@@ -1,12 +1,32 @@
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
+  db:
+    image: postgres:18.2
+    container_name: backend_postgres
+    restart: always
     environment:
-      NODE_ENV: development
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: GreenMarket
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./back-end/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  api:
+    build:
+      context: ./back-end
+      dockerfile: ./docker/node/Dockerfile
+    container_name: backend_api
+    restart: always
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - ./back-end/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+
+volumes:
+  pg_data:
