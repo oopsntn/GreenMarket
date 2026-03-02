@@ -1,8 +1,7 @@
 services:
   db:
     image: postgres:18.2
-    container_name: backend_postgres
-    restart: always
+    container_name: greenmarket_db
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
@@ -17,10 +16,7 @@ services:
     build:
       context: ./back-end
       dockerfile: ./docker/node/Dockerfile
-    container_name: backend_api
-    restart: always
-    environment:
-      - NODE_ENV=production
+    container_name: greenmarket_api
     env_file:
       - ./back-end/.env
     ports:

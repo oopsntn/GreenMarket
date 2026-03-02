@@ -1,23 +1,29 @@
-FROM node:24.14.0
-
-# Enable pnpm
+# ---- BASE ----
+FROM node:24-alpine AS base
 RUN corepack enable && corepack prepare pnpm@latest --activate
-
 WORKDIR /app
 
-# Copy dependencies for caching
+# ---- DEPENDENCIES ----
+FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
-
-# Install ALL deps (important for Drizzle + TypeScript)
 RUN pnpm install --frozen-lockfile
 
-# Copy all source
+# ---- BUILD ----
+FROM deps AS build
 COPY . .
-
-# Build TypeScript
 RUN pnpm build
 
-EXPOSE 5000
+# ---- PRODUCTION ----
+FROM node:24-alpine AS prod
+RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /app
 
-# Start server
-CMD ["pnpm", "start"]
+# Only prod deps
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy built code
+COPY --from=build /app/dist ./dist
+
+EXPOSE 5000
+CMD ["node", "dist/server.js"]
