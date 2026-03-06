@@ -3,13 +3,13 @@ services:
     image: postgres:18.2
     container_name: greenmarket_db
     environment:
-      POSTGRES_USER: admin
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: GreenMarket
     ports:
       - "5433:5432"
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql
       - ./GreenMarket.sql:/docker-entrypoint-initdb.d/init.sql
 
   api:
@@ -21,6 +21,8 @@ services:
       - ./back-end/.env
     ports:
       - "5000:5000"
+    environment:
+      - DATABASE_URL=postgres://postgres:admin@db:5432/GreenMarket
     depends_on:
       - db
 
