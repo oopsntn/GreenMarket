@@ -25,8 +25,9 @@ DROP TABLE IF EXISTS posts CASCADE;
 DROP TABLE IF EXISTS shops CASCADE;
 DROP TABLE IF EXISTS banned_keywords CASCADE;
 DROP TABLE IF EXISTS otp_requests CASCADE;
-DROP TABLE IF EXISTS user_roles CASCADE;
+DROP TABLE IF EXISTS admin_roles CASCADE;
 DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS admins CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS attributes CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -45,6 +46,19 @@ CREATE TABLE users (
   userUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE admins (
+  adminId SERIAL PRIMARY KEY,
+  adminEmail VARCHAR(150) UNIQUE NOT NULL,
+  adminUsername VARCHAR(50) UNIQUE,
+  adminPasswordHash VARCHAR(255) NOT NULL,
+  adminFullName VARCHAR(100),
+  adminAvatarUrl VARCHAR(255),
+  adminStatus VARCHAR(20),
+  adminLastLoginAt TIMESTAMP,
+  adminCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  adminUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE roles (
   roleId SERIAL PRIMARY KEY,
   roleCode VARCHAR(50),
@@ -52,12 +66,12 @@ CREATE TABLE roles (
   roleCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE user_roles (
-  userRoleUserId INT NOT NULL,
-  userRoleRoleId INT NOT NULL,
-  PRIMARY KEY (userRoleUserId, userRoleRoleId),
-  FOREIGN KEY (userRoleUserId) REFERENCES users(userId) ON DELETE CASCADE,
-  FOREIGN KEY (userRoleRoleId) REFERENCES roles(roleId) ON DELETE CASCADE
+CREATE TABLE admin_roles (
+  adminRoleAdminId INT NOT NULL,
+  adminRoleRoleId INT NOT NULL,
+  PRIMARY KEY (adminRoleAdminId, adminRoleRoleId),
+  FOREIGN KEY (adminRoleAdminId) REFERENCES admins(adminId) ON DELETE CASCADE,
+  FOREIGN KEY (adminRoleRoleId) REFERENCES roles(roleId) ON DELETE CASCADE
 );
 
 CREATE TABLE otp_requests (
@@ -105,7 +119,7 @@ CREATE TABLE attributes (
   attributeCode VARCHAR(100),
   attributeTitle VARCHAR(150),
   attributeDataType VARCHAR(50),
-  attributeOptions JSON,
+  attributeOptions JSONB,
   attributePublished BOOLEAN DEFAULT FALSE,
   attributeCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -225,6 +239,7 @@ CREATE TABLE moderation_actions (
   moderationActionAction VARCHAR(50),
   moderationActionNote TEXT,
   moderationActionCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (moderationActionActionBy) REFERENCES admins(adminId) ON DELETE CASCADE,
   FOREIGN KEY (moderationActionPostId) REFERENCES posts(postId) ON DELETE SET NULL
 );
 
@@ -233,7 +248,7 @@ CREATE TABLE placement_slots (
   placementSlotCode VARCHAR(100),
   placementSlotTitle VARCHAR(150),
   placementSlotCapacity INT,
-  placementSlotRules JSON,
+  placementSlotRules JSONB,
   placementSlotPublished BOOLEAN DEFAULT FALSE,
   placementSlotCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -270,7 +285,7 @@ CREATE TABLE payment_txn (
   paymentTxnPackageId INT NOT NULL,
   paymentTxnAmount DECIMAL(15, 2),
   paymentTxnProvider VARCHAR(50),
-  paymentTxnProviderTxnId VARCHAR(100),
+  paymentTxnProviderTxnId VARCHAR(100) UNIQUE,
   paymentTxnStatus VARCHAR(20),
   paymentTxnCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (paymentTxnUserId) REFERENCES users(userId) ON DELETE CASCADE,
@@ -297,7 +312,7 @@ CREATE TABLE trend_scores (
   trendScoreAsOfDate DATE,
   trendScoreSlotId INT NOT NULL,
   trendScoreScore DECIMAL(10, 4),
-  trendScoreComponents JSON,
+  trendScoreComponents JSONB,
   trendScoreCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (trendScoreSlotId) REFERENCES placement_slots(placementSlotId) ON DELETE CASCADE
 );
@@ -306,7 +321,7 @@ CREATE TABLE ai_insights (
   aiInsightId SERIAL PRIMARY KEY,
   aiInsightRequestedBy INT NOT NULL,
   aiInsightScope VARCHAR(50),
-  aiInsightInputSnapshot JSON,
+  aiInsightInputSnapshot JSONB,
   aiInsightOutputText TEXT,
   aiInsightProvider VARCHAR(50),
   aiInsightCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -318,7 +333,8 @@ CREATE TABLE system_settings (
   systemSettingKey VARCHAR(100) UNIQUE,
   systemSettingValue TEXT,
   systemSettingUpdatedBy INT,
-  systemSettingUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  systemSettingUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (systemSettingUpdatedBy) REFERENCES admins(adminId) ON DELETE SET NULL
 );
 
 CREATE TABLE event_logs (
@@ -330,14 +346,19 @@ CREATE TABLE event_logs (
   eventLogCategoryId INT,
   eventLogEventType VARCHAR(50),
   eventLogEventTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  eventLogMeta JSON,
+  eventLogMeta JSONB,
   FOREIGN KEY (eventLogUserId) REFERENCES users(userId) ON DELETE SET NULL
 );
 
 -- Create indexes for better performance
 
 CREATE INDEX idx_users_mobile ON users(userMobile);
+CREATE INDEX idx_otp_requests_mobile_code ON otp_requests(otpRequestMobile, otpRequestOtpCode);
 CREATE INDEX idx_users_status ON users(userStatus);
+
+CREATE INDEX idx_admins_email ON admins(adminEmail);
+CREATE INDEX idx_admins_username ON admins(adminUsername);
+CREATE INDEX idx_admins_status ON admins(adminStatus);
 
 CREATE INDEX idx_shops_owner ON shops(shopOwnerId);
 CREATE INDEX idx_shops_status ON shops(shopStatus);
@@ -385,36 +406,41 @@ CREATE INDEX idx_event_logs_user ON event_logs(eventLogUserId);
 CREATE INDEX idx_event_logs_type ON event_logs(eventLogEventType);
 CREATE INDEX idx_event_logs_time ON event_logs(eventLogEventTime);
 
--- Create trigger function for updating updatedAt timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.userUpdatedAt = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+-- Create trigger functions for updating updatedAt timestamps
+CREATE OR REPLACE FUNCTION update_user_updated_at() RETURNS TRIGGER AS $$
+BEGIN NEW.userUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION update_admin_updated_at() RETURNS TRIGGER AS $$
+BEGIN NEW.adminUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION update_shop_updated_at() RETURNS TRIGGER AS $$
+BEGIN NEW.shopUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION update_post_updated_at() RETURNS TRIGGER AS $$
+BEGIN NEW.postUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION update_category_updated_at() RETURNS TRIGGER AS $$
+BEGIN NEW.categoryUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION update_report_updated_at() RETURNS TRIGGER AS $$
+BEGIN NEW.reportUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION update_system_setting_updated_at() RETURNS TRIGGER AS $$
+BEGIN NEW.systemSettingUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
 
 -- Create triggers for tables with updatedAt column
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON reports
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_user_updated_at();
+CREATE TRIGGER update_admins_updated_at BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION update_admin_updated_at();
+CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops FOR EACH ROW EXECUTE FUNCTION update_shop_updated_at();
+CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION update_post_updated_at();
+CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_category_updated_at();
+CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON reports FOR EACH ROW EXECUTE FUNCTION update_report_updated_at();
+CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_system_setting_updated_at();
 
 -- Add comments for documentation
-COMMENT ON TABLE users IS 'User accounts and authentication';
+COMMENT ON TABLE users IS 'Customer accounts and authentication';
+COMMENT ON TABLE admins IS 'Internal staff and admin accounts';
+COMMENT ON TABLE admin_roles IS 'Mapping of administrators to roles';
 COMMENT ON TABLE shops IS 'Shop/seller information';
 COMMENT ON TABLE posts IS 'Product listings and advertisements';
 COMMENT ON TABLE categories IS 'Hierarchical product categories';
