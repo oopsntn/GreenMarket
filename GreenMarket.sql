@@ -1,5 +1,5 @@
 -- GreenMarket PostgreSQL Schema
--- Generated from DBML with renamed columns
+-- Snake_case naming convention
 
 -- Drop tables if exists (in reverse order of dependencies)
 DROP TABLE IF EXISTS event_logs CASCADE;
@@ -35,400 +35,400 @@ DROP TABLE IF EXISTS users CASCADE;
 -- Create tables
 
 CREATE TABLE users (
-  userId SERIAL PRIMARY KEY,
-  userMobile VARCHAR(15),
-  userDisplayName VARCHAR(80),
-  userAvatarUrl VARCHAR(255),
-  userStatus VARCHAR(20),
-  userRegisteredAt TIMESTAMP,
-  userLastLoginAt TIMESTAMP,
-  userCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  userUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  user_id SERIAL PRIMARY KEY,
+  user_mobile VARCHAR(15),
+  user_display_name VARCHAR(80),
+  user_avatar_url VARCHAR(255),
+  user_status VARCHAR(20),
+  user_registered_at TIMESTAMP,
+  user_last_login_at TIMESTAMP,
+  user_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  user_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE admins (
-  adminId SERIAL PRIMARY KEY,
-  adminEmail VARCHAR(150) UNIQUE NOT NULL,
-  adminUsername VARCHAR(50) UNIQUE,
-  adminPasswordHash VARCHAR(255) NOT NULL,
-  adminFullName VARCHAR(100),
-  adminAvatarUrl VARCHAR(255),
-  adminStatus VARCHAR(20),
-  adminLastLoginAt TIMESTAMP,
-  adminCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  adminUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  admin_id SERIAL PRIMARY KEY,
+  admin_email VARCHAR(150) UNIQUE NOT NULL,
+  admin_username VARCHAR(50) UNIQUE,
+  admin_password_hash VARCHAR(255) NOT NULL,
+  admin_full_name VARCHAR(100),
+  admin_avatar_url VARCHAR(255),
+  admin_status VARCHAR(20),
+  admin_last_login_at TIMESTAMP,
+  admin_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  admin_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE roles (
-  roleId SERIAL PRIMARY KEY,
-  roleCode VARCHAR(50),
-  roleTitle VARCHAR(100),
-  roleCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  role_id SERIAL PRIMARY KEY,
+  role_code VARCHAR(50),
+  role_title VARCHAR(100),
+  role_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE admin_roles (
-  adminRoleAdminId INT NOT NULL,
-  adminRoleRoleId INT NOT NULL,
-  PRIMARY KEY (adminRoleAdminId, adminRoleRoleId),
-  FOREIGN KEY (adminRoleAdminId) REFERENCES admins(adminId) ON DELETE CASCADE,
-  FOREIGN KEY (adminRoleRoleId) REFERENCES roles(roleId) ON DELETE CASCADE
+  admin_role_admin_id INT NOT NULL,
+  admin_role_role_id INT NOT NULL,
+  PRIMARY KEY (admin_role_admin_id, admin_role_role_id),
+  FOREIGN KEY (admin_role_admin_id) REFERENCES admins(admin_id) ON DELETE CASCADE,
+  FOREIGN KEY (admin_role_role_id) REFERENCES roles(role_id) ON DELETE CASCADE
 );
 
 CREATE TABLE otp_requests (
-  otpRequestId SERIAL PRIMARY KEY,
-  otpRequestMobile VARCHAR(15),
-  otpRequestOtpCode VARCHAR(10),
-  otpRequestExpireAt TIMESTAMP,
-  otpRequestStatus VARCHAR(20),
-  otpRequestCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  otp_request_id SERIAL PRIMARY KEY,
+  otp_request_mobile VARCHAR(15),
+  otp_request_otp_code VARCHAR(10),
+  otp_request_expire_at TIMESTAMP,
+  otp_request_status VARCHAR(20),
+  otp_request_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE banned_keywords (
-  bannedKeywordId SERIAL PRIMARY KEY,
-  bannedKeywordKeyword VARCHAR(50),
-  bannedKeywordPublished BOOLEAN DEFAULT FALSE,
-  bannedKeywordCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  banned_keyword_id SERIAL PRIMARY KEY,
+  banned_keyword_keyword VARCHAR(50),
+  banned_keyword_published BOOLEAN DEFAULT FALSE,
+  banned_keyword_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE shops (
-  shopId SERIAL PRIMARY KEY,
-  shopOwnerId INT NOT NULL,
-  shopName VARCHAR(150),
-  shopPhone VARCHAR(20),
-  shopLocation VARCHAR(255),
-  shopDescription TEXT,
-  shopStatus VARCHAR(20),
-  shopCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  shopUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (shopOwnerId) REFERENCES users(userId) ON DELETE CASCADE
+  shop_id SERIAL PRIMARY KEY,
+  shop_owner_id INT NOT NULL,
+  shop_name VARCHAR(150),
+  shop_phone VARCHAR(20),
+  shop_location VARCHAR(255),
+  shop_description TEXT,
+  shop_status VARCHAR(20),
+  shop_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  shop_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (shop_owner_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 CREATE TABLE categories (
-  categoryId SERIAL PRIMARY KEY,
-  categoryParentId INT,
-  categoryTitle VARCHAR(150),
-  categorySlug VARCHAR(150),
-  categoryPublished BOOLEAN DEFAULT FALSE,
-  categoryCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  categoryUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (categoryParentId) REFERENCES categories(categoryId) ON DELETE SET NULL
+  category_id SERIAL PRIMARY KEY,
+  category_parent_id INT,
+  category_title VARCHAR(150),
+  category_slug VARCHAR(150),
+  category_published BOOLEAN DEFAULT FALSE,
+  category_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  category_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (category_parent_id) REFERENCES categories(category_id) ON DELETE SET NULL
 );
 
 CREATE TABLE attributes (
-  attributeId SERIAL PRIMARY KEY,
-  attributeCode VARCHAR(100),
-  attributeTitle VARCHAR(150),
-  attributeDataType VARCHAR(50),
-  attributeOptions JSONB,
-  attributePublished BOOLEAN DEFAULT FALSE,
-  attributeCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  attribute_id SERIAL PRIMARY KEY,
+  attribute_code VARCHAR(100),
+  attribute_title VARCHAR(150),
+  attribute_data_type VARCHAR(50),
+  attribute_options JSONB,
+  attribute_published BOOLEAN DEFAULT FALSE,
+  attribute_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE posts (
-  postId SERIAL PRIMARY KEY,
-  postAuthorId INT NOT NULL,
-  postShopId INT,
-  postTitle VARCHAR(200),
-  postContent TEXT,
-  postPrice DECIMAL(15, 2),
-  postLocation VARCHAR(255),
-  postStatus VARCHAR(20),
-  postRejectedReason TEXT,
-  postPublished BOOLEAN DEFAULT FALSE,
-  postSubmittedAt TIMESTAMP,
-  postPublishedAt TIMESTAMP,
-  postDeletedAt TIMESTAMP,
-  postCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  postUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (postAuthorId) REFERENCES users(userId) ON DELETE CASCADE,
-  FOREIGN KEY (postShopId) REFERENCES shops(shopId) ON DELETE SET NULL
+  post_id SERIAL PRIMARY KEY,
+  post_author_id INT NOT NULL,
+  post_shop_id INT,
+  post_title VARCHAR(200),
+  post_content TEXT,
+  post_price DECIMAL(15, 2),
+  post_location VARCHAR(255),
+  post_status VARCHAR(20),
+  post_rejected_reason TEXT,
+  post_published BOOLEAN DEFAULT FALSE,
+  post_submitted_at TIMESTAMP,
+  post_published_at TIMESTAMP,
+  post_deleted_at TIMESTAMP,
+  post_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  post_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (post_author_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (post_shop_id) REFERENCES shops(shop_id) ON DELETE SET NULL
 );
 
 CREATE TABLE post_images (
-  postImageId SERIAL PRIMARY KEY,
-  postImagePostId INT NOT NULL,
-  postImageUrl VARCHAR(255),
-  postImagePosition INT,
-  postImageCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (postImagePostId) REFERENCES posts(postId) ON DELETE CASCADE
+  post_image_id SERIAL PRIMARY KEY,
+  post_image_post_id INT NOT NULL,
+  post_image_url VARCHAR(255),
+  post_image_position INT,
+  post_image_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (post_image_post_id) REFERENCES posts(post_id) ON DELETE CASCADE
 );
 
 CREATE TABLE post_meta (
-  postMetaId SERIAL PRIMARY KEY,
-  postMetaPostId INT NOT NULL,
-  postMetaKey VARCHAR(100),
-  postMetaContent TEXT,
-  postMetaCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (postMetaPostId) REFERENCES posts(postId) ON DELETE CASCADE
+  post_meta_id SERIAL PRIMARY KEY,
+  post_meta_post_id INT NOT NULL,
+  post_meta_key VARCHAR(100),
+  post_meta_content TEXT,
+  post_meta_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (post_meta_post_id) REFERENCES posts(post_id) ON DELETE CASCADE
 );
 
 CREATE TABLE post_categories (
-  postCategoryPostId INT NOT NULL,
-  postCategoryCategoryId INT NOT NULL,
-  PRIMARY KEY (postCategoryPostId, postCategoryCategoryId),
-  FOREIGN KEY (postCategoryPostId) REFERENCES posts(postId) ON DELETE CASCADE,
-  FOREIGN KEY (postCategoryCategoryId) REFERENCES categories(categoryId) ON DELETE CASCADE
+  post_category_post_id INT NOT NULL,
+  post_category_category_id INT NOT NULL,
+  PRIMARY KEY (post_category_post_id, post_category_category_id),
+  FOREIGN KEY (post_category_post_id) REFERENCES posts(post_id) ON DELETE CASCADE,
+  FOREIGN KEY (post_category_category_id) REFERENCES categories(category_id) ON DELETE CASCADE
 );
 
 CREATE TABLE post_attributes (
-  postAttributeId SERIAL PRIMARY KEY,
-  postAttributePostId INT NOT NULL,
-  postAttributeAttributeId INT NOT NULL,
-  postAttributeValueText TEXT,
-  postAttributeValueNumber DECIMAL(15, 4),
-  postAttributeValueEnum VARCHAR(100),
-  postAttributeCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (postAttributePostId) REFERENCES posts(postId) ON DELETE CASCADE,
-  FOREIGN KEY (postAttributeAttributeId) REFERENCES attributes(attributeId) ON DELETE CASCADE
+  post_attribute_id SERIAL PRIMARY KEY,
+  post_attribute_post_id INT NOT NULL,
+  post_attribute_attribute_id INT NOT NULL,
+  post_attribute_value_text TEXT,
+  post_attribute_value_number DECIMAL(15, 4),
+  post_attribute_value_enum VARCHAR(100),
+  post_attribute_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (post_attribute_post_id) REFERENCES posts(post_id) ON DELETE CASCADE,
+  FOREIGN KEY (post_attribute_attribute_id) REFERENCES attributes(attribute_id) ON DELETE CASCADE
 );
 
 CREATE TABLE favorite_posts (
-  favoritePostUserId INT NOT NULL,
-  favoritePostPostId INT NOT NULL,
-  favoritePostCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (favoritePostUserId, favoritePostPostId),
-  FOREIGN KEY (favoritePostUserId) REFERENCES users(userId) ON DELETE CASCADE,
-  FOREIGN KEY (favoritePostPostId) REFERENCES posts(postId) ON DELETE CASCADE
+  favorite_post_user_id INT NOT NULL,
+  favorite_post_post_id INT NOT NULL,
+  favorite_post_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (favorite_post_user_id, favorite_post_post_id),
+  FOREIGN KEY (favorite_post_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (favorite_post_post_id) REFERENCES posts(post_id) ON DELETE CASCADE
 );
 
 CREATE TABLE blocked_shops (
-  blockedShopUserId INT NOT NULL,
-  blockedShopShopId INT NOT NULL,
-  blockedShopCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (blockedShopUserId, blockedShopShopId),
-  FOREIGN KEY (blockedShopUserId) REFERENCES users(userId) ON DELETE CASCADE,
-  FOREIGN KEY (blockedShopShopId) REFERENCES shops(shopId) ON DELETE CASCADE
+  blocked_shop_user_id INT NOT NULL,
+  blocked_shop_shop_id INT NOT NULL,
+  blocked_shop_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (blocked_shop_user_id, blocked_shop_shop_id),
+  FOREIGN KEY (blocked_shop_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (blocked_shop_shop_id) REFERENCES shops(shop_id) ON DELETE CASCADE
 );
 
 CREATE TABLE category_attributes (
-  categoryAttributeCategoryId INT NOT NULL,
-  categoryAttributeAttributeId INT NOT NULL,
-  categoryAttributeRequired BOOLEAN DEFAULT FALSE,
-  PRIMARY KEY (categoryAttributeCategoryId, categoryAttributeAttributeId),
-  FOREIGN KEY (categoryAttributeCategoryId) REFERENCES categories(categoryId) ON DELETE CASCADE,
-  FOREIGN KEY (categoryAttributeAttributeId) REFERENCES attributes(attributeId) ON DELETE CASCADE
+  category_attribute_category_id INT NOT NULL,
+  category_attribute_attribute_id INT NOT NULL,
+  category_attribute_required BOOLEAN DEFAULT FALSE,
+  PRIMARY KEY (category_attribute_category_id, category_attribute_attribute_id),
+  FOREIGN KEY (category_attribute_category_id) REFERENCES categories(category_id) ON DELETE CASCADE,
+  FOREIGN KEY (category_attribute_attribute_id) REFERENCES attributes(attribute_id) ON DELETE CASCADE
 );
 
 CREATE TABLE reports (
-  reportId SERIAL PRIMARY KEY,
-  reportReporterId INT NOT NULL,
-  reportPostId INT,
-  reportShopId INT,
-  reportReasonCode VARCHAR(50),
-  reportNote TEXT,
-  reportStatus VARCHAR(20),
-  reportCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  reportUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (reportReporterId) REFERENCES users(userId) ON DELETE CASCADE,
-  FOREIGN KEY (reportPostId) REFERENCES posts(postId) ON DELETE SET NULL,
-  FOREIGN KEY (reportShopId) REFERENCES shops(shopId) ON DELETE SET NULL
+  report_id SERIAL PRIMARY KEY,
+  report_reporter_id INT NOT NULL,
+  report_post_id INT,
+  report_shop_id INT,
+  report_reason_code VARCHAR(50),
+  report_note TEXT,
+  report_status VARCHAR(20),
+  report_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  report_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (report_reporter_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (report_post_id) REFERENCES posts(post_id) ON DELETE SET NULL,
+  FOREIGN KEY (report_shop_id) REFERENCES shops(shop_id) ON DELETE SET NULL
 );
 
 CREATE TABLE report_evidence (
-  reportEvidenceId SERIAL PRIMARY KEY,
-  reportEvidenceReportId INT NOT NULL,
-  reportEvidenceUrl VARCHAR(255),
-  reportEvidenceCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (reportEvidenceReportId) REFERENCES reports(reportId) ON DELETE CASCADE
+  report_evidence_id SERIAL PRIMARY KEY,
+  report_evidence_report_id INT NOT NULL,
+  report_evidence_url VARCHAR(255),
+  report_evidence_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (report_evidence_report_id) REFERENCES reports(report_id) ON DELETE CASCADE
 );
 
 CREATE TABLE moderation_actions (
-  moderationActionId SERIAL PRIMARY KEY,
-  moderationActionActionBy INT NOT NULL,
-  moderationActionPostId INT,
-  moderationActionAction VARCHAR(50),
-  moderationActionNote TEXT,
-  moderationActionCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (moderationActionActionBy) REFERENCES admins(adminId) ON DELETE CASCADE,
-  FOREIGN KEY (moderationActionPostId) REFERENCES posts(postId) ON DELETE SET NULL
+  moderation_action_id SERIAL PRIMARY KEY,
+  moderation_action_action_by INT NOT NULL,
+  moderation_action_post_id INT,
+  moderation_action_action VARCHAR(50),
+  moderation_action_note TEXT,
+  moderation_action_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (moderation_action_action_by) REFERENCES admins(admin_id) ON DELETE CASCADE,
+  FOREIGN KEY (moderation_action_post_id) REFERENCES posts(post_id) ON DELETE SET NULL
 );
 
 CREATE TABLE placement_slots (
-  placementSlotId SERIAL PRIMARY KEY,
-  placementSlotCode VARCHAR(100),
-  placementSlotTitle VARCHAR(150),
-  placementSlotCapacity INT,
-  placementSlotRules JSONB,
-  placementSlotPublished BOOLEAN DEFAULT FALSE,
-  placementSlotCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  placement_slot_id SERIAL PRIMARY KEY,
+  placement_slot_code VARCHAR(100),
+  placement_slot_title VARCHAR(150),
+  placement_slot_capacity INT,
+  placement_slot_rules JSONB,
+  placement_slot_published BOOLEAN DEFAULT FALSE,
+  placement_slot_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE promotion_packages (
-  promotionPackageId SERIAL PRIMARY KEY,
-  promotionPackageSlotId INT NOT NULL,
-  promotionPackageTitle VARCHAR(150),
-  promotionPackageDurationDays INT,
-  promotionPackagePrice DECIMAL(15, 2),
-  promotionPackagePublished BOOLEAN DEFAULT FALSE,
-  promotionPackageCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (promotionPackageSlotId) REFERENCES placement_slots(placementSlotId) ON DELETE CASCADE
+  promotion_package_id SERIAL PRIMARY KEY,
+  promotion_package_slot_id INT NOT NULL,
+  promotion_package_title VARCHAR(150),
+  promotion_package_duration_days INT,
+  promotion_package_price DECIMAL(15, 2),
+  promotion_package_published BOOLEAN DEFAULT FALSE,
+  promotion_package_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (promotion_package_slot_id) REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE
 );
 
 CREATE TABLE post_promotions (
-  postPromotionId SERIAL PRIMARY KEY,
-  postPromotionPostId INT NOT NULL,
-  postPromotionBuyerId INT NOT NULL,
-  postPromotionPackageId INT NOT NULL,
-  postPromotionSlotId INT NOT NULL,
-  postPromotionStartAt TIMESTAMP,
-  postPromotionEndAt TIMESTAMP,
-  postPromotionStatus VARCHAR(20),
-  postPromotionCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (postPromotionPostId) REFERENCES posts(postId) ON DELETE CASCADE,
-  FOREIGN KEY (postPromotionPackageId) REFERENCES promotion_packages(promotionPackageId) ON DELETE CASCADE,
-  FOREIGN KEY (postPromotionSlotId) REFERENCES placement_slots(placementSlotId) ON DELETE CASCADE
+  post_promotion_id SERIAL PRIMARY KEY,
+  post_promotion_post_id INT NOT NULL,
+  post_promotion_buyer_id INT NOT NULL,
+  post_promotion_package_id INT NOT NULL,
+  post_promotion_slot_id INT NOT NULL,
+  post_promotion_start_at TIMESTAMP,
+  post_promotion_end_at TIMESTAMP,
+  post_promotion_status VARCHAR(20),
+  post_promotion_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (post_promotion_post_id) REFERENCES posts(post_id) ON DELETE CASCADE,
+  FOREIGN KEY (post_promotion_package_id) REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
+  FOREIGN KEY (post_promotion_slot_id) REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE
 );
 
 CREATE TABLE payment_txn (
-  paymentTxnId SERIAL PRIMARY KEY,
-  paymentTxnUserId INT NOT NULL,
-  paymentTxnPackageId INT NOT NULL,
-  paymentTxnAmount DECIMAL(15, 2),
-  paymentTxnProvider VARCHAR(50),
-  paymentTxnProviderTxnId VARCHAR(100) UNIQUE,
-  paymentTxnStatus VARCHAR(20),
-  paymentTxnCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (paymentTxnUserId) REFERENCES users(userId) ON DELETE CASCADE,
-  FOREIGN KEY (paymentTxnPackageId) REFERENCES promotion_packages(promotionPackageId) ON DELETE CASCADE
+  payment_txn_id SERIAL PRIMARY KEY,
+  payment_txn_user_id INT NOT NULL,
+  payment_txn_package_id INT NOT NULL,
+  payment_txn_amount DECIMAL(15, 2),
+  payment_txn_provider VARCHAR(50),
+  payment_txn_provider_txn_id VARCHAR(100) UNIQUE,
+  payment_txn_status VARCHAR(20),
+  payment_txn_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (payment_txn_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (payment_txn_package_id) REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE
 );
 
 CREATE TABLE daily_placement_metrics (
-  dailyPlacementMetricId SERIAL PRIMARY KEY,
-  dailyPlacementMetricDate DATE,
-  dailyPlacementMetricSlotId INT NOT NULL,
-  dailyPlacementMetricCategoryId INT,
-  dailyPlacementMetricImpressions INT DEFAULT 0,
-  dailyPlacementMetricClicks INT DEFAULT 0,
-  dailyPlacementMetricDetailViews INT DEFAULT 0,
-  dailyPlacementMetricContacts INT DEFAULT 0,
-  dailyPlacementMetricCtr DECIMAL(5, 4),
-  dailyPlacementMetricCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (dailyPlacementMetricSlotId) REFERENCES placement_slots(placementSlotId) ON DELETE CASCADE,
-  FOREIGN KEY (dailyPlacementMetricCategoryId) REFERENCES categories(categoryId) ON DELETE SET NULL
+  daily_placement_metric_id SERIAL PRIMARY KEY,
+  daily_placement_metric_date DATE,
+  daily_placement_metric_slot_id INT NOT NULL,
+  daily_placement_metric_category_id INT,
+  daily_placement_metric_impressions INT DEFAULT 0,
+  daily_placement_metric_clicks INT DEFAULT 0,
+  daily_placement_metric_detail_views INT DEFAULT 0,
+  daily_placement_metric_contacts INT DEFAULT 0,
+  daily_placement_metric_ctr DECIMAL(5, 4),
+  daily_placement_metric_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (daily_placement_metric_slot_id) REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
+  FOREIGN KEY (daily_placement_metric_category_id) REFERENCES categories(category_id) ON DELETE SET NULL
 );
 
 CREATE TABLE trend_scores (
-  trendScoreId SERIAL PRIMARY KEY,
-  trendScoreAsOfDate DATE,
-  trendScoreSlotId INT NOT NULL,
-  trendScoreScore DECIMAL(10, 4),
-  trendScoreComponents JSONB,
-  trendScoreCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (trendScoreSlotId) REFERENCES placement_slots(placementSlotId) ON DELETE CASCADE
+  trend_score_id SERIAL PRIMARY KEY,
+  trend_score_as_of_date DATE,
+  trend_score_slot_id INT NOT NULL,
+  trend_score_score DECIMAL(10, 4),
+  trend_score_components JSONB,
+  trend_score_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (trend_score_slot_id) REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE
 );
 
 CREATE TABLE ai_insights (
-  aiInsightId SERIAL PRIMARY KEY,
-  aiInsightRequestedBy INT NOT NULL,
-  aiInsightScope VARCHAR(50),
-  aiInsightInputSnapshot JSONB,
-  aiInsightOutputText TEXT,
-  aiInsightProvider VARCHAR(50),
-  aiInsightCreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (aiInsightRequestedBy) REFERENCES users(userId) ON DELETE CASCADE
+  ai_insight_id SERIAL PRIMARY KEY,
+  ai_insight_requested_by INT NOT NULL,
+  ai_insight_scope VARCHAR(50),
+  ai_insight_input_snapshot JSONB,
+  ai_insight_output_text TEXT,
+  ai_insight_provider VARCHAR(50),
+  ai_insight_created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (ai_insight_requested_by) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
 CREATE TABLE system_settings (
-  systemSettingId SERIAL PRIMARY KEY,
-  systemSettingKey VARCHAR(100) UNIQUE,
-  systemSettingValue TEXT,
-  systemSettingUpdatedBy INT,
-  systemSettingUpdatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (systemSettingUpdatedBy) REFERENCES admins(adminId) ON DELETE SET NULL
+  system_setting_id SERIAL PRIMARY KEY,
+  system_setting_key VARCHAR(100) UNIQUE,
+  system_setting_value TEXT,
+  system_setting_updated_by INT,
+  system_setting_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (system_setting_updated_by) REFERENCES admins(admin_id) ON DELETE SET NULL
 );
 
 CREATE TABLE event_logs (
-  eventLogId SERIAL PRIMARY KEY,
-  eventLogUserId INT,
-  eventLogPostId INT,
-  eventLogShopId INT,
-  eventLogSlotId INT,
-  eventLogCategoryId INT,
-  eventLogEventType VARCHAR(50),
-  eventLogEventTime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  eventLogMeta JSONB,
-  FOREIGN KEY (eventLogUserId) REFERENCES users(userId) ON DELETE SET NULL
+  event_log_id SERIAL PRIMARY KEY,
+  event_log_user_id INT,
+  event_log_post_id INT,
+  event_log_shop_id INT,
+  event_log_slot_id INT,
+  event_log_category_id INT,
+  event_log_event_type VARCHAR(50),
+  event_log_event_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  event_log_meta JSONB,
+  FOREIGN KEY (event_log_user_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
 
 -- Create indexes for better performance
 
-CREATE INDEX idx_users_mobile ON users(userMobile);
-CREATE INDEX idx_otp_requests_mobile_code ON otp_requests(otpRequestMobile, otpRequestOtpCode);
-CREATE INDEX idx_users_status ON users(userStatus);
+CREATE INDEX idx_users_mobile ON users(user_mobile);
+CREATE INDEX idx_otp_requests_mobile_code ON otp_requests(otp_request_mobile, otp_request_otp_code);
+CREATE INDEX idx_users_status ON users(user_status);
 
-CREATE INDEX idx_admins_email ON admins(adminEmail);
-CREATE INDEX idx_admins_username ON admins(adminUsername);
-CREATE INDEX idx_admins_status ON admins(adminStatus);
+CREATE INDEX idx_admins_email ON admins(admin_email);
+CREATE INDEX idx_admins_username ON admins(admin_username);
+CREATE INDEX idx_admins_status ON admins(admin_status);
 
-CREATE INDEX idx_shops_owner ON shops(shopOwnerId);
-CREATE INDEX idx_shops_status ON shops(shopStatus);
+CREATE INDEX idx_shops_owner ON shops(shop_owner_id);
+CREATE INDEX idx_shops_status ON shops(shop_status);
 
-CREATE INDEX idx_posts_author ON posts(postAuthorId);
-CREATE INDEX idx_posts_shop ON posts(postShopId);
-CREATE INDEX idx_posts_status ON posts(postStatus);
-CREATE INDEX idx_posts_published ON posts(postPublished);
-CREATE INDEX idx_posts_created ON posts(postCreatedAt);
+CREATE INDEX idx_posts_author ON posts(post_author_id);
+CREATE INDEX idx_posts_shop ON posts(post_shop_id);
+CREATE INDEX idx_posts_status ON posts(post_status);
+CREATE INDEX idx_posts_published ON posts(post_published);
+CREATE INDEX idx_posts_created ON posts(post_created_at);
 
-CREATE INDEX idx_post_images_post ON post_images(postImagePostId);
+CREATE INDEX idx_post_images_post ON post_images(post_image_post_id);
 
-CREATE INDEX idx_post_meta_post ON post_meta(postMetaPostId);
-CREATE INDEX idx_post_meta_key ON post_meta(postMetaKey);
+CREATE INDEX idx_post_meta_post ON post_meta(post_meta_post_id);
+CREATE INDEX idx_post_meta_key ON post_meta(post_meta_key);
 
-CREATE INDEX idx_post_categories_post ON post_categories(postCategoryPostId);
-CREATE INDEX idx_post_categories_category ON post_categories(postCategoryCategoryId);
+CREATE INDEX idx_post_categories_post ON post_categories(post_category_post_id);
+CREATE INDEX idx_post_categories_category ON post_categories(post_category_category_id);
 
-CREATE INDEX idx_post_attributes_post ON post_attributes(postAttributePostId);
-CREATE INDEX idx_post_attributes_attribute ON post_attributes(postAttributeAttributeId);
+CREATE INDEX idx_post_attributes_post ON post_attributes(post_attribute_post_id);
+CREATE INDEX idx_post_attributes_attribute ON post_attributes(post_attribute_attribute_id);
 
-CREATE INDEX idx_favorite_posts_user ON favorite_posts(favoritePostUserId);
-CREATE INDEX idx_favorite_posts_post ON favorite_posts(favoritePostPostId);
+CREATE INDEX idx_favorite_posts_user ON favorite_posts(favorite_post_user_id);
+CREATE INDEX idx_favorite_posts_post ON favorite_posts(favorite_post_post_id);
 
-CREATE INDEX idx_categories_parent ON categories(categoryParentId);
-CREATE INDEX idx_categories_slug ON categories(categorySlug);
+CREATE INDEX idx_categories_parent ON categories(category_parent_id);
+CREATE INDEX idx_categories_slug ON categories(category_slug);
 
-CREATE INDEX idx_reports_reporter ON reports(reportReporterId);
-CREATE INDEX idx_reports_post ON reports(reportPostId);
-CREATE INDEX idx_reports_shop ON reports(reportShopId);
-CREATE INDEX idx_reports_status ON reports(reportStatus);
+CREATE INDEX idx_reports_reporter ON reports(report_reporter_id);
+CREATE INDEX idx_reports_post ON reports(report_post_id);
+CREATE INDEX idx_reports_shop ON reports(report_shop_id);
+CREATE INDEX idx_reports_status ON reports(report_status);
 
-CREATE INDEX idx_post_promotions_post ON post_promotions(postPromotionPostId);
-CREATE INDEX idx_post_promotions_slot ON post_promotions(postPromotionSlotId);
-CREATE INDEX idx_post_promotions_status ON post_promotions(postPromotionStatus);
-CREATE INDEX idx_post_promotions_dates ON post_promotions(postPromotionStartAt, postPromotionEndAt);
+CREATE INDEX idx_post_promotions_post ON post_promotions(post_promotion_post_id);
+CREATE INDEX idx_post_promotions_slot ON post_promotions(post_promotion_slot_id);
+CREATE INDEX idx_post_promotions_status ON post_promotions(post_promotion_status);
+CREATE INDEX idx_post_promotions_dates ON post_promotions(post_promotion_start_at, post_promotion_end_at);
 
-CREATE INDEX idx_payment_txn_user ON payment_txn(paymentTxnUserId);
-CREATE INDEX idx_payment_txn_status ON payment_txn(paymentTxnStatus);
+CREATE INDEX idx_payment_txn_user ON payment_txn(payment_txn_user_id);
+CREATE INDEX idx_payment_txn_status ON payment_txn(payment_txn_status);
 
-CREATE INDEX idx_daily_metrics_date ON daily_placement_metrics(dailyPlacementMetricDate);
-CREATE INDEX idx_daily_metrics_slot ON daily_placement_metrics(dailyPlacementMetricSlotId);
+CREATE INDEX idx_daily_metrics_date ON daily_placement_metrics(daily_placement_metric_date);
+CREATE INDEX idx_daily_metrics_slot ON daily_placement_metrics(daily_placement_metric_slot_id);
 
-CREATE INDEX idx_event_logs_user ON event_logs(eventLogUserId);
-CREATE INDEX idx_event_logs_type ON event_logs(eventLogEventType);
-CREATE INDEX idx_event_logs_time ON event_logs(eventLogEventTime);
+CREATE INDEX idx_event_logs_user ON event_logs(event_log_user_id);
+CREATE INDEX idx_event_logs_type ON event_logs(event_log_event_type);
+CREATE INDEX idx_event_logs_time ON event_logs(event_log_event_time);
 
--- Create trigger functions for updating updatedAt timestamps
+-- Create trigger functions for updating updated_at timestamps
 CREATE OR REPLACE FUNCTION update_user_updated_at() RETURNS TRIGGER AS $$
-BEGIN NEW.userUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+BEGIN NEW.user_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
 
 CREATE OR REPLACE FUNCTION update_admin_updated_at() RETURNS TRIGGER AS $$
-BEGIN NEW.adminUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+BEGIN NEW.admin_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
 
 CREATE OR REPLACE FUNCTION update_shop_updated_at() RETURNS TRIGGER AS $$
-BEGIN NEW.shopUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+BEGIN NEW.shop_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
 
 CREATE OR REPLACE FUNCTION update_post_updated_at() RETURNS TRIGGER AS $$
-BEGIN NEW.postUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+BEGIN NEW.post_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
 
 CREATE OR REPLACE FUNCTION update_category_updated_at() RETURNS TRIGGER AS $$
-BEGIN NEW.categoryUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+BEGIN NEW.category_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
 
 CREATE OR REPLACE FUNCTION update_report_updated_at() RETURNS TRIGGER AS $$
-BEGIN NEW.reportUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+BEGIN NEW.report_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
 
 CREATE OR REPLACE FUNCTION update_system_setting_updated_at() RETURNS TRIGGER AS $$
-BEGIN NEW.systemSettingUpdatedAt = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
+BEGIN NEW.system_setting_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$ language 'plpgsql';
 
--- Create triggers for tables with updatedAt column
+-- Create triggers for tables with updated_at column
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_user_updated_at();
 CREATE TRIGGER update_admins_updated_at BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION update_admin_updated_at();
 CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops FOR EACH ROW EXECUTE FUNCTION update_shop_updated_at();
