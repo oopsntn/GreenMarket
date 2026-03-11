@@ -11,7 +11,8 @@
     "clean": "rm -rf dist",
     "lint": "eslint .",
     "db:push": "drizzle-kit push",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "seed:admin": "tsx src/scripts/seedAdmin.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

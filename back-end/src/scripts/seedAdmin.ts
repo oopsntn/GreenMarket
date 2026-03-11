@@ -6,27 +6,37 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const seedAdmin = async () => {
-    try {
-        const email = process.argv[2] || "admin@greenmarket.vn";
-        const password = process.argv[3] || "Admin@123";
+    const email = process.argv[2] || "admin@greenmarket.vn";
+    const password = process.argv[3] || "Admin@123";
 
-        console.log(`Seeding Admin: ${email}`);
+    console.log(`Seeding Admin: ${email}`);
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+    const existing = await db.query.admins.findFirst({
+        where: (admins, { eq }) => eq(admins.adminEmail, email)
+    });
 
-        const [newAdmin] = await db.insert(admins).values({
+    if (existing) {
+        console.log("Admin already exists");
+        return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const [newAdmin] = await db
+        .insert(admins)
+        .values({
             adminEmail: email,
             adminPasswordHash: hashedPassword,
             adminFullName: "System Administrator",
             adminStatus: "active"
-        }).returning();
+        })
+        .returning();
 
-        console.log("Admin seeded successfully:", newAdmin.adminId, newAdmin.adminEmail);
-        process.exit(0);
-    } catch (error) {
-        console.error("Error seeding admin:", error);
-        process.exit(1);
-    }
+    console.log(
+        "Admin seeded successfully:",
+        newAdmin.adminId,
+        newAdmin.adminEmail
+    );
 };
 
 seedAdmin();

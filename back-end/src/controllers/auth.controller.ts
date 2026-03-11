@@ -1,13 +1,21 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
-import { db } from "../config/db.ts";
-import { admins, users, otpRequests } from "../models/schema/index.ts";
+import { eq, and } from "drizzle-orm";
+import { db } from "../config/db";
+import { admins, users, otpRequests } from "../models/schema";
+import { AdminLoginBody } from "../dtos/admin";
+import { RequestOTPBody, VerifyOTPBody } from "../dtos/otp";
+
+import { otpService } from "../services/otp.service";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
 
-export const adminLogin = async (req: Request, res: Response): Promise<void> => {
+// --- Admin ---
+export const adminLogin = async (
+    req: Request<{}, {}, AdminLoginBody>,
+    res: Response
+): Promise<void> => {
     try {
         const { email, password } = req.body;
         if (!email || !password) {
@@ -41,7 +49,11 @@ export const adminLogin = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-export const userRequestOtp = async (req: Request, res: Response): Promise<void> => {
+// --- User (OTP) ---
+export const userRequestOtp = async (
+    req: Request<{}, {}, RequestOTPBody>,
+    res: Response
+): Promise<void> => {
     try {
         const { mobile } = req.body;
         if (!mobile) {
@@ -49,28 +61,32 @@ export const userRequestOtp = async (req: Request, res: Response): Promise<void>
             return;
         }
 
-        // Generate random 6-digit OTP
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const expireAt = new Date(Date.now() + 5 * 60000); // 5 mins
+        const otpCode = otpService.generateOTP();
+        const expireAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
 
-        // Save/Update OTP request
         await db.insert(otpRequests).values({
             otpRequestMobile: mobile,
             otpRequestOtpCode: otpCode,
             otpRequestExpireAt: expireAt,
-            otpRequestStatus: "pending"
+            otpRequestStatus: "pending",
         });
 
-        // In a real app, integrate with SMS gateway here
-        // Currently, we return it in dev environment for testing
-        res.json({ message: "OTP sent successfully", dev_otp: otpCode });
+        const sendResult = await otpService.sendOTP(mobile, otpCode);
+
+        res.json({ 
+            message: sendResult.message, 
+            otp: otpCode // Keep returning for testing/dev
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
     }
 };
 
-export const userVerifyOtp = async (req: Request, res: Response): Promise<void> => {
+export const userVerifyOtp = async (
+    req: Request<{}, {}, VerifyOTPBody>,
+    res: Response
+): Promise<void> => {
     try {
         const { mobile, otp } = req.body;
         if (!mobile || !otp) {
@@ -78,22 +94,45 @@ export const userVerifyOtp = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        // Optional: add actual verification against `otp_requests` db table
-        // ...
+        const [otpRecord] = await db
+            .select()
+            .from(otpRequests)
+            .where(
+                and(
+                    eq(otpRequests.otpRequestMobile, mobile),
+                    eq(otpRequests.otpRequestOtpCode, otp),
+                    eq(otpRequests.otpRequestStatus, "pending")
+                )
+            )
+            .orderBy(otpRequests.otpRequestCreatedAt);
 
-        // Auto register or login
+        if (!otpRecord || (otpRecord.otpRequestExpireAt && otpRecord.otpRequestExpireAt < new Date())) {
+            res.status(401).json({ error: "Invalid or expired OTP" });
+            return;
+        }
+
+        // Mark OTP as used
+        await db
+            .update(otpRequests)
+            .set({ otpRequestStatus: "verified" })
+            .where(eq(otpRequests.otpRequestId, otpRecord.otpRequestId));
+
+        // Check if user exists, otherwise create
         let [user] = await db.select().from(users).where(eq(users.userMobile, mobile));
 
         if (!user) {
-            // Create new user
-            const [newUser] = await db.insert(users).values({
-                userMobile: mobile,
-                userStatus: "active",
-            }).returning();
-            user = newUser;
+            [user] = await db
+                .insert(users)
+                .values({
+                    userMobile: mobile,
+                    userStatus: "active",
+                    userRegisteredAt: new Date(),
+                })
+                .returning();
         } else {
             // Update last login
-            await db.update(users)
+            await db
+                .update(users)
                 .set({ userLastLoginAt: new Date() })
                 .where(eq(users.userId, user.userId));
         }
@@ -101,10 +140,10 @@ export const userVerifyOtp = async (req: Request, res: Response): Promise<void> 
         const token = jwt.sign(
             { id: user.userId, mobile: user.userMobile, role: "user" },
             JWT_SECRET,
-            { expiresIn: "30d" }
+            { expiresIn: "7d" }
         );
 
-        res.json({ token, user: { id: user.userId, mobile: user.userMobile } });
+        res.json({ token, user: { id: user.userId, mobile: user.userMobile, name: user.userDisplayName } });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

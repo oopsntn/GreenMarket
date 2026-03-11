@@ -1,28 +1,10 @@
-/**
- * Schema barrel export
- *
- * Re-exports every table so consumers can do:
- *   import * as schema from "../models/schema/index.ts";
- *   import { users, admins } from "../models/schema/index.ts";
- */
+// Auth
+export { admins, type Admin, type NewAdmin } from "./admins";
+export { roles, type Role, type NewRole } from "./roles";
+export { adminRoles, type AdminRole, type NewAdminRole } from "./admin-roles";
+export { users, type User, type NewUser } from "./users";
+export { otpRequests, type OTPRequest, type NewOTPRequest } from "./otp-requests";
 
-// ─── Auth ────────────────────────────────────────────
-export { users } from "./users";
-export { admins } from "./admins";
-export { roles } from "./roles";
-export { adminRoles } from "./admin-roles";
-export { otpRequests } from "./otp-requests";
-
-// ─── Shop ────────────────────────────────────────────
-// export { shops } from "./shops.ts";
-
-// ─── Catalog ─────────────────────────────────────────
-// export { categories } from "./categories.ts";
-// export { attributes } from "./attributes.ts";
-
-// ─── Content ─────────────────────────────────────────
-// export { posts } from "./posts.ts";
-// export { postImages } from "./post-images.ts";
-
-// ─── System ──────────────────────────────────────────
-// export { systemSettings } from "./system-settings.ts";
+// Catalog
+export { categories, type Category, type NewCategory } from "./categories";
+export { attributes, type Attribute, type NewAttribute } from "./attributes";

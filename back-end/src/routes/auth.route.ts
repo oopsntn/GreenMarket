@@ -1,16 +1,12 @@
 import { Router } from "express";
-import {
-    adminLogin,
-    userRequestOtp,
-    userVerifyOtp
-} from "../controllers/authController";
+import { adminLogin, userRequestOtp, userVerifyOtp } from "../controllers/auth.controller";
 
 const router = Router();
 
-// Admin Auth
+// Admin
 router.post("/admin/login", adminLogin);
 
-// User Auth
+// User
 router.post("/user/request-otp", userRequestOtp);
 router.post("/user/verify-otp", userVerifyOtp);
 
