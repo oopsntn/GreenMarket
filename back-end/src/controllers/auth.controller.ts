@@ -61,25 +61,25 @@ export const userRequestOtp = async (
             return;
         }
 
-        const otpCode = otpService.generateOTP();
-        const expireAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+        const sendResult = await otpService.sendOTP(mobile);
 
+        if (!sendResult.success) {
+            res.status(500).json({ error: sendResult.message });
+            return;
+        }
+
+        // Log request in DB (Twilio handles the actual code)
         await db.insert(otpRequests).values({
             otpRequestMobile: mobile,
-            otpRequestOtpCode: otpCode,
-            otpRequestExpireAt: expireAt,
+            otpRequestOtpCode: "TWILIO_VERIFY", 
+            otpRequestExpireAt: new Date(Date.now() + 10 * 60 * 1000),
             otpRequestStatus: "pending",
         });
 
-        const sendResult = await otpService.sendOTP(mobile, otpCode);
-
-        res.json({ 
-            message: sendResult.message, 
-            otp: otpCode // Keep returning for testing/dev
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.json({ message: sendResult.message });
+    } catch (error: any) {
+        console.error("[AUTH CONTROLLER] userRequestOtp Error:", error);
+        res.status(500).json({ error: "Internal server error", message: error.message });
     }
 };
 
@@ -94,48 +94,51 @@ export const userVerifyOtp = async (
             return;
         }
 
-        const [otpRecord] = await db
-            .select()
-            .from(otpRequests)
-            .where(
-                and(
-                    eq(otpRequests.otpRequestMobile, mobile),
-                    eq(otpRequests.otpRequestOtpCode, otp),
-                    eq(otpRequests.otpRequestStatus, "pending")
-                )
-            )
-            .orderBy(otpRequests.otpRequestCreatedAt);
+        // Verify with Twilio
+        const verifyResult = await otpService.verifyOTP(mobile, otp);
 
-        if (!otpRecord || (otpRecord.otpRequestExpireAt && otpRecord.otpRequestExpireAt < new Date())) {
-            res.status(401).json({ error: "Invalid or expired OTP" });
+        if (!verifyResult.success) {
+            res.status(401).json({ error: verifyResult.message });
             return;
         }
 
-        // Mark OTP as used
-        await db
-            .update(otpRequests)
-            .set({ otpRequestStatus: "verified" })
-            .where(eq(otpRequests.otpRequestId, otpRecord.otpRequestId));
-
-        // Check if user exists, otherwise create
+        // Find or create user
         let [user] = await db.select().from(users).where(eq(users.userMobile, mobile));
 
+        const now = new Date();
+
         if (!user) {
-            [user] = await db
+            // Register new user
+            const [newUser] = (await db
                 .insert(users)
                 .values({
                     userMobile: mobile,
                     userStatus: "active",
-                    userRegisteredAt: new Date(),
+                    userRegisteredAt: now,
+                    userCreatedAt: now,
+                    userUpdatedAt: now,
+                    userLastLoginAt: now,
                 })
-                .returning();
+                .returning()) as any[];
+            user = newUser;
         } else {
             // Update last login
             await db
                 .update(users)
-                .set({ userLastLoginAt: new Date() })
+                .set({ userLastLoginAt: now })
                 .where(eq(users.userId, user.userId));
         }
+
+        // Update local OTP request log
+        await db
+            .update(otpRequests)
+            .set({ otpRequestStatus: "verified" })
+            .where(
+                and(
+                    eq(otpRequests.otpRequestMobile, mobile),
+                    eq(otpRequests.otpRequestStatus, "pending")
+                )
+            );
 
         const token = jwt.sign(
             { id: user.userId, mobile: user.userMobile, role: "user" },
@@ -143,7 +146,15 @@ export const userVerifyOtp = async (
             { expiresIn: "7d" }
         );
 
-        res.json({ token, user: { id: user.userId, mobile: user.userMobile, name: user.userDisplayName } });
+        res.json({ 
+            message: "Login successful",
+            token, 
+            user: { 
+                id: user.userId, 
+                mobile: user.userMobile, 
+                name: user.userDisplayName 
+            } 
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

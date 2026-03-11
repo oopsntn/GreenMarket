@@ -1,15 +1,15 @@
-export interface CategoryDTO {
-    categoryId: number;
-    categoryParentId?: number | null;
+export interface CreateCategoryBody {
     categoryTitle: string;
-    categorySlug: string;
-    categoryPublished: boolean;
-    categoryCreatedAt: Date;
-    categoryUpdatedAt: Date;
+    categoryParentId?: number;
+    categorySlug?: string;
 }
 
-export type CreateCategoryDTO = Omit<CategoryDTO, "categoryId" | "categoryCreatedAt" | "categoryUpdatedAt">;
-export type UpdateCategoryDTO = Partial<CreateCategoryDTO>;
+export interface UpdateCategoryBody {
+    categoryTitle?: string;
+    categoryParentId?: number;
+    categorySlug?: string;
+    categoryPublished?: boolean;
+}
 
 export interface CategoryParams {
     id: string;
