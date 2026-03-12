@@ -5,6 +5,7 @@ import {
     createCategory,
     updateCategory,
     deleteCategory,
+    getCategoryById,
 } from "../../controllers/admin/category.controller";
 
 import {
@@ -15,6 +16,8 @@ import {
 const router = Router();
 
 router.get("/", getCategories);
+
+router.get("/:id", getCategoryById);
 
 router.post("/", validateCreateCategory, createCategory);
 

@@ -3,7 +3,7 @@ import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 
 export const categories = pgTable("categories", {
     categoryId: serial("category_id").primaryKey(),
-    categoryParentId: integer("category_parent_id").references((): AnyPgColumn => categories.categoryId, { onDelete: "set null" }),
+    categoryParentId: integer("category_parent_id").references((): AnyPgColumn => categories.categoryId, { onDelete: "cascade" }),
     categoryTitle: varchar("category_title", { length: 150 }),
     categorySlug: varchar("category_slug", { length: 150 }),
     categoryPublished: boolean("category_published").default(false),
