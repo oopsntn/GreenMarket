@@ -13,6 +13,7 @@ import reportRoutes from "./routes/admin/report.route";
 import adminUserRoutes from "./routes/admin/user.route.ts";
 import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
+import userReportRoutes from "./routes/user/report.route.ts";
 
 const app = express();
 app.use(cors());
@@ -30,6 +31,7 @@ app.use("/api/admin/users", adminUserRoutes);
 // User Routes
 app.use("/api/shops", userShopRoutes);
 app.use("/api/posts", userPostRoutes);
+app.use("/api/reports", userReportRoutes);
 
 app.get("/", (req, res) => {
     res.send("API is running...");

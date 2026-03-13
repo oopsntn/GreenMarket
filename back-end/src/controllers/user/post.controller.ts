@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and } from "drizzle-orm";
-import { posts, postImages, postAttributeValues, shops, type Post } from "../../models/schema/index.ts";
+import { posts, postImages, postAttributeValues, shops, type Post, categories } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 
@@ -107,6 +107,54 @@ export const updatePost = async (req: Request<{ id: string }>, res: Response): P
             .returning();
 
         res.json(updatedPost);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// --- Buyer / Public Flow ---
+
+export const getPublicPosts = async (req: Request, res: Response): Promise<void> => {
+    try {
+        // Only fetch approved posts
+        const approvedPosts = await db.select().from(posts).where(eq(posts.postStatus, "approved"));
+        res.json(approvedPosts);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: Response): Promise<void> => {
+    try {
+        const { slug } = req.params;
+
+        const [post] = await db.select().from(posts).where(eq(posts.postSlug, slug)).limit(1);
+
+        if (!post || post.postStatus !== "approved") {
+            res.status(404).json({ error: "Post not found or not approved" });
+            return;
+        }
+
+        // Fetch related images
+        const images = await db.select().from(postImages).where(eq(postImages.postId, post.postId));
+
+        // Fetch related attributes
+        const attributes = await db.select().from(postAttributeValues).where(eq(postAttributeValues.postId, post.postId));
+        
+        // Fetch shop info if available
+        let shop = null;
+        if (post.postShopId) {
+            [shop] = await db.select().from(shops).where(eq(shops.shopId, post.postShopId)).limit(1);
+        }
+
+        res.json({
+            ...post,
+            images,
+            attributes,
+            shop
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
