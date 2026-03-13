@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { db } from "../../config/db";
+import { db } from "../../config/db.ts";
 import { eq } from "drizzle-orm";
-import { shops, type NewShop } from "../../models/schema/shops";
-import { parseId } from "../../utils/parseId";
+import { shops, type NewShop } from "../../models/schema/shops.ts";
+import { parseId } from "../../utils/parseId.ts";
 
 export const getShops = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -87,6 +87,31 @@ export const deleteShop = async (req: Request<{ id: string }>, res: Response): P
         }
 
         res.json({ message: "Shop deleted successfully", deletedShop });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const verifyShop = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    try {
+        const idNumber = parseId(req.params.id);
+        if (idNumber === null) {
+            res.status(400).json({ error: "Invalid shop id" });
+            return;
+        }
+
+        const [updatedShop] = await db.update(shops)
+            .set({ shopStatus: "active", shopUpdatedAt: new Date() })
+            .where(eq(shops.shopId, idNumber))
+            .returning();
+
+        if (!updatedShop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        res.json({ message: "Shop verified successfully", shop: updatedShop });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

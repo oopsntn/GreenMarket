@@ -9,7 +9,7 @@ export const shops = pgTable("shops", {
     shopPhone: varchar("shop_phone", { length: 20 }),
     shopLocation: varchar("shop_location", { length: 255 }), // Can be a Google Maps link or address
     shopDescription: text("shop_description"),
-    shopStatus: varchar("shop_status", { length: 20 }).default("active"), // active, blocked, closed
+    shopStatus: varchar("shop_status", { length: 20 }).default("pending"), // pending, active, blocked, closed
     shopCreatedAt: timestamp("shop_created_at").defaultNow(),
     shopUpdatedAt: timestamp("shop_updated_at").defaultNow(),
 });
