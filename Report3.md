@@ -1,4 +1,4 @@
-![](media/image67.png){width="2.9677832458442697in"
+![](media/image66.png){width="2.9677832458442697in"
 height="0.8118569553805774in"}
 
 **[CAPSTONE PROJECT REPORT]{.smallcaps}**
@@ -60,7 +60,7 @@ Specification**](#ii.-software-requirement-specification) **10**
 >
 > [2.1.2 Login](#login) 38
 >
-> [2.1.3 Logout](#section-135) 39
+> [2.1.3 Logout](#section-133) 39
 >
 > [2.2 Profile Management](#profile-management) 40
 >
@@ -125,7 +125,7 @@ Specification**](#ii.-software-requirement-specification) **10**
 >
 > [2.6.1 Create report](#create-report) 58
 >
-> [2.6.2 Attach report evidence](#section-135) 58
+> [2.6.2 Attach report evidence](#section-133) 58
 >
 > [2.6.3 View my reports](#view-my-reports) 59
 >
@@ -141,7 +141,7 @@ Specification**](#ii.-software-requirement-specification) **10**
 >
 > [2.7.3 View moderation queue](#view-moderation-queue) 63
 >
-> [2.7.4 Moderate post](#section-135) 63
+> [2.7.4 Moderate post](#section-133) 63
 >
 > [2.7.5 Resolve report](#resolve-report) 64
 >
@@ -197,7 +197,7 @@ Specification**](#ii.-software-requirement-specification) **10**
 > [2.11.2 Purchase promotion package
 > (sandbox)](#purchase-promotion-package-sandbox) 78
 >
-> [2.11.3 Assign package to post (boost)](#section-135) 79
+> [2.11.3 Assign package to post (boost)](#section-133) 79
 >
 > [2.11.4 View boosted post status](#view-boosted-post-status) 80
 >
@@ -263,7 +263,7 @@ Specification**](#ii.-software-requirement-specification) **10**
 >
 > [2.16.3 Lock user account](#lock-user-account) 96
 >
-> [2.16.4 Unlock user account](#section-135) 97
+> [2.16.4 Unlock user account](#section-133) 97
 >
 > [2.16.5 View user role assignments](#view-user-role-assignments) 98
 >
@@ -530,7 +530,7 @@ Specification**](#ii.-software-requirement-specification) **10**
 +------------+---------+----------+-----------------------------------------+
 | 18/01/2026 | M       | NamPH    | Update User Requirements                |
 +------------+---------+----------+-----------------------------------------+
-|            |         |          |                                         |
+| 11/03/2026 | A       | NamPH    | Add Uce Cases                           |
 +------------+---------+----------+-----------------------------------------+
 |            |         |          |                                         |
 +------------+---------+----------+-----------------------------------------+
@@ -562,7 +562,7 @@ Specification**](#ii.-software-requirement-specification) **10**
 ### 1.1 Context Diagram
 
   --------------------------------------------------------------------
-  ![](media/image60.png){width="6.135416666666667in" height="4.125in"}
+  ![](media/image75.png){width="6.135416666666667in" height="4.125in"}
   --------------------------------------------------------------------
 
   --------------------------------------------------------------------
@@ -593,7 +593,7 @@ Diagram]{.underline}](https://drive.google.com/file/d/1zXxgLI9iIzn9gg1rz-4PkVWJ3
 #### 1.2.2 WF-02 Host Create Promotion Content Flow 
 
   --------------------------------------------------------------------
-  ![](media/image82.png){width="6.135416666666667in"
+  ![](media/image77.png){width="6.135416666666667in"
   height="5.041666666666667in"}
   --------------------------------------------------------------------
 
@@ -609,7 +609,7 @@ diagram]{.underline}](https://drive.google.com/file/d/1_PF6_ZXMO8KOpY2WCrX2mFdnO
 #### 1.2.3 WF-03 Collaborator Accept Task Flow 
 
   --------------------------------------------------------------------
-  ![](media/image77.png){width="6.135416666666667in"
+  ![](media/image54.png){width="6.135416666666667in"
   height="3.611111111111111in"}
   --------------------------------------------------------------------
 
@@ -625,7 +625,7 @@ diagram]{.underline}](https://drive.google.com/file/d/1HncREQWr7HaXKJM_eaWB13UY-
 #### 1.2.4 WF-04 Admin Manage Account Flow
 
   --------------------------------------------------------------------
-  ![](media/image81.png){width="6.135416666666667in"
+  ![](media/image62.png){width="6.135416666666667in"
   height="2.8472222222222223in"}
   --------------------------------------------------------------------
 
@@ -639,8 +639,8 @@ diagram]{.underline}](https://drive.google.com/file/d/1FAvDQgBxt07GkjeW4JZ3GcxnG
 #### 1.2.5 WF-05 AI Recommendation Flow
 
   --------------------------------------------------------------------
-  ![](media/image20.png){width="6.135416666666667in"
-  height="3.5972222222222223in"}
+  ![](media/image84.png){width="6.135416666666667in"
+  height="2.9166666666666665in"}
   --------------------------------------------------------------------
 
   --------------------------------------------------------------------
@@ -648,7 +648,7 @@ diagram]{.underline}](https://drive.google.com/file/d/1FAvDQgBxt07GkjeW4JZ3GcxnG
 Figure 1.2.5: AI Recommendation Flow
 
 Link Diagram: [[link
-diagram]{.underline}](https://drive.google.com/file/d/1GU3pKB19uxbCOAZgo0WTc3GdMtb5r-kq/view?usp=sharing)
+diagram]{.underline}](https://drive.google.com/file/d/1cfmgvWXGFoy8r8x0R6FR0Cnl0ds1DUil/view?usp=sharing)
 
 ### 1.3 User Requirements
 
@@ -670,7 +670,7 @@ diagram]{.underline}](https://drive.google.com/file/d/1GU3pKB19uxbCOAZgo0WTc3GdM
                           listings, and resolves reports.
 
   4        Admin          System administrator (web only). Configures
-                          taxonomy/attributes, manages templates (UC30),
+                          taxonomy/attributes, manages templates,
                           provisions internal roles, analytics/export.
 
   5        Host           Content contributor/affiliate. Publishes
@@ -916,7 +916,7 @@ diagram]{.underline}](https://drive.google.com/file/d/1GU3pKB19uxbCOAZgo0WTc3GdM
 |                    | history (optional) |                    | generated AI insight       |
 |                    |                    |                    | summaries (stored text).   |
 +--------------------+--------------------+--------------------+----------------------------+
-| **Web-based**                                                                             |
+| **Web Admin -based**                                                                      |
 +--------------------+--------------------+--------------------+----------------------------+
 | UC68               | View category list | Category &         | View all categories.       |
 |                    |                    | Attribute          |                            |
@@ -1082,6 +1082,164 @@ diagram]{.underline}](https://drive.google.com/file/d/1GU3pKB19uxbCOAZgo0WTc3GdM
 |                    |                    |                    | range, slot, plan, status) |
 |                    |                    |                    | for reporting and          |
 |                    |                    |                    | analysis.                  |
++--------------------+--------------------+--------------------+----------------------------+
+| **Web Client -based**                                                                     |
++--------------------+--------------------+--------------------+----------------------------+
+| UC104              | Rate and review a  | Rating and Review  | As a customer, I want to   |
+|                    | shop               | Management         | rate and review a shop so  |
+|                    |                    |                    | that I can share my buying |
+|                    |                    |                    | experience with others.    |
++--------------------+--------------------+                    +----------------------------+
+| UC105              | Reply to customer  |                    | As a shop owner, I want to |
+|                    | reviews            |                    | reply to customer reviews  |
+|                    |                    |                    | so that I can interact     |
+|                    |                    |                    | with buyers and resolve    |
+|                    |                    |                    | issues.                    |
++--------------------+--------------------+                    +----------------------------+
+| UC106              | View shop average  |                    | As a user, I want to view  |
+|                    | rating and review  |                    | a shop\'s average rating   |
+|                    | list               |                    | and reviews so that I can  |
+|                    |                    |                    | evaluate its reputation    |
+|                    |                    |                    | before buying.             |
++--------------------+--------------------+                    +----------------------------+
+| UC107              | Report a           |                    | As a user, I want to       |
+|                    | fake/abusive       |                    | report a fake or abusive   |
+|                    | review             |                    | review so that the         |
+|                    |                    |                    | platform remains           |
+|                    |                    |                    | trustworthy.               |
++--------------------+--------------------+--------------------+----------------------------+
+| UC108              | View reward points | Point & Loyalty    | As a user, I want to view  |
+|                    | balance            | System             | my reward points balance   |
+|                    |                    |                    | so that I know how many    |
+|                    |                    |                    | points I currently have.   |
++--------------------+--------------------+                    +----------------------------+
+| UC109              | Earn points via    |                    | As a user, I want to earn  |
+|                    | purchases or       |                    | points via purchases or    |
+|                    | events             |                    | events so that I can       |
+|                    |                    |                    | accumulate rewards for     |
+|                    |                    |                    | later use.                 |
++--------------------+--------------------+                    +----------------------------+
+| UC110              | Redeem points for  |                    | As a shop owner, I want to |
+|                    | promotion packages |                    | redeem points for          |
+|                    |                    |                    | promotion packages so that |
+|                    |                    |                    | I can boost my posts       |
+|                    |                    |                    | without spending money.    |
++--------------------+--------------------+                    +----------------------------+
+| UC111              | View point         |                    | As a user, I want to view  |
+|                    | transaction        |                    | my point transaction       |
+|                    | history            |                    | history so that I can      |
+|                    |                    |                    | track my point earnings    |
+|                    |                    |                    | and usage.                 |
++--------------------+--------------------+--------------------+----------------------------+
+| UC112              | Browse and read    | News Hub           | As a user, I want to       |
+|                    | news articles      |                    | browse and read news       |
+|                    |                    |                    | articles so that I can     |
+|                    |                    |                    | learn tips about plant     |
+|                    |                    |                    | care.                      |
++--------------------+--------------------+                    +----------------------------+
+| UC113              | Search news by     |                    | As a user, I want to       |
+|                    | keywords           |                    | search news by keywords so |
+|                    |                    |                    | that I can quickly find    |
+|                    |                    |                    | specific information.      |
++--------------------+--------------------+                    +----------------------------+
+| UC114              | Share news to      |                    | As a user, I want to share |
+|                    | social platforms   |                    | news to social platforms   |
+|                    |                    |                    | so that I can spread       |
+|                    |                    |                    | useful knowledge to my     |
+|                    |                    |                    | friends.                   |
++--------------------+--------------------+--------------------+----------------------------+
+| UC115              | Login/Logout via   | User               | As a user, I want to log   |
+|                    | Web Client         | Authentication &   | in and log out on the web  |
+|                    |                    | Profile            | so that I can access my    |
+|                    |                    |                    | account securely on a PC.  |
++--------------------+--------------------+                    +----------------------------+
+| UC116              | View and update    |                    | As a user, I want to view  |
+|                    | user profile on    |                    | and update my profile on   |
+|                    | Web                |                    | the web so that my         |
+|                    |                    |                    | information is kept        |
+|                    |                    |                    | current.                   |
++--------------------+--------------------+--------------------+----------------------------+
+| UC117              | View news feed and | Marketplace        | As a user, I want to view  |
+|                    | categories on Web  | Discovery          | the news feed and          |
+|                    |                    |                    | categories on the web so   |
+|                    |                    |                    | that I can browse          |
+|                    |                    |                    | available plants easily.   |
++--------------------+--------------------+                    +----------------------------+
+| UC118              | Advanced search    |                    | As a user, I want to use   |
+|                    | and filter posts   |                    | advanced search and        |
+|                    | on Web             |                    | filters on the web so that |
+|                    |                    |                    | I can find exactly the     |
+|                    |                    |                    | plant I need.              |
++--------------------+--------------------+                    +----------------------------+
+| UC119              | View post details  |                    | As a user, I want to view  |
+|                    | and seller contact |                    | post details and seller    |
+|                    | info on Web        |                    | contact info on the web so |
+|                    |                    |                    | that I can contact them to |
+|                    |                    |                    | make a purchase.           |
++--------------------+--------------------+--------------------+----------------------------+
+| UC120              | Create and edit    | Seller Workspace   | As a shop owner, I want to |
+|                    | shop profile on    |                    | create and edit my shop    |
+|                    | Web                |                    | profile on the web so that |
+|                    |                    |                    | I can manage my brand      |
+|                    |                    |                    | effectively.               |
++--------------------+--------------------+                    +----------------------------+
+| UC121              | Create and edit    |                    | As a shop owner, I want to |
+|                    | posts via Web      |                    | create and edit posts on   |
+|                    | dashboard          |                    | the web so that I can      |
+|                    |                    |                    | manage my listings         |
+|                    |                    |                    | efficiently on a large     |
+|                    |                    |                    | screen.                    |
++--------------------+--------------------+                    +----------------------------+
+| UC122              | Bulk upload and    |                    | As a shop owner, I want to |
+|                    | manage post images |                    | bulk upload images on the  |
+|                    |                    |                    | web so that I can save     |
+|                    |                    |                    | time when listing multiple |
+|                    |                    |                    | plants.                    |
++--------------------+--------------------+                    +----------------------------+
+| UC123              | View and manage    |                    | As a shop owner, I want to |
+|                    | shop earnings on   |                    | view and manage my shop    |
+|                    | Web                |                    | earnings on the web so     |
+|                    |                    |                    | that I can track my        |
+|                    |                    |                    | financial performance and  |
+|                    |                    |                    | request payouts from my    |
+|                    |                    |                    | PC.                        |
++--------------------+--------------------+--------------------+----------------------------+
+| UC124              | Manage favorite    | User Interactions  | As a user, I want to       |
+|                    | posts on Web       |                    | manage favorite posts on   |
+|                    |                    |                    | the web so that I can save |
+|                    |                    |                    | and organize items I want  |
+|                    |                    |                    | to buy later.              |
++--------------------+--------------------+                    +----------------------------+
+| UC125              | Submit post/shop   |                    | As a user, I want to       |
+|                    | reports via Web    |                    | submit reports on the web  |
+|                    |                    |                    | so that I can easily       |
+|                    |                    |                    | attach visual evidence of  |
+|                    |                    |                    | violations from my         |
+|                    |                    |                    | computer.                  |
++--------------------+--------------------+                    +----------------------------+
+| UC126              | Submit and view    |                    | As a user, I want to       |
+|                    | shop ratings on    |                    | submit and view shop       |
+|                    | Web                |                    | ratings on the web so that |
+|                    |                    |                    | I can evaluate sellers     |
+|                    |                    |                    | conveniently.              |
++--------------------+--------------------+--------------------+----------------------------+
+| UC127              | View and purchase  | Promotion & Points | As a shop owner, I want to |
+|                    | promotion packages | Dashboard          | purchase promotion         |
+|                    | on Web             |                    | packages on the web so     |
+|                    |                    |                    | that I can increase the    |
+|                    |                    |                    | visibility of my posts.    |
++--------------------+--------------------+                    +----------------------------+
+| UC128              | Manage boosted     |                    | As a shop owner, I want to |
+|                    | posts on Web       |                    | manage boosted posts on    |
+|                    |                    |                    | the web so that I can      |
+|                    |                    |                    | track the status of my     |
+|                    |                    |                    | advertising campaigns.     |
++--------------------+--------------------+                    +----------------------------+
+| UC129              | View point balance |                    | As a user, I want to view  |
+|                    | and loyalty        |                    | my point balance and       |
+|                    | history on Web     |                    | loyalty history on the web |
+|                    |                    |                    | so that I can manage my    |
+|                    |                    |                    | rewards from my PC.        |
 +====================+====================+====================+============================+
 
 #### 
@@ -1090,27 +1248,27 @@ diagram]{.underline}](https://drive.google.com/file/d/1GU3pKB19uxbCOAZgo0WTc3GdM
 
 1.3.3.1 : UCs for Guest
 
-　![](media/image42.png){width="6.284383202099738in"
+　![](media/image44.png){width="6.284383202099738in"
 height="4.166666666666667in"}
 
 *Figure 1.3.1: Use Case Diagram for Guest*
 
 Link diagram
-:[[GuestUseCase.drawio.png]{.underline}](https://drive.google.com/file/d/1RA-1CqZ1ovzslUgQOjgaUIBVlc0hQ4Bz/view)
+:[[GuestUseCase.drawio.png]{.underline}](https://drive.google.com/file/d/1o308B6DlUMhyjnkbtY0SC3sRLFZnBF-J/view)
 
 1.3.3.2 : UCs for Customer
 
-![](media/image65.png){width="6.284383202099738in"
-height="5.819444444444445in"}
+![](media/image82.png){width="6.284383202099738in"
+height="7.194444444444445in"}
 
 *Figure 1.3.2: Use Case Diagram for Customer*
 
 *Link diagram:
-[[-CustomerUseCase.drawio.png]{.underline}](https://drive.google.com/file/d/11lruLTVz09qcTibgU3YaBTNJeL_-J88B/view)*
+[[-CustomerUseCase.drawio.png]{.underline}](https://drive.google.com/file/d/1Byx_aa46_-8nSDuQq1gtOQqg8cnHCC3R/view)*
 
 1.3.3.3: UCs for Manager
 
-![](media/image40.png){width="6.284383202099738in" height="4.125in"}
+![](media/image32.png){width="6.284383202099738in" height="4.125in"}
 
 *Figure 1.3.3: Use Case Diagram for Manager*
 
@@ -1119,7 +1277,7 @@ Link diagram:
 
 1.3.3.4 : UCs for Admin
 
-![](media/image52.png){width="6.284383202099738in"
+![](media/image30.png){width="6.284383202099738in"
 height="4.013888888888889in"}
 
 *Figure 1.3.4: Use Case Diagram for Admin*
@@ -1129,7 +1287,7 @@ diagram:[[-AdminUseCase.drawio.png]{.underline}](https://drive.google.com/file/d
 
 1.3.3.5 : UCs for Host
 
-![](media/image71.png){width="6.284383202099738in"
+![](media/image73.png){width="6.284383202099738in"
 height="4.555555555555555in"}
 
 *Figure 1.3.5: Use Case Diagram for Host*
@@ -1139,7 +1297,7 @@ diagram:[[-HostUseCase.drawio.png]{.underline}](https://drive.google.com/file/d/
 
 1.3.3.6 : UCs for Collaborator
 
-![](media/image78.png){width="6.284383202099738in"
+![](media/image70.png){width="6.284383202099738in"
 height="4.555555555555555in"}
 
 *Figure 1.3.6: Use Case Diagram for Collaborator*
@@ -1149,7 +1307,7 @@ Link diagram:
 
 1.3.3.7 : UCs for Operations Staff
 
-![](media/image62.png){width="6.284383202099738in"
+![](media/image56.png){width="6.284383202099738in"
 height="3.4444444444444446in"}
 
 *Figure 1.3.7: Use Case Diagram for Operations Staff*
@@ -1161,10 +1319,15 @@ diagram:[[-OperationStaffUseCase.drawio.png]{.underline}](https://drive.google.c
 
 #### 1.4.1 Screens Flow
 
-![](media/image33.png){width="6.284383202099738in"
+![](media/image45.png){width="6.284383202099738in"
 height="3.1527777777777777in"}
 
-*Figure 1.4.1: Screen Flow of GM*
+*Figure 1.4.1: Mobile App - Screen Flow and Web Admin - Screen Flow of
+GM*
+
+![](media/image38.png){width="4.25in" height="7.520833333333333in"}
+
+*Figure 1.4.2: Web Client -- Screen Flow of GM*
 
 *Link diagram:
 [[https://online.visual-paradigm.com/share.jsp?id=333231303735362d32]{.underline}](https://online.visual-paradigm.com/share.jsp?id=333231303735362d32)*
@@ -1178,54 +1341,65 @@ functions are on Web Admin; other roles use Mobile App.***
   **Screen / Module**       **Guest**   **Customer**   **Manager**   **Host**   **Collaborator**   **Operations   **Admin
                                                                                                    Staff**        (Web)**
   ------------------------- ----------- -------------- ------------- ---------- ------------------ -------------- ---------
-  Mobile -- Landing / Home  X           X              X             X          X                  X              
-  Feed                                                                                                            
+  Mobile + Web client --    X           X              X             X          X                  X              
+  Landing / Home Feed                                                                                             
 
-  Mobile -- Register Phone  X           X              X             X          X                  X              
+  Mobile + Web client --    X           X              X             X          X                  X              
+  Register Phone                                                                                                  
 
-  Mobile -- OTP Login       X           X              X             X          X                  X              
+  Mobile + Web client --    X           X              X             X          X                  X              
+  OTP Login                                                                                                       
 
-  Mobile -- Profile                     X              X             X          X                  X              
-  (View/Edit)                                                                                                     
+  Mobile + Web client --                X              X             X          X                  X              
+  Profile (View/Edit)                                                                                             
 
-  Mobile -- News            X           X              X             X          X                  X              
-  (Search/Filter/Sort)                                                                                            
+  Mobile + Web client --    X           X              X             X          X                  X              
+  News (Search/Filter/Sort)                                                                                       
 
-  Mobile -- Post Detail     X           X              X             X          X                  X              
-  (Share / Phone contact)                                                                                         
+  Mobile + Web client --    X           X              X             X          X                  X              
+  Post Detail (Share /                                                                                            
+  Phone contact)                                                                                                  
 
-  Mobile -- Shop Detail     X           X              X             X          X                  X              
+  Mobile + Web client --    X           X              X             X          X                  X              
+  Shop Detail                                                                                                     
 
-  Mobile -- Create/Edit                 X                                                                         
-  Shop                                                                                                            
+  Mobile + Web client --                X                                                                         
+  Create/Edit Shop                                                                                                
 
-  Mobile -- Shop Statistics             X                                                                         
+  Mobile + Web client --                X                                                                         
+  Shop Statistics                                                                                                 
 
-  Mobile -- My Posts (list              X                                                                         
-  by status)                                                                                                      
+  Mobile + Web client -- My             X                                                                         
+  Posts (list by status)                                                                                          
 
-  Mobile -- Create/Edit                 X                                                                         
-  Post + Image upload                                                                                             
+  Mobile + Web client --                X                                                                         
+  Create/Edit Post + Image                                                                                        
+  upload                                                                                                          
 
-  Mobile -- Submit Post /               X                                                                         
-  View Rejection Reason                                                                                           
+  Mobile + Web client --                X                                                                         
+  Submit Post / View                                                                                              
+  Rejection Reason                                                                                                
 
-  Mobile -- Favorites                   X                                                                         
+  Mobile + Web client --                X                                                                         
+  Favorites                                                                                                       
 
-  Mobile -- Reports         X           X                                                                         
-  (create/view my reports)                                                                                        
+  Mobile + Web client --    X           X                                                                         
+  Reports (create/view my                                                                                         
+  reports)                                                                                                        
 
-  Mobile -- Blocked Shops               X                                                                         
+  Mobile + Web client --                X                                                                         
+  Blocked Shops                                                                                                   
 
-  Mobile -- Moderation                                 X                                                          
-  Queue                                                                                                           
+  Mobile + Web client --                               X                                                          
+  Moderation Queue                                                                                                
 
   Mobile -- Moderation                                 X                                                          
   Action                                                                                                          
   (approve/reject/hide)                                                                                           
 
-  Mobile -- Report Queue /                             X                                                          
-  Resolve Reports                                                                                                 
+  Mobile + Web client --                               X                                                          
+  Report Queue / Resolve                                                                                          
+  Reports                                                                                                         
 
   Mobile -- Collaborator                                                        X                                 
   Jobs                                                                                                            
@@ -1262,6 +1436,12 @@ functions are on Web Admin; other roles use Mobile App.***
   Management                                                                                                      
 
   Web Admin -- Export CSV                                                                                         X
+
+  Mobile + Web client --                X                                                                         
+  Shop Rating Screen                                                                                              
+
+  Mobile + Web client --                X                                                                         
+  Loyalty Points Screen                                                                                           
   -------------------------------------------------------------------------------------------------------------------------
 
 Note: Screens not available to Guest require an authenticated session
@@ -1293,18 +1473,18 @@ Note: Screens not available to Guest require an authenticated session
 
 ### 1.5 Entity Relationship Diagram
 
-![](media/image70.png){width="6.284383202099738in"
+![](media/image27.png){width="6.284383202099738in"
 height="8.041666666666666in"}
 
-*Figure 1.5.2: Logical ERD of GM*
+*Figure 1.5.1: Logical ERD of GM*
 
 Link diagram: [[Logical ERD
 diagram]{.underline}](https://drive.google.com/file/d/1BRHX1Qs5aZbGiglJkKtWXZkPu_H_t-xS/view?usp=sharing)
 
-![](media/image79.jpg){width="6.284383202099738in"
+![](media/image72.jpg){width="6.284383202099738in"
 height="4.944444444444445in"}
 
-*Figure 1.5.3: Physical ERD of GM*
+*Figure 1.5.2: Physical ERD of GM*
 
 Link diagram:
 
@@ -3830,7 +4010,7 @@ Link diagram:
 
 ### 
 
-### 2.16.4 Unlock user account 
+#### 2.16.4 Unlock user account 
 
 +--------------------+-----------------+------------------+-----------------+
 | **Primary Actors** | Admin           | **Secondary      | None            |
@@ -4408,16 +4588,314 @@ Link diagram:
 
 ###  
 
+### 2.23 Rating and Review Management
+
+####  *2.23.1 Rate and review a shop*
+
++--------------------+-----------------+------------------+-----------------+
+| **Primary Actors** | Customer        | **Secondary      | None            |
+|                    |                 | Actors**         |                 |
++--------------------+-----------------+------------------+-----------------+
+| **Description**    | As a customer, I want to rate and review a shop so   |
+|                    | that I can share my buying experience with others.   |
++--------------------+------------------------------------------------------+
+| **Preconditions**  | • Customer must be logged into the system.           |
++--------------------+------------------------------------------------------+
+| **Postconditions** | • The review and star rating are saved and displayed |
+|                    | on the shop\'s profile.                              |
++--------------------+------------------------------------------------------+
+| **Normal\          | 1.  Customer navigates to the target shop\'s         |
+| Sequence/Flow**    |     profile.                                         |
+|                    |                                                      |
+|                    | 2.  Customer clicks on the \"Write a Review\"        |
+|                    |     button.                                          |
+|                    |                                                      |
+|                    | 3.  Customer selects a star rating (from 1 to 5) and |
+|                    |     enters text feedback in the comment box.         |
+|                    |                                                      |
+|                    | 4.  Customer clicks \"Submit\".                      |
+|                    |                                                      |
+|                    | 5.  System validates the input and saves the review  |
+|                    |     to the database.                                 |
+|                    |                                                      |
+|                    | 6.  System displays a success message.               |
++--------------------+------------------------------------------------------+
+| **Alternative\     | A1_Missing star rating\                              |
+| Sequences/Flows**  | 1. If the Customer clicks \"Submit\" without         |
+|                    | selecting a star rating, the system displays an      |
+|                    | error message requiring a rating.\                   |
+|                    | 2. The flow returns to step 3 of the Normal Flow.    |
++====================+=================+==================+=================+
+
+#### 
+
+#### 2.23.2 Reply to customer reviews
+
++--------------------+-----------------+------------------+-----------------+
+| **Primary Actors** | Customer        | **Secondary      | None            |
+|                    |                 | Actors**         |                 |
++--------------------+-----------------+------------------+-----------------+
+| **Description**    | As a shop owner, I want to reply to customer reviews |
+|                    | so that I can interact with buyers and resolve       |
+|                    | issues.                                              |
++--------------------+------------------------------------------------------+
+| **Preconditions**  | • Customer is logged in and the shop has at least    |
+|                    | one customer review.                                 |
++--------------------+------------------------------------------------------+
+| **Postconditions** | • The owner\'s reply is saved and displayed directly |
+|                    | below the customer\'s review.                        |
++--------------------+------------------------------------------------------+
+| **Normal\          | 1.  Shop Owner navigates to their shop\'s review     |
+| Sequence/Flow**    |     management section.                              |
+|                    |                                                      |
+|                    | 2.  Shop Owner selects a specific customer review    |
+|                    |     and clicks \"Reply\".                            |
+|                    |                                                      |
+|                    | 3.  Shop Owner enters their response in the text     |
+|                    |     field.                                           |
+|                    |                                                      |
+|                    | 4.  Shop Owner clicks \"Post Reply\".                |
+|                    |                                                      |
+|                    | 5.  System saves the reply and makes it visible to   |
+|                    |     the public.                                      |
++--------------------+------------------------------------------------------+
+| **Alternative\     | A1_Empty reply text                                  |
+| Sequences/Flows**  |                                                      |
+|                    | 1.  If the text field is empty upon submission, the  |
+|                    |     system displays an error message.                |
+|                    |                                                      |
+|                    | 2.  The flow returns to step 3 of the Normal Flow.   |
++====================+=================+==================+=================+
+
 ### 
 
-##  
+#### 2.23.3 View shop average rating and review list
+
++--------------------+-----------------+------------------+-----------------+
+| **Primary Actors** | Customer        | **Secondary      | None            |
+|                    |                 | Actors**         |                 |
++--------------------+-----------------+------------------+-----------------+
+| **Description**    | As a user, I want to view a shop\'s average rating   |
+|                    | and reviews so that I can evaluate its reputation    |
+|                    | before buying.                                       |
++--------------------+------------------------------------------------------+
+| **Preconditions**  | None                                                 |
++--------------------+------------------------------------------------------+
+| **Postconditions** | • The user views the calculated average star rating  |
+|                    | and the list of individual reviews.                  |
++--------------------+------------------------------------------------------+
+| **Normal\          | 1.  User opens a shop\'s profile page.               |
+| Sequence/Flow**    |                                                      |
+|                    | 2.  System calculates the average star rating and    |
+|                    |     total number of reviews.                         |
+|                    |                                                      |
+|                    | 3.  System displays the average rating at the top of |
+|                    |     the profile.                                     |
+|                    |                                                      |
+|                    | 4.  User scrolls down to the \"Reviews\" section to  |
+|                    |     see the detailed list of customer feedbacks.     |
++--------------------+------------------------------------------------------+
+| **Alternative\     | A1\_ No reviews available                            |
+| Sequences/Flows**  |                                                      |
+|                    | 1.  If the shop has no reviews, the system displays  |
+|                    |     \"No reviews yet\" and hides the average rating  |
+|                    |     calculation.                                     |
++====================+=================+==================+=================+
+
+#### 
+
+#### 2.23.4 Report a fake/abusive review
+
++--------------------+-----------------+------------------+-----------------+
+| **Primary Actors** | Customer        | **Secondary      | None            |
+|                    |                 | Actors**         |                 |
++--------------------+-----------------+------------------+-----------------+
+| **Description**    | As a customer, I want to report a fake or abusive    |
+|                    | review so that the platform remains trustworthy.     |
++--------------------+------------------------------------------------------+
+| **Preconditions**  | • Customer must be logged into the system.           |
++--------------------+------------------------------------------------------+
+| **Postconditions** | • The report is submitted to the Admin/Moderator for |
+|                    | review.                                              |
++--------------------+------------------------------------------------------+
+| **Normal\          | 1.  User views the review list on a shop\'s profile. |
+| Sequence/Flow**    |                                                      |
+|                    | 2.  User clicks the \"Report\" icon next to a        |
+|                    |     suspicious or offensive review.                  |
+|                    |                                                      |
+|                    | 3.  System displays a dialog prompting the user to   |
+|                    |     select a reason for reporting.                   |
+|                    |                                                      |
+|                    | 4.  User selects a reason and clicks \"Submit        |
+|                    |     Report\".                                        |
+|                    |                                                      |
+|                    | 5.  System saves the report flag and displays a      |
+|                    |     confirmation message.                            |
++--------------------+------------------------------------------------------+
+| **Alternative\     | A1_Cancel report                                     |
+| Sequences/Flows**  |                                                      |
+|                    | 1.  At step 3, if the User clicks \"Cancel\", the    |
+|                    |     dialog closes, and no action is taken.           |
++====================+=================+==================+=================+
+
+### 
+
+### 2.24 Point & Loyalty System
+
+#### 
+
+#### 2.24.1 View reward points balance
+
++--------------------+-----------------+------------------+-----------------+
+| **Primary Actors** | Customer        | **Secondary      | None            |
+|                    |                 | Actors**         |                 |
++--------------------+-----------------+------------------+-----------------+
+| **Description**    | As a user, I want to view my reward points balance   |
+|                    | so that I know how many points I currently have.     |
++--------------------+------------------------------------------------------+
+| **Preconditions**  | • Customer must be logged into the system.           |
++--------------------+------------------------------------------------------+
+| **Postconditions** | • The user\'s current point balance is displayed.    |
++--------------------+------------------------------------------------------+
+| **Normal\          | 1.  User navigates to the \"My Profile\" or          |
+| Sequence/Flow**    |     \"Loyalty\" tab.                                 |
+|                    |                                                      |
+|                    | 2.  System retrieves the user\'s current point       |
+|                    |     balance from the database.                       |
+|                    |                                                      |
+|                    | 3.  System displays the total points clearly on the  |
+|                    |     screen.                                          |
++--------------------+------------------------------------------------------+
+| **Alternative\     | 2.  None                                             |
+| Sequences/Flows**  |                                                      |
++====================+=================+==================+=================+
+
+#### 
+
+#### 2.24.2 Earn points via purchases or events
+
++--------------------+-----------------+------------------+-----------------+
+| **Primary Actors** | Customer        | **Secondary      | None            |
+|                    |                 | Actors**         |                 |
++--------------------+-----------------+------------------+-----------------+
+| **Description**    | As a user, I want to earn points via purchases or    |
+|                    | events so that I can accumulate rewards for later    |
+|                    | use.                                                 |
++--------------------+------------------------------------------------------+
+| **Preconditions**  | • Customer must be logged into the system.           |
++--------------------+------------------------------------------------------+
+| **Postconditions** | • Points are added to the user\'s balance based on   |
+|                    | the transaction value or event participation.        |
++--------------------+------------------------------------------------------+
+| **Normal\          | 1.  User completes a valid purchase on the platform  |
+| Sequence/Flow**    |     or participates in an eligible event.            |
+|                    |                                                      |
+|                    | 2.  System verifies the successful transaction or    |
+|                    |     event participation.                             |
+|                    |                                                      |
+|                    | 3.  System calculates the corresponding reward       |
+|                    |     points based on the conversion rate.             |
+|                    |                                                      |
+|                    | 4.  System adds the calculated points to the user\'s |
+|                    |     point balance.                                   |
+|                    |                                                      |
+|                    | 5.  System displays a success message and sends a    |
+|                    |     notification to the user about the points        |
+|                    |     earned.                                          |
++--------------------+------------------------------------------------------+
+| **Alternative\     | A1_Refunded purchase                                 |
+| Sequences/Flows**  |                                                      |
+|                    | 1.  If the user cancels the order or the purchase is |
+|                    |     refunded, the system automatically deducts the   |
+|                    |     previously awarded points from the balance.      |
++====================+=================+==================+=================+
+
+#### 
+
+#### 2.24.3 Redeem points for promotion packages
+
++--------------------+-----------------+------------------+-----------------+
+| **Primary Actors** | Customer        | **Secondary      | None            |
+|                    |                 | Actors**         |                 |
++--------------------+-----------------+------------------+-----------------+
+| **Description**    | As a shop owner, I want to redeem points for         |
+|                    | promotion packages so that I can boost my posts      |
+|                    | without spending money.                              |
++--------------------+------------------------------------------------------+
+| **Preconditions**  | • Shop Owner is logged in and has a sufficient point |
+|                    | balance.                                             |
++--------------------+------------------------------------------------------+
+| **Postconditions** | • Points are deducted, and the selected promotion    |
+|                    | package is added to the shop\'s account.             |
++--------------------+------------------------------------------------------+
+| **Normal\          | 1.  Shop Owner navigates to the \"Promotion          |
+| Sequence/Flow**    |     Packages\" store.                                |
+|                    |                                                      |
+|                    | 2.  Shop Owner selects a package and chooses \"Pay   |
+|                    |     with Points\" as the payment method.             |
+|                    |                                                      |
+|                    | 3.  System prompts for confirmation, showing the     |
+|                    |     point cost and remaining balance.                |
+|                    |                                                      |
+|                    | 4.  Shop Owner clicks \"Confirm Redeem\".            |
+|                    |                                                      |
+|                    | 5.  System deducts the points and provisions the     |
+|                    |     promotion package.                               |
+|                    |                                                      |
+|                    | 6.  System displays a successful redemption message. |
++--------------------+------------------------------------------------------+
+| **Alternative\     | A1_Insufficient points                               |
+| Sequences/Flows**  |                                                      |
+|                    | 1.  If the Shop Owner\'s balance is lower than the   |
+|                    |     package cost, the system disables the \"Pay with |
+|                    |     Points\" option and displays an \"Insufficient   |
+|                    |     points\" warning.                                |
++====================+=================+==================+=================+
+
+#### 
+
+#### 2.24.4 View point transaction history
+
++--------------------+------------------+------------------+-------------------+
+| **Primary Actors** | Customer         | **Secondary      | None              |
+|                    |                  | Actors**         |                   |
++--------------------+------------------+------------------+-------------------+
+| **Description**    | As a customer, I want to view my point transaction      |
+|                    | history so that I can track my point earnings and       |
+|                    | usage.                                                  |
++--------------------+---------------------------------------------------------+
+| **Preconditions**  | • Customer must be logged into the system.              |
++--------------------+---------------------------------------------------------+
+| **Postconditions** | • A chronological list of point transactions is         |
+|                    | displayed.                                              |
++--------------------+---------------------------------------------------------+
+| **Normal\          | 1.  User navigates to the \"Loyalty\" section and       |
+| Sequence/Flow**    |     clicks on \"History\".                              |
+|                    |                                                         |
+|                    | 2.  System retrieves the transaction records (points    |
+|                    |     earned, points spent, date, description) from the   |
+|                    |     database.                                           |
+|                    |                                                         |
+|                    | 3.  System displays the records in a paginated list,    |
+|                    |     sorted from newest to oldest.                       |
++--------------------+---------------------------------------------------------+
+| **Alternative\     | A1_Empty history                                        |
+| Sequences/Flows**  |                                                         |
+|                    | 1.  If the user has never earned or spent points, the   |
+|                    |     system displays an empty state message (\"No        |
+|                    |     transactions yet\").                                |
++====================+==================+==================+===================+
+
+#### 
+
+### 
 
 ## 3. Functional Requirements
 
 ### 3.1 Splash
 
   ---------------------------------------------------------------------
-  ![](media/image48.png){width="3.6416885389326334in"
+  ![](media/image78.png){width="3.6416885389326334in"
   height="7.880208880139983in"}
   ---------------------------------------------------------------------
 
@@ -4430,7 +4908,7 @@ Link diagram:
 #### 3.2.1 Login
 
   -------------------------------------------------------------------
-  ![](media/image34.png){width="3.785511811023622in"
+  ![](media/image43.png){width="3.785511811023622in"
   height="8.32812554680665in"}
   -------------------------------------------------------------------
 
@@ -4466,7 +4944,7 @@ This screen allows the User, all actors of system to:
 #### 
 
   -----------------------------------------------------------------------
-  ![](media/image30.png){width="3.7031255468066493in"
+  ![](media/image58.png){width="3.7031255468066493in"
   height="8.13456583552056in"}
   -----------------------------------------------------------------------
 
@@ -4494,7 +4972,7 @@ This screen allows the User to:
 #### 3.2.3 Register
 
   ----------------------------------------------------------------------
-  ![](media/image5.png){width="3.970312773403325in"
+  ![](media/image28.png){width="3.970312773403325in"
   height="8.76562554680665in"}
   ----------------------------------------------------------------------
 
@@ -4527,7 +5005,7 @@ This screen allows the User to:
 #### 3.3.1 View profile
 
   -----------------------------------------------------------------------
-  ![](media/image6.png){width="3.3125in" height="7.333333333333333in"}
+  ![](media/image29.png){width="3.3125in" height="7.333333333333333in"}
   -----------------------------------------------------------------------
 
   -----------------------------------------------------------------------
@@ -4585,7 +5063,7 @@ This screen allows the User to:
 #### 3.3.2 Edit Profile
 
   ----------------------------------------------------------------------
-  ![](media/image73.png){width="3.9194346019247592in"
+  ![](media/image68.png){width="3.9194346019247592in"
   height="8.692708880139982in"}
   ----------------------------------------------------------------------
 
@@ -4639,7 +5117,7 @@ This screen allows the User to:
 #### 3.4.1 Earning
 
   ----------------------------------------------------------------------
-  ![](media/image4.png){width="3.78125in" height="8.277777777777779in"}
+  ![](media/image1.png){width="3.78125in" height="8.277777777777779in"}
   ----------------------------------------------------------------------
 
   ----------------------------------------------------------------------
@@ -4682,7 +5160,7 @@ This screen allows the User to:
 #### 3.4.2 Manage jobs
 
   -----------------------------------------------------------------------
-  ![](media/image31.png){width="3.8854166666666665in"
+  ![](media/image16.png){width="3.8854166666666665in"
   height="8.541666666666666in"}
   -----------------------------------------------------------------------
 
@@ -4729,7 +5207,7 @@ This screen allows the User to:
 #### 3.4.3 My Jobs
 
   -----------------------------------------------------------------------
-  ![](media/image32.png){width="3.9101902887139106in"
+  ![](media/image48.png){width="3.9101902887139106in"
   height="8.651042213473316in"}
   -----------------------------------------------------------------------
 
@@ -4779,7 +5257,7 @@ This screen allows the User to:
 #### 3.4.4 Job Detail
 
   -----------------------------------------------------------------------
-  ![](media/image14.png){width="3.9843755468066493in"
+  ![](media/image24.png){width="3.9843755468066493in"
   height="8.785492125984252in"}
   -----------------------------------------------------------------------
 
@@ -4840,7 +5318,7 @@ This screen allows the User to:
 #### 3.4.5 Submit Job Result
 
   -----------------------------------------------------------------------
-  ![](media/image50.png){width="3.935029527559055in"
+  ![](media/image15.png){width="3.935029527559055in"
   height="8.64062554680665in"}
   -----------------------------------------------------------------------
 
@@ -4876,7 +5354,7 @@ This screen allows the User to:
 #### 3.4.6 Request payout
 
   ----------------------------------------------------------------------
-  ![](media/image11.png){width="3.873320209973753in"
+  ![](media/image9.png){width="3.873320209973753in"
   height="8.630208880139982in"}
   ----------------------------------------------------------------------
 
@@ -4922,7 +5400,7 @@ This screen allows the User to:
 #### 3.5.1 Favorite screen
 
   ---------------------------------------------------------------------
-  ![](media/image76.png){width="3.7968755468066493in"
+  ![](media/image81.png){width="3.7968755468066493in"
   height="8.284091207349082in"}
   ---------------------------------------------------------------------
 
@@ -4976,7 +5454,7 @@ This screen allows the User to:
 #### 3.6.1 Create Promotional Content
 
   ----------------------------------------------------------------------
-  ![](media/image25.png){width="3.4479166666666665in"
+  ![](media/image42.png){width="3.4479166666666665in"
   height="7.611111111111111in"}
   ----------------------------------------------------------------------
 
@@ -5012,7 +5490,7 @@ This screen allows the User to:
 #### 3.6.2 Host Dashboard
 
   -----------------------------------------------------------------------
-  ![](media/image53.png){width="3.868173665791776in"
+  ![](media/image55.png){width="3.868173665791776in"
   height="8.57812554680665in"}
   -----------------------------------------------------------------------
 
@@ -5050,7 +5528,7 @@ This screen allows the User to:
 #### 3.6.3 Host Earning
 
   -----------------------------------------------------------------------
-  ![](media/image16.png){width="3.963542213473316in"
+  ![](media/image31.png){width="3.963542213473316in"
   height="8.723540026246718in"}
   -----------------------------------------------------------------------
 
@@ -5091,7 +5569,7 @@ This screen allows the User to:
 #### 3.6.4 Request payout
 
   -----------------------------------------------------------------------
-  ![](media/image11.png){width="3.873320209973753in"
+  ![](media/image9.png){width="3.873320209973753in"
   height="8.630208880139982in"}
   -----------------------------------------------------------------------
 
@@ -5137,7 +5615,7 @@ This screen allows the User to:
 #### 3.7.1 Home
 
   -----------------------------------------------------------------------
-  ![](media/image8.png){width="3.821325459317585in"
+  ![](media/image49.png){width="3.821325459317585in"
   height="8.505208880139982in"}
   -----------------------------------------------------------------------
 
@@ -5190,7 +5668,7 @@ This screen allows the User to:
 #### 3.7.2 Post Detail
 
   -----------------------------------------------------------------------
-  ![](media/image24.png){width="3.8333333333333335in"
+  ![](media/image6.png){width="3.8333333333333335in"
   height="8.444444444444445in"}
   -----------------------------------------------------------------------
 
@@ -5250,7 +5728,7 @@ This screen allows the User to:
 #### 3.7.3 Search & Filter
 
   -----------------------------------------------------------------------
-  ![](media/image54.png){width="3.994792213473316in"
+  ![](media/image23.png){width="3.994792213473316in"
   height="8.786524496937883in"}
   -----------------------------------------------------------------------
 
@@ -5300,7 +5778,7 @@ This screen allows the User to:
 #### 3.8.1 Moderation Dashboard
 
   -----------------------------------------------------------------------
-  ![](media/image63.png){width="3.7447528433945756in"
+  ![](media/image46.png){width="3.7447528433945756in"
   height="8.23437554680665in"}
   -----------------------------------------------------------------------
 
@@ -5334,7 +5812,7 @@ This screen allows the User to:
 #### 3.8.2 Moderation History
 
   -----------------------------------------------------------------------
-  ![](media/image57.png){width="3.7864588801399823in"
+  ![](media/image52.png){width="3.7864588801399823in"
   height="8.43487423447069in"}
   -----------------------------------------------------------------------
 
@@ -5375,7 +5853,7 @@ This screen allows the User to:
 #### 3.8.3 Moderate Post Detail
 
   -----------------------------------------------------------------------
-  ![](media/image55.png){width="3.901042213473316in"
+  ![](media/image17.png){width="3.901042213473316in"
   height="8.586365923009623in"}
   -----------------------------------------------------------------------
 
@@ -5425,7 +5903,7 @@ This screen allows the User to:
 #### 3.8.4 Moderate Post Detail
 
   -----------------------------------------------------------------------
-  ![](media/image1.png){width="3.869792213473316in"
+  ![](media/image11.png){width="3.869792213473316in"
   height="8.575458223972003in"}
   -----------------------------------------------------------------------
 
@@ -5475,7 +5953,7 @@ This screen allows the User to:
 #### 3.8.5 Moderation Statistics
 
   -----------------------------------------------------------------------
-  ![](media/image9.png){width="3.8489588801399823in"
+  ![](media/image22.png){width="3.8489588801399823in"
   height="8.524662073490815in"}
   -----------------------------------------------------------------------
 
@@ -5504,7 +5982,7 @@ This screen allows the User to:
 #### 3.9.1 Daily Workload
 
   -----------------------------------------------------------------------
-  ![](media/image17.png){width="3.7430741469816273in"
+  ![](media/image34.png){width="3.7430741469816273in"
   height="8.30336832895888in"}
   -----------------------------------------------------------------------
 
@@ -5546,7 +6024,7 @@ This screen allows the User to:
 ### 
 
   -----------------------------------------------------------------------
-  ![](media/image10.png){width="3.62122375328084in"
+  ![](media/image26.png){width="3.62122375328084in"
   height="8.038097112860893in"}
   -----------------------------------------------------------------------
 
@@ -5603,7 +6081,7 @@ This screen allows the User to:
 #### 3.9.3 Task Queue
 
   -----------------------------------------------------------------------
-  ![](media/image35.png){width="3.8802088801399823in"
+  ![](media/image19.png){width="3.8802088801399823in"
   height="8.601128608923885in"}
   -----------------------------------------------------------------------
 
@@ -5652,7 +6130,7 @@ This screen allows the User to:
 #### 3.10.1 My Reports
 
   -----------------------------------------------------------------------
-  ![](media/image56.png){width="3.8802088801399823in"
+  ![](media/image65.png){width="3.8802088801399823in"
   height="8.522237532808399in"}
   -----------------------------------------------------------------------
 
@@ -5698,7 +6176,7 @@ This screen allows the User to:
 #### 3.10.2 Edit shop
 
   -----------------------------------------------------------------------
-  ![](media/image18.png){width="3.957370953630796in"
+  ![](media/image2.png){width="3.957370953630796in"
   height="8.682292213473316in"}
   -----------------------------------------------------------------------
 
@@ -5737,7 +6215,7 @@ This screen allows the User to:
 #### 3.10.3 Create Report
 
   -----------------------------------------------------------------------
-  ![](media/image36.png){width="3.682292213473316in"
+  ![](media/image21.png){width="3.682292213473316in"
   height="8.169265091863517in"}
   -----------------------------------------------------------------------
 
@@ -5775,7 +6253,7 @@ This screen allows the User to:
 #### 3.10.4 Blocked Shops
 
   -----------------------------------------------------------------------
-  ![](media/image21.png){width="3.9060028433945755in"
+  ![](media/image12.png){width="3.9060028433945755in"
   height="8.619792213473316in"}
   -----------------------------------------------------------------------
 
@@ -5808,7 +6286,7 @@ This screen allows the User to:
 #### 3.11.1 Feedback
 
   -----------------------------------------------------------------------
-  ![](media/image37.png){width="3.71792760279965in"
+  ![](media/image5.png){width="3.71792760279965in"
   height="8.181485126859142in"}
   -----------------------------------------------------------------------
 
@@ -5834,7 +6312,7 @@ This screen allows the User to:
 #### 3.11.2 Notifications
 
   -----------------------------------------------------------------------
-  ![](media/image46.png){width="3.8802088801399823in"
+  ![](media/image35.png){width="3.8802088801399823in"
   height="8.552926509186351in"}
   -----------------------------------------------------------------------
 
@@ -5866,7 +6344,7 @@ This screen allows the User to:
 3.11.3 System Announcements
 
   -----------------------------------------------------------------------
-  ![](media/image26.png){width="3.8281255468066493in"
+  ![](media/image36.png){width="3.8281255468066493in"
   height="8.450382764654417in"}
   -----------------------------------------------------------------------
 
@@ -5900,7 +6378,7 @@ This screen allows the User to:
 #### 3.12.1 Shop Detail
 
   -----------------------------------------------------------------------
-  ![](media/image39.png){width="3.838542213473316in"
+  ![](media/image8.png){width="3.838542213473316in"
   height="8.508767497812773in"}
   -----------------------------------------------------------------------
 
@@ -5945,7 +6423,7 @@ This screen allows the User to:
 #### 3.12.2 Shop Form
 
   -----------------------------------------------------------------------
-  ![](media/image28.png){width="3.856486220472441in"
+  ![](media/image4.png){width="3.856486220472441in"
   height="8.567708880139982in"}
   -----------------------------------------------------------------------
 
@@ -5990,7 +6468,7 @@ This screen allows the User to:
 #### 3.12.3 Shop Search
 
   -----------------------------------------------------------------------
-  ![](media/image19.png){width="3.8521806649168853in"
+  ![](media/image3.png){width="3.8521806649168853in"
   height="8.505208880139982in"}
   -----------------------------------------------------------------------
 
@@ -6020,7 +6498,7 @@ This screen allows the User to:
 #### 3.13.1 Promotion Packages Screen
 
   --------------------------------------------------------------------
-  ![](media/image59.png){width="3.886557305336833in"
+  ![](media/image64.png){width="3.886557305336833in"
   height="8.619792213473316in"}
   --------------------------------------------------------------------
 
@@ -6050,10 +6528,10 @@ This screen allows the User to:
 #### 3.13.2 Purchase Package
 
 +--------------------------------------------------------------------+
-| ![](media/image75.png){width="3.7536023622047243in"                |
+| ![](media/image71.png){width="3.7536023622047243in"                |
 | height="8.35937554680665in"}                                       |
 |                                                                    |
-| ![](media/image58.png){width="3.807292213473316in"                 |
+| ![](media/image57.png){width="3.807292213473316in"                 |
 | height="8.528333333333334in"}                                      |
 +====================================================================+
 
@@ -6088,7 +6566,7 @@ This screen allows the User to:
 #### 3.13.3 Boost Post
 
   --------------------------------------------------------------------
-  ![](media/image47.png){width="3.8593755468066493in"
+  ![](media/image7.png){width="3.8593755468066493in"
   height="8.566178915135609in"}
   --------------------------------------------------------------------
 
@@ -6119,7 +6597,7 @@ This screen allows the User to:
 #### 3.13.4 My Boosts
 
   --------------------------------------------------------------------
-  ![](media/image2.png){width="3.8354822834645668in"
+  ![](media/image69.png){width="3.8354822834645668in"
   height="8.505208880139982in"}
   --------------------------------------------------------------------
 
@@ -6156,7 +6634,7 @@ This screen allows the User to:
 #### 3.13.5 Transaction History
 
   --------------------------------------------------------------------
-  ![](media/image23.png){width="3.7858475503062117in"
+  ![](media/image39.png){width="3.7858475503062117in"
   height="8.369792213473316in"}
   --------------------------------------------------------------------
 
@@ -6190,7 +6668,7 @@ This screen allows the User to:
 #### 3.14.1 AI Recommendations
 
   --------------------------------------------------------------------
-  ![](media/image64.png){width="3.6918755468066493in"
+  ![](media/image59.png){width="3.6918755468066493in"
   height="8.39062554680665in"}
   --------------------------------------------------------------------
 
@@ -6247,7 +6725,7 @@ This screen allows the User to:
 #### 3.14.2 Post Analytics
 
   --------------------------------------------------------------------
-  ![](media/image44.png){width="2.997330489938758in"
+  ![](media/image18.png){width="2.997330489938758in"
   height="6.658499562554681in"}
   --------------------------------------------------------------------
 
@@ -6290,7 +6768,7 @@ This screen allows the User to:
 #### 3.15.1 System Analytics (Admin)
 
   --------------------------------------------------------------------
-  ![](media/image74.png){width="6.135416666666667in"
+  ![](media/image67.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6321,7 +6799,7 @@ This screen allows the User to:
 #### 3.15.2 Attribute Management (Admin)
 
   --------------------------------------------------------------------
-  ![](media/image68.png){width="6.135416666666667in"
+  ![](media/image74.png){width="6.135416666666667in"
   height="2.9722222222222223in"}
   --------------------------------------------------------------------
 
@@ -6370,7 +6848,7 @@ This screen allows the User to:
 **3.13.3 Attribute Create /Edit**
 
   --------------------------------------------------------------------
-  ![](media/image66.png){width="6.135416666666667in"
+  ![](media/image63.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6415,7 +6893,7 @@ This screen allows the User to:
 #### 3.15.4 Admin Login
 
   --------------------------------------------------------------------
-  ![](media/image13.png){width="6.135416666666667in"
+  ![](media/image14.png){width="6.135416666666667in"
   height="2.9722222222222223in"}
   --------------------------------------------------------------------
 
@@ -6452,7 +6930,7 @@ This screen allows the User to:
 #### 3.15.5 Category Management (List)
 
   --------------------------------------------------------------------
-  ![](media/image51.png){width="6.135416666666667in"
+  ![](media/image60.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6497,7 +6975,7 @@ This screen allows the User to:
 #### 3.15.6 Category Create / Edit
 
   --------------------------------------------------------------------
-  ![](media/image41.png){width="6.135416666666667in"
+  ![](media/image50.png){width="6.135416666666667in"
   height="2.9722222222222223in"}
   --------------------------------------------------------------------
 
@@ -6542,7 +7020,7 @@ This screen allows the User to:
 #### 3.15.7 Data Export
 
   --------------------------------------------------------------------
-  ![](media/image27.png){width="6.135416666666667in"
+  ![](media/image33.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6570,7 +7048,7 @@ This screen allows the User to:
 #### 3.15.8 Category -- Attribute Mapping
 
   --------------------------------------------------------------------
-  ![](media/image38.png){width="6.135416666666667in"
+  ![](media/image53.png){width="6.135416666666667in"
   height="2.9722222222222223in"}
   --------------------------------------------------------------------
 
@@ -6604,7 +7082,7 @@ This screen allows the User to:
 #### 3.15.9 Template Management
 
   --------------------------------------------------------------------
-  ![](media/image12.png){width="6.135416666666667in" height="3.0in"}
+  ![](media/image25.png){width="6.135416666666667in" height="3.0in"}
   --------------------------------------------------------------------
 
   --------------------------------------------------------------------
@@ -6638,7 +7116,7 @@ This screen allows the Admin to:
 #### 3.15.10 Template Builder
 
   --------------------------------------------------------------------
-  ![](media/image15.png){width="6.135416666666667in"
+  ![](media/image13.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6684,7 +7162,7 @@ This screen allows the Admin to:
 #### 3.15.11 User List
 
   --------------------------------------------------------------------
-  ![](media/image7.png){width="6.135416666666667in"
+  ![](media/image10.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6721,7 +7199,7 @@ This screen allows the Admin to:
 #### 3.15.12 User Detail
 
   --------------------------------------------------------------------
-  ![](media/image72.png){width="6.135416666666667in"
+  ![](media/image20.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6755,7 +7233,7 @@ This screen allows the Admin to:
 #### 3.15.13 Activity Log
 
   --------------------------------------------------------------------
-  ![](media/image80.png){width="6.135416666666667in"
+  ![](media/image79.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6792,7 +7270,7 @@ This screen allows the Admin to:
 #### 3.15.14 Admin Dashboard
 
   --------------------------------------------------------------------
-  ![](media/image43.png){width="6.135416666666667in"
+  ![](media/image80.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6827,7 +7305,7 @@ This screen allows the Admin to:
 #### 3.15.15 Placement Slot Management
 
   --------------------------------------------------------------------
-  ![](media/image22.png){width="6.135416666666667in"
+  ![](media/image40.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6867,7 +7345,7 @@ This screen allows the Admin to:
 #### 3.15.16 Promotion Package Management
 
   --------------------------------------------------------------------
-  ![](media/image45.png){width="6.135416666666667in"
+  ![](media/image47.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -6913,7 +7391,7 @@ This screen allows the Admin to:
 #### 3.15.17 Boosted Posts Management
 
   --------------------------------------------------------------------
-  ![](media/image49.png){width="6.135416666666667in"
+  ![](media/image51.png){width="6.135416666666667in"
   height="2.9722222222222223in"}
   --------------------------------------------------------------------
 
@@ -6996,7 +7474,7 @@ This screen allows the Admin to:
 #### 3.15.19 System Settings
 
   --------------------------------------------------------------------
-  ![](media/image3.png){width="6.135416666666667in"
+  ![](media/image41.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -7044,7 +7522,7 @@ This screen allows the Admin to:
 #### 3.15.20 Bonsai Post Form Preview
 
   --------------------------------------------------------------------
-  ![](media/image69.png){width="6.135416666666667in"
+  ![](media/image37.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 
@@ -7087,7 +7565,7 @@ This screen allows the Admin to:
 #### 3.15.21 Admin Analytics 
 
   --------------------------------------------------------------------
-  ![](media/image29.png){width="6.135416666666667in"
+  ![](media/image76.png){width="6.135416666666667in"
   height="2.986111111111111in"}
   --------------------------------------------------------------------
 

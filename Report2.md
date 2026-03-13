@@ -1,4 +1,4 @@
-![](media/image2.png){width="2.960998468941382in"
+![](media/image1.png){width="2.960998468941382in"
 height="0.90998687664042in"}
 
 **[CAPSTONE PROJECT REPORT]{.smallcaps}**
@@ -57,7 +57,8 @@ height="0.90998687664042in"}
 
   20/01/2026   M        NamPH       Update Configuration Management
 
-                                    
+  11/03/2026   M        NamPH       Update Cost & Time Estimate, Project
+                                    Processes and Tools & Infrastructures
 
                                     
 
@@ -187,30 +188,37 @@ height="0.90998687664042in"}
                       reject templates) + basic moderation                        
                       config                                                      
 
-  4.3.4               Export CSV + basic analytics aggregation 10                 Week10
+  4.3.4               Export CSV + basic analytics aggregation 9                  Week10
                       (dashboard KPIs)                                            
 
-  4.3.5               Update Report 4: SDS v1.2 (refine design 5                  Week11
+  4.3.5               Implement Rating & Review and Loyalty    1                  Week10
+                      System API                                                  
+
+  4.3.6               Update Report 4: SDS v1.2 (refine design 5                  Week11
                       after Iteration 3)                                          
 
-  4.3.6               Report 5: Integration Test Report        5                  Week11
+  4.3.7               Report 5: Integration Test Report        5                  Week11
 
-  4.3.7               Software Package Version 3               0                  Week11
+  4.3.8               Software Package Version 3               0                  Week11
 
   [4.4]{.underline}   [Implementation Iteration 4 (weeks       [60]{.underline}   
                       12--14)]{.underline}                                        
 
-  4.4.1               UX/UI refinement + bug fixing            15                 Week12
+  4.4.1               UX/UI refinement + bug fixing            13                 Week12
 
-  4.4.2               Security hardening (RBAC checks, rate    15                 Week12
+  4.4.2               Implement Web Client UI (News,           6                  Week12
+                      Marketplace, User Profile, Seller                           
+                      Workspace)                                                  
+
+  4.4.3               Security hardening (RBAC checks, rate    13                 Week12
                       limiting) + performance tuning                              
 
-  4.4.3               System integration + regression testing  15                 Week13
+  4.4.4               System integration + regression testing  13                 Week13
 
-  4.4.4               Update Report 3: SRS v1.2 & Report 4:    10                 Week13
+  4.4.5               Update Report 3: SRS v1.2 & Report 4:    10                 Week13
                       SDS v1.3 (final sync)                                       
 
-  4.4.5               Final demo rehearsal + Software Package  5                  Week14
+  4.4.6               Final demo rehearsal + Software Package  5                  Week14
                       Version 4                                                   
 
   ***5***             ***Stage 5: Verification & Validation    ***40***           
@@ -316,6 +324,14 @@ height="0.90998687664042in"}
                                                                               Contingency: Rebalance
                                                                               tasks; pair-programming for
                                                                               blockers.
+
+  8        Developing additional songs for     High         Medium            Mitigation: Design a RESTful
+           both the Web Client and Mobile App                                 backend API (NodeJS) from
+           doubled the frontend workload.                                     the start so that the web
+                                                                              and app can use the same API
+                                                                              100%, avoiding logic
+                                                                              rewriting. Prioritize
+                                                                              completing the API first.
   --------------------------------------------------------------------------------------------------------
 
 ## 2. Management Approach
@@ -323,7 +339,7 @@ height="0.90998687664042in"}
 ### 2.1 Project Processes
 
   --------------------------------------------------------------------
-  ![](media/image1.png){width="6.135416666666667in"
+  ![](media/image2.png){width="6.135416666666667in"
   height="3.4305555555555554in"}
   --------------------------------------------------------------------
 
@@ -345,10 +361,10 @@ Iteration 2 (Weeks 5--8): Moderation (Manager), reporting
 (Guest/Customer), categories/attributes, templates.
 
 Iteration 3 (Weeks 9--12): Favorites, analytics dashboard, export CSV,
-performance tuning.
+performance tuning, rating and loyalty system.
 
-Iteration 4 (Weeks 13--16): Stabilization, system testing, demo
-rehearsal, final packaging.
+Iteration 4 (Weeks 13--16): Web Client portal for end-users,
+stabilization, system testing, demo rehearsal, final packaging.
 
 ### 
 
@@ -497,8 +513,8 @@ rehearsal, final packaging.
 
   -----------------------------------------------------------------------------------------
   **Work Package**     **NamNT      **DungBD (BE **NamPH    **NghiaTT(App   **PhongDH(App
-                       (Leader/BE   Support)**   (Web Admin Dev A)**        Dev B)**
-                       Core)**                   FE)**                      
+                       (Leader/BE   Support)**   (Web FE)** Dev A)**        Dev B)**
+                       Core)**                                              
   -------------------- ------------ ------------ ---------- --------------- ---------------
   Requirements         A            R            C          C               C
   Analysis                                                                  
@@ -533,37 +549,38 @@ rehearsal, final packaging.
 
 ## 4. Project Communications
 
-+-----------------+----------+----------------+--------------+-------------+
-| **Communication | **Who/   | **Purpose**    | **When,      | **Type,     |
-| Item**          | Target** |                | Frequency**  | Tool,       |
-|                 |          |                |              | Method(s)** |
-+-----------------+----------+----------------+--------------+-------------+
-| Weekly meeting  | All team | Report         | 3:00 pm      | Offline     |
-| with mentor     | members  | progress.      | every        | meeting     |
-|                 | & mentor | Discuss and    | Wednesday    |             |
-|                 |          | solve problems |              |             |
-+-----------------+----------+----------------+--------------+-------------+
-| Weekly Team     | All team | Report tasks.  | 9:00 pm      | Online      |
-| Meeting         | members  |                | every Sunday | meeting     |
-|                 |          | Discuss        |              | through     |
-|                 |          | issues,        |              | Google Meet |
-|                 |          | resolve        |              |             |
-|                 |          | problems.      |              |             |
-|                 |          | Define the     |              |             |
-|                 |          | next task      |              |             |
-+-----------------+----------+----------------+--------------+-------------+
-| Unscheduled     | All team | Discuss and    | When there   | Online      |
-| meeting         | members  | solve          | are          | meeting     |
-|                 |          | important      | significant  | through     |
-|                 |          | issues         | problems     | Google Meet |
-|                 |          |                | that need to |             |
-|                 |          |                | be solved    |             |
-|                 |          |                | quickly      |             |
-+-----------------+----------+----------------+--------------+-------------+
-| Daily update    | All team | Share daily    | 9:00 am,     | Chat group  |
-|                 | members  | progress and   | Mon--Fri     |             |
-|                 |          | blockers       |              |             |
-+=================+==========+================+==============+=============+
++-----------------+----------+---------------+--------------+-------------+
+| **Communication | **Who/   | **Purpose**   | **When,      | **Type,     |
+| Item**          | Target** |               | Frequency**  | Tool,       |
+|                 |          |               |              | Method(s)** |
++-----------------+----------+---------------+--------------+-------------+
+| Weekly meeting  | All team | Report        | 3:00 pm      | Offline     |
+| with mentor     | members  | progress.     | every        | meeting     |
+|                 | & mentor | Discuss and   | Wednesday    |             |
+|                 |          | solve         |              |             |
+|                 |          | problems      |              |             |
++-----------------+----------+---------------+--------------+-------------+
+| Weekly Team     | All team | Report tasks. | 9:00 pm      | Online      |
+| Meeting         | members  |               | every Sunday | meeting     |
+|                 |          | Discuss       |              | through     |
+|                 |          | issues,       |              | Google Meet |
+|                 |          | resolve       |              |             |
+|                 |          | problems.     |              |             |
+|                 |          | Define the    |              |             |
+|                 |          | next task     |              |             |
++-----------------+----------+---------------+--------------+-------------+
+| Unscheduled     | All team | Discuss and   | When there   | Online      |
+| meeting         | members  | solve         | are          | meeting     |
+|                 |          | important     | significant  | through     |
+|                 |          | issues        | problems     | Google Meet |
+|                 |          |               | that need to |             |
+|                 |          |               | be solved    |             |
+|                 |          |               | quickly      |             |
++-----------------+----------+---------------+--------------+-------------+
+| Daily update    | All team | Share daily   | 9:00 am,     | Chat group  |
+|                 | members  | progress and  | Mon--Fri     |             |
+|                 |          | blockers      |              |             |
++=================+==========+===============+==============+=============+
 
 ##  
 
@@ -594,8 +611,8 @@ programming projects.
   --------------------------------------------------------------------
   **Category**         **Tools / Infrastructure**
   -------------------- -----------------------------------------------
-  Technology           NodeJS + Express (Back-end), ReactJS (Admin
-                       Web), React Native/Expo (Mobile App)
+  Technology           NodeJS + Express (Back-end), ReactJS (Web),
+                       React Native/Expo (Mobile App)
 
   Database             PostgreSQL
 

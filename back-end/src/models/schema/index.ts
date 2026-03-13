@@ -1,13 +1,12 @@
 // Auth
-export { admins, type Admin, type NewAdmin } from "./admins";
-export { roles, type Role, type NewRole } from "./roles";
-export { adminRoles, type AdminRole, type NewAdminRole } from "./admin-roles";
-export { users, type User, type NewUser } from "./users";
-export { otpRequests, type OTPRequest, type NewOTPRequest } from "./otp-requests";
-
-// Catalog
-export { categories, type Category, type NewCategory } from "./categories";
-export { attributes, type Attribute, type NewAttribute } from "./attributes";
-export { products, type Product, type NewProduct } from "./products";
-export { productImages, type ProductImage, type NewProductImage } from "./product-images";
-export { productAttributeValues, type ProductAttributeValue, type NewProductAttributeValue } from "./product-attribute-values";
+export { admins, type Admin, type NewAdmin } from "./admins.ts";
+export { roles, type Role, type NewRole } from "./roles.ts";
+export { adminRoles, type AdminRole, type NewAdminRole } from "./admin-roles.ts";
+export { users, type User, type NewUser } from "./users.ts";
+export { otpRequests, type OTPRequest, type NewOTPRequest } from "./otp-requests.ts";
+export { categories, type Category, type NewCategory } from "./categories.ts";
+export { attributes, type Attribute, type NewAttribute } from "./attributes.ts";
+export { shops, type Shop, type NewShop } from "./shops.ts";
+export { posts, type Post, type NewPost } from "./posts.ts";
+export { postImages, type PostImage, type NewPostImage } from "./post-images.ts";
+export { postAttributeValues, type PostAttributeValue, type NewPostAttributeValue } from "./post-attribute-values.ts";

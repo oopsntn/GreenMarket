@@ -146,10 +146,11 @@ Project code: GOPM (GreenMarket -- Online Plant Market)
 
 Group name: Group 96
 
-Software type: Mobile Application (User-side) + Web Portal (Admin-side)
+Software type: Mobile Application (User-side) & Web Portal (User-side) +
+Web Portal (Admin-side)
 
 Technology stack: NodeJS + Express + Prisma ORM(Back-end), PostgreSQL,
-ReactJS (Admin Web), React Native (Mobile App)
+ReactJS (Web), React Native (Mobile App)
 
 ### 1.2 Project Purpose
 
@@ -289,7 +290,7 @@ structured attributes, then contact sellers directly for transactions.
   --------------------------------------------------------------------
   ![A collage of images of a person working on a computer Description
   automatically
-  generated](media/image5.png){width="6.135416666666667in"
+  generated](media/image6.png){width="6.135416666666667in"
   height="3.111111111111111in"}
   --------------------------------------------------------------------
 
@@ -299,7 +300,7 @@ Figure 3.2.1: *Facebook Marketplace interface*
 
   --------------------------------------------------------------------
   ![A screenshot of a computer Description automatically
-  generated](media/image3.png){width="6.135416666666667in"
+  generated](media/image5.png){width="6.135416666666667in"
   height="3.3472222222222223in"}
   --------------------------------------------------------------------
 
@@ -405,15 +406,26 @@ via TikTok Shop)
 ## 5. Project Scope & Limitations
 
   -----------------------------------------------------------------------
-  ![](media/image2.png){width="6.8125in" height="3.9843755468066493in"}
+  ![](media/image2.png){width="6.8125in" height="2.5599978127734033in"}
   -----------------------------------------------------------------------
 
   -----------------------------------------------------------------------
 
-Figure 5.1: *Major feature tree for GOPM*
+Figure 5.1: *Major feature tree for Web & App Client*
 
-*Link diagram: [[Link
-diagram]{.underline}](https://drive.google.com/file/d/1Veg9kz6LMeziXXZuZdBUqW7bcTXS07cG/view?usp=sharing)*
+*Link diagram:*
+[[link]{.underline}](https://drive.google.com/file/d/1knBdGbAYyjDTvRUkkyHFK48ztI1JUzOW/view?usp=sharing)
+
+  --------------------------------------------------------------------
+  ![](media/image3.png){width="6.135416666666667in" height="3.0in"}
+  --------------------------------------------------------------------
+
+  --------------------------------------------------------------------
+
+Figure 5.2: *Major feature tree for Web Admin*
+
+*Link diagram:*
+[[link]{.underline}](https://drive.google.com/file/d/1Mi5IiwBFQ8A6gB9PtfE6b0k9tyLpWCyx/view?usp=sharing)
 
 ### 5.1 Major Features
 
@@ -471,6 +483,15 @@ customer request service, accept job & delivery update).
 
 FE-18 (Optional): Operations Staff internal support module (assigned
 tasks/tickets and operational updates).
+
+FE-19: Web Client Portal (News & Knowledge Hub, Marketplace Discovery,
+Web Seller Workspace, User Auth & Interactions).
+
+FE-20: Rating and Review Management (Customers rate shops, owners reply,
+moderation on fake reviews).
+
+FE-21: Point & Loyalty System (Earn points via purchases/events, redeem
+points for promotion packages).
 
 ### 5.2 Limitations & Exclusions
 

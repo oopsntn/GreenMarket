@@ -1,0 +1,25 @@
+import { pgTable, serial, varchar, text, timestamp, integer, numeric } from "drizzle-orm/pg-core";
+import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
+import { categories } from "./categories";
+import { users } from "./users";
+import { shops } from "./shops";
+
+export const posts = pgTable("posts", {
+    postId: serial("post_id").primaryKey(),
+    postAuthorId: integer("post_author_id").references(() => users.userId, { onDelete: "cascade" }).notNull(),
+    postShopId: integer("post_shop_id").references(() => shops.shopId, { onDelete: "set null" }),
+    categoryId: integer("category_id").references(() => categories.categoryId, { onDelete: "cascade" }),
+    postTitle: varchar("post_title", { length: 255 }).notNull(),
+    postSlug: varchar("post_slug", { length: 255 }).unique().notNull(),
+    postContent: text("post_content"),
+    postPrice: numeric("post_price", { precision: 12, scale: 2 }),
+    postLocation: varchar("post_location", { length: 255 }),
+    postStatus: varchar("post_status", { length: 20 }).default("pending").notNull(), // pending, approved, rejected, hidden, draft
+    postRejectedReason: text("post_rejected_reason"),
+    postModeratedAt: timestamp("post_moderated_at"),
+    postCreatedAt: timestamp("post_created_at").defaultNow(),
+    postUpdatedAt: timestamp("post_updated_at").defaultNow(),
+});
+
+export type Post = InferSelectModel<typeof posts>;
+export type NewPost = InferInsertModel<typeof posts>;
