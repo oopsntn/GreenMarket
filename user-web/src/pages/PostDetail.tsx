@@ -58,7 +58,7 @@ const PostDetail: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Left: Images */}
         <div className="space-y-4">
-          <div className="aspect-[4/5] glass rounded-3xl overflow-hidden relative">
+          <div className="aspect-4/5 glass rounded-3xl overflow-hidden relative">
             {post.images && post.images.length > 0 ? (
               <img src={post.images[0].imageUrl} alt={post.postTitle} className="w-full h-full object-cover" />
             ) : (
@@ -150,7 +150,7 @@ const PostDetail: React.FC = () => {
 
       {/* Report Modal */}
       {showReportModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="glass max-w-md w-full p-8 rounded-3xl shadow-2xl">
             <h3 className="text-2xl font-bold mb-4">Báo cáo bài đăng</h3>
             <p className="text-slate-400 mb-6">Hãy cho chúng tôi biết vấn đề bạn gặp phải với bài đăng này.</p>

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { registerShop } from '../services/api';
 import { Store, CheckCircle, ArrowRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const RegisterShop: React.FC = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    userId: 1, // Placeholder for logged in user
+    userId: user?.id || 0,
     shopName: '',
     shopPhone: '',
     shopLocation: '',

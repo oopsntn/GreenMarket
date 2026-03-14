@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { getMyShop } from '../services/api';
 import { Store, Plus, PackageOpen, AlertCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const MyPosts: React.FC = () => {
+  const { user } = useAuth();
   const [shop, setShop] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const userId = 1; // Placeholder
 
   useEffect(() => {
     const fetchShop = async () => {
+      if (!user?.id) return;
       try {
-        const response = await getMyShop(userId);
+        const response = await getMyShop(user.id);
         setShop(response.data);
       } catch (error) {
         console.error("Failed to fetch shop:", error);
@@ -38,7 +40,7 @@ const MyPosts: React.FC = () => {
       {shop ? (
         <div className="space-y-8">
           {/* Shop Header */}
-          <div className="glass p-8 rounded-[2rem] border-emerald-500/20 shadow-2xl shadow-emerald-500/5 flex flex-col md:flex-row gap-8 items-center bg-gradient-to-br from-surface to-background">
+          <div className="glass p-8 rounded-4xl border-emerald-500/20 shadow-2xl shadow-emerald-500/5 flex flex-col md:flex-row gap-8 items-center bg-linear-to-br from-surface to-background">
              <div className="w-24 h-24 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500">
                <Store className="w-12 h-12" />
              </div>
@@ -64,7 +66,7 @@ const MyPosts: React.FC = () => {
           </div>
 
           {/* Posts List Placeholder */}
-          <div className="text-center py-24 glass rounded-[2rem] border-dashed border-white/10">
+          <div className="text-center py-24 glass rounded-4xl border-dashed border-white/10">
             <PackageOpen className="w-16 h-16 text-slate-800 mx-auto mb-6" />
             <h3 className="text-xl font-bold mb-2">Bạn chưa có tin đăng nào</h3>
             <p className="text-slate-500 mb-8 max-w-xs mx-auto">Hãy bắt đầu rao bán những mẫu cây cảnh tuyệt vời của bạn ngay bây giờ!</p>
@@ -72,7 +74,7 @@ const MyPosts: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="glass p-12 rounded-[2rem] text-center border-amber-500/20">
+        <div className="glass p-12 rounded-4xl text-center border-amber-500/20">
           <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-6" />
           <h2 className="text-2xl font-bold mb-4">Bạn chưa có Nhà Vườn</h2>
           <p className="text-slate-400 mb-8 max-w-md mx-auto">Để có thể đăng tin kinh doanh và quản lý sản phẩm chuyên nghiệp, vui lòng đăng ký hồ sơ nhà vườn trước.</p>

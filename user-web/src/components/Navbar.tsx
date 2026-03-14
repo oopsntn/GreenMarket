@@ -1,6 +1,6 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Leaf, ShoppingBag, Store, User } from 'lucide-react';
+import { Leaf, ShoppingBag, Store, User, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -10,6 +10,7 @@ function cn(...inputs: ClassValue[]) {
 
 const Navbar: React.FC = () => {
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navItems = [
     { label: 'Chợ Bonsai', path: '/', icon: ShoppingBag },
@@ -41,9 +42,30 @@ const Navbar: React.FC = () => {
           ))}
         </div>
 
-        <button className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-sm font-bold transition-all transform active:scale-95 shadow-lg shadow-emerald-900/20">
-          Đăng tin
-        </button>
+        <div className="flex items-center gap-4">
+          {isAuthenticated ? (
+            <div className="flex items-center gap-4">
+              <div className="hidden lg:block text-right">
+                <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Nghệ nhân</div>
+                <div className="text-sm font-medium text-slate-300">{user?.name || user?.mobile}</div>
+              </div>
+              <button 
+                onClick={logout}
+                className="glass p-2 rounded-xl text-slate-400 hover:text-red-400 transition-all"
+                title="Đăng xuất"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <Link 
+              to="/login"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl text-sm font-bold transition-all"
+            >
+              Đăng nhập
+            </Link>
+          )}
+        </div>
       </div>
     </nav>
   );

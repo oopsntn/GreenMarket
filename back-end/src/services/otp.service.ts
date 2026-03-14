@@ -30,7 +30,14 @@ export class OTPService {
      * Twilio handles code generation automatically.
      */
     async sendOTP(mobile: string): Promise<{ success: boolean; message: string }> {
-        const destNumber = mobile.trim();
+        let destNumber = mobile.trim();
+        
+        // Ensure E.164 format for Vietnam (+84)
+        if (destNumber.startsWith("0")) {
+            destNumber = "+84" + destNumber.substring(1);
+        } else if (!destNumber.startsWith("+")) {
+            destNumber = "+84" + destNumber;
+        }
 
         if (this.client && this.verifyServiceSid) {
             try {
@@ -64,8 +71,15 @@ export class OTPService {
      * Verifies the OTP code using Twilio Verify.
      */
     async verifyOTP(mobile: string, code: string): Promise<{ success: boolean; message: string }> {
-        const destNumber = mobile.trim();
+        let destNumber = mobile.trim();
         const otpCode = code.trim();
+
+        // Ensure E.164 format for Vietnam (+84)
+        if (destNumber.startsWith("0")) {
+            destNumber = "+84" + destNumber.substring(1);
+        } else if (!destNumber.startsWith("+")) {
+            destNumber = "+84" + destNumber;
+        }
 
         if (this.client && this.verifyServiceSid) {
             try {
