@@ -23,7 +23,7 @@ export const generateQrSession = () => api.post('/auth/qr/generate');
 export const checkQrStatus = (sessionId: string) => api.get(`/auth/qr/status/${sessionId}`);
 
 // Post APIs
-export const getPublicPosts = () => api.get('/posts/browse');
+export const getPublicPosts = (params?: any) => api.get('/posts/browse', { params });
 export const getPostDetail = (slug: string) => api.get(`/posts/detail/${slug}`);
 
 // Shop APIs

@@ -115,11 +115,14 @@ export const updatePost = async (req: Request<{ id: string }>, res: Response): P
 
 // --- Buyer / Public Flow ---
 
+import { PostService } from "../../services/post.service.ts";
+import { GetPostsQueryDto } from "../../dtos/post.ts";
+
 export const getPublicPosts = async (req: Request, res: Response): Promise<void> => {
     try {
-        // Only fetch approved posts
-        const approvedPosts = await db.select().from(posts).where(eq(posts.postStatus, "approved"));
-        res.json(approvedPosts);
+        const query = req.query as GetPostsQueryDto;
+        const responseData = await PostService.getPublicPosts(query);
+        res.json(responseData);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
