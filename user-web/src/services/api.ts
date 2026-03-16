@@ -19,6 +19,8 @@ api.interceptors.request.use((config) => {
 // Auth APIs
 export const requestOtp = (mobile: string) => api.post('/auth/user/request-otp', { mobile });
 export const verifyOtp = (mobile: string, otp: string) => api.post('/auth/user/verify-otp', { mobile, otp });
+export const generateQrSession = () => api.post('/auth/qr/generate');
+export const checkQrStatus = (sessionId: string) => api.get(`/auth/qr/status/${sessionId}`);
 
 // Post APIs
 export const getPublicPosts = () => api.get('/posts/browse');
