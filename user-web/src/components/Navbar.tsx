@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Leaf, ShoppingBag, Store, User, LogOut, PlusCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -10,14 +11,23 @@ function cn(...inputs: ClassValue[]) {
 
 const Navbar: React.FC = () => {
   const location = useLocation();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, shop, isAuthenticated, logout } = useAuth();
 
-  const navItems = [
+  const baseNavItems = [
     { label: 'Chợ Bonsai', path: '/', icon: ShoppingBag },
-    { label: 'Lên Shop', path: '/register-shop', icon: Store },
     { label: 'Đăng Tin', path: '/create-post', icon: PlusCircle },
-    { label: 'Của Tôi', path: '/my-posts', icon: User },
   ];
+
+  const navItems = shop
+    ? [
+        ...baseNavItems,
+        { label: shop.shopName, path: '/my-posts', icon: Store },
+      ]
+    : [
+        ...baseNavItems,
+        { label: 'Lên Shop', path: '/register-shop', icon: Store },
+        { label: 'Của Tôi', path: '/my-posts', icon: User },
+      ];
 
   return (
     <nav className="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4">
@@ -30,11 +40,13 @@ const Navbar: React.FC = () => {
         <div className="hidden md:flex gap-8">
           {navItems.map((item) => (
             <Link
-              key={item.path}
+              key={item.label}
               to={item.path}
               className={cn(
                 "flex items-center gap-2 text-sm font-medium transition-colors hover:text-emerald-400",
-                location.pathname === item.path ? "text-emerald-500" : "text-slate-400"
+                location.pathname === item.path ? "text-emerald-500" : "text-slate-400",
+                // Highlight shop name in emerald if active shop
+                shop && item.label === shop.shopName ? "text-emerald-400" : ""
               )}
             >
               <item.icon className="w-4 h-4" />
@@ -47,8 +59,17 @@ const Navbar: React.FC = () => {
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
               <div className="hidden lg:block text-right">
-                <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Nghệ nhân</div>
-                <div className="text-sm font-medium text-slate-300">{user?.name || user?.mobile}</div>
+                {shop?.shopStatus === 'active' ? (
+                  <>
+                    <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Chủ Vườn</div>
+                    <div className="text-sm font-medium text-slate-300">{user?.name || user?.mobile}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Nghệ nhân</div>
+                    <div className="text-sm font-medium text-slate-300">{user?.name || user?.mobile}</div>
+                  </>
+                )}
               </div>
               <button 
                 onClick={logout}

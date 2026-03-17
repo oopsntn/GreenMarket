@@ -164,14 +164,19 @@ const PostDetail: React.FC = () => {
 
                             <div className="space-y-4 pb-6 border-b border-white/5">
                                 <a 
-                                    href={`tel:${post.postContactPhone}`}
+                                    href={`tel:${post.shop?.shopPhone || post.postContactPhone}`}
                                     className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/40"
                                 >
-                                    <Phone className="w-6 h-6" /> {post.postContactPhone || 'Không có số'}
+                                    <Phone className="w-6 h-6" /> {post.shop?.shopPhone || post.postContactPhone || 'Không có số'}
                                 </a>
-                                <button className="w-full py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all">
-                                    <MessageCircle className="w-6 h-6 text-emerald-500" /> Chat với người bán
-                                </button>
+                                <a 
+                                    href={`https://zalo.me/${post.shop?.shopPhone || post.postContactPhone}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all"
+                                >
+                                    <MessageCircle className="w-6 h-6 text-emerald-500" /> Chat qua Zalo
+                                </a>
                             </div>
 
                             <div className="flex items-center gap-3 text-slate-300">
@@ -226,8 +231,8 @@ const PostDetail: React.FC = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {post.attributes.map((attr: any, idx: number) => (
                                         <div key={idx} className="glass p-6 rounded-3xl border-white/5 flex items-center justify-between">
-                                            <span className="text-slate-400 font-medium">Attribute ID: {attr.attributeId}</span>
-                                            <span className="text-white font-black uppercase">{attr.attributeValue}</span>
+                                            <span className="text-slate-400 font-medium">{attr.name || `Thông số ${idx + 1}`}</span>
+                                            <span className="text-white font-black uppercase">{attr.value}</span>
                                         </div>
                                     ))}
                                 </div>

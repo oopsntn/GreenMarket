@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
     "seed:sample": "tsx src/scripts/seedSampleData.ts",
-    "approve:all": "tsx src/scripts/autoApprovePosts.ts"
+    "approve:all": "tsx src/scripts/autoApprovePosts.ts",
+    "approve:shops": "tsx src/scripts/autoApproveShops.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

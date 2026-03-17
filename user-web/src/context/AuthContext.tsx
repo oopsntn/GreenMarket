@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getMyShop } from '../services/api';
 
 interface User {
   id: number;
@@ -6,30 +7,53 @@ interface User {
   name: string | null;
 }
 
+interface Shop {
+  shopId: number;
+  shopName: string;
+  shopStatus: string;
+  shopDescription?: string;
+  shopPhone?: string;
+  shopLocation?: string;
+}
+
 interface AuthContextType {
   user: User | null;
+  shop: Shop | null;
   token: string | null;
   login: (token: string, user: User) => void;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
+  refreshShop: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [shop, setShop] = useState<Shop | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchShop = async (userId: number) => {
+    try {
+      const res = await getMyShop(userId);
+      setShop(res.data || null);
+    } catch {
+      setShop(null);
+    }
+  };
+
   useEffect(() => {
-    // Load stored auth data
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
     if (storedToken && storedUser) {
+      const parsedUser = JSON.parse(storedUser);
       setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      setUser(parsedUser);
+      // Fetch shop in background
+      fetchShop(parsedUser.id);
     }
     setLoading(false);
   }, []);
@@ -39,23 +63,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(newUser);
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
+    // Fetch shop after login
+    fetchShop(newUser.id);
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
+    setShop(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+  };
+
+  const refreshShop = async () => {
+    if (user?.id) await fetchShop(user.id);
   };
 
   return (
     <AuthContext.Provider value={{ 
       user, 
+      shop,
       token, 
       login, 
       logout, 
       isAuthenticated: !!token, 
-      loading 
+      loading,
+      refreshShop
     }}>
       {children}
     </AuthContext.Provider>

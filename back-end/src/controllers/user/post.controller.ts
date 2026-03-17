@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and } from "drizzle-orm";
-import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories } from "../../models/schema/index.ts";
+import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 
@@ -20,6 +20,17 @@ export const createPost = async (req: Request, res: Response): Promise<void> => 
             .where(and(eq(shops.shopOwnerId, userId), eq(shops.shopStatus, "active")))
             .limit(1);
 
+        // Get user mobile if shop phone isn't available
+        let contactPhone = postContactPhone;
+        if (!contactPhone) {
+            if (userShop?.shopPhone) {
+                contactPhone = userShop.shopPhone;
+            } else {
+                const [userRecord] = await db.select().from(users).where(eq(users.userId, userId)).limit(1);
+                contactPhone = userRecord?.userMobile || "";
+            }
+        }
+
         const postSlug = `${slugify(postTitle)}-${Date.now()}`;
 
         const [newPost] = await db.insert(posts).values({
@@ -31,8 +42,8 @@ export const createPost = async (req: Request, res: Response): Promise<void> => 
             postContent,
             postPrice: postPrice?.toString() || "0",
             postLocation,
-            postContactPhone,
-            postStatus: "pending" // All user posts must be moderated
+            postContactPhone: contactPhone,
+            postStatus: userShop ? "approved" : "pending" // Shop owners are auto-approved
         }).returning();
 
         // Handle images if provided
@@ -157,8 +168,15 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
         // Fetch related videos
         const videos = await db.select().from(postVideos).where(eq(postVideos.postId, post.postId));
 
-        // Fetch related attributes
-        const attributes = await db.select().from(postAttributeValues).where(eq(postAttributeValues.postId, post.postId));
+        // Fetch related attributes with names
+        const attributesData = await db.select({
+            id: postAttributeValues.attributeId,
+            name: attributes.attributeTitle,
+            value: postAttributeValues.attributeValue
+        })
+        .from(postAttributeValues)
+        .leftJoin(attributes, eq(postAttributeValues.attributeId, attributes.attributeId))
+        .where(eq(postAttributeValues.postId, post.postId));
         
         // Fetch shop info if available
         let shop = null;
@@ -170,7 +188,7 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
             ...post,
             images,
             videos,
-            attributes,
+            attributes: attributesData,
             shop
         });
     } catch (error) {

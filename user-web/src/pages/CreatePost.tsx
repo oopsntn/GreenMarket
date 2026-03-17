@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { PlusCircle, Image as ImageIcon, MapPin, Tag, CircleDollarSign, CheckCircle, ArrowRight, X, UploadCloud, Phone } from 'lucide-react';
+import { PlusCircle, Image as ImageIcon, MapPin, Tag, CircleDollarSign, CheckCircle, ArrowRight, X, UploadCloud } from 'lucide-react';
 import { getCategories, getCategoryAttributes, createPost, uploadMedia } from '../services/api';
 
 const CreatePost: React.FC = () => {
@@ -24,7 +24,6 @@ const CreatePost: React.FC = () => {
         postContent: '',
         postPrice: '',
         postLocation: '',
-        postContactPhone: user?.mobile || '',
         attributes: {} as Record<number, string>
     });
 
@@ -239,8 +238,7 @@ const CreatePost: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
+                    <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-emerald-500" /> Khu vực giao dịch
                             </label>
@@ -252,20 +250,6 @@ const CreatePost: React.FC = () => {
                                 onChange={(e) => setFormData({...formData, postLocation: e.target.value})}
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                                <Phone className="w-4 h-4 text-emerald-500" /> Số điện thoại liên hệ *
-                            </label>
-                            <input 
-                                required
-                                type="text"
-                                placeholder="Ví dụ: 0912345678"
-                                className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
-                                value={formData.postContactPhone}
-                                onChange={(e) => setFormData({...formData, postContactPhone: e.target.value})}
-                            />
-                        </div>
-                    </div>
                 </section>
 
                 {/* Dynamic Attributes */}
