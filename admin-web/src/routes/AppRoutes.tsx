@@ -6,6 +6,7 @@ import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage"
 import DashboardPage from "../pages/DashboardPage";
 import LoginPage from "../pages/LoginPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
+import TemplatesPage from "../pages/TemplatesPage";
 import UsersPage from "../pages/UsersPage";
 
 function AppRoutes() {
@@ -24,10 +25,7 @@ function AppRoutes() {
             path="category-attributes"
             element={<CategoryAttributeMappingPage />}
           />
-          <Route
-            path="templates"
-            element={<PlaceholderPage title="Templates Management" />}
-          />
+          <Route path="templates" element={<TemplatesPage />} />
           <Route
             path="settings"
             element={<PlaceholderPage title="System Settings" />}
