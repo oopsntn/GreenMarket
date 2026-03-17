@@ -134,6 +134,7 @@ CREATE TABLE posts (
   post_location VARCHAR(255),
   post_status VARCHAR(20),
   post_rejected_reason TEXT,
+  post_contact_phone VARCHAR(20),
   post_published BOOLEAN DEFAULT FALSE,
   post_submitted_at TIMESTAMP,
   post_published_at TIMESTAMP,

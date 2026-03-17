@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Leaf, ShoppingBag, Store, User, LogOut } from 'lucide-react';
+import { Leaf, ShoppingBag, Store, User, LogOut, PlusCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -15,6 +15,7 @@ const Navbar: React.FC = () => {
   const navItems = [
     { label: 'Chợ Bonsai', path: '/', icon: ShoppingBag },
     { label: 'Lên Shop', path: '/register-shop', icon: Store },
+    { label: 'Đăng Tin', path: '/create-post', icon: PlusCircle },
     { label: 'Của Tôi', path: '/my-posts', icon: User },
   ];
 

@@ -144,3 +144,4 @@ vite.config.ts.timestamp-*
 # knowns search index (rebuilt on demand)
 .knowns/search-index/
 
+/back-end/uploads

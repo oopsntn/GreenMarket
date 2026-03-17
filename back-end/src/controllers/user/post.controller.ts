@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and } from "drizzle-orm";
-import { posts, postImages, postAttributeValues, shops, type Post, categories } from "../../models/schema/index.ts";
+import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 
 export const createPost = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { userId, categoryId, postTitle, postContent, postPrice, postLocation, images, attributes } = req.body;
+        const { userId, categoryId, postTitle, postContent, postPrice, postLocation, postContactPhone, images, videos, attributes } = req.body;
 
         if (!userId || !categoryId || !postTitle) {
             res.status(400).json({ error: "Missing required fields (userId, categoryId, postTitle)" });
@@ -31,6 +31,7 @@ export const createPost = async (req: Request, res: Response): Promise<void> => 
             postContent,
             postPrice: postPrice?.toString() || "0",
             postLocation,
+            postContactPhone,
             postStatus: "pending" // All user posts must be moderated
         }).returning();
 
@@ -41,6 +42,16 @@ export const createPost = async (req: Request, res: Response): Promise<void> => 
                 imageUrl: url
             }));
             await db.insert(postImages).values(imageRecords);
+        }
+
+        // Handle videos if provided
+        if (videos && Array.isArray(videos) && videos.length > 0) {
+            const videoRecords = videos.map((url, index) => ({
+                postId: newPost.postId,
+                videoUrl: url,
+                videoPosition: index
+            }));
+            await db.insert(postVideos).values(videoRecords);
         }
 
         // Handle attributes if provided
@@ -143,6 +154,9 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
         // Fetch related images
         const images = await db.select().from(postImages).where(eq(postImages.postId, post.postId));
 
+        // Fetch related videos
+        const videos = await db.select().from(postVideos).where(eq(postVideos.postId, post.postId));
+
         // Fetch related attributes
         const attributes = await db.select().from(postAttributeValues).where(eq(postAttributeValues.postId, post.postId));
         
@@ -155,6 +169,7 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
         res.json({
             ...post,
             images,
+            videos,
             attributes,
             shop
         });

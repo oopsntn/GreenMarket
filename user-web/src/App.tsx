@@ -4,8 +4,9 @@ import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import RegisterShop from './pages/RegisterShop';
-import PostDetail from './pages/PostDetail';
 import MyPosts from './pages/MyPosts';
+import CreatePost from './pages/CreatePost';
+import PostDetail from './pages/PostDetail';
 import Login from './pages/Login';
 
 function App() {
@@ -30,6 +31,12 @@ function App() {
                 <MyPosts />
               </ProtectedRoute>
             } />
+            <Route path="/create-post" element={
+              <ProtectedRoute>
+                <CreatePost />
+              </ProtectedRoute>
+            } />
+            <Route path="/posts/detail/:slug" element={<PostDetail />} />
           </Routes>
         </div>
       </Router>

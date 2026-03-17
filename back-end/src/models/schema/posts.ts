@@ -16,6 +16,7 @@ export const posts = pgTable("posts", {
     postLocation: varchar("post_location", { length: 255 }),
     postStatus: varchar("post_status", { length: 20 }).default("pending").notNull(), // pending, approved, rejected, hidden, draft
     postRejectedReason: text("post_rejected_reason"),
+    postContactPhone: varchar("post_contact_phone", { length: 20 }),
     postModeratedAt: timestamp("post_moderated_at"),
     postCreatedAt: timestamp("post_created_at").defaultNow(),
     postUpdatedAt: timestamp("post_updated_at").defaultNow(),
