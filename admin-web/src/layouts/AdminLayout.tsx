@@ -6,6 +6,7 @@ const menuItems = [
   { label: "Users", path: "/users" },
   { label: "Categories", path: "/categories" },
   { label: "Attributes", path: "/attributes" },
+  { label: "Category Mapping", path: "/category-attributes" },
   { label: "Templates", path: "/templates" },
   { label: "Settings", path: "/settings" },
   { label: "Promotions", path: "/promotions" },

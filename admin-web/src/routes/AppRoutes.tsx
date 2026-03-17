@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 import AttributesPage from "../pages/AttributesPage";
 import CategoriesPage from "../pages/CategoriesPage";
+import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage";
 import DashboardPage from "../pages/DashboardPage";
 import LoginPage from "../pages/LoginPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
@@ -19,6 +20,10 @@ function AppRoutes() {
           <Route path="users" element={<UsersPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="attributes" element={<AttributesPage />} />
+          <Route
+            path="category-attributes"
+            element={<CategoryAttributeMappingPage />}
+          />
           <Route
             path="templates"
             element={<PlaceholderPage title="Templates Management" />}
