@@ -13,6 +13,7 @@ const menuItems = [
   { label: "Analytics", path: "/analytics" },
   { label: "Revenue", path: "/revenue" },
   { label: "Customer Spending", path: "/customer-spending" },
+  { label: "Export CSV", path: "/export" },
 ];
 
 function AdminLayout() {

@@ -6,6 +6,7 @@ import CategoriesPage from "../pages/CategoriesPage";
 import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage";
 import CustomerSpendingPage from "../pages/CustomerSpendingPage";
 import DashboardPage from "../pages/DashboardPage";
+import ExportPage from "../pages/ExportPage";
 import LoginPage from "../pages/LoginPage";
 import PromotionsPage from "../pages/PromotionsPage";
 import RevenuePage from "../pages/RevenuePage";
@@ -35,6 +36,7 @@ function AppRoutes() {
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="revenue" element={<RevenuePage />} />
           <Route path="customer-spending" element={<CustomerSpendingPage />} />
+          <Route path="export" element={<ExportPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
