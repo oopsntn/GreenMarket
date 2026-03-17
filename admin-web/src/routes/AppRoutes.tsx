@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
+import CategoriesPage from "../pages/CategoriesPage";
 import DashboardPage from "../pages/DashboardPage";
 import LoginPage from "../pages/LoginPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
@@ -15,10 +16,7 @@ function AppRoutes() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="users" element={<UsersPage />} />
-          <Route
-            path="categories"
-            element={<PlaceholderPage title="Categories Management" />}
-          />
+          <Route path="categories" element={<CategoriesPage />} />
           <Route
             path="attributes"
             element={<PlaceholderPage title="Attributes Management" />}
