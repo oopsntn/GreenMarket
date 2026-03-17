@@ -1,3 +1,4 @@
+import { useState } from "react";
 import "./CategoriesPage.css";
 
 type Category = {
@@ -9,7 +10,7 @@ type Category = {
   createdAt: string;
 };
 
-const categories: Category[] = [
+const initialCategories: Category[] = [
   {
     id: 1,
     name: "Indoor Plants",
@@ -44,7 +45,109 @@ const categories: Category[] = [
   },
 ];
 
+type CategoryFormState = {
+  name: string;
+  slug: string;
+  attributesCount: number;
+  status: "Active" | "Disabled";
+};
+
+const emptyForm: CategoryFormState = {
+  name: "",
+  slug: "",
+  attributesCount: 0,
+  status: "Active",
+};
+
 function CategoriesPage() {
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null,
+  );
+  const [formData, setFormData] = useState<CategoryFormState>(emptyForm);
+
+  const openAddModal = () => {
+    setModalMode("add");
+    setSelectedCategoryId(null);
+    setFormData(emptyForm);
+    setIsModalOpen(true);
+  };
+
+  const openViewModal = (category: Category) => {
+    setModalMode("view");
+    setSelectedCategoryId(category.id);
+    setFormData({
+      name: category.name,
+      slug: category.slug,
+      attributesCount: category.attributesCount,
+      status: category.status,
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (category: Category) => {
+    setModalMode("edit");
+    setSelectedCategoryId(category.id);
+    setFormData({
+      name: category.name,
+      slug: category.slug,
+      attributesCount: category.attributesCount,
+      status: category.status,
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "attributesCount" ? Number(value) : value,
+    }));
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (modalMode === "add") {
+      const newCategory: Category = {
+        id: categories.length + 1,
+        name: formData.name,
+        slug: formData.slug,
+        attributesCount: formData.attributesCount,
+        status: formData.status,
+        createdAt: "2026-03-18",
+      };
+
+      setCategories((prev) => [newCategory, ...prev]);
+    }
+
+    if (modalMode === "edit" && selectedCategoryId !== null) {
+      setCategories((prev) =>
+        prev.map((category) =>
+          category.id === selectedCategoryId
+            ? {
+                ...category,
+                name: formData.name,
+                slug: formData.slug,
+                attributesCount: formData.attributesCount,
+                status: formData.status,
+              }
+            : category,
+        ),
+      );
+    }
+
+    closeModal();
+  };
+
   return (
     <div className="categories-page">
       <div className="categories-page__header">
@@ -53,7 +156,11 @@ function CategoriesPage() {
           <p>Manage plant categories and their basic information.</p>
         </div>
 
-        <button className="categories-page__add-btn" type="button">
+        <button
+          className="categories-page__add-btn"
+          type="button"
+          onClick={openAddModal}
+        >
           + Add Category
         </button>
       </div>
@@ -105,7 +212,19 @@ function CategoriesPage() {
                 <td>{category.createdAt}</td>
                 <td>
                   <div className="categories-actions">
-                    <button type="button" className="categories-actions__edit">
+                    <button
+                      type="button"
+                      className="categories-actions__view"
+                      onClick={() => openViewModal(category)}
+                    >
+                      View
+                    </button>
+
+                    <button
+                      type="button"
+                      className="categories-actions__edit"
+                      onClick={() => openEditModal(category)}
+                    >
                       Edit
                     </button>
 
@@ -131,6 +250,104 @@ function CategoriesPage() {
           </tbody>
         </table>
       </div>
+
+      {isModalOpen && (
+        <div className="categories-modal-backdrop">
+          <div className="categories-modal">
+            <div className="categories-modal__header">
+              <div>
+                <h3>
+                  {modalMode === "add"
+                    ? "Add Category"
+                    : modalMode === "edit"
+                      ? "Edit Category"
+                      : "Category Details"}
+                </h3>
+                <p>Manage category information and settings.</p>
+              </div>
+
+              <button
+                type="button"
+                className="categories-modal__close"
+                onClick={closeModal}
+              >
+                ×
+              </button>
+            </div>
+
+            <form className="categories-modal__form" onSubmit={handleSubmit}>
+              <div className="categories-modal__field">
+                <label htmlFor="name">Category Name</label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={handleChange}
+                  disabled={modalMode === "view"}
+                  placeholder="Enter category name"
+                />
+              </div>
+
+              <div className="categories-modal__field">
+                <label htmlFor="slug">Slug</label>
+                <input
+                  id="slug"
+                  name="slug"
+                  type="text"
+                  value={formData.slug}
+                  onChange={handleChange}
+                  disabled={modalMode === "view"}
+                  placeholder="Enter slug"
+                />
+              </div>
+
+              <div className="categories-modal__field">
+                <label htmlFor="attributesCount">Attributes Count</label>
+                <input
+                  id="attributesCount"
+                  name="attributesCount"
+                  type="number"
+                  value={formData.attributesCount}
+                  onChange={handleChange}
+                  disabled={modalMode === "view"}
+                  placeholder="Enter number of attributes"
+                />
+              </div>
+
+              <div className="categories-modal__field">
+                <label htmlFor="status">Status</label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  disabled={modalMode === "view"}
+                >
+                  <option>Active</option>
+                  <option>Disabled</option>
+                </select>
+              </div>
+
+              <div className="categories-modal__actions">
+                <button
+                  type="button"
+                  className="categories-modal__cancel"
+                  onClick={closeModal}
+                >
+                  Close
+                </button>
+
+                {modalMode !== "view" && (
+                  <button type="submit" className="categories-modal__submit">
+                    {modalMode === "add" ? "Add Category" : "Save Changes"}
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
