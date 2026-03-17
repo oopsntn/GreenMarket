@@ -3,6 +3,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import DashboardPage from "../pages/DashboardPage";
 import LoginPage from "../pages/LoginPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
+import UsersPage from "../pages/UsersPage";
 
 function AppRoutes() {
   return (
@@ -13,10 +14,7 @@ function AppRoutes() {
         <Route path="/" element={<AdminLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
-          <Route
-            path="users"
-            element={<PlaceholderPage title="Users Management" />}
-          />
+          <Route path="users" element={<UsersPage />} />
           <Route
             path="categories"
             element={<PlaceholderPage title="Categories Management" />}
