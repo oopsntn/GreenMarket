@@ -6,6 +6,7 @@ import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage"
 import DashboardPage from "../pages/DashboardPage";
 import LoginPage from "../pages/LoginPage";
 import PlaceholderPage from "../pages/PlaceholderPage";
+import PromotionsPage from "../pages/PromotionsPage";
 import SettingsPage from "../pages/SettingsPage";
 import TemplatesPage from "../pages/TemplatesPage";
 import UsersPage from "../pages/UsersPage";
@@ -28,10 +29,7 @@ function AppRoutes() {
           />
           <Route path="templates" element={<TemplatesPage />} />
           <Route path="settings" element={<SettingsPage />} />
-          <Route
-            path="promotions"
-            element={<PlaceholderPage title="Promotions Management" />}
-          />
+          <Route path="promotions" element={<PromotionsPage />} />
           <Route
             path="analytics"
             element={<PlaceholderPage title="Analytics Dashboard" />}
