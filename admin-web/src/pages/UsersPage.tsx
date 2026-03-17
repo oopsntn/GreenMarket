@@ -1,3 +1,4 @@
+import { useState } from "react";
 import "./UsersPage.css";
 
 type User = {
@@ -9,7 +10,7 @@ type User = {
   joinedAt: string;
 };
 
-const users: User[] = [
+const initialUsers: User[] = [
   {
     id: 1,
     fullName: "Nguyen Van A",
@@ -44,7 +45,107 @@ const users: User[] = [
   },
 ];
 
+type UserFormState = {
+  fullName: string;
+  email: string;
+  role: string;
+  status: "Active" | "Locked";
+};
+
+const emptyForm: UserFormState = {
+  fullName: "",
+  email: "",
+  role: "Customer",
+  status: "Active",
+};
+
 function UsersPage() {
+  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [formData, setFormData] = useState<UserFormState>(emptyForm);
+
+  const openAddModal = () => {
+    setModalMode("add");
+    setSelectedUserId(null);
+    setFormData(emptyForm);
+    setIsModalOpen(true);
+  };
+
+  const openViewModal = (user: User) => {
+    setModalMode("view");
+    setSelectedUserId(user.id);
+    setFormData({
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (user: User) => {
+    setModalMode("edit");
+    setSelectedUserId(user.id);
+    setFormData({
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    });
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (modalMode === "add") {
+      const newUser: User = {
+        id: users.length + 1,
+        fullName: formData.fullName,
+        email: formData.email,
+        role: formData.role,
+        status: formData.status,
+        joinedAt: "2026-03-18",
+      };
+
+      setUsers((prev) => [newUser, ...prev]);
+    }
+
+    if (modalMode === "edit" && selectedUserId !== null) {
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === selectedUserId
+            ? {
+                ...user,
+                fullName: formData.fullName,
+                email: formData.email,
+                role: formData.role,
+                status: formData.status,
+              }
+            : user,
+        ),
+      );
+    }
+
+    closeModal();
+  };
+
   return (
     <div className="users-page">
       <div className="users-page__header">
@@ -53,7 +154,11 @@ function UsersPage() {
           <p>Manage user accounts, roles, and account status.</p>
         </div>
 
-        <button className="users-page__add-btn" type="button">
+        <button
+          className="users-page__add-btn"
+          type="button"
+          onClick={openAddModal}
+        >
           + Add User
         </button>
       </div>
@@ -109,8 +214,20 @@ function UsersPage() {
                 <td>{user.joinedAt}</td>
                 <td>
                   <div className="users-actions">
-                    <button type="button" className="users-actions__view">
+                    <button
+                      type="button"
+                      className="users-actions__view"
+                      onClick={() => openViewModal(user)}
+                    >
                       View
+                    </button>
+
+                    <button
+                      type="button"
+                      className="users-actions__edit"
+                      onClick={() => openEditModal(user)}
+                    >
+                      Edit
                     </button>
 
                     {user.status === "Active" ? (
@@ -129,6 +246,107 @@ function UsersPage() {
           </tbody>
         </table>
       </div>
+
+      {isModalOpen && (
+        <div className="users-modal-backdrop">
+          <div className="users-modal">
+            <div className="users-modal__header">
+              <div>
+                <h3>
+                  {modalMode === "add"
+                    ? "Add User"
+                    : modalMode === "edit"
+                      ? "Edit User"
+                      : "User Details"}
+                </h3>
+                <p>Manage user information and account settings.</p>
+              </div>
+
+              <button
+                type="button"
+                className="users-modal__close"
+                onClick={closeModal}
+              >
+                ×
+              </button>
+            </div>
+
+            <form className="users-modal__form" onSubmit={handleSubmit}>
+              <div className="users-modal__field">
+                <label htmlFor="fullName">Full Name</label>
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  disabled={modalMode === "view"}
+                  placeholder="Enter full name"
+                />
+              </div>
+
+              <div className="users-modal__field">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={modalMode === "view"}
+                  placeholder="Enter email"
+                />
+              </div>
+
+              <div className="users-modal__field">
+                <label htmlFor="role">Role</label>
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  disabled={modalMode === "view"}
+                >
+                  <option>Customer</option>
+                  <option>Shop Owner</option>
+                  <option>Moderator</option>
+                  <option>Admin</option>
+                </select>
+              </div>
+
+              <div className="users-modal__field">
+                <label htmlFor="status">Status</label>
+                <select
+                  id="status"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  disabled={modalMode === "view"}
+                >
+                  <option>Active</option>
+                  <option>Locked</option>
+                </select>
+              </div>
+
+              <div className="users-modal__actions">
+                <button
+                  type="button"
+                  className="users-modal__cancel"
+                  onClick={closeModal}
+                >
+                  Close
+                </button>
+
+                {modalMode !== "view" && (
+                  <button type="submit" className="users-modal__submit">
+                    {modalMode === "add" ? "Add User" : "Save Changes"}
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

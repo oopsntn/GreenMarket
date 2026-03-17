@@ -163,3 +163,133 @@
   background-color: #e8f5e9;
   color: #2e7d32;
 }
+
+.users-actions__edit {
+  background-color: #eef4ff;
+  color: #1d4ed8;
+}
+
+.users-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.users-modal {
+  width: 100%;
+  max-width: 560px;
+  background-color: #ffffff;
+  border-radius: 24px;
+  border: 1px solid #e8efe3;
+  box-shadow: 0 24px 60px rgba(27, 67, 50, 0.18);
+  overflow: hidden;
+}
+
+.users-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid #eef3ea;
+}
+
+.users-modal__header h3 {
+  font-size: 24px;
+  color: #1b4332;
+  margin-bottom: 6px;
+}
+
+.users-modal__header p {
+  font-size: 14px;
+  color: #6b7b6d;
+}
+
+.users-modal__close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background-color: #f3f7f1;
+  color: #486150;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.users-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+}
+
+.users-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.users-modal__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.users-modal__field input,
+.users-modal__field select {
+  height: 46px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+}
+
+.users-modal__field input:focus,
+.users-modal__field select:focus {
+  border-color: #43a047;
+  box-shadow: 0 0 0 4px rgba(67, 160, 71, 0.12);
+}
+
+.users-modal__field input:disabled,
+.users-modal__field select:disabled {
+  background-color: #f5f7f4;
+  color: #6b7b6d;
+  cursor: not-allowed;
+}
+
+.users-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.users-modal__cancel,
+.users-modal__submit {
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.users-modal__cancel {
+  background-color: #f3f7f1;
+  color: #486150;
+}
+
+.users-modal__submit {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
+}
