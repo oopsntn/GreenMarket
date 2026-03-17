@@ -7,6 +7,7 @@ import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage"
 import DashboardPage from "../pages/DashboardPage";
 import LoginPage from "../pages/LoginPage";
 import PromotionsPage from "../pages/PromotionsPage";
+import RevenuePage from "../pages/RevenuePage";
 import SettingsPage from "../pages/SettingsPage";
 import TemplatesPage from "../pages/TemplatesPage";
 import UsersPage from "../pages/UsersPage";
@@ -31,6 +32,7 @@ function AppRoutes() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="promotions" element={<PromotionsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="revenue" element={<RevenuePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

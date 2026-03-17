@@ -11,6 +11,7 @@ const menuItems = [
   { label: "Settings", path: "/settings" },
   { label: "Promotions", path: "/promotions" },
   { label: "Analytics", path: "/analytics" },
+  { label: "Revenue", path: "/revenue" },
 ];
 
 function AdminLayout() {
