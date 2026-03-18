@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { emptyUserForm } from "../mock-data/users";
 import { userService } from "../services/userService";
+import PageHeader from "../components/PageHeader";
 import type { AssignableUserRole, User, UserFormState } from "../types/user";
 import "./UsersPage.css";
 
@@ -103,20 +104,12 @@ function UsersPage() {
 
   return (
     <div className="users-page">
-      <div className="users-page__header">
-        <div>
-          <h2>Users Management</h2>
-          <p>Manage user accounts, roles, and account status.</p>
-        </div>
-
-        <button
-          className="users-page__add-btn"
-          type="button"
-          onClick={openAddModal}
-        >
-          + Add User
-        </button>
-      </div>
+      <PageHeader
+        title="Users Management"
+        description="Manage user accounts, roles, and account status."
+        actionLabel="+ Add User"
+        onActionClick={openAddModal}
+      />
 
       <div className="users-toolbar">
         <input
