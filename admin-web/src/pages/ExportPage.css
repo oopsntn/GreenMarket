@@ -1,0 +1,146 @@
+.export-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.export-page__header h2 {
+  font-size: 28px;
+  color: #1b4332;
+  margin-bottom: 8px;
+}
+
+.export-page__header p {
+  color: #6b7b6d;
+  font-size: 15px;
+}
+
+.export-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.export-card,
+.export-history-card {
+  background-color: #ffffff;
+  border: 1px solid #edf2e8;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
+}
+
+.export-card__header {
+  margin-bottom: 20px;
+}
+
+.export-card__header h3 {
+  font-size: 20px;
+  color: #1b4332;
+  margin-bottom: 6px;
+}
+
+.export-card__header p {
+  font-size: 14px;
+  color: #6b7b6d;
+}
+
+.export-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.export-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.export-field select {
+  height: 44px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+}
+
+.export-field select:focus {
+  border-color: #43a047;
+  box-shadow: 0 0 0 4px rgba(67, 160, 71, 0.12);
+}
+
+.export-button {
+  margin-top: 8px;
+  height: 46px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
+}
+
+.export-history-table-wrapper {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid #eef3ea;
+}
+
+.export-history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.export-history-table thead {
+  background-color: #f6faf5;
+}
+
+.export-history-table th,
+.export-history-table td {
+  text-align: left;
+  padding: 16px 18px;
+  border-bottom: 1px solid #eef3ea;
+  font-size: 14px;
+}
+
+.export-history-table th {
+  color: #486150;
+  font-weight: 700;
+}
+
+.export-history-table td {
+  color: #223127;
+}
+
+.export-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.export-badge--success {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+}
+
+.export-badge--processing {
+  background-color: #fff8e1;
+  color: #b26a00;
+}
