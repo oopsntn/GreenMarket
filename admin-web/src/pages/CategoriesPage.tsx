@@ -1,77 +1,25 @@
 import { useState } from "react";
+import { emptyCategoryForm } from "../mock-data/categories";
+import { categoryService } from "../services/categoryService";
+import type { Category, CategoryFormState } from "../types/category";
 import "./CategoriesPage.css";
 
-type Category = {
-  id: number;
-  name: string;
-  slug: string;
-  attributesCount: number;
-  status: "Active" | "Disabled";
-  createdAt: string;
-};
-
-const initialCategories: Category[] = [
-  {
-    id: 1,
-    name: "Indoor Plants",
-    slug: "indoor-plants",
-    attributesCount: 8,
-    status: "Active",
-    createdAt: "2026-03-10",
-  },
-  {
-    id: 2,
-    name: "Outdoor Plants",
-    slug: "outdoor-plants",
-    attributesCount: 6,
-    status: "Active",
-    createdAt: "2026-03-11",
-  },
-  {
-    id: 3,
-    name: "Succulents",
-    slug: "succulents",
-    attributesCount: 5,
-    status: "Active",
-    createdAt: "2026-03-12",
-  },
-  {
-    id: 4,
-    name: "Bonsai",
-    slug: "bonsai",
-    attributesCount: 7,
-    status: "Disabled",
-    createdAt: "2026-03-13",
-  },
-];
-
-type CategoryFormState = {
-  name: string;
-  slug: string;
-  attributesCount: number;
-  status: "Active" | "Disabled";
-};
-
-const emptyForm: CategoryFormState = {
-  name: "",
-  slug: "",
-  attributesCount: 0,
-  status: "Active",
-};
-
 function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>(
+    categoryService.getCategories(),
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null,
   );
-  const [formData, setFormData] = useState<CategoryFormState>(emptyForm);
+  const [formData, setFormData] =
+    useState<CategoryFormState>(emptyCategoryForm);
 
   const openAddModal = () => {
     setModalMode("add");
     setSelectedCategoryId(null);
-    setFormData(emptyForm);
+    setFormData(emptyCategoryForm);
     setIsModalOpen(true);
   };
 
@@ -107,6 +55,7 @@ function CategoriesPage() {
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = event.target;
+
     setFormData((prev) => ({
       ...prev,
       [name]: name === "attributesCount" ? Number(value) : value,
@@ -117,35 +66,23 @@ function CategoriesPage() {
     event.preventDefault();
 
     if (modalMode === "add") {
-      const newCategory: Category = {
-        id: categories.length + 1,
-        name: formData.name,
-        slug: formData.slug,
-        attributesCount: formData.attributesCount,
-        status: formData.status,
-        createdAt: "2026-03-18",
-      };
-
-      setCategories((prev) => [newCategory, ...prev]);
+      setCategories((prev) => categoryService.createCategory(prev, formData));
     }
 
     if (modalMode === "edit" && selectedCategoryId !== null) {
       setCategories((prev) =>
-        prev.map((category) =>
-          category.id === selectedCategoryId
-            ? {
-                ...category,
-                name: formData.name,
-                slug: formData.slug,
-                attributesCount: formData.attributesCount,
-                status: formData.status,
-              }
-            : category,
-        ),
+        categoryService.updateCategory(prev, selectedCategoryId, formData),
       );
     }
 
     closeModal();
+  };
+
+  const handleToggleStatus = (category: Category) => {
+    const nextStatus = category.status === "Active" ? "Disabled" : "Active";
+    setCategories((prev) =>
+      categoryService.updateCategoryStatus(prev, category.id, nextStatus),
+    );
   };
 
   return (
@@ -232,6 +169,7 @@ function CategoriesPage() {
                       <button
                         type="button"
                         className="categories-actions__disable"
+                        onClick={() => handleToggleStatus(category)}
                       >
                         Disable
                       </button>
@@ -239,6 +177,7 @@ function CategoriesPage() {
                       <button
                         type="button"
                         className="categories-actions__enable"
+                        onClick={() => handleToggleStatus(category)}
                       >
                         Enable
                       </button>
