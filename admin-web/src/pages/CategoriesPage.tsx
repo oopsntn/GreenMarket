@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BaseModal from "../components/BaseModal";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -92,7 +93,6 @@ function CategoriesPage() {
 
   const filteredCategories = categories.filter((category) => {
     const keyword = searchKeyword.trim().toLowerCase();
-
     if (!keyword) return true;
 
     return (
@@ -100,6 +100,13 @@ function CategoriesPage() {
       category.slug.toLowerCase().includes(keyword)
     );
   });
+
+  const modalTitle =
+    modalMode === "add"
+      ? "Add Category"
+      : modalMode === "edit"
+        ? "Edit Category"
+        : "Category Details";
 
   return (
     <div className="categories-page">
@@ -189,103 +196,83 @@ function CategoriesPage() {
         </table>
       </div>
 
-      {isModalOpen && (
-        <div className="categories-modal-backdrop">
-          <div className="categories-modal">
-            <div className="categories-modal__header">
-              <div>
-                <h3>
-                  {modalMode === "add"
-                    ? "Add Category"
-                    : modalMode === "edit"
-                      ? "Edit Category"
-                      : "Category Details"}
-                </h3>
-                <p>Manage category information and settings.</p>
-              </div>
-
-              <button
-                type="button"
-                className="categories-modal__close"
-                onClick={closeModal}
-              >
-                ×
-              </button>
-            </div>
-
-            <form className="categories-modal__form" onSubmit={handleSubmit}>
-              <div className="categories-modal__field">
-                <label htmlFor="name">Category Name</label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                  placeholder="Enter category name"
-                />
-              </div>
-
-              <div className="categories-modal__field">
-                <label htmlFor="slug">Slug</label>
-                <input
-                  id="slug"
-                  name="slug"
-                  type="text"
-                  value={formData.slug}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                  placeholder="Enter slug"
-                />
-              </div>
-
-              <div className="categories-modal__field">
-                <label htmlFor="attributesCount">Attributes Count</label>
-                <input
-                  id="attributesCount"
-                  name="attributesCount"
-                  type="number"
-                  value={formData.attributesCount}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                  placeholder="Enter number of attributes"
-                />
-              </div>
-
-              <div className="categories-modal__field">
-                <label htmlFor="status">Status</label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                >
-                  <option>Active</option>
-                  <option>Disabled</option>
-                </select>
-              </div>
-
-              <div className="categories-modal__actions">
-                <button
-                  type="button"
-                  className="categories-modal__cancel"
-                  onClick={closeModal}
-                >
-                  Close
-                </button>
-
-                {modalMode !== "view" && (
-                  <button type="submit" className="categories-modal__submit">
-                    {modalMode === "add" ? "Add Category" : "Save Changes"}
-                  </button>
-                )}
-              </div>
-            </form>
+      <BaseModal
+        isOpen={isModalOpen}
+        title={modalTitle}
+        description="Manage category information and settings."
+        onClose={closeModal}
+      >
+        <form className="categories-modal__form" onSubmit={handleSubmit}>
+          <div className="categories-modal__field">
+            <label htmlFor="name">Category Name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+              placeholder="Enter category name"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="categories-modal__field">
+            <label htmlFor="slug">Slug</label>
+            <input
+              id="slug"
+              name="slug"
+              type="text"
+              value={formData.slug}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+              placeholder="Enter slug"
+            />
+          </div>
+
+          <div className="categories-modal__field">
+            <label htmlFor="attributesCount">Attributes Count</label>
+            <input
+              id="attributesCount"
+              name="attributesCount"
+              type="number"
+              value={formData.attributesCount}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+              placeholder="Enter number of attributes"
+            />
+          </div>
+
+          <div className="categories-modal__field">
+            <label htmlFor="status">Status</label>
+            <select
+              id="status"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+            >
+              <option>Active</option>
+              <option>Disabled</option>
+            </select>
+          </div>
+
+          <div className="categories-modal__actions">
+            <button
+              type="button"
+              className="categories-modal__cancel"
+              onClick={closeModal}
+            >
+              Close
+            </button>
+
+            {modalMode !== "view" && (
+              <button type="submit" className="categories-modal__submit">
+                {modalMode === "add" ? "Add Category" : "Save Changes"}
+              </button>
+            )}
+          </div>
+        </form>
+      </BaseModal>
     </div>
   );
 }

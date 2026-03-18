@@ -41,6 +41,7 @@
 .attributes-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .attributes-actions button {
@@ -53,9 +54,14 @@
   cursor: pointer;
 }
 
-.attributes-actions__edit {
-  background-color: #eef7ef;
+.attributes-actions__view {
+  background-color: #edf7ee;
   color: #1b5e20;
+}
+
+.attributes-actions__edit {
+  background-color: #eef4ff;
+  color: #1d4ed8;
 }
 
 .attributes-actions__disable {
@@ -66,4 +72,91 @@
 .attributes-actions__enable {
   background-color: #e8f5e9;
   color: #2e7d32;
+}
+
+.attributes-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.attributes-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attributes-modal__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.attributes-modal__field input,
+.attributes-modal__field select {
+  height: 46px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+}
+
+.attributes-modal__field input:focus,
+.attributes-modal__field select:focus {
+  border-color: #43a047;
+  box-shadow: 0 0 0 4px rgba(67, 160, 71, 0.12);
+}
+
+.attributes-modal__field input:disabled,
+.attributes-modal__field select:disabled {
+  background-color: #f5f7f4;
+  color: #6b7b6d;
+  cursor: not-allowed;
+}
+
+.attributes-modal__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #2f4f3a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.attributes-modal__checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2e7d32;
+}
+
+.attributes-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.attributes-modal__cancel,
+.attributes-modal__submit {
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.attributes-modal__cancel {
+  background-color: #f3f7f1;
+  color: #486150;
+}
+
+.attributes-modal__submit {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BaseModal from "../components/BaseModal";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -117,6 +118,13 @@ function UsersPage() {
     );
   });
 
+  const modalTitle =
+    modalMode === "add"
+      ? "Add User"
+      : modalMode === "edit"
+        ? "Edit User"
+        : "User Details";
+
   return (
     <div className="users-page">
       <PageHeader
@@ -206,121 +214,101 @@ function UsersPage() {
         </table>
       </div>
 
-      {isModalOpen && (
-        <div className="users-modal-backdrop">
-          <div className="users-modal">
-            <div className="users-modal__header">
-              <div>
-                <h3>
-                  {modalMode === "add"
-                    ? "Add User"
-                    : modalMode === "edit"
-                      ? "Edit User"
-                      : "User Details"}
-                </h3>
-                <p>Manage user information and account settings.</p>
-              </div>
-
-              <button
-                type="button"
-                className="users-modal__close"
-                onClick={closeModal}
-              >
-                ×
-              </button>
-            </div>
-
-            <form className="users-modal__form" onSubmit={handleSubmit}>
-              <div className="users-modal__field">
-                <label htmlFor="fullName">Full Name</label>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                  placeholder="Enter full name"
-                />
-              </div>
-
-              <div className="users-modal__field">
-                <label htmlFor="email">Email</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                  placeholder="Enter email"
-                />
-              </div>
-
-              {isProtectedAdmin ? (
-                <div className="users-modal__field">
-                  <label>Role</label>
-                  <input type="text" value="Admin" disabled />
-                </div>
-              ) : (
-                <div className="users-modal__field">
-                  <label htmlFor="role">Role</label>
-                  <select
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    disabled={modalMode === "view"}
-                  >
-                    {assignableRoles.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="users-modal__field">
-                <label htmlFor="status">Status</label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  disabled={modalMode === "view" || isProtectedAdmin}
-                >
-                  <option>Active</option>
-                  <option>Locked</option>
-                </select>
-              </div>
-
-              {isProtectedAdmin && (
-                <div className="users-modal__notice">
-                  This is the only system Admin account. Role and status cannot
-                  be changed.
-                </div>
-              )}
-
-              <div className="users-modal__actions">
-                <button
-                  type="button"
-                  className="users-modal__cancel"
-                  onClick={closeModal}
-                >
-                  Close
-                </button>
-
-                {modalMode !== "view" && (
-                  <button type="submit" className="users-modal__submit">
-                    {modalMode === "add" ? "Add User" : "Save Changes"}
-                  </button>
-                )}
-              </div>
-            </form>
+      <BaseModal
+        isOpen={isModalOpen}
+        title={modalTitle}
+        description="Manage user information and account settings."
+        onClose={closeModal}
+      >
+        <form className="users-modal__form" onSubmit={handleSubmit}>
+          <div className="users-modal__field">
+            <label htmlFor="fullName">Full Name</label>
+            <input
+              id="fullName"
+              name="fullName"
+              type="text"
+              value={formData.fullName}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+              placeholder="Enter full name"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="users-modal__field">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+              placeholder="Enter email"
+            />
+          </div>
+
+          {isProtectedAdmin ? (
+            <div className="users-modal__field">
+              <label>Role</label>
+              <input type="text" value="Admin" disabled />
+            </div>
+          ) : (
+            <div className="users-modal__field">
+              <label htmlFor="role">Role</label>
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                disabled={modalMode === "view"}
+              >
+                {assignableRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="users-modal__field">
+            <label htmlFor="status">Status</label>
+            <select
+              id="status"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              disabled={modalMode === "view" || isProtectedAdmin}
+            >
+              <option>Active</option>
+              <option>Locked</option>
+            </select>
+          </div>
+
+          {isProtectedAdmin && (
+            <div className="users-modal__notice">
+              This is the only system Admin account. Role and status cannot be
+              changed.
+            </div>
+          )}
+
+          <div className="users-modal__actions">
+            <button
+              type="button"
+              className="users-modal__cancel"
+              onClick={closeModal}
+            >
+              Close
+            </button>
+
+            {modalMode !== "view" && (
+              <button type="submit" className="users-modal__submit">
+                {modalMode === "add" ? "Add User" : "Save Changes"}
+              </button>
+            )}
+          </div>
+        </form>
+      </BaseModal>
     </div>
   );
 }

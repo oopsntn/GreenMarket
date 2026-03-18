@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BaseModal from "../components/BaseModal";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -24,7 +25,6 @@ function ShopsPage() {
 
   const handleUpdateShopStatus = (shopId: number, status: ShopStatus) => {
     setShops((prev) => shopService.updateShopStatus(prev, shopId, status));
-
     setSelectedShop((prev) =>
       prev && prev.id === shopId ? { ...prev, status } : prev,
     );
@@ -32,7 +32,6 @@ function ShopsPage() {
 
   const filteredShops = shops.filter((shop) => {
     const keyword = searchKeyword.trim().toLowerCase();
-
     if (!keyword) return true;
 
     return (
@@ -158,126 +157,115 @@ function ShopsPage() {
         </table>
       </div>
 
-      {isModalOpen && selectedShop && (
-        <div className="shops-modal-backdrop">
-          <div className="shops-modal">
-            <div className="shops-modal__header">
-              <div>
-                <h3>Shop Details</h3>
-                <p>Review shop information and current approval status.</p>
-              </div>
-
-              <button
-                type="button"
-                className="shops-modal__close"
-                onClick={closeModal}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="shops-modal__content">
-              <div className="shops-modal__grid">
-                <div className="shops-modal__field">
-                  <label>Shop Name</label>
-                  <input type="text" value={selectedShop.name} disabled />
-                </div>
-
-                <div className="shops-modal__field">
-                  <label>Owner</label>
-                  <input type="text" value={selectedShop.ownerName} disabled />
-                </div>
-
-                <div className="shops-modal__field">
-                  <label>Owner Email</label>
-                  <input type="text" value={selectedShop.ownerEmail} disabled />
-                </div>
-
-                <div className="shops-modal__field">
-                  <label>Total Posts</label>
-                  <input
-                    type="text"
-                    value={String(selectedShop.totalPosts)}
-                    disabled
-                  />
-                </div>
-
-                <div className="shops-modal__field">
-                  <label>Status</label>
-                  <input type="text" value={selectedShop.status} disabled />
-                </div>
-
-                <div className="shops-modal__field">
-                  <label>Created Date</label>
-                  <input type="text" value={selectedShop.createdAt} disabled />
-                </div>
+      <BaseModal
+        isOpen={isModalOpen}
+        title="Shop Details"
+        description="Review shop information and current approval status."
+        onClose={closeModal}
+        maxWidth="720px"
+      >
+        {selectedShop && (
+          <div className="shops-modal__content">
+            <div className="shops-modal__grid">
+              <div className="shops-modal__field">
+                <label>Shop Name</label>
+                <input type="text" value={selectedShop.name} disabled />
               </div>
 
               <div className="shops-modal__field">
-                <label>Description</label>
-                <textarea value={selectedShop.description} rows={5} disabled />
+                <label>Owner</label>
+                <input type="text" value={selectedShop.ownerName} disabled />
               </div>
 
-              <div className="shops-modal__actions">
-                <button
-                  type="button"
-                  className="shops-modal__cancel"
-                  onClick={closeModal}
-                >
-                  Close
-                </button>
+              <div className="shops-modal__field">
+                <label>Owner Email</label>
+                <input type="text" value={selectedShop.ownerEmail} disabled />
+              </div>
 
-                {selectedShop.status === "Pending" && (
-                  <>
-                    <button
-                      type="button"
-                      className="shops-modal__approve"
-                      onClick={() =>
-                        handleUpdateShopStatus(selectedShop.id, "Active")
-                      }
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      className="shops-modal__reject"
-                      onClick={() =>
-                        handleUpdateShopStatus(selectedShop.id, "Rejected")
-                      }
-                    >
-                      Reject
-                    </button>
-                  </>
-                )}
+              <div className="shops-modal__field">
+                <label>Total Posts</label>
+                <input
+                  type="text"
+                  value={String(selectedShop.totalPosts)}
+                  disabled
+                />
+              </div>
 
-                {selectedShop.status === "Active" && (
+              <div className="shops-modal__field">
+                <label>Status</label>
+                <input type="text" value={selectedShop.status} disabled />
+              </div>
+
+              <div className="shops-modal__field">
+                <label>Created Date</label>
+                <input type="text" value={selectedShop.createdAt} disabled />
+              </div>
+            </div>
+
+            <div className="shops-modal__field">
+              <label>Description</label>
+              <textarea value={selectedShop.description} rows={5} disabled />
+            </div>
+
+            <div className="shops-modal__actions">
+              <button
+                type="button"
+                className="shops-modal__cancel"
+                onClick={closeModal}
+              >
+                Close
+              </button>
+
+              {selectedShop.status === "Pending" && (
+                <>
                   <button
                     type="button"
-                    className="shops-modal__suspend"
-                    onClick={() =>
-                      handleUpdateShopStatus(selectedShop.id, "Suspended")
-                    }
-                  >
-                    Suspend
-                  </button>
-                )}
-
-                {selectedShop.status === "Suspended" && (
-                  <button
-                    type="button"
-                    className="shops-modal__reactivate"
+                    className="shops-modal__approve"
                     onClick={() =>
                       handleUpdateShopStatus(selectedShop.id, "Active")
                     }
                   >
-                    Reactivate
+                    Approve
                   </button>
-                )}
-              </div>
+                  <button
+                    type="button"
+                    className="shops-modal__reject"
+                    onClick={() =>
+                      handleUpdateShopStatus(selectedShop.id, "Rejected")
+                    }
+                  >
+                    Reject
+                  </button>
+                </>
+              )}
+
+              {selectedShop.status === "Active" && (
+                <button
+                  type="button"
+                  className="shops-modal__suspend"
+                  onClick={() =>
+                    handleUpdateShopStatus(selectedShop.id, "Suspended")
+                  }
+                >
+                  Suspend
+                </button>
+              )}
+
+              {selectedShop.status === "Suspended" && (
+                <button
+                  type="button"
+                  className="shops-modal__reactivate"
+                  onClick={() =>
+                    handleUpdateShopStatus(selectedShop.id, "Active")
+                  }
+                >
+                  Reactivate
+                </button>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </BaseModal>
     </div>
   );
 }

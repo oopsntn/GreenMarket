@@ -1,4 +1,5 @@
 import { useState } from "react";
+import BaseModal from "../components/BaseModal";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -94,7 +95,6 @@ function TemplatesPage() {
 
   const filteredTemplates = templates.filter((template) => {
     const keyword = searchKeyword.trim().toLowerCase();
-
     if (!keyword) return true;
 
     return (
@@ -102,6 +102,13 @@ function TemplatesPage() {
       template.type.toLowerCase().includes(keyword)
     );
   });
+
+  const modalTitle =
+    modalMode === "add"
+      ? "Add Template"
+      : modalMode === "edit"
+        ? "Edit Template"
+        : "Template Details";
 
   return (
     <div className="templates-page">
@@ -195,105 +202,86 @@ function TemplatesPage() {
         </table>
       </div>
 
-      {isModalOpen && (
-        <div className="templates-modal-backdrop">
-          <div className="templates-modal">
-            <div className="templates-modal__header">
-              <div>
-                <h3>
-                  {modalMode === "add"
-                    ? "Add Template"
-                    : modalMode === "edit"
-                      ? "Edit Template"
-                      : "Template Details"}
-                </h3>
-                <p>Manage template details and content configuration.</p>
-              </div>
-
-              <button
-                type="button"
-                className="templates-modal__close"
-                onClick={closeModal}
-              >
-                ×
-              </button>
-            </div>
-
-            <form className="templates-modal__form" onSubmit={handleSubmit}>
-              <div className="templates-modal__field">
-                <label htmlFor="name">Template Name</label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                  placeholder="Enter template name"
-                />
-              </div>
-
-              <div className="templates-modal__field">
-                <label htmlFor="type">Type</label>
-                <select
-                  id="type"
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                >
-                  <option>Rejection Reason</option>
-                  <option>Report Reason</option>
-                  <option>Notification</option>
-                </select>
-              </div>
-
-              <div className="templates-modal__field">
-                <label htmlFor="content">Content</label>
-                <textarea
-                  id="content"
-                  name="content"
-                  value={formData.content}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                  placeholder="Enter template content"
-                  rows={5}
-                />
-              </div>
-
-              <div className="templates-modal__field">
-                <label htmlFor="status">Status</label>
-                <select
-                  id="status"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                >
-                  <option>Active</option>
-                  <option>Disabled</option>
-                </select>
-              </div>
-
-              <div className="templates-modal__actions">
-                <button
-                  type="button"
-                  className="templates-modal__cancel"
-                  onClick={closeModal}
-                >
-                  Close
-                </button>
-
-                {modalMode !== "view" && (
-                  <button type="submit" className="templates-modal__submit">
-                    {modalMode === "add" ? "Add Template" : "Save Changes"}
-                  </button>
-                )}
-              </div>
-            </form>
+      <BaseModal
+        isOpen={isModalOpen}
+        title={modalTitle}
+        description="Manage template details and content configuration."
+        onClose={closeModal}
+        maxWidth="620px"
+      >
+        <form className="templates-modal__form" onSubmit={handleSubmit}>
+          <div className="templates-modal__field">
+            <label htmlFor="name">Template Name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+              placeholder="Enter template name"
+            />
           </div>
-        </div>
-      )}
+
+          <div className="templates-modal__field">
+            <label htmlFor="type">Type</label>
+            <select
+              id="type"
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+            >
+              <option>Rejection Reason</option>
+              <option>Report Reason</option>
+              <option>Notification</option>
+            </select>
+          </div>
+
+          <div className="templates-modal__field">
+            <label htmlFor="content">Content</label>
+            <textarea
+              id="content"
+              name="content"
+              value={formData.content}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+              placeholder="Enter template content"
+              rows={5}
+            />
+          </div>
+
+          <div className="templates-modal__field">
+            <label htmlFor="status">Status</label>
+            <select
+              id="status"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              disabled={modalMode === "view"}
+            >
+              <option>Active</option>
+              <option>Disabled</option>
+            </select>
+          </div>
+
+          <div className="templates-modal__actions">
+            <button
+              type="button"
+              className="templates-modal__cancel"
+              onClick={closeModal}
+            >
+              Close
+            </button>
+
+            {modalMode !== "view" && (
+              <button type="submit" className="templates-modal__submit">
+                {modalMode === "add" ? "Add Template" : "Save Changes"}
+              </button>
+            )}
+          </div>
+        </form>
+      </BaseModal>
     </div>
   );
 }
