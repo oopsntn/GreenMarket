@@ -1,5 +1,7 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
+import StatusBadge from "../components/StatusBadge";
 import { emptyAttributeForm } from "../mock-data/attributes";
 import { attributeService } from "../services/attributeService";
 import type { Attribute, AttributeFormState } from "../types/attribute";
@@ -16,6 +18,7 @@ function AttributesPage() {
   );
   const [formData, setFormData] =
     useState<AttributeFormState>(emptyAttributeForm);
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   const openAddModal = () => {
     setModalMode("add");
@@ -90,6 +93,17 @@ function AttributesPage() {
     );
   };
 
+  const filteredAttributes = attributes.filter((attribute) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      attribute.name.toLowerCase().includes(keyword) ||
+      attribute.code.toLowerCase().includes(keyword)
+    );
+  });
+
   return (
     <div className="attributes-page">
       <PageHeader
@@ -99,17 +113,11 @@ function AttributesPage() {
         onActionClick={openAddModal}
       />
 
-      <div className="attributes-toolbar">
-        <input
-          className="attributes-toolbar__search"
-          type="text"
-          placeholder="Search by attribute name or code"
-        />
-
-        <button className="attributes-toolbar__filter-btn" type="button">
-          Filter
-        </button>
-      </div>
+      <SearchToolbar
+        placeholder="Search by attribute name or code"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+      />
 
       <div className="attributes-table-wrapper">
         <table className="attributes-table">
@@ -127,37 +135,27 @@ function AttributesPage() {
           </thead>
 
           <tbody>
-            {attributes.map((attribute) => (
+            {filteredAttributes.map((attribute) => (
               <tr key={attribute.id}>
                 <td>#{attribute.id}</td>
                 <td>{attribute.name}</td>
                 <td>{attribute.code}</td>
                 <td>
-                  <span className="attributes-badge attributes-badge--type">
-                    {attribute.type}
-                  </span>
+                  <StatusBadge label={attribute.type} variant="type" />
                 </td>
                 <td>
-                  <span
-                    className={
-                      attribute.required
-                        ? "attributes-badge attributes-badge--required"
-                        : "attributes-badge attributes-badge--optional"
-                    }
-                  >
-                    {attribute.required ? "Required" : "Optional"}
-                  </span>
+                  <StatusBadge
+                    label={attribute.required ? "Required" : "Optional"}
+                    variant={attribute.required ? "required" : "optional"}
+                  />
                 </td>
                 <td>
-                  <span
-                    className={
-                      attribute.status === "Active"
-                        ? "attributes-badge attributes-badge--active"
-                        : "attributes-badge attributes-badge--disabled"
+                  <StatusBadge
+                    label={attribute.status}
+                    variant={
+                      attribute.status === "Active" ? "active" : "disabled"
                     }
-                  >
-                    {attribute.status}
-                  </span>
+                  />
                 </td>
                 <td>{attribute.createdAt}</td>
                 <td>

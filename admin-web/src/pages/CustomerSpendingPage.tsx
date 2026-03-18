@@ -1,4 +1,5 @@
 import PageHeader from "../components/PageHeader";
+import StatusBadge from "../components/StatusBadge";
 import { customerSpendingService } from "../services/customerSpendingService";
 import "./CustomerSpendingPage.css";
 
@@ -74,9 +75,7 @@ function CustomerSpendingPage() {
                   <td>{row.email}</td>
                   <td>{row.totalOrders}</td>
                   <td>
-                    <span className="customer-spending-badge customer-spending-badge--spent">
-                      {row.totalSpent}
-                    </span>
+                    <StatusBadge label={row.totalSpent} variant="success" />
                   </td>
                   <td>{row.avgOrderValue}</td>
                   <td>{row.lastPurchase}</td>

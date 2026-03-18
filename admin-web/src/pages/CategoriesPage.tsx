@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import StatusBadge from "../components/StatusBadge";
 import { emptyCategoryForm } from "../mock-data/categories";
 import { categoryService } from "../services/categoryService";
 import type { Category, CategoryFormState } from "../types/category";
@@ -137,15 +138,12 @@ function CategoriesPage() {
                 <td>{category.slug}</td>
                 <td>{category.attributesCount}</td>
                 <td>
-                  <span
-                    className={
-                      category.status === "Active"
-                        ? "categories-badge categories-badge--active"
-                        : "categories-badge categories-badge--disabled"
+                  <StatusBadge
+                    label={category.status}
+                    variant={
+                      category.status === "Active" ? "active" : "disabled"
                     }
-                  >
-                    {category.status}
-                  </span>
+                  />
                 </td>
                 <td>{category.createdAt}</td>
                 <td>

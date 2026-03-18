@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import StatusBadge from "../components/StatusBadge";
 import { promotionService } from "../services/promotionService";
 import type { Promotion } from "../types/promotion";
 import "./PromotionsPage.css";
@@ -74,25 +75,22 @@ function PromotionsPage() {
                 <td>{promotion.postTitle}</td>
                 <td>{promotion.owner}</td>
                 <td>
-                  <span className="promotions-badge promotions-badge--slot">
-                    {promotion.slot}
-                  </span>
+                  <StatusBadge label={promotion.slot} variant="slot" />
                 </td>
                 <td>{promotion.packageName}</td>
                 <td>{promotion.startDate}</td>
                 <td>{promotion.endDate}</td>
                 <td>
-                  <span
-                    className={
+                  <StatusBadge
+                    label={promotion.status}
+                    variant={
                       promotion.status === "Active"
-                        ? "promotions-badge promotions-badge--active"
+                        ? "active"
                         : promotion.status === "Paused"
-                          ? "promotions-badge promotions-badge--paused"
-                          : "promotions-badge promotions-badge--expired"
+                          ? "paused"
+                          : "expired"
                     }
-                  >
-                    {promotion.status}
-                  </span>
+                  />
                 </td>
                 <td>
                   <div className="promotions-actions">

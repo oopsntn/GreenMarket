@@ -1,4 +1,5 @@
 import PageHeader from "../components/PageHeader";
+import StatusBadge from "../components/StatusBadge";
 import { exportService } from "../services/exportService";
 import "./ExportPage.css";
 
@@ -127,15 +128,12 @@ function ExportPage() {
                   <td>{item.generatedBy}</td>
                   <td>{item.date}</td>
                   <td>
-                    <span
-                      className={
-                        item.status === "Completed"
-                          ? "export-badge export-badge--success"
-                          : "export-badge export-badge--processing"
+                    <StatusBadge
+                      label={item.status}
+                      variant={
+                        item.status === "Completed" ? "success" : "processing"
                       }
-                    >
-                      {item.status}
-                    </span>
+                    />
                   </td>
                 </tr>
               ))}

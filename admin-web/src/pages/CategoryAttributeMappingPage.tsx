@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import StatusBadge from "../components/StatusBadge";
 import { categoryMappingService } from "../services/categoryMappingService";
 import type { CategoryMapping } from "../types/categoryMapping";
 import "./CategoryAttributeMappingPage.css";
@@ -73,27 +74,17 @@ function CategoryAttributeMappingPage() {
                 <td>{item.attributeName}</td>
                 <td>{item.attributeCode}</td>
                 <td>
-                  <span
-                    className={
-                      item.required
-                        ? "mapping-badge mapping-badge--required"
-                        : "mapping-badge mapping-badge--optional"
-                    }
-                  >
-                    {item.required ? "Required" : "Optional"}
-                  </span>
+                  <StatusBadge
+                    label={item.required ? "Required" : "Optional"}
+                    variant={item.required ? "required" : "optional"}
+                  />
                 </td>
                 <td>{item.displayOrder}</td>
                 <td>
-                  <span
-                    className={
-                      item.status === "Active"
-                        ? "mapping-badge mapping-badge--active"
-                        : "mapping-badge mapping-badge--disabled"
-                    }
-                  >
-                    {item.status}
-                  </span>
+                  <StatusBadge
+                    label={item.status}
+                    variant={item.status === "Active" ? "active" : "disabled"}
+                  />
                 </td>
                 <td>
                   <div className="mapping-actions">

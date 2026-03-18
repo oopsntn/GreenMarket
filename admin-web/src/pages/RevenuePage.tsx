@@ -1,4 +1,5 @@
 import PageHeader from "../components/PageHeader";
+import StatusBadge from "../components/StatusBadge";
 import { revenueService } from "../services/revenueService";
 import "./RevenuePage.css";
 
@@ -71,22 +72,17 @@ function RevenuePage() {
                   <td>#{row.id}</td>
                   <td>{row.packageName}</td>
                   <td>
-                    <span className="revenue-badge revenue-badge--slot">
-                      {row.slot}
-                    </span>
+                    <StatusBadge label={row.slot} variant="slot" />
                   </td>
                   <td>{row.orders}</td>
                   <td>{row.revenue}</td>
                   <td>
-                    <span
-                      className={
-                        row.growth.startsWith("-")
-                          ? "revenue-badge revenue-badge--negative"
-                          : "revenue-badge revenue-badge--positive"
+                    <StatusBadge
+                      label={row.growth}
+                      variant={
+                        row.growth.startsWith("-") ? "negative" : "positive"
                       }
-                    >
-                      {row.growth}
-                    </span>
+                    />
                   </td>
                 </tr>
               ))}

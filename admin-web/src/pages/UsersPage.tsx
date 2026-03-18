@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import StatusBadge from "../components/StatusBadge";
 import { emptyUserForm } from "../mock-data/users";
 import { userService } from "../services/userService";
 import type { AssignableUserRole, User, UserFormState } from "../types/user";
@@ -152,20 +153,13 @@ function UsersPage() {
                 <td>{user.fullName}</td>
                 <td>{user.email}</td>
                 <td>
-                  <span className="users-badge users-badge--role">
-                    {user.role}
-                  </span>
+                  <StatusBadge label={user.role} variant="role" />
                 </td>
                 <td>
-                  <span
-                    className={
-                      user.status === "Active"
-                        ? "users-badge users-badge--active"
-                        : "users-badge users-badge--locked"
-                    }
-                  >
-                    {user.status}
-                  </span>
+                  <StatusBadge
+                    label={user.status}
+                    variant={user.status === "Active" ? "active" : "locked"}
+                  />
                 </td>
                 <td>{user.joinedAt}</td>
                 <td>

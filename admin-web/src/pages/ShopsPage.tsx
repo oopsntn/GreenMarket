@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import StatusBadge from "../components/StatusBadge";
 import { shopService } from "../services/shopService";
 import type { Shop, ShopStatus } from "../types/shop";
 import "./ShopsPage.css";
@@ -79,19 +80,18 @@ function ShopsPage() {
                 <td>{shop.ownerEmail}</td>
                 <td>{shop.totalPosts}</td>
                 <td>
-                  <span
-                    className={
+                  <StatusBadge
+                    label={shop.status}
+                    variant={
                       shop.status === "Active"
-                        ? "shops-badge shops-badge--active"
+                        ? "active"
                         : shop.status === "Pending"
-                          ? "shops-badge shops-badge--pending"
+                          ? "pending"
                           : shop.status === "Suspended"
-                            ? "shops-badge shops-badge--suspended"
-                            : "shops-badge shops-badge--rejected"
+                            ? "suspended"
+                            : "rejected"
                     }
-                  >
-                    {shop.status}
-                  </span>
+                  />
                 </td>
                 <td>{shop.createdAt}</td>
                 <td>

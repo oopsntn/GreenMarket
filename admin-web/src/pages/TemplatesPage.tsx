@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import StatusBadge from "../components/StatusBadge";
 import { emptyTemplateForm } from "../mock-data/templates";
 import { templateService } from "../services/templateService";
 import type { Template, TemplateFormState } from "../types/template";
@@ -137,23 +138,18 @@ function TemplatesPage() {
                 <td>#{template.id}</td>
                 <td>{template.name}</td>
                 <td>
-                  <span className="templates-badge templates-badge--type">
-                    {template.type}
-                  </span>
+                  <StatusBadge label={template.type} variant="type" />
                 </td>
                 <td className="templates-content-preview">
                   {template.content}
                 </td>
                 <td>
-                  <span
-                    className={
-                      template.status === "Active"
-                        ? "templates-badge templates-badge--active"
-                        : "templates-badge templates-badge--disabled"
+                  <StatusBadge
+                    label={template.status}
+                    variant={
+                      template.status === "Active" ? "active" : "disabled"
                     }
-                  >
-                    {template.status}
-                  </span>
+                  />
                 </td>
                 <td>{template.updatedAt}</td>
                 <td>
