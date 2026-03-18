@@ -1,68 +1,10 @@
 import { useState } from "react";
+import { shopService } from "../services/shopService";
+import type { Shop, ShopStatus } from "../types/shop";
 import "./ShopsPage.css";
 
-type ShopStatus = "Pending" | "Active" | "Suspended" | "Rejected";
-
-type Shop = {
-  id: number;
-  name: string;
-  ownerName: string;
-  ownerEmail: string;
-  totalPosts: number;
-  status: ShopStatus;
-  createdAt: string;
-  description: string;
-};
-
-const initialShops: Shop[] = [
-  {
-    id: 1,
-    name: "Green Leaf Corner",
-    ownerName: "Nguyen Van A",
-    ownerEmail: "vana@greenmarket.vn",
-    totalPosts: 12,
-    status: "Active",
-    createdAt: "2026-03-10",
-    description:
-      "A specialty plant shop focusing on indoor plants, decorative pots, and beginner-friendly care guides.",
-  },
-  {
-    id: 2,
-    name: "Bonsai Home",
-    ownerName: "Tran Thi B",
-    ownerEmail: "thib@greenmarket.vn",
-    totalPosts: 8,
-    status: "Pending",
-    createdAt: "2026-03-11",
-    description:
-      "A curated bonsai store offering premium miniature trees, pruning tools, and maintenance support.",
-  },
-  {
-    id: 3,
-    name: "Succulent Garden",
-    ownerName: "Le Van C",
-    ownerEmail: "vanc@greenmarket.vn",
-    totalPosts: 15,
-    status: "Suspended",
-    createdAt: "2026-03-12",
-    description:
-      "A succulent-focused shop with themed combo sets, terrarium kits, and seasonal offers.",
-  },
-  {
-    id: 4,
-    name: "Mini Plant House",
-    ownerName: "Pham Thi D",
-    ownerEmail: "thid@greenmarket.vn",
-    totalPosts: 4,
-    status: "Rejected",
-    createdAt: "2026-03-13",
-    description:
-      "A small plant startup shop currently under review for profile and product information completeness.",
-  },
-];
-
 function ShopsPage() {
-  const [shops, setShops] = useState<Shop[]>(initialShops);
+  const [shops, setShops] = useState<Shop[]>(shopService.getShops());
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -76,10 +18,8 @@ function ShopsPage() {
     setIsModalOpen(false);
   };
 
-  const updateShopStatus = (shopId: number, status: ShopStatus) => {
-    setShops((prev) =>
-      prev.map((shop) => (shop.id === shopId ? { ...shop, status } : shop)),
-    );
+  const handleUpdateShopStatus = (shopId: number, status: ShopStatus) => {
+    setShops((prev) => shopService.updateShopStatus(prev, shopId, status));
 
     setSelectedShop((prev) =>
       prev && prev.id === shopId ? { ...prev, status } : prev,
@@ -165,14 +105,18 @@ function ShopsPage() {
                         <button
                           type="button"
                           className="shops-actions__approve"
-                          onClick={() => updateShopStatus(shop.id, "Active")}
+                          onClick={() =>
+                            handleUpdateShopStatus(shop.id, "Active")
+                          }
                         >
                           Approve
                         </button>
                         <button
                           type="button"
                           className="shops-actions__reject"
-                          onClick={() => updateShopStatus(shop.id, "Rejected")}
+                          onClick={() =>
+                            handleUpdateShopStatus(shop.id, "Rejected")
+                          }
                         >
                           Reject
                         </button>
@@ -183,7 +127,9 @@ function ShopsPage() {
                       <button
                         type="button"
                         className="shops-actions__suspend"
-                        onClick={() => updateShopStatus(shop.id, "Suspended")}
+                        onClick={() =>
+                          handleUpdateShopStatus(shop.id, "Suspended")
+                        }
                       >
                         Suspend
                       </button>
@@ -193,7 +139,9 @@ function ShopsPage() {
                       <button
                         type="button"
                         className="shops-actions__reactivate"
-                        onClick={() => updateShopStatus(shop.id, "Active")}
+                        onClick={() =>
+                          handleUpdateShopStatus(shop.id, "Active")
+                        }
                       >
                         Reactivate
                       </button>
@@ -281,7 +229,7 @@ function ShopsPage() {
                       type="button"
                       className="shops-modal__approve"
                       onClick={() =>
-                        updateShopStatus(selectedShop.id, "Active")
+                        handleUpdateShopStatus(selectedShop.id, "Active")
                       }
                     >
                       Approve
@@ -290,7 +238,7 @@ function ShopsPage() {
                       type="button"
                       className="shops-modal__reject"
                       onClick={() =>
-                        updateShopStatus(selectedShop.id, "Rejected")
+                        handleUpdateShopStatus(selectedShop.id, "Rejected")
                       }
                     >
                       Reject
@@ -303,7 +251,7 @@ function ShopsPage() {
                     type="button"
                     className="shops-modal__suspend"
                     onClick={() =>
-                      updateShopStatus(selectedShop.id, "Suspended")
+                      handleUpdateShopStatus(selectedShop.id, "Suspended")
                     }
                   >
                     Suspend
@@ -314,7 +262,9 @@ function ShopsPage() {
                   <button
                     type="button"
                     className="shops-modal__reactivate"
-                    onClick={() => updateShopStatus(selectedShop.id, "Active")}
+                    onClick={() =>
+                      handleUpdateShopStatus(selectedShop.id, "Active")
+                    }
                   >
                     Reactivate
                   </button>
