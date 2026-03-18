@@ -1,55 +1,26 @@
+import { useState } from "react";
+import { categoryMappingService } from "../services/categoryMappingService";
+import type { CategoryMapping } from "../types/categoryMapping";
 import "./CategoryAttributeMappingPage.css";
 
-type MappingItem = {
-  id: number;
-  categoryName: string;
-  attributeName: string;
-  attributeCode: string;
-  required: boolean;
-  displayOrder: number;
-  status: "Active" | "Disabled";
-};
-
-const mappingItems: MappingItem[] = [
-  {
-    id: 1,
-    categoryName: "Indoor Plants",
-    attributeName: "Height",
-    attributeCode: "height",
-    required: true,
-    displayOrder: 1,
-    status: "Active",
-  },
-  {
-    id: 2,
-    categoryName: "Indoor Plants",
-    attributeName: "Pot Size",
-    attributeCode: "pot_size",
-    required: false,
-    displayOrder: 2,
-    status: "Active",
-  },
-  {
-    id: 3,
-    categoryName: "Succulents",
-    attributeName: "Light Requirement",
-    attributeCode: "light_requirement",
-    required: true,
-    displayOrder: 1,
-    status: "Active",
-  },
-  {
-    id: 4,
-    categoryName: "Bonsai",
-    attributeName: "Pet Friendly",
-    attributeCode: "pet_friendly",
-    required: false,
-    displayOrder: 3,
-    status: "Disabled",
-  },
-];
-
 function CategoryAttributeMappingPage() {
+  const [mappings, setMappings] = useState<CategoryMapping[]>(
+    categoryMappingService.getMappings(),
+  );
+
+  const handleToggleStatus = (mapping: CategoryMapping) => {
+    const nextStatus = mapping.status === "Active" ? "Disabled" : "Active";
+    setMappings((prev) =>
+      categoryMappingService.updateMappingStatus(prev, mapping.id, nextStatus),
+    );
+  };
+
+  const handleRemove = (mappingId: number) => {
+    setMappings((prev) =>
+      categoryMappingService.removeMapping(prev, mappingId),
+    );
+  };
+
   return (
     <div className="mapping-page">
       <div className="mapping-page__header">
@@ -91,7 +62,7 @@ function CategoryAttributeMappingPage() {
           </thead>
 
           <tbody>
-            {mappingItems.map((item) => (
+            {mappings.map((item) => (
               <tr key={item.id}>
                 <td>#{item.id}</td>
                 <td>{item.categoryName}</td>
@@ -126,7 +97,29 @@ function CategoryAttributeMappingPage() {
                       Edit
                     </button>
 
-                    <button type="button" className="mapping-actions__remove">
+                    {item.status === "Active" ? (
+                      <button
+                        type="button"
+                        className="mapping-actions__disable"
+                        onClick={() => handleToggleStatus(item)}
+                      >
+                        Disable
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="mapping-actions__enable"
+                        onClick={() => handleToggleStatus(item)}
+                      >
+                        Enable
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="mapping-actions__remove"
+                      onClick={() => handleRemove(item.id)}
+                    >
                       Remove
                     </button>
                   </div>
