@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PageHeader from "../components/PageHeader";
 import { emptyAttributeForm } from "../mock-data/attributes";
 import { attributeService } from "../services/attributeService";
 import type { Attribute, AttributeFormState } from "../types/attribute";
@@ -50,6 +51,7 @@ function AttributesPage() {
   };
 
   const closeModal = () => {
+    setSelectedAttributeId(null);
     setIsModalOpen(false);
   };
 
@@ -90,20 +92,12 @@ function AttributesPage() {
 
   return (
     <div className="attributes-page">
-      <div className="attributes-page__header">
-        <div>
-          <h2>Attributes Management</h2>
-          <p>Manage post attributes used across plant categories.</p>
-        </div>
-
-        <button
-          className="attributes-page__add-btn"
-          type="button"
-          onClick={openAddModal}
-        >
-          + Add Attribute
-        </button>
-      </div>
+      <PageHeader
+        title="Attributes Management"
+        description="Manage post attributes used across plant categories."
+        actionLabel="+ Add Attribute"
+        onActionClick={openAddModal}
+      />
 
       <div className="attributes-toolbar">
         <input

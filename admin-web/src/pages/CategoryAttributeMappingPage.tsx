@@ -1,4 +1,6 @@
 import { useState } from "react";
+import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import { categoryMappingService } from "../services/categoryMappingService";
 import type { CategoryMapping } from "../types/categoryMapping";
 import "./CategoryAttributeMappingPage.css";
@@ -7,6 +9,7 @@ function CategoryAttributeMappingPage() {
   const [mappings, setMappings] = useState<CategoryMapping[]>(
     categoryMappingService.getMappings(),
   );
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   const handleToggleStatus = (mapping: CategoryMapping) => {
     const nextStatus = mapping.status === "Active" ? "Disabled" : "Active";
@@ -21,30 +24,31 @@ function CategoryAttributeMappingPage() {
     );
   };
 
+  const filteredMappings = mappings.filter((item) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      item.categoryName.toLowerCase().includes(keyword) ||
+      item.attributeName.toLowerCase().includes(keyword) ||
+      item.attributeCode.toLowerCase().includes(keyword)
+    );
+  });
+
   return (
     <div className="mapping-page">
-      <div className="mapping-page__header">
-        <div>
-          <h2>Category - Attribute Mapping</h2>
-          <p>Configure which attributes belong to each plant category.</p>
-        </div>
+      <PageHeader
+        title="Category - Attribute Mapping"
+        description="Configure which attributes belong to each plant category."
+        actionLabel="+ Add Mapping"
+      />
 
-        <button className="mapping-page__add-btn" type="button">
-          + Add Mapping
-        </button>
-      </div>
-
-      <div className="mapping-toolbar">
-        <input
-          className="mapping-toolbar__search"
-          type="text"
-          placeholder="Search by category or attribute"
-        />
-
-        <button className="mapping-toolbar__filter-btn" type="button">
-          Filter
-        </button>
-      </div>
+      <SearchToolbar
+        placeholder="Search by category or attribute"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+      />
 
       <div className="mapping-table-wrapper">
         <table className="mapping-table">
@@ -62,7 +66,7 @@ function CategoryAttributeMappingPage() {
           </thead>
 
           <tbody>
-            {mappings.map((item) => (
+            {filteredMappings.map((item) => (
               <tr key={item.id}>
                 <td>#{item.id}</td>
                 <td>{item.categoryName}</td>

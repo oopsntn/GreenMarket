@@ -1,3 +1,4 @@
+import PageHeader from "../components/PageHeader";
 import { dashboardService } from "../services/dashboardService";
 import "./DashboardPage.css";
 
@@ -7,10 +8,10 @@ function DashboardPage() {
 
   return (
     <div className="dashboard-page">
-      <div className="dashboard-title">
-        <h2>Dashboard Overview</h2>
-        <p>Welcome back. Here is the summary of GreenMarket system.</p>
-      </div>
+      <PageHeader
+        title="Dashboard Overview"
+        description="Welcome back. Here is the summary of GreenMarket system."
+      />
 
       <div className="dashboard-cards">
         {statCards.map((card) => (

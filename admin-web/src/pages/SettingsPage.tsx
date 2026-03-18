@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PageHeader from "../components/PageHeader";
 import { settingsService } from "../services/settingsService";
 import type { SettingsState } from "../types/settings";
 import "./SettingsPage.css";
@@ -29,23 +30,12 @@ function SettingsPage() {
 
   return (
     <div className="settings-page">
-      <div className="settings-page__header">
-        <div>
-          <h2>System Settings</h2>
-          <p>
-            Configure platform rules, moderation options, and lifecycle
-            settings.
-          </p>
-        </div>
-
-        <button
-          className="settings-page__save-btn"
-          type="button"
-          onClick={handleSave}
-        >
-          Save Changes
-        </button>
-      </div>
+      <PageHeader
+        title="System Settings"
+        description="Configure platform rules, moderation options, and lifecycle settings."
+        actionLabel="Save Changes"
+        onActionClick={handleSave}
+      />
 
       <div className="settings-grid">
         <section className="settings-card">

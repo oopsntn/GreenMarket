@@ -1,7 +1,8 @@
 import { useState } from "react";
+import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import { emptyUserForm } from "../mock-data/users";
 import { userService } from "../services/userService";
-import PageHeader from "../components/PageHeader";
 import type { AssignableUserRole, User, UserFormState } from "../types/user";
 import "./UsersPage.css";
 
@@ -19,6 +20,7 @@ function UsersPage() {
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [formData, setFormData] = useState<UserFormState>(emptyUserForm);
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   const selectedUser =
     selectedUserId !== null
@@ -72,6 +74,7 @@ function UsersPage() {
   };
 
   const closeModal = () => {
+    setSelectedUserId(null);
     setIsModalOpen(false);
   };
 
@@ -102,6 +105,17 @@ function UsersPage() {
     closeModal();
   };
 
+  const filteredUsers = users.filter((user) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      user.fullName.toLowerCase().includes(keyword) ||
+      user.email.toLowerCase().includes(keyword)
+    );
+  });
+
   return (
     <div className="users-page">
       <PageHeader
@@ -111,17 +125,11 @@ function UsersPage() {
         onActionClick={openAddModal}
       />
 
-      <div className="users-toolbar">
-        <input
-          className="users-toolbar__search"
-          type="text"
-          placeholder="Search by name or email"
-        />
-
-        <button className="users-toolbar__filter-btn" type="button">
-          Filter
-        </button>
-      </div>
+      <SearchToolbar
+        placeholder="Search by name or email"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+      />
 
       <div className="users-table-wrapper">
         <table className="users-table">
@@ -138,7 +146,7 @@ function UsersPage() {
           </thead>
 
           <tbody>
-            {users.map((user) => (
+            {filteredUsers.map((user) => (
               <tr key={user.id}>
                 <td>#{user.id}</td>
                 <td>{user.fullName}</td>

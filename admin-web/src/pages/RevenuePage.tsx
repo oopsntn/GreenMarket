@@ -1,3 +1,4 @@
+import PageHeader from "../components/PageHeader";
 import { revenueService } from "../services/revenueService";
 import "./RevenuePage.css";
 
@@ -7,18 +8,11 @@ function RevenuePage() {
 
   return (
     <div className="revenue-page">
-      <div className="revenue-page__header">
-        <div>
-          <h2>Revenue Summary</h2>
-          <p>
-            Track promotion revenue across slots, packages, and sales periods.
-          </p>
-        </div>
-
-        <button className="revenue-page__export-btn" type="button">
-          Export Revenue Report
-        </button>
-      </div>
+      <PageHeader
+        title="Revenue Summary"
+        description="Track promotion revenue across slots, packages, and sales periods."
+        actionLabel="Export Revenue Report"
+      />
 
       <div className="revenue-filters">
         <div className="revenue-field">

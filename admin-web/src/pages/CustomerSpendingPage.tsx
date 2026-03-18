@@ -1,3 +1,4 @@
+import PageHeader from "../components/PageHeader";
 import { customerSpendingService } from "../services/customerSpendingService";
 import "./CustomerSpendingPage.css";
 
@@ -7,18 +8,11 @@ function CustomerSpendingPage() {
 
   return (
     <div className="customer-spending-page">
-      <div className="customer-spending-page__header">
-        <div>
-          <h2>Customer Spending Report</h2>
-          <p>
-            Track customer purchase behavior and promotion spending activity.
-          </p>
-        </div>
-
-        <button className="customer-spending-page__export-btn" type="button">
-          Export Customer Report
-        </button>
-      </div>
+      <PageHeader
+        title="Customer Spending Report"
+        description="Track customer purchase behavior and promotion spending activity."
+        actionLabel="Export Customer Report"
+      />
 
       <div className="customer-spending-filters">
         <div className="customer-spending-field">

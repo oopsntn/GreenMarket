@@ -1,3 +1,4 @@
+import PageHeader from "../components/PageHeader";
 import { analyticsService } from "../services/analyticsService";
 import "./AnalyticsPage.css";
 
@@ -7,16 +8,11 @@ function AnalyticsPage() {
 
   return (
     <div className="analytics-page">
-      <div className="analytics-page__header">
-        <div>
-          <h2>Analytics Dashboard</h2>
-          <p>Monitor placement performance, engagement, and revenue trends.</p>
-        </div>
-
-        <button className="analytics-page__export-btn" type="button">
-          Export Report
-        </button>
-      </div>
+      <PageHeader
+        title="Analytics Dashboard"
+        description="Monitor placement performance, engagement, and revenue trends."
+        actionLabel="Export Report"
+      />
 
       <div className="analytics-kpis">
         {kpiCards.map((card) => (

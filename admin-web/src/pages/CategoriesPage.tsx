@@ -1,4 +1,6 @@
 import { useState } from "react";
+import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import { emptyCategoryForm } from "../mock-data/categories";
 import { categoryService } from "../services/categoryService";
 import type { Category, CategoryFormState } from "../types/category";
@@ -15,6 +17,7 @@ function CategoriesPage() {
   );
   const [formData, setFormData] =
     useState<CategoryFormState>(emptyCategoryForm);
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   const openAddModal = () => {
     setModalMode("add");
@@ -48,6 +51,7 @@ function CategoriesPage() {
   };
 
   const closeModal = () => {
+    setSelectedCategoryId(null);
     setIsModalOpen(false);
   };
 
@@ -85,34 +89,31 @@ function CategoriesPage() {
     );
   };
 
+  const filteredCategories = categories.filter((category) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      category.name.toLowerCase().includes(keyword) ||
+      category.slug.toLowerCase().includes(keyword)
+    );
+  });
+
   return (
     <div className="categories-page">
-      <div className="categories-page__header">
-        <div>
-          <h2>Categories Management</h2>
-          <p>Manage plant categories and their basic information.</p>
-        </div>
+      <PageHeader
+        title="Categories Management"
+        description="Manage plant categories and their basic information."
+        actionLabel="+ Add Category"
+        onActionClick={openAddModal}
+      />
 
-        <button
-          className="categories-page__add-btn"
-          type="button"
-          onClick={openAddModal}
-        >
-          + Add Category
-        </button>
-      </div>
-
-      <div className="categories-toolbar">
-        <input
-          className="categories-toolbar__search"
-          type="text"
-          placeholder="Search by category name or slug"
-        />
-
-        <button className="categories-toolbar__filter-btn" type="button">
-          Filter
-        </button>
-      </div>
+      <SearchToolbar
+        placeholder="Search by category name or slug"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+      />
 
       <div className="categories-table-wrapper">
         <table className="categories-table">
@@ -129,7 +130,7 @@ function CategoriesPage() {
           </thead>
 
           <tbody>
-            {categories.map((category) => (
+            {filteredCategories.map((category) => (
               <tr key={category.id}>
                 <td>#{category.id}</td>
                 <td>{category.name}</td>

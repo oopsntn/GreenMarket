@@ -1,4 +1,6 @@
 import { useState } from "react";
+import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import { shopService } from "../services/shopService";
 import type { Shop, ShopStatus } from "../types/shop";
 import "./ShopsPage.css";
@@ -7,6 +9,7 @@ function ShopsPage() {
   const [shops, setShops] = useState<Shop[]>(shopService.getShops());
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   const openViewModal = (shop: Shop) => {
     setSelectedShop(shop);
@@ -26,30 +29,31 @@ function ShopsPage() {
     );
   };
 
+  const filteredShops = shops.filter((shop) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      shop.name.toLowerCase().includes(keyword) ||
+      shop.ownerName.toLowerCase().includes(keyword) ||
+      shop.ownerEmail.toLowerCase().includes(keyword)
+    );
+  });
+
   return (
     <div className="shops-page">
-      <div className="shops-page__header">
-        <div>
-          <h2>Shops Management</h2>
-          <p>Manage shops, shop owners, and approval status in the system.</p>
-        </div>
+      <PageHeader
+        title="Shops Management"
+        description="Manage shops, shop owners, and approval status in the system."
+        actionLabel="+ Add Shop"
+      />
 
-        <button className="shops-page__add-btn" type="button">
-          + Add Shop
-        </button>
-      </div>
-
-      <div className="shops-toolbar">
-        <input
-          className="shops-toolbar__search"
-          type="text"
-          placeholder="Search by shop name or owner"
-        />
-
-        <button className="shops-toolbar__filter-btn" type="button">
-          Filter
-        </button>
-      </div>
+      <SearchToolbar
+        placeholder="Search by shop name or owner"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+      />
 
       <div className="shops-table-wrapper">
         <table className="shops-table">
@@ -67,7 +71,7 @@ function ShopsPage() {
           </thead>
 
           <tbody>
-            {shops.map((shop) => (
+            {filteredShops.map((shop) => (
               <tr key={shop.id}>
                 <td>#{shop.id}</td>
                 <td>{shop.name}</td>

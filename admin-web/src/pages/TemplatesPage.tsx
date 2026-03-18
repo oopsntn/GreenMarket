@@ -1,4 +1,6 @@
 import { useState } from "react";
+import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import { emptyTemplateForm } from "../mock-data/templates";
 import { templateService } from "../services/templateService";
 import type { Template, TemplateFormState } from "../types/template";
@@ -15,6 +17,7 @@ function TemplatesPage() {
   );
   const [formData, setFormData] =
     useState<TemplateFormState>(emptyTemplateForm);
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   const openAddModal = () => {
     setModalMode("add");
@@ -48,6 +51,7 @@ function TemplatesPage() {
   };
 
   const closeModal = () => {
+    setSelectedTemplateId(null);
     setIsModalOpen(false);
   };
 
@@ -87,37 +91,31 @@ function TemplatesPage() {
     );
   };
 
+  const filteredTemplates = templates.filter((template) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      template.name.toLowerCase().includes(keyword) ||
+      template.type.toLowerCase().includes(keyword)
+    );
+  });
+
   return (
     <div className="templates-page">
-      <div className="templates-page__header">
-        <div>
-          <h2>Template Management</h2>
-          <p>
-            Manage rejection reasons, report templates, and notification
-            content.
-          </p>
-        </div>
+      <PageHeader
+        title="Template Management"
+        description="Manage rejection reasons, report templates, and notification content."
+        actionLabel="+ Add Template"
+        onActionClick={openAddModal}
+      />
 
-        <button
-          className="templates-page__add-btn"
-          type="button"
-          onClick={openAddModal}
-        >
-          + Add Template
-        </button>
-      </div>
-
-      <div className="templates-toolbar">
-        <input
-          className="templates-toolbar__search"
-          type="text"
-          placeholder="Search by template name or type"
-        />
-
-        <button className="templates-toolbar__filter-btn" type="button">
-          Filter
-        </button>
-      </div>
+      <SearchToolbar
+        placeholder="Search by template name or type"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+      />
 
       <div className="templates-table-wrapper">
         <table className="templates-table">
@@ -134,7 +132,7 @@ function TemplatesPage() {
           </thead>
 
           <tbody>
-            {templates.map((template) => (
+            {filteredTemplates.map((template) => (
               <tr key={template.id}>
                 <td>#{template.id}</td>
                 <td>{template.name}</td>

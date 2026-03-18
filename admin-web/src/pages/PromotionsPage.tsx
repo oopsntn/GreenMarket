@@ -1,4 +1,6 @@
 import { useState } from "react";
+import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import { promotionService } from "../services/promotionService";
 import type { Promotion } from "../types/promotion";
 import "./PromotionsPage.css";
@@ -7,6 +9,7 @@ function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>(
     promotionService.getPromotions(),
   );
+  const [searchKeyword, setSearchKeyword] = useState("");
 
   const handleUpdateStatus = (promotion: Promotion) => {
     if (promotion.status === "Active") {
@@ -23,30 +26,30 @@ function PromotionsPage() {
     }
   };
 
+  const filteredPromotions = promotions.filter((promotion) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      promotion.postTitle.toLowerCase().includes(keyword) ||
+      promotion.owner.toLowerCase().includes(keyword)
+    );
+  });
+
   return (
     <div className="promotions-page">
-      <div className="promotions-page__header">
-        <div>
-          <h2>Promotions Management</h2>
-          <p>Manage boosted posts, placement slots, and promotion status.</p>
-        </div>
+      <PageHeader
+        title="Promotions Management"
+        description="Manage boosted posts, placement slots, and promotion status."
+        actionLabel="+ Add Promotion"
+      />
 
-        <button className="promotions-page__add-btn" type="button">
-          + Add Promotion
-        </button>
-      </div>
-
-      <div className="promotions-toolbar">
-        <input
-          className="promotions-toolbar__search"
-          type="text"
-          placeholder="Search by post title or owner"
-        />
-
-        <button className="promotions-toolbar__filter-btn" type="button">
-          Filter
-        </button>
-      </div>
+      <SearchToolbar
+        placeholder="Search by post title or owner"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+      />
 
       <div className="promotions-table-wrapper">
         <table className="promotions-table">
@@ -65,7 +68,7 @@ function PromotionsPage() {
           </thead>
 
           <tbody>
-            {promotions.map((promotion) => (
+            {filteredPromotions.map((promotion) => (
               <tr key={promotion.id}>
                 <td>#{promotion.id}</td>
                 <td>{promotion.postTitle}</td>

@@ -1,3 +1,4 @@
+import PageHeader from "../components/PageHeader";
 import { exportService } from "../services/exportService";
 import "./ExportPage.css";
 
@@ -6,12 +7,10 @@ function ExportPage() {
 
   return (
     <div className="export-page">
-      <div className="export-page__header">
-        <div>
-          <h2>Export CSV</h2>
-          <p>Export operational and financial reports for GreenMarket admin.</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Export CSV"
+        description="Export operational and financial reports for GreenMarket admin."
+      />
 
       <div className="export-grid">
         <section className="export-card">
