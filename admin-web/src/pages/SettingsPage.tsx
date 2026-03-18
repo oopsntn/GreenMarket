@@ -1,6 +1,32 @@
+import { useState } from "react";
+import { settingsService } from "../services/settingsService";
+import type { SettingsState } from "../types/settings";
 import "./SettingsPage.css";
 
 function SettingsPage() {
+  const [settings, setSettings] = useState<SettingsState>(
+    settingsService.getSettings(),
+  );
+
+  const handleInputChange = (
+    section: keyof SettingsState,
+    field: string,
+    value: string | number | boolean,
+  ) => {
+    setSettings((prev) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSave = () => {
+    const updated = settingsService.updateSettings(settings);
+    setSettings(updated);
+  };
+
   return (
     <div className="settings-page">
       <div className="settings-page__header">
@@ -12,7 +38,11 @@ function SettingsPage() {
           </p>
         </div>
 
-        <button className="settings-page__save-btn" type="button">
+        <button
+          className="settings-page__save-btn"
+          type="button"
+          onClick={handleSave}
+        >
           Save Changes
         </button>
       </div>
@@ -30,7 +60,10 @@ function SettingsPage() {
               <input
                 id="platform-name"
                 type="text"
-                defaultValue="GreenMarket"
+                value={settings.general.platformName}
+                onChange={(e) =>
+                  handleInputChange("general", "platformName", e.target.value)
+                }
               />
             </div>
 
@@ -39,13 +72,26 @@ function SettingsPage() {
               <input
                 id="support-email"
                 type="email"
-                defaultValue="support@greenmarket.vn"
+                value={settings.general.supportEmail}
+                onChange={(e) =>
+                  handleInputChange("general", "supportEmail", e.target.value)
+                }
               />
             </div>
 
             <div className="settings-field">
               <label htmlFor="default-language">Default Language</label>
-              <select id="default-language" defaultValue="English">
+              <select
+                id="default-language"
+                value={settings.general.defaultLanguage}
+                onChange={(e) =>
+                  handleInputChange(
+                    "general",
+                    "defaultLanguage",
+                    e.target.value,
+                  )
+                }
+              >
                 <option>English</option>
                 <option>Vietnamese</option>
               </select>
@@ -65,7 +111,17 @@ function SettingsPage() {
                 <strong>Auto Moderation</strong>
                 <span>Automatically flag suspicious posts</span>
               </div>
-              <input type="checkbox" defaultChecked />
+              <input
+                type="checkbox"
+                checked={settings.moderation.autoModeration}
+                onChange={(e) =>
+                  handleInputChange(
+                    "moderation",
+                    "autoModeration",
+                    e.target.checked,
+                  )
+                }
+              />
             </div>
 
             <div className="settings-toggle">
@@ -73,12 +129,33 @@ function SettingsPage() {
                 <strong>Banned Keyword Filter</strong>
                 <span>Block content containing prohibited terms</span>
               </div>
-              <input type="checkbox" defaultChecked />
+              <input
+                type="checkbox"
+                checked={settings.moderation.bannedKeywordFilter}
+                onChange={(e) =>
+                  handleInputChange(
+                    "moderation",
+                    "bannedKeywordFilter",
+                    e.target.checked,
+                  )
+                }
+              />
             </div>
 
             <div className="settings-field">
               <label htmlFor="report-limit">Max Reports Before Review</label>
-              <input id="report-limit" type="number" defaultValue={5} />
+              <input
+                id="report-limit"
+                type="number"
+                value={settings.moderation.reportLimit}
+                onChange={(e) =>
+                  handleInputChange(
+                    "moderation",
+                    "reportLimit",
+                    Number(e.target.value),
+                  )
+                }
+              />
             </div>
           </div>
         </section>
@@ -92,12 +169,34 @@ function SettingsPage() {
           <div className="settings-form">
             <div className="settings-field">
               <label htmlFor="post-expiry">Post Expiry Days</label>
-              <input id="post-expiry" type="number" defaultValue={30} />
+              <input
+                id="post-expiry"
+                type="number"
+                value={settings.postLifecycle.postExpiryDays}
+                onChange={(e) =>
+                  handleInputChange(
+                    "postLifecycle",
+                    "postExpiryDays",
+                    Number(e.target.value),
+                  )
+                }
+              />
             </div>
 
             <div className="settings-field">
               <label htmlFor="restore-window">Restore Window (Days)</label>
-              <input id="restore-window" type="number" defaultValue={7} />
+              <input
+                id="restore-window"
+                type="number"
+                value={settings.postLifecycle.restoreWindowDays}
+                onChange={(e) =>
+                  handleInputChange(
+                    "postLifecycle",
+                    "restoreWindowDays",
+                    Number(e.target.value),
+                  )
+                }
+              />
             </div>
 
             <div className="settings-toggle">
@@ -105,7 +204,17 @@ function SettingsPage() {
                 <strong>Allow Auto Expire</strong>
                 <span>Automatically expire inactive listings</span>
               </div>
-              <input type="checkbox" defaultChecked />
+              <input
+                type="checkbox"
+                checked={settings.postLifecycle.allowAutoExpire}
+                onChange={(e) =>
+                  handleInputChange(
+                    "postLifecycle",
+                    "allowAutoExpire",
+                    e.target.checked,
+                  )
+                }
+              />
             </div>
           </div>
         </section>
@@ -119,12 +228,34 @@ function SettingsPage() {
           <div className="settings-form">
             <div className="settings-field">
               <label htmlFor="max-images">Max Images Per Post</label>
-              <input id="max-images" type="number" defaultValue={10} />
+              <input
+                id="max-images"
+                type="number"
+                value={settings.media.maxImagesPerPost}
+                onChange={(e) =>
+                  handleInputChange(
+                    "media",
+                    "maxImagesPerPost",
+                    Number(e.target.value),
+                  )
+                }
+              />
             </div>
 
             <div className="settings-field">
               <label htmlFor="max-size">Max File Size (MB)</label>
-              <input id="max-size" type="number" defaultValue={5} />
+              <input
+                id="max-size"
+                type="number"
+                value={settings.media.maxFileSizeMb}
+                onChange={(e) =>
+                  handleInputChange(
+                    "media",
+                    "maxFileSizeMb",
+                    Number(e.target.value),
+                  )
+                }
+              />
             </div>
 
             <div className="settings-toggle">
@@ -132,7 +263,17 @@ function SettingsPage() {
                 <strong>Enable Image Compression</strong>
                 <span>Compress uploaded media before storage</span>
               </div>
-              <input type="checkbox" defaultChecked />
+              <input
+                type="checkbox"
+                checked={settings.media.enableImageCompression}
+                onChange={(e) =>
+                  handleInputChange(
+                    "media",
+                    "enableImageCompression",
+                    e.target.checked,
+                  )
+                }
+              />
             </div>
           </div>
         </section>
