@@ -1,78 +1,25 @@
 import { useState } from "react";
+import { emptyTemplateForm } from "../mock-data/templates";
+import { templateService } from "../services/templateService";
+import type { Template, TemplateFormState } from "../types/template";
 import "./TemplatesPage.css";
 
-type Template = {
-  id: number;
-  name: string;
-  type: "Rejection Reason" | "Report Reason" | "Notification";
-  content: string;
-  status: "Active" | "Disabled";
-  updatedAt: string;
-};
-
-const initialTemplates: Template[] = [
-  {
-    id: 1,
-    name: "Post Rejection - Invalid Content",
-    type: "Rejection Reason",
-    content: "Your post violates our marketplace content policy.",
-    status: "Active",
-    updatedAt: "2026-03-14",
-  },
-  {
-    id: 2,
-    name: "Post Rejection - Missing Information",
-    type: "Rejection Reason",
-    content:
-      "Your post is missing required information and cannot be approved.",
-    status: "Active",
-    updatedAt: "2026-03-13",
-  },
-  {
-    id: 3,
-    name: "Report Reason - Spam Content",
-    type: "Report Reason",
-    content: "This content appears to be spam or misleading.",
-    status: "Active",
-    updatedAt: "2026-03-12",
-  },
-  {
-    id: 4,
-    name: "Notification - Account Locked",
-    type: "Notification",
-    content: "Your account has been locked due to suspicious activity.",
-    status: "Disabled",
-    updatedAt: "2026-03-11",
-  },
-];
-
-type TemplateFormState = {
-  name: string;
-  type: "Rejection Reason" | "Report Reason" | "Notification";
-  content: string;
-  status: "Active" | "Disabled";
-};
-
-const emptyForm: TemplateFormState = {
-  name: "",
-  type: "Rejection Reason",
-  content: "",
-  status: "Active",
-};
-
 function TemplatesPage() {
-  const [templates, setTemplates] = useState<Template[]>(initialTemplates);
+  const [templates, setTemplates] = useState<Template[]>(
+    templateService.getTemplates(),
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
     null,
   );
-  const [formData, setFormData] = useState<TemplateFormState>(emptyForm);
+  const [formData, setFormData] =
+    useState<TemplateFormState>(emptyTemplateForm);
 
   const openAddModal = () => {
     setModalMode("add");
     setSelectedTemplateId(null);
-    setFormData(emptyForm);
+    setFormData(emptyTemplateForm);
     setIsModalOpen(true);
   };
 
@@ -110,6 +57,7 @@ function TemplatesPage() {
     >,
   ) => {
     const { name, value } = event.target;
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -120,36 +68,23 @@ function TemplatesPage() {
     event.preventDefault();
 
     if (modalMode === "add") {
-      const newTemplate: Template = {
-        id: templates.length + 1,
-        name: formData.name,
-        type: formData.type,
-        content: formData.content,
-        status: formData.status,
-        updatedAt: "2026-03-18",
-      };
-
-      setTemplates((prev) => [newTemplate, ...prev]);
+      setTemplates((prev) => templateService.createTemplate(prev, formData));
     }
 
     if (modalMode === "edit" && selectedTemplateId !== null) {
       setTemplates((prev) =>
-        prev.map((template) =>
-          template.id === selectedTemplateId
-            ? {
-                ...template,
-                name: formData.name,
-                type: formData.type,
-                content: formData.content,
-                status: formData.status,
-                updatedAt: "2026-03-18",
-              }
-            : template,
-        ),
+        templateService.updateTemplate(prev, selectedTemplateId, formData),
       );
     }
 
     closeModal();
+  };
+
+  const handleToggleStatus = (template: Template) => {
+    const nextStatus = template.status === "Active" ? "Disabled" : "Active";
+    setTemplates((prev) =>
+      templateService.updateTemplateStatus(prev, template.id, nextStatus),
+    );
   };
 
   return (
@@ -245,6 +180,7 @@ function TemplatesPage() {
                       <button
                         type="button"
                         className="templates-actions__disable"
+                        onClick={() => handleToggleStatus(template)}
                       >
                         Disable
                       </button>
@@ -252,6 +188,7 @@ function TemplatesPage() {
                       <button
                         type="button"
                         className="templates-actions__enable"
+                        onClick={() => handleToggleStatus(template)}
                       >
                         Enable
                       </button>
