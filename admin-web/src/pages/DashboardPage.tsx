@@ -1,6 +1,10 @@
+import { dashboardService } from "../services/dashboardService";
 import "./DashboardPage.css";
 
 function DashboardPage() {
+  const statCards = dashboardService.getStatCards();
+  const summary = dashboardService.getSummary();
+
   return (
     <div className="dashboard-page">
       <div className="dashboard-title">
@@ -9,33 +13,17 @@ function DashboardPage() {
       </div>
 
       <div className="dashboard-cards">
-        <div className="dashboard-card">
-          <h3>Total Users</h3>
-          <strong>1,250</strong>
-        </div>
-
-        <div className="dashboard-card">
-          <h3>Total Posts</h3>
-          <strong>3,480</strong>
-        </div>
-
-        <div className="dashboard-card">
-          <h3>Pending Reports</h3>
-          <strong>28</strong>
-        </div>
-
-        <div className="dashboard-card">
-          <h3>Revenue</h3>
-          <strong>$2,340</strong>
-        </div>
+        {statCards.map((card) => (
+          <div key={card.title} className="dashboard-card">
+            <h3>{card.title}</h3>
+            <strong>{card.value}</strong>
+          </div>
+        ))}
       </div>
 
       <div className="dashboard-panel">
-        <h3>System Summary</h3>
-        <p>
-          This area will later display analytics, latest activities, moderation
-          status, promotion performance, and financial reports.
-        </p>
+        <h3>{summary.title}</h3>
+        <p>{summary.description}</p>
       </div>
     </div>
   );
