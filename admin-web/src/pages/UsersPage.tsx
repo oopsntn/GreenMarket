@@ -1,91 +1,64 @@
 import { useState } from "react";
+import { emptyUserForm } from "../mock-data/users";
+import { userService } from "../services/userService";
+import type { AssignableUserRole, User, UserFormState } from "../types/user";
 import "./UsersPage.css";
 
-type User = {
-  id: number;
-  fullName: string;
-  email: string;
-  role: string;
-  status: "Active" | "Locked";
-  joinedAt: string;
-};
-
-const initialUsers: User[] = [
-  {
-    id: 1,
-    fullName: "Nguyen Van A",
-    email: "vana@greenmarket.vn",
-    role: "Customer",
-    status: "Active",
-    joinedAt: "2026-03-10",
-  },
-  {
-    id: 2,
-    fullName: "Tran Thi B",
-    email: "thib@greenmarket.vn",
-    role: "Shop Owner",
-    status: "Active",
-    joinedAt: "2026-03-11",
-  },
-  {
-    id: 3,
-    fullName: "Le Van C",
-    email: "vanc@greenmarket.vn",
-    role: "Moderator",
-    status: "Locked",
-    joinedAt: "2026-03-12",
-  },
-  {
-    id: 4,
-    fullName: "Pham Thi D",
-    email: "thid@greenmarket.vn",
-    role: "Admin",
-    status: "Active",
-    joinedAt: "2026-03-13",
-  },
+const assignableRoles: AssignableUserRole[] = [
+  "Customer",
+  "Manager",
+  "Host",
+  "Collaborator",
+  "Operations Staff",
 ];
 
-type UserFormState = {
-  fullName: string;
-  email: string;
-  role: string;
-  status: "Active" | "Locked";
-};
-
-const emptyForm: UserFormState = {
-  fullName: "",
-  email: "",
-  role: "Customer",
-  status: "Active",
-};
-
 function UsersPage() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>(userService.getUsers());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<UserFormState>(emptyForm);
+  const [formData, setFormData] = useState<UserFormState>(emptyUserForm);
+
+  const selectedUser =
+    selectedUserId !== null
+      ? (users.find((user) => user.id === selectedUserId) ?? null)
+      : null;
+
+  const isProtectedAdmin = selectedUser?.role === "Admin";
 
   const openAddModal = () => {
     setModalMode("add");
     setSelectedUserId(null);
-    setFormData(emptyForm);
+    setFormData(emptyUserForm);
     setIsModalOpen(true);
   };
 
   const openViewModal = (user: User) => {
     setModalMode("view");
     setSelectedUserId(user.id);
-    setFormData({
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-    });
+
+    if (user.role === "Admin") {
+      setFormData({
+        fullName: user.fullName,
+        email: user.email,
+        role: "Customer",
+        status: user.status,
+      });
+    } else {
+      setFormData({
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+      });
+    }
+
     setIsModalOpen(true);
   };
 
   const openEditModal = (user: User) => {
+    if (user.role === "Admin") return;
+
     setModalMode("edit");
     setSelectedUserId(user.id);
     setFormData({
@@ -105,6 +78,7 @@ function UsersPage() {
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = event.target;
+
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -115,31 +89,12 @@ function UsersPage() {
     event.preventDefault();
 
     if (modalMode === "add") {
-      const newUser: User = {
-        id: users.length + 1,
-        fullName: formData.fullName,
-        email: formData.email,
-        role: formData.role,
-        status: formData.status,
-        joinedAt: "2026-03-18",
-      };
-
-      setUsers((prev) => [newUser, ...prev]);
+      setUsers((prev) => userService.createUser(prev, formData));
     }
 
     if (modalMode === "edit" && selectedUserId !== null) {
       setUsers((prev) =>
-        prev.map((user) =>
-          user.id === selectedUserId
-            ? {
-                ...user,
-                fullName: formData.fullName,
-                email: formData.email,
-                role: formData.role,
-                status: formData.status,
-              }
-            : user,
-        ),
+        userService.updateUser(prev, selectedUserId, formData),
       );
     }
 
@@ -226,11 +181,20 @@ function UsersPage() {
                       type="button"
                       className="users-actions__edit"
                       onClick={() => openEditModal(user)}
+                      disabled={user.role === "Admin"}
                     >
                       Edit
                     </button>
 
-                    {user.status === "Active" ? (
+                    {user.role === "Admin" ? (
+                      <button
+                        type="button"
+                        className="users-actions__disabled"
+                        disabled
+                      >
+                        Protected
+                      </button>
+                    ) : user.status === "Active" ? (
                       <button type="button" className="users-actions__lock">
                         Lock
                       </button>
@@ -298,21 +262,29 @@ function UsersPage() {
                 />
               </div>
 
-              <div className="users-modal__field">
-                <label htmlFor="role">Role</label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                >
-                  <option>Customer</option>
-                  <option>Shop Owner</option>
-                  <option>Moderator</option>
-                  <option>Admin</option>
-                </select>
-              </div>
+              {isProtectedAdmin ? (
+                <div className="users-modal__field">
+                  <label>Role</label>
+                  <input type="text" value="Admin" disabled />
+                </div>
+              ) : (
+                <div className="users-modal__field">
+                  <label htmlFor="role">Role</label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    disabled={modalMode === "view"}
+                  >
+                    {assignableRoles.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="users-modal__field">
                 <label htmlFor="status">Status</label>
@@ -321,12 +293,19 @@ function UsersPage() {
                   name="status"
                   value={formData.status}
                   onChange={handleChange}
-                  disabled={modalMode === "view"}
+                  disabled={modalMode === "view" || isProtectedAdmin}
                 >
                   <option>Active</option>
                   <option>Locked</option>
                 </select>
               </div>
+
+              {isProtectedAdmin && (
+                <div className="users-modal__notice">
+                  This is the only system Admin account. Role and status cannot
+                  be changed.
+                </div>
+              )}
 
               <div className="users-modal__actions">
                 <button

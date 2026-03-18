@@ -13,6 +13,7 @@ import RevenuePage from "../pages/RevenuePage";
 import SettingsPage from "../pages/SettingsPage";
 import TemplatesPage from "../pages/TemplatesPage";
 import UsersPage from "../pages/UsersPage";
+import ShopsPage from "../pages/ShopsPage";
 
 function AppRoutes() {
   return (
@@ -24,6 +25,7 @@ function AppRoutes() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="users" element={<UsersPage />} />
+          <Route path="shops" element={<ShopsPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="attributes" element={<AttributesPage />} />
           <Route

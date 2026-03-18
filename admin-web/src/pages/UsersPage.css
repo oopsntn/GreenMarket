@@ -137,6 +137,7 @@
 .users-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .users-actions button {
@@ -154,6 +155,11 @@
   color: #1b5e20;
 }
 
+.users-actions__edit {
+  background-color: #eef4ff;
+  color: #1d4ed8;
+}
+
 .users-actions__lock {
   background-color: #fff1f0;
   color: #c62828;
@@ -164,9 +170,16 @@
   color: #2e7d32;
 }
 
-.users-actions__edit {
-  background-color: #eef4ff;
-  color: #1d4ed8;
+.users-actions__disabled {
+  background-color: #f2f4f3;
+  color: #8a948c;
+  cursor: not-allowed;
+}
+
+.users-actions__edit:disabled {
+  background-color: #f2f4f3;
+  color: #8a948c;
+  cursor: not-allowed;
 }
 
 .users-modal-backdrop {
@@ -263,6 +276,15 @@
   background-color: #f5f7f4;
   color: #6b7b6d;
   cursor: not-allowed;
+}
+
+.users-modal__notice {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background-color: #fff8e1;
+  color: #8a5a00;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .users-modal__actions {

@@ -1,0 +1,182 @@
+.shops-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.shops-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.shops-page__header h2 {
+  font-size: 28px;
+  color: #1b4332;
+  margin-bottom: 8px;
+}
+
+.shops-page__header p {
+  color: #6b7b6d;
+  font-size: 15px;
+}
+
+.shops-page__add-btn {
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
+}
+
+.shops-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background-color: #ffffff;
+  border: 1px solid #edf2e8;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(27, 67, 50, 0.06);
+}
+
+.shops-toolbar__search {
+  flex: 1;
+  height: 44px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+}
+
+.shops-toolbar__search:focus {
+  border-color: #43a047;
+  box-shadow: 0 0 0 4px rgba(67, 160, 71, 0.12);
+}
+
+.shops-toolbar__filter-btn {
+  height: 44px;
+  padding: 0 18px;
+  border: 1px solid #cfe2d1;
+  border-radius: 12px;
+  background-color: #f6fbf6;
+  color: #1b5e20;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shops-table-wrapper {
+  background-color: #ffffff;
+  border: 1px solid #edf2e8;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
+}
+
+.shops-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shops-table thead {
+  background-color: #f6faf5;
+}
+
+.shops-table th,
+.shops-table td {
+  text-align: left;
+  padding: 16px 18px;
+  border-bottom: 1px solid #eef3ea;
+  font-size: 14px;
+  vertical-align: top;
+}
+
+.shops-table th {
+  color: #486150;
+  font-weight: 700;
+}
+
+.shops-table td {
+  color: #223127;
+}
+
+.shops-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.shops-badge--active {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+}
+
+.shops-badge--pending {
+  background-color: #fff8e1;
+  color: #b26a00;
+}
+
+.shops-badge--suspended {
+  background-color: #fff1f0;
+  color: #c62828;
+}
+
+.shops-badge--rejected {
+  background-color: #fdecea;
+  color: #c62828;
+}
+
+.shops-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shops-actions button {
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shops-actions__view {
+  background-color: #edf7ee;
+  color: #1b5e20;
+}
+
+.shops-actions__approve {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.shops-actions__reject {
+  background-color: #fff1f0;
+  color: #c62828;
+}
+
+.shops-actions__suspend {
+  background-color: #fff1f0;
+  color: #c62828;
+}
+
+.shops-actions__reactivate {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}

@@ -4,6 +4,7 @@ import "./AdminLayout.css";
 const menuItems = [
   { label: "Dashboard", path: "/dashboard" },
   { label: "Users", path: "/users" },
+  { label: "Shops", path: "/shops" },
   { label: "Categories", path: "/categories" },
   { label: "Attributes", path: "/attributes" },
   { label: "Category Mapping", path: "/category-attributes" },
