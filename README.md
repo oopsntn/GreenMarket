@@ -2,103 +2,73 @@
 
 GreenMarket - Chợ điện tử cho người đam mê cây cảnh.
 
-## 🏗 Project Structure
+## 🏗 Cấu trúc Dự Án
 
-- `admin-web/`: Frontend dashboard built with React + TypeScript + Vite.
-- `back-end/`: API server built with Node.js Express + TypeScript + Drizzle ORM.
-- `docker/`: Docker configuration for postgreSQL and node.
+- `admin-web/`: Dashboard quản trị (React + TypeScript + Vite).
+- `user-web/`: Giao diện người dùng (React + TypeScript + Vite).
+- `back-end/`: API Server (Node.js Express + TypeScript + Drizzle ORM).
+- `GreenMarket.sql`: File backup database chuẩn với dữ liệu mẫu (Sanh, Tùng, v.v.).
 
-## 🚀 Getting Started
+## 🚀 Hướng dẫn khởi chạy nhanh (Dành cho Frontend Team)
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/oopsntn/GreenMarket.git
-cd GreenMarket
-```
+Nếu bạn chỉ muốn chạy Backend + Database để làm Frontend, hãy làm theo các bước sau:
 
-### 2. Infrastructure Setup (Database)
-The project uses PostgreSQL 18.2. The easiest way to run it is via Docker:
+1. **Yêu cầu**: Đã cài đặt [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2. **Khởi chạy toàn bộ hệ thống**:
+   ```bash
+   docker-compose up --build
+   ```
+3. **Lưu ý quan trọng (Cập nhật dữ liệu mới nhất)**:
+   Để đảm bảo Database luôn có dữ liệu mới nhất từ file `GreenMarket.sql` (xóa dữ liệu cũ, nạp lại từ đầu), hãy dùng lệnh:
+   ```bash
+   docker-compose down -v && docker-compose up --build
+   ```
+   *(Tham số `-v` sẽ xóa volume cũ để Docker nạp lại file SQL mới).*
 
-```bash
-docker-compose up -d db
-```
-*Port: `5433` (External) | User/Pass: `admin`/`admin`*
+- **API URL:** `http://localhost:5000`
+- **Database Port:** `5433` (User: `postgres` | Pass: `admin` | DB: `greenmarket`)
 
 ---
 
-## 💻 Development Guide
+## 💻 Hướng dẫn Phát triển (Chạy thủ công)
 
-This project is optimized for **TypeScript** and uses **pnpm** as the package manager.
+Dự án sử dụng **pnpm**. Nếu chưa có, hãy cài đặt bằng `npm install -g pnpm`.
 
-### 🎨 Frontend Development (`admin-web`)
-To start developing the admin dashboard:
+### 🎨 Phát triển Frontend (`admin-web` hoặc `user-web`)
+1. Di chuyển vào thư mục: `cd admin-web` (hoặc `user-web`)
+2. Cài đặt thư viện: `pnpm install`
+3. Chạy dev: `pnpm dev`
+   - Admin: `http://localhost:5173`
+   - User: `http://localhost:5174` (Tùy cấu hình port)
 
-1. Navigate to the folder:
-   ```bash
-   cd admin-web
-   ```
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-3. Run development server:
-   ```bash
-   pnpm dev
-   ```
-   *Dashboard will be available at: `http://localhost:5173`*
-
-### ⚙️ Backend Development (`back-end`)
-To start developing the API server:
-
-1. Navigate to the folder:
-   ```bash
-   cd back-end
-   ```
-2. Setup environment variables:
-   - Copy `.env.example` to `.env`.
-   - Update `DATABASE_URL` in `.env`:
+### ⚙️ Phát triển Backend (`back-end`)
+1. Di chuyển vào thư mục: `cd back-end`
+2. Thiết lập môi trường:
+   - Copy `.env.example` thành `.env`.
+   - Cập nhật `DATABASE_URL`:
      ```env
      PORT=5000
-     DATABASE_URL=postgresql://admin:admin@localhost:5433/GreenMarket
+     DATABASE_URL=postgresql://postgres:admin@localhost:5433/greenmarket
      ```
-3. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-4. Push database schema (if necessary):
+3. Cài đặt thư viện: `pnpm install`
+4. Cập nhật database schema (nếu có thay đổi code):
    ```bash
    pnpm db:push
    ```
-5. Run development server:
-   ```bash
-   pnpm dev
-   ```
-   *API will be available at: `http://localhost:5000`*
+5. Chạy dev: `pnpm dev`
 
 ---
 
-## 🐳 Docker Deployment
+## 🛠 Lệnh hữu ích
 
-To run the entire stack (API + Database) using Docker:
-
-```bash
-docker-compose up --build
-```
-
-- **API:** `http://localhost:5000`
-- **Database:** `localhost:5433`
-
----
-
-## 🛠 Useful Commands
-
-| Command | Description |
+| Lệnh | Mô tả |
 |---------|-------------|
-| `pnpm build` | Build the project for production |
-| `pnpm lint` | Run ESLint (TypeScript aware) |
-| `pnpm type-check` | Run TypeScript compiler in check mode |
-| `pnpm db:generate` | Generate Drizzle migrations |
-| `pnpm db:push` | Sync schema to database |
+| `pnpm build` | Build production |
+| `pnpm lint` | Kiểm tra lỗi code (ESLint) |
+| `pnpm db:generate` | Tạo file migration từ schema |
+| `pnpm db:push` | Đẩy trực tiếp schema vào DB |
+| `docker-compose logs -f` | Xem log của hệ thống Docker |
 
 ---
-*Happy coding! 🚀*
+*Chúc team làm việc hiệu quả! 🚀*
+
