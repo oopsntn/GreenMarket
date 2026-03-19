@@ -1,0 +1,192 @@
+.revenue-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.revenue-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.revenue-page__header h2 {
+  font-size: 28px;
+  color: #1b4332;
+  margin-bottom: 8px;
+}
+
+.revenue-page__header p {
+  color: #6b7b6d;
+  font-size: 15px;
+}
+
+.revenue-page__export-btn {
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
+}
+
+.revenue-filters {
+  display: flex;
+  gap: 16px;
+  background-color: #ffffff;
+  border: 1px solid #edf2e8;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(27, 67, 50, 0.06);
+}
+
+.revenue-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.revenue-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.revenue-field select {
+  height: 44px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+}
+
+.revenue-field select:focus {
+  border-color: #43a047;
+  box-shadow: 0 0 0 4px rgba(67, 160, 71, 0.12);
+}
+
+.revenue-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.revenue-card {
+  background-color: #ffffff;
+  border: 1px solid #edf2e8;
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
+}
+
+.revenue-card span {
+  display: block;
+  color: #6b7b6d;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.revenue-card strong {
+  display: block;
+  font-size: 30px;
+  color: #1b4332;
+  margin-bottom: 8px;
+}
+
+.revenue-card small {
+  color: #2e7d32;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.revenue-panel {
+  background-color: #ffffff;
+  border: 1px solid #edf2e8;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
+}
+
+.revenue-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.revenue-panel__header h3 {
+  font-size: 20px;
+  color: #1b4332;
+}
+
+.revenue-panel__header span {
+  font-size: 13px;
+  color: #6b7b6d;
+}
+
+.revenue-table-wrapper {
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid #eef3ea;
+}
+
+.revenue-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.revenue-table thead {
+  background-color: #f6faf5;
+}
+
+.revenue-table th,
+.revenue-table td {
+  text-align: left;
+  padding: 16px 18px;
+  border-bottom: 1px solid #eef3ea;
+  font-size: 14px;
+}
+
+.revenue-table th {
+  color: #486150;
+  font-weight: 700;
+}
+
+.revenue-table td {
+  color: #223127;
+}
+
+.revenue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.revenue-badge--slot {
+  background-color: #edf7ee;
+  color: #2e7d32;
+}
+
+.revenue-badge--positive {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+}
+
+.revenue-badge--negative {
+  background-color: #fdecea;
+  color: #c62828;
+}

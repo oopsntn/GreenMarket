@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getPublicPosts } from '../services/api';
 import { Leaf, Search, ShoppingBag, Filter } from 'lucide-react';
 
@@ -94,30 +95,41 @@ const Home: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {posts && posts.length > 0 ? posts.map((post) => (
-              <div key={post.postId} className="group glass rounded-3xl overflow-hidden hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-300">
+              <Link
+                key={post.postId}
+                to={`/posts/detail/${post.postSlug}`}
+                className="group glass rounded-4xl overflow-hidden hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 border border-white/5 hover:border-emerald-500/30 block"
+              >
                 <div className="aspect-square bg-slate-900 overflow-hidden relative">
                   {post.images && post.images.length > 0 ? (
-                    <img src={post.images[0].imageUrl} alt={post.postTitle} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <img
+                      src={post.images[0].imageUrl.startsWith('http') ? post.images[0].imageUrl : `http://localhost:5000${post.images[0].imageUrl}`}
+                      alt={post.postTitle}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-slate-800">
                       <ShoppingBag className="w-12 h-12" />
                     </div>
                   )}
+                  <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                    Xem chi tiết
+                  </div>
                 </div>
-                <div className="p-5">
-                  <h3 className="text-lg font-bold mb-2 group-hover:text-emerald-400 transition-colors line-clamp-1">
+                <div className="p-6">
+                  <h3 className="text-xl font-bold mb-2 group-hover:text-emerald-400 transition-colors line-clamp-1 uppercase tracking-tight">
                     {post.postTitle}
                   </h3>
                   <div className="flex justify-between items-end">
-                    <p className="text-emerald-500 font-bold text-xl">
-                      {Number(post.postPrice).toLocaleString()} đ
+                    <p className="text-emerald-500 font-black text-2xl">
+                      {Number(post.postPrice).toLocaleString()} <span className="text-xs font-medium text-slate-500 ml-1">đ</span>
                     </p>
-                    <p className="text-xs text-slate-500">
-                      {post.postLocation || "Chưa cập nhật"}
+                    <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                      <Filter className="w-3 h-3" /> {post.postLocation || "Hà Nội"}
                     </p>
                   </div>
                 </div>
-              </div>
+              </Link>
             )) : (
               <div className="col-span-full text-center py-20 bg-surface rounded-3xl border border-dashed border-white/10 text-slate-500">
                 Không tìm thấy kết quả phù hợp.

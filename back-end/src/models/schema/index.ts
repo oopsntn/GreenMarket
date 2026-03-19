@@ -12,3 +12,5 @@ export { postImages, type PostImage, type NewPostImage } from "./post-images.ts"
 export { postAttributeValues, type PostAttributeValue, type NewPostAttributeValue } from "./post-attribute-values.ts";
 export { reports, type Report, type NewReport } from "./reports.ts";
 export { qrSessions, type QRSession, type NewQRSession } from "./qr-sessions.ts";
+export { categoryAttributes, type CategoryAttribute, type NewCategoryAttribute } from "./category-attributes.ts";
+export { postVideos, type PostVideo, type NewPostVideo } from "./post-videos.ts";

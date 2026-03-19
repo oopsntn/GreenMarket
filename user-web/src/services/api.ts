@@ -25,6 +25,7 @@ export const checkQrStatus = (sessionId: string) => api.get(`/auth/qr/status/${s
 // Post APIs
 export const getPublicPosts = (params?: any) => api.get('/posts/browse', { params });
 export const getPostDetail = (slug: string) => api.get(`/posts/detail/${slug}`);
+export const getMyPosts = (userId: number) => api.get(`/posts/my-posts?userId=${userId}`);
 
 // Shop APIs
 export const registerShop = (data: any) => api.post('/shops/register', data);
@@ -33,5 +34,20 @@ export const getMyShop = (userId: number) => api.get(`/shops/my-shop?userId=${us
 // Report API
 export const submitReport = (data: { postId: number; reportReason: string; reporterId?: number }) => 
   api.post('/reports', data);
+
+// Category APIs
+export const getCategories = () => api.get('/categories');
+export const getCategoryAttributes = (categoryId: number) => api.get(`/categories/${categoryId}/attributes`);
+
+// Create Post
+export const createPost = (data: any) => api.post("/posts", data);
+
+export const uploadMedia = (files: File[]) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append("media", file));
+    return api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+    });
+};
 
 export default api;

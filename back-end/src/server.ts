@@ -14,6 +14,9 @@ import adminUserRoutes from "./routes/admin/user.route.ts";
 import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
 import userReportRoutes from "./routes/user/report.route.ts";
+import userCategoryRoutes from "./routes/user/category.route.ts";
+import uploadRoutes from "./routes/upload.route.ts";
+import path from "path";
 
 const app = express();
 app.use(cors());
@@ -32,6 +35,11 @@ app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/shops", userShopRoutes);
 app.use("/api/posts", userPostRoutes);
 app.use("/api/reports", userReportRoutes);
+app.use("/api/categories", userCategoryRoutes);
+app.use("/api/upload", uploadRoutes);
+
+// Static files for uploads
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.get("/", (req, res) => {
     res.send("API is running...");

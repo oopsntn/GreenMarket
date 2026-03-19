@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq } from "drizzle-orm";
 import { shops, type NewShop } from "../../models/schema/shops.ts";
+import { posts } from "../../models/schema/posts.ts";
 import { parseId } from "../../utils/parseId.ts";
 
 export const getShops = async (req: Request, res: Response): Promise<void> => {
@@ -65,7 +66,19 @@ export const updateShopStatus = async (req: Request<{ id: string }, {}, { status
             return;
         }
 
-        res.json(updatedShop);
+        // Auto-assign all the owner's posts to this shop if status is changed to active
+        let postsAssigned = 0;
+        if (status === "active") {
+            const { rowCount } = await db.update(posts)
+                .set({ postShopId: updatedShop.shopId, postUpdatedAt: new Date() })
+                .where(eq(posts.postAuthorId, updatedShop.shopOwnerId));
+            postsAssigned = rowCount ?? 0;
+        }
+
+        res.json({
+            ...updatedShop,
+            postsAssigned
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -111,7 +124,16 @@ export const verifyShop = async (req: Request<{ id: string }>, res: Response): P
             return;
         }
 
-        res.json({ message: "Shop verified successfully", shop: updatedShop });
+        // Auto-assign all the owner's posts to this shop
+        const { rowCount } = await db.update(posts)
+            .set({ postShopId: updatedShop.shopId, postUpdatedAt: new Date() })
+            .where(eq(posts.postAuthorId, updatedShop.shopOwnerId));
+
+        res.json({ 
+            message: "Shop verified successfully", 
+            shop: updatedShop,
+            postsAssigned: rowCount ?? 0
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
