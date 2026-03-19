@@ -16,12 +16,12 @@ Nếu bạn chỉ muốn chạy Backend + Database để làm Frontend, hãy là
 1. **Yêu cầu**: Đã cài đặt [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 2. **Khởi chạy toàn bộ hệ thống**:
    ```bash
-   docker-compose up --build
+   docker compose up -d --build
    ```
 3. **Lưu ý quan trọng (Cập nhật dữ liệu mới nhất)**:
    Để đảm bảo Database luôn có dữ liệu mới nhất từ file `GreenMarket.sql` (xóa dữ liệu cũ, nạp lại từ đầu), hãy dùng lệnh:
    ```bash
-   docker-compose down -v && docker-compose up --build
+   docker compose down -v && docker compose up -d --build
    ```
    *(Tham số `-v` sẽ xóa volume cũ để Docker nạp lại file SQL mới).*
 
