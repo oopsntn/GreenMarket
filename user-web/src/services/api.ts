@@ -26,6 +26,8 @@ export const checkQrStatus = (sessionId: string) => api.get(`/auth/qr/status/${s
 export const getPublicPosts = (params?: any) => api.get('/posts/browse', { params });
 export const getPostDetail = (slug: string) => api.get(`/posts/detail/${slug}`);
 export const getMyPosts = (userId: number) => api.get(`/posts/my-posts?userId=${userId}`);
+export const updateUserPost = (postId: number, data: any) => api.patch(`/posts/${postId}`, data);
+export const deleteUserPost = (postId: number, userId: number) => api.delete(`/posts/${postId}`, { data: { userId } });
 
 // Shop APIs
 export const getPublicShop = (id: number | string) => api.get(`/shops/${id}`);
