@@ -58,19 +58,22 @@ const Navbar: React.FC = () => {
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
-              <div className="hidden lg:block text-right">
+              <Link 
+                to="/profile"
+                className="hidden lg:block text-right hover:opacity-80 transition-opacity"
+              >
                 {shop?.shopStatus === 'active' ? (
                   <>
                     <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Chủ Vườn</div>
-                    <div className="text-sm font-medium text-slate-300">{user?.name || user?.mobile}</div>
+                    <div className="text-sm font-medium text-slate-300">{user?.userDisplayName || user?.userMobile}</div>
                   </>
                 ) : (
                   <>
                     <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Nghệ nhân</div>
-                    <div className="text-sm font-medium text-slate-300">{user?.name || user?.mobile}</div>
+                    <div className="text-sm font-medium text-slate-300">{user?.userDisplayName || user?.userMobile}</div>
                   </>
                 )}
-              </div>
+              </Link>
               <button 
                 onClick={logout}
                 className="glass p-2 rounded-xl text-slate-400 hover:text-red-400 transition-all"

@@ -15,6 +15,7 @@ import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
 import userReportRoutes from "./routes/user/report.route.ts";
 import userCategoryRoutes from "./routes/user/category.route.ts";
+import userProfileRoutes from "./routes/user/profile.route.ts";
 import uploadRoutes from "./routes/upload.route.ts";
 import path from "path";
 
@@ -36,6 +37,7 @@ app.use("/api/shops", userShopRoutes);
 app.use("/api/posts", userPostRoutes);
 app.use("/api/reports", userReportRoutes);
 app.use("/api/categories", userCategoryRoutes);
+app.use("/api/profile", userProfileRoutes);
 app.use("/api/upload", uploadRoutes);
 
 // Static files for uploads

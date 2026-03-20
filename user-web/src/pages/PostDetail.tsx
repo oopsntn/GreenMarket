@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPostDetail } from '../services/api';
 import { 
   MapPin, Phone, Calendar, ChevronLeft, ChevronRight, 
@@ -187,12 +187,15 @@ const PostDetail: React.FC = () => {
 
                         {/* Shop Profile Card */}
                         {post.shop && (
-                            <div className="glass p-8 rounded-4xl border-emerald-500/20 bg-linear-to-br from- emerald-500/5 to-transparent space-y-6 group cursor-pointer overflow-hidden relative">
+                            <Link 
+                                to={`/shop/${post.postShopId}`}
+                                className="glass p-8 rounded-4xl border-emerald-500/20 bg-linear-to-br from-emerald-500/5 to-transparent space-y-6 group cursor-pointer overflow-hidden relative block"
+                            >
                                 <div className="absolute top-0 right-0 p-8 text-emerald-500/10 -rotate-12 group-hover:rotate-0 transition-transform duration-700">
                                     <Store className="w-24 h-24" />
                                 </div>
                                 <div className="flex items-center gap-6 relative z-10">
-                                    <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-500">
+                                    <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-500 shrink-0">
                                         <Store className="w-8 h-8" />
                                     </div>
                                     <div>
@@ -202,9 +205,11 @@ const PostDetail: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <p className="text-slate-400 text-sm leading-relaxed relative z-10">{post.shop.shopDescription || 'Cung cấp các mẫu bonsai tuyệt đẹp cho mọi không gian kiến trúc.'}</p>
-                                <button className="w-full py-3 rounded-xl border border-emerald-500/30 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition-all">Xem trang Nhà Vườn</button>
-                            </div>
+                                <p className="text-slate-400 text-sm leading-relaxed relative z-10 line-clamp-2">{post.shop.shopDescription || 'Cung cấp các mẫu bonsai tuyệt đẹp cho mọi không gian kiến trúc.'}</p>
+                                <div className="w-full py-3 rounded-xl border border-emerald-500/30 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition-all text-center">
+                                    Xem trang Nhà Vườn
+                                </div>
+                            </Link>
                         )}
                     </div>
                 </div>
