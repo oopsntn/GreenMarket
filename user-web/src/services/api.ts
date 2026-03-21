@@ -31,14 +31,32 @@ export const deleteUserPost = (postId: number, userId: number) => api.delete(`/p
 
 // Shop APIs
 export const getPublicShop = (id: number | string) => api.get(`/shops/${id}`);
-export const registerShop = (data: any) => api.post('/shops/register', data);
+export const registerShop = (data: {
+  userId: number;
+  shopName: string;
+  shopPhone: string;
+  shopLocation: string;
+  shopDescription?: string;
+  shopLat?: number;
+  shopLng?: number;
+}) => api.post('/shops/register', data);
+
 export const getMyShop = (userId: number) => api.get(`/shops/my-shop?userId=${userId}`);
+
+export const updateShop = (shopId: number, data: {
+  shopName?: string;
+  shopPhone?: string;
+  shopLocation?: string;
+  shopDescription?: string;
+  shopLat?: number;
+  shopLng?: number;
+}) => api.patch(`/shops/${shopId}`, data);
 
 // Report API
 export const submitReport = (data: { postId: number; reportReason: string; reporterId?: number }) => 
   api.post('/reports', data);
 
-// Category APIs
+// --- Metadata (Categories & Attributes) ---
 export const getCategories = () => api.get('/categories');
 export const getCategoryAttributes = (categoryId: number) => api.get(`/categories/${categoryId}/attributes`);
 

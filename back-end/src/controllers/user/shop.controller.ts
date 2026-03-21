@@ -10,7 +10,7 @@ import { parseId } from "../../utils/parseId.ts";
 
 export const registerShop = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { userId, shopName, shopPhone, shopLocation, shopDescription } = req.body;
+        const { userId, shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng } = req.body;
 
         if (!userId || !shopName) {
             res.status(400).json({ error: "User ID and Shop Name are required" });
@@ -30,6 +30,8 @@ export const registerShop = async (req: Request, res: Response): Promise<void> =
             shopPhone,
             shopLocation,
             shopDescription,
+            shopLat: shopLat ? String(shopLat) : null,
+            shopLng: shopLng ? String(shopLng) : null,
             shopStatus: "pending"
         }).returning();
 
@@ -98,6 +100,41 @@ export const getPublicShopById = async (req: Request<{ id: string }>, res: Respo
             ...shop,
             posts: postsWithImages
         });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const updateShop = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const id = parseId(req.params.id as string);
+        if (!id) {
+            res.status(400).json({ error: "Invalid Shop ID" });
+            return;
+        }
+
+        const { shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng } = req.body;
+
+        const [updatedShop] = await db.update(shops)
+            .set({ 
+                shopName, 
+                shopPhone, 
+                shopLocation, 
+                shopDescription, 
+                shopLat: shopLat !== undefined ? String(shopLat) : undefined,
+                shopLng: shopLng !== undefined ? String(shopLng) : undefined,
+                shopUpdatedAt: new Date() 
+            })
+            .where(eq(shops.shopId, id))
+            .returning();
+
+        if (!updatedShop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        res.json(updatedShop);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

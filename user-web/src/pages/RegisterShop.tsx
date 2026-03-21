@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { registerShop } from '../services/api';
 import { Store, CheckCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import AddressPicker from '../components/AddressPicker';
 
 const RegisterShop: React.FC = () => {
   const { user } = useAuth();
@@ -11,6 +12,8 @@ const RegisterShop: React.FC = () => {
     shopPhone: '',
     shopLocation: '',
     shopDescription: '',
+    shopLat: undefined as number | undefined,
+    shopLng: undefined as number | undefined
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -85,15 +88,20 @@ const RegisterShop: React.FC = () => {
               onChange={(e) => setFormData({...formData, shopPhone: e.target.value})}
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Địa chỉ / Khu vực</label>
-            <input 
-              type="text"
-              className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
-              placeholder="Hà Nội, Nam Định..."
-              value={formData.shopLocation}
-              onChange={(e) => setFormData({...formData, shopLocation: e.target.value})}
-            />
+          <div className="space-y-4">
+            <div className="pt-2">
+              <AddressPicker 
+                onAddressChange={(addr) => setFormData(prev => ({ ...prev, shopLocation: addr }))}
+                onLocationSelect={(lat, lng) => setFormData(prev => ({ ...prev, shopLat: lat, shopLng: lng }))}
+                label="Địa chỉ nhà vườn"
+              />
+              {formData.shopLat && formData.shopLng && (
+                <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest block mb-1">Vị trí đã chọn (Toạ độ)</span>
+                  <span className="text-sm font-mono text-emerald-500">{Number(formData.shopLat).toFixed(6)}, {Number(formData.shopLng).toFixed(6)}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

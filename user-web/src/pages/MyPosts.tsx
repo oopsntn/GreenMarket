@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { getMyPosts, deleteUserPost, updateUserPost } from '../services/api';
 import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -151,15 +151,18 @@ const MyPosts: React.FC = () => {
                 <div className="w-24 h-24 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500 shrink-0">
                   <Store className="w-12 h-12" />
                 </div>
-                <div className="flex-1 text-center md:text-left">
+                <Link 
+                  to={`/shop/${shop.shopId}`}
+                  className="flex-1 text-center md:text-left group/shopLink cursor-pointer"
+                >
                   <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                    <h2 className="text-3xl font-black">{shop.shopName}</h2>
-                    <span className={shop.shopStatus === 'active' ? "bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-full font-bold uppercase" : "bg-amber-500/20 text-amber-400 text-[10px] px-2 py-1 rounded-full font-bold uppercase"}>
+                    <h2 className="text-3xl font-black group-hover/shopLink:text-emerald-400 transition-colors">{shop.shopName}</h2>
+                    <span className={shop.shopStatus === 'active' ? "bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-full font-bold uppercase transition-all group-hover/shopLink:bg-emerald-500/30" : "bg-amber-500/20 text-amber-400 text-[10px] px-2 py-1 rounded-full font-bold uppercase"}>
                       {shop.shopStatus === 'active' ? 'Nhà vườn đã xác minh' : 'Đang chờ xác minh'}
                     </span>
                   </div>
-                  <p className="text-slate-400 max-w-xl line-clamp-2">{shop.shopDescription || 'Chưa có mô tả nhà vườn.'}</p>
-                </div>
+                  <p className="text-slate-400 max-w-xl line-clamp-2 group-hover/shopLink:text-slate-300 transition-colors">{shop.shopDescription || 'Chưa có mô tả nhà vườn.'}</p>
+                </Link>
                 <div className="flex gap-8">
                   <div className="text-center">
                     <div className="text-3xl font-black text-emerald-500">0</div>
@@ -206,21 +209,21 @@ const MyPosts: React.FC = () => {
 
                   <div className="flex-1 min-w-0 text-center sm:text-left">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                      <h3 className="text-xl font-bold truncate group-hover:text-emerald-400 transition-colors uppercase">{post.postTitle}</h3>
+                      <h3 className="text-base font-bold line-clamp-2 group-hover:text-emerald-400 transition-colors uppercase">{post.postTitle}</h3>
                       <div className="flex justify-center sm:justify-start">
                         {getStatusBadge(post.postStatus)}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4 text-sm text-slate-400">
-                      <div className="flex items-center gap-1.5 font-black text-xl text-emerald-500">
+                    <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4 text-xs text-slate-400">
+                      <div className="flex items-center gap-1.5 font-black text-lg text-emerald-500">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(post.postPrice)}
                       </div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px]">
                         <MapPin className="w-3.5 h-3.5 text-slate-500" />
                         {post.postLocation || 'Chưa cập nhật vị trí'}
                       </div>
-                      <div className="text-slate-600 font-medium">
+                      <div className="text-[10px] text-slate-600 font-medium">
                         🕒 {new Date(post.postUpdatedAt).toLocaleDateString('vi-VN')}
                       </div>
                     </div>
