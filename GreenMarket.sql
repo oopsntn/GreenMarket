@@ -1,6 +1,7 @@
 -- ============================================================
--- GreenMarket Database Backup
--- PostgreSQL 18.x | Generated: 2026-03-19
+-- GreenMarket Database Backup (Full Schema)
+-- PostgreSQL 18.x | Generated: 2026-03-20
+-- Tables: 31 | Synced from Drizzle ORM schema
 -- ============================================================
 
 -- ============================================================
@@ -43,6 +44,9 @@ CREATE TABLE users (
     user_mobile VARCHAR(15) NOT NULL UNIQUE,
     user_display_name VARCHAR(80),
     user_avatar_url VARCHAR(255),
+    user_email VARCHAR(255),
+    user_location VARCHAR(255),
+    user_bio TEXT,
     user_status VARCHAR(20) DEFAULT 'active',
     user_registered_at TIMESTAMP DEFAULT now(),
     user_last_login_at TIMESTAMP,
@@ -89,6 +93,23 @@ CREATE TABLE otp_requests (
     otp_request_created_at TIMESTAMP DEFAULT now()
 );
 
+-- QR Sessions
+CREATE TABLE qr_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    status TEXT NOT NULL DEFAULT 'pending',
+    user_id INTEGER REFERENCES users(user_id),
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    expires_at TIMESTAMP NOT NULL
+);
+
+-- Banned Keywords
+CREATE TABLE banned_keywords (
+    banned_keyword_id SERIAL PRIMARY KEY,
+    banned_keyword_keyword VARCHAR(50),
+    banned_keyword_published BOOLEAN DEFAULT FALSE,
+    banned_keyword_created_at TIMESTAMP DEFAULT now()
+);
+
 -- Categories
 CREATE TABLE categories (
     category_id SERIAL PRIMARY KEY,
@@ -122,7 +143,7 @@ CREATE TABLE category_attributes (
 -- Shops
 CREATE TABLE shops (
     shop_id SERIAL PRIMARY KEY,
-    shop_owner_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    shop_owner_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE UNIQUE,
     shop_name VARCHAR(150) NOT NULL,
     shop_phone VARCHAR(20),
     shop_location VARCHAR(255),
@@ -130,6 +151,14 @@ CREATE TABLE shops (
     shop_status VARCHAR(20) DEFAULT 'pending',
     shop_created_at TIMESTAMP DEFAULT now(),
     shop_updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Blocked Shops
+CREATE TABLE blocked_shops (
+    blocked_shop_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    blocked_shop_shop_id INTEGER NOT NULL REFERENCES shops(shop_id) ON DELETE CASCADE,
+    blocked_shop_created_at TIMESTAMP DEFAULT now(),
+    PRIMARY KEY (blocked_shop_user_id, blocked_shop_shop_id)
 );
 
 -- Posts
@@ -141,11 +170,15 @@ CREATE TABLE posts (
     post_title VARCHAR(255) NOT NULL,
     post_slug VARCHAR(255) NOT NULL UNIQUE,
     post_content TEXT,
-    post_price NUMERIC(15,2),
+    post_price NUMERIC(12,2),
     post_location VARCHAR(255),
     post_status VARCHAR(20) NOT NULL DEFAULT 'pending',
     post_rejected_reason TEXT,
     post_contact_phone VARCHAR(20),
+    post_published BOOLEAN DEFAULT FALSE,
+    post_submitted_at TIMESTAMP,
+    post_published_at TIMESTAMP,
+    post_deleted_at TIMESTAMP,
     post_moderated_at TIMESTAMP,
     post_created_at TIMESTAMP DEFAULT now(),
     post_updated_at TIMESTAMP DEFAULT now()
@@ -169,6 +202,13 @@ CREATE TABLE post_videos (
     video_created_at TIMESTAMP DEFAULT now()
 );
 
+-- Post Categories (Many-to-Many)
+CREATE TABLE post_categories (
+    post_category_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
+    post_category_category_id INTEGER NOT NULL REFERENCES categories(category_id) ON DELETE CASCADE,
+    PRIMARY KEY (post_category_post_id, post_category_category_id)
+);
+
 -- Post Attribute Values
 CREATE TABLE post_attribute_values (
     value_id SERIAL PRIMARY KEY,
@@ -178,36 +218,234 @@ CREATE TABLE post_attribute_values (
     value_created_at TIMESTAMP DEFAULT now()
 );
 
+-- Post Meta
+CREATE TABLE post_meta (
+    post_meta_id SERIAL PRIMARY KEY,
+    post_meta_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
+    post_meta_key VARCHAR(100),
+    post_meta_content TEXT,
+    post_meta_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Favorite Posts (Bookmarks)
+CREATE TABLE favorite_posts (
+    favorite_post_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    favorite_post_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
+    favorite_post_created_at TIMESTAMP DEFAULT now(),
+    PRIMARY KEY (favorite_post_user_id, favorite_post_post_id)
+);
+
 -- Reports
 CREATE TABLE reports (
     report_id SERIAL PRIMARY KEY,
     reporter_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
+    post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
+    report_shop_id INTEGER REFERENCES shops(shop_id) ON DELETE SET NULL,
+    report_reason_code VARCHAR(50),
     report_reason TEXT NOT NULL,
+    report_note TEXT,
     report_status VARCHAR(20) NOT NULL DEFAULT 'pending',
     admin_note TEXT,
     report_created_at TIMESTAMP DEFAULT now(),
     report_updated_at TIMESTAMP DEFAULT now()
 );
 
--- QR Sessions
-CREATE TABLE qr_sessions (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    status TEXT NOT NULL DEFAULT 'pending',
-    user_id INTEGER REFERENCES users(user_id),
-    created_at TIMESTAMP NOT NULL DEFAULT now(),
-    expires_at TIMESTAMP NOT NULL
+-- Report Evidence
+CREATE TABLE report_evidence (
+    report_evidence_id SERIAL PRIMARY KEY,
+    report_evidence_report_id INTEGER NOT NULL REFERENCES reports(report_id) ON DELETE CASCADE,
+    report_evidence_url VARCHAR(255),
+    report_evidence_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Moderation Actions
+CREATE TABLE moderation_actions (
+    moderation_action_id SERIAL PRIMARY KEY,
+    moderation_action_action_by INTEGER NOT NULL REFERENCES admins(admin_id) ON DELETE CASCADE,
+    moderation_action_post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
+    moderation_action_action VARCHAR(50),
+    moderation_action_note TEXT,
+    moderation_action_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Placement Slots (Ad zones)
+CREATE TABLE placement_slots (
+    placement_slot_id SERIAL PRIMARY KEY,
+    placement_slot_code VARCHAR(100),
+    placement_slot_title VARCHAR(150),
+    placement_slot_capacity INTEGER,
+    placement_slot_rules JSONB,
+    placement_slot_published BOOLEAN DEFAULT FALSE,
+    placement_slot_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Promotion Packages
+CREATE TABLE promotion_packages (
+    promotion_package_id SERIAL PRIMARY KEY,
+    promotion_package_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
+    promotion_package_title VARCHAR(150),
+    promotion_package_duration_days INTEGER,
+    promotion_package_price DECIMAL(15, 2),
+    promotion_package_published BOOLEAN DEFAULT FALSE,
+    promotion_package_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Post Promotions
+CREATE TABLE post_promotions (
+    post_promotion_id SERIAL PRIMARY KEY,
+    post_promotion_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
+    post_promotion_buyer_id INTEGER NOT NULL,
+    post_promotion_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
+    post_promotion_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
+    post_promotion_start_at TIMESTAMP,
+    post_promotion_end_at TIMESTAMP,
+    post_promotion_status VARCHAR(20),
+    post_promotion_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Payment Transactions
+CREATE TABLE payment_txn (
+    payment_txn_id SERIAL PRIMARY KEY,
+    payment_txn_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    payment_txn_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
+    payment_txn_amount DECIMAL(15, 2),
+    payment_txn_provider VARCHAR(50),
+    payment_txn_provider_txn_id VARCHAR(100) UNIQUE,
+    payment_txn_status VARCHAR(20),
+    payment_txn_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Daily Placement Metrics
+CREATE TABLE daily_placement_metrics (
+    daily_placement_metric_id SERIAL PRIMARY KEY,
+    daily_placement_metric_date DATE,
+    daily_placement_metric_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
+    daily_placement_metric_category_id INTEGER REFERENCES categories(category_id) ON DELETE SET NULL,
+    daily_placement_metric_impressions INTEGER DEFAULT 0,
+    daily_placement_metric_clicks INTEGER DEFAULT 0,
+    daily_placement_metric_detail_views INTEGER DEFAULT 0,
+    daily_placement_metric_contacts INTEGER DEFAULT 0,
+    daily_placement_metric_ctr DECIMAL(5, 4),
+    daily_placement_metric_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Trend Scores
+CREATE TABLE trend_scores (
+    trend_score_id SERIAL PRIMARY KEY,
+    trend_score_as_of_date DATE,
+    trend_score_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
+    trend_score_score DECIMAL(10, 4),
+    trend_score_components JSONB,
+    trend_score_created_at TIMESTAMP DEFAULT now()
+);
+
+-- AI Insights
+CREATE TABLE ai_insights (
+    ai_insight_id SERIAL PRIMARY KEY,
+    ai_insight_requested_by INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    ai_insight_scope VARCHAR(50),
+    ai_insight_input_snapshot JSONB,
+    ai_insight_output_text TEXT,
+    ai_insight_provider VARCHAR(50),
+    ai_insight_created_at TIMESTAMP DEFAULT now()
+);
+
+-- System Settings
+CREATE TABLE system_settings (
+    system_setting_id SERIAL PRIMARY KEY,
+    system_setting_key VARCHAR(100) UNIQUE,
+    system_setting_value TEXT,
+    system_setting_updated_by INTEGER REFERENCES admins(admin_id) ON DELETE SET NULL,
+    system_setting_updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Event Logs
+CREATE TABLE event_logs (
+    event_log_id SERIAL PRIMARY KEY,
+    event_log_user_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    event_log_post_id INTEGER,
+    event_log_shop_id INTEGER,
+    event_log_slot_id INTEGER,
+    event_log_category_id INTEGER,
+    event_log_event_type VARCHAR(50),
+    event_log_event_time TIMESTAMP DEFAULT now(),
+    event_log_meta JSONB
 );
 
 -- ============================================================
 -- INDEXES
 -- ============================================================
+
+-- Posts
 CREATE INDEX post_search_idx ON posts USING gin (to_tsvector('simple', post_title || ' ' || COALESCE(post_content, '')));
 CREATE INDEX post_category_idx ON posts USING btree (category_id);
 CREATE INDEX post_status_idx ON posts USING btree (post_status);
 CREATE INDEX post_price_idx ON posts USING btree (post_price);
 CREATE INDEX post_location_idx ON posts USING btree (post_location);
+CREATE INDEX idx_posts_author ON posts(post_author_id);
+CREATE INDEX idx_posts_shop ON posts(post_shop_id);
+CREATE INDEX idx_posts_published ON posts(post_published);
+CREATE INDEX idx_posts_created ON posts(post_created_at);
+
+-- Post Attribute Values
 CREATE INDEX attribute_filter_idx ON post_attribute_values USING btree (post_id, attribute_id, attribute_value);
+
+-- Post Meta
+CREATE INDEX idx_post_meta_post ON post_meta(post_meta_post_id);
+CREATE INDEX idx_post_meta_key ON post_meta(post_meta_key);
+
+-- Post Categories
+CREATE INDEX idx_post_categories_post ON post_categories(post_category_post_id);
+CREATE INDEX idx_post_categories_category ON post_categories(post_category_category_id);
+
+-- Favorites & Blocks
+CREATE INDEX idx_favorite_posts_user ON favorite_posts(favorite_post_user_id);
+CREATE INDEX idx_favorite_posts_post ON favorite_posts(favorite_post_post_id);
+
+-- Users
+CREATE INDEX idx_users_mobile ON users(user_mobile);
+CREATE INDEX idx_users_status ON users(user_status);
+
+-- Admins
+CREATE INDEX idx_admins_email ON admins(admin_email);
+CREATE INDEX idx_admins_username ON admins(admin_username);
+CREATE INDEX idx_admins_status ON admins(admin_status);
+
+-- Shops
+CREATE INDEX idx_shops_owner ON shops(shop_owner_id);
+CREATE INDEX idx_shops_status ON shops(shop_status);
+
+-- Categories
+CREATE INDEX idx_categories_parent ON categories(category_parent_id);
+CREATE INDEX idx_categories_slug ON categories(category_slug);
+
+-- Reports
+CREATE INDEX idx_reports_reporter ON reports(reporter_id);
+CREATE INDEX idx_reports_post ON reports(post_id);
+CREATE INDEX idx_reports_shop ON reports(report_shop_id);
+CREATE INDEX idx_reports_status ON reports(report_status);
+
+-- Promotions
+CREATE INDEX idx_post_promotions_post ON post_promotions(post_promotion_post_id);
+CREATE INDEX idx_post_promotions_slot ON post_promotions(post_promotion_slot_id);
+CREATE INDEX idx_post_promotions_status ON post_promotions(post_promotion_status);
+CREATE INDEX idx_post_promotions_dates ON post_promotions(post_promotion_start_at, post_promotion_end_at);
+
+-- Payments
+CREATE INDEX idx_payment_txn_user ON payment_txn(payment_txn_user_id);
+CREATE INDEX idx_payment_txn_status ON payment_txn(payment_txn_status);
+
+-- Analytics
+CREATE INDEX idx_daily_metrics_date ON daily_placement_metrics(daily_placement_metric_date);
+CREATE INDEX idx_daily_metrics_slot ON daily_placement_metrics(daily_placement_metric_slot_id);
+
+-- Event Logs
+CREATE INDEX idx_event_logs_user ON event_logs(event_log_user_id);
+CREATE INDEX idx_event_logs_type ON event_logs(event_log_event_type);
+CREATE INDEX idx_event_logs_time ON event_logs(event_log_event_time);
+
+-- OTP
+CREATE INDEX idx_otp_requests_mobile_code ON otp_requests(otp_request_mobile, otp_request_otp_code);
 
 -- ============================================================
 -- TRIGGERS
@@ -215,6 +453,10 @@ CREATE INDEX attribute_filter_idx ON post_attribute_values USING btree (post_id,
 CREATE TRIGGER update_admins_updated_at BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION update_admin_updated_at();
 CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_category_updated_at();
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_user_updated_at();
+CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops FOR EACH ROW EXECUTE FUNCTION update_shop_updated_at();
+CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION update_post_updated_at();
+CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON reports FOR EACH ROW EXECUTE FUNCTION update_report_updated_at();
+CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_system_setting_updated_at();
 
 -- ============================================================
 -- SEED DATA
@@ -251,16 +493,13 @@ INSERT INTO shops (shop_id, shop_owner_id, shop_name, shop_phone, shop_location,
 
 -- Categories (Tree)
 INSERT INTO categories (category_id, category_parent_id, category_title, category_slug, category_published) VALUES
--- Root categories
 (1, NULL, 'Bonsai', 'bonsai', true),
 (2, NULL, 'Cây Công Trình', 'cay-cong-trinh', true),
 (3, NULL, 'Dụng Cụ & Vật Tư', 'dung-cu-vat-tu', true),
 (4, NULL, 'Chậu & Phụ Kiện', 'chau-phu-kien', true),
--- Sub Bonsai
 (11, 1, 'Bonsai Mini (Mame/Shito)', 'bonsai-mini', true),
 (12, 1, 'Bonsai Tầm Trung', 'bonsai-tam-trung', true),
 (13, 1, 'Bonsai Đại (San vườn)', 'bonsai-dai', true),
--- Sub Tools
 (31, 3, 'Kéo Tỉa & Kìm Cạp', 'keo-tia-kim-cap', true),
 (32, 3, 'Đất Nhật (Akadama)', 'dat-nhat-akadama', true);
 
@@ -272,12 +511,12 @@ INSERT INTO attributes (attribute_id, attribute_code, attribute_title, attribute
 (4, 'tuoi_cay', 'Tuổi cây (năm)', 'number', NULL, true),
 (5, 'nguon_goc', 'Nguồn gốc', 'text', NULL, true);
 
--- Category-Attribute Mapping (Bonsai needs attributes)
+-- Category-Attribute Mapping
 INSERT INTO category_attributes (category_attribute_category_id, category_attribute_attribute_id, category_attribute_required) VALUES
 (1, 1, true), (1, 2, true), (1, 3, true), (1, 4, false), (1, 5, false),
 (11, 1, true), (11, 2, true), (12, 1, true), (12, 3, true);
 
--- Posts (Sample Bonsai Listings)
+-- Posts
 INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_title, post_slug, post_content, post_price, post_location, post_status, post_contact_phone) VALUES
 (1, 1, 1, 11, 'Sanh Nam Điền Mini Dáng Văn Nhân', 'sanh-nam-dien-mini-123', 'Cây Sanh Nam Điền già, u nần, cốt cách thanh thoát.', 2500000, 'Bắc Ninh', 'approved', '0978195419'),
 (2, 3, 2, 12, 'Tùng La Hán Dáng Trực Cổ Thụ', 'tung-la-han-truc-456', 'Siêu phẩm Tùng La Hán cốt cách Nam Định, tay cành hoàn thiện.', 150000000, 'Nam Định', 'approved', '0123456789'),

@@ -28,6 +28,7 @@ export const getPostDetail = (slug: string) => api.get(`/posts/detail/${slug}`);
 export const getMyPosts = (userId: number) => api.get(`/posts/my-posts?userId=${userId}`);
 
 // Shop APIs
+export const getPublicShop = (id: number | string) => api.get(`/shops/${id}`);
 export const registerShop = (data: any) => api.post('/shops/register', data);
 export const getMyShop = (userId: number) => api.get(`/shops/my-shop?userId=${userId}`);
 
@@ -38,6 +39,16 @@ export const submitReport = (data: { postId: number; reportReason: string; repor
 // Category APIs
 export const getCategories = () => api.get('/categories');
 export const getCategoryAttributes = (categoryId: number) => api.get(`/categories/${categoryId}/attributes`);
+
+// Profile APIs
+export const getProfile = () => api.get('/profile');
+export const updateProfile = (data: { 
+  userDisplayName?: string; 
+  userAvatarUrl?: string;
+  userEmail?: string;
+  userLocation?: string;
+  userBio?: string;
+}) => api.patch('/profile', data);
 
 // Create Post
 export const createPost = (data: any) => api.post("/posts", data);

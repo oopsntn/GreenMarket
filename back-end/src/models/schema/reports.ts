@@ -2,13 +2,17 @@ import { pgTable, serial, varchar, text, timestamp, integer } from "drizzle-orm/
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 import { users } from "./users.ts";
 import { posts } from "./posts.ts";
+import { shops } from "./shops.ts";
 
 export const reports = pgTable("reports", {
     reportId: serial("report_id").primaryKey(),
     reporterId: integer("reporter_id").references(() => users.userId, { onDelete: "set null" }),
-    postId: integer("post_id").references(() => posts.postId, { onDelete: "cascade" }).notNull(),
+    postId: integer("post_id").references(() => posts.postId, { onDelete: "set null" }),
+    reportShopId: integer("report_shop_id").references(() => shops.shopId, { onDelete: "set null" }),
+    reportReasonCode: varchar("report_reason_code", { length: 50 }),
     reportReason: text("report_reason").notNull(),
-    reportStatus: varchar("report_status", { length: 20 }).default("pending").notNull(), // pending, resolved, dismissed
+    reportNote: text("report_note"),
+    reportStatus: varchar("report_status", { length: 20 }).default("pending").notNull(),
     adminNote: text("admin_note"),
     reportCreatedAt: timestamp("report_created_at").defaultNow(),
     reportUpdatedAt: timestamp("report_updated_at").defaultNow(),

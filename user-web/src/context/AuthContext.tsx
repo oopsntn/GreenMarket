@@ -3,8 +3,12 @@ import { getMyShop } from '../services/api';
 
 interface User {
   id: number;
-  mobile: string;
-  name: string | null;
+  userMobile: string;
+  userDisplayName: string | null;
+  userAvatarUrl?: string | null;
+  userEmail?: string | null;
+  userLocation?: string | null;
+  userBio?: string | null;
 }
 
 interface Shop {
@@ -22,6 +26,7 @@ interface AuthContextType {
   token: string | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (newData: Partial<User>) => void;
   isAuthenticated: boolean;
   loading: boolean;
   refreshShop: () => Promise<void>;
@@ -75,6 +80,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('user');
   };
 
+  const updateUser = (newData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...newData };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
   const refreshShop = async () => {
     if (user?.id) await fetchShop(user.id);
   };
@@ -85,7 +98,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       shop,
       token, 
       login, 
-      logout, 
+      logout,
+      updateUser,
       isAuthenticated: !!token, 
       loading,
       refreshShop
