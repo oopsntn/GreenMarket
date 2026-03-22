@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createPost, getMyPosts, updatePost, getPublicPosts, getPublicPostBySlug } from "../../controllers/user/post.controller.ts";
+import { createPost, getMyPosts, updatePost, softDeletePost, getPublicPosts, getPublicPostBySlug } from "../../controllers/user/post.controller.ts";
 
 const router = Router();
 
@@ -11,5 +11,6 @@ router.get("/detail/:slug", getPublicPostBySlug);
 router.post("/", createPost);
 router.get("/my-posts", getMyPosts);
 router.patch("/:id", updatePost);
+router.delete("/:id", softDeletePost);
 
 export default router;

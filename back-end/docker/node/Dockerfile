@@ -18,8 +18,9 @@ FROM node:24-alpine AS prod
 RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
-# Only prod deps
 COPY package.json pnpm-lock.yaml ./
+RUN sed -i 's/"type": "module"/"type": "commonjs"/' package.json
+
 RUN pnpm install --frozen-lockfile --prod
 
 # Copy built code

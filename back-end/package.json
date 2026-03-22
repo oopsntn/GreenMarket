@@ -12,7 +12,10 @@
     "lint": "eslint .",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "seed:admin": "tsx src/scripts/seedAdmin.ts"
+    "seed:admin": "tsx src/scripts/seedAdmin.ts",
+    "seed:sample": "tsx src/scripts/seedSampleData.ts",
+    "approve:all": "tsx src/scripts/autoApprovePosts.ts",
+    "approve:shops": "tsx src/scripts/autoApproveShops.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -21,8 +24,10 @@
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
     "pg": "^8.19.0",
-    "twilio": "^5.12.2"
+    "twilio": "^5.12.2",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -30,8 +35,10 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.3.3",
     "@types/pg": "^8.18.0",
+    "@types/uuid": "^11.0.0",
     "axios": "^1.13.6",
     "drizzle-kit": "^0.31.9",
     "eslint": "^10.0.2",
