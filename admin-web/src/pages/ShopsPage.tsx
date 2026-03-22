@@ -1,5 +1,6 @@
 import { useState } from "react";
 import BaseModal from "../components/BaseModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -7,11 +8,24 @@ import { shopService } from "../services/shopService";
 import type { Shop, ShopStatus } from "../types/shop";
 import "./ShopsPage.css";
 
+type ConfirmAction = "approve" | "reject" | "suspend" | "reactivate";
+
+type ConfirmState = {
+  isOpen: boolean;
+  shopId: number | null;
+  action: ConfirmAction | null;
+};
+
 function ShopsPage() {
   const [shops, setShops] = useState<Shop[]>(shopService.getShops());
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    shopId: null,
+    action: null,
+  });
 
   const openViewModal = (shop: Shop) => {
     setSelectedShop(shop);
@@ -23,15 +37,51 @@ function ShopsPage() {
     setIsModalOpen(false);
   };
 
+  const openConfirmDialog = (shopId: number, action: ConfirmAction) => {
+    setConfirmState({
+      isOpen: true,
+      shopId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      shopId: null,
+      action: null,
+    });
+  };
+
   const handleUpdateShopStatus = (shopId: number, status: ShopStatus) => {
     setShops((prev) => shopService.updateShopStatus(prev, shopId, status));
+
     setSelectedShop((prev) =>
       prev && prev.id === shopId ? { ...prev, status } : prev,
     );
   };
 
+  const handleConfirmAction = () => {
+    if (confirmState.shopId === null || confirmState.action === null) return;
+
+    const nextStatusMap: Record<ConfirmAction, ShopStatus> = {
+      approve: "Active",
+      reject: "Rejected",
+      suspend: "Suspended",
+      reactivate: "Active",
+    };
+
+    handleUpdateShopStatus(
+      confirmState.shopId,
+      nextStatusMap[confirmState.action],
+    );
+
+    closeConfirmDialog();
+  };
+
   const filteredShops = shops.filter((shop) => {
     const keyword = searchKeyword.trim().toLowerCase();
+
     if (!keyword) return true;
 
     return (
@@ -40,6 +90,50 @@ function ShopsPage() {
       shop.ownerEmail.toLowerCase().includes(keyword)
     );
   });
+
+  const confirmShop =
+    confirmState.shopId !== null
+      ? (shops.find((shop) => shop.id === confirmState.shopId) ?? null)
+      : null;
+
+  const confirmTitleMap: Record<ConfirmAction, string> = {
+    approve: "Approve Shop",
+    reject: "Reject Shop",
+    suspend: "Suspend Shop",
+    reactivate: "Reactivate Shop",
+  };
+
+  const confirmMessageMap: Record<ConfirmAction, string> = {
+    approve: `Are you sure you want to approve ${
+      confirmShop?.name ?? "this shop"
+    }? This shop will become active in the system.`,
+    reject: `Are you sure you want to reject ${
+      confirmShop?.name ?? "this shop"
+    }? This shop will not be allowed to operate.`,
+    suspend: `Are you sure you want to suspend ${
+      confirmShop?.name ?? "this shop"
+    }? The shop will be temporarily restricted.`,
+    reactivate: `Are you sure you want to reactivate ${
+      confirmShop?.name ?? "this shop"
+    }? The shop will be active again.`,
+  };
+
+  const confirmButtonMap: Record<ConfirmAction, string> = {
+    approve: "Approve Shop",
+    reject: "Reject Shop",
+    suspend: "Suspend Shop",
+    reactivate: "Reactivate Shop",
+  };
+
+  const confirmToneMap: Record<
+    ConfirmAction,
+    "danger" | "success" | "neutral"
+  > = {
+    approve: "success",
+    reject: "danger",
+    suspend: "danger",
+    reactivate: "success",
+  };
 
   return (
     <div className="shops-page">
@@ -108,18 +202,14 @@ function ShopsPage() {
                         <button
                           type="button"
                           className="shops-actions__approve"
-                          onClick={() =>
-                            handleUpdateShopStatus(shop.id, "Active")
-                          }
+                          onClick={() => openConfirmDialog(shop.id, "approve")}
                         >
                           Approve
                         </button>
                         <button
                           type="button"
                           className="shops-actions__reject"
-                          onClick={() =>
-                            handleUpdateShopStatus(shop.id, "Rejected")
-                          }
+                          onClick={() => openConfirmDialog(shop.id, "reject")}
                         >
                           Reject
                         </button>
@@ -130,9 +220,7 @@ function ShopsPage() {
                       <button
                         type="button"
                         className="shops-actions__suspend"
-                        onClick={() =>
-                          handleUpdateShopStatus(shop.id, "Suspended")
-                        }
+                        onClick={() => openConfirmDialog(shop.id, "suspend")}
                       >
                         Suspend
                       </button>
@@ -142,9 +230,7 @@ function ShopsPage() {
                       <button
                         type="button"
                         className="shops-actions__reactivate"
-                        onClick={() =>
-                          handleUpdateShopStatus(shop.id, "Active")
-                        }
+                        onClick={() => openConfirmDialog(shop.id, "reactivate")}
                       >
                         Reactivate
                       </button>
@@ -222,7 +308,7 @@ function ShopsPage() {
                     type="button"
                     className="shops-modal__approve"
                     onClick={() =>
-                      handleUpdateShopStatus(selectedShop.id, "Active")
+                      openConfirmDialog(selectedShop.id, "approve")
                     }
                   >
                     Approve
@@ -230,9 +316,7 @@ function ShopsPage() {
                   <button
                     type="button"
                     className="shops-modal__reject"
-                    onClick={() =>
-                      handleUpdateShopStatus(selectedShop.id, "Rejected")
-                    }
+                    onClick={() => openConfirmDialog(selectedShop.id, "reject")}
                   >
                     Reject
                   </button>
@@ -243,9 +327,7 @@ function ShopsPage() {
                 <button
                   type="button"
                   className="shops-modal__suspend"
-                  onClick={() =>
-                    handleUpdateShopStatus(selectedShop.id, "Suspended")
-                  }
+                  onClick={() => openConfirmDialog(selectedShop.id, "suspend")}
                 >
                   Suspend
                 </button>
@@ -256,7 +338,7 @@ function ShopsPage() {
                   type="button"
                   className="shops-modal__reactivate"
                   onClick={() =>
-                    handleUpdateShopStatus(selectedShop.id, "Active")
+                    openConfirmDialog(selectedShop.id, "reactivate")
                   }
                 >
                   Reactivate
@@ -266,6 +348,29 @@ function ShopsPage() {
           </div>
         )}
       </BaseModal>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={
+          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+        }
+        message={
+          confirmState.action
+            ? confirmMessageMap[confirmState.action]
+            : "Please confirm this action."
+        }
+        confirmText={
+          confirmState.action
+            ? confirmButtonMap[confirmState.action]
+            : "Confirm"
+        }
+        cancelText="Cancel"
+        tone={
+          confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
+        }
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
+      />
     </div>
   );
 }
