@@ -1,5 +1,6 @@
 import { useState } from "react";
 import BaseModal from "../components/BaseModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -16,6 +17,12 @@ const assignableRoles: AssignableUserRole[] = [
   "Operations Staff",
 ];
 
+type ConfirmState = {
+  isOpen: boolean;
+  userId: number | null;
+  action: "lock" | "unlock" | null;
+};
+
 function UsersPage() {
   const [users, setUsers] = useState<User[]>(userService.getUsers());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -23,10 +30,20 @@ function UsersPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [formData, setFormData] = useState<UserFormState>(emptyUserForm);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    userId: null,
+    action: null,
+  });
 
   const selectedUser =
     selectedUserId !== null
       ? (users.find((user) => user.id === selectedUserId) ?? null)
+      : null;
+
+  const confirmUser =
+    confirmState.userId !== null
+      ? (users.find((user) => user.id === confirmState.userId) ?? null)
       : null;
 
   const isProtectedAdmin = selectedUser?.role === "Admin";
@@ -80,6 +97,39 @@ function UsersPage() {
     setIsModalOpen(false);
   };
 
+  const openConfirmDialog = (userId: number, action: "lock" | "unlock") => {
+    setConfirmState({
+      isOpen: true,
+      userId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      userId: null,
+      action: null,
+    });
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmState.userId === null || confirmState.action === null) return;
+
+    setUsers((prev) =>
+      prev.map((user) =>
+        user.id === confirmState.userId
+          ? {
+              ...user,
+              status: confirmState.action === "lock" ? "Locked" : "Active",
+            }
+          : user,
+      ),
+    );
+
+    closeConfirmDialog();
+  };
+
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -124,6 +174,20 @@ function UsersPage() {
       : modalMode === "edit"
         ? "Edit User"
         : "User Details";
+
+  const confirmTitle =
+    confirmState.action === "lock"
+      ? "Lock User Account"
+      : "Unlock User Account";
+
+  const confirmMessage =
+    confirmState.action === "lock"
+      ? `Are you sure you want to lock ${
+          confirmUser?.fullName ?? "this user"
+        }? They may lose access until reactivated.`
+      : `Are you sure you want to unlock ${
+          confirmUser?.fullName ?? "this user"
+        }? They will be able to access the system again.`;
 
   return (
     <div className="users-page">
@@ -198,11 +262,19 @@ function UsersPage() {
                         Protected
                       </button>
                     ) : user.status === "Active" ? (
-                      <button type="button" className="users-actions__lock">
+                      <button
+                        type="button"
+                        className="users-actions__lock"
+                        onClick={() => openConfirmDialog(user.id, "lock")}
+                      >
                         Lock
                       </button>
                     ) : (
-                      <button type="button" className="users-actions__unlock">
+                      <button
+                        type="button"
+                        className="users-actions__unlock"
+                        onClick={() => openConfirmDialog(user.id, "unlock")}
+                      >
                         Unlock
                       </button>
                     )}
@@ -309,6 +381,19 @@ function UsersPage() {
           </div>
         </form>
       </BaseModal>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmText={
+          confirmState.action === "lock" ? "Lock User" : "Unlock User"
+        }
+        cancelText="Cancel"
+        tone={confirmState.action === "lock" ? "danger" : "success"}
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
+      />
     </div>
   );
 }

@@ -1,0 +1,48 @@
+.confirm-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.confirm-dialog__message {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #425446;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.confirm-dialog__cancel,
+.confirm-dialog__confirm {
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.confirm-dialog__cancel {
+  background-color: #f3f7f1;
+  color: #486150;
+}
+
+.confirm-dialog__confirm--danger {
+  background-color: #c62828;
+  color: #ffffff;
+}
+
+.confirm-dialog__confirm--success {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+}
+
+.confirm-dialog__confirm--neutral {
+  background-color: #1d4ed8;
+  color: #ffffff;
+}
