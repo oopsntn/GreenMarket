@@ -1,6 +1,7 @@
 import { useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
+import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -194,99 +195,110 @@ function ShopsPage() {
         onSearchChange={setSearchKeyword}
       />
 
-      <div className="shops-table-wrapper">
-        <table className="shops-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Shop Name</th>
-              <th>Owner</th>
-              <th>Owner Email</th>
-              <th>Total Posts</th>
-              <th>Status</th>
-              <th>Created Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredShops.map((shop) => (
-              <tr key={shop.id}>
-                <td>#{shop.id}</td>
-                <td>{shop.name}</td>
-                <td>{shop.ownerName}</td>
-                <td>{shop.ownerEmail}</td>
-                <td>{shop.totalPosts}</td>
-                <td>
-                  <StatusBadge
-                    label={shop.status}
-                    variant={
-                      shop.status === "Active"
-                        ? "active"
-                        : shop.status === "Pending"
-                          ? "pending"
-                          : shop.status === "Suspended"
-                            ? "suspended"
-                            : "rejected"
-                    }
-                  />
-                </td>
-                <td>{shop.createdAt}</td>
-                <td>
-                  <div className="shops-actions">
-                    <button
-                      type="button"
-                      className="shops-actions__view"
-                      onClick={() => openViewModal(shop)}
-                    >
-                      View
-                    </button>
-
-                    {shop.status === "Pending" && (
-                      <>
-                        <button
-                          type="button"
-                          className="shops-actions__approve"
-                          onClick={() => openConfirmDialog(shop.id, "approve")}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="shops-actions__reject"
-                          onClick={() => openConfirmDialog(shop.id, "reject")}
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-
-                    {shop.status === "Active" && (
-                      <button
-                        type="button"
-                        className="shops-actions__suspend"
-                        onClick={() => openConfirmDialog(shop.id, "suspend")}
-                      >
-                        Suspend
-                      </button>
-                    )}
-
-                    {shop.status === "Suspended" && (
-                      <button
-                        type="button"
-                        className="shops-actions__reactivate"
-                        onClick={() => openConfirmDialog(shop.id, "reactivate")}
-                      >
-                        Reactivate
-                      </button>
-                    )}
-                  </div>
-                </td>
+      {filteredShops.length === 0 ? (
+        <EmptyState
+          title="No shops found"
+          description="No shops match your current search. Try another keyword to continue."
+        />
+      ) : (
+        <div className="shops-table-wrapper">
+          <table className="shops-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Shop Name</th>
+                <th>Owner</th>
+                <th>Owner Email</th>
+                <th>Total Posts</th>
+                <th>Status</th>
+                <th>Created Date</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody>
+              {filteredShops.map((shop) => (
+                <tr key={shop.id}>
+                  <td>#{shop.id}</td>
+                  <td>{shop.name}</td>
+                  <td>{shop.ownerName}</td>
+                  <td>{shop.ownerEmail}</td>
+                  <td>{shop.totalPosts}</td>
+                  <td>
+                    <StatusBadge
+                      label={shop.status}
+                      variant={
+                        shop.status === "Active"
+                          ? "active"
+                          : shop.status === "Pending"
+                            ? "pending"
+                            : shop.status === "Suspended"
+                              ? "suspended"
+                              : "rejected"
+                      }
+                    />
+                  </td>
+                  <td>{shop.createdAt}</td>
+                  <td>
+                    <div className="shops-actions">
+                      <button
+                        type="button"
+                        className="shops-actions__view"
+                        onClick={() => openViewModal(shop)}
+                      >
+                        View
+                      </button>
+
+                      {shop.status === "Pending" && (
+                        <>
+                          <button
+                            type="button"
+                            className="shops-actions__approve"
+                            onClick={() =>
+                              openConfirmDialog(shop.id, "approve")
+                            }
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="shops-actions__reject"
+                            onClick={() => openConfirmDialog(shop.id, "reject")}
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+
+                      {shop.status === "Active" && (
+                        <button
+                          type="button"
+                          className="shops-actions__suspend"
+                          onClick={() => openConfirmDialog(shop.id, "suspend")}
+                        >
+                          Suspend
+                        </button>
+                      )}
+
+                      {shop.status === "Suspended" && (
+                        <button
+                          type="button"
+                          className="shops-actions__reactivate"
+                          onClick={() =>
+                            openConfirmDialog(shop.id, "reactivate")
+                          }
+                        >
+                          Reactivate
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <BaseModal
         isOpen={isModalOpen}
