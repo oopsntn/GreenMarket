@@ -1,10 +1,42 @@
+import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { exportService } from "../services/exportService";
 import "./ExportPage.css";
 
 function ExportPage() {
   const historyItems = exportService.getExportHistory();
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  const handleExportGeneralData = () => {
+    showToast("General data export started successfully.");
+  };
+
+  const handleExportFinancialReport = () => {
+    showToast("Financial report export started successfully.");
+  };
 
   return (
     <div className="export-page">
@@ -51,7 +83,11 @@ function ExportPage() {
               </select>
             </div>
 
-            <button className="export-button" type="button">
+            <button
+              className="export-button"
+              type="button"
+              onClick={handleExportGeneralData}
+            >
               Export General Data
             </button>
           </div>
@@ -91,7 +127,11 @@ function ExportPage() {
               </select>
             </div>
 
-            <button className="export-button" type="button">
+            <button
+              className="export-button"
+              type="button"
+              onClick={handleExportFinancialReport}
+            >
               Export Financial Report
             </button>
           </div>
@@ -141,6 +181,8 @@ function ExportPage() {
           </table>
         </div>
       </section>
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
