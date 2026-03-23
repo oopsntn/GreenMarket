@@ -1,5 +1,6 @@
 import { useState } from "react";
 import BaseModal from "../components/BaseModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -7,6 +8,14 @@ import { emptyTemplateForm } from "../mock-data/templates";
 import { templateService } from "../services/templateService";
 import type { Template, TemplateFormState } from "../types/template";
 import "./TemplatesPage.css";
+
+type ConfirmAction = "disable" | "enable";
+
+type ConfirmState = {
+  isOpen: boolean;
+  templateId: number | null;
+  action: ConfirmAction | null;
+};
 
 function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>(
@@ -20,6 +29,11 @@ function TemplatesPage() {
   const [formData, setFormData] =
     useState<TemplateFormState>(emptyTemplateForm);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    templateId: null,
+    action: null,
+  });
 
   const openAddModal = () => {
     setModalMode("add");
@@ -55,6 +69,22 @@ function TemplatesPage() {
   const closeModal = () => {
     setSelectedTemplateId(null);
     setIsModalOpen(false);
+  };
+
+  const openConfirmDialog = (templateId: number, action: ConfirmAction) => {
+    setConfirmState({
+      isOpen: true,
+      templateId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      templateId: null,
+      action: null,
+    });
   };
 
   const handleChange = (
@@ -93,8 +123,25 @@ function TemplatesPage() {
     );
   };
 
+  const handleConfirmAction = () => {
+    if (confirmState.templateId === null || confirmState.action === null)
+      return;
+
+    const targetTemplate = templates.find(
+      (item) => item.id === confirmState.templateId,
+    );
+    if (!targetTemplate) {
+      closeConfirmDialog();
+      return;
+    }
+
+    handleToggleStatus(targetTemplate);
+    closeConfirmDialog();
+  };
+
   const filteredTemplates = templates.filter((template) => {
     const keyword = searchKeyword.trim().toLowerCase();
+
     if (!keyword) return true;
 
     return (
@@ -109,6 +156,36 @@ function TemplatesPage() {
       : modalMode === "edit"
         ? "Edit Template"
         : "Template Details";
+
+  const confirmTemplate =
+    confirmState.templateId !== null
+      ? (templates.find((item) => item.id === confirmState.templateId) ?? null)
+      : null;
+
+  const templateLabel = confirmTemplate?.name ?? "this template";
+
+  const confirmTitleMap: Record<ConfirmAction, string> = {
+    disable: "Disable Template",
+    enable: "Enable Template",
+  };
+
+  const confirmMessageMap: Record<ConfirmAction, string> = {
+    disable: `Are you sure you want to disable ${templateLabel}? This template will no longer be active in the system.`,
+    enable: `Are you sure you want to enable ${templateLabel}? This template will be active again in the system.`,
+  };
+
+  const confirmButtonMap: Record<ConfirmAction, string> = {
+    disable: "Disable Template",
+    enable: "Enable Template",
+  };
+
+  const confirmToneMap: Record<
+    ConfirmAction,
+    "danger" | "success" | "neutral"
+  > = {
+    disable: "danger",
+    enable: "success",
+  };
 
   return (
     <div className="templates-page">
@@ -181,7 +258,9 @@ function TemplatesPage() {
                       <button
                         type="button"
                         className="templates-actions__disable"
-                        onClick={() => handleToggleStatus(template)}
+                        onClick={() =>
+                          openConfirmDialog(template.id, "disable")
+                        }
                       >
                         Disable
                       </button>
@@ -189,7 +268,7 @@ function TemplatesPage() {
                       <button
                         type="button"
                         className="templates-actions__enable"
-                        onClick={() => handleToggleStatus(template)}
+                        onClick={() => openConfirmDialog(template.id, "enable")}
                       >
                         Enable
                       </button>
@@ -282,6 +361,29 @@ function TemplatesPage() {
           </div>
         </form>
       </BaseModal>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={
+          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+        }
+        message={
+          confirmState.action
+            ? confirmMessageMap[confirmState.action]
+            : "Please confirm this action."
+        }
+        confirmText={
+          confirmState.action
+            ? confirmButtonMap[confirmState.action]
+            : "Confirm"
+        }
+        cancelText="Cancel"
+        tone={
+          confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
+        }
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
+      />
     </div>
   );
 }
