@@ -1,5 +1,6 @@
 import { useState } from "react";
 import BaseModal from "../components/BaseModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -7,6 +8,14 @@ import { emptyCategoryForm } from "../mock-data/categories";
 import { categoryService } from "../services/categoryService";
 import type { Category, CategoryFormState } from "../types/category";
 import "./CategoriesPage.css";
+
+type ConfirmAction = "disable" | "enable";
+
+type ConfirmState = {
+  isOpen: boolean;
+  categoryId: number | null;
+  action: ConfirmAction | null;
+};
 
 function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>(
@@ -20,6 +29,11 @@ function CategoriesPage() {
   const [formData, setFormData] =
     useState<CategoryFormState>(emptyCategoryForm);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    categoryId: null,
+    action: null,
+  });
 
   const openAddModal = () => {
     setModalMode("add");
@@ -57,6 +71,22 @@ function CategoriesPage() {
     setIsModalOpen(false);
   };
 
+  const openConfirmDialog = (categoryId: number, action: ConfirmAction) => {
+    setConfirmState({
+      isOpen: true,
+      categoryId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      categoryId: null,
+      action: null,
+    });
+  };
+
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -91,8 +121,25 @@ function CategoriesPage() {
     );
   };
 
+  const handleConfirmAction = () => {
+    if (confirmState.categoryId === null || confirmState.action === null)
+      return;
+
+    const targetCategory = categories.find(
+      (item) => item.id === confirmState.categoryId,
+    );
+    if (!targetCategory) {
+      closeConfirmDialog();
+      return;
+    }
+
+    handleToggleStatus(targetCategory);
+    closeConfirmDialog();
+  };
+
   const filteredCategories = categories.filter((category) => {
     const keyword = searchKeyword.trim().toLowerCase();
+
     if (!keyword) return true;
 
     return (
@@ -107,6 +154,36 @@ function CategoriesPage() {
       : modalMode === "edit"
         ? "Edit Category"
         : "Category Details";
+
+  const confirmCategory =
+    confirmState.categoryId !== null
+      ? (categories.find((item) => item.id === confirmState.categoryId) ?? null)
+      : null;
+
+  const categoryLabel = confirmCategory?.name ?? "this category";
+
+  const confirmTitleMap: Record<ConfirmAction, string> = {
+    disable: "Disable Category",
+    enable: "Enable Category",
+  };
+
+  const confirmMessageMap: Record<ConfirmAction, string> = {
+    disable: `Are you sure you want to disable ${categoryLabel}? This category will no longer be active in the system.`,
+    enable: `Are you sure you want to enable ${categoryLabel}? This category will be active again in the system.`,
+  };
+
+  const confirmButtonMap: Record<ConfirmAction, string> = {
+    disable: "Disable Category",
+    enable: "Enable Category",
+  };
+
+  const confirmToneMap: Record<
+    ConfirmAction,
+    "danger" | "success" | "neutral"
+  > = {
+    disable: "danger",
+    enable: "success",
+  };
 
   return (
     <div className="categories-page">
@@ -175,7 +252,9 @@ function CategoriesPage() {
                       <button
                         type="button"
                         className="categories-actions__disable"
-                        onClick={() => handleToggleStatus(category)}
+                        onClick={() =>
+                          openConfirmDialog(category.id, "disable")
+                        }
                       >
                         Disable
                       </button>
@@ -183,7 +262,7 @@ function CategoriesPage() {
                       <button
                         type="button"
                         className="categories-actions__enable"
-                        onClick={() => handleToggleStatus(category)}
+                        onClick={() => openConfirmDialog(category.id, "enable")}
                       >
                         Enable
                       </button>
@@ -273,6 +352,29 @@ function CategoriesPage() {
           </div>
         </form>
       </BaseModal>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={
+          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+        }
+        message={
+          confirmState.action
+            ? confirmMessageMap[confirmState.action]
+            : "Please confirm this action."
+        }
+        confirmText={
+          confirmState.action
+            ? confirmButtonMap[confirmState.action]
+            : "Confirm"
+        }
+        cancelText="Cancel"
+        tone={
+          confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
+        }
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
+      />
     </div>
   );
 }
