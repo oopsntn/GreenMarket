@@ -27,7 +27,6 @@
   padding: 16px 18px;
   border-bottom: 1px solid #eef3ea;
   font-size: 14px;
-  vertical-align: top;
 }
 
 .promotions-table th {
@@ -41,8 +40,8 @@
 
 .promotions-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .promotions-actions button {

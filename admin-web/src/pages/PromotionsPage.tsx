@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -6,11 +7,40 @@ import { promotionService } from "../services/promotionService";
 import type { Promotion } from "../types/promotion";
 import "./PromotionsPage.css";
 
+type ConfirmAction = "pause" | "resume";
+
+type ConfirmState = {
+  isOpen: boolean;
+  promotionId: number | null;
+  action: ConfirmAction | null;
+};
+
 function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>(
     promotionService.getPromotions(),
   );
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    promotionId: null,
+    action: null,
+  });
+
+  const openConfirmDialog = (promotionId: number, action: ConfirmAction) => {
+    setConfirmState({
+      isOpen: true,
+      promotionId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      promotionId: null,
+      action: null,
+    });
+  };
 
   const handleUpdateStatus = (promotion: Promotion) => {
     if (promotion.status === "Active") {
@@ -27,6 +57,22 @@ function PromotionsPage() {
     }
   };
 
+  const handleConfirmAction = () => {
+    if (confirmState.promotionId === null || confirmState.action === null)
+      return;
+
+    const targetPromotion = promotions.find(
+      (item) => item.id === confirmState.promotionId,
+    );
+    if (!targetPromotion) {
+      closeConfirmDialog();
+      return;
+    }
+
+    handleUpdateStatus(targetPromotion);
+    closeConfirmDialog();
+  };
+
   const filteredPromotions = promotions.filter((promotion) => {
     const keyword = searchKeyword.trim().toLowerCase();
 
@@ -37,6 +83,37 @@ function PromotionsPage() {
       promotion.owner.toLowerCase().includes(keyword)
     );
   });
+
+  const confirmPromotion =
+    confirmState.promotionId !== null
+      ? (promotions.find((item) => item.id === confirmState.promotionId) ??
+        null)
+      : null;
+
+  const promotionLabel = confirmPromotion?.postTitle ?? "this promotion";
+
+  const confirmTitleMap: Record<ConfirmAction, string> = {
+    pause: "Pause Promotion",
+    resume: "Resume Promotion",
+  };
+
+  const confirmMessageMap: Record<ConfirmAction, string> = {
+    pause: `Are you sure you want to pause ${promotionLabel}? This promotion will stop running until it is resumed.`,
+    resume: `Are you sure you want to resume ${promotionLabel}? This promotion will become active again.`,
+  };
+
+  const confirmButtonMap: Record<ConfirmAction, string> = {
+    pause: "Pause Promotion",
+    resume: "Resume Promotion",
+  };
+
+  const confirmToneMap: Record<
+    ConfirmAction,
+    "danger" | "success" | "neutral"
+  > = {
+    pause: "danger",
+    resume: "success",
+  };
 
   return (
     <div className="promotions-page">
@@ -102,7 +179,7 @@ function PromotionsPage() {
                       <button
                         type="button"
                         className="promotions-actions__pause"
-                        onClick={() => handleUpdateStatus(promotion)}
+                        onClick={() => openConfirmDialog(promotion.id, "pause")}
                       >
                         Pause
                       </button>
@@ -110,7 +187,9 @@ function PromotionsPage() {
                       <button
                         type="button"
                         className="promotions-actions__resume"
-                        onClick={() => handleUpdateStatus(promotion)}
+                        onClick={() =>
+                          openConfirmDialog(promotion.id, "resume")
+                        }
                       >
                         Resume
                       </button>
@@ -130,6 +209,29 @@ function PromotionsPage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={
+          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+        }
+        message={
+          confirmState.action
+            ? confirmMessageMap[confirmState.action]
+            : "Please confirm this action."
+        }
+        confirmText={
+          confirmState.action
+            ? confirmButtonMap[confirmState.action]
+            : "Confirm"
+        }
+        cancelText="Cancel"
+        tone={
+          confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
+        }
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
+      />
     </div>
   );
 }
