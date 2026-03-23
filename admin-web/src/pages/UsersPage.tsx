@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { emptyUserForm } from "../mock-data/users";
 import { userService } from "../services/userService";
 import type { AssignableUserRole, User, UserFormState } from "../types/user";
@@ -35,6 +36,7 @@ function UsersPage() {
     userId: null,
     action: null,
   });
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const selectedUser =
     selectedUserId !== null
@@ -47,6 +49,27 @@ function UsersPage() {
       : null;
 
   const isProtectedAdmin = selectedUser?.role === "Admin";
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   const openAddModal = () => {
     setModalMode("add");
@@ -116,6 +139,8 @@ function UsersPage() {
   const handleConfirmAction = () => {
     if (confirmState.userId === null || confirmState.action === null) return;
 
+    const targetUser = users.find((user) => user.id === confirmState.userId);
+
     setUsers((prev) =>
       prev.map((user) =>
         user.id === confirmState.userId
@@ -126,6 +151,16 @@ function UsersPage() {
           : user,
       ),
     );
+
+    if (confirmState.action === "lock") {
+      showToast(
+        `${targetUser?.fullName ?? "User"} has been locked successfully.`,
+      );
+    } else {
+      showToast(
+        `${targetUser?.fullName ?? "User"} has been unlocked successfully.`,
+      );
+    }
 
     closeConfirmDialog();
   };
@@ -146,12 +181,14 @@ function UsersPage() {
 
     if (modalMode === "add") {
       setUsers((prev) => userService.createUser(prev, formData));
+      showToast("User added successfully.");
     }
 
     if (modalMode === "edit" && selectedUserId !== null) {
       setUsers((prev) =>
         userService.updateUser(prev, selectedUserId, formData),
       );
+      showToast("User updated successfully.");
     }
 
     closeModal();
@@ -394,6 +431,8 @@ function UsersPage() {
         onConfirm={handleConfirmAction}
         onCancel={closeConfirmDialog}
       />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
