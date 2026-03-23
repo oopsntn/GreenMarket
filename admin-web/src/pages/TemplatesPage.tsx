@@ -4,6 +4,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { emptyTemplateForm } from "../mock-data/templates";
 import { templateService } from "../services/templateService";
 import type { Template, TemplateFormState } from "../types/template";
@@ -34,6 +35,28 @@ function TemplatesPage() {
     templateId: null,
     action: null,
   });
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   const openAddModal = () => {
     setModalMode("add");
@@ -105,12 +128,14 @@ function TemplatesPage() {
 
     if (modalMode === "add") {
       setTemplates((prev) => templateService.createTemplate(prev, formData));
+      showToast("Template added successfully.");
     }
 
     if (modalMode === "edit" && selectedTemplateId !== null) {
       setTemplates((prev) =>
         templateService.updateTemplate(prev, selectedTemplateId, formData),
       );
+      showToast("Template updated successfully.");
     }
 
     closeModal();
@@ -136,6 +161,16 @@ function TemplatesPage() {
     }
 
     handleToggleStatus(targetTemplate);
+
+    if (confirmState.action === "disable") {
+      showToast(
+        `${targetTemplate.name} has been disabled successfully.`,
+        "info",
+      );
+    } else {
+      showToast(`${targetTemplate.name} has been enabled successfully.`);
+    }
+
     closeConfirmDialog();
   };
 
@@ -384,6 +419,8 @@ function TemplatesPage() {
         onConfirm={handleConfirmAction}
         onCancel={closeConfirmDialog}
       />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
