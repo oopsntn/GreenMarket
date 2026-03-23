@@ -4,6 +4,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { shopService } from "../services/shopService";
 import type { Shop, ShopStatus } from "../types/shop";
 import "./ShopsPage.css";
@@ -26,6 +27,28 @@ function ShopsPage() {
     shopId: null,
     action: null,
   });
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   const openViewModal = (shop: Shop) => {
     setSelectedShop(shop);
@@ -64,6 +87,12 @@ function ShopsPage() {
   const handleConfirmAction = () => {
     if (confirmState.shopId === null || confirmState.action === null) return;
 
+    const targetShop = shops.find((shop) => shop.id === confirmState.shopId);
+    if (!targetShop) {
+      closeConfirmDialog();
+      return;
+    }
+
     const nextStatusMap: Record<ConfirmAction, ShopStatus> = {
       approve: "Active",
       reject: "Rejected",
@@ -75,6 +104,22 @@ function ShopsPage() {
       confirmState.shopId,
       nextStatusMap[confirmState.action],
     );
+
+    if (confirmState.action === "approve") {
+      showToast(`${targetShop.name} has been approved successfully.`);
+    }
+
+    if (confirmState.action === "reject") {
+      showToast(`${targetShop.name} has been rejected successfully.`, "info");
+    }
+
+    if (confirmState.action === "suspend") {
+      showToast(`${targetShop.name} has been suspended successfully.`, "info");
+    }
+
+    if (confirmState.action === "reactivate") {
+      showToast(`${targetShop.name} has been reactivated successfully.`);
+    }
 
     closeConfirmDialog();
   };
@@ -371,6 +416,8 @@ function ShopsPage() {
         onConfirm={handleConfirmAction}
         onCancel={closeConfirmDialog}
       />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
