@@ -1,5 +1,6 @@
 import { useState } from "react";
 import BaseModal from "../components/BaseModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -7,6 +8,14 @@ import { emptyAttributeForm } from "../mock-data/attributes";
 import { attributeService } from "../services/attributeService";
 import type { Attribute, AttributeFormState } from "../types/attribute";
 import "./AttributesPage.css";
+
+type ConfirmAction = "disable" | "enable";
+
+type ConfirmState = {
+  isOpen: boolean;
+  attributeId: number | null;
+  action: ConfirmAction | null;
+};
 
 function AttributesPage() {
   const [attributes, setAttributes] = useState<Attribute[]>(
@@ -20,6 +29,11 @@ function AttributesPage() {
   const [formData, setFormData] =
     useState<AttributeFormState>(emptyAttributeForm);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    attributeId: null,
+    action: null,
+  });
 
   const openAddModal = () => {
     setModalMode("add");
@@ -59,6 +73,22 @@ function AttributesPage() {
     setIsModalOpen(false);
   };
 
+  const openConfirmDialog = (attributeId: number, action: ConfirmAction) => {
+    setConfirmState({
+      isOpen: true,
+      attributeId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      attributeId: null,
+      action: null,
+    });
+  };
+
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -94,8 +124,25 @@ function AttributesPage() {
     );
   };
 
+  const handleConfirmAction = () => {
+    if (confirmState.attributeId === null || confirmState.action === null)
+      return;
+
+    const targetAttribute = attributes.find(
+      (item) => item.id === confirmState.attributeId,
+    );
+    if (!targetAttribute) {
+      closeConfirmDialog();
+      return;
+    }
+
+    handleToggleStatus(targetAttribute);
+    closeConfirmDialog();
+  };
+
   const filteredAttributes = attributes.filter((attribute) => {
     const keyword = searchKeyword.trim().toLowerCase();
+
     if (!keyword) return true;
 
     return (
@@ -110,6 +157,37 @@ function AttributesPage() {
       : modalMode === "edit"
         ? "Edit Attribute"
         : "Attribute Details";
+
+  const confirmAttribute =
+    confirmState.attributeId !== null
+      ? (attributes.find((item) => item.id === confirmState.attributeId) ??
+        null)
+      : null;
+
+  const attributeLabel = confirmAttribute?.name ?? "this attribute";
+
+  const confirmTitleMap: Record<ConfirmAction, string> = {
+    disable: "Disable Attribute",
+    enable: "Enable Attribute",
+  };
+
+  const confirmMessageMap: Record<ConfirmAction, string> = {
+    disable: `Are you sure you want to disable ${attributeLabel}? This attribute will no longer be active in the system.`,
+    enable: `Are you sure you want to enable ${attributeLabel}? This attribute will be active again in the system.`,
+  };
+
+  const confirmButtonMap: Record<ConfirmAction, string> = {
+    disable: "Disable Attribute",
+    enable: "Enable Attribute",
+  };
+
+  const confirmToneMap: Record<
+    ConfirmAction,
+    "danger" | "success" | "neutral"
+  > = {
+    disable: "danger",
+    enable: "success",
+  };
 
   return (
     <div className="attributes-page">
@@ -187,7 +265,9 @@ function AttributesPage() {
                       <button
                         type="button"
                         className="attributes-actions__disable"
-                        onClick={() => handleToggleStatus(attribute)}
+                        onClick={() =>
+                          openConfirmDialog(attribute.id, "disable")
+                        }
                       >
                         Disable
                       </button>
@@ -195,7 +275,9 @@ function AttributesPage() {
                       <button
                         type="button"
                         className="attributes-actions__enable"
-                        onClick={() => handleToggleStatus(attribute)}
+                        onClick={() =>
+                          openConfirmDialog(attribute.id, "enable")
+                        }
                       >
                         Enable
                       </button>
@@ -299,6 +381,29 @@ function AttributesPage() {
           </div>
         </form>
       </BaseModal>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={
+          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+        }
+        message={
+          confirmState.action
+            ? confirmMessageMap[confirmState.action]
+            : "Please confirm this action."
+        }
+        confirmText={
+          confirmState.action
+            ? confirmButtonMap[confirmState.action]
+            : "Confirm"
+        }
+        cancelText="Cancel"
+        tone={
+          confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
+        }
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
+      />
     </div>
   );
 }
