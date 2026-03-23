@@ -3,6 +3,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { categoryMappingService } from "../services/categoryMappingService";
 import type { CategoryMapping } from "../types/categoryMapping";
 import "./CategoryAttributeMappingPage.css";
@@ -25,6 +26,28 @@ function CategoryAttributeMappingPage() {
     mappingId: null,
     action: null,
   });
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   const openConfirmDialog = (mappingId: number, action: ConfirmAction) => {
     setConfirmState({
@@ -66,10 +89,19 @@ function CategoryAttributeMappingPage() {
       return;
     }
 
+    const mappingLabel = `${targetMapping.categoryName} - ${targetMapping.attributeName}`;
+
     if (confirmState.action === "remove") {
       handleRemove(confirmState.mappingId);
+      showToast(`${mappingLabel} has been removed successfully.`, "info");
     } else {
       handleToggleStatus(targetMapping);
+
+      if (confirmState.action === "disable") {
+        showToast(`${mappingLabel} has been disabled successfully.`, "info");
+      } else {
+        showToast(`${mappingLabel} has been enabled successfully.`);
+      }
     }
 
     closeConfirmDialog();
@@ -233,6 +265,8 @@ function CategoryAttributeMappingPage() {
         onConfirm={handleConfirmAction}
         onCancel={closeConfirmDialog}
       />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
