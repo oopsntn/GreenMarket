@@ -4,6 +4,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { emptyAttributeForm } from "../mock-data/attributes";
 import { attributeService } from "../services/attributeService";
 import type { Attribute, AttributeFormState } from "../types/attribute";
@@ -34,6 +35,28 @@ function AttributesPage() {
     attributeId: null,
     action: null,
   });
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   const openAddModal = () => {
     setModalMode("add");
@@ -106,12 +129,14 @@ function AttributesPage() {
 
     if (modalMode === "add") {
       setAttributes((prev) => attributeService.createAttribute(prev, formData));
+      showToast("Attribute added successfully.");
     }
 
     if (modalMode === "edit" && selectedAttributeId !== null) {
       setAttributes((prev) =>
         attributeService.updateAttribute(prev, selectedAttributeId, formData),
       );
+      showToast("Attribute updated successfully.");
     }
 
     closeModal();
@@ -137,6 +162,16 @@ function AttributesPage() {
     }
 
     handleToggleStatus(targetAttribute);
+
+    if (confirmState.action === "disable") {
+      showToast(
+        `${targetAttribute.name} has been disabled successfully.`,
+        "info",
+      );
+    } else {
+      showToast(`${targetAttribute.name} has been enabled successfully.`);
+    }
+
     closeConfirmDialog();
   };
 
@@ -404,6 +439,8 @@ function AttributesPage() {
         onConfirm={handleConfirmAction}
         onCancel={closeConfirmDialog}
       />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
