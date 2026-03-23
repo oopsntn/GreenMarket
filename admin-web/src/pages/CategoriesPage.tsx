@@ -4,6 +4,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { emptyCategoryForm } from "../mock-data/categories";
 import { categoryService } from "../services/categoryService";
 import type { Category, CategoryFormState } from "../types/category";
@@ -34,6 +35,28 @@ function CategoriesPage() {
     categoryId: null,
     action: null,
   });
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   const openAddModal = () => {
     setModalMode("add");
@@ -103,12 +126,14 @@ function CategoriesPage() {
 
     if (modalMode === "add") {
       setCategories((prev) => categoryService.createCategory(prev, formData));
+      showToast("Category added successfully.");
     }
 
     if (modalMode === "edit" && selectedCategoryId !== null) {
       setCategories((prev) =>
         categoryService.updateCategory(prev, selectedCategoryId, formData),
       );
+      showToast("Category updated successfully.");
     }
 
     closeModal();
@@ -134,6 +159,16 @@ function CategoriesPage() {
     }
 
     handleToggleStatus(targetCategory);
+
+    if (confirmState.action === "disable") {
+      showToast(
+        `${targetCategory.name} has been disabled successfully.`,
+        "info",
+      );
+    } else {
+      showToast(`${targetCategory.name} has been enabled successfully.`);
+    }
+
     closeConfirmDialog();
   };
 
@@ -375,6 +410,8 @@ function CategoriesPage() {
         onConfirm={handleConfirmAction}
         onCancel={closeConfirmDialog}
       />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
