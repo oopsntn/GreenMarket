@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -6,11 +7,40 @@ import { categoryMappingService } from "../services/categoryMappingService";
 import type { CategoryMapping } from "../types/categoryMapping";
 import "./CategoryAttributeMappingPage.css";
 
+type ConfirmAction = "disable" | "enable" | "remove";
+
+type ConfirmState = {
+  isOpen: boolean;
+  mappingId: number | null;
+  action: ConfirmAction | null;
+};
+
 function CategoryAttributeMappingPage() {
   const [mappings, setMappings] = useState<CategoryMapping[]>(
     categoryMappingService.getMappings(),
   );
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    mappingId: null,
+    action: null,
+  });
+
+  const openConfirmDialog = (mappingId: number, action: ConfirmAction) => {
+    setConfirmState({
+      isOpen: true,
+      mappingId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      mappingId: null,
+      action: null,
+    });
+  };
 
   const handleToggleStatus = (mapping: CategoryMapping) => {
     const nextStatus = mapping.status === "Active" ? "Disabled" : "Active";
@@ -25,6 +55,26 @@ function CategoryAttributeMappingPage() {
     );
   };
 
+  const handleConfirmAction = () => {
+    if (confirmState.mappingId === null || confirmState.action === null) return;
+
+    const targetMapping = mappings.find(
+      (item) => item.id === confirmState.mappingId,
+    );
+    if (!targetMapping) {
+      closeConfirmDialog();
+      return;
+    }
+
+    if (confirmState.action === "remove") {
+      handleRemove(confirmState.mappingId);
+    } else {
+      handleToggleStatus(targetMapping);
+    }
+
+    closeConfirmDialog();
+  };
+
   const filteredMappings = mappings.filter((item) => {
     const keyword = searchKeyword.trim().toLowerCase();
 
@@ -36,6 +86,42 @@ function CategoryAttributeMappingPage() {
       item.attributeCode.toLowerCase().includes(keyword)
     );
   });
+
+  const confirmMapping =
+    confirmState.mappingId !== null
+      ? (mappings.find((item) => item.id === confirmState.mappingId) ?? null)
+      : null;
+
+  const mappingLabel = confirmMapping
+    ? `${confirmMapping.categoryName} - ${confirmMapping.attributeName}`
+    : "this mapping";
+
+  const confirmTitleMap: Record<ConfirmAction, string> = {
+    disable: "Disable Mapping",
+    enable: "Enable Mapping",
+    remove: "Remove Mapping",
+  };
+
+  const confirmMessageMap: Record<ConfirmAction, string> = {
+    disable: `Are you sure you want to disable ${mappingLabel}? This mapping will no longer be applied in the category configuration.`,
+    enable: `Are you sure you want to enable ${mappingLabel}? This mapping will be active again in the category configuration.`,
+    remove: `Are you sure you want to remove ${mappingLabel}? This action will delete the relationship between category and attribute from the current UI data.`,
+  };
+
+  const confirmButtonMap: Record<ConfirmAction, string> = {
+    disable: "Disable Mapping",
+    enable: "Enable Mapping",
+    remove: "Remove Mapping",
+  };
+
+  const confirmToneMap: Record<
+    ConfirmAction,
+    "danger" | "success" | "neutral"
+  > = {
+    disable: "danger",
+    enable: "success",
+    remove: "danger",
+  };
 
   return (
     <div className="mapping-page">
@@ -96,7 +182,7 @@ function CategoryAttributeMappingPage() {
                       <button
                         type="button"
                         className="mapping-actions__disable"
-                        onClick={() => handleToggleStatus(item)}
+                        onClick={() => openConfirmDialog(item.id, "disable")}
                       >
                         Disable
                       </button>
@@ -104,7 +190,7 @@ function CategoryAttributeMappingPage() {
                       <button
                         type="button"
                         className="mapping-actions__enable"
-                        onClick={() => handleToggleStatus(item)}
+                        onClick={() => openConfirmDialog(item.id, "enable")}
                       >
                         Enable
                       </button>
@@ -113,7 +199,7 @@ function CategoryAttributeMappingPage() {
                     <button
                       type="button"
                       className="mapping-actions__remove"
-                      onClick={() => handleRemove(item.id)}
+                      onClick={() => openConfirmDialog(item.id, "remove")}
                     >
                       Remove
                     </button>
@@ -124,6 +210,29 @@ function CategoryAttributeMappingPage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={
+          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+        }
+        message={
+          confirmState.action
+            ? confirmMessageMap[confirmState.action]
+            : "Please confirm this action."
+        }
+        confirmText={
+          confirmState.action
+            ? confirmButtonMap[confirmState.action]
+            : "Confirm"
+        }
+        cancelText="Cancel"
+        tone={
+          confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
+        }
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
+      />
     </div>
   );
 }

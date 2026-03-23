@@ -41,6 +41,7 @@
 .mapping-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .mapping-actions button {
@@ -54,11 +55,21 @@
 }
 
 .mapping-actions__edit {
-  background-color: #eef7ef;
-  color: #1b5e20;
+  background-color: #eef4ff;
+  color: #1d4ed8;
+}
+
+.mapping-actions__disable {
+  background-color: #fff1f0;
+  color: #c62828;
+}
+
+.mapping-actions__enable {
+  background-color: #e8f5e9;
+  color: #2e7d32;
 }
 
 .mapping-actions__remove {
-  background-color: #fff1f0;
+  background-color: #fdecea;
   color: #c62828;
 }
