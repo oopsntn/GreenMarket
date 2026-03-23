@@ -25,7 +25,7 @@ const Button: React.FC<ButtonProps> = ({
         <TouchableOpacity
             onPress={onPress}
             disabled={disabled}
-            activeopacity={0.7}
+            activeOpacity={0.7}
             style={[
                 styles.btn,
                 styles[variant as keyof typeof styles] as ViewStyle,

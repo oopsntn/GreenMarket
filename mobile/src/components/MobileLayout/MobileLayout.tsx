@@ -23,6 +23,7 @@ interface MobileLayoutProps {
     rightAction?: React.ReactNode;
     headerStyle?: 'default' | 'transparent' | 'gradient';
     containerStyle?: ViewStyle;
+    scrollEnabled?: boolean;
 }
 
 const MobileLayout: React.FC<MobileLayoutProps> = ({
