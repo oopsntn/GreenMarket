@@ -149,6 +149,8 @@ CREATE TABLE shops (
     shop_location VARCHAR(255),
     shop_description TEXT,
     shop_status VARCHAR(20) DEFAULT 'pending',
+    shop_lat DECIMAL(10, 8),
+    shop_lng DECIMAL(11, 8),
     shop_created_at TIMESTAMP DEFAULT now(),
     shop_updated_at TIMESTAMP DEFAULT now()
 );

@@ -18,6 +18,8 @@ interface Shop {
   shopDescription?: string;
   shopPhone?: string;
   shopLocation?: string;
+  shopLat?: number;
+  shopLng?: number;
 }
 
 interface AuthContextType {

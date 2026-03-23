@@ -1,0 +1,59 @@
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-badge--active,
+.status-badge--positive,
+.status-badge--success {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+}
+
+.status-badge--disabled,
+.status-badge--locked,
+.status-badge--rejected,
+.status-badge--negative {
+  background-color: #fdecea;
+  color: #c62828;
+}
+
+.status-badge--pending,
+.status-badge--paused,
+.status-badge--processing {
+  background-color: #fff8e1;
+  color: #b26a00;
+}
+
+.status-badge--suspended {
+  background-color: #fff1f0;
+  color: #c62828;
+}
+
+.status-badge--required {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+}
+
+.status-badge--optional {
+  background-color: #f3f7f1;
+  color: #486150;
+}
+
+.status-badge--expired {
+  background-color: #f2f4f3;
+  color: #8a948c;
+}
+
+.status-badge--slot,
+.status-badge--role,
+.status-badge--type {
+  background-color: #edf7ee;
+  color: #2e7d32;
+}

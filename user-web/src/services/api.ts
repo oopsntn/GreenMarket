@@ -26,17 +26,37 @@ export const checkQrStatus = (sessionId: string) => api.get(`/auth/qr/status/${s
 export const getPublicPosts = (params?: any) => api.get('/posts/browse', { params });
 export const getPostDetail = (slug: string) => api.get(`/posts/detail/${slug}`);
 export const getMyPosts = (userId: number) => api.get(`/posts/my-posts?userId=${userId}`);
+export const updateUserPost = (postId: number, data: any) => api.patch(`/posts/${postId}`, data);
+export const deleteUserPost = (postId: number, userId: number) => api.delete(`/posts/${postId}`, { data: { userId } });
 
 // Shop APIs
 export const getPublicShop = (id: number | string) => api.get(`/shops/${id}`);
-export const registerShop = (data: any) => api.post('/shops/register', data);
+export const registerShop = (data: {
+  userId: number;
+  shopName: string;
+  shopPhone: string;
+  shopLocation: string;
+  shopDescription?: string;
+  shopLat?: number;
+  shopLng?: number;
+}) => api.post('/shops/register', data);
+
 export const getMyShop = (userId: number) => api.get(`/shops/my-shop?userId=${userId}`);
+
+export const updateShop = (shopId: number, data: {
+  shopName?: string;
+  shopPhone?: string;
+  shopLocation?: string;
+  shopDescription?: string;
+  shopLat?: number;
+  shopLng?: number;
+}) => api.patch(`/shops/${shopId}`, data);
 
 // Report API
 export const submitReport = (data: { postId: number; reportReason: string; reporterId?: number }) => 
   api.post('/reports', data);
 
-// Category APIs
+// --- Metadata (Categories & Attributes) ---
 export const getCategories = () => api.get('/categories');
 export const getCategoryAttributes = (categoryId: number) => api.get(`/categories/${categoryId}/attributes`);
 

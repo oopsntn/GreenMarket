@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
@@ -90,7 +90,12 @@ export const getMyPosts = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        const userPosts = await db.select().from(posts).where(eq(posts.postAuthorId, Number(userId)));
+        const userPosts = await db.select().from(posts).where(
+            and(
+                eq(posts.postAuthorId, Number(userId)),
+                ne(posts.postStatus, "hidden") // exclude soft deleted posts
+            )
+        );
         res.json(userPosts);
     } catch (error) {
         console.error(error);
@@ -129,6 +134,44 @@ export const updatePost = async (req: Request<{ id: string }>, res: Response): P
             .returning();
 
         res.json(updatedPost);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const softDeletePost = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    try {
+        const postId = parseId(req.params.id);
+        const { userId } = req.body; // Assuming userId is passed via middleware body injection, or from req.user if JWT is used properly
+
+        if (!postId || !userId) {
+            res.status(400).json({ error: "Post ID and User ID are required" });
+            return;
+        }
+
+        // Ensure user owns the post
+        const [existingPost] = await db.select().from(posts).where(eq(posts.postId, postId)).limit(1);
+        if (!existingPost) {
+            res.status(404).json({ error: "Post not found" });
+            return;
+        }
+        if (existingPost.postAuthorId !== userId) {
+            res.status(403).json({ error: "Unauthorized to delete this post" });
+            return;
+        }
+
+        // Perform soft delete
+        const [deletedPost] = await db.update(posts)
+            .set({ 
+                postStatus: "hidden", 
+                postDeletedAt: new Date(),
+                postUpdatedAt: new Date()
+            })
+            .where(eq(posts.postId, postId))
+            .returning();
+
+        res.json({ message: "Post deleted successfully", post: deletedPost });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

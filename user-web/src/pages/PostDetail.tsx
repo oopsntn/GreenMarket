@@ -179,9 +179,19 @@ const PostDetail: React.FC = () => {
                                 </a>
                             </div>
 
-                            <div className="flex items-center gap-3 text-slate-300">
-                                <MapPin className="w-5 h-5 text-emerald-500" />
-                                <span className="font-medium">{post.postLocation || 'Thạch Thất, Hà Nội'}</span>
+                            <div className="flex items-center justify-between gap-3 text-slate-300">
+                                <div className="flex items-center gap-3">
+                                    <MapPin className="w-5 h-5 text-emerald-500" />
+                                    <span className="font-medium">{post.postLocation || 'Thạch Thất, Hà Nội'}</span>
+                                </div>
+                                <a 
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.postLocation || 'Hà Nội')}`}
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest hover:underline whitespace-nowrap"
+                                >
+                                    Xem bản đồ
+                                </a>
                             </div>
                         </div>
 

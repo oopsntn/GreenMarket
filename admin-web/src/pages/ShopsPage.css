@@ -1,0 +1,165 @@
+.shops-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.shops-table-wrapper {
+  background-color: #ffffff;
+  border: 1px solid #edf2e8;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
+}
+
+.shops-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.shops-table thead {
+  background-color: #f6faf5;
+}
+
+.shops-table th,
+.shops-table td {
+  text-align: left;
+  padding: 16px 18px;
+  border-bottom: 1px solid #eef3ea;
+  font-size: 14px;
+  vertical-align: top;
+}
+
+.shops-table th {
+  color: #486150;
+  font-weight: 700;
+}
+
+.shops-table td {
+  color: #223127;
+}
+
+.shops-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shops-actions button {
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.shops-actions__view {
+  background-color: #edf7ee;
+  color: #1b5e20;
+}
+
+.shops-actions__approve {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.shops-actions__reject {
+  background-color: #fff1f0;
+  color: #c62828;
+}
+
+.shops-actions__suspend {
+  background-color: #fff1f0;
+  color: #c62828;
+}
+
+.shops-actions__reactivate {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.shops-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.shops-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.shops-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shops-modal__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.shops-modal__field input,
+.shops-modal__field textarea {
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #f5f7f4;
+  color: #223127;
+  font-family: inherit;
+}
+
+.shops-modal__field input {
+  height: 46px;
+}
+
+.shops-modal__field textarea {
+  resize: none;
+}
+
+.shops-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+  flex-wrap: wrap;
+}
+
+.shops-modal__cancel,
+.shops-modal__approve,
+.shops-modal__reject,
+.shops-modal__suspend,
+.shops-modal__reactivate {
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.shops-modal__cancel {
+  background-color: #f3f7f1;
+  color: #486150;
+}
+
+.shops-modal__approve,
+.shops-modal__reactivate {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
+}
+
+.shops-modal__reject,
+.shops-modal__suspend {
+  background-color: #fff1f0;
+  color: #c62828;
+}

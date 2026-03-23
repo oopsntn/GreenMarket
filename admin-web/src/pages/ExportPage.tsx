@@ -1,14 +1,17 @@
+import PageHeader from "../components/PageHeader";
+import StatusBadge from "../components/StatusBadge";
+import { exportService } from "../services/exportService";
 import "./ExportPage.css";
 
 function ExportPage() {
+  const historyItems = exportService.getExportHistory();
+
   return (
     <div className="export-page">
-      <div className="export-page__header">
-        <div>
-          <h2>Export CSV</h2>
-          <p>Export operational and financial reports for GreenMarket admin.</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Export CSV"
+        description="Export operational and financial reports for GreenMarket admin."
+      />
 
       <div className="export-grid">
         <section className="export-card">
@@ -116,45 +119,24 @@ function ExportPage() {
             </thead>
 
             <tbody>
-              <tr>
-                <td>#1</td>
-                <td>User Accounts Report</td>
-                <td>General</td>
-                <td>CSV</td>
-                <td>Admin</td>
-                <td>2026-03-17</td>
-                <td>
-                  <span className="export-badge export-badge--success">
-                    Completed
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td>#2</td>
-                <td>Revenue Summary</td>
-                <td>Financial</td>
-                <td>CSV</td>
-                <td>Admin</td>
-                <td>2026-03-16</td>
-                <td>
-                  <span className="export-badge export-badge--success">
-                    Completed
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td>#3</td>
-                <td>Customer Spending Report</td>
-                <td>Financial</td>
-                <td>XLSX</td>
-                <td>Admin</td>
-                <td>2026-03-15</td>
-                <td>
-                  <span className="export-badge export-badge--processing">
-                    Processing
-                  </span>
-                </td>
-              </tr>
+              {historyItems.map((item) => (
+                <tr key={item.id}>
+                  <td>#{item.id}</td>
+                  <td>{item.reportName}</td>
+                  <td>{item.type}</td>
+                  <td>{item.format}</td>
+                  <td>{item.generatedBy}</td>
+                  <td>{item.date}</td>
+                  <td>
+                    <StatusBadge
+                      label={item.status}
+                      variant={
+                        item.status === "Completed" ? "success" : "processing"
+                      }
+                    />
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

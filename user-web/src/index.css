@@ -6,6 +6,7 @@
   --color-accent: #10b981;
   --color-background: #0a0a0a;
   --color-surface: #171717;
+  --color-surface-hover: rgba(255, 255, 255, 0.1);
   --color-text: #f8fafc;
   --color-text-muted: #94a3b8;
 }
@@ -26,4 +27,29 @@
 
 .text-gradient {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500;
+}
+
+/* Custom Global Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-hover);
+  border-radius: 50px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Class-based trigger if needed, though global style already applies */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-hover) transparent;
 }
