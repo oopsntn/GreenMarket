@@ -3,6 +3,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { promotionService } from "../services/promotionService";
 import type { Promotion } from "../types/promotion";
 import "./PromotionsPage.css";
@@ -25,6 +26,28 @@ function PromotionsPage() {
     promotionId: null,
     action: null,
   });
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   const openConfirmDialog = (promotionId: number, action: ConfirmAction) => {
     setConfirmState({
@@ -70,6 +93,16 @@ function PromotionsPage() {
     }
 
     handleUpdateStatus(targetPromotion);
+
+    if (confirmState.action === "pause") {
+      showToast(
+        `${targetPromotion.postTitle} has been paused successfully.`,
+        "info",
+      );
+    } else {
+      showToast(`${targetPromotion.postTitle} has been resumed successfully.`);
+    }
+
     closeConfirmDialog();
   };
 
@@ -232,6 +265,8 @@ function PromotionsPage() {
         onConfirm={handleConfirmAction}
         onCancel={closeConfirmDialog}
       />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
