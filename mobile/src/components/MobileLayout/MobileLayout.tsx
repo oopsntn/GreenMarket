@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
 // Nếu dùng Expo: npx expo install expo-linear-gradient
-import { LinearGradient } from 'react-native-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface MobileLayoutProps {
     title?: string;
@@ -33,53 +33,71 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     backButton,
     rightAction,
     headerStyle = 'default',
-    containerStyle
+    containerStyle,
+    scrollEnabled = true,
 }) => {
 
-    // Hàm render Header tùy biến theo style
-    const renderHeader = () => {
-        const isGradient = headerStyle === 'gradient';
-        const isTransparent = headerStyle === 'transparent';
+    // Tach phan noi dung ben trong Header ra de dung chung
+    const renderHeaderContent = () => (
+        <View style={styles.headerContent}>
+            {backButton && (
+                <TouchableOpacity onPress={backButton} style={styles.backButton}>
+                    <ChevronLeft size={28} color={headerStyle === 'default' ? '#fff' : '#333'} />
+                </TouchableOpacity>
+            )}
 
-        const HeaderWrapper = isGradient ? LinearGradient : View;
-        const wrapperProps = isGradient
-            ? { colors: ['#52c41a', '#2e7d32'], start: { x: 0, y: 0 }, end: { x: 1, y: 1 } }
-            : {};
-
-        return (
-            <HeaderWrapper
-                {...wrapperProps}
+            <Text numberOfLines={1}
                 style={[
-                    styles.header,
-                    isTransparent && styles.headerTransparent,
-                    !isGradient && !isTransparent && styles.headerDefault
+                    styles.headerTitle, { color: headerStyle === 'default' ? '#fff' : '#333' }
                 ]}
             >
-                <View style={styles.headerContent}>
-                    {backButton && (
-                        <TouchableOpacity onPress={backButton} style={styles.backButton}>
-                            <ChevronLeft size={28} color={headerStyle === 'default' ? '#fff' : '#333'} />
-                        </TouchableOpacity>
-                    )}
+                {title}
+            </Text>
 
-                    <Text style={[
-                        styles.headerTitle,
-                        { color: headerStyle === 'default' ? '#fff' : '#333' }
-                    ]}>
-                        {title}
-                    </Text>
+            <View style={styles.rightAction}>
+                {rightAction || <View style={{ width: 28 }} />}
+            </View>
+        </View>
 
-                    {rightAction && <View style={styles.rightAction}>{rightAction}</View>}
-                </View>
-            </HeaderWrapper>
-        );
-    };
+    );
+
+    //Ham render Header de fix loi TypeScript Overload
+    const renderHeader = () => {
+        const isGradient = headerStyle === 'gradient'
+        const isTransparent = headerStyle === 'transparent'
+
+        const combinedHeaderStyle = [
+            styles.header,
+            isTransparent && styles.headerTransparent,
+            !isGradient && !isTransparent && styles.headerDefault
+        ]
+
+        if (isGradient) {
+            return (
+                <LinearGradient
+                    colors={['#52c41a', '#2e7d32']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={combinedHeaderStyle}
+                >
+                    {renderHeaderContent()}
+                </LinearGradient>
+            )
+        }
+
+        return (
+            <View style={combinedHeaderStyle}>
+                {renderHeaderContent()}
+            </View>
+        )
+    }
 
     return (
         <View style={styles.container}>
             {/* Cấu hình thanh trạng thái (Pin, Sóng, Giờ) */}
             <StatusBar barStyle={headerStyle === 'default' ? 'light-content' : 'dark-content'} />
 
+            {/* SafeAreaView để đảm bảo nội dung không bị che bởi notch hoặc thanh home trên iPhone */}
             <SafeAreaView style={{ flex: 0, backgroundColor: headerStyle === 'default' ? '#2e7d32' : '#fff' }} />
 
             <KeyboardAvoidingView
@@ -89,8 +107,9 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
                 {/* Header */}
                 {title && renderHeader()}
 
-                {/* Body */}
+                {/* Body: Kiem soat Scroll dua tren prop scrollEnabled */}
                 <ScrollView
+                    scrollEnabled={scrollEnabled}
                     style={[styles.body, containerStyle]}
                     contentContainerStyle={{ flexGrow: 1 }}
                     showsVerticalScrollIndicator={false}
