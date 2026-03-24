@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { settingsService } from "../services/settingsService";
 import type { SettingsState } from "../types/settings";
 import "./SettingsPage.css";
@@ -8,6 +9,28 @@ function SettingsPage() {
   const [settings, setSettings] = useState<SettingsState>(
     settingsService.getSettings(),
   );
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
 
   const handleInputChange = (
     section: keyof SettingsState,
@@ -26,6 +49,7 @@ function SettingsPage() {
   const handleSave = () => {
     const updated = settingsService.updateSettings(settings);
     setSettings(updated);
+    showToast("Settings saved successfully.");
   };
 
   return (
@@ -268,6 +292,8 @@ function SettingsPage() {
           </div>
         </section>
       </div>
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
