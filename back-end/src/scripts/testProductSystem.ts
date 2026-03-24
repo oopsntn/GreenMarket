@@ -1,4 +1,5 @@
 import axios from "axios";
+import { eq } from "drizzle-orm";
 
 const BASE_URL = "http://localhost:5000/api/admin";
 
@@ -6,7 +7,15 @@ async function testBonsaiSystem() {
     try {
         console.log("--- Starting Bonsai Product & Attribute Test ---");
 
-        // 1. Create Attribute: Nguồn gốc (Origin)
+        // 1. Create a temporary user for authoring
+        const { users } = await import("../models/schema/users.ts");
+        const { db } = await import("../config/db.ts");
+        const [user] = await db.insert(users).values({
+            userMobile: "0999888777",
+            userDisplayName: "Admin Test User",
+        }).returning();
+
+        // 2. Create Attribute: Nguồn gốc (Origin)
         console.log("\n1. Creating Attribute: Nguồn gốc...");
         const attrRes = await axios.post(`${BASE_URL}/attributes`, {
             attributeCode: "origin",
@@ -17,7 +26,7 @@ async function testBonsaiSystem() {
         const attribute = attrRes.data;
         console.log("Attribute Created:", attribute.attributeTitle);
 
-        // 2. Create Category: Cây cảnh Bonsai
+        // 3. Create Category: Cây cảnh Bonsai
         console.log("\n2. Creating Category: Cây cảnh Bonsai...");
         const catRes = await axios.post(`${BASE_URL}/categories`, {
             categoryTitle: "Cây cảnh Bonsai",
@@ -25,15 +34,15 @@ async function testBonsaiSystem() {
         const category = catRes.data;
         console.log("Category Created:", category.categoryTitle);
 
-        // 3. Create Product: Cây Tùng La Hán (Bonsai Ficus)
-        console.log("\n3. Creating Product: Tùng La Hán...");
-        const prodRes = await axios.post(`${BASE_URL}/products`, {
+        // 4. Create Post: Cây Tùng La Hán
+        console.log("\n3. Creating Post: Tùng La Hán...");
+        const prodRes = await axios.post(`${BASE_URL}/posts`, {
+            postAuthorId: user.userId,
             categoryId: category.categoryId,
-            productTitle: "Tùng La Hán Bonsai Nhật Bản",
-            productDescription: "Một tác phẩm nghệ thuật sống động với độ tuổi hơn 10 năm.",
-            productPrice: 5500000,
-            productStock: 1,
-            productStatus: "published",
+            postTitle: "Tùng La Hán Bonsai Nhật Bản",
+            postContent: "Một tác phẩm nghệ thuật sống động với độ tuổi hơn 10 năm.",
+            postPrice: 5500000,
+            postStatus: "approved",
             images: [
                 "https://example.com/bonsai-1.jpg",
                 "https://example.com/bonsai-2.jpg"
@@ -42,23 +51,23 @@ async function testBonsaiSystem() {
                 { id: attribute.attributeId, value: "Nhật Bản" }
             ]
         });
-        const product = prodRes.data;
-        console.log("Product Created ID:", product.productId);
+        const post = prodRes.data;
+        console.log("Post Created ID:", post.postId);
 
-        // 4. Get Product Details (Verify everything is linked)
-        console.log("\n4. Fetching Product Details...");
-        const detailRes = await axios.get(`${BASE_URL}/products/${product.productId}`);
+        // 5. Get Post Details
+        console.log("\n4. Fetching Post Details...");
+        const detailRes = await axios.get(`${BASE_URL}/posts/${post.postId}`);
         const details = detailRes.data;
-        console.log("Product Title:", details.productTitle);
+        console.log("Post Title:", details.postTitle);
         console.log("Images count:", details.images.length);
         console.log("Attributes count:", details.attributes.length);
-        console.log("Origin value:", details.attributes[0].attributeValue);
 
-        // 5. Cleanup
+        // 6. Cleanup
         console.log("\n5. Cleanup...");
-        await axios.delete(`${BASE_URL}/products/${product.productId}`);
+        await axios.delete(`${BASE_URL}/posts/${post.postId}`);
         await axios.delete(`${BASE_URL}/categories/${category.categoryId}`);
         await axios.delete(`${BASE_URL}/attributes/${attribute.attributeId}`);
+        await db.delete(users).where(eq(users.userId, user.userId));
         console.log("Cleanup successful.");
 
         console.log("\n--- Bonsai System Test Finished Successfully ---");

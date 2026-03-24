@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { posts, type NewPost } from "../../models/schema/posts";
 import { postImages } from "../../models/schema/post-images";
 import { postAttributeValues } from "../../models/schema/post-attribute-values";
+import { moderationActions } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId";
 import { slugify } from "../../utils/slugify";
 
@@ -122,18 +123,42 @@ export const updatePostStatus = async (req: Request<{ id: string }, {}, { status
 export const deletePost = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
     try {
         const idNumber = parseId(req.params.id);
+        const { adminId, reason } = req.body;
+
         if (idNumber === null) {
             res.status(400).json({ error: "Invalid post id" });
             return;
         }
 
-        const [deletedPost] = await db.delete(posts).where(eq(posts.postId, idNumber)).returning();
+        if (!adminId) {
+            res.status(400).json({ error: "adminId is required for this action" });
+            return;
+        }
+
+        // Soft delete the post
+        const [deletedPost] = await db.update(posts)
+            .set({ 
+                postStatus: 'hidden', 
+                postDeletedAt: new Date(),
+                postUpdatedAt: new Date()
+            })
+            .where(eq(posts.postId, idNumber))
+            .returning();
+            
         if (!deletedPost) {
             res.status(404).json({ error: "Post not found" });
             return;
         }
 
-        res.json({ message: "Post deleted successfully", deletedPost });
+        // Log the action
+        await db.insert(moderationActions).values({
+            moderationActionActionBy: adminId,
+            moderationActionPostId: idNumber,
+            moderationActionAction: "hidden",
+            moderationActionNote: reason || "Admin decided to hide this post",
+        });
+
+        res.json({ message: "Post hidden successfully", deletedPost });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

@@ -9,6 +9,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
+      # Để database luôn mới nhất, team nên dùng: docker-compose down -v && docker-compose up
       - pg_data:/var/lib/postgresql
       - ./GreenMarket.sql:/docker-entrypoint-initdb.d/init.sql
 
@@ -22,9 +23,10 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - DATABASE_URL=postgres://postgres:admin@db:5432/GreenMarket
+      - DATABASE_URL=postgresql://postgres:admin@db:5432/GreenMarket
     depends_on:
       - db
 
 volumes:
   pg_data:
+

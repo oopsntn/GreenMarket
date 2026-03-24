@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, text, timestamp, integer, numeric, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, timestamp, integer, numeric, boolean, index } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel, sql } from "drizzle-orm";
 import { categories } from "./categories";
 import { users } from "./users";
@@ -16,6 +16,11 @@ export const posts = pgTable("posts", {
     postLocation: varchar("post_location", { length: 255 }),
     postStatus: varchar("post_status", { length: 20 }).default("pending").notNull(), // pending, approved, rejected, hidden, draft
     postRejectedReason: text("post_rejected_reason"),
+    postContactPhone: varchar("post_contact_phone", { length: 20 }),
+    postPublished: boolean("post_published").default(false),
+    postSubmittedAt: timestamp("post_submitted_at"),
+    postPublishedAt: timestamp("post_published_at"),
+    postDeletedAt: timestamp("post_deleted_at"),
     postModeratedAt: timestamp("post_moderated_at"),
     postCreatedAt: timestamp("post_created_at").defaultNow(),
     postUpdatedAt: timestamp("post_updated_at").defaultNow(),
