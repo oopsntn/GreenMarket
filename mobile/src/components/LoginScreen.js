@@ -18,6 +18,7 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
 
   const handleRequestOtp = async () => {
+
     if (!mobile.trim()) {
       Alert.alert("Lỗi", "Vui lòng nhập số điện thoại");
       return;
@@ -32,14 +33,20 @@ export default function LoginScreen({ onLoginSuccess }) {
       });
       console.log(res);
       if (!res.ok) {
-        Alert.alert("Lỗi", "Không thể gửi OTP. Vui lòng thử lại.");
+        const errorData = await res.json();
+
+        console.log(res.status); // 400, 401, 500, etc.
+        console.log(errorData); // Lấy chi tiết lỗi từ server
+
+        Alert.alert("Lỗi", errorData.message || "Thao tác thất bại");
         return;
       }
 
+      const data = await res.json(); 
       Alert.alert("Thành công", "Mã OTP đã được gửi tới số điện thoại của bạn.");
       setStep("otp");
     } catch (error) {
-      console.error("Request OTP error", error);
+      console.error("❌ Error:", error.message); // Xem chi tiết lỗi
       Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);

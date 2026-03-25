@@ -13,7 +13,7 @@ export default function App() {
 
   const handleLoginSuccess = (authToken) => {
     setToken(authToken);
-    // TODO: Lưu token vào storage và điều hướng đến màn hình chính
+    
   };
 
   return (
@@ -31,7 +31,6 @@ export default function App() {
       ) : (
         <View style={styles.inner}>
           <Text style={styles.title}>Đã đăng nhập thành công!</Text>
-          {/* TODO: Thêm nội dung chính của app ở đây */}
         </View>
       )}
     </SafeAreaView>
