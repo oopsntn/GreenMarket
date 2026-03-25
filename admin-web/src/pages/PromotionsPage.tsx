@@ -1,74 +1,166 @@
+import { useState } from "react";
+import ConfirmDialog from "../components/ConfirmDialog";
+import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
+import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
+import { promotionService } from "../services/promotionService";
+import type { Promotion } from "../types/promotion";
 import "./PromotionsPage.css";
 
-type Promotion = {
-  id: number;
-  postTitle: string;
-  owner: string;
-  slot: "Home Top" | "Category Top" | "Search Boost";
-  packageName: string;
-  startDate: string;
-  endDate: string;
-  status: "Active" | "Paused" | "Expired";
+type ConfirmAction = "pause" | "resume";
+
+type ConfirmState = {
+  isOpen: boolean;
+  promotionId: number | null;
+  action: ConfirmAction | null;
 };
 
-const promotions: Promotion[] = [
-  {
-    id: 1,
-    postTitle: "Rare Monstera Deliciosa for Sale",
-    owner: "Nguyen Van A",
-    slot: "Home Top",
-    packageName: "Premium 7 Days",
-    startDate: "2026-03-15",
-    endDate: "2026-03-22",
-    status: "Active",
-  },
-  {
-    id: 2,
-    postTitle: "Mini Bonsai Collection",
-    owner: "Tran Thi B",
-    slot: "Category Top",
-    packageName: "Standard 5 Days",
-    startDate: "2026-03-14",
-    endDate: "2026-03-19",
-    status: "Paused",
-  },
-  {
-    id: 3,
-    postTitle: "Succulent Combo Pot Set",
-    owner: "Le Van C",
-    slot: "Search Boost",
-    packageName: "Boost 3 Days",
-    startDate: "2026-03-10",
-    endDate: "2026-03-13",
-    status: "Expired",
-  },
-];
-
 function PromotionsPage() {
+  const [promotions, setPromotions] = useState<Promotion[]>(
+    promotionService.getPromotions(),
+  );
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    promotionId: null,
+    action: null,
+  });
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  const openConfirmDialog = (promotionId: number, action: ConfirmAction) => {
+    setConfirmState({
+      isOpen: true,
+      promotionId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      promotionId: null,
+      action: null,
+    });
+  };
+
+  const handleUpdateStatus = (promotion: Promotion) => {
+    if (promotion.status === "Active") {
+      setPromotions((prev) =>
+        promotionService.updatePromotionStatus(prev, promotion.id, "Paused"),
+      );
+      return;
+    }
+
+    if (promotion.status === "Paused") {
+      setPromotions((prev) =>
+        promotionService.updatePromotionStatus(prev, promotion.id, "Active"),
+      );
+    }
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmState.promotionId === null || confirmState.action === null)
+      return;
+
+    const targetPromotion = promotions.find(
+      (item) => item.id === confirmState.promotionId,
+    );
+    if (!targetPromotion) {
+      closeConfirmDialog();
+      return;
+    }
+
+    handleUpdateStatus(targetPromotion);
+
+    if (confirmState.action === "pause") {
+      showToast(
+        `${targetPromotion.postTitle} has been paused successfully.`,
+        "info",
+      );
+    } else {
+      showToast(`${targetPromotion.postTitle} has been resumed successfully.`);
+    }
+
+    closeConfirmDialog();
+  };
+
+  const filteredPromotions = promotions.filter((promotion) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      promotion.postTitle.toLowerCase().includes(keyword) ||
+      promotion.owner.toLowerCase().includes(keyword)
+    );
+  });
+
+  const confirmPromotion =
+    confirmState.promotionId !== null
+      ? (promotions.find((item) => item.id === confirmState.promotionId) ??
+        null)
+      : null;
+
+  const promotionLabel = confirmPromotion?.postTitle ?? "this promotion";
+
+  const confirmTitleMap: Record<ConfirmAction, string> = {
+    pause: "Pause Promotion",
+    resume: "Resume Promotion",
+  };
+
+  const confirmMessageMap: Record<ConfirmAction, string> = {
+    pause: `Are you sure you want to pause ${promotionLabel}? This promotion will stop running until it is resumed.`,
+    resume: `Are you sure you want to resume ${promotionLabel}? This promotion will become active again.`,
+  };
+
+  const confirmButtonMap: Record<ConfirmAction, string> = {
+    pause: "Pause Promotion",
+    resume: "Resume Promotion",
+  };
+
+  const confirmToneMap: Record<
+    ConfirmAction,
+    "danger" | "success" | "neutral"
+  > = {
+    pause: "danger",
+    resume: "success",
+  };
+
   return (
     <div className="promotions-page">
-      <div className="promotions-page__header">
-        <div>
-          <h2>Promotions Management</h2>
-          <p>Manage boosted posts, placement slots, and promotion status.</p>
-        </div>
+      <PageHeader
+        title="Promotions Management"
+        description="Manage boosted posts, placement slots, and promotion status."
+        actionLabel="+ Add Promotion"
+      />
 
-        <button className="promotions-page__add-btn" type="button">
-          + Add Promotion
-        </button>
-      </div>
-
-      <div className="promotions-toolbar">
-        <input
-          className="promotions-toolbar__search"
-          type="text"
-          placeholder="Search by post title or owner"
-        />
-
-        <button className="promotions-toolbar__filter-btn" type="button">
-          Filter
-        </button>
-      </div>
+      <SearchToolbar
+        placeholder="Search by post title or owner"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+      />
 
       <div className="promotions-table-wrapper">
         <table className="promotions-table">
@@ -87,31 +179,28 @@ function PromotionsPage() {
           </thead>
 
           <tbody>
-            {promotions.map((promotion) => (
+            {filteredPromotions.map((promotion) => (
               <tr key={promotion.id}>
                 <td>#{promotion.id}</td>
                 <td>{promotion.postTitle}</td>
                 <td>{promotion.owner}</td>
                 <td>
-                  <span className="promotions-badge promotions-badge--slot">
-                    {promotion.slot}
-                  </span>
+                  <StatusBadge label={promotion.slot} variant="slot" />
                 </td>
                 <td>{promotion.packageName}</td>
                 <td>{promotion.startDate}</td>
                 <td>{promotion.endDate}</td>
                 <td>
-                  <span
-                    className={
+                  <StatusBadge
+                    label={promotion.status}
+                    variant={
                       promotion.status === "Active"
-                        ? "promotions-badge promotions-badge--active"
+                        ? "active"
                         : promotion.status === "Paused"
-                          ? "promotions-badge promotions-badge--paused"
-                          : "promotions-badge promotions-badge--expired"
+                          ? "paused"
+                          : "expired"
                     }
-                  >
-                    {promotion.status}
-                  </span>
+                  />
                 </td>
                 <td>
                   <div className="promotions-actions">
@@ -123,6 +212,7 @@ function PromotionsPage() {
                       <button
                         type="button"
                         className="promotions-actions__pause"
+                        onClick={() => openConfirmDialog(promotion.id, "pause")}
                       >
                         Pause
                       </button>
@@ -130,6 +220,9 @@ function PromotionsPage() {
                       <button
                         type="button"
                         className="promotions-actions__resume"
+                        onClick={() =>
+                          openConfirmDialog(promotion.id, "resume")
+                        }
                       >
                         Resume
                       </button>
@@ -149,6 +242,31 @@ function PromotionsPage() {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={
+          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+        }
+        message={
+          confirmState.action
+            ? confirmMessageMap[confirmState.action]
+            : "Please confirm this action."
+        }
+        confirmText={
+          confirmState.action
+            ? confirmButtonMap[confirmState.action]
+            : "Confirm"
+        }
+        cancelText="Cancel"
+        tone={
+          confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
+        }
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
+      />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }

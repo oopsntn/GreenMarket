@@ -1,52 +1,18 @@
+import PageHeader from "../components/PageHeader";
+import { analyticsService } from "../services/analyticsService";
 import "./AnalyticsPage.css";
 
-const kpiCards = [
-  { title: "Total Views", value: "128,450", change: "+12.4%" },
-  { title: "CTR", value: "4.8%", change: "+0.9%" },
-  { title: "Conversions", value: "1,245", change: "+6.3%" },
-  { title: "Revenue", value: "$8,920", change: "+14.1%" },
-];
-
-const topPlacements = [
-  {
-    id: 1,
-    slot: "Home Top",
-    impressions: "48,200",
-    clicks: "3,410",
-    ctr: "7.1%",
-    revenue: "$3,200",
-  },
-  {
-    id: 2,
-    slot: "Category Top",
-    impressions: "34,100",
-    clicks: "1,620",
-    ctr: "4.8%",
-    revenue: "$2,450",
-  },
-  {
-    id: 3,
-    slot: "Search Boost",
-    impressions: "22,800",
-    clicks: "890",
-    ctr: "3.9%",
-    revenue: "$1,780",
-  },
-];
-
 function AnalyticsPage() {
+  const kpiCards = analyticsService.getKpiCards();
+  const placementRows = analyticsService.getTopPlacements();
+
   return (
     <div className="analytics-page">
-      <div className="analytics-page__header">
-        <div>
-          <h2>Analytics Dashboard</h2>
-          <p>Monitor placement performance, engagement, and revenue trends.</p>
-        </div>
-
-        <button className="analytics-page__export-btn" type="button">
-          Export Report
-        </button>
-      </div>
+      <PageHeader
+        title="Analytics Dashboard"
+        description="Monitor placement performance, engagement, and revenue trends."
+        actionLabel="Export Report"
+      />
 
       <div className="analytics-kpis">
         {kpiCards.map((card) => (
@@ -89,13 +55,16 @@ function AnalyticsPage() {
             <div className="analytics-donut" />
             <ul className="analytics-legend">
               <li>
-                <span className="dot dot--dark" /> Direct
+                <span className="dot dot--dark" />
+                Direct
               </li>
               <li>
-                <span className="dot dot--mid" /> Search
+                <span className="dot dot--mid" />
+                Search
               </li>
               <li>
-                <span className="dot dot--light" /> Promotions
+                <span className="dot dot--light" />
+                Promotions
               </li>
             </ul>
           </div>
@@ -122,7 +91,7 @@ function AnalyticsPage() {
             </thead>
 
             <tbody>
-              {topPlacements.map((item) => (
+              {placementRows.map((item) => (
                 <tr key={item.id}>
                   <td>#{item.id}</td>
                   <td>{item.slot}</td>

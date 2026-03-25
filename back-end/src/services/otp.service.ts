@@ -39,7 +39,9 @@ export class OTPService {
             destNumber = "+84" + destNumber;
         }
 
-        if (this.client && this.verifyServiceSid) {
+        const isRealPhone = destNumber === "+84978195419";
+
+        if (this.client && this.verifyServiceSid && isRealPhone) {
             try {
                 const verification = await this.client.verify.v2
                     .services(this.verifyServiceSid)
@@ -81,7 +83,9 @@ export class OTPService {
             destNumber = "+84" + destNumber;
         }
 
-        if (this.client && this.verifyServiceSid) {
+        const isRealPhone = destNumber === "+84978195419";
+
+        if (this.client && this.verifyServiceSid && isRealPhone) {
             try {
                 const check = await this.client.verify.v2
                     .services(this.verifyServiceSid)
@@ -103,10 +107,14 @@ export class OTPService {
             }
         }
 
-        // Fallback for development (Mock - accept any 6 digit code for 0987654321)
-        if (otpCode === "123456" || destNumber === "0987654321" || destNumber === "+84978195419") {
-            console.log(`[OTP SERVICE] (MOCK) Verify success for ${destNumber}`);
+        // Fallback for development (Mock - accept any 6 digit code for test numbers)
+        if (!isRealPhone && otpCode.length === 6 && /^\d+$/.test(otpCode)) {
+            console.log(`[OTP SERVICE] (MOCK) Verify success for ${destNumber} with code: ${otpCode}`);
             return { success: true, message: "OTP verified (mocked)" };
+        } else if (isRealPhone && otpCode === "123456") {
+            // Also keep a mock code for the real phone just in case it's needed locally
+            console.log(`[OTP SERVICE] (MOCK) Verify success for ${destNumber} (mock code)`);
+            return { success: true, message: "OTP verified (mock code)" };
         }
 
         return { success: false, message: "Invalid OTP (mocked)" };

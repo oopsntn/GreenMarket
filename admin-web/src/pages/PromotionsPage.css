@@ -4,76 +4,6 @@
   gap: 24px;
 }
 
-.promotions-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.promotions-page__header h2 {
-  font-size: 28px;
-  color: #1b4332;
-  margin-bottom: 8px;
-}
-
-.promotions-page__header p {
-  color: #6b7b6d;
-  font-size: 15px;
-}
-
-.promotions-page__add-btn {
-  height: 44px;
-  padding: 0 18px;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
-}
-
-.promotions-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background-color: #ffffff;
-  border: 1px solid #edf2e8;
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: 0 6px 18px rgba(27, 67, 50, 0.06);
-}
-
-.promotions-toolbar__search {
-  flex: 1;
-  height: 44px;
-  border: 1px solid #d7e6d9;
-  border-radius: 12px;
-  padding: 0 14px;
-  font-size: 14px;
-  outline: none;
-  background-color: #fcfffc;
-}
-
-.promotions-toolbar__search:focus {
-  border-color: #43a047;
-  box-shadow: 0 0 0 4px rgba(67, 160, 71, 0.12);
-}
-
-.promotions-toolbar__filter-btn {
-  height: 44px;
-  padding: 0 18px;
-  border: 1px solid #cfe2d1;
-  border-radius: 12px;
-  background-color: #f6fbf6;
-  color: #1b5e20;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .promotions-table-wrapper {
   background-color: #ffffff;
   border: 1px solid #edf2e8;
@@ -97,7 +27,6 @@
   padding: 16px 18px;
   border-bottom: 1px solid #eef3ea;
   font-size: 14px;
-  vertical-align: top;
 }
 
 .promotions-table th {
@@ -109,41 +38,10 @@
   color: #223127;
 }
 
-.promotions-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.promotions-badge--slot {
-  background-color: #edf7ee;
-  color: #2e7d32;
-}
-
-.promotions-badge--active {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-}
-
-.promotions-badge--paused {
-  background-color: #fff8e1;
-  color: #b26a00;
-}
-
-.promotions-badge--expired {
-  background-color: #fdecea;
-  color: #c62828;
-}
-
 .promotions-actions {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .promotions-actions button {
