@@ -108,7 +108,7 @@ export class OTPService {
         }
 
         // Fallback for development (Mock - accept any 6 digit code for test numbers)
-        if (!isRealPhone && /^\\d{6}$/.test(otpCode)) {
+        if (!isRealPhone && otpCode.length === 6 && /^\d+$/.test(otpCode)) {
             console.log(`[OTP SERVICE] (MOCK) Verify success for ${destNumber} with code: ${otpCode}`);
             return { success: true, message: "OTP verified (mocked)" };
         } else if (isRealPhone && otpCode === "123456") {
