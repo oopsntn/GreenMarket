@@ -1,6 +1,7 @@
 import { useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
+import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
@@ -237,84 +238,93 @@ function TemplatesPage() {
         onSearchChange={setSearchKeyword}
       />
 
-      <div className="templates-table-wrapper">
-        <table className="templates-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Template Name</th>
-              <th>Type</th>
-              <th>Content Preview</th>
-              <th>Status</th>
-              <th>Updated Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredTemplates.map((template) => (
-              <tr key={template.id}>
-                <td>#{template.id}</td>
-                <td>{template.name}</td>
-                <td>
-                  <StatusBadge label={template.type} variant="type" />
-                </td>
-                <td className="templates-content-preview">
-                  {template.content}
-                </td>
-                <td>
-                  <StatusBadge
-                    label={template.status}
-                    variant={
-                      template.status === "Active" ? "active" : "disabled"
-                    }
-                  />
-                </td>
-                <td>{template.updatedAt}</td>
-                <td>
-                  <div className="templates-actions">
-                    <button
-                      type="button"
-                      className="templates-actions__view"
-                      onClick={() => openViewModal(template)}
-                    >
-                      View
-                    </button>
-
-                    <button
-                      type="button"
-                      className="templates-actions__edit"
-                      onClick={() => openEditModal(template)}
-                    >
-                      Edit
-                    </button>
-
-                    {template.status === "Active" ? (
-                      <button
-                        type="button"
-                        className="templates-actions__disable"
-                        onClick={() =>
-                          openConfirmDialog(template.id, "disable")
-                        }
-                      >
-                        Disable
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="templates-actions__enable"
-                        onClick={() => openConfirmDialog(template.id, "enable")}
-                      >
-                        Enable
-                      </button>
-                    )}
-                  </div>
-                </td>
+      {filteredTemplates.length === 0 ? (
+        <EmptyState
+          title="No templates found"
+          description="No templates match your current search. Try another keyword or create a new template."
+        />
+      ) : (
+        <div className="templates-table-wrapper">
+          <table className="templates-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Template Name</th>
+                <th>Type</th>
+                <th>Content Preview</th>
+                <th>Status</th>
+                <th>Updated Date</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody>
+              {filteredTemplates.map((template) => (
+                <tr key={template.id}>
+                  <td>#{template.id}</td>
+                  <td>{template.name}</td>
+                  <td>
+                    <StatusBadge label={template.type} variant="type" />
+                  </td>
+                  <td className="templates-content-preview">
+                    {template.content}
+                  </td>
+                  <td>
+                    <StatusBadge
+                      label={template.status}
+                      variant={
+                        template.status === "Active" ? "active" : "disabled"
+                      }
+                    />
+                  </td>
+                  <td>{template.updatedAt}</td>
+                  <td>
+                    <div className="templates-actions">
+                      <button
+                        type="button"
+                        className="templates-actions__view"
+                        onClick={() => openViewModal(template)}
+                      >
+                        View
+                      </button>
+
+                      <button
+                        type="button"
+                        className="templates-actions__edit"
+                        onClick={() => openEditModal(template)}
+                      >
+                        Edit
+                      </button>
+
+                      {template.status === "Active" ? (
+                        <button
+                          type="button"
+                          className="templates-actions__disable"
+                          onClick={() =>
+                            openConfirmDialog(template.id, "disable")
+                          }
+                        >
+                          Disable
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="templates-actions__enable"
+                          onClick={() =>
+                            openConfirmDialog(template.id, "enable")
+                          }
+                        >
+                          Enable
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <BaseModal
         isOpen={isModalOpen}
