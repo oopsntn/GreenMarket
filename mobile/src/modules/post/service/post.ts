@@ -10,5 +10,17 @@ export const postService = {
             console.error("Lỗi gọi API createPost: , error");
             throw error
         }
+    },
+
+    myPost: async (userId: number) => {
+        try {
+            const response = await axios.get(`${API_URL}/posts/my-posts`, {
+                params: { userId }
+            })
+            return response.data
+        } catch (error) {
+            console.error("Lỗi gọi API myPost: ", error);
+            throw error
+        }
     }
 }
