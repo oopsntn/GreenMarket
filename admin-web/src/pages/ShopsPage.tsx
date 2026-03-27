@@ -10,6 +10,7 @@ import { shopApi } from "../services/shopApi";
 import type { Shop, ShopStatus } from "../types/shop";
 import "./ShopsPage.css";
 import LoadingState from "../components/LoadingState";
+import ErrorState from "../components/ErrorState";
 
 type ConfirmAction = "approve" | "reject" | "suspend" | "reactivate";
 
@@ -263,13 +264,12 @@ function ShopsPage() {
         </div>
       ) : error ? (
         <div className="shops-table-wrapper">
-          <div className="shops-error-state">
-            <h3>Failed to load shops</h3>
-            <p>{error}</p>
-            <button type="button" onClick={() => void fetchShops()}>
-              Try Again
-            </button>
-          </div>
+          <ErrorState
+            title="Failed to load shops"
+            description={error}
+            actionLabel="Try Again"
+            onActionClick={() => void fetchShops()}
+          />
         </div>
       ) : filteredShops.length === 0 ? (
         <EmptyState

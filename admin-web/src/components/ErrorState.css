@@ -1,0 +1,46 @@
+.error-state {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+}
+
+.error-state__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff1f0;
+  color: #c62828;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.error-state h3 {
+  font-size: 20px;
+  color: #c62828;
+}
+
+.error-state p {
+  max-width: 420px;
+  color: #6b7b6d;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.error-state button {
+  height: 42px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  background-color: #1d4ed8;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
