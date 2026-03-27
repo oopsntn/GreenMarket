@@ -7,7 +7,7 @@ import { getCategories, getCategoryAttributes, createPost, uploadMedia } from '.
 const CreatePost: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    
+
     const [categories, setCategories] = useState<any[]>([]);
     const [attributes, setAttributes] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState(false);
@@ -15,7 +15,7 @@ const CreatePost: React.FC = () => {
 
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [videoFiles, setVideoFiles] = useState<File[]>([]);
-    const [previews, setPreviews] = useState<{url: string, type: 'image' | 'video'}[]>([]);
+    const [previews, setPreviews] = useState<{ url: string, type: 'image' | 'video' }[]>([]);
 
     const [formData, setFormData] = useState({
         userId: user?.id || 0,
@@ -64,10 +64,10 @@ const CreatePost: React.FC = () => {
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
         const selectedFiles = Array.from(e.target.files);
-        
+
         const newImages: File[] = [];
         const newVideos: File[] = [];
-        const newPreviews: {url: string, type: 'image' | 'video'}[] = [];
+        const newPreviews: { url: string, type: 'image' | 'video' }[] = [];
 
         selectedFiles.forEach(file => {
             const url = URL.createObjectURL(file);
@@ -90,7 +90,7 @@ const CreatePost: React.FC = () => {
         URL.revokeObjectURL(itemToRemove.url);
 
         setPreviews(prev => prev.filter((_, i) => i !== index));
-        
+
         // Find which file array to remove from
         if (itemToRemove.type === 'image') {
             const previewIndexInImages = previews
@@ -118,10 +118,10 @@ const CreatePost: React.FC = () => {
             const mediaUrls = uploadResponse.data.urls;
 
             // Split URLs back into images and videos
-            const imageUrls = mediaUrls.filter((url: string) => 
+            const imageUrls = mediaUrls.filter((url: string) =>
                 url.match(/\.(jpg|jpeg|png|webp)$/i)
             );
-            const videoUrls = mediaUrls.filter((url: string) => 
+            const videoUrls = mediaUrls.filter((url: string) =>
                 url.match(/\.(mp4|mov|avi)$/i)
             );
 
@@ -162,13 +162,13 @@ const CreatePost: React.FC = () => {
                         Bài đăng của bạn đã được gửi và đang chờ Admin phê duyệt. Bạn có thể theo dõi trạng thái tại mục "Tin của tôi".
                     </p>
                     <div className="space-y-4">
-                        <button 
+                        <button
                             onClick={() => navigate('/my-posts')}
                             className="w-full bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-500 transition-all"
                         >
                             Xem tin của tôi <ArrowRight className="w-5 h-5" />
                         </button>
-                        <button 
+                        <button
                             onClick={() => window.location.reload()}
                             className="w-full bg-slate-800 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-700 transition-all"
                         >
@@ -193,25 +193,25 @@ const CreatePost: React.FC = () => {
                 {/* Basic Info */}
                 <section className="glass p-8 rounded-3xl space-y-6">
                     <h2 className="text-xl font-semibold border-b border-white/5 pb-4">Thông tin cơ bản</h2>
-                    
+
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
                             <Tag className="w-4 h-4 text-emerald-500" /> Tiêu đề tin *
                         </label>
-                        <input 
+                        <input
                             required
                             type="text"
                             placeholder="Ví dụ: Tùng la hán dáng văn nhân cốt chậu 10 năm"
                             className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
                             value={formData.postTitle}
-                            onChange={(e) => setFormData({...formData, postTitle: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, postTitle: e.target.value })}
                         />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-400">Danh mục *</label>
-                            <select 
+                            <select
                                 required
                                 className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all appearance-none"
                                 value={formData.categoryId}
@@ -227,29 +227,29 @@ const CreatePost: React.FC = () => {
                             <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
                                 <CircleDollarSign className="w-4 h-4 text-emerald-500" /> Giá bán (đ) *
                             </label>
-                            <input 
+                            <input
                                 required
                                 type="number"
                                 placeholder="0"
                                 className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
                                 value={formData.postPrice}
-                                onChange={(e) => setFormData({...formData, postPrice: e.target.value})}
+                                onChange={(e) => setFormData({ ...formData, postPrice: e.target.value })}
                             />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-emerald-500" /> Khu vực giao dịch
-                            </label>
-                            <input 
-                                type="text"
-                                placeholder="Ví dụ: Thạch Thất, Hà Nội"
-                                className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
-                                value={formData.postLocation}
-                                onChange={(e) => setFormData({...formData, postLocation: e.target.value})}
-                            />
-                        </div>
+                        <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-emerald-500" /> Khu vực giao dịch
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Ví dụ: Thạch Thất, Hà Nội"
+                            className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                            value={formData.postLocation}
+                            onChange={(e) => setFormData({ ...formData, postLocation: e.target.value })}
+                        />
+                    </div>
                 </section>
 
                 {/* Dynamic Attributes */}
@@ -263,7 +263,7 @@ const CreatePost: React.FC = () => {
                                         {attr.attributeTitle} {attr.required && '*'}
                                     </label>
                                     {attr.attributeDataType === 'enum' && attr.attributeOptions ? (
-                                        <select 
+                                        <select
                                             required={attr.required}
                                             className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
                                             value={formData.attributes[attr.attributeId] || ''}
@@ -275,7 +275,7 @@ const CreatePost: React.FC = () => {
                                             ))}
                                         </select>
                                     ) : (
-                                        <input 
+                                        <input
                                             required={attr.required}
                                             type={attr.attributeDataType === 'number' ? 'number' : 'text'}
                                             placeholder={`Nhập ${attr.attributeTitle}`}
@@ -293,12 +293,12 @@ const CreatePost: React.FC = () => {
                 {/* Content */}
                 <section className="glass p-8 rounded-3xl space-y-6">
                     <h2 className="text-xl font-semibold border-b border-white/5 pb-4">Mô tả chi tiết</h2>
-                    <textarea 
+                    <textarea
                         rows={6}
                         placeholder="Mô tả chi tiết về cây: tuổi thọ, kích thước, nguồn gốc, chế độ chăm sóc..."
                         className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
                         value={formData.postContent}
-                        onChange={(e) => setFormData({...formData, postContent: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, postContent: e.target.value })}
                     />
                 </section>
 
@@ -309,7 +309,7 @@ const CreatePost: React.FC = () => {
                             <ImageIcon className="w-5 h-5 text-emerald-500" /> Hình ảnh & Video sản phẩm
                         </h2>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {previews.map((preview, index) => (
                             <div key={index} className="relative aspect-square rounded-2xl overflow-hidden group">
@@ -319,7 +319,7 @@ const CreatePost: React.FC = () => {
                                     <video src={preview.url} className="w-full h-full object-cover" />
                                 )}
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => removePreview(index)}
                                         className="bg-rose-500 p-2 rounded-full text-white hover:scale-110 transition-transform"
@@ -334,15 +334,15 @@ const CreatePost: React.FC = () => {
                                 )}
                             </div>
                         ))}
-                        
+
                         <label className="border-2 border-dashed border-white/10 rounded-2xl aspect-square flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group">
                             <UploadCloud className="w-8 h-8 text-slate-500 group-hover:text-emerald-500 transition-colors" />
                             <span className="text-xs font-medium text-slate-500 group-hover:text-emerald-400">Tải tệp lên</span>
-                            <input 
-                                type="file" 
-                                multiple 
-                                accept="image/*,video/*" 
-                                className="hidden" 
+                            <input
+                                type="file"
+                                multiple
+                                accept="image/*,video/*"
+                                className="hidden"
                                 onChange={handleFileSelect}
                             />
                         </label>
@@ -359,7 +359,7 @@ const CreatePost: React.FC = () => {
 
                 {/* Submit */}
                 <div className="pt-6">
-                    <button 
+                    <button
                         type="submit"
                         disabled={submitting}
                         className="w-full bg-emerald-600 py-6 rounded-3xl font-bold text-xl hover:bg-emerald-500 disabled:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20"

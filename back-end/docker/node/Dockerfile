@@ -19,8 +19,6 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
-RUN sed -i 's/"type": "module"/"type": "commonjs"/' package.json
-
 RUN pnpm install --frozen-lockfile --prod
 
 # Copy built code
