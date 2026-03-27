@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -6,7 +6,7 @@ import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
-import { shopService } from "../services/shopService";
+import { shopApi } from "../services/shopApi";
 import type { Shop, ShopStatus } from "../types/shop";
 import "./ShopsPage.css";
 
@@ -19,16 +19,23 @@ type ConfirmState = {
 };
 
 function ShopsPage() {
-  const [shops, setShops] = useState<Shop[]>(shopService.getShops());
+  const [shops, setShops] = useState<Shop[]>([]);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [searchInput, setSearchInput] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
+
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     shopId: null,
     action: null,
   });
+
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -51,9 +58,53 @@ function ShopsPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const openViewModal = (shop: Shop) => {
-    setSelectedShop(shop);
-    setIsModalOpen(true);
+  const fetchShops = async () => {
+    try {
+      setIsLoading(true);
+      setError("");
+
+      const data = await shopApi.getShops();
+      setShops(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load shops.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchShops();
+  }, []);
+
+  const filteredShops = useMemo(() => {
+    return shops.filter((shop) => {
+      const keyword = searchKeyword.trim().toLowerCase();
+
+      if (!keyword) return true;
+
+      return (
+        shop.name.toLowerCase().includes(keyword) ||
+        shop.ownerName.toLowerCase().includes(keyword) ||
+        shop.ownerEmail.toLowerCase().includes(keyword)
+      );
+    });
+  }, [shops, searchKeyword]);
+
+  const handleApplyFilter = () => {
+    setSearchKeyword(searchInput.trim());
+  };
+
+  const openViewModal = async (shop: Shop) => {
+    try {
+      const detailShop = await shopApi.getShopById(shop.id);
+      setSelectedShop(detailShop);
+      setIsModalOpen(true);
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Failed to load shop details.",
+        "error",
+      );
+    }
   };
 
   const closeModal = () => {
@@ -70,72 +121,14 @@ function ShopsPage() {
   };
 
   const closeConfirmDialog = () => {
+    if (isSubmitting) return;
+
     setConfirmState({
       isOpen: false,
       shopId: null,
       action: null,
     });
   };
-
-  const handleUpdateShopStatus = (shopId: number, status: ShopStatus) => {
-    setShops((prev) => shopService.updateShopStatus(prev, shopId, status));
-
-    setSelectedShop((prev) =>
-      prev && prev.id === shopId ? { ...prev, status } : prev,
-    );
-  };
-
-  const handleConfirmAction = () => {
-    if (confirmState.shopId === null || confirmState.action === null) return;
-
-    const targetShop = shops.find((shop) => shop.id === confirmState.shopId);
-    if (!targetShop) {
-      closeConfirmDialog();
-      return;
-    }
-
-    const nextStatusMap: Record<ConfirmAction, ShopStatus> = {
-      approve: "Active",
-      reject: "Rejected",
-      suspend: "Suspended",
-      reactivate: "Active",
-    };
-
-    handleUpdateShopStatus(
-      confirmState.shopId,
-      nextStatusMap[confirmState.action],
-    );
-
-    if (confirmState.action === "approve") {
-      showToast(`${targetShop.name} has been approved successfully.`);
-    }
-
-    if (confirmState.action === "reject") {
-      showToast(`${targetShop.name} has been rejected successfully.`, "info");
-    }
-
-    if (confirmState.action === "suspend") {
-      showToast(`${targetShop.name} has been suspended successfully.`, "info");
-    }
-
-    if (confirmState.action === "reactivate") {
-      showToast(`${targetShop.name} has been reactivated successfully.`);
-    }
-
-    closeConfirmDialog();
-  };
-
-  const filteredShops = shops.filter((shop) => {
-    const keyword = searchKeyword.trim().toLowerCase();
-
-    if (!keyword) return true;
-
-    return (
-      shop.name.toLowerCase().includes(keyword) ||
-      shop.ownerName.toLowerCase().includes(keyword) ||
-      shop.ownerEmail.toLowerCase().includes(keyword)
-    );
-  });
 
   const confirmShop =
     confirmState.shopId !== null
@@ -181,21 +174,100 @@ function ShopsPage() {
     reactivate: "success",
   };
 
+  const nextStatusMap: Record<ConfirmAction, ShopStatus> = {
+    approve: "Active",
+    reject: "Rejected",
+    suspend: "Suspended",
+    reactivate: "Active",
+  };
+
+  const handleConfirmAction = async () => {
+    if (confirmState.shopId === null || confirmState.action === null) return;
+
+    const targetShop = shops.find((shop) => shop.id === confirmState.shopId);
+    if (!targetShop) {
+      closeConfirmDialog();
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      await shopApi.updateShopStatus(
+        confirmState.shopId,
+        nextStatusMap[confirmState.action],
+      );
+
+      await fetchShops();
+
+      if (selectedShop && selectedShop.id === confirmState.shopId) {
+        const updatedDetail = await shopApi.getShopById(confirmState.shopId);
+        setSelectedShop(updatedDetail);
+      }
+
+      if (confirmState.action === "approve") {
+        showToast(`${targetShop.name} has been approved successfully.`);
+      }
+
+      if (confirmState.action === "reject") {
+        showToast(`${targetShop.name} has been rejected successfully.`, "info");
+      }
+
+      if (confirmState.action === "suspend") {
+        showToast(
+          `${targetShop.name} has been suspended successfully.`,
+          "info",
+        );
+      }
+
+      if (confirmState.action === "reactivate") {
+        showToast(`${targetShop.name} has been reactivated successfully.`);
+      }
+
+      setConfirmState({
+        isOpen: false,
+        shopId: null,
+        action: null,
+      });
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Failed to update shop status.",
+        "error",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="shops-page">
       <PageHeader
         title="Shops Management"
         description="Manage shops, shop owners, and approval status in the system."
-        actionLabel="+ Add Shop"
       />
 
       <SearchToolbar
         placeholder="Search by shop name or owner"
-        searchValue={searchKeyword}
-        onSearchChange={setSearchKeyword}
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        onFilterClick={handleApplyFilter}
       />
 
-      {filteredShops.length === 0 ? (
+      {isLoading ? (
+        <div className="shops-table-wrapper">
+          <div className="shops-loading-state">Loading shops...</div>
+        </div>
+      ) : error ? (
+        <div className="shops-table-wrapper">
+          <div className="shops-error-state">
+            <h3>Failed to load shops</h3>
+            <p>{error}</p>
+            <button type="button" onClick={() => void fetchShops()}>
+              Try Again
+            </button>
+          </div>
+        </div>
+      ) : filteredShops.length === 0 ? (
         <EmptyState
           title="No shops found"
           description="No shops match your current search. Try another keyword to continue."
@@ -222,7 +294,7 @@ function ShopsPage() {
                   <td>#{shop.id}</td>
                   <td>{shop.name}</td>
                   <td>{shop.ownerName}</td>
-                  <td>{shop.ownerEmail}</td>
+                  <td>{shop.ownerEmail || "-"}</td>
                   <td>{shop.totalPosts}</td>
                   <td>
                     <StatusBadge
@@ -244,7 +316,7 @@ function ShopsPage() {
                       <button
                         type="button"
                         className="shops-actions__view"
-                        onClick={() => openViewModal(shop)}
+                        onClick={() => void openViewModal(shop)}
                       >
                         View
                       </button>
@@ -322,7 +394,11 @@ function ShopsPage() {
 
               <div className="shops-modal__field">
                 <label>Owner Email</label>
-                <input type="text" value={selectedShop.ownerEmail} disabled />
+                <input
+                  type="text"
+                  value={selectedShop.ownerEmail || "-"}
+                  disabled
+                />
               </div>
 
               <div className="shops-modal__field">
@@ -425,7 +501,7 @@ function ShopsPage() {
         tone={
           confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
         }
-        onConfirm={handleConfirmAction}
+        onConfirm={() => void handleConfirmAction()}
         onCancel={closeConfirmDialog}
       />
 
