@@ -11,12 +11,14 @@ import postRoutes from "./routes/admin/post.route";
 import shopRoutes from "./routes/admin/shop.route";
 import reportRoutes from "./routes/admin/report.route";
 import adminUserRoutes from "./routes/admin/user.route.ts";
+import adminRoleRoutes from "./routes/admin/role.route.ts";
 import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
 import userReportRoutes from "./routes/user/report.route.ts";
 import userCategoryRoutes from "./routes/user/category.route.ts";
 import userProfileRoutes from "./routes/user/profile.route.ts";
 import uploadRoutes from "./routes/upload.route.ts";
+import { verifyToken, isAdmin } from "./middlewares/authMiddleware.ts";
 import path from "path";
 
 const app = express();
@@ -25,12 +27,13 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/admin/categories", categoryRoutes);
-app.use("/api/admin/attributes", attributeRoutes);
-app.use("/api/admin/posts", postRoutes);
-app.use("/api/admin/shops", shopRoutes);
-app.use("/api/admin/reports", reportRoutes);
-app.use("/api/admin/users", adminUserRoutes);
+app.use("/api/admin/categories", verifyToken, isAdmin, categoryRoutes);
+app.use("/api/admin/attributes", verifyToken, isAdmin, attributeRoutes);
+app.use("/api/admin/posts", verifyToken, isAdmin, postRoutes);
+app.use("/api/admin/shops", verifyToken, isAdmin, shopRoutes);
+app.use("/api/admin/reports", verifyToken, isAdmin, reportRoutes);
+app.use("/api/admin/users", verifyToken, isAdmin, adminUserRoutes);
+app.use("/api/admin/roles", verifyToken, isAdmin, adminRoleRoutes);
 
 // User Routes
 app.use("/api/shops", userShopRoutes);
