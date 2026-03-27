@@ -9,6 +9,7 @@ import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { shopApi } from "../services/shopApi";
 import type { Shop, ShopStatus } from "../types/shop";
 import "./ShopsPage.css";
+import LoadingState from "../components/LoadingState";
 
 type ConfirmAction = "approve" | "reject" | "suspend" | "reactivate";
 
@@ -255,7 +256,10 @@ function ShopsPage() {
 
       {isLoading ? (
         <div className="shops-table-wrapper">
-          <div className="shops-loading-state">Loading shops...</div>
+          <LoadingState
+            title="Loading shops..."
+            description="Please wait while the system loads the latest shop data."
+          />
         </div>
       ) : error ? (
         <div className="shops-table-wrapper">

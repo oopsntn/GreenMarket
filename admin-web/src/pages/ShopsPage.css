@@ -220,7 +220,6 @@
   color: #c62828;
 }
 
-.shops-loading-state,
 .shops-error-state {
   min-height: 240px;
   display: flex;
