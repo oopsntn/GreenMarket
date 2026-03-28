@@ -4,6 +4,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { emptyUserForm } from "../mock-data/users";
@@ -242,94 +243,99 @@ function UsersPage() {
         onSearchChange={setSearchKeyword}
       />
 
-      {filteredUsers.length === 0 ? (
-        <EmptyState
-          title="No users found"
-          description="No users match your current search. Try changing the keyword or create a new user."
-        />
-      ) : (
-        <div className="users-table-wrapper">
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Full Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Joined Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td>#{user.id}</td>
-                  <td>{user.fullName}</td>
-                  <td>{user.email}</td>
-                  <td>
-                    <StatusBadge label={user.role} variant="role" />
-                  </td>
-                  <td>
-                    <StatusBadge
-                      label={user.status}
-                      variant={user.status === "Active" ? "active" : "locked"}
-                    />
-                  </td>
-                  <td>{user.joinedAt}</td>
-                  <td>
-                    <div className="users-actions">
-                      <button
-                        type="button"
-                        className="users-actions__view"
-                        onClick={() => openViewModal(user)}
-                      >
-                        View
-                      </button>
-
-                      <button
-                        type="button"
-                        className="users-actions__edit"
-                        onClick={() => openEditModal(user)}
-                        disabled={user.role === "Admin"}
-                      >
-                        Edit
-                      </button>
-
-                      {user.role === "Admin" ? (
-                        <button
-                          type="button"
-                          className="users-actions__disabled"
-                          disabled
-                        >
-                          Protected
-                        </button>
-                      ) : user.status === "Active" ? (
-                        <button
-                          type="button"
-                          className="users-actions__lock"
-                          onClick={() => openConfirmDialog(user.id, "lock")}
-                        >
-                          Lock
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="users-actions__unlock"
-                          onClick={() => openConfirmDialog(user.id, "unlock")}
-                        >
-                          Unlock
-                        </button>
-                      )}
-                    </div>
-                  </td>
+      <SectionCard
+        title="User Directory"
+        description="Review account information, role assignment, and account status."
+      >
+        {filteredUsers.length === 0 ? (
+          <EmptyState
+            title="No users found"
+            description="No users match your current search. Try changing the keyword or create a new user."
+          />
+        ) : (
+          <div className="users-table-wrapper">
+            <table className="users-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Full Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Joined Date</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td>#{user.id}</td>
+                    <td>{user.fullName}</td>
+                    <td>{user.email}</td>
+                    <td>
+                      <StatusBadge label={user.role} variant="role" />
+                    </td>
+                    <td>
+                      <StatusBadge
+                        label={user.status}
+                        variant={user.status === "Active" ? "active" : "locked"}
+                      />
+                    </td>
+                    <td>{user.joinedAt}</td>
+                    <td>
+                      <div className="users-actions">
+                        <button
+                          type="button"
+                          className="users-actions__view"
+                          onClick={() => openViewModal(user)}
+                        >
+                          View
+                        </button>
+
+                        <button
+                          type="button"
+                          className="users-actions__edit"
+                          onClick={() => openEditModal(user)}
+                          disabled={user.role === "Admin"}
+                        >
+                          Edit
+                        </button>
+
+                        {user.role === "Admin" ? (
+                          <button
+                            type="button"
+                            className="users-actions__disabled"
+                            disabled
+                          >
+                            Protected
+                          </button>
+                        ) : user.status === "Active" ? (
+                          <button
+                            type="button"
+                            className="users-actions__lock"
+                            onClick={() => openConfirmDialog(user.id, "lock")}
+                          >
+                            Lock
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="users-actions__unlock"
+                            onClick={() => openConfirmDialog(user.id, "unlock")}
+                          >
+                            Unlock
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
 
       <BaseModal
         isOpen={isModalOpen}
