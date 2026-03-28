@@ -15,7 +15,8 @@
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
     "seed:sample": "tsx src/scripts/seedSampleData.ts",
     "approve:all": "tsx src/scripts/autoApprovePosts.ts",
-    "approve:shops": "tsx src/scripts/autoApproveShops.ts"
+    "approve:shops": "tsx src/scripts/autoApproveShops.ts",
+    "test:rbac": "tsx src/scripts/testRbacApis.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
