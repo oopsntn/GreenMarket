@@ -4,37 +4,6 @@
   gap: 24px;
 }
 
-.customer-spending-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.customer-spending-page__header h2 {
-  font-size: 28px;
-  color: #1b4332;
-  margin-bottom: 8px;
-}
-
-.customer-spending-page__header p {
-  color: #6b7b6d;
-  font-size: 15px;
-}
-
-.customer-spending-page__export-btn {
-  height: 44px;
-  padding: 0 18px;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
-}
-
 .customer-spending-filters {
   display: flex;
   gap: 16px;

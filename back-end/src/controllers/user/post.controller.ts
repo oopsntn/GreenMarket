@@ -125,8 +125,8 @@ export const updatePost = async (req: Request<{ id: string }>, res: Response): P
         }
 
         const [updatedPost] = await db.update(posts)
-            .set({ 
-                ...updateData, 
+            .set({
+                ...updateData,
                 postUpdatedAt: new Date(),
                 postStatus: "pending" // Re-moderate on edit
             })
@@ -163,8 +163,8 @@ export const softDeletePost = async (req: Request<{ id: string }>, res: Response
 
         // Perform soft delete
         const [deletedPost] = await db.update(posts)
-            .set({ 
-                postStatus: "hidden", 
+            .set({
+                postStatus: "hidden",
                 postDeletedAt: new Date(),
                 postUpdatedAt: new Date()
             })
@@ -217,10 +217,10 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
             name: attributes.attributeTitle,
             value: postAttributeValues.attributeValue
         })
-        .from(postAttributeValues)
-        .leftJoin(attributes, eq(postAttributeValues.attributeId, attributes.attributeId))
-        .where(eq(postAttributeValues.postId, post.postId));
-        
+            .from(postAttributeValues)
+            .leftJoin(attributes, eq(postAttributeValues.attributeId, attributes.attributeId))
+            .where(eq(postAttributeValues.postId, post.postId));
+
         // Fetch shop info if available
         let shop = null;
         if (post.postShopId) {

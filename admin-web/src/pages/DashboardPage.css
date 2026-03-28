@@ -4,17 +4,6 @@
   gap: 24px;
 }
 
-.dashboard-title h2 {
-  font-size: 28px;
-  color: #1b4332;
-  margin-bottom: 8px;
-}
-
-.dashboard-title p {
-  color: #6c757d;
-  font-size: 15px;
-}
-
 .dashboard-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -1,141 +1,280 @@
+import { useState } from "react";
+import ConfirmDialog from "../components/ConfirmDialog";
+import EmptyState from "../components/EmptyState";
+import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
+import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
+import { categoryMappingService } from "../services/categoryMappingService";
+import type { CategoryMapping } from "../types/categoryMapping";
 import "./CategoryAttributeMappingPage.css";
 
-type MappingItem = {
-  id: number;
-  categoryName: string;
-  attributeName: string;
-  attributeCode: string;
-  required: boolean;
-  displayOrder: number;
-  status: "Active" | "Disabled";
+type ConfirmAction = "disable" | "enable" | "remove";
+
+type ConfirmState = {
+  isOpen: boolean;
+  mappingId: number | null;
+  action: ConfirmAction | null;
 };
 
-const mappingItems: MappingItem[] = [
-  {
-    id: 1,
-    categoryName: "Indoor Plants",
-    attributeName: "Height",
-    attributeCode: "height",
-    required: true,
-    displayOrder: 1,
-    status: "Active",
-  },
-  {
-    id: 2,
-    categoryName: "Indoor Plants",
-    attributeName: "Pot Size",
-    attributeCode: "pot_size",
-    required: false,
-    displayOrder: 2,
-    status: "Active",
-  },
-  {
-    id: 3,
-    categoryName: "Succulents",
-    attributeName: "Light Requirement",
-    attributeCode: "light_requirement",
-    required: true,
-    displayOrder: 1,
-    status: "Active",
-  },
-  {
-    id: 4,
-    categoryName: "Bonsai",
-    attributeName: "Pet Friendly",
-    attributeCode: "pet_friendly",
-    required: false,
-    displayOrder: 3,
-    status: "Disabled",
-  },
-];
-
 function CategoryAttributeMappingPage() {
+  const [mappings, setMappings] = useState<CategoryMapping[]>(
+    categoryMappingService.getMappings(),
+  );
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    mappingId: null,
+    action: null,
+  });
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [
+      ...prev,
+      {
+        id: toastId,
+        message,
+        tone,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  const openConfirmDialog = (mappingId: number, action: ConfirmAction) => {
+    setConfirmState({
+      isOpen: true,
+      mappingId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      mappingId: null,
+      action: null,
+    });
+  };
+
+  const handleToggleStatus = (mapping: CategoryMapping) => {
+    const nextStatus = mapping.status === "Active" ? "Disabled" : "Active";
+    setMappings((prev) =>
+      categoryMappingService.updateMappingStatus(prev, mapping.id, nextStatus),
+    );
+  };
+
+  const handleRemove = (mappingId: number) => {
+    setMappings((prev) =>
+      categoryMappingService.removeMapping(prev, mappingId),
+    );
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmState.mappingId === null || confirmState.action === null) return;
+
+    const targetMapping = mappings.find(
+      (item) => item.id === confirmState.mappingId,
+    );
+    if (!targetMapping) {
+      closeConfirmDialog();
+      return;
+    }
+
+    const mappingLabel = `${targetMapping.categoryName} - ${targetMapping.attributeName}`;
+
+    if (confirmState.action === "remove") {
+      handleRemove(confirmState.mappingId);
+      showToast(`${mappingLabel} has been removed successfully.`, "info");
+    } else {
+      handleToggleStatus(targetMapping);
+
+      if (confirmState.action === "disable") {
+        showToast(`${mappingLabel} has been disabled successfully.`, "info");
+      } else {
+        showToast(`${mappingLabel} has been enabled successfully.`);
+      }
+    }
+
+    closeConfirmDialog();
+  };
+
+  const filteredMappings = mappings.filter((item) => {
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    if (!keyword) return true;
+
+    return (
+      item.categoryName.toLowerCase().includes(keyword) ||
+      item.attributeName.toLowerCase().includes(keyword) ||
+      item.attributeCode.toLowerCase().includes(keyword)
+    );
+  });
+
+  const confirmMapping =
+    confirmState.mappingId !== null
+      ? (mappings.find((item) => item.id === confirmState.mappingId) ?? null)
+      : null;
+
+  const mappingLabel = confirmMapping
+    ? `${confirmMapping.categoryName} - ${confirmMapping.attributeName}`
+    : "this mapping";
+
+  const confirmTitleMap: Record<ConfirmAction, string> = {
+    disable: "Disable Mapping",
+    enable: "Enable Mapping",
+    remove: "Remove Mapping",
+  };
+
+  const confirmMessageMap: Record<ConfirmAction, string> = {
+    disable: `Are you sure you want to disable ${mappingLabel}? This mapping will no longer be applied in the category configuration.`,
+    enable: `Are you sure you want to enable ${mappingLabel}? This mapping will be active again in the category configuration.`,
+    remove: `Are you sure you want to remove ${mappingLabel}? This action will delete the relationship between category and attribute from the current UI data.`,
+  };
+
+  const confirmButtonMap: Record<ConfirmAction, string> = {
+    disable: "Disable Mapping",
+    enable: "Enable Mapping",
+    remove: "Remove Mapping",
+  };
+
+  const confirmToneMap: Record<
+    ConfirmAction,
+    "danger" | "success" | "neutral"
+  > = {
+    disable: "danger",
+    enable: "success",
+    remove: "danger",
+  };
+
   return (
     <div className="mapping-page">
-      <div className="mapping-page__header">
-        <div>
-          <h2>Category - Attribute Mapping</h2>
-          <p>Configure which attributes belong to each plant category.</p>
-        </div>
+      <PageHeader
+        title="Category - Attribute Mapping"
+        description="Configure which attributes belong to each plant category."
+        actionLabel="+ Add Mapping"
+      />
 
-        <button className="mapping-page__add-btn" type="button">
-          + Add Mapping
-        </button>
-      </div>
+      <SearchToolbar
+        placeholder="Search by category or attribute"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+      />
 
-      <div className="mapping-toolbar">
-        <input
-          className="mapping-toolbar__search"
-          type="text"
-          placeholder="Search by category or attribute"
+      {filteredMappings.length === 0 ? (
+        <EmptyState
+          title="No mappings found"
+          description="No category-attribute mappings match your current search. Try another keyword to continue."
         />
-
-        <button className="mapping-toolbar__filter-btn" type="button">
-          Filter
-        </button>
-      </div>
-
-      <div className="mapping-table-wrapper">
-        <table className="mapping-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Category</th>
-              <th>Attribute</th>
-              <th>Code</th>
-              <th>Required</th>
-              <th>Display Order</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {mappingItems.map((item) => (
-              <tr key={item.id}>
-                <td>#{item.id}</td>
-                <td>{item.categoryName}</td>
-                <td>{item.attributeName}</td>
-                <td>{item.attributeCode}</td>
-                <td>
-                  <span
-                    className={
-                      item.required
-                        ? "mapping-badge mapping-badge--required"
-                        : "mapping-badge mapping-badge--optional"
-                    }
-                  >
-                    {item.required ? "Required" : "Optional"}
-                  </span>
-                </td>
-                <td>{item.displayOrder}</td>
-                <td>
-                  <span
-                    className={
-                      item.status === "Active"
-                        ? "mapping-badge mapping-badge--active"
-                        : "mapping-badge mapping-badge--disabled"
-                    }
-                  >
-                    {item.status}
-                  </span>
-                </td>
-                <td>
-                  <div className="mapping-actions">
-                    <button type="button" className="mapping-actions__edit">
-                      Edit
-                    </button>
-
-                    <button type="button" className="mapping-actions__remove">
-                      Remove
-                    </button>
-                  </div>
-                </td>
+      ) : (
+        <div className="mapping-table-wrapper">
+          <table className="mapping-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Category</th>
+                <th>Attribute</th>
+                <th>Code</th>
+                <th>Required</th>
+                <th>Display Order</th>
+                <th>Status</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody>
+              {filteredMappings.map((item) => (
+                <tr key={item.id}>
+                  <td>#{item.id}</td>
+                  <td>{item.categoryName}</td>
+                  <td>{item.attributeName}</td>
+                  <td>{item.attributeCode}</td>
+                  <td>
+                    <StatusBadge
+                      label={item.required ? "Required" : "Optional"}
+                      variant={item.required ? "required" : "optional"}
+                    />
+                  </td>
+                  <td>{item.displayOrder}</td>
+                  <td>
+                    <StatusBadge
+                      label={item.status}
+                      variant={item.status === "Active" ? "active" : "disabled"}
+                    />
+                  </td>
+                  <td>
+                    <div className="mapping-actions">
+                      <button type="button" className="mapping-actions__edit">
+                        Edit
+                      </button>
+
+                      {item.status === "Active" ? (
+                        <button
+                          type="button"
+                          className="mapping-actions__disable"
+                          onClick={() => openConfirmDialog(item.id, "disable")}
+                        >
+                          Disable
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="mapping-actions__enable"
+                          onClick={() => openConfirmDialog(item.id, "enable")}
+                        >
+                          Enable
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="mapping-actions__remove"
+                        onClick={() => openConfirmDialog(item.id, "remove")}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={
+          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+        }
+        message={
+          confirmState.action
+            ? confirmMessageMap[confirmState.action]
+            : "Please confirm this action."
+        }
+        confirmText={
+          confirmState.action
+            ? confirmButtonMap[confirmState.action]
+            : "Confirm"
+        }
+        cancelText="Cancel"
+        tone={
+          confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
+        }
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
+      />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }

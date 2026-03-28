@@ -53,7 +53,7 @@ export const updateShop = (shopId: number, data: {
 }) => api.patch(`/shops/${shopId}`, data);
 
 // Report API
-export const submitReport = (data: { postId: number; reportReason: string; reporterId?: number }) => 
+export const submitReport = (data: { postId: number; reportReason: string; reporterId?: number }) =>
   api.post('/reports', data);
 
 // --- Metadata (Categories & Attributes) ---
@@ -62,8 +62,8 @@ export const getCategoryAttributes = (categoryId: number) => api.get(`/categorie
 
 // Profile APIs
 export const getProfile = () => api.get('/profile');
-export const updateProfile = (data: { 
-  userDisplayName?: string; 
+export const updateProfile = (data: {
+  userDisplayName?: string;
   userAvatarUrl?: string;
   userEmail?: string;
   userLocation?: string;
@@ -74,11 +74,11 @@ export const updateProfile = (data: {
 export const createPost = (data: any) => api.post("/posts", data);
 
 export const uploadMedia = (files: File[]) => {
-    const formData = new FormData();
-    files.forEach(file => formData.append("media", file));
-    return api.post("/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-    });
+  const formData = new FormData();
+  files.forEach(file => formData.append("media", file));
+  return api.post("/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
 };
 
 export default api;

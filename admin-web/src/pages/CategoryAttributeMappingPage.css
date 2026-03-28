@@ -4,76 +4,6 @@
   gap: 24px;
 }
 
-.mapping-page__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.mapping-page__header h2 {
-  font-size: 28px;
-  color: #1b4332;
-  margin-bottom: 8px;
-}
-
-.mapping-page__header p {
-  color: #6b7b6d;
-  font-size: 15px;
-}
-
-.mapping-page__add-btn {
-  height: 44px;
-  padding: 0 18px;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
-}
-
-.mapping-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background-color: #ffffff;
-  border: 1px solid #edf2e8;
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: 0 6px 18px rgba(27, 67, 50, 0.06);
-}
-
-.mapping-toolbar__search {
-  flex: 1;
-  height: 44px;
-  border: 1px solid #d7e6d9;
-  border-radius: 12px;
-  padding: 0 14px;
-  font-size: 14px;
-  outline: none;
-  background-color: #fcfffc;
-}
-
-.mapping-toolbar__search:focus {
-  border-color: #43a047;
-  box-shadow: 0 0 0 4px rgba(67, 160, 71, 0.12);
-}
-
-.mapping-toolbar__filter-btn {
-  height: 44px;
-  padding: 0 18px;
-  border: 1px solid #cfe2d1;
-  border-radius: 12px;
-  background-color: #f6fbf6;
-  color: #1b5e20;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .mapping-table-wrapper {
   background-color: #ffffff;
   border: 1px solid #edf2e8;
@@ -108,40 +38,10 @@
   color: #223127;
 }
 
-.mapping-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.mapping-badge--required {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-}
-
-.mapping-badge--optional {
-  background-color: #f1f5f2;
-  color: #5f6f62;
-}
-
-.mapping-badge--active {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-}
-
-.mapping-badge--disabled {
-  background-color: #fdecea;
-  color: #c62828;
-}
-
 .mapping-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .mapping-actions button {
@@ -155,11 +55,21 @@
 }
 
 .mapping-actions__edit {
-  background-color: #eef7ef;
-  color: #1b5e20;
+  background-color: #eef4ff;
+  color: #1d4ed8;
+}
+
+.mapping-actions__disable {
+  background-color: #fff1f0;
+  color: #c62828;
+}
+
+.mapping-actions__enable {
+  background-color: #e8f5e9;
+  color: #2e7d32;
 }
 
 .mapping-actions__remove {
-  background-color: #fff1f0;
+  background-color: #fdecea;
   color: #c62828;
 }

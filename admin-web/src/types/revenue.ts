@@ -1,0 +1,14 @@
+export type RevenueCard = {
+  title: string;
+  value: string;
+  note: string;
+};
+
+export type RevenueRow = {
+  id: number;
+  packageName: string;
+  slot: string;
+  orders: number;
+  revenue: string;
+  growth: string;
+};
