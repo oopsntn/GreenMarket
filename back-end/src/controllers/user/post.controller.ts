@@ -1,16 +1,25 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, sql } from "drizzle-orm";
 import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
+import { AuthRequest } from "../../dtos/auth.ts";
 
-export const createPost = async (req: Request, res: Response): Promise<void> => {
+const actionCache = new Set<string>();
+
+export const createPost = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { userId, categoryId, postTitle, postContent, postPrice, postLocation, postContactPhone, images, videos, attributes } = req.body;
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
 
-        if (!userId || !categoryId || !postTitle) {
-            res.status(400).json({ error: "Missing required fields (userId, categoryId, postTitle)" });
+        const { categoryId, postTitle, postContent, postPrice, postLocation, postContactPhone, images, videos, attributes } = req.body;
+
+        if (!categoryId || !postTitle) {
+            res.status(400).json({ error: "Missing required fields (categoryId, postTitle)" });
             return;
         }
 
@@ -82,18 +91,18 @@ export const createPost = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-export const getMyPosts = async (req: Request, res: Response): Promise<void> => {
+export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { userId } = req.query;
+        const userId = req.user?.id;
         if (!userId) {
-            res.status(400).json({ error: "User ID is required" });
+            res.status(401).json({ error: "Unauthorized" });
             return;
         }
 
         const userPosts = await db.select().from(posts).where(
             and(
-                eq(posts.postAuthorId, Number(userId)),
-                ne(posts.postStatus, "hidden") // exclude soft deleted posts
+                eq(posts.postAuthorId, userId),
+                ne(posts.postStatus, "hidden")
             )
         );
         res.json(userPosts);
@@ -103,15 +112,16 @@ export const getMyPosts = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-export const updatePost = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+export const updatePost = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const postId = parseId(req.params.id);
-        const { userId, ...updateData } = req.body;
-
+        const postId = parseId(req.params.id as string);
+        const userId = req.user?.id;
         if (!postId || !userId) {
-            res.status(400).json({ error: "Post ID and User ID are required" });
+            res.status(400).json({ error: "Post ID is required" });
             return;
         }
+
+        const updateData = req.body;
 
         // Ensure user owns the post
         const [existingPost] = await db.select().from(posts).where(eq(posts.postId, postId)).limit(1);
@@ -140,13 +150,12 @@ export const updatePost = async (req: Request<{ id: string }>, res: Response): P
     }
 };
 
-export const softDeletePost = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+export const softDeletePost = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const postId = parseId(req.params.id);
-        const { userId } = req.body; // Assuming userId is passed via middleware body injection, or from req.user if JWT is used properly
-
+        const postId = parseId(req.params.id as string);
+        const userId = req.user?.id;
         if (!postId || !userId) {
-            res.status(400).json({ error: "Post ID and User ID are required" });
+            res.status(400).json({ error: "Post ID is required" });
             return;
         }
 
@@ -205,6 +214,21 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
             return;
         }
 
+        // View counting logic with IP caching
+        const clientIp = req.ip || req.socket?.remoteAddress || "unknown_ip";
+        const cacheKey = `view_${post.postId}_${clientIp}`;
+
+        if (!actionCache.has(cacheKey)) {
+            actionCache.add(cacheKey);
+            db.update(posts)
+                .set({ postViewCount: sql`post_view_count + 1` })
+                .where(eq(posts.postId, post.postId))
+                .execute()
+                .catch(e => console.error("Failed to increment views:", e));
+            
+            post.postViewCount = (post.postViewCount || 0) + 1;
+        }
+
         // Fetch related images
         const images = await db.select().from(postImages).where(eq(postImages.postId, post.postId));
 
@@ -239,3 +263,30 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+export const recordContactClick = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    try {
+        const postId = parseId(req.params.id as string);
+        if (!postId) {
+            res.status(400).json({ error: "Post ID is required" });
+            return;
+        }
+
+        const clientIp = req.ip || req.socket?.remoteAddress || "unknown_ip";
+        const cacheKey = `contact_${postId}_${clientIp}`;
+
+        if (!actionCache.has(cacheKey)) {
+            actionCache.add(cacheKey);
+            await db.update(posts)
+                .set({ postContactCount: sql`post_contact_count + 1` })
+                .where(eq(posts.postId, postId))
+                .execute();
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+

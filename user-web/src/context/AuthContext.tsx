@@ -42,9 +42,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchShop = async (userId: number) => {
+  const fetchShop = async () => {
     try {
-      const res = await getMyShop(userId);
+      const res = await getMyShop();
       setShop(res.data || null);
     } catch {
       setShop(null);
@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(storedToken);
       setUser(parsedUser);
       // Fetch shop in background
-      fetchShop(parsedUser.id);
+      fetchShop();
     }
     setLoading(false);
   }, []);
@@ -71,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
     // Fetch shop after login
-    fetchShop(newUser.id);
+    fetchShop();
   };
 
   const logout = () => {
@@ -91,7 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshShop = async () => {
-    if (user?.id) await fetchShop(user.id);
+    if (user?.id) await fetchShop();
   };
 
   return (

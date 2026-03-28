@@ -47,13 +47,26 @@ const ShopDetail: React.FC = () => {
       {/* Shop Hero Section */}
       <header className="mb-16">
         <div className="glass p-8 md:p-12 rounded-[3.5rem] relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] -z-10" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/5 blur-[50px] -z-10" />
+          {shop.shopCoverUrl ? (
+             <div className="absolute inset-0 -z-10">
+                <img src={shop.shopCoverUrl.startsWith('http') ? shop.shopCoverUrl : `http://localhost:5000${shop.shopCoverUrl}`} alt="Cover" className="w-full h-full object-cover opacity-30" />
+                <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+             </div>
+          ) : (
+            <>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] -z-10" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/5 blur-[50px] -z-10" />
+            </>
+          )}
 
-          <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+          <div className="flex flex-col md:flex-row gap-8 items-center md:items-start z-10 relative">
             {/* Shop Avatar/Icon */}
-            <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 shadow-2xl">
-              <Store className="w-16 h-16 md:w-20 md:h-20 text-emerald-500" />
+            <div className="w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 shadow-2xl overflow-hidden glass">
+              {shop.shopLogoUrl ? (
+                <img src={shop.shopLogoUrl.startsWith('http') ? shop.shopLogoUrl : `http://localhost:5000${shop.shopLogoUrl}`} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <Store className="w-16 h-16 md:w-20 md:h-20 text-emerald-500" />
+              )}
             </div>
 
             <div className="flex-1 text-center md:text-left">

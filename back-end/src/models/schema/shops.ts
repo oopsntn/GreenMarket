@@ -9,6 +9,8 @@ export const shops = pgTable("shops", {
     shopPhone: varchar("shop_phone", { length: 20 }),
     shopLocation: varchar("shop_location", { length: 255 }), // Can be a Google Maps link or address
     shopDescription: text("shop_description"),
+    shopLogoUrl: varchar("shop_logo_url", { length: 255 }),
+    shopCoverUrl: varchar("shop_cover_url", { length: 255 }),
     shopStatus: varchar("shop_status", { length: 20 }).default("pending"), // pending, active, blocked, closed
     shopLat: decimal("shop_lat", { precision: 10, scale: 8 }),
     shopLng: decimal("shop_lng", { precision: 11, scale: 8 }),

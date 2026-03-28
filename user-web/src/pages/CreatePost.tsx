@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { PlusCircle, Image as ImageIcon, MapPin, Tag, CircleDollarSign, CheckCircle, ArrowRight, X, UploadCloud } from 'lucide-react';
 import { getCategories, getCategoryAttributes, createPost, uploadMedia } from '../services/api';
 
 const CreatePost: React.FC = () => {
-    const { user } = useAuth();
     const navigate = useNavigate();
 
     const [categories, setCategories] = useState<any[]>([]);
@@ -18,7 +16,6 @@ const CreatePost: React.FC = () => {
     const [previews, setPreviews] = useState<{ url: string, type: 'image' | 'video' }[]>([]);
 
     const [formData, setFormData] = useState({
-        userId: user?.id || 0,
         categoryId: '',
         postTitle: '',
         postContent: '',

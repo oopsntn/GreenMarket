@@ -18,6 +18,8 @@ export const posts = pgTable("posts", {
     postRejectedReason: text("post_rejected_reason"),
     postContactPhone: varchar("post_contact_phone", { length: 20 }),
     postPublished: boolean("post_published").default(false),
+    postViewCount: integer("post_view_count").default(0),
+    postContactCount: integer("post_contact_count").default(0),
     postSubmittedAt: timestamp("post_submitted_at"),
     postPublishedAt: timestamp("post_published_at"),
     postDeletedAt: timestamp("post_deleted_at"),

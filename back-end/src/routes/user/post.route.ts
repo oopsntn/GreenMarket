@@ -1,16 +1,18 @@
 import { Router } from "express";
-import { createPost, getMyPosts, updatePost, softDeletePost, getPublicPosts, getPublicPostBySlug } from "../../controllers/user/post.controller.ts";
+import { createPost, getMyPosts, updatePost, softDeletePost, getPublicPosts, getPublicPostBySlug, recordContactClick } from "../../controllers/user/post.controller.ts";
+import { verifyToken } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
 
-// Public routes (Buyers)
+// Public routes (Buyers — no auth needed)
 router.get("/browse", getPublicPosts);
 router.get("/detail/:slug", getPublicPostBySlug);
+router.post("/:id/contact-click", recordContactClick);
 
-// User routes (Sellers)
-router.post("/", createPost);
-router.get("/my-posts", getMyPosts);
-router.patch("/:id", updatePost);
-router.delete("/:id", softDeletePost);
+// Protected routes (Sellers — JWT required)
+router.post("/", verifyToken, createPost);
+router.get("/my-posts", verifyToken, getMyPosts);
+router.patch("/:id", verifyToken, updatePost);
+router.delete("/:id", verifyToken, softDeletePost);
 
 export default router;

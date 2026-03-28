@@ -25,14 +25,15 @@ export const checkQrStatus = (sessionId: string) => api.get(`/auth/qr/status/${s
 // Post APIs
 export const getPublicPosts = (params?: any) => api.get('/posts/browse', { params });
 export const getPostDetail = (slug: string) => api.get(`/posts/detail/${slug}`);
-export const getMyPosts = (userId: number) => api.get(`/posts/my-posts?userId=${userId}`);
+export const recordContactClick = (postId: number | string) => api.post(`/posts/${postId}/contact-click`);
+export const getMyPosts = () => api.get('/posts/my-posts');
 export const updateUserPost = (postId: number, data: any) => api.patch(`/posts/${postId}`, data);
-export const deleteUserPost = (postId: number, userId: number) => api.delete(`/posts/${postId}`, { data: { userId } });
+export const deleteUserPost = (postId: number) => api.delete(`/posts/${postId}`);
 
 // Shop APIs
+export const getAllShops = (params?: any) => api.get('/shops/browse', { params });
 export const getPublicShop = (id: number | string) => api.get(`/shops/${id}`);
 export const registerShop = (data: {
-  userId: number;
   shopName: string;
   shopPhone: string;
   shopLocation: string;
@@ -41,7 +42,7 @@ export const registerShop = (data: {
   shopLng?: number;
 }) => api.post('/shops/register', data);
 
-export const getMyShop = (userId: number) => api.get(`/shops/my-shop?userId=${userId}`);
+export const getMyShop = () => api.get('/shops/my-shop');
 
 export const updateShop = (shopId: number, data: {
   shopName?: string;
