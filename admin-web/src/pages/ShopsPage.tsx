@@ -2,15 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
+import ErrorState from "../components/ErrorState";
+import LoadingState from "../components/LoadingState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { shopApi } from "../services/shopApi";
 import type { Shop, ShopStatus } from "../types/shop";
 import "./ShopsPage.css";
-import LoadingState from "../components/LoadingState";
-import ErrorState from "../components/ErrorState";
 
 type ConfirmAction = "approve" | "reject" | "suspend" | "reactivate";
 
@@ -255,126 +256,131 @@ function ShopsPage() {
         onFilterClick={handleApplyFilter}
       />
 
-      {isLoading ? (
-        <div className="shops-table-wrapper">
+      <SectionCard
+        title="Shop Directory"
+        description="Review registered shops, owner information, and approval status."
+      >
+        {isLoading ? (
           <LoadingState
             title="Loading shops..."
             description="Please wait while the system loads the latest shop data."
           />
-        </div>
-      ) : error ? (
-        <div className="shops-table-wrapper">
+        ) : error ? (
           <ErrorState
             title="Failed to load shops"
             description={error}
             actionLabel="Try Again"
             onActionClick={() => void fetchShops()}
           />
-        </div>
-      ) : filteredShops.length === 0 ? (
-        <EmptyState
-          title="No shops found"
-          description="No shops match your current search. Try another keyword to continue."
-        />
-      ) : (
-        <div className="shops-table-wrapper">
-          <table className="shops-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Shop Name</th>
-                <th>Owner</th>
-                <th>Owner Email</th>
-                <th>Total Posts</th>
-                <th>Status</th>
-                <th>Created Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+        ) : filteredShops.length === 0 ? (
+          <EmptyState
+            title="No shops found"
+            description="No shops match your current search. Try another keyword to continue."
+          />
+        ) : (
+          <div className="shops-table-wrapper">
+            <table className="shops-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Shop Name</th>
+                  <th>Owner</th>
+                  <th>Owner Email</th>
+                  <th>Total Posts</th>
+                  <th>Status</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
 
-            <tbody>
-              {filteredShops.map((shop) => (
-                <tr key={shop.id}>
-                  <td>#{shop.id}</td>
-                  <td>{shop.name}</td>
-                  <td>{shop.ownerName}</td>
-                  <td>{shop.ownerEmail || "-"}</td>
-                  <td>{shop.totalPosts}</td>
-                  <td>
-                    <StatusBadge
-                      label={shop.status}
-                      variant={
-                        shop.status === "Active"
-                          ? "active"
-                          : shop.status === "Pending"
-                            ? "pending"
-                            : shop.status === "Suspended"
-                              ? "suspended"
-                              : "rejected"
-                      }
-                    />
-                  </td>
-                  <td>{shop.createdAt}</td>
-                  <td>
-                    <div className="shops-actions">
-                      <button
-                        type="button"
-                        className="shops-actions__view"
-                        onClick={() => void openViewModal(shop)}
-                      >
-                        View
-                      </button>
+              <tbody>
+                {filteredShops.map((shop) => (
+                  <tr key={shop.id}>
+                    <td>#{shop.id}</td>
+                    <td>{shop.name}</td>
+                    <td>{shop.ownerName}</td>
+                    <td>{shop.ownerEmail || "-"}</td>
+                    <td>{shop.totalPosts}</td>
+                    <td>
+                      <StatusBadge
+                        label={shop.status}
+                        variant={
+                          shop.status === "Active"
+                            ? "active"
+                            : shop.status === "Pending"
+                              ? "pending"
+                              : shop.status === "Suspended"
+                                ? "suspended"
+                                : "rejected"
+                        }
+                      />
+                    </td>
+                    <td>{shop.createdAt}</td>
+                    <td>
+                      <div className="shops-actions">
+                        <button
+                          type="button"
+                          className="shops-actions__view"
+                          onClick={() => void openViewModal(shop)}
+                        >
+                          View
+                        </button>
 
-                      {shop.status === "Pending" && (
-                        <>
+                        {shop.status === "Pending" && (
+                          <>
+                            <button
+                              type="button"
+                              className="shops-actions__approve"
+                              onClick={() =>
+                                openConfirmDialog(shop.id, "approve")
+                              }
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              className="shops-actions__reject"
+                              onClick={() =>
+                                openConfirmDialog(shop.id, "reject")
+                              }
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+
+                        {shop.status === "Active" && (
                           <button
                             type="button"
-                            className="shops-actions__approve"
+                            className="shops-actions__suspend"
                             onClick={() =>
-                              openConfirmDialog(shop.id, "approve")
+                              openConfirmDialog(shop.id, "suspend")
                             }
                           >
-                            Approve
+                            Suspend
                           </button>
+                        )}
+
+                        {shop.status === "Suspended" && (
                           <button
                             type="button"
-                            className="shops-actions__reject"
-                            onClick={() => openConfirmDialog(shop.id, "reject")}
+                            className="shops-actions__reactivate"
+                            onClick={() =>
+                              openConfirmDialog(shop.id, "reactivate")
+                            }
                           >
-                            Reject
+                            Reactivate
                           </button>
-                        </>
-                      )}
-
-                      {shop.status === "Active" && (
-                        <button
-                          type="button"
-                          className="shops-actions__suspend"
-                          onClick={() => openConfirmDialog(shop.id, "suspend")}
-                        >
-                          Suspend
-                        </button>
-                      )}
-
-                      {shop.status === "Suspended" && (
-                        <button
-                          type="button"
-                          className="shops-actions__reactivate"
-                          onClick={() =>
-                            openConfirmDialog(shop.id, "reactivate")
-                          }
-                        >
-                          Reactivate
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
 
       <BaseModal
         isOpen={isModalOpen}

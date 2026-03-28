@@ -5,11 +5,7 @@
 }
 
 .shops-table-wrapper {
-  background-color: #ffffff;
-  border: 1px solid #edf2e8;
-  border-radius: 20px;
   overflow-x: hidden;
-  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
 }
 
 .shops-table {
