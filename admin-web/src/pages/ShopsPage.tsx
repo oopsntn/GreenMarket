@@ -299,7 +299,11 @@ function ShopsPage() {
                     <td>#{shop.id}</td>
                     <td>{shop.name}</td>
                     <td>{shop.ownerName}</td>
-                    <td>{shop.ownerEmail || "-"}</td>
+                    <td
+                      className={!shop.ownerEmail ? "shops-table__muted" : ""}
+                    >
+                      {shop.ownerEmail || ""}
+                    </td>
                     <td>{shop.totalPosts}</td>
                     <td>
                       <StatusBadge
@@ -402,14 +406,12 @@ function ShopsPage() {
                 <input type="text" value={selectedShop.ownerName} disabled />
               </div>
 
-              <div className="shops-modal__field">
-                <label>Owner Email</label>
-                <input
-                  type="text"
-                  value={selectedShop.ownerEmail || "-"}
-                  disabled
-                />
-              </div>
+              {selectedShop.ownerEmail && (
+                <div className="shops-modal__field">
+                  <label>Owner Email</label>
+                  <input type="text" value={selectedShop.ownerEmail} disabled />
+                </div>
+              )}
 
               <div className="shops-modal__field">
                 <label>Total Posts</label>

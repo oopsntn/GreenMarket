@@ -177,3 +177,41 @@
   font-size: 13px;
   color: #7b8d7d;
 }
+
+.login-form__password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-form__password-wrapper input {
+  width: 100%;
+  padding-right: 72px;
+}
+
+.login-form__toggle-password {
+  position: absolute;
+  right: 12px;
+  border: none;
+  background: transparent;
+  color: #2e7d32;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-form__toggle-password:hover {
+  opacity: 0.8;
+}
+
+.login-form__error {
+  margin-top: -4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c62828;
+}
+
+.login-form__submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

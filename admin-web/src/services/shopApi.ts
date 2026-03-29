@@ -31,9 +31,30 @@ const parseErrorMessage = async (response: Response) => {
   }
 };
 
+const getAdminToken = () => {
+  return (
+    localStorage.getItem("adminToken") ||
+    sessionStorage.getItem("adminToken") ||
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("token") ||
+    ""
+  );
+};
+
+const buildHeaders = (includeJsonContentType = false): HeadersInit => {
+  const token = getAdminToken();
+
+  return {
+    ...(includeJsonContentType ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
 export const shopApi = {
   async getShops(): Promise<ApiShop[]> {
-    const response = await fetch(API_BASE_URL);
+    const response = await fetch(API_BASE_URL, {
+      headers: buildHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error(await parseErrorMessage(response));
@@ -43,7 +64,9 @@ export const shopApi = {
   },
 
   async getShopById(shopId: number): Promise<ApiShop> {
-    const response = await fetch(`${API_BASE_URL}/${shopId}`);
+    const response = await fetch(`${API_BASE_URL}/${shopId}`, {
+      headers: buildHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error(await parseErrorMessage(response));
@@ -58,9 +81,7 @@ export const shopApi = {
   ): Promise<UpdateShopStatusResponse> {
     const response = await fetch(`${API_BASE_URL}/${shopId}/status`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: buildHeaders(true),
       body: JSON.stringify({ status }),
     });
 
