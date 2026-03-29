@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
+import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { exportService } from "../services/exportService";
@@ -46,13 +47,11 @@ function ExportPage() {
       />
 
       <div className="export-grid">
-        <section className="export-card">
-          <div className="export-card__header">
-            <h3>General Data Export</h3>
-            <p>Export operational records from the admin system.</p>
-          </div>
-
-          <div className="export-form">
+        <SectionCard
+          title="General Data Export"
+          description="Export operational records from the admin system."
+        >
+          <div className="export-form export-form--padded">
             <div className="export-field">
               <label htmlFor="general-module">Module</label>
               <select id="general-module" defaultValue="Users">
@@ -91,15 +90,13 @@ function ExportPage() {
               Export General Data
             </button>
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="export-card">
-          <div className="export-card__header">
-            <h3>Financial Export</h3>
-            <p>Export revenue and customer spending reports.</p>
-          </div>
-
-          <div className="export-form">
+        <SectionCard
+          title="Financial Export"
+          description="Export revenue and customer spending reports."
+        >
+          <div className="export-form export-form--padded">
             <div className="export-field">
               <label htmlFor="financial-report-type">Report Type</label>
               <select id="financial-report-type" defaultValue="Revenue Summary">
@@ -135,15 +132,13 @@ function ExportPage() {
               Export Financial Report
             </button>
           </div>
-        </section>
+        </SectionCard>
       </div>
 
-      <section className="export-history-card">
-        <div className="export-card__header">
-          <h3>Recent Export History</h3>
-          <p>Track recently generated reports.</p>
-        </div>
-
+      <SectionCard
+        title="Recent Export History"
+        description="Track recently generated reports."
+      >
         <div className="export-history-table-wrapper">
           <table className="export-history-table">
             <thead>
@@ -180,7 +175,7 @@ function ExportPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </SectionCard>
 
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
