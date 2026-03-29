@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -6,8 +7,16 @@ import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
-import { categoryMappingService } from "../services/categoryMappingService";
-import type { CategoryMapping } from "../types/categoryMapping";
+import {
+  categoryMappingService,
+  emptyCategoryMappingForm,
+} from "../services/categoryMappingService";
+import type { Attribute } from "../types/attribute";
+import type { Category } from "../types/category";
+import type {
+  CategoryMapping,
+  CategoryMappingFormState,
+} from "../types/categoryMapping";
 import "./CategoryAttributeMappingPage.css";
 
 type ConfirmAction = "disable" | "enable" | "remove";
@@ -29,6 +38,21 @@ function CategoryAttributeMappingPage() {
     action: null,
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [selectedMappingId, setSelectedMappingId] = useState<number | null>(
+    null,
+  );
+  const [formData, setFormData] = useState<CategoryMappingFormState>(
+    emptyCategoryMappingForm,
+  );
+  const [formError, setFormError] = useState("");
+  const [previewCategoryId, setPreviewCategoryId] = useState<string>("1");
+
+  const availableCategories: Category[] =
+    categoryMappingService.getAvailableCategories();
+  const availableAttributes: Attribute[] =
+    categoryMappingService.getAvailableAttributes();
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -51,6 +75,33 @@ function CategoryAttributeMappingPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
+  const openAddModal = () => {
+    setModalMode("add");
+    setSelectedMappingId(null);
+    setFormData(emptyCategoryMappingForm);
+    setFormError("");
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (mapping: CategoryMapping) => {
+    setModalMode("edit");
+    setSelectedMappingId(mapping.id);
+    setFormData({
+      categoryId: String(mapping.categoryId),
+      attributeId: String(mapping.attributeId),
+      required: mapping.required,
+      displayOrder: mapping.displayOrder,
+    });
+    setFormError("");
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setSelectedMappingId(null);
+    setFormError("");
+    setIsModalOpen(false);
+  };
+
   const openConfirmDialog = (mappingId: number, action: ConfirmAction) => {
     setConfirmState({
       isOpen: true,
@@ -65,6 +116,57 @@ function CategoryAttributeMappingPage() {
       mappingId: null,
       action: null,
     });
+  };
+
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const target = event.target as HTMLInputElement;
+    const { name, value, type, checked } = target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : name === "displayOrder"
+            ? Number(value)
+            : value,
+    }));
+
+    if (formError) {
+      setFormError("");
+    }
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    try {
+      if (modalMode === "add") {
+        setMappings((prev) =>
+          categoryMappingService.createMapping(prev, formData),
+        );
+        showToast("Mapping added successfully.");
+      }
+
+      if (modalMode === "edit" && selectedMappingId !== null) {
+        setMappings((prev) =>
+          categoryMappingService.updateMapping(
+            prev,
+            selectedMappingId,
+            formData,
+          ),
+        );
+        showToast("Mapping updated successfully.");
+      }
+
+      closeModal();
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Failed to save mapping.",
+      );
+    }
   };
 
   const handleToggleStatus = (mapping: CategoryMapping) => {
@@ -86,6 +188,7 @@ function CategoryAttributeMappingPage() {
     const targetMapping = mappings.find(
       (item) => item.id === confirmState.mappingId,
     );
+
     if (!targetMapping) {
       closeConfirmDialog();
       return;
@@ -159,12 +262,72 @@ function CategoryAttributeMappingPage() {
     remove: "danger",
   };
 
+  const modalTitle = modalMode === "add" ? "Add Mapping" : "Edit Mapping";
+
+  const modalDescription =
+    modalMode === "add"
+      ? "Assign an attribute to a category and define how it appears in the posting form. New mappings are created as active by default."
+      : "Update the category-attribute relationship, requirement level, and display order. Use Enable or Disable in the table to change status.";
+
+  const previewMappings = categoryMappingService.getPreviewMappingsByCategory(
+    mappings,
+    Number(previewCategoryId),
+  );
+
+  const previewCategoryName =
+    availableCategories.find(
+      (category) => category.id === Number(previewCategoryId),
+    )?.name ?? "Selected Category";
+
+  const renderPreviewInput = (mapping: CategoryMapping) => {
+    if (mapping.attributeType === "Text") {
+      return (
+        <input
+          type="text"
+          placeholder={`Enter ${mapping.attributeName.toLowerCase()}`}
+          disabled
+        />
+      );
+    }
+
+    if (mapping.attributeType === "Number") {
+      return (
+        <input
+          type="number"
+          placeholder={`Enter ${mapping.attributeName.toLowerCase()}`}
+          disabled
+        />
+      );
+    }
+
+    if (mapping.attributeType === "Select") {
+      return (
+        <select disabled defaultValue="">
+          <option value="" disabled>
+            Select {mapping.attributeName.toLowerCase()}
+          </option>
+          <option>Option 1</option>
+          <option>Option 2</option>
+          <option>Option 3</option>
+        </select>
+      );
+    }
+
+    return (
+      <label className="mapping-preview__checkbox">
+        <input type="checkbox" disabled />
+        <span>{mapping.attributeName}</span>
+      </label>
+    );
+  };
+
   return (
     <div className="mapping-page">
       <PageHeader
         title="Category - Attribute Mapping"
-        description="Configure which attributes belong to each plant category."
+        description="Configure which attributes belong to each plant category and preview the posting form structure."
         actionLabel="+ Add Mapping"
+        onActionClick={openAddModal}
       />
 
       <SearchToolbar
@@ -175,12 +338,12 @@ function CategoryAttributeMappingPage() {
 
       <SectionCard
         title="Mapping Directory"
-        description="Review category-attribute relationships, requirement settings, and status."
+        description="Review category-attribute relationships, requirement settings, display order, and status."
       >
         {filteredMappings.length === 0 ? (
           <EmptyState
             title="No mappings found"
-            description="No category-attribute mappings match your current search. Try another keyword to continue."
+            description="No category-attribute mappings match your current search. Try another keyword or add a new mapping."
           />
         ) : (
           <div className="mapping-table-wrapper">
@@ -191,6 +354,7 @@ function CategoryAttributeMappingPage() {
                   <th>Category</th>
                   <th>Attribute</th>
                   <th>Code</th>
+                  <th>Type</th>
                   <th>Required</th>
                   <th>Display Order</th>
                   <th>Status</th>
@@ -205,6 +369,9 @@ function CategoryAttributeMappingPage() {
                     <td>{item.categoryName}</td>
                     <td>{item.attributeName}</td>
                     <td>{item.attributeCode}</td>
+                    <td>
+                      <StatusBadge label={item.attributeType} variant="type" />
+                    </td>
                     <td>
                       <StatusBadge
                         label={item.required ? "Required" : "Optional"}
@@ -222,7 +389,11 @@ function CategoryAttributeMappingPage() {
                     </td>
                     <td>
                       <div className="mapping-actions">
-                        <button type="button" className="mapping-actions__edit">
+                        <button
+                          type="button"
+                          className="mapping-actions__edit"
+                          onClick={() => openEditModal(item)}
+                        >
                           Edit
                         </button>
 
@@ -262,6 +433,149 @@ function CategoryAttributeMappingPage() {
           </div>
         )}
       </SectionCard>
+
+      <SectionCard
+        title="Preview Post Form Configuration"
+        description="Preview how the posting form will appear based on the selected category's active mappings."
+      >
+        <div className="mapping-preview">
+          <div className="mapping-preview__toolbar">
+            <div className="mapping-preview__field">
+              <label htmlFor="preview-category">Category</label>
+              <select
+                id="preview-category"
+                value={previewCategoryId}
+                onChange={(event) => setPreviewCategoryId(event.target.value)}
+              >
+                {availableCategories.map((category) => (
+                  <option key={category.id} value={String(category.id)}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {previewMappings.length === 0 ? (
+            <EmptyState
+              title="No active form fields"
+              description="This category does not have any active attribute mappings yet. Add or enable a mapping to preview the posting form."
+            />
+          ) : (
+            <div className="mapping-preview__form-card">
+              <div className="mapping-preview__header">
+                <h3>{previewCategoryName} Post Form</h3>
+                <p>Fields are displayed in the configured order below.</p>
+              </div>
+
+              <div className="mapping-preview__grid">
+                {previewMappings.map((mapping) => (
+                  <div key={mapping.id} className="mapping-preview__item">
+                    <div className="mapping-preview__label-row">
+                      <label>{mapping.attributeName}</label>
+                      <div className="mapping-preview__meta">
+                        <StatusBadge
+                          label={mapping.required ? "Required" : "Optional"}
+                          variant={mapping.required ? "required" : "optional"}
+                        />
+                        <span className="mapping-preview__order">
+                          Order {mapping.displayOrder}
+                        </span>
+                      </div>
+                    </div>
+
+                    {renderPreviewInput(mapping)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+
+      <BaseModal
+        isOpen={isModalOpen}
+        title={modalTitle}
+        description={modalDescription}
+        onClose={closeModal}
+        maxWidth="640px"
+      >
+        <form className="mapping-modal__form" onSubmit={handleSubmit}>
+          <div className="mapping-modal__field">
+            <label htmlFor="categoryId">Category</label>
+            <select
+              id="categoryId"
+              name="categoryId"
+              value={formData.categoryId}
+              onChange={handleChange}
+            >
+              <option value="">Select category</option>
+              {availableCategories.map((category) => (
+                <option key={category.id} value={String(category.id)}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mapping-modal__field">
+            <label htmlFor="attributeId">Attribute</label>
+            <select
+              id="attributeId"
+              name="attributeId"
+              value={formData.attributeId}
+              onChange={handleChange}
+            >
+              <option value="">Select attribute</option>
+              {availableAttributes.map((attribute) => (
+                <option key={attribute.id} value={String(attribute.id)}>
+                  {attribute.name} ({attribute.type})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mapping-modal__field">
+            <label htmlFor="displayOrder">Display Order</label>
+            <input
+              id="displayOrder"
+              name="displayOrder"
+              type="number"
+              min={1}
+              value={formData.displayOrder}
+              onChange={handleChange}
+              placeholder="Enter display order"
+            />
+          </div>
+
+          <label className="mapping-modal__checkbox">
+            <input
+              name="required"
+              type="checkbox"
+              checked={formData.required}
+              onChange={handleChange}
+            />
+            <span>Required field in posting form</span>
+          </label>
+
+          {formError ? (
+            <p className="mapping-modal__error">{formError}</p>
+          ) : null}
+
+          <div className="mapping-modal__actions">
+            <button
+              type="button"
+              className="mapping-modal__cancel"
+              onClick={closeModal}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="mapping-modal__submit">
+              {modalMode === "add" ? "Add Mapping" : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </BaseModal>
 
       <ConfirmDialog
         isOpen={confirmState.isOpen}
