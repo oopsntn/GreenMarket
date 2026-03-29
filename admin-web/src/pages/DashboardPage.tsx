@@ -1,4 +1,5 @@
 import PageHeader from "../components/PageHeader";
+import SectionCard from "../components/SectionCard";
 import { dashboardService } from "../services/dashboardService";
 import "./DashboardPage.css";
 
@@ -15,17 +16,20 @@ function DashboardPage() {
 
       <div className="dashboard-cards">
         {statCards.map((card) => (
-          <div key={card.title} className="dashboard-card">
-            <h3>{card.title}</h3>
-            <strong>{card.value}</strong>
-          </div>
+          <SectionCard key={card.title}>
+            <div className="dashboard-card">
+              <h3>{card.title}</h3>
+              <strong>{card.value}</strong>
+            </div>
+          </SectionCard>
         ))}
       </div>
 
-      <div className="dashboard-panel">
-        <h3>{summary.title}</h3>
-        <p>{summary.description}</p>
-      </div>
+      <SectionCard title={summary.title}>
+        <div className="dashboard-panel">
+          <p>{summary.description}</p>
+        </div>
+      </SectionCard>
     </div>
   );
 }
