@@ -18,7 +18,8 @@
     "approve:shops": "tsx src/scripts/autoApproveShops.ts",
     "test:rbac": "tsx src/scripts/testRbacApis.ts",
     "test:sprint1": "tsx src/scripts/testSprint1.ts",
-    "test:sprint2": "tsx src/scripts/testSprint2.ts"
+    "test:sprint2": "tsx src/scripts/testSprint2.ts",
+    "test:sprint3": "tsx src/scripts/testSprint3Promotion.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
