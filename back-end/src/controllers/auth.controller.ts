@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { eq, and } from "drizzle-orm";
 import { db } from "../config/db";
-import { admins, users, otpRequests } from "../models/schema";
+import { admins, users, otpRequests, adminRoles, roles } from "../models/schema";
 import { AdminLoginBody } from "../dtos/admin";
 import { RequestOTPBody, VerifyOTPBody } from "../dtos/otp";
 
@@ -36,8 +36,24 @@ export const adminLogin = async (
             return;
         }
 
+        const roleRows = await db.select({
+            roleCode: roles.roleCode,
+        })
+        .from(adminRoles)
+        .innerJoin(roles, eq(adminRoles.adminRoleRoleId, roles.roleId))
+        .where(eq(adminRoles.adminRoleAdminId, admin.adminId));
+
+        const roleCodes = roleRows
+            .map((row) => row.roleCode)
+            .filter((code): code is string => Boolean(code));
+
         const token = jwt.sign(
-            { id: admin.adminId, email: admin.adminEmail, role: "admin" },
+            {
+                id: admin.adminId,
+                email: admin.adminEmail,
+                role: "admin",
+                roleCodes: roleCodes.length > 0 ? roleCodes : ["ROLE_ADMIN"],
+            },
             JWT_SECRET,
             { expiresIn: "1d" }
         );

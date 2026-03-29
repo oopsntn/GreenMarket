@@ -1,11 +1,16 @@
 import { Router } from "express";
-import { registerShop, getMyShop, getPublicShopById, updateShop } from "../../controllers/user/shop.controller.ts";
+import { registerShop, getMyShop, getPublicShopById, updateShop, getAllShops } from "../../controllers/user/shop.controller.ts";
+import { verifyToken } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
 
-router.post("/register", registerShop);
-router.get("/my-shop", getMyShop);
+// Public routes
+router.get("/browse", getAllShops);
 router.get("/:id", getPublicShopById);
-router.patch("/:id", updateShop);
+
+// Protected routes (JWT required)
+router.post("/register", verifyToken, registerShop);
+router.get("/my-shop", verifyToken, getMyShop);
+router.patch("/:id", verifyToken, updateShop);
 
 export default router;

@@ -22,6 +22,8 @@ const VIETNAM_PROVINCES = [
 const Home: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -54,6 +56,7 @@ const Home: React.FC = () => {
   }, []);
 
   const applyFilters = () => {
+    setPage(1); // Reset page on filter
     setAppliedFilters({
       minPrice,
       maxPrice,
@@ -67,6 +70,7 @@ const Home: React.FC = () => {
     setMaxPrice("");
     setSelectedCategoryId("");
     setLocation("");
+    setPage(1);
     setAppliedFilters({
       minPrice: "",
       maxPrice: "",
@@ -85,10 +89,15 @@ const Home: React.FC = () => {
         if (appliedFilters.maxPrice) params.maxPrice = appliedFilters.maxPrice;
         if (appliedFilters.categoryId) params.categoryId = appliedFilters.categoryId;
         if (appliedFilters.location) params.location = appliedFilters.location;
+        params.page = page;
+        params.limit = 12;
 
         const response = await getPublicPosts(params);
         // Backend returns `{ data, meta }` or just array directly, robust check:
         setPosts(response.data.data || response.data);
+        if (response.data.meta) {
+          setTotalPages(response.data.meta.totalPages || 1);
+        }
       } catch (error) {
         console.error("Failed to fetch posts:", error);
       } finally {
@@ -96,7 +105,7 @@ const Home: React.FC = () => {
       }
     };
     fetchPosts();
-  }, [debouncedSearch, appliedFilters]);
+  }, [debouncedSearch, appliedFilters, page]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -274,6 +283,27 @@ const Home: React.FC = () => {
                 Không tìm thấy kết quả phù hợp.
               </div>
             )}
+          </div>
+        )}
+
+        {/* Pagination UI */}
+        {!loading && totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-12">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-6 py-3 rounded-xl bg-surface border border-white/10 text-white font-bold hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              Trang trước
+            </button>
+            <span className="text-slate-400 font-medium bg-white/5 px-4 py-3 rounded-xl">Trang {page} / {totalPages}</span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-6 py-3 rounded-xl bg-surface border border-white/10 text-white font-bold hover:bg-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              Trang sau
+            </button>
           </div>
         )}
         </section>

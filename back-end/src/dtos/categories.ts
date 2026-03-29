@@ -12,5 +12,6 @@ export interface UpdateCategoryBody {
 }
 
 export interface CategoryParams {
+    [key: string]: string;
     id: string;
 }

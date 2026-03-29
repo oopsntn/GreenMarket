@@ -25,7 +25,7 @@ const MyPosts: React.FC = () => {
     const fetchPosts = async () => {
       if (!user?.id) return;
       try {
-        const postsRes = await getMyPosts(user.id);
+        const postsRes = await getMyPosts();
         setPosts(postsRes.data);
       } catch (error) {
         console.error("Failed to fetch posts:", error);
@@ -40,7 +40,7 @@ const MyPosts: React.FC = () => {
     if (!user?.id) return;
     if (window.confirm('Bạn có chắc chắn muốn xóa bài đăng này không?')) {
       try {
-        await deleteUserPost(postId, user.id);
+        await deleteUserPost(postId);
         alert('Đã xóa bài đăng thành công.');
         setPosts(posts.filter(p => p.postId !== postId));
       } catch (error) {
@@ -62,14 +62,13 @@ const MyPosts: React.FC = () => {
 
     try {
       await updateUserPost(editingPost.postId, {
-        userId: user.id,
         postTitle: editTitle,
         postPrice: editPrice
       });
       alert('Đã cập nhật bài đăng thành công! Bài viết sẽ được chuyển về trạng thái chờ duyệt.');
       setEditingPost(null);
       // Refresh list to get updated status
-      const postsRes = await getMyPosts(user.id);
+      const postsRes = await getMyPosts();
       setPosts(postsRes.data);
     } catch (error) {
       console.error('Failed to update post', error);

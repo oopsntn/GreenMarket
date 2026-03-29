@@ -1,19 +1,24 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { shops, type Shop } from "../../models/schema/shops.ts";
 import { posts, postImages } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
+import { AuthRequest } from "../../dtos/auth.ts";
 
-// Note: In a real app, userId would come from authentication middleware (req.user)
-// For this stage, we'll expect it in the body or use a test ID
 
-export const registerShop = async (req: Request, res: Response): Promise<void> => {
+export const registerShop = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { userId, shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng } = req.body;
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
 
-        if (!userId || !shopName) {
-            res.status(400).json({ error: "User ID and Shop Name are required" });
+        const { shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng, shopLogoUrl, shopCoverUrl } = req.body;
+
+        if (!shopName) {
+            res.status(400).json({ error: "Shop Name is required" });
             return;
         }
 
@@ -30,6 +35,8 @@ export const registerShop = async (req: Request, res: Response): Promise<void> =
             shopPhone,
             shopLocation,
             shopDescription,
+            shopLogoUrl,
+            shopCoverUrl,
             shopLat: shopLat ? String(shopLat) : null,
             shopLng: shopLng ? String(shopLng) : null,
             shopStatus: "pending"
@@ -42,16 +49,15 @@ export const registerShop = async (req: Request, res: Response): Promise<void> =
     }
 };
 
-export const getMyShop = async (req: Request, res: Response): Promise<void> => {
+export const getMyShop = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { userId } = req.query; // Expecting userId for now since auth isn't fully integrated here
-        
+        const userId = req.user?.id;
         if (!userId) {
-            res.status(400).json({ error: "User ID is required" });
+            res.status(401).json({ error: "Unauthorized" });
             return;
         }
 
-        const [myShop] = await db.select().from(shops).where(eq(shops.shopOwnerId, Number(userId))).limit(1);
+        const [myShop] = await db.select().from(shops).where(eq(shops.shopOwnerId, userId)).limit(1);
         if (!myShop) {
             res.status(404).json({ error: "Shop not found for this user" });
             return;
@@ -106,7 +112,7 @@ export const getPublicShopById = async (req: Request<{ id: string }>, res: Respo
     }
 };
 
-export const updateShop = async (req: Request, res: Response): Promise<void> => {
+export const updateShop = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const id = parseId(req.params.id as string);
         if (!id) {
@@ -114,7 +120,24 @@ export const updateShop = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        const { shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng } = req.body;
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        // Verify ownership
+        const [existingShop] = await db.select().from(shops).where(eq(shops.shopId, id)).limit(1);
+        if (!existingShop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+        if (existingShop.shopOwnerId !== userId) {
+            res.status(403).json({ error: "Unauthorized to update this shop" });
+            return;
+        }
+
+        const { shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng, shopLogoUrl, shopCoverUrl } = req.body;
 
         const [updatedShop] = await db.update(shops)
             .set({ 
@@ -122,6 +145,8 @@ export const updateShop = async (req: Request, res: Response): Promise<void> => 
                 shopPhone, 
                 shopLocation, 
                 shopDescription, 
+                shopLogoUrl,
+                shopCoverUrl,
                 shopLat: shopLat !== undefined ? String(shopLat) : undefined,
                 shopLng: shopLng !== undefined ? String(shopLng) : undefined,
                 shopUpdatedAt: new Date() 
@@ -129,12 +154,38 @@ export const updateShop = async (req: Request, res: Response): Promise<void> => 
             .where(eq(shops.shopId, id))
             .returning();
 
-        if (!updatedShop) {
-            res.status(404).json({ error: "Shop not found" });
-            return;
-        }
-
         res.json(updatedShop);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// --- Public: Browse All Shops ---
+
+export const getAllShops = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const offset = (page - 1) * limit;
+
+        const data = await db.select()
+            .from(shops)
+            .where(eq(shops.shopStatus, "active"))
+            .limit(limit)
+            .offset(offset)
+            .orderBy(sql`${shops.shopCreatedAt} DESC`);
+
+        const countResult = await db.select({ count: sql<number>`count(*)` })
+            .from(shops)
+            .where(eq(shops.shopStatus, "active"));
+
+        const totalItems = Number(countResult[0]?.count) || 0;
+
+        res.json({
+            data,
+            meta: { totalItems, totalPages: Math.ceil(totalItems / limit), currentPage: page, limit }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

@@ -1,6 +1,6 @@
 # ---- BASE ----
 FROM node:24-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 WORKDIR /app
 
 # ---- DEPENDENCIES ----
@@ -15,14 +15,14 @@ RUN pnpm build
 
 # ---- PRODUCTION ----
 FROM node:24-alpine AS prod
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
+RUN sed -i 's/"type": "module"/"type": "commonjs"/' package.json
 RUN pnpm install --frozen-lockfile --prod
 
-# Copy built code
 COPY --from=build /app/dist ./dist
 
 EXPOSE 5000
-CMD ["node", "dist/server.js"]
+CMD ["pnpm", "start"]
