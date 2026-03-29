@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
+import SectionCard from "../components/SectionCard";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { settingsService } from "../services/settingsService";
 import type { SettingsState } from "../types/settings";
@@ -62,13 +63,11 @@ function SettingsPage() {
       />
 
       <div className="settings-grid">
-        <section className="settings-card">
-          <div className="settings-card__header">
-            <h3>General Settings</h3>
-            <p>Basic platform configuration</p>
-          </div>
-
-          <div className="settings-form">
+        <SectionCard
+          title="General Settings"
+          description="Basic platform configuration"
+        >
+          <div className="settings-form settings-form--padded">
             <div className="settings-field">
               <label htmlFor="platform-name">Platform Name</label>
               <input
@@ -111,15 +110,13 @@ function SettingsPage() {
               </select>
             </div>
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="settings-card">
-          <div className="settings-card__header">
-            <h3>Moderation Rules</h3>
-            <p>Control content moderation behavior</p>
-          </div>
-
-          <div className="settings-form">
+        <SectionCard
+          title="Moderation Rules"
+          description="Control content moderation behavior"
+        >
+          <div className="settings-form settings-form--padded">
             <div className="settings-toggle">
               <div>
                 <strong>Auto Moderation</strong>
@@ -172,15 +169,13 @@ function SettingsPage() {
               />
             </div>
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="settings-card">
-          <div className="settings-card__header">
-            <h3>Post Lifecycle Rules</h3>
-            <p>Manage how long posts remain active</p>
-          </div>
-
-          <div className="settings-form">
+        <SectionCard
+          title="Post Lifecycle Rules"
+          description="Manage how long posts remain active"
+        >
+          <div className="settings-form settings-form--padded">
             <div className="settings-field">
               <label htmlFor="post-expiry">Post Expiry Days</label>
               <input
@@ -231,15 +226,13 @@ function SettingsPage() {
               />
             </div>
           </div>
-        </section>
+        </SectionCard>
 
-        <section className="settings-card">
-          <div className="settings-card__header">
-            <h3>Media Settings</h3>
-            <p>Control upload and image rules</p>
-          </div>
-
-          <div className="settings-form">
+        <SectionCard
+          title="Media Settings"
+          description="Control upload and image rules"
+        >
+          <div className="settings-form settings-form--padded">
             <div className="settings-field">
               <label htmlFor="max-images">Max Images Per Post</label>
               <input
@@ -290,7 +283,7 @@ function SettingsPage() {
               />
             </div>
           </div>
-        </section>
+        </SectionCard>
       </div>
 
       <ToastContainer toasts={toasts} onClose={removeToast} />
