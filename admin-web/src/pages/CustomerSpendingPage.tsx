@@ -1,4 +1,5 @@
 import PageHeader from "../components/PageHeader";
+import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import { customerSpendingService } from "../services/customerSpendingService";
 import "./CustomerSpendingPage.css";
@@ -15,44 +16,49 @@ function CustomerSpendingPage() {
         actionLabel="Export Customer Report"
       />
 
-      <div className="customer-spending-filters">
-        <div className="customer-spending-field">
-          <label htmlFor="customer-date-range">Date Range</label>
-          <select id="customer-date-range" defaultValue="Last 30 Days">
-            <option>Last 7 Days</option>
-            <option>Last 30 Days</option>
-            <option>Last 90 Days</option>
-            <option>This Year</option>
-          </select>
-        </div>
+      <SectionCard
+        title="Customer Spending Filters"
+        description="Narrow the reporting period and customer segment."
+      >
+        <div className="customer-spending-filters customer-spending-filters--padded">
+          <div className="customer-spending-field">
+            <label htmlFor="customer-date-range">Date Range</label>
+            <select id="customer-date-range" defaultValue="Last 30 Days">
+              <option>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>Last 90 Days</option>
+              <option>This Year</option>
+            </select>
+          </div>
 
-        <div className="customer-spending-field">
-          <label htmlFor="customer-segment">Customer Segment</label>
-          <select id="customer-segment" defaultValue="All Customers">
-            <option>All Customers</option>
-            <option>Top Spenders</option>
-            <option>Returning Buyers</option>
-            <option>New Customers</option>
-          </select>
+          <div className="customer-spending-field">
+            <label htmlFor="customer-segment">Customer Segment</label>
+            <select id="customer-segment" defaultValue="All Customers">
+              <option>All Customers</option>
+              <option>Top Spenders</option>
+              <option>Returning Buyers</option>
+              <option>New Customers</option>
+            </select>
+          </div>
         </div>
-      </div>
+      </SectionCard>
 
       <div className="customer-spending-cards">
         {summaryCards.map((card) => (
-          <div key={card.title} className="customer-spending-card">
-            <span>{card.title}</span>
-            <strong>{card.value}</strong>
-            <small>{card.note}</small>
-          </div>
+          <SectionCard key={card.title}>
+            <div className="customer-spending-card">
+              <span>{card.title}</span>
+              <strong>{card.value}</strong>
+              <small>{card.note}</small>
+            </div>
+          </SectionCard>
         ))}
       </div>
 
-      <section className="customer-spending-panel">
-        <div className="customer-spending-panel__header">
-          <h3>Top Customer Spending</h3>
-          <span>Current reporting period</span>
-        </div>
-
+      <SectionCard
+        title="Top Customer Spending"
+        description="Current reporting period"
+      >
         <div className="customer-spending-table-wrapper">
           <table className="customer-spending-table">
             <thead>
@@ -84,7 +90,7 @@ function CustomerSpendingPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </SectionCard>
     </div>
   );
 }

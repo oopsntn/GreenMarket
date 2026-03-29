@@ -5,11 +5,7 @@
 }
 
 .shops-table-wrapper {
-  background-color: #ffffff;
-  border: 1px solid #edf2e8;
-  border-radius: 20px;
   overflow-x: hidden;
-  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
 }
 
 .shops-table {
@@ -218,47 +214,6 @@
 .shops-modal__suspend {
   background-color: #fff1f0;
   color: #c62828;
-}
-
-.shops-loading-state,
-.shops-error-state {
-  min-height: 240px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 32px;
-  text-align: center;
-}
-
-.shops-loading-state {
-  color: #486150;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.shops-error-state h3 {
-  font-size: 20px;
-  color: #c62828;
-}
-
-.shops-error-state p {
-  max-width: 420px;
-  color: #6b7b6d;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.shops-error-state button {
-  height: 42px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 12px;
-  background-color: #1d4ed8;
-  color: #ffffff;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 @media (max-width: 1200px) {
