@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import "./AdminLayout.css";
 
 const menuItems = [
@@ -18,6 +18,27 @@ const menuItems = [
 ];
 
 function AdminLayout() {
+  const navigate = useNavigate();
+
+  const profileText =
+    localStorage.getItem("adminProfile") ||
+    sessionStorage.getItem("adminProfile");
+
+  const profile = profileText
+    ? (JSON.parse(profileText) as {
+        name: string;
+        email: string;
+      })
+    : null;
+
+  const handleLogout = () => {
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminProfile");
+    sessionStorage.removeItem("adminToken");
+    sessionStorage.removeItem("adminProfile");
+    navigate("/login", { replace: true });
+  };
+
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
@@ -51,7 +72,18 @@ function AdminLayout() {
           </div>
 
           <div className="admin-header__profile">
-            <span>Admin</span>
+            <div className="admin-header__profile-info">
+              <strong>{profile?.name || "Admin"}</strong>
+              <span>{profile?.email || "admin@greenmarket.com"}</span>
+            </div>
+
+            <button
+              type="button"
+              className="admin-header__logout"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
           </div>
         </header>
 

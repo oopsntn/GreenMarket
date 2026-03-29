@@ -38,6 +38,10 @@
   word-break: break-word;
 }
 
+.shops-table__muted {
+  color: #9aa79b;
+}
+
 .shops-table tbody tr:hover {
   background-color: #fbfdfb;
 }
