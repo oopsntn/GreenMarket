@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -174,16 +174,18 @@ function CategoriesPage() {
     closeConfirmDialog();
   };
 
-  const filteredCategories = categories.filter((category) => {
+  const filteredCategories = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return true;
+    if (!keyword) return categories;
 
-    return (
-      category.name.toLowerCase().includes(keyword) ||
-      category.slug.toLowerCase().includes(keyword)
-    );
-  });
+    return categories.filter((category) => {
+      return (
+        category.name.toLowerCase().includes(keyword) ||
+        category.slug.toLowerCase().includes(keyword)
+      );
+    });
+  }, [categories, searchKeyword]);
 
   const modalTitle =
     modalMode === "add"
@@ -191,6 +193,13 @@ function CategoriesPage() {
       : modalMode === "edit"
         ? "Edit Category"
         : "Category Details";
+
+  const modalDescription =
+    modalMode === "add"
+      ? "Create a new category and define its basic settings."
+      : modalMode === "edit"
+        ? "Update category information, slug, status, and attribute count."
+        : "Review category information and current activation status.";
 
   const confirmCategory =
     confirmState.categoryId !== null
@@ -329,7 +338,7 @@ function CategoriesPage() {
       <BaseModal
         isOpen={isModalOpen}
         title={modalTitle}
-        description="Manage category information and settings."
+        description={modalDescription}
         onClose={closeModal}
       >
         <form className="categories-modal__form" onSubmit={handleSubmit}>

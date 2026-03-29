@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -177,16 +177,18 @@ function AttributesPage() {
     closeConfirmDialog();
   };
 
-  const filteredAttributes = attributes.filter((attribute) => {
+  const filteredAttributes = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return true;
+    if (!keyword) return attributes;
 
-    return (
-      attribute.name.toLowerCase().includes(keyword) ||
-      attribute.code.toLowerCase().includes(keyword)
-    );
-  });
+    return attributes.filter((attribute) => {
+      return (
+        attribute.name.toLowerCase().includes(keyword) ||
+        attribute.code.toLowerCase().includes(keyword)
+      );
+    });
+  }, [attributes, searchKeyword]);
 
   const modalTitle =
     modalMode === "add"
@@ -194,6 +196,13 @@ function AttributesPage() {
       : modalMode === "edit"
         ? "Edit Attribute"
         : "Attribute Details";
+
+  const modalDescription =
+    modalMode === "add"
+      ? "Create a new attribute and define its input behavior."
+      : modalMode === "edit"
+        ? "Update attribute code, type, requirement, and status."
+        : "Review attribute information and current configuration.";
 
   const confirmAttribute =
     confirmState.attributeId !== null
@@ -342,7 +351,7 @@ function AttributesPage() {
       <BaseModal
         isOpen={isModalOpen}
         title={modalTitle}
-        description="Manage attribute information and configuration."
+        description={modalDescription}
         onClose={closeModal}
       >
         <form className="attributes-modal__form" onSubmit={handleSubmit}>

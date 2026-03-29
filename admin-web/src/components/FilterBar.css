@@ -1,0 +1,44 @@
+.filter-bar {
+  display: flex;
+  gap: 16px;
+  padding: 24px;
+}
+
+.filter-bar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.filter-bar__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.filter-bar__field select {
+  height: 44px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+}
+
+.filter-bar__field select:focus {
+  border-color: #43a047;
+  box-shadow: 0 0 0 4px rgba(67, 160, 71, 0.12);
+}
+
+@media (max-width: 1024px) {
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .filter-bar__field {
+    min-width: 100%;
+  }
+}

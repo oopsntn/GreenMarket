@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -109,17 +109,19 @@ function CategoryAttributeMappingPage() {
     closeConfirmDialog();
   };
 
-  const filteredMappings = mappings.filter((item) => {
+  const filteredMappings = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return true;
+    if (!keyword) return mappings;
 
-    return (
-      item.categoryName.toLowerCase().includes(keyword) ||
-      item.attributeName.toLowerCase().includes(keyword) ||
-      item.attributeCode.toLowerCase().includes(keyword)
-    );
-  });
+    return mappings.filter((item) => {
+      return (
+        item.categoryName.toLowerCase().includes(keyword) ||
+        item.attributeName.toLowerCase().includes(keyword) ||
+        item.attributeCode.toLowerCase().includes(keyword)
+      );
+    });
+  }, [mappings, searchKeyword]);
 
   const confirmMapping =
     confirmState.mappingId !== null
