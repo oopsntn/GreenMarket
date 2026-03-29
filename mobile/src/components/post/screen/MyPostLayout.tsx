@@ -1,11 +1,74 @@
-import React from 'react'
-import { StyleSheet } from 'react-native'
+import React, { useState } from 'react'
+import { ActivityIndicator, FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import useMyPost from '../service/useMyPost'
+import { CheckCircle2, Clock, Plus, XCircle } from 'lucide-react-native'
+import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
+import PostTabs from '../components/PostTabs'
+import PostItem from '../components/PostItem'
+import EditPostModal from '../components/EditPostModal'
 
 const MyPostLayout = () => {
-    return (
-        <div>
+    const navigation = useNavigation<any>()
+    const { state, actions } = useMyPost()
 
-        </div>
+    const [editData, setEditData] = useState({ title: '', price: '' })
+    const openEdit = (post: any) => {
+        setEditData({ title: post.postTitle, price: String(post.postPrice) })
+        actions.setEditingPost(post)
+    }
+
+    const renderStatus = (status: string) => {
+        const configs: any = {
+            pending: { color: '#f59e0b', icon: <Clock size={12} color="#f59e0b" /> },
+            approved: { color: '#10b981', icon: <CheckCircle2 size={12} color="#10b981" /> },
+            rejected: { color: '#ef4444', icon: <XCircle size={12} color="#ef4444" /> }
+        }
+        const config = configs[status] || configs.pending
+        return (
+            <View style={[styles.statusBadge, { borderColor: config.color }]}>
+                {config.icon}
+                <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
+            </View>
+        )
+    }
+    return (
+        <MobileLayout title='Quản lý đăng tin' backButton={() => navigation.goBack()}
+            rightAction={
+                <TouchableOpacity onPress={() => navigation.navigate('CreatePost')}>
+                    <Plus color='#10b981' size={24} />
+                </TouchableOpacity>
+            }>
+            {/* Tabs */}
+            {!state.shop && <PostTabs activeTab={state.activeTab} onTabChange={actions.setActiveTab} styles={styles} />}
+
+            {/* List Body */}
+            {state.loading ? (
+                <ActivityIndicator style={{ marginTop: 50 }} />
+            ) : (
+                <FlatList data={state.posts}
+                    renderItem={({ item }) => (
+                        <PostItem
+                            item={item}
+                            onEdit={openEdit}
+                            onDelete={() => actions.handleDelete}
+                            styles={styles}
+                            renderStatus={renderStatus}
+                        />
+                    )}
+                />
+            )}
+            {/* Edit Modal */}
+            <EditPostModal
+                visible={!!state.editingPost}
+                editingPost={state.editingPost}
+                editData={editData}
+                setEditData={setEditData}
+                onClose={() => actions.setEditingPost(null)}
+                onSave={actions.handleUpdate}
+                styles={styles}
+            />
+        </MobileLayout>
     )
 }
 
