@@ -1,22 +1,37 @@
 import React, { useState } from 'react';
-import { registerShop } from '../services/api';
-import { Store, CheckCircle, ArrowRight } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { registerShop, uploadMedia } from '../services/api';
+import { Store, CheckCircle, ArrowRight, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import AddressPicker from '../components/AddressPicker';
 
 const RegisterShop: React.FC = () => {
-  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    userId: user?.id || 0,
     shopName: '',
     shopPhone: '',
     shopLocation: '',
     shopDescription: '',
+    shopLogoUrl: '',
+    shopCoverUrl: '',
     shopLat: undefined as number | undefined,
     shopLng: undefined as number | undefined
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'shopLogoUrl' | 'shopCoverUrl') => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setUploading(true);
+    try {
+      const resp = await uploadMedia([e.target.files[0]]);
+      if (resp.data.urls && resp.data.urls.length > 0) {
+        setFormData(prev => ({ ...prev, [field]: resp.data.urls[0] }));
+      }
+    } catch (err) {
+      alert("Lỗi upload ảnh. Vui lòng thử lại.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +58,7 @@ const RegisterShop: React.FC = () => {
           <p className="text-slate-400 mb-8 leading-relaxed">
             Hồ sơ nhà vườn của bạn đã được gửi tới Admin. Chúng tôi sẽ thông báo cho bạn ngay khi shop được kích hoạt.
           </p>
-          <button 
+          <button
             onClick={() => window.location.href = '/'}
             className="w-full bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-500 transition-all"
           >
@@ -67,30 +82,74 @@ const RegisterShop: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-300">Tên Nhà Vườn *</label>
-          <input 
+          <input
             required
             type="text"
             className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600"
             placeholder="Ví dụ: Vườn Bonsai Hữu Tình"
             value={formData.shopName}
-            onChange={(e) => setFormData({...formData, shopName: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300">Logo Nhà Vườn</label>
+            <div className="relative border-2 border-dashed border-white/10 rounded-2xl p-6 text-center hover:border-emerald-500/50 transition-all bg-surface">
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => handleFileUpload(e, 'shopLogoUrl')} 
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={uploading}
+              />
+              {formData.shopLogoUrl ? (
+                <img src={formData.shopLogoUrl.startsWith('http') ? formData.shopLogoUrl : `http://localhost:5000${formData.shopLogoUrl}`} alt="Logo" className="mx-auto h-20 w-20 object-cover rounded-full" />
+              ) : (
+                <div className="flex flex-col items-center">
+                  <ImageIcon className="w-8 h-8 text-slate-500 mb-2" />
+                  <span className="text-sm text-slate-400">Tải lên Logo (Vuông)</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300">Ảnh bìa (Cover)</label>
+            <div className="relative border-2 border-dashed border-white/10 rounded-2xl p-6 text-center hover:border-emerald-500/50 transition-all bg-surface">
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => handleFileUpload(e, 'shopCoverUrl')} 
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={uploading}
+              />
+              {formData.shopCoverUrl ? (
+                <img src={formData.shopCoverUrl.startsWith('http') ? formData.shopCoverUrl : `http://localhost:5000${formData.shopCoverUrl}`} alt="Cover" className="mx-auto h-20 w-full object-cover rounded-lg" />
+              ) : (
+                <div className="flex flex-col items-center">
+                  <UploadCloud className="w-8 h-8 text-slate-500 mb-2" />
+                  <span className="text-sm text-slate-400">Tải lên Ảnh bìa ngàng</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
             <label className="text-sm font-medium text-slate-300">Số Điện Thoại Shop</label>
-            <input 
+            <input
               type="tel"
               className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
               placeholder="09xx xxx xxx"
               value={formData.shopPhone}
-              onChange={(e) => setFormData({...formData, shopPhone: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, shopPhone: e.target.value })}
             />
           </div>
           <div className="space-y-4">
             <div className="pt-2">
-              <AddressPicker 
+              <AddressPicker
                 onAddressChange={(addr) => setFormData(prev => ({ ...prev, shopLocation: addr }))}
                 onLocationSelect={(lat, lng) => setFormData(prev => ({ ...prev, shopLat: lat, shopLng: lng }))}
                 label="Địa chỉ nhà vườn"
@@ -107,22 +166,22 @@ const RegisterShop: React.FC = () => {
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-slate-300">Mô tả về Nhà Vườn</label>
-          <textarea 
+          <textarea
             rows={4}
             className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
             placeholder="Chia sẻ về kinh nghiệm, các loại cây thế mạnh của bạn..."
             value={formData.shopDescription}
-            onChange={(e) => setFormData({...formData, shopDescription: e.target.value})}
+            onChange={(e) => setFormData({ ...formData, shopDescription: e.target.value })}
           />
         </div>
 
         <div className="pt-4">
-          <button 
-            type="submit" 
-            disabled={loading}
+          <button
+            type="submit"
+            disabled={loading || uploading}
             className="w-full bg-emerald-600 py-4 rounded-2xl font-bold text-lg hover:bg-emerald-500 disabled:bg-slate-700 transition-all active:scale-95 flex items-center justify-center gap-3"
           >
-            {loading ? "Đang gửi..." : "Gửi Đăng Ký"}
+            {loading ? "Đang gửi..." : uploading ? "Đang tải ảnh..." : "Gửi Đăng Ký"}
           </button>
           <p className="mt-4 text-center text-xs text-slate-500">
             * Bằng việc nhấn gửi, bạn đồng ý với Điều khoản và Chính sách của GreenMarket.

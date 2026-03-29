@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { getUsers, getUserById, updateUserStatus } from "../../controllers/admin/user.controller.ts";
+import { requireRoles } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
 
-router.get("/", getUsers);
-router.get("/:id", getUserById);
-router.patch("/:id/status", updateUserStatus);
+router.get("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"), getUsers);
+router.get("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"), getUserById);
+router.patch("/:id/status", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"), updateUserStatus);
 
 export default router;

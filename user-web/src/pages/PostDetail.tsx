@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getPostDetail } from '../services/api';
+import { getPostDetail, recordContactClick } from '../services/api';
 import { 
   MapPin, Phone, Calendar, ChevronLeft, ChevronRight, 
   Store, ShieldCheck, Share2, Heart, MessageCircle, Info,
-  Play, Maximize2, ShoppingBag
+  Play, Maximize2, ShoppingBag, Eye
 } from 'lucide-react';
 
 const PostDetail: React.FC = () => {
@@ -13,6 +13,18 @@ const PostDetail: React.FC = () => {
     const [post, setPost] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+    const [contactRevealed, setContactRevealed] = useState(false);
+
+    const handleRevealContact = async () => {
+        setContactRevealed(true);
+        if (post?.postId) {
+            try {
+                await recordContactClick(post.postId);
+            } catch (error) {
+                console.error("Failed to record contact click", error);
+            }
+        }
+    };
 
     useEffect(() => {
         const fetchDetail = async () => {
@@ -154,6 +166,9 @@ const PostDetail: React.FC = () => {
                                     <div className="text-slate-500 text-sm flex items-center gap-2">
                                         <Calendar className="w-4 h-4" /> Đăng ngày {new Date(post.postCreatedAt).toLocaleDateString('vi-VN')}
                                     </div>
+                                    <div className="text-slate-500 text-sm flex items-center gap-2">
+                                        <Eye className="w-4 h-4" /> {post.postViewCount || 1} lượt xem
+                                    </div>
                                 </div>
                             </div>
 
@@ -163,20 +178,31 @@ const PostDetail: React.FC = () => {
                             </div>
 
                             <div className="space-y-4 pb-6 border-b border-white/5">
-                                <a 
-                                    href={`tel:${post.shop?.shopPhone || post.postContactPhone}`}
-                                    className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/40"
-                                >
-                                    <Phone className="w-6 h-6" /> {post.shop?.shopPhone || post.postContactPhone || 'Không có số'}
-                                </a>
-                                <a 
-                                    href={`https://zalo.me/${post.shop?.shopPhone || post.postContactPhone}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="w-full py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all"
-                                >
-                                    <MessageCircle className="w-6 h-6 text-emerald-500" /> Chat qua Zalo
-                                </a>
+                                {!contactRevealed ? (
+                                    <button 
+                                        onClick={handleRevealContact}
+                                        className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/40"
+                                    >
+                                        <Phone className="w-6 h-6" /> Bấm để xem SĐT & Zalo
+                                    </button>
+                                ) : (
+                                    <>
+                                        <a 
+                                            href={`tel:${post.shop?.shopPhone || post.postContactPhone}`}
+                                            className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/40"
+                                        >
+                                            <Phone className="w-6 h-6" /> {post.shop?.shopPhone || post.postContactPhone || 'Không có số'}
+                                        </a>
+                                        <a 
+                                            href={`https://zalo.me/${post.shop?.shopPhone || post.postContactPhone}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all"
+                                        >
+                                            <MessageCircle className="w-6 h-6 text-emerald-500" /> Chat qua Zalo
+                                        </a>
+                                    </>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-between gap-3 text-slate-300">

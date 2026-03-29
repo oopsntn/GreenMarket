@@ -5,6 +5,7 @@ export interface JWTUserPayload {
     email?: string;
     mobile?: string;
     role: string;
+    roleCodes?: string[];
 }
 
 export interface AuthRequest extends Request {

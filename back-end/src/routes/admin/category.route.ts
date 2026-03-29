@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireRoles } from "../../middlewares/authMiddleware";
 
 import {
     getCategories,
@@ -15,14 +16,14 @@ import {
 
 const router = Router();
 
-router.get("/", getCategories);
+router.get("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), getCategories);
 
-router.get("/:id", getCategoryById);
+router.get("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), getCategoryById);
 
-router.post("/", validateCreateCategory, createCategory);
+router.post("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), validateCreateCategory, createCategory);
 
-router.put("/:id", validateUpdateCategory, updateCategory);
+router.put("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), validateUpdateCategory, updateCategory);
 
-router.delete("/:id", deleteCategory);
+router.delete("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), deleteCategory);
 
 export default router;
