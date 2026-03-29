@@ -1,5 +1,7 @@
+import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
+import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import { customerSpendingService } from "../services/customerSpendingService";
 import "./CustomerSpendingPage.css";
@@ -7,6 +9,9 @@ import "./CustomerSpendingPage.css";
 function CustomerSpendingPage() {
   const summaryCards = customerSpendingService.getCustomerSpendingCards();
   const rows = customerSpendingService.getCustomerSpendingRows();
+
+  const [dateRange, setDateRange] = useState("Last 30 Days");
+  const [customerSegment, setCustomerSegment] = useState("All Customers");
 
   return (
     <div className="customer-spending-page">
@@ -23,7 +28,11 @@ function CustomerSpendingPage() {
         <div className="customer-spending-filters customer-spending-filters--padded">
           <div className="customer-spending-field">
             <label htmlFor="customer-date-range">Date Range</label>
-            <select id="customer-date-range" defaultValue="Last 30 Days">
+            <select
+              id="customer-date-range"
+              value={dateRange}
+              onChange={(event) => setDateRange(event.target.value)}
+            >
               <option>Last 7 Days</option>
               <option>Last 30 Days</option>
               <option>Last 90 Days</option>
@@ -33,7 +42,11 @@ function CustomerSpendingPage() {
 
           <div className="customer-spending-field">
             <label htmlFor="customer-segment">Customer Segment</label>
-            <select id="customer-segment" defaultValue="All Customers">
+            <select
+              id="customer-segment"
+              value={customerSegment}
+              onChange={(event) => setCustomerSegment(event.target.value)}
+            >
               <option>All Customers</option>
               <option>Top Spenders</option>
               <option>Returning Buyers</option>
@@ -46,18 +59,18 @@ function CustomerSpendingPage() {
       <div className="customer-spending-cards">
         {summaryCards.map((card) => (
           <SectionCard key={card.title}>
-            <div className="customer-spending-card">
-              <span>{card.title}</span>
-              <strong>{card.value}</strong>
-              <small>{card.note}</small>
-            </div>
+            <StatCard
+              title={card.title}
+              value={card.value}
+              subtitle={`${card.note} • ${dateRange}`}
+            />
           </SectionCard>
         ))}
       </div>
 
       <SectionCard
         title="Top Customer Spending"
-        description="Current reporting period"
+        description={`${dateRange} • ${customerSegment}`}
       >
         <div className="customer-spending-table-wrapper">
           <table className="customer-spending-table">

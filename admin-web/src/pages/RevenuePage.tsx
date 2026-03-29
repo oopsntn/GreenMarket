@@ -1,5 +1,7 @@
+import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
+import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import { revenueService } from "../services/revenueService";
 import "./RevenuePage.css";
@@ -7,6 +9,9 @@ import "./RevenuePage.css";
 function RevenuePage() {
   const summaryCards = revenueService.getRevenueCards();
   const rows = revenueService.getRevenueRows();
+
+  const [dateRange, setDateRange] = useState("Last 30 Days");
+  const [slotFilter, setSlotFilter] = useState("All Slots");
 
   return (
     <div className="revenue-page">
@@ -23,7 +28,11 @@ function RevenuePage() {
         <div className="revenue-filters revenue-filters--padded">
           <div className="revenue-field">
             <label htmlFor="date-range">Date Range</label>
-            <select id="date-range" defaultValue="Last 30 Days">
+            <select
+              id="date-range"
+              value={dateRange}
+              onChange={(event) => setDateRange(event.target.value)}
+            >
               <option>Last 7 Days</option>
               <option>Last 30 Days</option>
               <option>Last 90 Days</option>
@@ -33,7 +42,11 @@ function RevenuePage() {
 
           <div className="revenue-field">
             <label htmlFor="slot-filter">Placement Slot</label>
-            <select id="slot-filter" defaultValue="All Slots">
+            <select
+              id="slot-filter"
+              value={slotFilter}
+              onChange={(event) => setSlotFilter(event.target.value)}
+            >
               <option>All Slots</option>
               <option>Home Top</option>
               <option>Category Top</option>
@@ -46,18 +59,18 @@ function RevenuePage() {
       <div className="revenue-cards">
         {summaryCards.map((card) => (
           <SectionCard key={card.title}>
-            <div className="revenue-card">
-              <span>{card.title}</span>
-              <strong>{card.value}</strong>
-              <small>{card.note}</small>
-            </div>
+            <StatCard
+              title={card.title}
+              value={card.value}
+              subtitle={`${card.note} • ${dateRange}`}
+            />
           </SectionCard>
         ))}
       </div>
 
       <SectionCard
         title="Revenue by Package"
-        description="Current reporting period"
+        description={`${dateRange} • ${slotFilter}`}
       >
         <div className="revenue-table-wrapper">
           <table className="revenue-table">

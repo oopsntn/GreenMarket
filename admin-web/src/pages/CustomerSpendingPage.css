@@ -48,30 +48,6 @@
   gap: 20px;
 }
 
-.customer-spending-card {
-  padding: 22px;
-}
-
-.customer-spending-card span {
-  display: block;
-  color: #6b7b6d;
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-
-.customer-spending-card strong {
-  display: block;
-  font-size: 30px;
-  color: #1b4332;
-  margin-bottom: 8px;
-}
-
-.customer-spending-card small {
-  color: #2e7d32;
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .customer-spending-table-wrapper {
   overflow: hidden;
   border-radius: 16px;
