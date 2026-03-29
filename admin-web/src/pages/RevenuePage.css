@@ -7,11 +7,10 @@
 .revenue-filters {
   display: flex;
   gap: 16px;
-  background-color: #ffffff;
-  border: 1px solid #edf2e8;
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: 0 6px 18px rgba(27, 67, 50, 0.06);
+}
+
+.revenue-filters--padded {
+  padding: 24px;
 }
 
 .revenue-field {
@@ -50,11 +49,7 @@
 }
 
 .revenue-card {
-  background-color: #ffffff;
-  border: 1px solid #edf2e8;
-  border-radius: 18px;
   padding: 22px;
-  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
 }
 
 .revenue-card span {
@@ -75,31 +70,6 @@
   color: #2e7d32;
   font-size: 13px;
   font-weight: 600;
-}
-
-.revenue-panel {
-  background-color: #ffffff;
-  border: 1px solid #edf2e8;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
-}
-
-.revenue-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.revenue-panel__header h3 {
-  font-size: 20px;
-  color: #1b4332;
-}
-
-.revenue-panel__header span {
-  font-size: 13px;
-  color: #6b7b6d;
 }
 
 .revenue-table-wrapper {
@@ -134,28 +104,32 @@
   color: #223127;
 }
 
-.revenue-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 30px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
+@media (max-width: 1100px) {
+  .revenue-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-.revenue-badge--slot {
-  background-color: #edf7ee;
-  color: #2e7d32;
+@media (max-width: 1024px) {
+  .revenue-filters {
+    flex-direction: column;
+  }
+
+  .revenue-field {
+    min-width: 100%;
+  }
+
+  .revenue-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .revenue-table {
+    min-width: 760px;
+  }
 }
 
-.revenue-badge--positive {
-  background-color: #e8f5e9;
-  color: #1b5e20;
-}
-
-.revenue-badge--negative {
-  background-color: #fdecea;
-  color: #c62828;
+@media (max-width: 640px) {
+  .revenue-cards {
+    grid-template-columns: 1fr;
+  }
 }

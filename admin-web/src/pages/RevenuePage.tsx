@@ -1,4 +1,5 @@
 import PageHeader from "../components/PageHeader";
+import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import { revenueService } from "../services/revenueService";
 import "./RevenuePage.css";
@@ -15,44 +16,49 @@ function RevenuePage() {
         actionLabel="Export Revenue Report"
       />
 
-      <div className="revenue-filters">
-        <div className="revenue-field">
-          <label htmlFor="date-range">Date Range</label>
-          <select id="date-range" defaultValue="Last 30 Days">
-            <option>Last 7 Days</option>
-            <option>Last 30 Days</option>
-            <option>Last 90 Days</option>
-            <option>This Year</option>
-          </select>
-        </div>
+      <SectionCard
+        title="Revenue Filters"
+        description="Narrow the reporting period and placement scope."
+      >
+        <div className="revenue-filters revenue-filters--padded">
+          <div className="revenue-field">
+            <label htmlFor="date-range">Date Range</label>
+            <select id="date-range" defaultValue="Last 30 Days">
+              <option>Last 7 Days</option>
+              <option>Last 30 Days</option>
+              <option>Last 90 Days</option>
+              <option>This Year</option>
+            </select>
+          </div>
 
-        <div className="revenue-field">
-          <label htmlFor="slot-filter">Placement Slot</label>
-          <select id="slot-filter" defaultValue="All Slots">
-            <option>All Slots</option>
-            <option>Home Top</option>
-            <option>Category Top</option>
-            <option>Search Boost</option>
-          </select>
+          <div className="revenue-field">
+            <label htmlFor="slot-filter">Placement Slot</label>
+            <select id="slot-filter" defaultValue="All Slots">
+              <option>All Slots</option>
+              <option>Home Top</option>
+              <option>Category Top</option>
+              <option>Search Boost</option>
+            </select>
+          </div>
         </div>
-      </div>
+      </SectionCard>
 
       <div className="revenue-cards">
         {summaryCards.map((card) => (
-          <div key={card.title} className="revenue-card">
-            <span>{card.title}</span>
-            <strong>{card.value}</strong>
-            <small>{card.note}</small>
-          </div>
+          <SectionCard key={card.title}>
+            <div className="revenue-card">
+              <span>{card.title}</span>
+              <strong>{card.value}</strong>
+              <small>{card.note}</small>
+            </div>
+          </SectionCard>
         ))}
       </div>
 
-      <section className="revenue-panel">
-        <div className="revenue-panel__header">
-          <h3>Revenue by Package</h3>
-          <span>Current reporting period</span>
-        </div>
-
+      <SectionCard
+        title="Revenue by Package"
+        description="Current reporting period"
+      >
         <div className="revenue-table-wrapper">
           <table className="revenue-table">
             <thead>
@@ -89,7 +95,7 @@ function RevenuePage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </SectionCard>
     </div>
   );
 }
