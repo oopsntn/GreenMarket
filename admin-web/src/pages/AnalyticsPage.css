@@ -4,41 +4,6 @@
   gap: 24px;
 }
 
-.analytics-filters {
-  display: flex;
-  gap: 16px;
-  padding: 24px;
-}
-
-.analytics-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 220px;
-}
-
-.analytics-field label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #2f4f3a;
-}
-
-.analytics-field select {
-  height: 44px;
-  border: 1px solid #d7e6d9;
-  border-radius: 12px;
-  padding: 0 14px;
-  font-size: 14px;
-  outline: none;
-  background-color: #fcfffc;
-  color: #223127;
-}
-
-.analytics-field select:focus {
-  border-color: #43a047;
-  box-shadow: 0 0 0 4px rgba(67, 160, 71, 0.12);
-}
-
 .analytics-kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -180,16 +145,6 @@
 
   .analytics-chart-grid {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 1024px) {
-  .analytics-filters {
-    flex-direction: column;
-  }
-
-  .analytics-field {
-    min-width: 100%;
   }
 }
 

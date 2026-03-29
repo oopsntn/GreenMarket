@@ -1,4 +1,5 @@
 import { useState } from "react";
+import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
@@ -24,35 +25,34 @@ function AnalyticsPage() {
         title="Analytics Filters"
         description="Adjust the KPI time range and analytics scope."
       >
-        <div className="analytics-filters">
-          <div className="analytics-field">
-            <label htmlFor="analytics-date-range">Date Range</label>
-            <select
-              id="analytics-date-range"
-              value={dateRange}
-              onChange={(event) => setDateRange(event.target.value)}
-            >
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-              <option>Last 90 Days</option>
-              <option>This Year</option>
-            </select>
-          </div>
-
-          <div className="analytics-field">
-            <label htmlFor="analytics-metric-scope">Analytics Scope</label>
-            <select
-              id="analytics-metric-scope"
-              value={metricScope}
-              onChange={(event) => setMetricScope(event.target.value)}
-            >
-              <option>All Placements</option>
-              <option>Traffic & Reach</option>
-              <option>CTR & Clicks</option>
-              <option>Revenue Focus</option>
-            </select>
-          </div>
-        </div>
+        <FilterBar
+          fields={[
+            {
+              id: "analytics-date-range",
+              label: "Date Range",
+              value: dateRange,
+              onChange: setDateRange,
+              options: [
+                "Last 7 Days",
+                "Last 30 Days",
+                "Last 90 Days",
+                "This Year",
+              ],
+            },
+            {
+              id: "analytics-metric-scope",
+              label: "Analytics Scope",
+              value: metricScope,
+              onChange: setMetricScope,
+              options: [
+                "All Placements",
+                "Traffic & Reach",
+                "CTR & Clicks",
+                "Revenue Focus",
+              ],
+            },
+          ]}
+        />
       </SectionCard>
 
       <div className="analytics-kpis">

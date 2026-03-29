@@ -1,4 +1,5 @@
 import { useState } from "react";
+import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
@@ -25,35 +26,34 @@ function CustomerSpendingPage() {
         title="Customer Spending Filters"
         description="Narrow the reporting period and customer segment."
       >
-        <div className="customer-spending-filters customer-spending-filters--padded">
-          <div className="customer-spending-field">
-            <label htmlFor="customer-date-range">Date Range</label>
-            <select
-              id="customer-date-range"
-              value={dateRange}
-              onChange={(event) => setDateRange(event.target.value)}
-            >
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-              <option>Last 90 Days</option>
-              <option>This Year</option>
-            </select>
-          </div>
-
-          <div className="customer-spending-field">
-            <label htmlFor="customer-segment">Customer Segment</label>
-            <select
-              id="customer-segment"
-              value={customerSegment}
-              onChange={(event) => setCustomerSegment(event.target.value)}
-            >
-              <option>All Customers</option>
-              <option>Top Spenders</option>
-              <option>Returning Buyers</option>
-              <option>New Customers</option>
-            </select>
-          </div>
-        </div>
+        <FilterBar
+          fields={[
+            {
+              id: "customer-spending-date-range",
+              label: "Date Range",
+              value: dateRange,
+              onChange: setDateRange,
+              options: [
+                "Last 7 Days",
+                "Last 30 Days",
+                "Last 90 Days",
+                "This Year",
+              ],
+            },
+            {
+              id: "customer-segment",
+              label: "Customer Segment",
+              value: customerSegment,
+              onChange: setCustomerSegment,
+              options: [
+                "All Customers",
+                "Top Spenders",
+                "Returning Buyers",
+                "New Customers",
+              ],
+            },
+          ]}
+        />
       </SectionCard>
 
       <div className="customer-spending-cards">

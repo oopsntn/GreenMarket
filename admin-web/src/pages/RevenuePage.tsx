@@ -1,4 +1,5 @@
 import { useState } from "react";
+import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
@@ -25,35 +26,34 @@ function RevenuePage() {
         title="Revenue Filters"
         description="Narrow the reporting period and placement scope."
       >
-        <div className="revenue-filters revenue-filters--padded">
-          <div className="revenue-field">
-            <label htmlFor="date-range">Date Range</label>
-            <select
-              id="date-range"
-              value={dateRange}
-              onChange={(event) => setDateRange(event.target.value)}
-            >
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-              <option>Last 90 Days</option>
-              <option>This Year</option>
-            </select>
-          </div>
-
-          <div className="revenue-field">
-            <label htmlFor="slot-filter">Placement Slot</label>
-            <select
-              id="slot-filter"
-              value={slotFilter}
-              onChange={(event) => setSlotFilter(event.target.value)}
-            >
-              <option>All Slots</option>
-              <option>Home Top</option>
-              <option>Category Top</option>
-              <option>Search Boost</option>
-            </select>
-          </div>
-        </div>
+        <FilterBar
+          fields={[
+            {
+              id: "revenue-date-range",
+              label: "Date Range",
+              value: dateRange,
+              onChange: setDateRange,
+              options: [
+                "Last 7 Days",
+                "Last 30 Days",
+                "Last 90 Days",
+                "This Year",
+              ],
+            },
+            {
+              id: "revenue-slot-filter",
+              label: "Placement Slot",
+              value: slotFilter,
+              onChange: setSlotFilter,
+              options: [
+                "All Slots",
+                "Home Top",
+                "Category Top",
+                "Search Boost",
+              ],
+            },
+          ]}
+        />
       </SectionCard>
 
       <div className="revenue-cards">

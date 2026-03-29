@@ -1,4 +1,5 @@
 import { useState } from "react";
+import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
@@ -23,35 +24,34 @@ function DashboardPage() {
         title="Dashboard Filters"
         description="Adjust the KPI time range and overview scope."
       >
-        <div className="dashboard-filters">
-          <div className="dashboard-field">
-            <label htmlFor="dashboard-date-range">Date Range</label>
-            <select
-              id="dashboard-date-range"
-              value={dateRange}
-              onChange={(event) => setDateRange(event.target.value)}
-            >
-              <option>Last 7 Days</option>
-              <option>Last 30 Days</option>
-              <option>Last 90 Days</option>
-              <option>This Year</option>
-            </select>
-          </div>
-
-          <div className="dashboard-field">
-            <label htmlFor="dashboard-overview-scope">Overview Scope</label>
-            <select
-              id="dashboard-overview-scope"
-              value={overviewScope}
-              onChange={(event) => setOverviewScope(event.target.value)}
-            >
-              <option>All Metrics</option>
-              <option>Users & Shops</option>
-              <option>Posts & Moderation</option>
-              <option>Business Overview</option>
-            </select>
-          </div>
-        </div>
+        <FilterBar
+          fields={[
+            {
+              id: "dashboard-date-range",
+              label: "Date Range",
+              value: dateRange,
+              onChange: setDateRange,
+              options: [
+                "Last 7 Days",
+                "Last 30 Days",
+                "Last 90 Days",
+                "This Year",
+              ],
+            },
+            {
+              id: "dashboard-overview-scope",
+              label: "Overview Scope",
+              value: overviewScope,
+              onChange: setOverviewScope,
+              options: [
+                "All Metrics",
+                "Users & Shops",
+                "Posts & Moderation",
+                "Business Overview",
+              ],
+            },
+          ]}
+        />
       </SectionCard>
 
       <div className="dashboard-cards">
