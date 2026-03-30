@@ -12,6 +12,10 @@ export type Promotion = {
   status: PromotionStatus;
   budget: string;
   note: string;
+  canPause: boolean;
+  canResume: boolean;
+  pauseBlockedReason?: string;
+  resumeBlockedReason?: string;
 };
 
 export type PromotionSummaryCard = {

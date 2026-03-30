@@ -40,6 +40,12 @@
   color: #223127;
 }
 
+.promotions-directory {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .promotions-table-wrapper {
   overflow-x: hidden;
 }
@@ -178,6 +184,42 @@
   transform: none;
 }
 
+.promotions-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.promotions-pagination__info {
+  font-size: 14px;
+  color: #6b7b6d;
+}
+
+.promotions-pagination__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.promotions-pagination__actions button {
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 12px;
+  background-color: #f3f7f1;
+  color: #486150;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promotions-pagination__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .promotions-modal__content {
   display: flex;
   flex-direction: column;
@@ -222,6 +264,15 @@
   resize: none;
 }
 
+.promotions-modal__notice {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background-color: #fff8e1;
+  color: #8d6e00;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .promotions-modal__actions {
   display: flex;
   justify-content: flex-end;
@@ -258,6 +309,13 @@
   box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
 }
 
+.promotions-modal__pause:disabled,
+.promotions-modal__resume:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
 @media (max-width: 1200px) {
   .promotions-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -291,6 +349,12 @@
 
   .promotions-modal__grid {
     grid-template-columns: 1fr;
+  }
+
+  .promotions-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 20px 20px;
   }
 }
 

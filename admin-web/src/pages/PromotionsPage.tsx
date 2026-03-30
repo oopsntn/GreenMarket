@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -40,6 +40,8 @@ const statusFilterOptions: Array<PromotionStatus | "All"> = [
   "Expired",
 ];
 
+const PAGE_SIZE = 5;
+
 function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>(
     promotionService.getPromotions(),
@@ -56,6 +58,7 @@ function PromotionsPage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     PromotionStatus | "All"
   >("All");
+  const [page, setPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     promotionId: null,
@@ -113,58 +116,6 @@ function PromotionsPage() {
     });
   };
 
-  const handleUpdateStatus = (promotion: Promotion) => {
-    if (promotion.status === "Active") {
-      setPromotions((prev) =>
-        promotionService.updatePromotionStatus(prev, promotion.id, "Paused"),
-      );
-      return;
-    }
-
-    if (promotion.status === "Paused") {
-      setPromotions((prev) =>
-        promotionService.updatePromotionStatus(prev, promotion.id, "Active"),
-      );
-    }
-  };
-
-  const handleConfirmAction = () => {
-    if (confirmState.promotionId === null || confirmState.action === null)
-      return;
-
-    const targetPromotion = promotions.find(
-      (item) => item.id === confirmState.promotionId,
-    );
-    if (!targetPromotion) {
-      closeConfirmDialog();
-      return;
-    }
-
-    handleUpdateStatus(targetPromotion);
-
-    if (confirmState.action === "pause") {
-      showToast(
-        `${targetPromotion.postTitle} has been paused successfully.`,
-        "info",
-      );
-    } else {
-      showToast(`${targetPromotion.postTitle} has been resumed successfully.`);
-    }
-
-    if (selectedPromotion?.id === targetPromotion.id) {
-      setSelectedPromotion((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: confirmState.action === "pause" ? "Paused" : "Active",
-            }
-          : null,
-      );
-    }
-
-    closeConfirmDialog();
-  };
-
   const filteredPromotions = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
@@ -185,6 +136,26 @@ function PromotionsPage() {
       return matchesKeyword && matchesSlot && matchesStatus;
     });
   }, [promotions, searchKeyword, selectedSlotFilter, selectedStatusFilter]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredPromotions.length / PAGE_SIZE),
+  );
+
+  const paginatedPromotions = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredPromotions.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredPromotions, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword, selectedSlotFilter, selectedStatusFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const confirmPromotion =
     confirmState.promotionId !== null
@@ -215,6 +186,121 @@ function PromotionsPage() {
   > = {
     pause: "danger",
     resume: "success",
+  };
+
+  const handleActionClick = (promotion: Promotion, action: ConfirmAction) => {
+    if (action === "pause") {
+      if (!promotionService.canPausePromotion(promotion)) {
+        showToast(
+          promotionService.getActionBlockedReason(promotion, "pause"),
+          "error",
+        );
+        return;
+      }
+    }
+
+    if (action === "resume") {
+      if (!promotionService.canResumePromotion(promotion)) {
+        showToast(
+          promotionService.getActionBlockedReason(promotion, "resume"),
+          "error",
+        );
+        return;
+      }
+    }
+
+    openConfirmDialog(promotion.id, action);
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmState.promotionId === null || confirmState.action === null)
+      return;
+
+    const targetPromotion = promotions.find(
+      (item) => item.id === confirmState.promotionId,
+    );
+    if (!targetPromotion) {
+      closeConfirmDialog();
+      return;
+    }
+
+    if (confirmState.action === "pause") {
+      if (!promotionService.canPausePromotion(targetPromotion)) {
+        showToast(
+          promotionService.getActionBlockedReason(targetPromotion, "pause"),
+          "error",
+        );
+        closeConfirmDialog();
+        return;
+      }
+
+      setPromotions((prev) =>
+        promotionService.updatePromotionStatus(
+          prev,
+          targetPromotion.id,
+          "Paused",
+        ),
+      );
+
+      showToast(
+        `${targetPromotion.postTitle} has been paused successfully.`,
+        "info",
+      );
+
+      if (selectedPromotion?.id === targetPromotion.id) {
+        setSelectedPromotion((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "Paused",
+                canPause: false,
+                canResume: true,
+                pauseBlockedReason: "This promotion is already paused.",
+                resumeBlockedReason: undefined,
+              }
+            : null,
+        );
+      }
+    }
+
+    if (confirmState.action === "resume") {
+      if (!promotionService.canResumePromotion(targetPromotion)) {
+        showToast(
+          promotionService.getActionBlockedReason(targetPromotion, "resume"),
+          "error",
+        );
+        closeConfirmDialog();
+        return;
+      }
+
+      setPromotions((prev) =>
+        promotionService.updatePromotionStatus(
+          prev,
+          targetPromotion.id,
+          "Active",
+        ),
+      );
+
+      showToast(`${targetPromotion.postTitle} has been resumed successfully.`);
+
+      if (selectedPromotion?.id === targetPromotion.id) {
+        setSelectedPromotion((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "Active",
+                canPause: true,
+                canResume: false,
+                pauseBlockedReason: undefined,
+                resumeBlockedReason:
+                  "This promotion is already active and does not need resume action.",
+              }
+            : null,
+        );
+      }
+    }
+
+    closeConfirmDialog();
   };
 
   return (
@@ -299,101 +385,130 @@ function PromotionsPage() {
             description="No promotions match your current search or filter settings. Try another condition to continue."
           />
         ) : (
-          <div className="promotions-table-wrapper">
-            <table className="promotions-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Post Title</th>
-                  <th>Owner</th>
-                  <th>Placement Slot</th>
-                  <th>Package</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredPromotions.map((promotion) => (
-                  <tr key={promotion.id}>
-                    <td>#{promotion.id}</td>
-                    <td>{promotion.postTitle}</td>
-                    <td>{promotion.owner}</td>
-                    <td>
-                      <StatusBadge label={promotion.slot} variant="slot" />
-                    </td>
-                    <td>{promotion.packageName}</td>
-                    <td>{promotion.startDate}</td>
-                    <td>{promotion.endDate}</td>
-                    <td>
-                      <StatusBadge
-                        label={promotion.status}
-                        variant={
-                          promotion.status === "Active"
-                            ? "active"
-                            : promotion.status === "Paused"
-                              ? "paused"
-                              : promotion.status === "Scheduled"
-                                ? "pending"
-                                : "expired"
-                        }
-                      />
-                    </td>
-                    <td>
-                      <div className="promotions-actions">
-                        <button
-                          type="button"
-                          className="promotions-actions__view"
-                          onClick={() => openViewModal(promotion)}
-                        >
-                          View
-                        </button>
-
-                        {promotion.status === "Active" ? (
-                          <button
-                            type="button"
-                            className="promotions-actions__pause"
-                            onClick={() =>
-                              openConfirmDialog(promotion.id, "pause")
-                            }
-                          >
-                            Pause
-                          </button>
-                        ) : promotion.status === "Paused" ? (
-                          <button
-                            type="button"
-                            className="promotions-actions__resume"
-                            onClick={() =>
-                              openConfirmDialog(promotion.id, "resume")
-                            }
-                          >
-                            Resume
-                          </button>
-                        ) : promotion.status === "Scheduled" ? (
-                          <button
-                            type="button"
-                            className="promotions-actions__disabled"
-                            disabled
-                          >
-                            Upcoming
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="promotions-actions__disabled"
-                            disabled
-                          >
-                            Closed
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <div className="promotions-directory">
+            <div className="promotions-table-wrapper">
+              <table className="promotions-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Post Title</th>
+                    <th>Owner</th>
+                    <th>Placement Slot</th>
+                    <th>Package</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+
+                <tbody>
+                  {paginatedPromotions.map((promotion) => (
+                    <tr key={promotion.id}>
+                      <td>#{promotion.id}</td>
+                      <td>{promotion.postTitle}</td>
+                      <td>{promotion.owner}</td>
+                      <td>
+                        <StatusBadge label={promotion.slot} variant="slot" />
+                      </td>
+                      <td>{promotion.packageName}</td>
+                      <td>{promotion.startDate}</td>
+                      <td>{promotion.endDate}</td>
+                      <td>
+                        <StatusBadge
+                          label={promotion.status}
+                          variant={
+                            promotion.status === "Active"
+                              ? "active"
+                              : promotion.status === "Paused"
+                                ? "paused"
+                                : promotion.status === "Scheduled"
+                                  ? "pending"
+                                  : "expired"
+                          }
+                        />
+                      </td>
+                      <td>
+                        <div className="promotions-actions">
+                          <button
+                            type="button"
+                            className="promotions-actions__view"
+                            onClick={() => openViewModal(promotion)}
+                          >
+                            View
+                          </button>
+
+                          {promotion.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="promotions-actions__pause"
+                              onClick={() =>
+                                handleActionClick(promotion, "pause")
+                              }
+                            >
+                              Pause
+                            </button>
+                          ) : promotion.status === "Paused" ? (
+                            <button
+                              type="button"
+                              className="promotions-actions__resume"
+                              onClick={() =>
+                                handleActionClick(promotion, "resume")
+                              }
+                            >
+                              Resume
+                            </button>
+                          ) : promotion.status === "Scheduled" ? (
+                            <button
+                              type="button"
+                              className="promotions-actions__disabled"
+                              disabled
+                              title="Scheduled promotions have not started yet."
+                            >
+                              Upcoming
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="promotions-actions__disabled"
+                              disabled
+                              title="Expired promotions are already closed."
+                            >
+                              Closed
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="promotions-pagination">
+              <span className="promotions-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="promotions-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </SectionCard>
@@ -466,6 +581,26 @@ function PromotionsPage() {
               <textarea value={selectedPromotion.note} rows={4} disabled />
             </div>
 
+            {selectedPromotion.status === "Active" &&
+              !promotionService.canPausePromotion(selectedPromotion) && (
+                <div className="promotions-modal__notice">
+                  {promotionService.getActionBlockedReason(
+                    selectedPromotion,
+                    "pause",
+                  )}
+                </div>
+              )}
+
+            {selectedPromotion.status === "Paused" &&
+              !promotionService.canResumePromotion(selectedPromotion) && (
+                <div className="promotions-modal__notice">
+                  {promotionService.getActionBlockedReason(
+                    selectedPromotion,
+                    "resume",
+                  )}
+                </div>
+              )}
+
             <div className="promotions-modal__actions">
               <button
                 type="button"
@@ -479,8 +614,17 @@ function PromotionsPage() {
                 <button
                   type="button"
                   className="promotions-modal__pause"
-                  onClick={() =>
-                    openConfirmDialog(selectedPromotion.id, "pause")
+                  onClick={() => handleActionClick(selectedPromotion, "pause")}
+                  disabled={
+                    !promotionService.canPausePromotion(selectedPromotion)
+                  }
+                  title={
+                    !promotionService.canPausePromotion(selectedPromotion)
+                      ? promotionService.getActionBlockedReason(
+                          selectedPromotion,
+                          "pause",
+                        )
+                      : "Pause this promotion"
                   }
                 >
                   Pause Promotion
@@ -489,8 +633,17 @@ function PromotionsPage() {
                 <button
                   type="button"
                   className="promotions-modal__resume"
-                  onClick={() =>
-                    openConfirmDialog(selectedPromotion.id, "resume")
+                  onClick={() => handleActionClick(selectedPromotion, "resume")}
+                  disabled={
+                    !promotionService.canResumePromotion(selectedPromotion)
+                  }
+                  title={
+                    !promotionService.canResumePromotion(selectedPromotion)
+                      ? promotionService.getActionBlockedReason(
+                          selectedPromotion,
+                          "resume",
+                        )
+                      : "Resume this promotion"
                   }
                 >
                   Resume Promotion
