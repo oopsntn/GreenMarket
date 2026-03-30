@@ -3,6 +3,7 @@ import { db } from "../../config/db";
 import { eq } from "drizzle-orm";
 import { promotionPackages, type NewPromotionPackage } from "../../models/schema/promotion-packages";
 import { placementSlots } from "../../models/schema/placement-slots";
+import { postPromotions } from "../../models/schema/post-promotions";
 import { type PromotionPackageParams } from "../../dtos/promotion";
 import { parseId } from "../../utils/parseId";
 
@@ -169,6 +170,18 @@ export const deletePromotionPackage = async (
             return;
         }
 
+        // Check for linked post promotions before deleting (CASCADE would silently delete them)
+        const linkedPromotions = await db
+            .select()
+            .from(postPromotions)
+            .where(eq(postPromotions.postPromotionPackageId, idNumber))
+            .limit(1);
+
+        if (linkedPromotions.length > 0) {
+            res.status(400).json({ error: "Cannot delete package that has active promotions linked to it" });
+            return;
+        }
+
         const [pkg] = await db
             .delete(promotionPackages)
             .where(eq(promotionPackages.promotionPackageId, idNumber))
@@ -185,10 +198,6 @@ export const deletePromotionPackage = async (
         });
     } catch (error) {
         console.error(error);
-        if ((error as any).code === "23503") {
-            res.status(400).json({ error: "Cannot delete package that has active promotions linked to it" });
-            return;
-        }
         res.status(500).json({ error: "Internal server error" });
     }
 };

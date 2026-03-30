@@ -118,6 +118,18 @@ export const deletePlacementSlot = async (
             return;
         }
 
+        // Check for linked promotion packages before deleting (CASCADE would silently delete them)
+        const linkedPackages = await db
+            .select()
+            .from(promotionPackages)
+            .where(eq(promotionPackages.promotionPackageSlotId, idNumber))
+            .limit(1);
+
+        if (linkedPackages.length > 0) {
+            res.status(400).json({ error: "Cannot delete slot that has promotion packages linked to it" });
+            return;
+        }
+
         const [slot] = await db
             .delete(placementSlots)
             .where(eq(placementSlots.placementSlotId, idNumber))
@@ -134,10 +146,6 @@ export const deletePlacementSlot = async (
         });
     } catch (error) {
         console.error(error);
-        if ((error as any).code === "23503") {
-            res.status(400).json({ error: "Cannot delete slot that has promotion packages linked to it" });
-            return;
-        }
         res.status(500).json({ error: "Internal server error" });
     }
 };
