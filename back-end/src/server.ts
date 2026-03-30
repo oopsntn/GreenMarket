@@ -21,8 +21,10 @@ import userCategoryRoutes from "./routes/user/category.route.ts";
 import userProfileRoutes from "./routes/user/profile.route.ts";
 import uploadRoutes from "./routes/upload.route.ts";
 import userPromotionRoutes from "./routes/user/promotion.route.ts";
+import userPaymentRoutes from "./routes/user/payment.route.ts";
 import { verifyToken, isAdmin } from "./middlewares/authMiddleware.ts";
 import path from "path";
+import "./services/promotionScheduler.ts";
 
 const app = express();
 app.use(cors());
@@ -48,6 +50,7 @@ app.use("/api/categories", userCategoryRoutes);
 app.use("/api/profile", userProfileRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/promotions", userPromotionRoutes);
+app.use("/api/payment", userPaymentRoutes);
 
 // Static files for uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));

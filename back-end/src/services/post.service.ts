@@ -1,6 +1,6 @@
 import { db } from "../config/db.ts";
-import { posts, postImages } from "../models/schema/index.ts";
-import { eq, and, or, ilike, gte, lte, sql, SQL, inArray } from "drizzle-orm";
+import { posts, postImages, postPromotions } from "../models/schema/index.ts";
+import { eq, and, or, ilike, gte, lte, sql, SQL, inArray, getTableColumns } from "drizzle-orm";
 import { GetPostsQueryDto } from "../dtos/post.ts";
 
 export class PostService {
@@ -54,13 +54,28 @@ export class PostService {
             }
         }
 
-        const queryBuilder = db.select().from(posts);
+        const queryBuilder = db.select({
+            ...getTableColumns(posts),
+            isPromoted: sql<boolean>`CASE WHEN ${postPromotions.postPromotionId} IS NOT NULL THEN true ELSE false END`.as('isPromoted')
+        })
+        .from(posts)
+        .leftJoin(
+            postPromotions,
+            and(
+                eq(posts.postId, postPromotions.postPromotionPostId),
+                eq(postPromotions.postPromotionStatus, "active"),
+                sql`${postPromotions.postPromotionEndAt} > NOW()`
+            )
+        );
 
         const data = await queryBuilder
             .where(and(...conditions))
             .limit(limit)
             .offset(offset)
-            .orderBy(sql`${posts.postCreatedAt} DESC`);
+            .orderBy(
+                sql`CASE WHEN ${postPromotions.postPromotionId} IS NOT NULL THEN 1 ELSE 0 END DESC`,
+                sql`${posts.postCreatedAt} DESC`
+            );
 
         const countResult = await db.select({ count: sql<number>`count(*)` })
             .from(posts)
@@ -70,7 +85,7 @@ export class PostService {
         const totalPages = Math.ceil(totalItems / limit);
 
         if (data.length > 0) {
-            const postIds = data.map(p => p.postId);
+            const postIds = data.map(p => p.postId as number);
             const images = await db.select()
                 .from(postImages)
                 .where(inArray(postImages.postId, postIds));

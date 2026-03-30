@@ -313,6 +313,7 @@ CREATE TABLE post_promotions (
 CREATE TABLE payment_txn (
     payment_txn_id SERIAL PRIMARY KEY,
     payment_txn_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    payment_txn_post_id INTEGER REFERENCES posts(post_id),
     payment_txn_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
     payment_txn_amount DECIMAL(15, 2),
     payment_txn_provider VARCHAR(50),
