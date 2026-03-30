@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import "./BaseModal.css";
 
 type BaseModalProps = Readonly<{
@@ -20,13 +20,26 @@ function BaseModal({
 }: BaseModalProps) {
   if (!isOpen) return null;
 
+  const handleBackdropClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="base-modal-backdrop">
-      <div className="base-modal" style={{ maxWidth }}>
+    <div className="base-modal-backdrop" onClick={handleBackdropClick}>
+      <div
+        className="base-modal"
+        style={{ maxWidth }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="base-modal-title"
+        aria-describedby="base-modal-description"
+      >
         <div className="base-modal__header">
           <div>
-            <h3>{title}</h3>
-            <p>{description}</p>
+            <h3 id="base-modal-title">{title}</h3>
+            <p id="base-modal-description">{description}</p>
           </div>
 
           <button type="button" className="base-modal__close" onClick={onClose}>
