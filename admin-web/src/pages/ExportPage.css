@@ -10,41 +10,14 @@
   gap: 24px;
 }
 
-.export-card,
-.export-history-card {
-  background-color: #ffffff;
-  border: 1px solid #edf2e8;
-  border-radius: 20px;
-  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
-}
-
-.export-card {
-  padding: 24px;
-}
-
-.export-history-card {
-  overflow: hidden;
-}
-
-.export-card__header {
-  margin-bottom: 20px;
-}
-
-.export-card__header h3 {
-  font-size: 20px;
-  color: #1b4332;
-  margin-bottom: 6px;
-}
-
-.export-card__header p {
-  font-size: 14px;
-  color: #6b7b6d;
-}
-
 .export-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.export-form--padded {
+  padding: 24px;
 }
 
 .export-field {
@@ -115,4 +88,10 @@
 
 .export-history-table td {
   color: #223127;
+}
+
+@media (max-width: 1024px) {
+  .export-grid {
+    grid-template-columns: 1fr;
+  }
 }

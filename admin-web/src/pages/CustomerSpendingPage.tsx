@@ -1,4 +1,8 @@
+import { useState } from "react";
+import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
+import SectionCard from "../components/SectionCard";
+import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import { customerSpendingService } from "../services/customerSpendingService";
 import "./CustomerSpendingPage.css";
@@ -6,6 +10,9 @@ import "./CustomerSpendingPage.css";
 function CustomerSpendingPage() {
   const summaryCards = customerSpendingService.getCustomerSpendingCards();
   const rows = customerSpendingService.getCustomerSpendingRows();
+
+  const [dateRange, setDateRange] = useState("Last 30 Days");
+  const [customerSegment, setCustomerSegment] = useState("All Customers");
 
   return (
     <div className="customer-spending-page">
@@ -15,44 +22,56 @@ function CustomerSpendingPage() {
         actionLabel="Export Customer Report"
       />
 
-      <div className="customer-spending-filters">
-        <div className="customer-spending-field">
-          <label htmlFor="customer-date-range">Date Range</label>
-          <select id="customer-date-range" defaultValue="Last 30 Days">
-            <option>Last 7 Days</option>
-            <option>Last 30 Days</option>
-            <option>Last 90 Days</option>
-            <option>This Year</option>
-          </select>
-        </div>
-
-        <div className="customer-spending-field">
-          <label htmlFor="customer-segment">Customer Segment</label>
-          <select id="customer-segment" defaultValue="All Customers">
-            <option>All Customers</option>
-            <option>Top Spenders</option>
-            <option>Returning Buyers</option>
-            <option>New Customers</option>
-          </select>
-        </div>
-      </div>
+      <SectionCard
+        title="Customer Spending Filters"
+        description="Narrow the reporting period and customer segment."
+      >
+        <FilterBar
+          fields={[
+            {
+              id: "customer-spending-date-range",
+              label: "Date Range",
+              value: dateRange,
+              onChange: setDateRange,
+              options: [
+                "Last 7 Days",
+                "Last 30 Days",
+                "Last 90 Days",
+                "This Year",
+              ],
+            },
+            {
+              id: "customer-segment",
+              label: "Customer Segment",
+              value: customerSegment,
+              onChange: setCustomerSegment,
+              options: [
+                "All Customers",
+                "Top Spenders",
+                "Returning Buyers",
+                "New Customers",
+              ],
+            },
+          ]}
+        />
+      </SectionCard>
 
       <div className="customer-spending-cards">
         {summaryCards.map((card) => (
-          <div key={card.title} className="customer-spending-card">
-            <span>{card.title}</span>
-            <strong>{card.value}</strong>
-            <small>{card.note}</small>
-          </div>
+          <SectionCard key={card.title}>
+            <StatCard
+              title={card.title}
+              value={card.value}
+              subtitle={`${card.note} • ${dateRange}`}
+            />
+          </SectionCard>
         ))}
       </div>
 
-      <section className="customer-spending-panel">
-        <div className="customer-spending-panel__header">
-          <h3>Top Customer Spending</h3>
-          <span>Current reporting period</span>
-        </div>
-
+      <SectionCard
+        title="Top Customer Spending"
+        description={`${dateRange} • ${customerSegment}`}
+      >
         <div className="customer-spending-table-wrapper">
           <table className="customer-spending-table">
             <thead>
@@ -84,7 +103,7 @@ function CustomerSpendingPage() {
             </tbody>
           </table>
         </div>
-      </section>
+      </SectionCard>
     </div>
   );
 }

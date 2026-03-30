@@ -3,6 +3,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { promotionService } from "../services/promotionService";
@@ -154,7 +155,6 @@ function PromotionsPage() {
       <PageHeader
         title="Promotions Management"
         description="Manage boosted posts, placement slots, and promotion status."
-        actionLabel="+ Add Promotion"
       />
 
       <SearchToolbar
@@ -163,98 +163,103 @@ function PromotionsPage() {
         onSearchChange={setSearchKeyword}
       />
 
-      {filteredPromotions.length === 0 ? (
-        <EmptyState
-          title="No promotions found"
-          description="No promotions match your current search. Try another keyword to continue."
-        />
-      ) : (
-        <div className="promotions-table-wrapper">
-          <table className="promotions-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Post Title</th>
-                <th>Owner</th>
-                <th>Placement Slot</th>
-                <th>Package</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredPromotions.map((promotion) => (
-                <tr key={promotion.id}>
-                  <td>#{promotion.id}</td>
-                  <td>{promotion.postTitle}</td>
-                  <td>{promotion.owner}</td>
-                  <td>
-                    <StatusBadge label={promotion.slot} variant="slot" />
-                  </td>
-                  <td>{promotion.packageName}</td>
-                  <td>{promotion.startDate}</td>
-                  <td>{promotion.endDate}</td>
-                  <td>
-                    <StatusBadge
-                      label={promotion.status}
-                      variant={
-                        promotion.status === "Active"
-                          ? "active"
-                          : promotion.status === "Paused"
-                            ? "paused"
-                            : "expired"
-                      }
-                    />
-                  </td>
-                  <td>
-                    <div className="promotions-actions">
-                      <button
-                        type="button"
-                        className="promotions-actions__view"
-                      >
-                        View
-                      </button>
-
-                      {promotion.status === "Active" ? (
-                        <button
-                          type="button"
-                          className="promotions-actions__pause"
-                          onClick={() =>
-                            openConfirmDialog(promotion.id, "pause")
-                          }
-                        >
-                          Pause
-                        </button>
-                      ) : promotion.status === "Paused" ? (
-                        <button
-                          type="button"
-                          className="promotions-actions__resume"
-                          onClick={() =>
-                            openConfirmDialog(promotion.id, "resume")
-                          }
-                        >
-                          Resume
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="promotions-actions__disabled"
-                          disabled
-                        >
-                          Closed
-                        </button>
-                      )}
-                    </div>
-                  </td>
+      <SectionCard
+        title="Promotion Directory"
+        description="Review promoted posts, package details, schedule, and current status."
+      >
+        {filteredPromotions.length === 0 ? (
+          <EmptyState
+            title="No promotions found"
+            description="No promotions match your current search. Try another keyword to continue."
+          />
+        ) : (
+          <div className="promotions-table-wrapper">
+            <table className="promotions-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Post Title</th>
+                  <th>Owner</th>
+                  <th>Placement Slot</th>
+                  <th>Package</th>
+                  <th>Start Date</th>
+                  <th>End Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+
+              <tbody>
+                {filteredPromotions.map((promotion) => (
+                  <tr key={promotion.id}>
+                    <td>#{promotion.id}</td>
+                    <td>{promotion.postTitle}</td>
+                    <td>{promotion.owner}</td>
+                    <td>
+                      <StatusBadge label={promotion.slot} variant="slot" />
+                    </td>
+                    <td>{promotion.packageName}</td>
+                    <td>{promotion.startDate}</td>
+                    <td>{promotion.endDate}</td>
+                    <td>
+                      <StatusBadge
+                        label={promotion.status}
+                        variant={
+                          promotion.status === "Active"
+                            ? "active"
+                            : promotion.status === "Paused"
+                              ? "paused"
+                              : "expired"
+                        }
+                      />
+                    </td>
+                    <td>
+                      <div className="promotions-actions">
+                        <button
+                          type="button"
+                          className="promotions-actions__view"
+                        >
+                          View
+                        </button>
+
+                        {promotion.status === "Active" ? (
+                          <button
+                            type="button"
+                            className="promotions-actions__pause"
+                            onClick={() =>
+                              openConfirmDialog(promotion.id, "pause")
+                            }
+                          >
+                            Pause
+                          </button>
+                        ) : promotion.status === "Paused" ? (
+                          <button
+                            type="button"
+                            className="promotions-actions__resume"
+                            onClick={() =>
+                              openConfirmDialog(promotion.id, "resume")
+                            }
+                          >
+                            Resume
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="promotions-actions__disabled"
+                            disabled
+                          >
+                            Closed
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
 
       <ConfirmDialog
         isOpen={confirmState.isOpen}

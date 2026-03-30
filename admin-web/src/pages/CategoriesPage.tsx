@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { emptyCategoryForm } from "../mock-data/categories";
@@ -173,16 +174,18 @@ function CategoriesPage() {
     closeConfirmDialog();
   };
 
-  const filteredCategories = categories.filter((category) => {
+  const filteredCategories = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return true;
+    if (!keyword) return categories;
 
-    return (
-      category.name.toLowerCase().includes(keyword) ||
-      category.slug.toLowerCase().includes(keyword)
-    );
-  });
+    return categories.filter((category) => {
+      return (
+        category.name.toLowerCase().includes(keyword) ||
+        category.slug.toLowerCase().includes(keyword)
+      );
+    });
+  }, [categories, searchKeyword]);
 
   const modalTitle =
     modalMode === "add"
@@ -190,6 +193,13 @@ function CategoriesPage() {
       : modalMode === "edit"
         ? "Edit Category"
         : "Category Details";
+
+  const modalDescription =
+    modalMode === "add"
+      ? "Create a new category and define its basic settings."
+      : modalMode === "edit"
+        ? "Update category information, slug, status, and attribute count."
+        : "Review category information and current activation status.";
 
   const confirmCategory =
     confirmState.categoryId !== null
@@ -236,94 +246,99 @@ function CategoriesPage() {
         onSearchChange={setSearchKeyword}
       />
 
-      {filteredCategories.length === 0 ? (
-        <EmptyState
-          title="No categories found"
-          description="No categories match your current search. Try another keyword or create a new category."
-        />
-      ) : (
-        <div className="categories-table-wrapper">
-          <table className="categories-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Category Name</th>
-                <th>Slug</th>
-                <th>Attributes</th>
-                <th>Status</th>
-                <th>Created Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredCategories.map((category) => (
-                <tr key={category.id}>
-                  <td>#{category.id}</td>
-                  <td>{category.name}</td>
-                  <td>{category.slug}</td>
-                  <td>{category.attributesCount}</td>
-                  <td>
-                    <StatusBadge
-                      label={category.status}
-                      variant={
-                        category.status === "Active" ? "active" : "disabled"
-                      }
-                    />
-                  </td>
-                  <td>{category.createdAt}</td>
-                  <td>
-                    <div className="categories-actions">
-                      <button
-                        type="button"
-                        className="categories-actions__view"
-                        onClick={() => openViewModal(category)}
-                      >
-                        View
-                      </button>
-
-                      <button
-                        type="button"
-                        className="categories-actions__edit"
-                        onClick={() => openEditModal(category)}
-                      >
-                        Edit
-                      </button>
-
-                      {category.status === "Active" ? (
-                        <button
-                          type="button"
-                          className="categories-actions__disable"
-                          onClick={() =>
-                            openConfirmDialog(category.id, "disable")
-                          }
-                        >
-                          Disable
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="categories-actions__enable"
-                          onClick={() =>
-                            openConfirmDialog(category.id, "enable")
-                          }
-                        >
-                          Enable
-                        </button>
-                      )}
-                    </div>
-                  </td>
+      <SectionCard
+        title="Category Directory"
+        description="Review category information, status, and attribute counts."
+      >
+        {filteredCategories.length === 0 ? (
+          <EmptyState
+            title="No categories found"
+            description="No categories match your current search. Try another keyword or create a new category."
+          />
+        ) : (
+          <div className="categories-table-wrapper">
+            <table className="categories-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Category Name</th>
+                  <th>Slug</th>
+                  <th>Attributes</th>
+                  <th>Status</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+
+              <tbody>
+                {filteredCategories.map((category) => (
+                  <tr key={category.id}>
+                    <td>#{category.id}</td>
+                    <td>{category.name}</td>
+                    <td>{category.slug}</td>
+                    <td>{category.attributesCount}</td>
+                    <td>
+                      <StatusBadge
+                        label={category.status}
+                        variant={
+                          category.status === "Active" ? "active" : "disabled"
+                        }
+                      />
+                    </td>
+                    <td>{category.createdAt}</td>
+                    <td>
+                      <div className="categories-actions">
+                        <button
+                          type="button"
+                          className="categories-actions__view"
+                          onClick={() => openViewModal(category)}
+                        >
+                          View
+                        </button>
+
+                        <button
+                          type="button"
+                          className="categories-actions__edit"
+                          onClick={() => openEditModal(category)}
+                        >
+                          Edit
+                        </button>
+
+                        {category.status === "Active" ? (
+                          <button
+                            type="button"
+                            className="categories-actions__disable"
+                            onClick={() =>
+                              openConfirmDialog(category.id, "disable")
+                            }
+                          >
+                            Disable
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="categories-actions__enable"
+                            onClick={() =>
+                              openConfirmDialog(category.id, "enable")
+                            }
+                          >
+                            Enable
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
 
       <BaseModal
         isOpen={isModalOpen}
         title={modalTitle}
-        description="Manage category information and settings."
+        description={modalDescription}
         onClose={closeModal}
       >
         <form className="categories-modal__form" onSubmit={handleSubmit}>

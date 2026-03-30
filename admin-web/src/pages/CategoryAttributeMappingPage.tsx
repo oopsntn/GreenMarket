@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { categoryMappingService } from "../services/categoryMappingService";
@@ -108,17 +109,19 @@ function CategoryAttributeMappingPage() {
     closeConfirmDialog();
   };
 
-  const filteredMappings = mappings.filter((item) => {
+  const filteredMappings = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return true;
+    if (!keyword) return mappings;
 
-    return (
-      item.categoryName.toLowerCase().includes(keyword) ||
-      item.attributeName.toLowerCase().includes(keyword) ||
-      item.attributeCode.toLowerCase().includes(keyword)
-    );
-  });
+    return mappings.filter((item) => {
+      return (
+        item.categoryName.toLowerCase().includes(keyword) ||
+        item.attributeName.toLowerCase().includes(keyword) ||
+        item.attributeCode.toLowerCase().includes(keyword)
+      );
+    });
+  }, [mappings, searchKeyword]);
 
   const confirmMapping =
     confirmState.mappingId !== null
@@ -170,86 +173,95 @@ function CategoryAttributeMappingPage() {
         onSearchChange={setSearchKeyword}
       />
 
-      {filteredMappings.length === 0 ? (
-        <EmptyState
-          title="No mappings found"
-          description="No category-attribute mappings match your current search. Try another keyword to continue."
-        />
-      ) : (
-        <div className="mapping-table-wrapper">
-          <table className="mapping-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Category</th>
-                <th>Attribute</th>
-                <th>Code</th>
-                <th>Required</th>
-                <th>Display Order</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredMappings.map((item) => (
-                <tr key={item.id}>
-                  <td>#{item.id}</td>
-                  <td>{item.categoryName}</td>
-                  <td>{item.attributeName}</td>
-                  <td>{item.attributeCode}</td>
-                  <td>
-                    <StatusBadge
-                      label={item.required ? "Required" : "Optional"}
-                      variant={item.required ? "required" : "optional"}
-                    />
-                  </td>
-                  <td>{item.displayOrder}</td>
-                  <td>
-                    <StatusBadge
-                      label={item.status}
-                      variant={item.status === "Active" ? "active" : "disabled"}
-                    />
-                  </td>
-                  <td>
-                    <div className="mapping-actions">
-                      <button type="button" className="mapping-actions__edit">
-                        Edit
-                      </button>
-
-                      {item.status === "Active" ? (
-                        <button
-                          type="button"
-                          className="mapping-actions__disable"
-                          onClick={() => openConfirmDialog(item.id, "disable")}
-                        >
-                          Disable
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="mapping-actions__enable"
-                          onClick={() => openConfirmDialog(item.id, "enable")}
-                        >
-                          Enable
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        className="mapping-actions__remove"
-                        onClick={() => openConfirmDialog(item.id, "remove")}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </td>
+      <SectionCard
+        title="Mapping Directory"
+        description="Review category-attribute relationships, requirement settings, and status."
+      >
+        {filteredMappings.length === 0 ? (
+          <EmptyState
+            title="No mappings found"
+            description="No category-attribute mappings match your current search. Try another keyword to continue."
+          />
+        ) : (
+          <div className="mapping-table-wrapper">
+            <table className="mapping-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Category</th>
+                  <th>Attribute</th>
+                  <th>Code</th>
+                  <th>Required</th>
+                  <th>Display Order</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+
+              <tbody>
+                {filteredMappings.map((item) => (
+                  <tr key={item.id}>
+                    <td>#{item.id}</td>
+                    <td>{item.categoryName}</td>
+                    <td>{item.attributeName}</td>
+                    <td>{item.attributeCode}</td>
+                    <td>
+                      <StatusBadge
+                        label={item.required ? "Required" : "Optional"}
+                        variant={item.required ? "required" : "optional"}
+                      />
+                    </td>
+                    <td>{item.displayOrder}</td>
+                    <td>
+                      <StatusBadge
+                        label={item.status}
+                        variant={
+                          item.status === "Active" ? "active" : "disabled"
+                        }
+                      />
+                    </td>
+                    <td>
+                      <div className="mapping-actions">
+                        <button type="button" className="mapping-actions__edit">
+                          Edit
+                        </button>
+
+                        {item.status === "Active" ? (
+                          <button
+                            type="button"
+                            className="mapping-actions__disable"
+                            onClick={() =>
+                              openConfirmDialog(item.id, "disable")
+                            }
+                          >
+                            Disable
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="mapping-actions__enable"
+                            onClick={() => openConfirmDialog(item.id, "enable")}
+                          >
+                            Enable
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          className="mapping-actions__remove"
+                          onClick={() => openConfirmDialog(item.id, "remove")}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
 
       <ConfirmDialog
         isOpen={confirmState.isOpen}

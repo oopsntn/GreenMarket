@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
+import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
+import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { emptyAttributeForm } from "../mock-data/attributes";
@@ -175,16 +177,18 @@ function AttributesPage() {
     closeConfirmDialog();
   };
 
-  const filteredAttributes = attributes.filter((attribute) => {
+  const filteredAttributes = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return true;
+    if (!keyword) return attributes;
 
-    return (
-      attribute.name.toLowerCase().includes(keyword) ||
-      attribute.code.toLowerCase().includes(keyword)
-    );
-  });
+    return attributes.filter((attribute) => {
+      return (
+        attribute.name.toLowerCase().includes(keyword) ||
+        attribute.code.toLowerCase().includes(keyword)
+      );
+    });
+  }, [attributes, searchKeyword]);
 
   const modalTitle =
     modalMode === "add"
@@ -192,6 +196,13 @@ function AttributesPage() {
       : modalMode === "edit"
         ? "Edit Attribute"
         : "Attribute Details";
+
+  const modalDescription =
+    modalMode === "add"
+      ? "Create a new attribute and define its input behavior."
+      : modalMode === "edit"
+        ? "Update attribute code, type, requirement, and status."
+        : "Review attribute information and current configuration.";
 
   const confirmAttribute =
     confirmState.attributeId !== null
@@ -239,96 +250,108 @@ function AttributesPage() {
         onSearchChange={setSearchKeyword}
       />
 
-      <div className="attributes-table-wrapper">
-        <table className="attributes-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Attribute Name</th>
-              <th>Code</th>
-              <th>Type</th>
-              <th>Required</th>
-              <th>Status</th>
-              <th>Created Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
+      <SectionCard
+        title="Attribute Directory"
+        description="Review attribute information, types, requirements, and status."
+      >
+        {filteredAttributes.length === 0 ? (
+          <EmptyState
+            title="No attributes found"
+            description="No attributes match your current search. Try another keyword or create a new attribute."
+          />
+        ) : (
+          <div className="attributes-table-wrapper">
+            <table className="attributes-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Attribute Name</th>
+                  <th>Code</th>
+                  <th>Type</th>
+                  <th>Required</th>
+                  <th>Status</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
 
-          <tbody>
-            {filteredAttributes.map((attribute) => (
-              <tr key={attribute.id}>
-                <td>#{attribute.id}</td>
-                <td>{attribute.name}</td>
-                <td>{attribute.code}</td>
-                <td>
-                  <StatusBadge label={attribute.type} variant="type" />
-                </td>
-                <td>
-                  <StatusBadge
-                    label={attribute.required ? "Required" : "Optional"}
-                    variant={attribute.required ? "required" : "optional"}
-                  />
-                </td>
-                <td>
-                  <StatusBadge
-                    label={attribute.status}
-                    variant={
-                      attribute.status === "Active" ? "active" : "disabled"
-                    }
-                  />
-                </td>
-                <td>{attribute.createdAt}</td>
-                <td>
-                  <div className="attributes-actions">
-                    <button
-                      type="button"
-                      className="attributes-actions__view"
-                      onClick={() => openViewModal(attribute)}
-                    >
-                      View
-                    </button>
-
-                    <button
-                      type="button"
-                      className="attributes-actions__edit"
-                      onClick={() => openEditModal(attribute)}
-                    >
-                      Edit
-                    </button>
-
-                    {attribute.status === "Active" ? (
-                      <button
-                        type="button"
-                        className="attributes-actions__disable"
-                        onClick={() =>
-                          openConfirmDialog(attribute.id, "disable")
+              <tbody>
+                {filteredAttributes.map((attribute) => (
+                  <tr key={attribute.id}>
+                    <td>#{attribute.id}</td>
+                    <td>{attribute.name}</td>
+                    <td>{attribute.code}</td>
+                    <td>
+                      <StatusBadge label={attribute.type} variant="type" />
+                    </td>
+                    <td>
+                      <StatusBadge
+                        label={attribute.required ? "Required" : "Optional"}
+                        variant={attribute.required ? "required" : "optional"}
+                      />
+                    </td>
+                    <td>
+                      <StatusBadge
+                        label={attribute.status}
+                        variant={
+                          attribute.status === "Active" ? "active" : "disabled"
                         }
-                      >
-                        Disable
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="attributes-actions__enable"
-                        onClick={() =>
-                          openConfirmDialog(attribute.id, "enable")
-                        }
-                      >
-                        Enable
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      />
+                    </td>
+                    <td>{attribute.createdAt}</td>
+                    <td>
+                      <div className="attributes-actions">
+                        <button
+                          type="button"
+                          className="attributes-actions__view"
+                          onClick={() => openViewModal(attribute)}
+                        >
+                          View
+                        </button>
+
+                        <button
+                          type="button"
+                          className="attributes-actions__edit"
+                          onClick={() => openEditModal(attribute)}
+                        >
+                          Edit
+                        </button>
+
+                        {attribute.status === "Active" ? (
+                          <button
+                            type="button"
+                            className="attributes-actions__disable"
+                            onClick={() =>
+                              openConfirmDialog(attribute.id, "disable")
+                            }
+                          >
+                            Disable
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="attributes-actions__enable"
+                            onClick={() =>
+                              openConfirmDialog(attribute.id, "enable")
+                            }
+                          >
+                            Enable
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SectionCard>
 
       <BaseModal
         isOpen={isModalOpen}
         title={modalTitle}
-        description="Manage attribute information and configuration."
+        description={modalDescription}
         onClose={closeModal}
       >
         <form className="attributes-modal__form" onSubmit={handleSubmit}>
