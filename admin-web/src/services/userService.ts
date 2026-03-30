@@ -10,7 +10,28 @@ import type {
 } from "../types/user";
 
 const DEFAULT_ADMIN_NAME = "System Administrator";
-const DEFAULT_DATE = "2026-03-29";
+
+const padNumber = (value: number) => String(value).padStart(2, "0");
+
+const getCurrentDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = padNumber(now.getMonth() + 1);
+  const day = padNumber(now.getDate());
+
+  return `${year}-${month}-${day}`;
+};
+
+const getCurrentDateTime = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = padNumber(now.getMonth() + 1);
+  const day = padNumber(now.getDate());
+  const hours = padNumber(now.getHours());
+  const minutes = padNumber(now.getMinutes());
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+};
 
 const getNextUserId = (users: User[]) => {
   if (users.length === 0) return 1;
@@ -32,19 +53,22 @@ export const userService = {
   },
 
   createUser(users: User[], formData: UserFormState): User[] {
+    const currentDate = getCurrentDate();
+    const currentDateTime = getCurrentDateTime();
+
     const newUser: User = {
       id: getNextUserId(users),
       fullName: formData.fullName.trim(),
       email: formData.email.trim(),
       role: formData.role,
       status: "Active",
-      joinedAt: DEFAULT_DATE,
+      joinedAt: currentDate,
       roleAssignments: [
         {
           id: 1,
           role: formData.role,
           assignedBy: DEFAULT_ADMIN_NAME,
-          assignedAt: DEFAULT_DATE,
+          assignedAt: currentDate,
           note: "Initial role assignment during account creation.",
         },
       ],
@@ -54,14 +78,14 @@ export const userService = {
           action: "Account Created",
           detail: "User account was created in the admin panel.",
           performedBy: DEFAULT_ADMIN_NAME,
-          performedAt: `${DEFAULT_DATE} 09:00`,
+          performedAt: currentDateTime,
         },
         {
           id: 2,
           action: "Role Assigned",
           detail: `Assigned role: ${formData.role}.`,
           performedBy: DEFAULT_ADMIN_NAME,
-          performedAt: `${DEFAULT_DATE} 09:01`,
+          performedAt: currentDateTime,
         },
       ],
     };
@@ -74,6 +98,9 @@ export const userService = {
     selectedUserId: number,
     formData: UserFormState,
   ): User[] {
+    const currentDate = getCurrentDate();
+    const currentDateTime = getCurrentDateTime();
+
     return users.map((user) => {
       if (user.id !== selectedUserId) return user;
 
@@ -87,7 +114,7 @@ export const userService = {
               id: getNextNestedId(user.roleAssignments),
               role: nextRole,
               assignedBy: DEFAULT_ADMIN_NAME,
-              assignedAt: DEFAULT_DATE,
+              assignedAt: currentDate,
               note: `Role changed from ${user.role} to ${nextRole}.`,
             },
           ]
@@ -100,7 +127,7 @@ export const userService = {
           action: "Profile Updated",
           detail: "User profile information was updated.",
           performedBy: DEFAULT_ADMIN_NAME,
-          performedAt: `${DEFAULT_DATE} 10:00`,
+          performedAt: currentDateTime,
         },
         ...(didRoleChange
           ? [
@@ -109,7 +136,7 @@ export const userService = {
                 action: "Role Changed",
                 detail: `Changed role from ${user.role} to ${nextRole}.`,
                 performedBy: DEFAULT_ADMIN_NAME,
-                performedAt: `${DEFAULT_DATE} 10:01`,
+                performedAt: currentDateTime,
               },
             ]
           : []),
@@ -127,6 +154,8 @@ export const userService = {
   },
 
   updateUserStatus(users: User[], userId: number, status: UserStatus): User[] {
+    const currentDateTime = getCurrentDateTime();
+
     return users.map((user) => {
       if (user.id !== userId) return user;
 
@@ -148,7 +177,7 @@ export const userService = {
             action,
             detail,
             performedBy: DEFAULT_ADMIN_NAME,
-            performedAt: `${DEFAULT_DATE} 11:00`,
+            performedAt: currentDateTime,
           },
         ],
       };
@@ -209,7 +238,6 @@ export const userService = {
           userName: user.fullName,
         })),
       )
-      .sort((a, b) => b.performedAt.localeCompare(a.performedAt))
-      .slice(0, 10);
+      .sort((a, b) => b.performedAt.localeCompare(a.performedAt));
   },
 };

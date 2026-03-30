@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -15,8 +15,10 @@ import type {
   FlattenedUserActivityItem,
   User,
   UserFormState,
+  UserRole,
   UserRoleCountItem,
   UserSummaryCard,
+  UserStatus,
 } from "../types/user";
 import "./UsersPage.css";
 
@@ -27,6 +29,24 @@ const assignableRoles: AssignableUserRole[] = [
   "Collaborator",
   "Operations Staff",
 ];
+
+const roleFilterOptions: Array<UserRole | "All"> = [
+  "All",
+  "Admin",
+  "Customer",
+  "Manager",
+  "Host",
+  "Collaborator",
+  "Operations Staff",
+];
+
+const statusFilterOptions: Array<UserStatus | "All"> = [
+  "All",
+  "Active",
+  "Locked",
+];
+
+const ACTIVITY_PAGE_SIZE = 5;
 
 type ConfirmState = {
   isOpen: boolean;
@@ -41,6 +61,14 @@ function UsersPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [formData, setFormData] = useState<UserFormState>(emptyUserForm);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<
+    UserRole | "All"
+  >("All");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+    UserStatus | "All"
+  >("All");
+  const [showFilters, setShowFilters] = useState(false);
+  const [activityPage, setActivityPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     userId: null,
@@ -62,8 +90,6 @@ function UsersPage() {
 
   const summaryCards: UserSummaryCard[] = userService.getSummaryCards(users);
   const roleCounts: UserRoleCountItem[] = userService.getRoleCounts(users);
-  const recentActivities: FlattenedUserActivityItem[] =
-    userService.getRecentActivityLogs(users);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -176,6 +202,7 @@ function UsersPage() {
 
     closeConfirmDialog();
   };
+
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -208,15 +235,48 @@ function UsersPage() {
   const filteredUsers = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return users;
-
     return users.filter((user) => {
-      return (
+      const matchesKeyword =
+        !keyword ||
         user.fullName.toLowerCase().includes(keyword) ||
-        user.email.toLowerCase().includes(keyword)
-      );
+        user.email.toLowerCase().includes(keyword);
+
+      const matchesRole =
+        selectedRoleFilter === "All" || user.role === selectedRoleFilter;
+
+      const matchesStatus =
+        selectedStatusFilter === "All" || user.status === selectedStatusFilter;
+
+      return matchesKeyword && matchesRole && matchesStatus;
     });
-  }, [users, searchKeyword]);
+  }, [users, searchKeyword, selectedRoleFilter, selectedStatusFilter]);
+
+  const filteredActivities: FlattenedUserActivityItem[] = useMemo(() => {
+    return userService.getRecentActivityLogs(filteredUsers);
+  }, [filteredUsers]);
+
+  const totalActivityPages = Math.max(
+    1,
+    Math.ceil(filteredActivities.length / ACTIVITY_PAGE_SIZE),
+  );
+
+  const paginatedActivities = useMemo(() => {
+    const startIndex = (activityPage - 1) * ACTIVITY_PAGE_SIZE;
+    return filteredActivities.slice(
+      startIndex,
+      startIndex + ACTIVITY_PAGE_SIZE,
+    );
+  }, [filteredActivities, activityPage]);
+
+  useEffect(() => {
+    setActivityPage(1);
+  }, [searchKeyword, selectedRoleFilter, selectedStatusFilter]);
+
+  useEffect(() => {
+    if (activityPage > totalActivityPages) {
+      setActivityPage(totalActivityPages);
+    }
+  }, [activityPage, totalActivityPages]);
 
   const modalTitle =
     modalMode === "add"
@@ -270,7 +330,53 @@ function UsersPage() {
         placeholder="Search by name or email"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
+        onFilterClick={() => setShowFilters((prev) => !prev)}
       />
+
+      {showFilters && (
+        <SectionCard
+          title="User Filters"
+          description="Refine the user directory and account activity by role and status."
+        >
+          <div className="users-filters">
+            <div className="users-filters__field">
+              <label htmlFor="users-role-filter">Role</label>
+              <select
+                id="users-role-filter"
+                value={selectedRoleFilter}
+                onChange={(event) =>
+                  setSelectedRoleFilter(event.target.value as UserRole | "All")
+                }
+              >
+                {roleFilterOptions.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="users-filters__field">
+              <label htmlFor="users-status-filter">Status</label>
+              <select
+                id="users-status-filter"
+                value={selectedStatusFilter}
+                onChange={(event) =>
+                  setSelectedStatusFilter(
+                    event.target.value as UserStatus | "All",
+                  )
+                }
+              >
+                {statusFilterOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </SectionCard>
+      )}
 
       <SectionCard
         title="User Directory"
@@ -279,7 +385,7 @@ function UsersPage() {
         {filteredUsers.length === 0 ? (
           <EmptyState
             title="No users found"
-            description="No users match your current search. Try changing the keyword or create a new user."
+            description="No users match your current search or filter settings. Try changing the conditions or create a new user."
           />
         ) : (
           <div className="users-table-wrapper">
@@ -390,35 +496,66 @@ function UsersPage() {
           title="Recent Account Activity"
           description="Latest user account changes recorded in the admin panel."
         >
-          {recentActivities.length === 0 ? (
+          {filteredActivities.length === 0 ? (
             <EmptyState
               title="No activity found"
-              description="Recent user account actions will appear here once changes are made."
+              description="No activity matches the current user search or filter settings."
             />
           ) : (
-            <div className="users-activity-table-wrapper">
-              <table className="users-activity-table">
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Action</th>
-                    <th>Detail</th>
-                    <th>Performed By</th>
-                    <th>Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentActivities.map((activity) => (
-                    <tr key={`${activity.userId}-${activity.id}`}>
-                      <td>{activity.userName}</td>
-                      <td>{activity.action}</td>
-                      <td>{activity.detail}</td>
-                      <td>{activity.performedBy}</td>
-                      <td>{activity.performedAt}</td>
+            <div className="users-activity-section">
+              <div className="users-activity-table-wrapper">
+                <table className="users-activity-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Action</th>
+                      <th>Detail</th>
+                      <th>Performed By</th>
+                      <th>Timestamp</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {paginatedActivities.map((activity) => (
+                      <tr key={`${activity.userId}-${activity.id}`}>
+                        <td>{activity.userName}</td>
+                        <td>{activity.action}</td>
+                        <td>{activity.detail}</td>
+                        <td>{activity.performedBy}</td>
+                        <td>{activity.performedAt}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="users-activity-pagination">
+                <span className="users-activity-pagination__info">
+                  Page {activityPage} of {totalActivityPages}
+                </span>
+
+                <div className="users-activity-pagination__actions">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActivityPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={activityPage === 1}
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActivityPage((prev) =>
+                        Math.min(totalActivityPages, prev + 1),
+                      )
+                    }
+                    disabled={activityPage === totalActivityPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </SectionCard>
