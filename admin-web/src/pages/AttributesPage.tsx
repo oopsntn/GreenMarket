@@ -63,7 +63,10 @@ function AttributesPage() {
   const openAddModal = () => {
     setModalMode("add");
     setSelectedAttributeId(null);
-    setFormData(emptyAttributeForm);
+    setFormData({
+      ...emptyAttributeForm,
+      status: "Active",
+    });
     setIsModalOpen(true);
   };
 
@@ -130,13 +133,25 @@ function AttributesPage() {
     event.preventDefault();
 
     if (modalMode === "add") {
-      setAttributes((prev) => attributeService.createAttribute(prev, formData));
+      setAttributes((prev) =>
+        attributeService.createAttribute(prev, {
+          ...formData,
+          status: "Active",
+        }),
+      );
       showToast("Attribute added successfully.");
     }
 
     if (modalMode === "edit" && selectedAttributeId !== null) {
+      const currentAttribute = attributes.find(
+        (attribute) => attribute.id === selectedAttributeId,
+      );
+
       setAttributes((prev) =>
-        attributeService.updateAttribute(prev, selectedAttributeId, formData),
+        attributeService.updateAttribute(prev, selectedAttributeId, {
+          ...formData,
+          status: currentAttribute?.status ?? "Active",
+        }),
       );
       showToast("Attribute updated successfully.");
     }
@@ -199,9 +214,9 @@ function AttributesPage() {
 
   const modalDescription =
     modalMode === "add"
-      ? "Create a new attribute and define its input behavior."
+      ? "Create a new attribute. New attributes are created as active by default."
       : modalMode === "edit"
-        ? "Update attribute code, type, requirement, and status."
+        ? "Update attribute code, type, requirement, and current configuration. Use Enable or Disable in the table to change status."
         : "Review attribute information and current configuration.";
 
   const confirmAttribute =
@@ -408,19 +423,12 @@ function AttributesPage() {
             <span>Required attribute</span>
           </label>
 
-          <div className="attributes-modal__field">
-            <label htmlFor="status">Status</label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              disabled={modalMode === "view"}
-            >
-              <option>Active</option>
-              <option>Disabled</option>
-            </select>
-          </div>
+          {modalMode === "view" && (
+            <div className="attributes-modal__field">
+              <label>Status</label>
+              <input type="text" value={formData.status} disabled />
+            </div>
+          )}
 
           <div className="attributes-modal__actions">
             <button

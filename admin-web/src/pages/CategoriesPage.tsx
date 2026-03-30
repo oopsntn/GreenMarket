@@ -63,7 +63,10 @@ function CategoriesPage() {
   const openAddModal = () => {
     setModalMode("add");
     setSelectedCategoryId(null);
-    setFormData(emptyCategoryForm);
+    setFormData({
+      ...emptyCategoryForm,
+      status: "Active",
+    });
     setIsModalOpen(true);
   };
 
@@ -127,13 +130,25 @@ function CategoriesPage() {
     event.preventDefault();
 
     if (modalMode === "add") {
-      setCategories((prev) => categoryService.createCategory(prev, formData));
+      setCategories((prev) =>
+        categoryService.createCategory(prev, {
+          ...formData,
+          status: "Active",
+        }),
+      );
       showToast("Category added successfully.");
     }
 
     if (modalMode === "edit" && selectedCategoryId !== null) {
+      const currentCategory = categories.find(
+        (category) => category.id === selectedCategoryId,
+      );
+
       setCategories((prev) =>
-        categoryService.updateCategory(prev, selectedCategoryId, formData),
+        categoryService.updateCategory(prev, selectedCategoryId, {
+          ...formData,
+          status: currentCategory?.status ?? "Active",
+        }),
       );
       showToast("Category updated successfully.");
     }
@@ -196,9 +211,9 @@ function CategoriesPage() {
 
   const modalDescription =
     modalMode === "add"
-      ? "Create a new category and define its basic settings."
+      ? "Create a new category. New categories are created as active by default."
       : modalMode === "edit"
-        ? "Update category information, slug, status, and attribute count."
+        ? "Update category information and attribute count. Use Enable or Disable in the table to change status."
         : "Review category information and current activation status.";
 
   const confirmCategory =
@@ -381,19 +396,12 @@ function CategoriesPage() {
             />
           </div>
 
-          <div className="categories-modal__field">
-            <label htmlFor="status">Status</label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              disabled={modalMode === "view"}
-            >
-              <option>Active</option>
-              <option>Disabled</option>
-            </select>
-          </div>
+          {modalMode === "view" && (
+            <div className="categories-modal__field">
+              <label>Status</label>
+              <input type="text" value={formData.status} disabled />
+            </div>
+          )}
 
           <div className="categories-modal__actions">
             <button

@@ -63,7 +63,10 @@ function TemplatesPage() {
   const openAddModal = () => {
     setModalMode("add");
     setSelectedTemplateId(null);
-    setFormData(emptyTemplateForm);
+    setFormData({
+      ...emptyTemplateForm,
+      status: "Active",
+    });
     setIsModalOpen(true);
   };
 
@@ -129,13 +132,25 @@ function TemplatesPage() {
     event.preventDefault();
 
     if (modalMode === "add") {
-      setTemplates((prev) => templateService.createTemplate(prev, formData));
+      setTemplates((prev) =>
+        templateService.createTemplate(prev, {
+          ...formData,
+          status: "Active",
+        }),
+      );
       showToast("Template added successfully.");
     }
 
     if (modalMode === "edit" && selectedTemplateId !== null) {
+      const currentTemplate = templates.find(
+        (template) => template.id === selectedTemplateId,
+      );
+
       setTemplates((prev) =>
-        templateService.updateTemplate(prev, selectedTemplateId, formData),
+        templateService.updateTemplate(prev, selectedTemplateId, {
+          ...formData,
+          status: currentTemplate?.status ?? "Active",
+        }),
       );
       showToast("Template updated successfully.");
     }
@@ -198,9 +213,9 @@ function TemplatesPage() {
 
   const modalDescription =
     modalMode === "add"
-      ? "Create a new template for rejection reasons, report messages, or notifications."
+      ? "Create a new template. New templates are created as active by default."
       : modalMode === "edit"
-        ? "Update template type, content, and current activation status."
+        ? "Update template type and content. Use Enable or Disable in the table to change status."
         : "Review template information, content preview, and current status.";
 
   const confirmTemplate =
@@ -390,19 +405,12 @@ function TemplatesPage() {
             />
           </div>
 
-          <div className="templates-modal__field">
-            <label htmlFor="status">Status</label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              disabled={modalMode === "view"}
-            >
-              <option>Active</option>
-              <option>Disabled</option>
-            </select>
-          </div>
+          {modalMode === "view" && (
+            <div className="templates-modal__field">
+              <label>Status</label>
+              <input type="text" value={formData.status} disabled />
+            </div>
+          )}
 
           <div className="templates-modal__actions">
             <button
