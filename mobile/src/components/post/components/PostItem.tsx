@@ -8,7 +8,7 @@ interface PostItemProps {
     onEdit: (item: any) => void;
     onDelete: (id: number) => void;
     styles: any;
-    renderStatus: (status: string) => React.ReactNode;
+    renderStatus?: (status: string) => React.ReactNode;
 }
 const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProps) => (
     <Card style={styles.postCard}>
@@ -24,7 +24,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                 <Text style={styles.postPrice}>
                     {new Intl.NumberFormat('vi-VN').format(item.postPrice)} đ
                 </Text>
-                {renderStatus(item.postStatus)}
+                {renderStatus && renderStatus(item.postStatus)}
             </View>
 
             {/* Nút bấm hành động */}
@@ -34,7 +34,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn} onPress={() => onDelete(item.postId)}>
                     <Trash2 size={18} color="#ef4444" />
-                </TouchableOpacity>
+                </TouchableOpacity> 
             </View>
         </View>
     </Card>
