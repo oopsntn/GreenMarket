@@ -1,13 +1,20 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
+import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { promotionService } from "../services/promotionService";
-import type { Promotion } from "../types/promotion";
+import type {
+  Promotion,
+  PromotionSlot,
+  PromotionStatus,
+  PromotionSummaryCard,
+} from "../types/promotion";
 import "./PromotionsPage.css";
 
 type ConfirmAction = "pause" | "resume";
@@ -18,17 +25,46 @@ type ConfirmState = {
   action: ConfirmAction | null;
 };
 
+const slotFilterOptions: Array<PromotionSlot | "All"> = [
+  "All",
+  "Home Top",
+  "Category Top",
+  "Search Boost",
+];
+
+const statusFilterOptions: Array<PromotionStatus | "All"> = [
+  "All",
+  "Scheduled",
+  "Active",
+  "Paused",
+  "Expired",
+];
+
 function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>(
     promotionService.getPromotions(),
   );
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(
+    null,
+  );
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedSlotFilter, setSelectedSlotFilter] = useState<
+    PromotionSlot | "All"
+  >("All");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+    PromotionStatus | "All"
+  >("All");
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     promotionId: null,
     action: null,
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const summaryCards: PromotionSummaryCard[] =
+    promotionService.getSummaryCards(promotions);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -49,6 +85,16 @@ function PromotionsPage() {
 
   const removeToast = (id: number) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  const openViewModal = (promotion: Promotion) => {
+    setSelectedPromotion(promotion);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setSelectedPromotion(null);
+    setIsModalOpen(false);
   };
 
   const openConfirmDialog = (promotionId: number, action: ConfirmAction) => {
@@ -105,19 +151,40 @@ function PromotionsPage() {
       showToast(`${targetPromotion.postTitle} has been resumed successfully.`);
     }
 
+    if (selectedPromotion?.id === targetPromotion.id) {
+      setSelectedPromotion((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: confirmState.action === "pause" ? "Paused" : "Active",
+            }
+          : null,
+      );
+    }
+
     closeConfirmDialog();
   };
 
-  const filteredPromotions = promotions.filter((promotion) => {
+  const filteredPromotions = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return true;
+    return promotions.filter((promotion) => {
+      const matchesKeyword =
+        !keyword ||
+        promotion.postTitle.toLowerCase().includes(keyword) ||
+        promotion.owner.toLowerCase().includes(keyword) ||
+        promotion.packageName.toLowerCase().includes(keyword);
 
-    return (
-      promotion.postTitle.toLowerCase().includes(keyword) ||
-      promotion.owner.toLowerCase().includes(keyword)
-    );
-  });
+      const matchesSlot =
+        selectedSlotFilter === "All" || promotion.slot === selectedSlotFilter;
+
+      const matchesStatus =
+        selectedStatusFilter === "All" ||
+        promotion.status === selectedStatusFilter;
+
+      return matchesKeyword && matchesSlot && matchesStatus;
+    });
+  }, [promotions, searchKeyword, selectedSlotFilter, selectedStatusFilter]);
 
   const confirmPromotion =
     confirmState.promotionId !== null
@@ -154,14 +221,73 @@ function PromotionsPage() {
     <div className="promotions-page">
       <PageHeader
         title="Promotions Management"
-        description="Manage boosted posts, placement slots, and promotion status."
+        description="Monitor boosted posts, placement slots, package windows, and admin intervention status."
       />
 
+      <div className="promotions-summary-grid">
+        {summaryCards.map((card) => (
+          <StatCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            subtitle={card.subtitle}
+          />
+        ))}
+      </div>
+
       <SearchToolbar
-        placeholder="Search by post title or owner"
+        placeholder="Search by post title, owner, or package"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
+        onFilterClick={() => setShowFilters((prev) => !prev)}
       />
+
+      {showFilters && (
+        <SectionCard
+          title="Promotion Filters"
+          description="Refine promotion records by placement slot and runtime status."
+        >
+          <div className="promotions-filters">
+            <div className="promotions-filters__field">
+              <label htmlFor="promotion-slot-filter">Placement Slot</label>
+              <select
+                id="promotion-slot-filter"
+                value={selectedSlotFilter}
+                onChange={(event) =>
+                  setSelectedSlotFilter(
+                    event.target.value as PromotionSlot | "All",
+                  )
+                }
+              >
+                {slotFilterOptions.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="promotions-filters__field">
+              <label htmlFor="promotion-status-filter">Status</label>
+              <select
+                id="promotion-status-filter"
+                value={selectedStatusFilter}
+                onChange={(event) =>
+                  setSelectedStatusFilter(
+                    event.target.value as PromotionStatus | "All",
+                  )
+                }
+              >
+                {statusFilterOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </SectionCard>
+      )}
 
       <SectionCard
         title="Promotion Directory"
@@ -170,7 +296,7 @@ function PromotionsPage() {
         {filteredPromotions.length === 0 ? (
           <EmptyState
             title="No promotions found"
-            description="No promotions match your current search. Try another keyword to continue."
+            description="No promotions match your current search or filter settings. Try another condition to continue."
           />
         ) : (
           <div className="promotions-table-wrapper">
@@ -209,7 +335,9 @@ function PromotionsPage() {
                             ? "active"
                             : promotion.status === "Paused"
                               ? "paused"
-                              : "expired"
+                              : promotion.status === "Scheduled"
+                                ? "pending"
+                                : "expired"
                         }
                       />
                     </td>
@@ -218,6 +346,7 @@ function PromotionsPage() {
                         <button
                           type="button"
                           className="promotions-actions__view"
+                          onClick={() => openViewModal(promotion)}
                         >
                           View
                         </button>
@@ -242,6 +371,14 @@ function PromotionsPage() {
                           >
                             Resume
                           </button>
+                        ) : promotion.status === "Scheduled" ? (
+                          <button
+                            type="button"
+                            className="promotions-actions__disabled"
+                            disabled
+                          >
+                            Upcoming
+                          </button>
                         ) : (
                           <button
                             type="button"
@@ -260,6 +397,109 @@ function PromotionsPage() {
           </div>
         )}
       </SectionCard>
+
+      <BaseModal
+        isOpen={isModalOpen}
+        title="Promotion Details"
+        description="Review package setup, placement schedule, and current runtime status."
+        onClose={closeModal}
+        maxWidth="720px"
+      >
+        {selectedPromotion ? (
+          <div className="promotions-modal__content">
+            <div className="promotions-modal__grid">
+              <div className="promotions-modal__field">
+                <label>Post Title</label>
+                <input
+                  type="text"
+                  value={selectedPromotion.postTitle}
+                  disabled
+                />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>Owner</label>
+                <input type="text" value={selectedPromotion.owner} disabled />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>Placement Slot</label>
+                <input type="text" value={selectedPromotion.slot} disabled />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>Package</label>
+                <input
+                  type="text"
+                  value={selectedPromotion.packageName}
+                  disabled
+                />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>Start Date</label>
+                <input
+                  type="text"
+                  value={selectedPromotion.startDate}
+                  disabled
+                />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>End Date</label>
+                <input type="text" value={selectedPromotion.endDate} disabled />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>Status</label>
+                <input type="text" value={selectedPromotion.status} disabled />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>Budget</label>
+                <input type="text" value={selectedPromotion.budget} disabled />
+              </div>
+            </div>
+
+            <div className="promotions-modal__field">
+              <label>Admin Note</label>
+              <textarea value={selectedPromotion.note} rows={4} disabled />
+            </div>
+
+            <div className="promotions-modal__actions">
+              <button
+                type="button"
+                className="promotions-modal__close"
+                onClick={closeModal}
+              >
+                Close
+              </button>
+
+              {selectedPromotion.status === "Active" ? (
+                <button
+                  type="button"
+                  className="promotions-modal__pause"
+                  onClick={() =>
+                    openConfirmDialog(selectedPromotion.id, "pause")
+                  }
+                >
+                  Pause Promotion
+                </button>
+              ) : selectedPromotion.status === "Paused" ? (
+                <button
+                  type="button"
+                  className="promotions-modal__resume"
+                  onClick={() =>
+                    openConfirmDialog(selectedPromotion.id, "resume")
+                  }
+                >
+                  Resume Promotion
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </BaseModal>
 
       <ConfirmDialog
         isOpen={confirmState.isOpen}

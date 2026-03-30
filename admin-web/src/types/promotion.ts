@@ -1,5 +1,5 @@
 export type PromotionSlot = "Home Top" | "Category Top" | "Search Boost";
-export type PromotionStatus = "Active" | "Paused" | "Expired";
+export type PromotionStatus = "Scheduled" | "Active" | "Paused" | "Expired";
 
 export type Promotion = {
   id: number;
@@ -10,4 +10,12 @@ export type Promotion = {
   startDate: string;
   endDate: string;
   status: PromotionStatus;
+  budget: string;
+  note: string;
+};
+
+export type PromotionSummaryCard = {
+  title: string;
+  value: string;
+  subtitle: string;
 };

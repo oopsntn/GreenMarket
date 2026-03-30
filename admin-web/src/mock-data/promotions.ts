@@ -10,6 +10,8 @@ export const initialPromotions: Promotion[] = [
     startDate: "2026-03-15",
     endDate: "2026-03-22",
     status: "Active",
+    budget: "1,200,000 VND",
+    note: "Priority placement for premium plant listing on the homepage.",
   },
   {
     id: 2,
@@ -20,6 +22,8 @@ export const initialPromotions: Promotion[] = [
     startDate: "2026-03-14",
     endDate: "2026-03-19",
     status: "Paused",
+    budget: "650,000 VND",
+    note: "Temporarily paused by admin review due to content adjustment request.",
   },
   {
     id: 3,
@@ -30,5 +34,19 @@ export const initialPromotions: Promotion[] = [
     startDate: "2026-03-10",
     endDate: "2026-03-13",
     status: "Expired",
+    budget: "320,000 VND",
+    note: "Promotion package completed and no longer active.",
+  },
+  {
+    id: 4,
+    postTitle: "Philodendron Pink Princess Cutting",
+    owner: "Pham Thi D",
+    slot: "Home Top",
+    packageName: "Premium 7 Days",
+    startDate: "2026-04-02",
+    endDate: "2026-04-09",
+    status: "Scheduled",
+    budget: "1,200,000 VND",
+    note: "Scheduled campaign waiting for upcoming placement window.",
   },
 ];
