@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import EmptyState from "../components/EmptyState";
 import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { analyticsService } from "../services/analyticsService";
 import "./AnalyticsPage.css";
+
+const PAGE_SIZE = 4;
 
 function AnalyticsPage() {
   const kpiCards = analyticsService.getKpiCards();
@@ -12,6 +16,56 @@ function AnalyticsPage() {
 
   const [dateRange, setDateRange] = useState("Last 30 Days");
   const [metricScope, setMetricScope] = useState("All Placements");
+  const [page, setPage] = useState(1);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const filteredRows = useMemo(() => {
+    if (metricScope === "All Placements") return placementRows;
+
+    return placementRows.filter((item) => item.slot === metricScope);
+  }, [metricScope, placementRows]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+
+  const paginatedRows = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredRows.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredRows, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [metricScope, dateRange]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [...prev, { id: toastId, message, tone }]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
+  const handleExportReport = () => {
+    showToast(
+      `Analytics report export started for ${dateRange} • ${metricScope}.`,
+    );
+  };
+
+  const trafficOverviewTitle =
+    metricScope === "All Placements"
+      ? "Traffic Overview"
+      : `${metricScope} Traffic Overview`;
 
   return (
     <div className="analytics-page">
@@ -19,6 +73,7 @@ function AnalyticsPage() {
         title="Analytics Dashboard"
         description="Monitor placement performance, engagement, and revenue trends."
         actionLabel="Export Report"
+        onActionClick={handleExportReport}
       />
 
       <SectionCard
@@ -41,14 +96,14 @@ function AnalyticsPage() {
             },
             {
               id: "analytics-metric-scope",
-              label: "Analytics Scope",
+              label: "Placement Scope",
               value: metricScope,
               onChange: setMetricScope,
               options: [
                 "All Placements",
-                "Traffic & Reach",
-                "CTR & Clicks",
-                "Revenue Focus",
+                "Home Top",
+                "Category Top",
+                "Search Boost",
               ],
             },
           ]}
@@ -69,7 +124,7 @@ function AnalyticsPage() {
 
       <div className="analytics-chart-grid">
         <SectionCard
-          title="Traffic Overview"
+          title={trafficOverviewTitle}
           description={`${dateRange} • ${metricScope}`}
         >
           <div className="analytics-panel__body">
@@ -118,34 +173,70 @@ function AnalyticsPage() {
         title="Top Placement Performance"
         description={`${dateRange} • ${metricScope}`}
       >
-        <div className="analytics-table-wrapper">
-          <table className="analytics-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Placement Slot</th>
-                <th>Impressions</th>
-                <th>Clicks</th>
-                <th>CTR</th>
-                <th>Revenue</th>
-              </tr>
-            </thead>
+        {filteredRows.length === 0 ? (
+          <EmptyState
+            title="No analytics data found"
+            description="No placement performance matches the current filter settings."
+          />
+        ) : (
+          <div className="analytics-table-section">
+            <div className="analytics-table-wrapper">
+              <table className="analytics-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Placement Slot</th>
+                    <th>Impressions</th>
+                    <th>Clicks</th>
+                    <th>CTR</th>
+                    <th>Revenue</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {placementRows.map((item) => (
-                <tr key={item.id}>
-                  <td>#{item.id}</td>
-                  <td>{item.slot}</td>
-                  <td>{item.impressions}</td>
-                  <td>{item.clicks}</td>
-                  <td>{item.ctr}</td>
-                  <td>{item.revenue}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                <tbody>
+                  {paginatedRows.map((item) => (
+                    <tr key={item.id}>
+                      <td>#{item.id}</td>
+                      <td>{item.slot}</td>
+                      <td>{item.impressions}</td>
+                      <td>{item.clicks}</td>
+                      <td>{item.ctr}</td>
+                      <td>{item.revenue}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="analytics-pagination">
+              <span className="analytics-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="analytics-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </SectionCard>
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
