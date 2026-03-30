@@ -5,11 +5,19 @@ import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
+import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { emptyUserForm } from "../mock-data/users";
 import { userService } from "../services/userService";
-import type { AssignableUserRole, User, UserFormState } from "../types/user";
+import type {
+  AssignableUserRole,
+  FlattenedUserActivityItem,
+  User,
+  UserFormState,
+  UserRoleCountItem,
+  UserSummaryCard,
+} from "../types/user";
 import "./UsersPage.css";
 
 const assignableRoles: AssignableUserRole[] = [
@@ -52,6 +60,11 @@ function UsersPage() {
 
   const isProtectedAdmin = selectedUser?.role === "Admin";
 
+  const summaryCards: UserSummaryCard[] = userService.getSummaryCards(users);
+  const roleCounts: UserRoleCountItem[] = userService.getRoleCounts(users);
+  const recentActivities: FlattenedUserActivityItem[] =
+    userService.getRecentActivityLogs(users);
+
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
 
@@ -89,14 +102,12 @@ function UsersPage() {
         fullName: user.fullName,
         email: user.email,
         role: "Customer",
-        status: user.status,
       });
     } else {
       setFormData({
         fullName: user.fullName,
         email: user.email,
         role: user.role,
-        status: user.status,
       });
     }
 
@@ -112,7 +123,6 @@ function UsersPage() {
       fullName: user.fullName,
       email: user.email,
       role: user.role,
-      status: user.status,
     });
     setIsModalOpen(true);
   };
@@ -141,20 +151,20 @@ function UsersPage() {
   const handleConfirmAction = () => {
     if (confirmState.userId === null || confirmState.action === null) return;
 
-    const targetUser = users.find((user) => user.id === confirmState.userId);
+    const userId = confirmState.userId;
+    const action = confirmState.action;
+
+    const targetUser = users.find((user) => user.id === userId);
 
     setUsers((prev) =>
-      prev.map((user) =>
-        user.id === confirmState.userId
-          ? {
-              ...user,
-              status: confirmState.action === "lock" ? "Locked" : "Active",
-            }
-          : user,
+      userService.updateUserStatus(
+        prev,
+        userId,
+        action === "lock" ? "Locked" : "Active",
       ),
     );
 
-    if (confirmState.action === "lock") {
+    if (action === "lock") {
       showToast(
         `${targetUser?.fullName ?? "User"} has been locked successfully.`,
       );
@@ -166,7 +176,6 @@ function UsersPage() {
 
     closeConfirmDialog();
   };
-
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -218,10 +227,10 @@ function UsersPage() {
 
   const modalDescription =
     modalMode === "add"
-      ? "Create a new internal user account and assign the appropriate role."
+      ? "Create a new internal user account and assign the appropriate role. New accounts are created as active by default."
       : modalMode === "edit"
-        ? "Update user account information, role assignment, and status."
-        : "Review user account information and current access status.";
+        ? "Update user account information and role assignment. Use Lock or Unlock in the table to change status."
+        : "Review user account information, role assignment history, and recent access activity.";
 
   const confirmTitle =
     confirmState.action === "lock"
@@ -245,6 +254,17 @@ function UsersPage() {
         actionLabel="+ Add User"
         onActionClick={openAddModal}
       />
+
+      <div className="users-summary-grid">
+        {summaryCards.map((card) => (
+          <StatCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            subtitle={card.subtitle}
+          />
+        ))}
+      </div>
 
       <SearchToolbar
         placeholder="Search by name or email"
@@ -346,75 +366,136 @@ function UsersPage() {
         )}
       </SectionCard>
 
+      <div className="users-insight-grid">
+        <SectionCard
+          title="Role Assignment Overview"
+          description="Track how many accounts are assigned to each role."
+        >
+          <div className="users-role-overview">
+            {roleCounts.map((item) => (
+              <div key={item.role} className="users-role-card">
+                <div className="users-role-card__header">
+                  <StatusBadge label={item.role} variant="role" />
+                </div>
+                <strong>{item.count}</strong>
+                <span>
+                  {item.count === 1 ? "account assigned" : "accounts assigned"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Recent Account Activity"
+          description="Latest user account changes recorded in the admin panel."
+        >
+          {recentActivities.length === 0 ? (
+            <EmptyState
+              title="No activity found"
+              description="Recent user account actions will appear here once changes are made."
+            />
+          ) : (
+            <div className="users-activity-table-wrapper">
+              <table className="users-activity-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Detail</th>
+                    <th>Performed By</th>
+                    <th>Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentActivities.map((activity) => (
+                    <tr key={`${activity.userId}-${activity.id}`}>
+                      <td>{activity.userName}</td>
+                      <td>{activity.action}</td>
+                      <td>{activity.detail}</td>
+                      <td>{activity.performedBy}</td>
+                      <td>{activity.performedAt}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </SectionCard>
+      </div>
+
       <BaseModal
         isOpen={isModalOpen}
         title={modalTitle}
         description={modalDescription}
         onClose={closeModal}
+        maxWidth="760px"
       >
         <form className="users-modal__form" onSubmit={handleSubmit}>
-          <div className="users-modal__field">
-            <label htmlFor="fullName">Full Name</label>
-            <input
-              id="fullName"
-              name="fullName"
-              type="text"
-              value={formData.fullName}
-              onChange={handleChange}
-              disabled={modalMode === "view"}
-              placeholder="Enter full name"
-            />
-          </div>
-
-          <div className="users-modal__field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              disabled={modalMode === "view"}
-              placeholder="Enter email"
-            />
-          </div>
-
-          {isProtectedAdmin ? (
+          <div className="users-modal__grid">
             <div className="users-modal__field">
-              <label>Role</label>
-              <input type="text" value="Admin" disabled />
-            </div>
-          ) : (
-            <div className="users-modal__field">
-              <label htmlFor="role">Role</label>
-              <select
-                id="role"
-                name="role"
-                value={formData.role}
+              <label htmlFor="fullName">Full Name</label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                value={formData.fullName}
                 onChange={handleChange}
                 disabled={modalMode === "view"}
-              >
-                {assignableRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
+                placeholder="Enter full name"
+              />
             </div>
-          )}
 
-          <div className="users-modal__field">
-            <label htmlFor="status">Status</label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              disabled={modalMode === "view" || isProtectedAdmin}
-            >
-              <option>Active</option>
-              <option>Locked</option>
-            </select>
+            <div className="users-modal__field">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                disabled={modalMode === "view"}
+                placeholder="Enter email"
+              />
+            </div>
+
+            {isProtectedAdmin ? (
+              <div className="users-modal__field">
+                <label>Role</label>
+                <input type="text" value="Admin" disabled />
+              </div>
+            ) : (
+              <div className="users-modal__field">
+                <label htmlFor="role">Role</label>
+                <select
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  disabled={modalMode === "view"}
+                >
+                  {assignableRoles.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {modalMode === "view" && selectedUser ? (
+              <>
+                <div className="users-modal__field">
+                  <label>Status</label>
+                  <input type="text" value={selectedUser.status} disabled />
+                </div>
+
+                <div className="users-modal__field">
+                  <label>Joined Date</label>
+                  <input type="text" value={selectedUser.joinedAt} disabled />
+                </div>
+              </>
+            ) : null}
           </div>
 
           {isProtectedAdmin && (
@@ -423,6 +504,72 @@ function UsersPage() {
               changed.
             </div>
           )}
+
+          {modalMode === "view" && selectedUser ? (
+            <>
+              <div className="users-modal__section">
+                <div className="users-modal__section-header">
+                  <h4>Role Assignment History</h4>
+                  <p>
+                    Review how this account's role has been assigned over time.
+                  </p>
+                </div>
+
+                <div className="users-modal__history-table-wrapper">
+                  <table className="users-modal__history-table">
+                    <thead>
+                      <tr>
+                        <th>Role</th>
+                        <th>Assigned By</th>
+                        <th>Assigned At</th>
+                        <th>Note</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedUser.roleAssignments.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.role}</td>
+                          <td>{item.assignedBy}</td>
+                          <td>{item.assignedAt}</td>
+                          <td>{item.note}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="users-modal__section">
+                <div className="users-modal__section-header">
+                  <h4>Recent Activity</h4>
+                  <p>Latest account actions performed for this user.</p>
+                </div>
+
+                <div className="users-modal__history-table-wrapper">
+                  <table className="users-modal__history-table">
+                    <thead>
+                      <tr>
+                        <th>Action</th>
+                        <th>Detail</th>
+                        <th>Performed By</th>
+                        <th>Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedUser.activityLogs.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.action}</td>
+                          <td>{item.detail}</td>
+                          <td>{item.performedBy}</td>
+                          <td>{item.performedAt}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : null}
 
           <div className="users-modal__actions">
             <button
