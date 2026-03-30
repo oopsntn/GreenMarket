@@ -35,18 +35,19 @@ export default function LoginScreen({ onLoginSuccess }) {
       if (!res.ok) {
         const errorData = await res.json();
 
-        console.log(res.status); // 400, 401, 500, etc.
-        console.log(errorData); // Lấy chi tiết lỗi từ server
+        console.log(res.status); 
+        console.log(errorData); 
 
         Alert.alert("Lỗi", errorData.message || "Thao tác thất bại");
         return;
       }
 
-      const data = await res.json(); 
+      const data = await res.json();
+      console.log("📦 Response data:", data); 
       Alert.alert("Thành công", "Mã OTP đã được gửi tới số điện thoại của bạn.");
       setStep("otp");
     } catch (error) {
-      console.error("❌ Error:", error.message); // Xem chi tiết lỗi
+      console.error("❌ Error:", error.message); 
       Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);
