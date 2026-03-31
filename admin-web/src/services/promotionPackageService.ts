@@ -104,9 +104,14 @@ export const promotionPackageService = {
         subtitle: "Temporarily hidden from package sales",
       },
       {
-        title: "Peak Price / Total Quota",
-        value: `${highestPrice.toLocaleString("en-US")} / ${totalQuota.toLocaleString("en-US")}`,
-        subtitle: "Highest package price and total delivery quota",
+        title: "Peak Price",
+        value: highestPrice.toLocaleString("en-US"),
+        subtitle: "Highest package price across all active and disabled plans",
+      },
+      {
+        title: "Total Quota",
+        value: totalQuota.toLocaleString("en-US"),
+        subtitle: "Combined delivery quota across all configured packages",
       },
     ];
   },

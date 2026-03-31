@@ -6,7 +6,7 @@
 
 .promotion-packages-summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -14,7 +14,7 @@
   background: #ffffff;
   border: 1px solid #e7efe6;
   border-radius: 20px;
-  padding: 22px 22px 20px;
+  padding: 22px 20px 20px;
   box-shadow: 0 10px 24px rgba(27, 94, 32, 0.06);
   display: flex;
   flex-direction: column;
@@ -29,34 +29,18 @@
 }
 
 .promotion-packages-summary-card__value {
-  font-size: 42px;
-  line-height: 1;
+  font-size: 34px;
+  line-height: 1.1;
   font-weight: 800;
   color: #1b4332;
   word-break: break-word;
 }
 
 .promotion-packages-summary-card__subtitle {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.5;
   color: #2e7d32;
   font-weight: 600;
-}
-
-.promotion-packages-summary-card--compact
-  .promotion-packages-summary-card__label {
-  min-height: 44px;
-}
-
-.promotion-packages-summary-card--compact
-  .promotion-packages-summary-card__value {
-  font-size: 28px;
-  line-height: 1.25;
-}
-
-.promotion-packages-summary-card--compact
-  .promotion-packages-summary-card__subtitle {
-  color: #486150;
 }
 
 .promotion-packages-filters {
@@ -258,11 +242,13 @@
   box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .promotion-packages-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
 
+@media (max-width: 1200px) {
   .promotion-packages-filters {
     grid-template-columns: 1fr 1fr;
   }
@@ -275,6 +261,10 @@
 @media (max-width: 1024px) {
   .promotion-packages-modal__grid {
     grid-template-columns: 1fr;
+  }
+
+  .promotion-packages-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
