@@ -8,6 +8,7 @@ import {
 import AdminLayout from "../layouts/AdminLayout";
 import AnalyticsPage from "../pages/AnalyticsPage";
 import AttributesPage from "../pages/AttributesPage";
+import BoostedPostsPage from "../pages/BoostedPostsPage";
 import CategoriesPage from "../pages/CategoriesPage";
 import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage";
 import CustomerSpendingPage from "../pages/CustomerSpendingPage";
@@ -98,6 +99,7 @@ function AppRoutes() {
               path="promotion-packages"
               element={<PromotionPackagesPage />}
             />
+            <Route path="boosted-posts" element={<BoostedPostsPage />} />
             <Route path="promotions" element={<PromotionsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="revenue" element={<RevenuePage />} />

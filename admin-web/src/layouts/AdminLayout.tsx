@@ -12,6 +12,7 @@ const menuItems = [
   { label: "Settings", path: "/settings" },
   { label: "Placement Slots", path: "/placement-slots" },
   { label: "Promotion Packages", path: "/promotion-packages" },
+  { label: "Boosted Posts", path: "/boosted-posts" },
   { label: "Promotions", path: "/promotions" },
   { label: "Analytics", path: "/analytics" },
   { label: "Revenue", path: "/revenue" },
