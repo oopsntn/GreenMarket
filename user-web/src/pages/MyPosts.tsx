@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { getMyPosts, deleteUserPost, updateUserPost } from '../services/api';
-import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { getMyPosts, deleteUserPost, updateUserPost, getPromotionPackages, buyPromotionPackage } from '../services/api';
+import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const MyPosts: React.FC = () => {
@@ -15,6 +15,10 @@ const MyPosts: React.FC = () => {
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editPrice, setEditPrice] = useState("");
+  const [boostingPost, setBoostingPost] = useState<any | null>(null);
+  const [boostPackages, setBoostPackages] = useState<any[]>([]);
+  const [boostLoading, setBoostLoading] = useState(false);
+  const [boostBuyingId, setBoostBuyingId] = useState<number | null>(null);
 
   useEffect(() => {
     // Default to shop tab if user has a shop
@@ -73,6 +77,71 @@ const MyPosts: React.FC = () => {
     } catch (error) {
       console.error('Failed to update post', error);
       alert('Có lỗi xảy ra khi cập nhật bài đăng.');
+    }
+  };
+
+  const getPlanType = (days: number) => {
+    if (days <= 3) {
+      return { label: 'Gói Ngày', subtitle: 'Thử nghiệm nhanh cho bài mới' };
+    }
+    if (days <= 14) {
+      return { label: 'Gói Tuần', subtitle: 'Phù hợp chu kỳ cân nhắc của người mua' };
+    }
+    return { label: 'Gói Tháng', subtitle: 'Duy trì hiện diện ổn định, bền vững' };
+  };
+
+  const getDisplayPackages = (allPackages: any[]) => {
+    const sorted = [...allPackages].sort(
+      (a, b) => Number(a.promotionPackageDurationDays || 0) - Number(b.promotionPackageDurationDays || 0)
+    );
+
+    const pickClosest = (target: number, filter: (days: number) => boolean) => {
+      const filtered = sorted.filter((pkg) => filter(Number(pkg.promotionPackageDurationDays || 0)));
+      if (filtered.length === 0) return null;
+      return filtered.reduce((best, current) => {
+        const bestDiff = Math.abs(Number(best.promotionPackageDurationDays || 0) - target);
+        const currentDiff = Math.abs(Number(current.promotionPackageDurationDays || 0) - target);
+        return currentDiff < bestDiff ? current : best;
+      });
+    };
+
+    return [
+      pickClosest(1, (days) => days <= 3),
+      pickClosest(7, (days) => days > 3 && days <= 14),
+      pickClosest(30, (days) => days > 14),
+    ].filter(Boolean);
+  };
+
+  const openBoostModal = async (post: any) => {
+    setBoostingPost(post);
+    setBoostLoading(true);
+    try {
+      const res = await getPromotionPackages();
+      setBoostPackages(getDisplayPackages(res.data || []));
+    } catch (error) {
+      console.error('Failed to load boost packages:', error);
+      alert('Khong the tai goi uu tien hien thi. Vui long thu lai.');
+      setBoostingPost(null);
+    } finally {
+      setBoostLoading(false);
+    }
+  };
+
+  const handleBuyBoost = async (packageId: number) => {
+    if (!boostingPost?.postId) return;
+    setBoostBuyingId(packageId);
+    try {
+      const res = await buyPromotionPackage(boostingPost.postId, packageId);
+      if (res.data.paymentUrl) {
+        window.location.href = res.data.paymentUrl;
+      } else {
+        alert('Không nhận được URL thanh toán từ hệ thống.');
+      }
+    } catch (err: any) {
+      console.error('Failed to create boost payment', err);
+      alert(err.response?.data?.error || 'Có lỗi xảy ra khi tạo giao dịch thanh toán.');
+    } finally {
+      setBoostBuyingId(null);
     }
   };
 
@@ -150,7 +219,7 @@ const MyPosts: React.FC = () => {
                 <div className="w-24 h-24 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500 shrink-0">
                   <Store className="w-12 h-12" />
                 </div>
-                <Link 
+                <Link
                   to={`/shop/${shop.shopId}`}
                   className="flex-1 text-center md:text-left group/shopLink cursor-pointer"
                 >
@@ -182,7 +251,7 @@ const MyPosts: React.FC = () => {
                   onClick={() => navigate('/register-shop')}
                   className="bg-amber-500 text-black px-10 py-4 rounded-2xl font-black uppercase text-sm hover:bg-amber-400 transition-all shadow-xl shadow-amber-950/20"
                 >
-                  🚀 Mở Nhà Vườn Ngay
+                  Mở Nhà Vườn Ngay
                 </button>
               </div>
             )}
@@ -256,6 +325,15 @@ const MyPosts: React.FC = () => {
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
+                    {post.postStatus === 'approved' && (
+                      <button
+                        title="Quảng bá bài viết"
+                        onClick={() => openBoostModal(post)}
+                        className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 hover:text-white hover:bg-emerald-600 transition-all group-hover:translate-x-1 border border-emerald-500/20"
+                      >
+                        <Zap className="w-5 h-5 fill-emerald-500 group-hover:fill-white" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -275,6 +353,73 @@ const MyPosts: React.FC = () => {
           )}
         </div>
       </div>
+
+      {boostingPost && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm shadow-2xl flex items-center justify-center z-50 p-4">
+          <div className="bg-surface border border-white/10 p-8 rounded-3xl w-full max-w-3xl shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl -mr-16 -mt-16"></div>
+            <div className="relative z-10 flex items-center justify-between mb-6 gap-4">
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-white">Chọn gói ưu tiên hiển thị</h2>
+                <p className="text-slate-400 text-sm mt-1 line-clamp-1">Bài đăng: {boostingPost.postTitle}</p>
+              </div>
+              <button
+                onClick={() => setBoostingPost(null)}
+                className="px-4 py-2 rounded-xl font-bold text-slate-400 bg-white/5 hover:bg-white/10 hover:text-white transition-all"
+              >
+                Đóng
+              </button>
+            </div>
+
+            {boostLoading ? (
+              <div className="min-h-[220px] flex flex-col items-center justify-center gap-3 text-slate-400">
+                <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                <p>Đang tải gói ưu tiên...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {boostPackages.map((pkg) => {
+                  const plan = getPlanType(Number(pkg.promotionPackageDurationDays || 0));
+                  return (
+                    <div key={pkg.promotionPackageId} className="glass p-5 rounded-2xl border border-white/10 hover:border-emerald-500/30 transition-all flex flex-col">
+                      <div className="mb-4">
+                        <h3 className="text-lg font-black uppercase tracking-tight text-white">{plan.label}</h3>
+                        <p className="text-xs text-slate-400 mt-1">{plan.subtitle}</p>
+                      </div>
+
+                      <div className="mb-4">
+                        <div className="text-2xl font-black text-white">
+                          {Number(pkg.promotionPackagePrice).toLocaleString()} <span className="text-sm text-slate-500">VND</span>
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1">Thời hạn: {pkg.promotionPackageDurationDays} ngày</div>
+                      </div>
+
+                      <ul className="space-y-2 mb-5 flex-1">
+                        <li className="flex items-start gap-2 text-xs text-slate-300">
+                          <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Ưu tiên hiển thị trong {pkg.promotionPackageDurationDays} ngày</span>
+                        </li>
+                        <li className="flex items-start gap-2 text-xs text-slate-300">
+                          <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Cùng một cơ chế ưu tiên cho mỗi gói</span>
+                        </li>
+                      </ul>
+
+                      <button
+                        disabled={boostBuyingId !== null}
+                        onClick={() => handleBuyBoost(pkg.promotionPackageId)}
+                        className="w-full py-3 rounded-xl border font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all bg-emerald-600 border-emerald-500 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {boostBuyingId === pkg.promotionPackageId ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Mua gói'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {editingPost && (

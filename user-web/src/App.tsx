@@ -10,6 +10,7 @@ import PostDetail from './pages/PostDetail';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import ShopDetail from './pages/ShopDetail';
+import ShopList from './pages/ShopList';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/shops" element={<ShopList />} />
             <Route path="/detail/:slug" element={<PostDetail />} />
             <Route path="/shop/:id" element={<ShopDetail />} />
 

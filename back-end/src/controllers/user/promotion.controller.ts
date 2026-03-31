@@ -19,6 +19,8 @@ export const getPublishedPackages = async (
                 promotionPackagePrice: promotionPackages.promotionPackagePrice,
                 slotCode: placementSlots.placementSlotCode,
                 slotTitle: placementSlots.placementSlotTitle,
+                slotCapacity: placementSlots.placementSlotCapacity,
+                slotRules: placementSlots.placementSlotRules,
             })
             .from(promotionPackages)
             .innerJoin(placementSlots, eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId))
@@ -28,7 +30,7 @@ export const getPublishedPackages = async (
                     eq(placementSlots.placementSlotPublished, true)
                 )
             )
-            .orderBy(promotionPackages.promotionPackagePrice);
+            .orderBy(promotionPackages.promotionPackageDurationDays);
 
         res.json(packages);
     } catch (error) {
@@ -58,6 +60,7 @@ export const getPublishedPackageById = async (
                 slotCode: placementSlots.placementSlotCode,
                 slotTitle: placementSlots.placementSlotTitle,
                 slotCapacity: placementSlots.placementSlotCapacity,
+                slotRules: placementSlots.placementSlotRules,
             })
             .from(promotionPackages)
             .innerJoin(placementSlots, eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId))

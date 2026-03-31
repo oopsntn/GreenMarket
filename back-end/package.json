@@ -14,6 +14,7 @@
     "db:generate": "drizzle-kit generate",
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
     "seed:sample": "tsx src/scripts/seedSampleData.ts",
+    "seed:promotion-catalog": "tsx src/scripts/seedPromotionCatalog.ts",
     "approve:all": "tsx src/scripts/autoApprovePosts.ts",
     "approve:shops": "tsx src/scripts/autoApproveShops.ts",
     "test:rbac": "tsx src/scripts/testRbacApis.ts",

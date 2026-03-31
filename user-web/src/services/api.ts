@@ -61,6 +61,12 @@ export const submitReport = (data: { postId: number; reportReason: string; repor
 export const getCategories = () => api.get('/categories');
 export const getCategoryAttributes = (categoryId: number) => api.get(`/categories/${categoryId}/attributes`);
 
+// --- Promotions & Payments ---
+export const getPromotionPackages = () => api.get('/promotions/packages');
+export const getPromotionPackageDetail = (id: number | string) => api.get(`/promotions/packages/${id}`);
+export const buyPromotionPackage = (postId: number | string, packageId: number | string) => 
+  api.post('/payment/buy-package', { postId, packageId });
+
 // Profile APIs
 export const getProfile = () => api.get('/profile');
 export const updateProfile = (data: {
