@@ -286,8 +286,15 @@ function PromotionPackagesPage() {
       />
 
       <div className="promotion-packages-summary-grid">
-        {summaryCards.map((card) => (
-          <div key={card.title} className="promotion-packages-summary-card">
+        {summaryCards.map((card, index) => (
+          <div
+            key={card.title}
+            className={
+              index === 3
+                ? "promotion-packages-summary-card promotion-packages-summary-card--compact"
+                : "promotion-packages-summary-card"
+            }
+          >
             <span className="promotion-packages-summary-card__label">
               {card.title}
             </span>

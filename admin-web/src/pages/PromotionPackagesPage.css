@@ -29,10 +29,11 @@
 }
 
 .promotion-packages-summary-card__value {
-  font-size: 32px;
-  line-height: 1.15;
+  font-size: 42px;
+  line-height: 1;
   font-weight: 800;
   color: #1b4332;
+  word-break: break-word;
 }
 
 .promotion-packages-summary-card__subtitle {
@@ -40,6 +41,22 @@
   line-height: 1.5;
   color: #2e7d32;
   font-weight: 600;
+}
+
+.promotion-packages-summary-card--compact
+  .promotion-packages-summary-card__label {
+  min-height: 44px;
+}
+
+.promotion-packages-summary-card--compact
+  .promotion-packages-summary-card__value {
+  font-size: 28px;
+  line-height: 1.25;
+}
+
+.promotion-packages-summary-card--compact
+  .promotion-packages-summary-card__subtitle {
+  color: #486150;
 }
 
 .promotion-packages-filters {
