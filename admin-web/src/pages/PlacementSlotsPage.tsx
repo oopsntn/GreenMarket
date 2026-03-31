@@ -3,9 +3,7 @@ import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
-import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
-import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { placementSlotService } from "../services/placementSlotService";
@@ -217,24 +215,22 @@ function PlacementSlotsPage() {
   const handleConfirmAction = () => {
     if (confirmState.slotId === null || confirmState.action === null) return;
 
-    const targetSlot = slots.find((slot) => slot.id === confirmState.slotId);
+    const slotId = confirmState.slotId;
+
+    const targetSlot = slots.find((slot) => slot.id === slotId);
     if (!targetSlot) {
       closeConfirmDialog();
       return;
     }
 
-    const nextStatus =
+    const nextStatus: PlacementSlotStatus =
       confirmState.action === "disable" ? "Disabled" : "Active";
 
     setSlots((prev) =>
-      placementSlotService.updatePlacementSlotStatus(
-        prev,
-        confirmState.slotId as number,
-        nextStatus,
-      ),
+      placementSlotService.updatePlacementSlotStatus(prev, slotId, nextStatus),
     );
 
-    if (selectedSlot?.id === confirmState.slotId) {
+    if (selectedSlot?.id === slotId) {
       setSelectedSlot((prev) =>
         prev
           ? {
@@ -279,66 +275,72 @@ function PlacementSlotsPage() {
 
       <div className="placement-slots-summary-grid">
         {summaryCards.map((card) => (
-          <StatCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            subtitle={card.subtitle}
-          />
+          <div key={card.title} className="placement-slots-summary-card">
+            <span className="placement-slots-summary-card__label">
+              {card.title}
+            </span>
+            <strong className="placement-slots-summary-card__value">
+              {card.value}
+            </strong>
+            <p className="placement-slots-summary-card__subtitle">
+              {card.subtitle}
+            </p>
+          </div>
         ))}
       </div>
 
       <SectionCard
         title="Slot Filters"
-        description="Filter slots by scope and availability status."
+        description="Search and refine slots by scope and availability status."
       >
         <div className="placement-slots-filters">
-          <div className="placement-slots-filters__search">
-            <SearchToolbar
+          <div className="placement-slots-filters__field placement-slots-filters__field--search">
+            <label htmlFor="placement-slot-search">Search</label>
+            <input
+              id="placement-slot-search"
+              type="text"
+              value={searchKeyword}
+              onChange={(event) => setSearchKeyword(event.target.value)}
               placeholder="Search by slot name, code, or display rule"
-              searchValue={searchKeyword}
-              onSearchChange={setSearchKeyword}
             />
           </div>
 
-          <div className="placement-slots-filters__controls">
-            <div className="placement-slots-filters__field">
-              <label htmlFor="slot-scope-filter">Scope</label>
-              <select
-                id="slot-scope-filter"
-                value={selectedScopeFilter}
-                onChange={(event) =>
-                  setSelectedScopeFilter(
-                    event.target.value as PlacementSlotScope | "All",
-                  )
-                }
-              >
-                {scopeFilterOptions.map((scope) => (
-                  <option key={scope} value={scope}>
-                    {scope}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="placement-slots-filters__field">
+            <label htmlFor="slot-scope-filter">Scope</label>
+            <select
+              id="slot-scope-filter"
+              value={selectedScopeFilter}
+              onChange={(event) =>
+                setSelectedScopeFilter(
+                  event.target.value as PlacementSlotScope | "All",
+                )
+              }
+            >
+              {scopeFilterOptions.map((scope) => (
+                <option key={scope} value={scope}>
+                  {scope}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div className="placement-slots-filters__field">
-              <label htmlFor="slot-status-filter">Status</label>
-              <select
-                id="slot-status-filter"
-                value={selectedStatusFilter}
-                onChange={(event) =>
-                  setSelectedStatusFilter(
-                    event.target.value as PlacementSlotStatus | "All",
-                  )
-                }
-              >
-                {statusFilterOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="placement-slots-filters__field">
+            <label htmlFor="slot-status-filter">Status</label>
+            <select
+              id="slot-status-filter"
+              value={selectedStatusFilter}
+              onChange={(event) =>
+                setSelectedStatusFilter(
+                  event.target.value as PlacementSlotStatus | "All",
+                )
+              }
+            >
+              {statusFilterOptions.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </SectionCard>

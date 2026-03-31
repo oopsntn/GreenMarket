@@ -1,7 +1,7 @@
 .placement-slots-page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .placement-slots-summary-grid {
@@ -10,21 +10,44 @@
   gap: 20px;
 }
 
-.placement-slots-filters {
-  padding: 24px;
+.placement-slots-summary-card {
+  background: #ffffff;
+  border: 1px solid #e7efe6;
+  border-radius: 20px;
+  padding: 22px 22px 20px;
+  box-shadow: 0 10px 24px rgba(27, 94, 32, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 10px;
+  min-height: 156px;
 }
 
-.placement-slots-filters__search {
-  width: 100%;
+.placement-slots-summary-card__label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #5d7263;
 }
 
-.placement-slots-filters__controls {
+.placement-slots-summary-card__value {
+  font-size: 42px;
+  line-height: 1;
+  font-weight: 800;
+  color: #1b4332;
+}
+
+.placement-slots-summary-card__subtitle {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.placement-slots-filters {
+  padding: 24px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 2fr 1fr 1fr;
   gap: 18px;
+  align-items: end;
 }
 
 .placement-slots-filters__field {
@@ -39,6 +62,7 @@
   color: #2f4f3a;
 }
 
+.placement-slots-filters__field input,
 .placement-slots-filters__field select {
   height: 46px;
   border: 1px solid #d7e6d9;
@@ -48,6 +72,11 @@
   outline: none;
   background-color: #fcfffc;
   color: #223127;
+  font-family: inherit;
+}
+
+.placement-slots-filters__field--search {
+  min-width: 0;
 }
 
 .placement-slots-table-wrapper {
@@ -216,13 +245,17 @@
   .placement-slots-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .placement-slots-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .placement-slots-filters__field--search {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 1024px) {
-  .placement-slots-filters__controls {
-    grid-template-columns: 1fr;
-  }
-
   .placement-slots-modal__grid {
     grid-template-columns: 1fr;
   }
@@ -230,6 +263,10 @@
 
 @media (max-width: 640px) {
   .placement-slots-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .placement-slots-filters {
     grid-template-columns: 1fr;
   }
 }
