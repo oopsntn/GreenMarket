@@ -203,10 +203,8 @@ function BoostedPostsPage() {
   const renderStatusVariant = (status: BoostedPostStatus) => {
     if (status === "Active") return "active";
     if (status === "Scheduled") return "pending";
-    if (status === "Paused") return "warning";
-    if (status === "Completed") return "success";
-    if (status === "Expired") return "disabled";
-    return "neutral";
+    if (status === "Paused") return "paused";
+    return "expired";
   };
 
   return (
