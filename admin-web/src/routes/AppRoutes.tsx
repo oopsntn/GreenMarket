@@ -14,6 +14,7 @@ import CustomerSpendingPage from "../pages/CustomerSpendingPage";
 import DashboardPage from "../pages/DashboardPage";
 import ExportPage from "../pages/ExportPage";
 import LoginPage from "../pages/LoginPage";
+import PlacementSlotsPage from "../pages/PlacementSlotsPage";
 import PromotionsPage from "../pages/PromotionsPage";
 import RevenuePage from "../pages/RevenuePage";
 import SettingsPage from "../pages/SettingsPage";
@@ -91,6 +92,7 @@ function AppRoutes() {
             />
             <Route path="templates" element={<TemplatesPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="placement-slots" element={<PlacementSlotsPage />} />
             <Route path="promotions" element={<PromotionsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="revenue" element={<RevenuePage />} />
