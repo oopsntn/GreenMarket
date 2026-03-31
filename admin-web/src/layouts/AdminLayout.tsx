@@ -11,6 +11,7 @@ const menuItems = [
   { label: "Templates", path: "/templates" },
   { label: "Settings", path: "/settings" },
   { label: "Placement Slots", path: "/placement-slots" },
+  { label: "Promotion Packages", path: "/promotion-packages" },
   { label: "Promotions", path: "/promotions" },
   { label: "Analytics", path: "/analytics" },
   { label: "Revenue", path: "/revenue" },

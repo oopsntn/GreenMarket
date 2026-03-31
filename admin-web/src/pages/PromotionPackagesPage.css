@@ -1,0 +1,272 @@
+.promotion-packages-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.promotion-packages-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.promotion-packages-summary-card {
+  background: #ffffff;
+  border: 1px solid #e7efe6;
+  border-radius: 20px;
+  padding: 22px 22px 20px;
+  box-shadow: 0 10px 24px rgba(27, 94, 32, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 156px;
+}
+
+.promotion-packages-summary-card__label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #5d7263;
+}
+
+.promotion-packages-summary-card__value {
+  font-size: 32px;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #1b4332;
+}
+
+.promotion-packages-summary-card__subtitle {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.promotion-packages-filters {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 18px;
+  align-items: end;
+}
+
+.promotion-packages-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.promotion-packages-filters__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.promotion-packages-filters__field input,
+.promotion-packages-filters__field select {
+  height: 46px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+  font-family: inherit;
+}
+
+.promotion-packages-filters__field--search {
+  min-width: 0;
+}
+
+.promotion-packages-table-wrapper {
+  overflow-x: auto;
+}
+
+.promotion-packages-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1150px;
+}
+
+.promotion-packages-table thead {
+  background-color: #f6faf5;
+}
+
+.promotion-packages-table th,
+.promotion-packages-table td {
+  padding: 16px 14px;
+  border-bottom: 1px solid #eef3ea;
+  font-size: 14px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.promotion-packages-table th {
+  color: #486150;
+  font-weight: 700;
+}
+
+.promotion-packages-table td {
+  color: #223127;
+  line-height: 1.5;
+}
+
+.promotion-packages-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.promotion-packages-actions button {
+  width: 104px;
+  height: 36px;
+  border: none;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promotion-packages-actions__view {
+  background-color: #edf7ee;
+  color: #1b5e20;
+}
+
+.promotion-packages-actions__edit {
+  background-color: #eef4ff;
+  color: #1d4ed8;
+}
+
+.promotion-packages-actions__disable {
+  background-color: #fff1f0;
+  color: #c62828;
+}
+
+.promotion-packages-actions__enable {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.promotion-packages-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.promotion-packages-form__error {
+  color: #c62828;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.promotion-packages-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.promotion-packages-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.promotion-packages-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.promotion-packages-modal__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.promotion-packages-modal__field input,
+.promotion-packages-modal__field select,
+.promotion-packages-modal__field textarea {
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+  font-family: inherit;
+}
+
+.promotion-packages-modal__field input,
+.promotion-packages-modal__field select {
+  height: 46px;
+}
+
+.promotion-packages-modal__field input:disabled,
+.promotion-packages-modal__field textarea:disabled {
+  background-color: #f5f7f4;
+}
+
+.promotion-packages-modal__field textarea {
+  resize: none;
+}
+
+.promotion-packages-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.promotion-packages-modal__close,
+.promotion-packages-modal__submit {
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promotion-packages-modal__close {
+  background-color: #f3f7f1;
+  color: #486150;
+}
+
+.promotion-packages-modal__submit {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
+}
+
+@media (max-width: 1200px) {
+  .promotion-packages-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .promotion-packages-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .promotion-packages-filters__field--search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1024px) {
+  .promotion-packages-modal__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .promotion-packages-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .promotion-packages-filters {
+    grid-template-columns: 1fr;
+  }
+}
