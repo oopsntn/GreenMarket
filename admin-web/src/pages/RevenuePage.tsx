@@ -2,11 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import EmptyState from "../components/EmptyState";
 import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { revenueService } from "../services/revenueService";
+import {
+  DEFAULT_REPORT_FROM_DATE,
+  DEFAULT_REPORT_TO_DATE,
+  formatDateRangeLabel,
+} from "../utils/dateRange";
 import "./RevenuePage.css";
 
 const PAGE_SIZE = 5;
@@ -15,15 +21,27 @@ function RevenuePage() {
   const summaryCards = revenueService.getRevenueCards();
   const rows = revenueService.getRevenueRows();
 
-  const [dateRange, setDateRange] = useState("Last 30 Days");
+  const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
+  const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
   const [slotFilter, setSlotFilter] = useState("All Slots");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
 
   const filteredRows = useMemo(() => {
-    if (slotFilter === "All Slots") return rows;
-    return rows.filter((row) => row.slot === slotFilter);
-  }, [rows, slotFilter]);
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    return rows.filter((row) => {
+      const matchesSlot = slotFilter === "All Slots" || row.slot === slotFilter;
+      const matchesKeyword =
+        !keyword ||
+        row.packageName.toLowerCase().includes(keyword) ||
+        row.slot.toLowerCase().includes(keyword);
+
+      return matchesSlot && matchesKeyword;
+    });
+  }, [rows, searchKeyword, slotFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
 
@@ -34,7 +52,7 @@ function RevenuePage() {
 
   useEffect(() => {
     setPage(1);
-  }, [slotFilter, dateRange]);
+  }, [fromDate, searchKeyword, slotFilter, toDate]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -58,7 +76,7 @@ function RevenuePage() {
 
   const handleExportRevenueReport = () => {
     showToast(
-      `Revenue report export started for ${dateRange} • ${slotFilter}.`,
+      `Revenue report export started for ${dateRangeLabel} • ${slotFilter}.`,
     );
   };
 
@@ -78,20 +96,23 @@ function RevenuePage() {
         <FilterBar
           fields={[
             {
-              id: "revenue-date-range",
-              label: "Date Range",
-              value: dateRange,
-              onChange: setDateRange,
-              options: [
-                "Last 7 Days",
-                "Last 30 Days",
-                "Last 90 Days",
-                "This Year",
-              ],
+              id: "revenue-from-date",
+              label: "From Date",
+              type: "date",
+              value: fromDate,
+              onChange: setFromDate,
+            },
+            {
+              id: "revenue-to-date",
+              label: "To Date",
+              type: "date",
+              value: toDate,
+              onChange: setToDate,
             },
             {
               id: "revenue-slot-filter",
               label: "Placement Slot",
+              type: "select",
               value: slotFilter,
               onChange: setSlotFilter,
               options: [
@@ -105,13 +126,20 @@ function RevenuePage() {
         />
       </SectionCard>
 
+      <SearchToolbar
+        placeholder="Search by package name or slot"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+        filterSummary={`Current slot filter: ${slotFilter} • ${dateRangeLabel}`}
+      />
+
       <div className="revenue-cards">
         {summaryCards.map((card) => (
           <SectionCard key={card.title}>
             <StatCard
               title={card.title}
               value={card.value}
-              subtitle={`${card.note} • ${dateRange}`}
+              subtitle={`${card.note} • ${dateRangeLabel}`}
             />
           </SectionCard>
         ))}
@@ -119,7 +147,7 @@ function RevenuePage() {
 
       <SectionCard
         title="Revenue by Package"
-        description={`${dateRange} • ${slotFilter}`}
+        description={`${dateRangeLabel} • ${slotFilter}`}
       >
         {filteredRows.length === 0 ? (
           <EmptyState
