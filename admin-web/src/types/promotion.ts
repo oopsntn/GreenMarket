@@ -1,10 +1,24 @@
 export type PromotionSlot = "Home Top" | "Category Top" | "Search Boost";
 export type PromotionStatus = "Scheduled" | "Active" | "Paused" | "Expired";
+export type PromotionPaymentStatus = "Paid" | "Pending Verification";
+export type PromotionHandledBy = "Manager" | "Admin";
+
+export type PromotionPackageActionPayload = {
+  packageId: number;
+  packageName: string;
+  slot: PromotionSlot;
+  startDate: string;
+  endDate: string;
+  budget: string;
+  paymentStatus: PromotionPaymentStatus;
+  adminNote: string;
+};
 
 export type Promotion = {
   id: number;
   postTitle: string;
   owner: string;
+  packageId: number;
   slot: PromotionSlot;
   packageName: string;
   startDate: string;
@@ -12,10 +26,14 @@ export type Promotion = {
   status: PromotionStatus;
   budget: string;
   note: string;
+  paymentStatus: PromotionPaymentStatus;
+  handledBy: PromotionHandledBy;
+  reopenEligible: boolean;
   canPause: boolean;
   canResume: boolean;
   pauseBlockedReason?: string;
   resumeBlockedReason?: string;
+  reopenBlockedReason?: string;
 };
 
 export type PromotionSummaryCard = {
