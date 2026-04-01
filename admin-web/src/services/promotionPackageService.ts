@@ -67,6 +67,10 @@ export const promotionPackageService = {
     return initialPromotionPackages;
   },
 
+  getActivePromotionPackages(packages = initialPromotionPackages) {
+    return packages.filter((item) => item.status === "Active");
+  },
+
   getEmptyForm(): PromotionPackageFormState {
     return emptyPromotionPackageForm;
   },
