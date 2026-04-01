@@ -20,19 +20,39 @@ const menuItems = [
   { label: "Export CSV", path: "/export" },
 ];
 
-function AdminLayout() {
-  const navigate = useNavigate();
+type AdminProfile = {
+  name?: string;
+  email?: string;
+};
 
+const getStoredProfile = (): AdminProfile | null => {
   const profileText =
     localStorage.getItem("adminProfile") ||
     sessionStorage.getItem("adminProfile");
 
-  const profile = profileText
-    ? (JSON.parse(profileText) as {
-        name: string;
-        email: string;
-      })
-    : null;
+  if (!profileText) return null;
+
+  try {
+    const parsed = JSON.parse(profileText) as AdminProfile | null;
+
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    return {
+      name: typeof parsed.name === "string" ? parsed.name : undefined,
+      email: typeof parsed.email === "string" ? parsed.email : undefined,
+    };
+  } catch {
+    localStorage.removeItem("adminProfile");
+    sessionStorage.removeItem("adminProfile");
+    return null;
+  }
+};
+
+function AdminLayout() {
+  const navigate = useNavigate();
+  const profile = getStoredProfile();
 
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
