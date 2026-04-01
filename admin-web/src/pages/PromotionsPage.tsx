@@ -545,7 +545,7 @@ function PromotionsPage() {
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Filter by slot & status"
-        filterSummary={`Current filters: ${selectedSlotFilter} • ${selectedStatusFilter}`}
+        filterSummaryItems={[selectedSlotFilter, selectedStatusFilter]}
       />
 
       {showFilters && (

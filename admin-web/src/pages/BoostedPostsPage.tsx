@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -57,6 +57,8 @@ const healthFilterOptions: Array<BoostedPostDeliveryHealth | "All"> = [
   "At Risk",
 ];
 
+const PAGE_SIZE = 5;
+
 const formatCtr = (clicks: number, impressions: number) => {
   if (impressions === 0) {
     return "0.00%";
@@ -101,6 +103,7 @@ function BoostedPostsPage() {
   const [selectedHealthFilter, setSelectedHealthFilter] = useState<
     BoostedPostDeliveryHealth | "All"
   >("All");
+  const [page, setPage] = useState(1);
   const [selectedPost, setSelectedPost] = useState<BoostedPost | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
@@ -167,6 +170,29 @@ function BoostedPostsPage() {
     selectedReviewFilter,
     selectedHealthFilter,
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / PAGE_SIZE));
+
+  const paginatedPosts = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredPosts.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredPosts, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [
+    searchKeyword,
+    selectedSlotFilter,
+    selectedStatusFilter,
+    selectedReviewFilter,
+    selectedHealthFilter,
+  ]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const openViewModal = (item: BoostedPost) => {
     setSelectedPost(item);
@@ -294,7 +320,12 @@ function BoostedPostsPage() {
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Filter by slot, status, review, health"
-        filterSummary={`Current filters: ${selectedSlotFilter} • ${selectedStatusFilter} • ${selectedReviewFilter} • ${selectedHealthFilter}`}
+        filterSummaryItems={[
+          selectedSlotFilter,
+          selectedStatusFilter,
+          selectedReviewFilter,
+          selectedHealthFilter,
+        ]}
       />
 
       {showFilters && (
@@ -392,110 +423,137 @@ function BoostedPostsPage() {
             description="No boosted campaigns match the current search or filter settings."
           />
         ) : (
-          <div className="boosted-posts-table-wrapper">
-            <table className="boosted-posts-table">
-              <thead>
-                <tr>
-                  <th>Campaign</th>
-                  <th>Post</th>
-                  <th>Owner</th>
-                  <th>Slot</th>
-                  <th>Delivery</th>
-                  <th>Review</th>
-                  <th>CTR</th>
-                  <th>Quota Used</th>
-                  <th>Operator</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredPosts.map((item) => (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="boosted-posts-cell">
-                        <strong>{item.campaignCode}</strong>
-                        <span>
-                          {item.startDate} to {item.endDate}
-                        </span>
-                      </div>
-                    </td>
-                    <td>{item.postTitle}</td>
-                    <td>{item.ownerName}</td>
-                    <td>
-                      <StatusBadge label={item.slot} variant="slot" />
-                    </td>
-                    <td>
-                      <div className="boosted-posts-cell">
-                        <StatusBadge
-                          label={item.deliveryHealth}
-                          variant={getHealthVariant(item.deliveryHealth)}
-                        />
-                        <span>{item.status}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <StatusBadge
-                        label={item.reviewStatus}
-                        variant={getReviewVariant(item.reviewStatus)}
-                      />
-                    </td>
-                    <td>{formatCtr(item.clicks, item.impressions)}</td>
-                    <td>{formatQuotaUsage(item.usedQuota, item.totalQuota)}</td>
-                    <td>
-                      <div className="boosted-posts-cell">
-                        <strong>{item.assignedOperator}</strong>
-                        <span>{item.lastOptimizedAt}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="boosted-posts-actions">
-                        <button
-                          type="button"
-                          className="boosted-posts-actions__view"
-                          onClick={() => openViewModal(item)}
-                        >
-                          View
-                        </button>
-
-                        {item.status === "Active" && (
-                          <button
-                            type="button"
-                            className="boosted-posts-actions__pause"
-                            onClick={() => openConfirmDialog(item.id, "pause")}
-                          >
-                            Pause
-                          </button>
-                        )}
-
-                        {item.status === "Paused" && (
-                          <button
-                            type="button"
-                            className="boosted-posts-actions__resume"
-                            onClick={() => openConfirmDialog(item.id, "resume")}
-                          >
-                            Resume
-                          </button>
-                        )}
-
-                        {(item.status === "Scheduled" ||
-                          item.status === "Active" ||
-                          item.status === "Paused") && (
-                          <button
-                            type="button"
-                            className="boosted-posts-actions__close"
-                            onClick={() => openConfirmDialog(item.id, "close")}
-                          >
-                            Close
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="boosted-posts-table-wrapper">
+              <table className="boosted-posts-table">
+                <thead>
+                  <tr>
+                    <th>Campaign</th>
+                    <th>Post</th>
+                    <th>Owner</th>
+                    <th>Slot</th>
+                    <th>Delivery</th>
+                    <th>Review</th>
+                    <th>CTR</th>
+                    <th>Quota Used</th>
+                    <th>Operator</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedPosts.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <div className="boosted-posts-cell">
+                          <strong>{item.campaignCode}</strong>
+                          <span>
+                            {item.startDate} to {item.endDate}
+                          </span>
+                        </div>
+                      </td>
+                      <td>{item.postTitle}</td>
+                      <td>{item.ownerName}</td>
+                      <td>
+                        <StatusBadge label={item.slot} variant="slot" />
+                      </td>
+                      <td>
+                        <div className="boosted-posts-cell">
+                          <StatusBadge
+                            label={item.deliveryHealth}
+                            variant={getHealthVariant(item.deliveryHealth)}
+                          />
+                          <span>{item.status}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <StatusBadge
+                          label={item.reviewStatus}
+                          variant={getReviewVariant(item.reviewStatus)}
+                        />
+                      </td>
+                      <td>{formatCtr(item.clicks, item.impressions)}</td>
+                      <td>{formatQuotaUsage(item.usedQuota, item.totalQuota)}</td>
+                      <td>
+                        <div className="boosted-posts-cell">
+                          <strong>{item.assignedOperator}</strong>
+                          <span>{item.lastOptimizedAt}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="boosted-posts-actions">
+                          <button
+                            type="button"
+                            className="boosted-posts-actions__view"
+                            onClick={() => openViewModal(item)}
+                          >
+                            View
+                          </button>
+
+                          {item.status === "Active" && (
+                            <button
+                              type="button"
+                              className="boosted-posts-actions__pause"
+                              onClick={() => openConfirmDialog(item.id, "pause")}
+                            >
+                              Pause
+                            </button>
+                          )}
+
+                          {item.status === "Paused" && (
+                            <button
+                              type="button"
+                              className="boosted-posts-actions__resume"
+                              onClick={() => openConfirmDialog(item.id, "resume")}
+                            >
+                              Resume
+                            </button>
+                          )}
+
+                          {(item.status === "Scheduled" ||
+                            item.status === "Active" ||
+                            item.status === "Paused") && (
+                            <button
+                              type="button"
+                              className="boosted-posts-actions__close"
+                              onClick={() => openConfirmDialog(item.id, "close")}
+                            >
+                              Close
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="boosted-posts-pagination">
+              <span className="boosted-posts-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="boosted-posts-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </SectionCard>
 
