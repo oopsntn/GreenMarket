@@ -4,14 +4,21 @@ import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import { dashboardService } from "../services/dashboardService";
+import {
+  DEFAULT_REPORT_FROM_DATE,
+  DEFAULT_REPORT_TO_DATE,
+  formatDateRangeLabel,
+} from "../utils/dateRange";
 import "./DashboardPage.css";
 
 function DashboardPage() {
   const statCards = dashboardService.getStatCards();
   const summary = dashboardService.getSummary();
 
-  const [dateRange, setDateRange] = useState("Last 30 Days");
+  const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
+  const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
   const [overviewScope, setOverviewScope] = useState("All Metrics");
+  const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
 
   const filteredCards = useMemo(() => {
     if (overviewScope === "All Metrics") return statCards;
@@ -73,25 +80,28 @@ function DashboardPage() {
 
       <SectionCard
         title="Dashboard Filters"
-        description="Adjust the KPI time range and overview scope."
+        description="Adjust the reporting period and overview scope."
       >
         <FilterBar
           fields={[
             {
-              id: "dashboard-date-range",
-              label: "Date Range",
-              value: dateRange,
-              onChange: setDateRange,
-              options: [
-                "Last 7 Days",
-                "Last 30 Days",
-                "Last 90 Days",
-                "This Year",
-              ],
+              id: "dashboard-from-date",
+              label: "From Date",
+              type: "date",
+              value: fromDate,
+              onChange: setFromDate,
+            },
+            {
+              id: "dashboard-to-date",
+              label: "To Date",
+              type: "date",
+              value: toDate,
+              onChange: setToDate,
             },
             {
               id: "dashboard-overview-scope",
               label: "Overview Scope",
+              type: "select",
               value: overviewScope,
               onChange: setOverviewScope,
               options: [
@@ -107,7 +117,7 @@ function DashboardPage() {
 
       <SectionCard
         title="Overview Context"
-        description={`${dateRange} • ${overviewScope}`}
+        description={`${dateRangeLabel} • ${overviewScope}`}
       >
         <div className="dashboard-context">
           <p>{scopeSummaryText}</p>
@@ -120,7 +130,7 @@ function DashboardPage() {
             <StatCard
               title={card.title}
               value={card.value}
-              subtitle={`${dateRange} • ${overviewScope}`}
+              subtitle={`${dateRangeLabel} • ${overviewScope}`}
             />
           </SectionCard>
         ))}
