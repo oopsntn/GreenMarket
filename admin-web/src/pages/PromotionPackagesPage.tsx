@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -36,6 +36,8 @@ const statusFilterOptions: Array<PromotionPackageStatus | "All"> = [
   "Disabled",
 ];
 
+const PAGE_SIZE = 5;
+
 function PromotionPackagesPage() {
   const [packages, setPackages] = useState<PromotionPackage[]>(
     promotionPackageService.getPromotionPackages(),
@@ -47,6 +49,7 @@ function PromotionPackagesPage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     PromotionPackageStatus | "All"
   >("All");
+  const [page, setPage] = useState(1);
 
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -101,6 +104,23 @@ function PromotionPackagesPage() {
       return matchesKeyword && matchesSlot && matchesStatus;
     });
   }, [packages, searchKeyword, selectedSlotFilter, selectedStatusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPackages.length / PAGE_SIZE));
+
+  const paginatedPackages = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredPackages.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredPackages, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword, selectedSlotFilter, selectedStatusFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const openViewModal = (item: PromotionPackage) => {
     setSelectedPackage(item);
@@ -367,86 +387,113 @@ function PromotionPackagesPage() {
             description="No promotion packages match the current search or filter settings."
           />
         ) : (
-          <div className="promotion-packages-table-wrapper">
-            <table className="promotion-packages-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Package Name</th>
-                  <th>Slot</th>
-                  <th>Duration</th>
-                  <th>Price</th>
-                  <th>Max Posts</th>
-                  <th>Quota</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredPackages.map((item) => (
-                  <tr key={item.id}>
-                    <td>#{item.id}</td>
-                    <td>{item.name}</td>
-                    <td>
-                      <StatusBadge label={item.slot} variant="slot" />
-                    </td>
-                    <td>{item.durationDays} days</td>
-                    <td>{item.price}</td>
-                    <td>{item.maxPosts}</td>
-                    <td>{item.displayQuota.toLocaleString("en-US")}</td>
-                    <td>
-                      <StatusBadge
-                        label={item.status}
-                        variant={
-                          item.status === "Active" ? "active" : "disabled"
-                        }
-                      />
-                    </td>
-                    <td>
-                      <div className="promotion-packages-actions">
-                        <button
-                          type="button"
-                          className="promotion-packages-actions__view"
-                          onClick={() => openViewModal(item)}
-                        >
-                          View
-                        </button>
-
-                        <button
-                          type="button"
-                          className="promotion-packages-actions__edit"
-                          onClick={() => openEditModal(item)}
-                        >
-                          Edit
-                        </button>
-
-                        {item.status === "Active" ? (
-                          <button
-                            type="button"
-                            className="promotion-packages-actions__disable"
-                            onClick={() =>
-                              openConfirmDialog(item.id, "disable")
-                            }
-                          >
-                            Disable
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="promotion-packages-actions__enable"
-                            onClick={() => openConfirmDialog(item.id, "enable")}
-                          >
-                            Enable
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="promotion-packages-table-wrapper">
+              <table className="promotion-packages-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Package Name</th>
+                    <th>Slot</th>
+                    <th>Duration</th>
+                    <th>Price</th>
+                    <th>Max Posts</th>
+                    <th>Quota</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedPackages.map((item) => (
+                    <tr key={item.id}>
+                      <td>#{item.id}</td>
+                      <td>{item.name}</td>
+                      <td>
+                        <StatusBadge label={item.slot} variant="slot" />
+                      </td>
+                      <td>{item.durationDays} days</td>
+                      <td>{item.price}</td>
+                      <td>{item.maxPosts}</td>
+                      <td>{item.displayQuota.toLocaleString("en-US")}</td>
+                      <td>
+                        <StatusBadge
+                          label={item.status}
+                          variant={
+                            item.status === "Active" ? "active" : "disabled"
+                          }
+                        />
+                      </td>
+                      <td>
+                        <div className="promotion-packages-actions">
+                          <button
+                            type="button"
+                            className="promotion-packages-actions__view"
+                            onClick={() => openViewModal(item)}
+                          >
+                            View
+                          </button>
+
+                          <button
+                            type="button"
+                            className="promotion-packages-actions__edit"
+                            onClick={() => openEditModal(item)}
+                          >
+                            Edit
+                          </button>
+
+                          {item.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="promotion-packages-actions__disable"
+                              onClick={() =>
+                                openConfirmDialog(item.id, "disable")
+                              }
+                            >
+                              Disable
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="promotion-packages-actions__enable"
+                              onClick={() => openConfirmDialog(item.id, "enable")}
+                            >
+                              Enable
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="promotion-packages-pagination">
+              <span className="promotion-packages-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="promotion-packages-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </SectionCard>
 

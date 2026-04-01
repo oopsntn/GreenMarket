@@ -99,7 +99,7 @@
   padding: 16px 14px;
   border-bottom: 1px solid #eef3ea;
   font-size: 14px;
-  text-align: left;
+  text-align: center;
   vertical-align: middle;
 }
 
@@ -116,6 +116,7 @@
 .promotion-packages-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
 
@@ -148,6 +149,42 @@
 .promotion-packages-actions__enable {
   background-color: #e8f5e9;
   color: #2e7d32;
+}
+
+.promotion-packages-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.promotion-packages-pagination__info {
+  font-size: 14px;
+  color: #6b7b6d;
+}
+
+.promotion-packages-pagination__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.promotion-packages-pagination__actions button {
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 12px;
+  background-color: #f3f7f1;
+  color: #486150;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promotion-packages-pagination__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .promotion-packages-form {
@@ -265,6 +302,12 @@
 
   .promotion-packages-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .promotion-packages-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 20px 20px;
   }
 }
 
