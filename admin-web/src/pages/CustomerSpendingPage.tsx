@@ -2,12 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import EmptyState from "../components/EmptyState";
 import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { customerSpendingService } from "../services/customerSpendingService";
 import type { CustomerSpendingRow } from "../types/customerSpending";
+import {
+  DEFAULT_REPORT_FROM_DATE,
+  DEFAULT_REPORT_TO_DATE,
+  formatDateRangeLabel,
+} from "../utils/dateRange";
 import "./CustomerSpendingPage.css";
 
 const PAGE_SIZE = 5;
@@ -21,32 +27,44 @@ function CustomerSpendingPage() {
   const summaryCards = customerSpendingService.getCustomerSpendingCards();
   const rows = customerSpendingService.getCustomerSpendingRows();
 
-  const [dateRange, setDateRange] = useState("Last 30 Days");
+  const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
+  const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
   const [customerSegment, setCustomerSegment] = useState("All Customers");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
 
   const filteredRows = useMemo(() => {
-    if (customerSegment === "All Customers") return rows;
+    let segmentRows = rows;
 
     if (customerSegment === "Top Spenders") {
       const sortedRows = [...rows].sort(
         (a, b) =>
           parseCurrencyValue(b.totalSpent) - parseCurrencyValue(a.totalSpent),
       );
-      return sortedRows.slice(0, 5);
+      segmentRows = sortedRows.slice(0, 5);
     }
 
     if (customerSegment === "Returning Buyers") {
-      return rows.filter((row) => row.totalOrders >= 5);
+      segmentRows = rows.filter((row) => row.totalOrders >= 5);
     }
 
     if (customerSegment === "New Customers") {
-      return rows.filter((row) => row.totalOrders <= 2);
+      segmentRows = rows.filter((row) => row.totalOrders <= 2);
     }
 
-    return rows;
-  }, [customerSegment, rows]);
+    const keyword = searchKeyword.trim().toLowerCase();
+
+    return segmentRows.filter((row) => {
+      if (!keyword) return true;
+
+      return (
+        row.customerName.toLowerCase().includes(keyword) ||
+        row.email.toLowerCase().includes(keyword)
+      );
+    });
+  }, [customerSegment, rows, searchKeyword]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
 
@@ -57,7 +75,7 @@ function CustomerSpendingPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [customerSegment, dateRange]);
+  }, [customerSegment, fromDate, searchKeyword, toDate]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -81,7 +99,7 @@ function CustomerSpendingPage() {
 
   const handleExportCustomerReport = () => {
     showToast(
-      `Customer spending report export started for ${dateRange} • ${customerSegment}.`,
+      `Customer spending report export started for ${dateRangeLabel} • ${customerSegment}.`,
     );
   };
 
@@ -101,20 +119,23 @@ function CustomerSpendingPage() {
         <FilterBar
           fields={[
             {
-              id: "customer-spending-date-range",
-              label: "Date Range",
-              value: dateRange,
-              onChange: setDateRange,
-              options: [
-                "Last 7 Days",
-                "Last 30 Days",
-                "Last 90 Days",
-                "This Year",
-              ],
+              id: "customer-spending-from-date",
+              label: "From Date",
+              type: "date",
+              value: fromDate,
+              onChange: setFromDate,
+            },
+            {
+              id: "customer-spending-to-date",
+              label: "To Date",
+              type: "date",
+              value: toDate,
+              onChange: setToDate,
             },
             {
               id: "customer-segment",
               label: "Customer Segment",
+              type: "select",
               value: customerSegment,
               onChange: setCustomerSegment,
               options: [
@@ -128,13 +149,20 @@ function CustomerSpendingPage() {
         />
       </SectionCard>
 
+      <SearchToolbar
+        placeholder="Search by customer name or email"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+        filterSummary={`Current segment: ${customerSegment} • ${dateRangeLabel}`}
+      />
+
       <div className="customer-spending-cards">
         {summaryCards.map((card) => (
           <SectionCard key={card.title}>
             <StatCard
               title={card.title}
               value={card.value}
-              subtitle={`${card.note} • ${dateRange}`}
+              subtitle={`${card.note} • ${dateRangeLabel}`}
             />
           </SectionCard>
         ))}
@@ -142,7 +170,7 @@ function CustomerSpendingPage() {
 
       <SectionCard
         title="Top Customer Spending"
-        description={`${dateRange} • ${customerSegment}`}
+        description={`${dateRangeLabel} • ${customerSegment}`}
       >
         {filteredRows.length === 0 ? (
           <EmptyState
