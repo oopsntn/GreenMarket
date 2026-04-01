@@ -5,6 +5,50 @@ import type {
   PromotionSummaryCard,
 } from "../types/promotion";
 
+const applyPromotionState = (
+  promotion: Promotion,
+  status: PromotionStatus,
+): Promotion => {
+  if (status === "Paused") {
+    return {
+      ...promotion,
+      status: "Paused",
+      canPause: false,
+      canResume: true,
+      pauseBlockedReason: "This promotion is already paused.",
+      resumeBlockedReason: undefined,
+    };
+  }
+
+  if (status === "Active") {
+    return {
+      ...promotion,
+      status: "Active",
+      canPause: true,
+      canResume: false,
+      pauseBlockedReason: undefined,
+      resumeBlockedReason:
+        "This promotion is already active and does not need resume action.",
+    };
+  }
+
+  if (status === "Scheduled") {
+    return {
+      ...promotion,
+      status: "Scheduled",
+      canPause: false,
+      canResume: false,
+      pauseBlockedReason: "Scheduled promotions have not started yet.",
+      resumeBlockedReason: "Scheduled promotions do not need resume action.",
+    };
+  }
+
+  return {
+    ...promotion,
+    status,
+  };
+};
+
 export const promotionService = {
   getPromotions(): Promotion[] {
     return initialPromotions;
@@ -17,34 +61,7 @@ export const promotionService = {
   ): Promotion[] {
     return promotions.map((promotion) => {
       if (promotion.id !== promotionId) return promotion;
-
-      if (status === "Paused") {
-        return {
-          ...promotion,
-          status: "Paused",
-          canPause: false,
-          canResume: true,
-          pauseBlockedReason: "This promotion is already paused.",
-          resumeBlockedReason: undefined,
-        };
-      }
-
-      if (status === "Active") {
-        return {
-          ...promotion,
-          status: "Active",
-          canPause: true,
-          canResume: false,
-          pauseBlockedReason: undefined,
-          resumeBlockedReason:
-            "This promotion is already active and does not need resume action.",
-        };
-      }
-
-      return {
-        ...promotion,
-        status,
-      };
+      return applyPromotionState(promotion, status);
     });
   },
 
@@ -56,9 +73,17 @@ export const promotionService = {
     return promotion.status === "Paused" && promotion.canResume;
   },
 
+  canReopenPromotion(promotion: Promotion) {
+    return (
+      promotion.status === "Expired" &&
+      promotion.paymentStatus === "Paid" &&
+      promotion.reopenEligible
+    );
+  },
+
   getActionBlockedReason(
     promotion: Promotion,
-    action: "pause" | "resume",
+    action: "pause" | "resume" | "reopen",
   ): string {
     if (action === "pause") {
       if (promotion.status !== "Active") {
@@ -68,6 +93,21 @@ export const promotionService = {
       return (
         promotion.pauseBlockedReason ??
         "This promotion is not eligible for pause right now."
+      );
+    }
+
+    if (action === "reopen") {
+      if (promotion.status !== "Expired") {
+        return "Only expired promotions can be reopened.";
+      }
+
+      if (promotion.paymentStatus !== "Paid") {
+        return "Admin can reopen only after payment has been confirmed.";
+      }
+
+      return (
+        promotion.reopenBlockedReason ??
+        "This promotion is not eligible for reopen right now."
       );
     }
 
