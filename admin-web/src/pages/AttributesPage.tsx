@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -7,7 +7,6 @@ import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
-import { emptyAttributeForm } from "../mock-data/attributes";
 import { attributeService } from "../services/attributeService";
 import type { Attribute, AttributeFormState } from "../types/attribute";
 import "./AttributesPage.css";
@@ -21,16 +20,22 @@ type ConfirmState = {
 };
 
 function AttributesPage() {
-  const [attributes, setAttributes] = useState<Attribute[]>(
-    attributeService.getAttributes(),
-  );
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
   const [selectedAttributeId, setSelectedAttributeId] = useState<number | null>(
     null,
   );
-  const [formData, setFormData] =
-    useState<AttributeFormState>(emptyAttributeForm);
+  const [formData, setFormData] = useState<AttributeFormState>(
+    attributeService.getEmptyForm(),
+  );
+  const [formError, setFormError] = useState("");
+
   const [searchKeyword, setSearchKeyword] = useState("");
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
@@ -38,6 +43,24 @@ function AttributesPage() {
     action: null,
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const loadAttributes = async () => {
+    try {
+      setPageError("");
+      const data = await attributeService.getAttributes();
+      setAttributes(data);
+    } catch (error) {
+      setPageError(
+        error instanceof Error ? error.message : "Failed to load attributes.",
+      );
+    } finally {
+      setIsInitialLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadAttributes();
+  }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -63,10 +86,8 @@ function AttributesPage() {
   const openAddModal = () => {
     setModalMode("add");
     setSelectedAttributeId(null);
-    setFormData({
-      ...emptyAttributeForm,
-      status: "Active",
-    });
+    setFormData(attributeService.getEmptyForm());
+    setFormError("");
     setIsModalOpen(true);
   };
 
@@ -77,9 +98,9 @@ function AttributesPage() {
       name: attribute.name,
       code: attribute.code,
       type: attribute.type,
-      required: attribute.required,
-      status: attribute.status,
+      optionsText: attribute.options.join(", "),
     });
+    setFormError("");
     setIsModalOpen(true);
   };
 
@@ -90,14 +111,15 @@ function AttributesPage() {
       name: attribute.name,
       code: attribute.code,
       type: attribute.type,
-      required: attribute.required,
-      status: attribute.status,
+      optionsText: attribute.options.join(", "),
     });
+    setFormError("");
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setSelectedAttributeId(null);
+    setFormError("");
     setIsModalOpen(false);
   };
 
@@ -120,76 +142,131 @@ function AttributesPage() {
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
-    const target = event.target as HTMLInputElement;
-    const { name, value, type, checked } = target;
+    const { name, value } = event.target;
 
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: value,
     }));
+
+    if (formError) {
+      setFormError("");
+    }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (modalMode === "add") {
-      setAttributes((prev) =>
-        attributeService.createAttribute(prev, {
-          ...formData,
-          status: "Active",
-        }),
-      );
-      showToast("Attribute added successfully.");
+    if (!formData.name.trim()) {
+      setFormError("Attribute name is required.");
+      return;
     }
 
-    if (modalMode === "edit" && selectedAttributeId !== null) {
-      const currentAttribute = attributes.find(
-        (attribute) => attribute.id === selectedAttributeId,
-      );
-
-      setAttributes((prev) =>
-        attributeService.updateAttribute(prev, selectedAttributeId, {
-          ...formData,
-          status: currentAttribute?.status ?? "Active",
-        }),
-      );
-      showToast("Attribute updated successfully.");
+    if (!formData.type) {
+      setFormError("Attribute type is required.");
+      return;
     }
 
-    closeModal();
+    if (formData.type === "Select" && !formData.optionsText.trim()) {
+      setFormError("Options are required for Select type.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setFormError("");
+
+      if (modalMode === "add") {
+        const newAttribute = await attributeService.createAttribute(formData);
+        setAttributes((prev) => [newAttribute, ...prev]);
+        showToast("Attribute added successfully.");
+      }
+
+      if (modalMode === "edit" && selectedAttributeId !== null) {
+        const currentAttribute = attributes.find(
+          (attribute) => attribute.id === selectedAttributeId,
+        );
+
+        if (!currentAttribute) {
+          setFormError("Selected attribute no longer exists.");
+          return;
+        }
+
+        const updatedAttribute = await attributeService.updateAttribute(
+          selectedAttributeId,
+          formData,
+          currentAttribute.status,
+        );
+
+        setAttributes((prev) =>
+          prev.map((attribute) =>
+            attribute.id === selectedAttributeId ? updatedAttribute : attribute,
+          ),
+        );
+        showToast("Attribute updated successfully.");
+      }
+
+      closeModal();
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Failed to save attribute.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleToggleStatus = (attribute: Attribute) => {
-    const nextStatus = attribute.status === "Active" ? "Disabled" : "Active";
-    setAttributes((prev) =>
-      attributeService.updateAttributeStatus(prev, attribute.id, nextStatus),
-    );
-  };
-
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (confirmState.attributeId === null || confirmState.action === null)
       return;
 
     const targetAttribute = attributes.find(
       (item) => item.id === confirmState.attributeId,
     );
+
     if (!targetAttribute) {
       closeConfirmDialog();
       return;
     }
 
-    handleToggleStatus(targetAttribute);
+    const nextStatus =
+      confirmState.action === "disable" ? "Disabled" : "Active";
 
-    if (confirmState.action === "disable") {
-      showToast(
-        `${targetAttribute.name} has been disabled successfully.`,
-        "info",
+    try {
+      setIsStatusUpdating(confirmState.attributeId);
+
+      const updatedAttribute = await attributeService.updateAttributeStatus(
+        confirmState.attributeId,
+        nextStatus,
+        targetAttribute,
       );
-    } else {
-      showToast(`${targetAttribute.name} has been enabled successfully.`);
-    }
 
-    closeConfirmDialog();
+      setAttributes((prev) =>
+        prev.map((item) =>
+          item.id === confirmState.attributeId ? updatedAttribute : item,
+        ),
+      );
+
+      if (confirmState.action === "disable") {
+        showToast(
+          `${targetAttribute.name} has been disabled successfully.`,
+          "info",
+        );
+      } else {
+        showToast(`${targetAttribute.name} has been enabled successfully.`);
+      }
+
+      closeConfirmDialog();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to update attribute status.",
+        "error",
+      );
+    } finally {
+      setIsStatusUpdating(null);
+    }
   };
 
   const filteredAttributes = useMemo(() => {
@@ -205,6 +282,11 @@ function AttributesPage() {
     });
   }, [attributes, searchKeyword]);
 
+  const selectedAttribute =
+    selectedAttributeId !== null
+      ? (attributes.find((item) => item.id === selectedAttributeId) ?? null)
+      : null;
+
   const modalTitle =
     modalMode === "add"
       ? "Add Attribute"
@@ -216,8 +298,8 @@ function AttributesPage() {
     modalMode === "add"
       ? "Create a new attribute. New attributes are created as active by default."
       : modalMode === "edit"
-        ? "Update attribute code, type, requirement, and current configuration. Use Enable or Disable in the table to change status."
-        : "Review attribute information and current configuration.";
+        ? "Update attribute information and options. Use Enable or Disable in the table to change status."
+        : "Review attribute information, configuration, and current activation status.";
 
   const confirmAttribute =
     confirmState.attributeId !== null
@@ -267,9 +349,15 @@ function AttributesPage() {
 
       <SectionCard
         title="Attribute Directory"
-        description="Review attribute information, types, requirements, and status."
+        description="Review attribute information, type, usage, and activation status."
       >
-        {filteredAttributes.length === 0 ? (
+        {isInitialLoading ? (
+          <div className="attributes-state">Loading attributes...</div>
+        ) : pageError ? (
+          <div className="attributes-state attributes-state--error">
+            {pageError}
+          </div>
+        ) : filteredAttributes.length === 0 ? (
           <EmptyState
             title="No attributes found"
             description="No attributes match your current search. Try another keyword or create a new attribute."
@@ -283,7 +371,7 @@ function AttributesPage() {
                   <th>Attribute Name</th>
                   <th>Code</th>
                   <th>Type</th>
-                  <th>Required</th>
+                  <th>Used In</th>
                   <th>Status</th>
                   <th>Created Date</th>
                   <th>Actions</th>
@@ -295,15 +383,14 @@ function AttributesPage() {
                   <tr key={attribute.id}>
                     <td>#{attribute.id}</td>
                     <td>{attribute.name}</td>
-                    <td>{attribute.code}</td>
+                    <td>{attribute.code || "—"}</td>
                     <td>
                       <StatusBadge label={attribute.type} variant="type" />
                     </td>
                     <td>
-                      <StatusBadge
-                        label={attribute.required ? "Required" : "Optional"}
-                        variant={attribute.required ? "required" : "optional"}
-                      />
+                      {attribute.usedIn.length > 0
+                        ? attribute.usedIn.join(", ")
+                        : "—"}
                     </td>
                     <td>
                       <StatusBadge
@@ -313,7 +400,7 @@ function AttributesPage() {
                         }
                       />
                     </td>
-                    <td>{attribute.createdAt}</td>
+                    <td>{attribute.createdAt || "—"}</td>
                     <td>
                       <div className="attributes-actions">
                         <button
@@ -339,6 +426,7 @@ function AttributesPage() {
                             onClick={() =>
                               openConfirmDialog(attribute.id, "disable")
                             }
+                            disabled={isStatusUpdating === attribute.id}
                           >
                             Disable
                           </button>
@@ -349,6 +437,7 @@ function AttributesPage() {
                             onClick={() =>
                               openConfirmDialog(attribute.id, "enable")
                             }
+                            disabled={isStatusUpdating === attribute.id}
                           >
                             Enable
                           </button>
@@ -378,7 +467,7 @@ function AttributesPage() {
               type="text"
               value={formData.name}
               onChange={handleChange}
-              disabled={modalMode === "view"}
+              disabled={modalMode === "view" || isSubmitting}
               placeholder="Enter attribute name"
             />
           </div>
@@ -391,7 +480,7 @@ function AttributesPage() {
               type="text"
               value={formData.code}
               onChange={handleChange}
-              disabled={modalMode === "view"}
+              disabled={modalMode === "view" || isSubmitting}
               placeholder="Enter attribute code"
             />
           </div>
@@ -403,7 +492,7 @@ function AttributesPage() {
               name="type"
               value={formData.type}
               onChange={handleChange}
-              disabled={modalMode === "view"}
+              disabled={modalMode === "view" || isSubmitting}
             >
               <option>Text</option>
               <option>Number</option>
@@ -412,36 +501,66 @@ function AttributesPage() {
             </select>
           </div>
 
-          <label className="attributes-modal__checkbox">
-            <input
-              name="required"
-              type="checkbox"
-              checked={formData.required}
-              onChange={handleChange}
-              disabled={modalMode === "view"}
-            />
-            <span>Required attribute</span>
-          </label>
-
-          {modalMode === "view" && (
+          {formData.type === "Select" && (
             <div className="attributes-modal__field">
-              <label>Status</label>
-              <input type="text" value={formData.status} disabled />
+              <label htmlFor="optionsText">Options</label>
+              <input
+                id="optionsText"
+                name="optionsText"
+                type="text"
+                value={formData.optionsText}
+                onChange={handleChange}
+                disabled={modalMode === "view" || isSubmitting}
+                placeholder="Enter options separated by commas"
+              />
             </div>
           )}
+
+          {modalMode === "view" && selectedAttribute ? (
+            <>
+              <div className="attributes-modal__field">
+                <label>Status</label>
+                <input type="text" value={selectedAttribute.status} disabled />
+              </div>
+
+              <div className="attributes-modal__field">
+                <label>Created Date</label>
+                <input
+                  type="text"
+                  value={selectedAttribute.createdAt || "—"}
+                  disabled
+                />
+              </div>
+            </>
+          ) : null}
+
+          {formError ? (
+            <div className="attributes-state attributes-state--error">
+              {formError}
+            </div>
+          ) : null}
 
           <div className="attributes-modal__actions">
             <button
               type="button"
               className="attributes-modal__cancel"
               onClick={closeModal}
+              disabled={isSubmitting}
             >
               Close
             </button>
 
             {modalMode !== "view" && (
-              <button type="submit" className="attributes-modal__submit">
-                {modalMode === "add" ? "Add Attribute" : "Save Changes"}
+              <button
+                type="submit"
+                className="attributes-modal__submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Saving..."
+                  : modalMode === "add"
+                    ? "Add Attribute"
+                    : "Save Changes"}
               </button>
             )}
           </div>
