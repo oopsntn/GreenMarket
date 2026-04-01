@@ -44,6 +44,7 @@
   display: grid;
   grid-template-columns: 1.15fr 1.85fr;
   gap: 24px;
+  align-items: start;
 }
 
 .users-role-overview {
@@ -84,6 +85,38 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.users-activity-toolbar {
+  padding: 24px 24px 0;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: 16px;
+  align-items: end;
+}
+
+.users-activity-toolbar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.users-activity-toolbar__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.users-activity-toolbar__field input,
+.users-activity-toolbar__field select {
+  height: 44px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
 }
 
 .users-activity-table-wrapper {
@@ -156,13 +189,14 @@
 }
 
 .users-table-wrapper {
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .users-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 920px;
 }
 
 .users-table thead {
@@ -234,18 +268,17 @@
 
 .users-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .users-actions button {
-  width: 100px;
-  height: 36px;
+  min-width: 82px;
+  height: 34px;
   padding: 0 12px;
   border: none;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -437,10 +470,8 @@
     font-size: 13px;
   }
 
-  .users-actions button {
-    width: 92px;
-    height: 34px;
-    font-size: 13px;
+  .users-activity-toolbar {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -453,12 +484,8 @@
     grid-template-columns: 1fr;
   }
 
-  .users-table-wrapper {
-    overflow-x: auto;
-  }
-
   .users-table {
-    min-width: 980px;
+    min-width: 860px;
   }
 
   .users-modal__grid {
@@ -475,5 +502,9 @@
 @media (max-width: 640px) {
   .users-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .users-activity-toolbar {
+    padding: 20px 20px 0;
   }
 }

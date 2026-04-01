@@ -68,6 +68,9 @@ function UsersPage() {
     UserStatus | "All"
   >("All");
   const [showFilters, setShowFilters] = useState(false);
+  const [activitySearchKeyword, setActivitySearchKeyword] = useState("");
+  const [selectedActivityActionFilter, setSelectedActivityActionFilter] =
+    useState("All");
   const [activityPage, setActivityPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
@@ -251,9 +254,35 @@ function UsersPage() {
     });
   }, [users, searchKeyword, selectedRoleFilter, selectedStatusFilter]);
 
+  const allActivities: FlattenedUserActivityItem[] = useMemo(() => {
+    return userService.getRecentActivityLogs(users);
+  }, [users]);
+
+  const activityActionOptions = useMemo(() => {
+    return [
+      "All",
+      ...Array.from(new Set(allActivities.map((activity) => activity.action))),
+    ];
+  }, [allActivities]);
+
   const filteredActivities: FlattenedUserActivityItem[] = useMemo(() => {
-    return userService.getRecentActivityLogs(filteredUsers);
-  }, [filteredUsers]);
+    const keyword = activitySearchKeyword.trim().toLowerCase();
+
+    return allActivities.filter((activity) => {
+      const matchesKeyword =
+        !keyword ||
+        activity.userName.toLowerCase().includes(keyword) ||
+        activity.action.toLowerCase().includes(keyword) ||
+        activity.detail.toLowerCase().includes(keyword) ||
+        activity.performedBy.toLowerCase().includes(keyword);
+
+      const matchesAction =
+        selectedActivityActionFilter === "All" ||
+        activity.action === selectedActivityActionFilter;
+
+      return matchesKeyword && matchesAction;
+    });
+  }, [allActivities, activitySearchKeyword, selectedActivityActionFilter]);
 
   const totalActivityPages = Math.max(
     1,
@@ -270,7 +299,7 @@ function UsersPage() {
 
   useEffect(() => {
     setActivityPage(1);
-  }, [searchKeyword, selectedRoleFilter, selectedStatusFilter]);
+  }, [activitySearchKeyword, selectedActivityActionFilter]);
 
   useEffect(() => {
     if (activityPage > totalActivityPages) {
@@ -496,70 +525,106 @@ function UsersPage() {
 
         <SectionCard
           title="Recent Account Activity"
-          description="Latest user account changes recorded in the admin panel."
+          description="Search and review the latest account changes recorded in the admin panel."
         >
-          {filteredActivities.length === 0 ? (
-            <EmptyState
-              title="No activity found"
-              description="No activity matches the current user search or filter settings."
-            />
-          ) : (
-            <div className="users-activity-section">
-              <div className="users-activity-table-wrapper">
-                <table className="users-activity-table">
-                  <thead>
-                    <tr>
-                      <th>User</th>
-                      <th>Action</th>
-                      <th>Detail</th>
-                      <th>Performed By</th>
-                      <th>Timestamp</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedActivities.map((activity) => (
-                      <tr key={`${activity.userId}-${activity.id}`}>
-                        <td>{activity.userName}</td>
-                        <td>{activity.action}</td>
-                        <td>{activity.detail}</td>
-                        <td>{activity.performedBy}</td>
-                        <td>{activity.performedAt}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="users-activity-section">
+            <div className="users-activity-toolbar">
+              <div className="users-activity-toolbar__field users-activity-toolbar__field--search">
+                <label htmlFor="users-activity-search">Search Activity</label>
+                <input
+                  id="users-activity-search"
+                  type="text"
+                  value={activitySearchKeyword}
+                  onChange={(event) =>
+                    setActivitySearchKeyword(event.target.value)
+                  }
+                  placeholder="Search by user, action, detail, or performer"
+                />
               </div>
 
-              <div className="users-activity-pagination">
-                <span className="users-activity-pagination__info">
-                  Page {activityPage} of {totalActivityPages}
-                </span>
-
-                <div className="users-activity-pagination__actions">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActivityPage((prev) => Math.max(1, prev - 1))
-                    }
-                    disabled={activityPage === 1}
-                  >
-                    Previous
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActivityPage((prev) =>
-                        Math.min(totalActivityPages, prev + 1),
-                      )
-                    }
-                    disabled={activityPage === totalActivityPages}
-                  >
-                    Next
-                  </button>
-                </div>
+              <div className="users-activity-toolbar__field">
+                <label htmlFor="users-activity-action-filter">
+                  Filter Action
+                </label>
+                <select
+                  id="users-activity-action-filter"
+                  value={selectedActivityActionFilter}
+                  onChange={(event) =>
+                    setSelectedActivityActionFilter(event.target.value)
+                  }
+                >
+                  {activityActionOptions.map((action) => (
+                    <option key={action} value={action}>
+                      {action}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-          )}
+
+            {filteredActivities.length === 0 ? (
+              <EmptyState
+                title="No activity found"
+                description="No activity matches the current activity search or filter settings."
+              />
+            ) : (
+              <>
+                <div className="users-activity-table-wrapper">
+                  <table className="users-activity-table">
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Detail</th>
+                        <th>Performed By</th>
+                        <th>Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedActivities.map((activity) => (
+                        <tr key={`${activity.userId}-${activity.id}`}>
+                          <td>{activity.userName}</td>
+                          <td>{activity.action}</td>
+                          <td>{activity.detail}</td>
+                          <td>{activity.performedBy}</td>
+                          <td>{activity.performedAt}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="users-activity-pagination">
+                  <span className="users-activity-pagination__info">
+                    Page {activityPage} of {totalActivityPages}
+                  </span>
+
+                  <div className="users-activity-pagination__actions">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActivityPage((prev) => Math.max(1, prev - 1))
+                      }
+                      disabled={activityPage === 1}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActivityPage((prev) =>
+                          Math.min(totalActivityPages, prev + 1),
+                        )
+                      }
+                      disabled={activityPage === totalActivityPages}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </SectionCard>
       </div>
 
