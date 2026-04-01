@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import EmptyState from "../components/EmptyState";
 import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
@@ -12,6 +13,11 @@ import type {
   FinancialReportType,
   GeneralExportModule,
 } from "../types/export";
+import {
+  DEFAULT_REPORT_FROM_DATE,
+  DEFAULT_REPORT_TO_DATE,
+  formatDateRangeLabel,
+} from "../utils/dateRange";
 import "./ExportPage.css";
 
 const PAGE_SIZE = 5;
@@ -22,23 +28,63 @@ function ExportPage() {
   );
   const [generalModule, setGeneralModule] =
     useState<GeneralExportModule>("Users");
-  const [generalDateRange, setGeneralDateRange] = useState("Last 30 Days");
+  const [generalFromDate, setGeneralFromDate] = useState(
+    DEFAULT_REPORT_FROM_DATE,
+  );
+  const [generalToDate, setGeneralToDate] = useState(DEFAULT_REPORT_TO_DATE);
   const [generalFormat, setGeneralFormat] = useState<ExportFormat>("CSV");
 
   const [financialReportType, setFinancialReportType] =
     useState<FinancialReportType>("Revenue Summary");
-  const [financialDateRange, setFinancialDateRange] = useState("Last 30 Days");
+  const [financialFromDate, setFinancialFromDate] = useState(
+    DEFAULT_REPORT_FROM_DATE,
+  );
+  const [financialToDate, setFinancialToDate] = useState(
+    DEFAULT_REPORT_TO_DATE,
+  );
   const [financialFormat, setFinancialFormat] = useState<ExportFormat>("CSV");
+  const [historySearchKeyword, setHistorySearchKeyword] = useState("");
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("All Statuses");
+  const [showHistoryFilters, setShowHistoryFilters] = useState(false);
 
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const generalDateRangeLabel = formatDateRangeLabel(
+    generalFromDate,
+    generalToDate,
+  );
+  const financialDateRangeLabel = formatDateRangeLabel(
+    financialFromDate,
+    financialToDate,
+  );
 
-  const totalPages = Math.max(1, Math.ceil(historyItems.length / PAGE_SIZE));
+  const filteredHistory = useMemo(() => {
+    const keyword = historySearchKeyword.trim().toLowerCase();
+
+    return historyItems.filter((item) => {
+      const matchesStatus =
+        historyStatusFilter === "All Statuses" ||
+        item.status === historyStatusFilter;
+      const matchesKeyword =
+        !keyword ||
+        item.reportName.toLowerCase().includes(keyword) ||
+        item.type.toLowerCase().includes(keyword) ||
+        item.generatedBy.toLowerCase().includes(keyword);
+
+      return matchesStatus && matchesKeyword;
+    });
+  }, [historyItems, historySearchKeyword, historyStatusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredHistory.length / PAGE_SIZE));
 
   const paginatedHistory = useMemo(() => {
     const startIndex = (page - 1) * PAGE_SIZE;
-    return historyItems.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [historyItems, page]);
+    return filteredHistory.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredHistory, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [historySearchKeyword, historyStatusFilter]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -71,7 +117,7 @@ function ExportPage() {
     setPage(1);
 
     showToast(
-      `${generalModule} export started for ${generalDateRange} in ${generalFormat} format.`,
+      `${generalModule} export started for ${generalDateRangeLabel} in ${generalFormat} format.`,
     );
   };
 
@@ -86,7 +132,7 @@ function ExportPage() {
     setPage(1);
 
     showToast(
-      `${financialReportType} export started for ${financialDateRange} in ${financialFormat} format.`,
+      `${financialReportType} export started for ${financialDateRangeLabel} in ${financialFormat} format.`,
     );
   };
 
@@ -108,6 +154,7 @@ function ExportPage() {
                 {
                   id: "general-module",
                   label: "Module",
+                  type: "select",
                   value: generalModule,
                   onChange: (value) =>
                     setGeneralModule(value as GeneralExportModule),
@@ -121,20 +168,23 @@ function ExportPage() {
                   ],
                 },
                 {
-                  id: "general-date-range",
-                  label: "Date Range",
-                  value: generalDateRange,
-                  onChange: setGeneralDateRange,
-                  options: [
-                    "Last 7 Days",
-                    "Last 30 Days",
-                    "Last 90 Days",
-                    "This Year",
-                  ],
+                  id: "general-from-date",
+                  label: "From Date",
+                  type: "date",
+                  value: generalFromDate,
+                  onChange: setGeneralFromDate,
+                },
+                {
+                  id: "general-to-date",
+                  label: "To Date",
+                  type: "date",
+                  value: generalToDate,
+                  onChange: setGeneralToDate,
                 },
                 {
                   id: "general-format",
                   label: "File Format",
+                  type: "select",
                   value: generalFormat,
                   onChange: (value) => setGeneralFormat(value as ExportFormat),
                   options: ["CSV", "XLSX"],
@@ -162,6 +212,7 @@ function ExportPage() {
                 {
                   id: "financial-report-type",
                   label: "Report Type",
+                  type: "select",
                   value: financialReportType,
                   onChange: (value) =>
                     setFinancialReportType(value as FinancialReportType),
@@ -172,20 +223,23 @@ function ExportPage() {
                   ],
                 },
                 {
-                  id: "financial-date-range",
-                  label: "Date Range",
-                  value: financialDateRange,
-                  onChange: setFinancialDateRange,
-                  options: [
-                    "Last 7 Days",
-                    "Last 30 Days",
-                    "Last 90 Days",
-                    "This Year",
-                  ],
+                  id: "financial-from-date",
+                  label: "From Date",
+                  type: "date",
+                  value: financialFromDate,
+                  onChange: setFinancialFromDate,
+                },
+                {
+                  id: "financial-to-date",
+                  label: "To Date",
+                  type: "date",
+                  value: financialToDate,
+                  onChange: setFinancialToDate,
                 },
                 {
                   id: "financial-format",
                   label: "File Format",
+                  type: "select",
                   value: financialFormat,
                   onChange: (value) =>
                     setFinancialFormat(value as ExportFormat),
@@ -205,11 +259,40 @@ function ExportPage() {
         </SectionCard>
       </div>
 
+      <SearchToolbar
+        placeholder="Search by report name, type, or generated by"
+        searchValue={historySearchKeyword}
+        onSearchChange={setHistorySearchKeyword}
+        onFilterClick={() => setShowHistoryFilters((prev) => !prev)}
+        filterLabel="Filter by export status"
+        filterSummary={`Showing ${filteredHistory.length} history item(s)`}
+      />
+
+      {showHistoryFilters ? (
+        <SectionCard
+          title="Export History Filters"
+          description="Refine recent exports by completion status."
+        >
+          <FilterBar
+            fields={[
+              {
+                id: "export-history-status",
+                label: "Status",
+                type: "select",
+                value: historyStatusFilter,
+                onChange: setHistoryStatusFilter,
+                options: ["All Statuses", "Completed", "In Progress"],
+              },
+            ]}
+          />
+        </SectionCard>
+      ) : null}
+
       <SectionCard
         title="Recent Export History"
-        description="Track recently generated reports."
+        description={`Track recently generated reports • ${historyStatusFilter}`}
       >
-        {historyItems.length === 0 ? (
+        {filteredHistory.length === 0 ? (
           <EmptyState
             title="No export history found"
             description="Generated export records will appear here after you run an export."
