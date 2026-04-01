@@ -8,7 +8,12 @@ import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { attributeService } from "../services/attributeService";
-import type { Attribute, AttributeFormState } from "../types/attribute";
+import type {
+  Attribute,
+  AttributeFormState,
+  AttributeStatus,
+  AttributeType,
+} from "../types/attribute";
 import "./AttributesPage.css";
 
 type ConfirmAction = "disable" | "enable";
@@ -18,6 +23,20 @@ type ConfirmState = {
   attributeId: number | null;
   action: ConfirmAction | null;
 };
+
+const statusFilterOptions: Array<AttributeStatus | "All"> = [
+  "All",
+  "Active",
+  "Disabled",
+];
+
+const typeFilterOptions: Array<AttributeType | "All"> = [
+  "All",
+  "Text",
+  "Number",
+  "Select",
+  "Boolean",
+];
 
 function AttributesPage() {
   const [attributes, setAttributes] = useState<Attribute[]>([]);
@@ -37,6 +56,13 @@ function AttributesPage() {
   const [formError, setFormError] = useState("");
 
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+    AttributeStatus | "All"
+  >("All");
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<
+    AttributeType | "All"
+  >("All");
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     attributeId: null,
@@ -272,15 +298,20 @@ function AttributesPage() {
   const filteredAttributes = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return attributes;
-
     return attributes.filter((attribute) => {
-      return (
+      const matchesKeyword =
+        !keyword ||
         attribute.name.toLowerCase().includes(keyword) ||
-        attribute.code.toLowerCase().includes(keyword)
-      );
+        attribute.code.toLowerCase().includes(keyword);
+      const matchesStatus =
+        selectedStatusFilter === "All" ||
+        attribute.status === selectedStatusFilter;
+      const matchesType =
+        selectedTypeFilter === "All" || attribute.type === selectedTypeFilter;
+
+      return matchesKeyword && matchesStatus && matchesType;
     });
-  }, [attributes, searchKeyword]);
+  }, [attributes, searchKeyword, selectedStatusFilter, selectedTypeFilter]);
 
   const selectedAttribute =
     selectedAttributeId !== null
@@ -345,7 +376,57 @@ function AttributesPage() {
         placeholder="Search by attribute name or code"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
+        onFilterClick={() => setShowFilters((prev) => !prev)}
+        filterLabel="Filter by type & status"
+        filterSummary={`Current filters: ${selectedTypeFilter} • ${selectedStatusFilter}`}
       />
+
+      {showFilters ? (
+        <SectionCard
+          title="Attribute Filters"
+          description="Filter attribute records by data type and status."
+        >
+          <div className="attributes-filters">
+            <div className="attributes-filters__field">
+              <label htmlFor="attributes-type-filter">Type</label>
+              <select
+                id="attributes-type-filter"
+                value={selectedTypeFilter}
+                onChange={(event) =>
+                  setSelectedTypeFilter(
+                    event.target.value as AttributeType | "All",
+                  )
+                }
+              >
+                {typeFilterOptions.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="attributes-filters__field">
+              <label htmlFor="attributes-status-filter">Status</label>
+              <select
+                id="attributes-status-filter"
+                value={selectedStatusFilter}
+                onChange={(event) =>
+                  setSelectedStatusFilter(
+                    event.target.value as AttributeStatus | "All",
+                  )
+                }
+              >
+                {statusFilterOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
 
       <SectionCard
         title="Attribute Directory"

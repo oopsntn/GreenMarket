@@ -18,6 +18,36 @@
   color: #c62828;
 }
 
+.attributes-filters {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.attributes-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attributes-filters__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.attributes-filters__field select {
+  height: 46px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+}
+
 .attributes-table-wrapper {
   overflow-x: hidden;
 }
@@ -238,6 +268,10 @@
 }
 
 @media (max-width: 1024px) {
+  .attributes-filters {
+    grid-template-columns: 1fr;
+  }
+
   .attributes-table-wrapper {
     overflow-x: auto;
   }
