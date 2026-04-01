@@ -9,6 +9,8 @@ type SearchToolbarProps = Readonly<{
   onFilterClick?(): void;
   filterLabel?: string;
   filterSummary?: string;
+  filterSummaryLabel?: string;
+  filterSummaryItems?: string[];
 }>;
 
 function SearchToolbar({
@@ -20,8 +22,12 @@ function SearchToolbar({
   onFilterClick,
   filterLabel = "Filter",
   filterSummary,
+  filterSummaryLabel = "Current filters",
+  filterSummaryItems,
 }: SearchToolbarProps) {
   const hasActions = Boolean(onSearchSubmit || onFilterClick);
+  const summaryItems = filterSummaryItems?.filter(Boolean) ?? [];
+  const hasSummaryItems = summaryItems.length > 0;
 
   return (
     <div className="search-toolbar">
@@ -39,7 +45,26 @@ function SearchToolbar({
           }}
         />
 
-        {filterSummary ? (
+        {hasSummaryItems ? (
+          <div className="search-toolbar__summary">
+            <span className="search-toolbar__summary-label">
+              {filterSummaryLabel}
+            </span>
+
+            <div className="search-toolbar__summary-tags">
+              {summaryItems.map((item) => (
+                <span
+                  key={item}
+                  className={`search-toolbar__summary-tag${
+                    item === "All" ? " search-toolbar__summary-tag--muted" : ""
+                  }`}
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : filterSummary ? (
           <p className="search-toolbar__summary">{filterSummary}</p>
         ) : null}
       </div>

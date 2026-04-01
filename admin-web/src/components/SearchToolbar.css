@@ -33,8 +33,40 @@
 
 .search-toolbar__summary {
   margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
   font-size: 13px;
   line-height: 1.5;
+  color: #6b7b6d;
+}
+
+.search-toolbar__summary-label {
+  font-weight: 700;
+  color: #486150;
+}
+
+.search-toolbar__summary-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.search-toolbar__summary-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #edf7ee;
+  border: 1px solid #d7e6d9;
+  color: #1b5e20;
+  font-weight: 600;
+}
+
+.search-toolbar__summary-tag--muted {
+  background: #f3f7f1;
   color: #6b7b6d;
 }
 
