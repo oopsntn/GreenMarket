@@ -2,8 +2,8 @@ import React from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
 
 interface PostTabsProps {
-  activeTab: 'personal' | 'shop',
-  onTabChange: (tab: 'personal' | 'shop') => void
+  activeTab: 'personal' | 'shop' | 'trash',
+  onTabChange: (tab: 'personal' | 'shop' | 'trash') => void
   styles: any
 }
 

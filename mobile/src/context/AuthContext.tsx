@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from "react"
 import { ShopService } from "../components/shop/service/shopService";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface User {
     id: number;
@@ -52,17 +53,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }
 
-    useEffect(() => {
+    const loadStoredData = async () => {
+        try {
+            const storedToken = await AsyncStorage.getItem('token')
+            const storedUser = await AsyncStorage.getItem('user')
 
+            if (storedToken && storedUser) {
+                setToken(storedToken);
+                const parsedUser = JSON.parse(storedUser);
+                setUser(parsedUser);
+
+                await fetchShop(parsedUser.id)
+            }
+
+        } catch (e) {
+            console.error("Lỗi load data:", e);
+        } finally {
+            setLoading(false)
+        }
+    }
+    useEffect(() => {
+        loadStoredData()
     }, [])
 
+    //Luu Toke + User vao may
     const login = async (newToken: string, newUser: User) => {
+        try {
+            setToken(newToken)
+            setUser(newUser)
+            await AsyncStorage.setItem('token', newToken)
+            await AsyncStorage.setItem('user', JSON.stringify(newUser))
 
+            await fetchShop(newUser.id)
+        } catch (e) {
+            console.error("Lỗi lưu thông tin login:", e);
+        }
     }
-    const logout = async () => {
 
+    //Xoa sach dau vet
+    const logout = async () => {
+        setToken(null)
+        setUser(null)
+        setShop(null)
+        await AsyncStorage.removeItem('token')
+        await AsyncStorage.removeItem('user')
     }
     const updateUser = async (newData: Partial<User>) => {
+        try {
+            if (user) {
+                const updatedUser = { ...user, ...newData };
+                setUser(updatedUser);
+                await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+        } catch (e) {
+            console.error("Lỗi khi cập nhật thông tin user: ", e);
+        }
 
     }
     const refreshShop = async () => {
@@ -70,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     return (
-        <AuthContext.Provider value={{ user, shop, token, login, logout, updateUser, refreshShop }}>
+        <AuthContext.Provider value={{ user, shop, token, login, logout, updateUser, refreshShop, loading, isAuthenticated: !!token }}>
             {children}
         </AuthContext.Provider>
     )

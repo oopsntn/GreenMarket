@@ -20,10 +20,10 @@ const MyPostLayout = () => {
 
     const renderStatus = (status: string) => {
         const configs: any = {
-            pending: { color: '#f59e0b', icon: <Clock size={12} color="#f59e0b" /> },
-            approved: { color: '#10b981', icon: <CheckCircle2 size={12} color="#10b981" /> },
-            rejected: { color: '#ef4444', icon: <XCircle size={12} color="#ef4444" /> }
-        }
+            pending: { label: 'Chờ duyệt', color: '#f59e0b', icon: <Clock size={12} color="#f59e0b" /> },
+            approved: { label: 'Đã duyệt', color: '#10b981', icon: <CheckCircle2 size={12} color="#10b981" /> },
+            rejected: { label: 'Bị từ chối', color: '#ef4444', icon: <XCircle size={12} color="#ef4444" /> }
+        };
         const config = configs[status] || configs.pending
         return (
             <View style={[styles.statusBadge, { borderColor: config.color }]}>

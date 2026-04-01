@@ -4,6 +4,7 @@ import { ReportService } from "./reportService"
 
 export const useCreateReport = (postId: number, reporterId: number | null) => {
     const [reportReason, setReportReason] = useState('')
+    const [description, setDescription] = useState('')
     const [loading, setLoading] = useState(true)
 
     // Danh sách các lý do báo cáo để map vào reportReason
@@ -19,12 +20,13 @@ export const useCreateReport = (postId: number, reporterId: number | null) => {
         if (!reportReason) {
             return Alert.alert("Thông báo", "Vui lòng chọn lý do báo cáo")
         }
+        setLoading(true)
         try {
-            setLoading(true)
+            const finalReason = description ? `${reportReason} - Chi tiết: ${description}` : reportReason
             await ReportService.createReport({
                 reporterId,
                 postId,
-                reportReason
+                reportReason: finalReason,
             })
             Alert.alert("Thành công", "Báo cáo của bạn đã được gửi. Admin sẽ xem xét sớm nhất.")
             // Quay lại màn hình trước đó
@@ -39,6 +41,8 @@ export const useCreateReport = (postId: number, reporterId: number | null) => {
     return {
         reportReason,
         setReportReason,
+        description,
+        setDescription,
         loading,
         reasons,
         handleSubmit

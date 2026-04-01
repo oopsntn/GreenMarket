@@ -18,7 +18,7 @@ const CreatePostLayout = () => {
                 <View style={styles.successContainer}>
                     <CheckCircle2 size={80} color='#10b981' />
                     <Text style={styles.successTitle}>Đăng bài thành công</Text>
-                    <Button onPress={() => navigation.navigate('')}>Xem tin của tôi</Button>
+                    <Button onPress={() => navigation.navigate('MyPost')}>Xem tin của tôi</Button>
                 </View>
             </MobileLayout>
         )

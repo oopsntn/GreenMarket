@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { API_BASE_URL } from "../config/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen({ onLoginSuccess }) {
   // OTP login state
@@ -16,6 +17,7 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState("mobile"); // "mobile" | "otp"
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth()
 
   const handleRequestOtp = async () => {
 
@@ -35,19 +37,19 @@ export default function LoginScreen({ onLoginSuccess }) {
       if (!res.ok) {
         const errorData = await res.json();
 
-        console.log(res.status); 
-        console.log(errorData); 
+        console.log(res.status);
+        console.log(errorData);
 
         Alert.alert("Lỗi", errorData.message || "Thao tác thất bại");
         return;
       }
 
       const data = await res.json();
-      console.log("📦 Response data:", data); 
+      console.log("📦 Response data:", data);
       Alert.alert("Thành công", "Mã OTP đã được gửi tới số điện thoại của bạn.");
       setStep("otp");
     } catch (error) {
-      console.error("❌ Error:", error.message); 
+      console.error("❌ Error:", error.message);
       Alert.alert("Lỗi", "Có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);
@@ -75,6 +77,8 @@ export default function LoginScreen({ onLoginSuccess }) {
 
       const data = await res.json();
       Alert.alert("Thành công", "Đăng nhập thành công!");
+      //Login cua AuthContext
+      login(data.token, data.user)
       onLoginSuccess(data.token);
     } catch (error) {
       console.error("Verify OTP error", error);
