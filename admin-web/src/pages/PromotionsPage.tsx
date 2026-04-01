@@ -8,9 +8,12 @@ import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
+import { promotionPackageService } from "../services/promotionPackageService";
 import { promotionService } from "../services/promotionService";
 import type {
   Promotion,
+  PromotionPackageActionPayload,
+  PromotionPaymentStatus,
   PromotionSlot,
   PromotionStatus,
   PromotionSummaryCard,
@@ -18,11 +21,21 @@ import type {
 import "./PromotionsPage.css";
 
 type ConfirmAction = "pause" | "resume";
+type ActionModalMode = "change";
 
 type ConfirmState = {
   isOpen: boolean;
   promotionId: number | null;
   action: ConfirmAction | null;
+};
+
+type PackageActionFormState = {
+  slot: PromotionSlot;
+  packageId: string;
+  startDate: string;
+  endDate: string;
+  paymentStatus: PromotionPaymentStatus;
+  adminNote: string;
 };
 
 const slotFilterOptions: Array<PromotionSlot | "All"> = [
@@ -42,6 +55,23 @@ const statusFilterOptions: Array<PromotionStatus | "All"> = [
 
 const PAGE_SIZE = 5;
 
+const formatDateInput = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const calculateEndDate = (startDate: string, durationDays: number) => {
+  if (!startDate) return "";
+
+  const date = new Date(`${startDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return startDate;
+
+  date.setDate(date.getDate() + Math.max(durationDays - 1, 0));
+  return formatDateInput(date);
+};
+
 function PromotionsPage() {
   const [promotions, setPromotions] = useState<Promotion[]>(
     promotionService.getPromotions(),
@@ -50,6 +80,21 @@ function PromotionsPage() {
     null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [actionModalMode, setActionModalMode] = useState<ActionModalMode | null>(
+    null,
+  );
+  const [actionPromotionId, setActionPromotionId] = useState<number | null>(
+    null,
+  );
+  const [actionFormData, setActionFormData] = useState<PackageActionFormState>({
+    slot: "Home Top",
+    packageId: "",
+    startDate: "",
+    endDate: "",
+    paymentStatus: "Paid",
+    adminNote: "",
+  });
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedSlotFilter, setSelectedSlotFilter] = useState<
@@ -65,9 +110,21 @@ function PromotionsPage() {
     action: null,
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const activePackages = promotionPackageService.getActivePromotionPackages();
 
   const summaryCards: PromotionSummaryCard[] =
     promotionService.getSummaryCards(promotions);
+  const actionTargetPromotion =
+    actionPromotionId !== null
+      ? (promotions.find((item) => item.id === actionPromotionId) ?? null)
+      : null;
+  const availablePackages = useMemo(() => {
+    return activePackages.filter((item) => item.slot === actionFormData.slot);
+  }, [actionFormData.slot, activePackages]);
+  const selectedActionPackage =
+    availablePackages.find(
+      (item) => item.id === Number(actionFormData.packageId),
+    ) ?? null;
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -98,6 +155,41 @@ function PromotionsPage() {
   const closeModal = () => {
     setSelectedPromotion(null);
     setIsModalOpen(false);
+  };
+
+  const getPreferredPackage = (promotion: Promotion) => {
+    return (
+      activePackages.find((item) => item.id === promotion.packageId) ??
+      activePackages.find((item) => item.slot === promotion.slot) ??
+      activePackages[0] ??
+      null
+    );
+  };
+
+  const openChangePackageModal = (promotion: Promotion) => {
+    const preferredPackage = getPreferredPackage(promotion);
+    if (!preferredPackage) {
+      showToast("No active promotion packages are available right now.", "error");
+      return;
+    }
+
+    setActionPromotionId(promotion.id);
+    setActionModalMode("change");
+    setActionFormData({
+      slot: preferredPackage.slot,
+      packageId: String(preferredPackage.id),
+      startDate: promotion.startDate,
+      endDate: promotion.endDate,
+      paymentStatus: promotion.paymentStatus,
+      adminNote: promotion.note,
+    });
+    setIsActionModalOpen(true);
+  };
+
+  const closeActionModal = () => {
+    setActionPromotionId(null);
+    setActionModalMode(null);
+    setIsActionModalOpen(false);
   };
 
   const openConfirmDialog = (promotionId: number, action: ConfirmAction) => {
@@ -284,12 +376,107 @@ function PromotionsPage() {
     closeConfirmDialog();
   };
 
+  const handlePackageActionChange = (
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
+    const { name, value } = event.target;
+
+    setActionFormData((prev) => {
+      if (name === "slot") {
+        const nextSlot = value as PromotionSlot;
+        const nextPackage = activePackages.find((item) => item.slot === nextSlot);
+
+        return {
+          ...prev,
+          slot: nextSlot,
+          packageId: nextPackage ? String(nextPackage.id) : "",
+          endDate: nextPackage
+            ? calculateEndDate(prev.startDate, nextPackage.durationDays)
+            : prev.endDate,
+        };
+      }
+
+      if (name === "packageId") {
+        const nextPackage = activePackages.find(
+          (item) => item.id === Number(value),
+        );
+
+        return {
+          ...prev,
+          packageId: value,
+          slot: nextPackage?.slot ?? prev.slot,
+          endDate: nextPackage
+            ? calculateEndDate(prev.startDate, nextPackage.durationDays)
+            : prev.endDate,
+        };
+      }
+
+      if (name === "startDate") {
+        return {
+          ...prev,
+          startDate: value,
+          endDate: selectedActionPackage
+            ? calculateEndDate(value, selectedActionPackage.durationDays)
+            : prev.endDate,
+        };
+      }
+
+      return {
+        ...prev,
+        [name]: value,
+      };
+    });
+  };
+
+  const handlePackageActionSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!actionTargetPromotion || !selectedActionPackage) {
+      showToast("Please choose a valid package before continuing.", "error");
+      return;
+    }
+
+    const payload: PromotionPackageActionPayload = {
+      packageId: selectedActionPackage.id,
+      packageName: selectedActionPackage.name,
+      slot: selectedActionPackage.slot,
+      startDate: actionFormData.startDate,
+      endDate: actionFormData.endDate,
+      budget: selectedActionPackage.price,
+      paymentStatus: actionFormData.paymentStatus,
+      adminNote: actionFormData.adminNote,
+    };
+
+    const nextPromotions = promotionService.changePromotionPackage(
+      promotions,
+      actionTargetPromotion.id,
+      payload,
+    );
+
+    setPromotions(nextPromotions);
+
+    if (selectedPromotion?.id === actionTargetPromotion.id) {
+      setSelectedPromotion(
+        nextPromotions.find((item) => item.id === actionTargetPromotion.id) ??
+          null,
+      );
+    }
+
+    showToast(
+      `${actionTargetPromotion.postTitle} has been moved to ${selectedActionPackage.name}.`,
+    );
+
+    closeActionModal();
+  };
+
 
   return (
     <div className="promotions-page">
       <PageHeader
         title="Promotions Management"
-        description="Monitor boosted posts, placement slots, package windows, and payment confirmation status."
+        description="Monitor boosted posts, placement slots, package windows, payment confirmation status, and package change handling."
       />
 
       <div className="promotions-summary-grid">
@@ -434,34 +621,61 @@ function PromotionsPage() {
                           </button>
 
                           {promotion.status === "Active" ? (
-                            <button
-                              type="button"
-                              className="promotions-actions__pause"
-                              onClick={() =>
-                                handleActionClick(promotion, "pause")
-                              }
-                            >
-                              Pause
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="promotions-actions__pause"
+                                onClick={() =>
+                                  handleActionClick(promotion, "pause")
+                                }
+                              >
+                                Pause
+                              </button>
+                              <button
+                                type="button"
+                                className="promotions-actions__change"
+                                onClick={() => openChangePackageModal(promotion)}
+                              >
+                                Change Package
+                              </button>
+                            </>
                           ) : promotion.status === "Paused" ? (
-                            <button
-                              type="button"
-                              className="promotions-actions__resume"
-                              onClick={() =>
-                                handleActionClick(promotion, "resume")
-                              }
-                            >
-                              Resume
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="promotions-actions__resume"
+                                onClick={() =>
+                                  handleActionClick(promotion, "resume")
+                                }
+                              >
+                                Resume
+                              </button>
+                              <button
+                                type="button"
+                                className="promotions-actions__change"
+                                onClick={() => openChangePackageModal(promotion)}
+                              >
+                                Change Package
+                              </button>
+                            </>
                           ) : promotion.status === "Scheduled" ? (
-                            <button
-                              type="button"
-                              className="promotions-actions__disabled"
-                              disabled
-                              title="Scheduled promotions have not started yet."
-                            >
-                              Upcoming
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="promotions-actions__change"
+                                onClick={() => openChangePackageModal(promotion)}
+                              >
+                                Change Package
+                              </button>
+                              <button
+                                type="button"
+                                className="promotions-actions__disabled"
+                                disabled
+                                title="Scheduled promotions have not started yet."
+                              >
+                                Upcoming
+                              </button>
+                            </>
                           ) : (
                             <button
                               type="button"
@@ -620,54 +834,194 @@ function PromotionsPage() {
               </button>
 
               {selectedPromotion.status === "Active" ? (
-                <button
-                  type="button"
-                  className="promotions-modal__pause"
-                  onClick={() => handleActionClick(selectedPromotion, "pause")}
-                  disabled={
-                    !promotionService.canPausePromotion(selectedPromotion)
-                  }
-                  title={
-                    !promotionService.canPausePromotion(selectedPromotion)
-                      ? promotionService.getActionBlockedReason(
-                          selectedPromotion,
-                          "pause",
-                        )
-                      : "Pause this promotion"
-                  }
-                >
-                  Pause Promotion
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="promotions-modal__change"
+                    onClick={() => openChangePackageModal(selectedPromotion)}
+                  >
+                    Change Package
+                  </button>
+                  <button
+                    type="button"
+                    className="promotions-modal__pause"
+                    onClick={() => handleActionClick(selectedPromotion, "pause")}
+                    disabled={
+                      !promotionService.canPausePromotion(selectedPromotion)
+                    }
+                    title={
+                      !promotionService.canPausePromotion(selectedPromotion)
+                        ? promotionService.getActionBlockedReason(
+                            selectedPromotion,
+                            "pause",
+                          )
+                        : "Pause this promotion"
+                    }
+                  >
+                    Pause Promotion
+                  </button>
+                </>
               ) : selectedPromotion.status === "Paused" ? (
+                <>
+                  <button
+                    type="button"
+                    className="promotions-modal__change"
+                    onClick={() => openChangePackageModal(selectedPromotion)}
+                  >
+                    Change Package
+                  </button>
+                  <button
+                    type="button"
+                    className="promotions-modal__resume"
+                    onClick={() => handleActionClick(selectedPromotion, "resume")}
+                    disabled={
+                      !promotionService.canResumePromotion(selectedPromotion)
+                    }
+                    title={
+                      !promotionService.canResumePromotion(selectedPromotion)
+                        ? promotionService.getActionBlockedReason(
+                            selectedPromotion,
+                            "resume",
+                          )
+                        : "Resume this promotion"
+                    }
+                  >
+                    Resume Promotion
+                  </button>
+                </>
+              ) : selectedPromotion.status === "Scheduled" ? (
                 <button
                   type="button"
-                  className="promotions-modal__resume"
-                  onClick={() => handleActionClick(selectedPromotion, "resume")}
-                  disabled={
-                    !promotionService.canResumePromotion(selectedPromotion)
-                  }
-                  title={
-                    !promotionService.canResumePromotion(selectedPromotion)
-                      ? promotionService.getActionBlockedReason(
-                          selectedPromotion,
-                          "resume",
-                        )
-                      : "Resume this promotion"
-                  }
+                  className="promotions-modal__change"
+                  onClick={() => openChangePackageModal(selectedPromotion)}
                 >
-                  Resume Promotion
+                  Change Package
                 </button>
               ) : (
-                <button
-                  type="button"
-                  className="promotions-modal__close"
-                  disabled
-                >
+                <button type="button" className="promotions-modal__close" disabled>
                   Closed Promotion
                 </button>
               )}
             </div>
           </div>
+        ) : null}
+      </BaseModal>
+
+      <BaseModal
+        isOpen={isActionModalOpen}
+        title="Change Promotion Package"
+        description="Move the customer to another package and update the delivery schedule from admin."
+        onClose={closeActionModal}
+        maxWidth="760px"
+      >
+        {actionTargetPromotion ? (
+          <form
+            className="promotions-package-form"
+            onSubmit={handlePackageActionSubmit}
+          >
+            <div className="promotions-modal__grid">
+              <div className="promotions-modal__field">
+                <label htmlFor="slot">Placement Slot</label>
+                <select
+                  id="slot"
+                  name="slot"
+                  value={actionFormData.slot}
+                  onChange={handlePackageActionChange}
+                >
+                  <option value="Home Top">Home Top</option>
+                  <option value="Category Top">Category Top</option>
+                  <option value="Search Boost">Search Boost</option>
+                </select>
+              </div>
+
+              <div className="promotions-modal__field">
+                <label htmlFor="packageId">Package</label>
+                <select
+                  id="packageId"
+                  name="packageId"
+                  value={actionFormData.packageId}
+                  onChange={handlePackageActionChange}
+                >
+                  {availablePackages.map((item) => (
+                    <option key={item.id} value={String(item.id)}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="promotions-modal__field">
+                <label htmlFor="startDate">From Date</label>
+                <input
+                  id="startDate"
+                  name="startDate"
+                  type="date"
+                  value={actionFormData.startDate}
+                  onChange={handlePackageActionChange}
+                />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label htmlFor="endDate">To Date</label>
+                <input
+                  id="endDate"
+                  name="endDate"
+                  type="date"
+                  value={actionFormData.endDate}
+                  onChange={handlePackageActionChange}
+                />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label htmlFor="paymentStatus">Payment Status</label>
+                <select
+                  id="paymentStatus"
+                  name="paymentStatus"
+                  value={actionFormData.paymentStatus}
+                  onChange={handlePackageActionChange}
+                >
+                  <option value="Paid">Paid</option>
+                  <option value="Pending Verification">
+                    Pending Verification
+                  </option>
+                </select>
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>Updated Budget</label>
+                <input
+                  type="text"
+                  value={selectedActionPackage?.price ?? ""}
+                  disabled
+                />
+              </div>
+            </div>
+
+            <div className="promotions-modal__field">
+              <label htmlFor="adminNote">Admin Note</label>
+              <textarea
+                id="adminNote"
+                name="adminNote"
+                rows={4}
+                value={actionFormData.adminNote}
+                onChange={handlePackageActionChange}
+                placeholder="Explain why the package was changed"
+              />
+            </div>
+
+            <div className="promotions-modal__actions">
+              <button
+                type="button"
+                className="promotions-modal__close"
+                onClick={closeActionModal}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="promotions-modal__change">
+                Save Package Change
+              </button>
+            </div>
+          </form>
         ) : null}
       </BaseModal>
 

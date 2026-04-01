@@ -181,6 +181,11 @@
   color: #2e7d32;
 }
 
+.promotions-actions__change {
+  background-color: #eef4ff;
+  color: #1d4ed8;
+}
+
 .promotions-actions__disabled {
   background-color: #f3f7f1;
   color: #7b8a7d;
@@ -252,6 +257,7 @@
 }
 
 .promotions-modal__field input,
+.promotions-modal__field select,
 .promotions-modal__field textarea {
   border: 1px solid #d7e6d9;
   border-radius: 12px;
@@ -267,8 +273,18 @@
   height: 46px;
 }
 
+.promotions-modal__field select {
+  height: 46px;
+}
+
 .promotions-modal__field textarea {
   resize: none;
+}
+
+.promotions-package-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .promotions-modal__notice {
@@ -289,6 +305,7 @@
 }
 
 .promotions-modal__close,
+.promotions-modal__change,
 .promotions-modal__pause,
 .promotions-modal__resume {
   height: 44px;
@@ -308,6 +325,11 @@
 .promotions-modal__pause {
   background-color: #fff1f0;
   color: #c62828;
+}
+
+.promotions-modal__change {
+  background-color: #eef4ff;
+  color: #1d4ed8;
 }
 
 .promotions-modal__resume {
