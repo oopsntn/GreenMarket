@@ -87,7 +87,7 @@
 .promotion-packages-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1150px;
+  min-width: 1020px;
 }
 
 .promotion-packages-table thead {
@@ -115,14 +115,14 @@
 
 .promotion-packages-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .promotion-packages-actions button {
-  width: 104px;
-  height: 36px;
+  min-width: 82px;
+  height: 34px;
+  padding: 0 12px;
   border: none;
   border-radius: 12px;
   font-size: 13px;

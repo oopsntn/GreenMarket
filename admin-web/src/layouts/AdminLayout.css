@@ -6,6 +6,7 @@
 
 .admin-sidebar {
   width: 260px;
+  flex-shrink: 0;
   background: linear-gradient(180deg, #1b5e20 0%, #2e7d32 100%);
   color: #ffffff;
   padding: 24px 18px;
@@ -39,6 +40,7 @@
 }
 
 .admin-sidebar__link {
+  display: block;
   text-decoration: none;
   color: #f1f8e9;
   padding: 12px 14px;
@@ -46,6 +48,7 @@
   font-size: 15px;
   font-weight: 500;
   transition: all 0.2s ease;
+  word-break: break-word;
 }
 
 .admin-sidebar__link:hover {
