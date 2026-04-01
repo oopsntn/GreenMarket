@@ -8,7 +8,11 @@ import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { categoryService } from "../services/categoryService";
-import type { Category, CategoryFormState } from "../types/category";
+import type {
+  Category,
+  CategoryFormState,
+  CategoryStatus,
+} from "../types/category";
 import "./CategoriesPage.css";
 
 type ConfirmAction = "disable" | "enable";
@@ -18,6 +22,12 @@ type ConfirmState = {
   categoryId: number | null;
   action: ConfirmAction | null;
 };
+
+const statusFilterOptions: Array<CategoryStatus | "All"> = [
+  "All",
+  "Active",
+  "Disabled",
+];
 
 function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -37,6 +47,10 @@ function CategoriesPage() {
   const [formError, setFormError] = useState("");
 
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+    CategoryStatus | "All"
+  >("All");
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     categoryId: null,
@@ -258,15 +272,18 @@ function CategoriesPage() {
   const filteredCategories = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return categories;
-
     return categories.filter((category) => {
-      return (
+      const matchesKeyword =
+        !keyword ||
         category.name.toLowerCase().includes(keyword) ||
-        category.slug.toLowerCase().includes(keyword)
-      );
+        category.slug.toLowerCase().includes(keyword);
+      const matchesStatus =
+        selectedStatusFilter === "All" ||
+        category.status === selectedStatusFilter;
+
+      return matchesKeyword && matchesStatus;
     });
-  }, [categories, searchKeyword]);
+  }, [categories, searchKeyword, selectedStatusFilter]);
 
   const selectedCategory =
     selectedCategoryId !== null
@@ -330,7 +347,38 @@ function CategoriesPage() {
         placeholder="Search by category name or slug"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
+        onFilterClick={() => setShowFilters((prev) => !prev)}
+        filterLabel="Filter by status"
+        filterSummary={`Current status filter: ${selectedStatusFilter}`}
       />
+
+      {showFilters ? (
+        <SectionCard
+          title="Category Filters"
+          description="Filter category records by publication status."
+        >
+          <div className="categories-filters">
+            <div className="categories-filters__field">
+              <label htmlFor="categories-status-filter">Status</label>
+              <select
+                id="categories-status-filter"
+                value={selectedStatusFilter}
+                onChange={(event) =>
+                  setSelectedStatusFilter(
+                    event.target.value as CategoryStatus | "All",
+                  )
+                }
+              >
+                {statusFilterOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
 
       <SectionCard
         title="Category Directory"
