@@ -46,6 +46,7 @@ const statusFilterOptions: Array<UserStatus | "All"> = [
   "Locked",
 ];
 
+const USER_PAGE_SIZE = 5;
 const ACTIVITY_PAGE_SIZE = 5;
 
 type ConfirmState = {
@@ -68,6 +69,7 @@ function UsersPage() {
     UserStatus | "All"
   >("All");
   const [showFilters, setShowFilters] = useState(false);
+  const [userPage, setUserPage] = useState(1);
   const [activitySearchKeyword, setActivitySearchKeyword] = useState("");
   const [selectedActivityActionFilter, setSelectedActivityActionFilter] =
     useState("All");
@@ -254,6 +256,16 @@ function UsersPage() {
     });
   }, [users, searchKeyword, selectedRoleFilter, selectedStatusFilter]);
 
+  const totalUserPages = Math.max(
+    1,
+    Math.ceil(filteredUsers.length / USER_PAGE_SIZE),
+  );
+
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (userPage - 1) * USER_PAGE_SIZE;
+    return filteredUsers.slice(startIndex, startIndex + USER_PAGE_SIZE);
+  }, [filteredUsers, userPage]);
+
   const allActivities: FlattenedUserActivityItem[] = useMemo(() => {
     return userService.getRecentActivityLogs(users);
   }, [users]);
@@ -296,6 +308,16 @@ function UsersPage() {
       startIndex + ACTIVITY_PAGE_SIZE,
     );
   }, [filteredActivities, activityPage]);
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [searchKeyword, selectedRoleFilter, selectedStatusFilter]);
+
+  useEffect(() => {
+    if (userPage > totalUserPages) {
+      setUserPage(totalUserPages);
+    }
+  }, [userPage, totalUserPages]);
 
   useEffect(() => {
     setActivityPage(1);
@@ -361,7 +383,7 @@ function UsersPage() {
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Filter by role & status"
-        filterSummary={`Current filters: ${selectedRoleFilter} • ${selectedStatusFilter}`}
+        filterSummaryItems={[selectedRoleFilter, selectedStatusFilter]}
       />
 
       {showFilters && (
@@ -419,87 +441,118 @@ function UsersPage() {
             description="No users match your current search or filter settings. Try changing the conditions or create a new user."
           />
         ) : (
-          <div className="users-table-wrapper">
-            <table className="users-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Full Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Joined Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id}>
-                    <td>#{user.id}</td>
-                    <td>{user.fullName}</td>
-                    <td>{user.email}</td>
-                    <td>
-                      <StatusBadge label={user.role} variant="role" />
-                    </td>
-                    <td>
-                      <StatusBadge
-                        label={user.status}
-                        variant={user.status === "Active" ? "active" : "locked"}
-                      />
-                    </td>
-                    <td>{user.joinedAt}</td>
-                    <td>
-                      <div className="users-actions">
-                        <button
-                          type="button"
-                          className="users-actions__view"
-                          onClick={() => openViewModal(user)}
-                        >
-                          View
-                        </button>
-
-                        <button
-                          type="button"
-                          className="users-actions__edit"
-                          onClick={() => openEditModal(user)}
-                          disabled={user.role === "Admin"}
-                        >
-                          Edit
-                        </button>
-
-                        {user.role === "Admin" ? (
-                          <button
-                            type="button"
-                            className="users-actions__disabled"
-                            disabled
-                          >
-                            Protected
-                          </button>
-                        ) : user.status === "Active" ? (
-                          <button
-                            type="button"
-                            className="users-actions__lock"
-                            onClick={() => openConfirmDialog(user.id, "lock")}
-                          >
-                            Lock
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="users-actions__unlock"
-                            onClick={() => openConfirmDialog(user.id, "unlock")}
-                          >
-                            Unlock
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="users-table-wrapper">
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Joined Date</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedUsers.map((user) => (
+                    <tr key={user.id}>
+                      <td>#{user.id}</td>
+                      <td>{user.fullName}</td>
+                      <td>{user.email}</td>
+                      <td>
+                        <StatusBadge label={user.role} variant="role" />
+                      </td>
+                      <td>
+                        <StatusBadge
+                          label={user.status}
+                          variant={
+                            user.status === "Active" ? "active" : "locked"
+                          }
+                        />
+                      </td>
+                      <td>{user.joinedAt}</td>
+                      <td>
+                        <div className="users-actions">
+                          <button
+                            type="button"
+                            className="users-actions__view"
+                            onClick={() => openViewModal(user)}
+                          >
+                            View
+                          </button>
+
+                          <button
+                            type="button"
+                            className="users-actions__edit"
+                            onClick={() => openEditModal(user)}
+                            disabled={user.role === "Admin"}
+                          >
+                            Edit
+                          </button>
+
+                          {user.role === "Admin" ? (
+                            <button
+                              type="button"
+                              className="users-actions__disabled"
+                              disabled
+                            >
+                              Protected
+                            </button>
+                          ) : user.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="users-actions__lock"
+                              onClick={() => openConfirmDialog(user.id, "lock")}
+                            >
+                              Lock
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="users-actions__unlock"
+                              onClick={() =>
+                                openConfirmDialog(user.id, "unlock")
+                              }
+                            >
+                              Unlock
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="users-table-pagination">
+              <span className="users-table-pagination__info">
+                Page {userPage} of {totalUserPages}
+              </span>
+
+              <div className="users-table-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setUserPage((prev) => Math.max(1, prev - 1))}
+                  disabled={userPage === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setUserPage((prev) => Math.min(totalUserPages, prev + 1))
+                  }
+                  disabled={userPage === totalUserPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </SectionCard>
 
