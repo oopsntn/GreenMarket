@@ -1,7 +1,8 @@
 -- ============================================================
 -- GreenMarket Database Backup (Full Schema)
--- PostgreSQL 18.x | Generated: 2026-03-20
+-- PostgreSQL 18.x | Generated: 2026-04-01
 -- Tables: 31 | Synced from Drizzle ORM schema
+-- Categories: Cây Cảnh Bonsai, Dụng Cụ Làm Vườn
 -- ============================================================
 
 -- ============================================================
@@ -485,69 +486,283 @@ INSERT INTO admin_roles (admin_role_admin_id, admin_role_role_id) VALUES
 (2, 2);
 
 -- Users
-INSERT INTO users (user_id, user_mobile, user_display_name, user_status) VALUES
-(1, '0978195419', 'Nguyễn Thành Nam', 'active'),
-(2, '0982703398', 'Trần Văn Bonsai', 'active'),
-(3, '0123456789', 'Lê Hoài Nam (Nghệ Nhân)', 'active'),
-(4, '0912345678', 'Vườn Kiểng Bến Tre', 'active'),
-(5, '0966778899', 'Người Mua Cây Cảnh', 'active');
+INSERT INTO users (user_id, user_mobile, user_display_name, user_email, user_location, user_bio, user_status) VALUES
+(1, '0978195419', 'Nguyễn Thành Nam', 'nam.nguyen@gmail.com', 'Yên Phong, Bắc Ninh', 'Đam mê bonsai từ năm 2018, chuyên dòng mini và phong thủy.', 'active'),
+(2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'Hoàng Mai, Hà Nội', 'Sưu tầm và chăm sóc thông đen Nhật Bản.', 'active'),
+(3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'Nam Trực, Nam Định', 'Nghệ nhân cây cảnh cổ truyền, hơn 20 năm kinh nghiệm.', 'active'),
+(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Chủ vườn kiểng miền Tây, chuyên Linh Sam và Mai Chiếu Thủy.', 'active'),
+(5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Quận 7, TP.HCM', 'Người chơi bonsai nghiệp dư, thích tìm cây đẹp giá rẻ.', 'active'),
+(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Chuyên nhập khẩu và phân phối dụng cụ bonsai Nhật Bản.', 'active'),
+(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Ninh Kiều, Cần Thơ', 'Thích sưu tầm chậu bonsai men Nhật cổ.', 'active');
 
 -- Shops
-INSERT INTO shops (shop_id, shop_owner_id, shop_name, shop_phone, shop_location, shop_description, shop_status) VALUES
-(1, 1, 'Vườn Bonsai Phố Huyện', '0978195419', 'Yên Phong, Bắc Ninh', 'Chuyên các dòng Bonsai mini và tầm trung.', 'active'),
-(2, 3, 'Nam Định Art Garden', '0123456789', 'Nam Trực, Nam Định', 'Nghệ nhân cây cảnh cổ truyền Nam Điền.', 'active'),
-(3, 4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'Chợ Lách, Bến Tre', 'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy số lượng lớn.', 'active');
+INSERT INTO shops (shop_id, shop_owner_id, shop_name, shop_phone, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
+(1, 1, 'Vườn Bonsai Phố Huyện', '0978195419', 'Yên Phong, Bắc Ninh',
+    'Chuyên bonsai mini và tầm trung. Nhận thiết kế, chăm sóc và phối thế bonsai theo yêu cầu. Ship toàn quốc qua Viettel Post.',
+    'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', 21.1863, 106.0734),
+(2, 3, 'Nam Định Art Garden', '0123456789', 'Nam Trực, Nam Định',
+    'Nghệ nhân cây cảnh cổ truyền Nam Điền. Chuyên sanh, si, tùng la hán cốt cách truyền thống. Hơn 20 năm kinh nghiệm.',
+    'http://localhost:5000/uploads/shop/nam-dinh-art-garden.jpg', 'active', 20.2506, 106.2355),
+(3, 4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'Chợ Lách, Bến Tre',
+    'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
+    'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', 10.2350, 106.1511),
+(4, 6, 'Dụng Cụ Bonsai Pro', '0935112233', 'Đông Anh, Hà Nội',
+    'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
+    'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', 21.1395, 105.8544);
 
--- Categories (Tree)
+-- ============================================================
+-- CATEGORIES
+-- Chỉ 2 danh mục chính: Cây Cảnh Bonsai + Dụng Cụ Làm Vườn
+-- ============================================================
 INSERT INTO categories (category_id, category_parent_id, category_title, category_slug, category_published) VALUES
-(1, NULL, 'Bonsai', 'bonsai', true),
-(2, NULL, 'Cây Công Trình', 'cay-cong-trinh', true),
-(3, NULL, 'Dụng Cụ & Vật Tư', 'dung-cu-vat-tu', true),
-(4, NULL, 'Chậu & Phụ Kiện', 'chau-phu-kien', true),
-(11, 1, 'Bonsai Mini (Mame/Shito)', 'bonsai-mini', true),
-(12, 1, 'Bonsai Tầm Trung', 'bonsai-tam-trung', true),
-(13, 1, 'Bonsai Đại (San vườn)', 'bonsai-dai', true),
-(31, 3, 'Kéo Tỉa & Kìm Cạp', 'keo-tia-kim-cap', true),
-(32, 3, 'Đất Nhật (Akadama)', 'dat-nhat-akadama', true);
+-- Danh mục gốc
+(1,  NULL, 'Cây Cảnh Bonsai',       'cay-canh-bonsai',     true),
+(2,  NULL, 'Dụng Cụ Làm Vườn',      'dung-cu-lam-vuon',    true),
+-- Sub: Cây Cảnh Bonsai
+(11, 1,    'Bonsai Mini (Mame/Shito)', 'bonsai-mini',       true),
+(12, 1,    'Bonsai Tầm Trung',        'bonsai-tam-trung',   true),
+(13, 1,    'Bonsai Đại (San Vườn)',    'bonsai-dai',         true),
+(14, 1,    'Bonsai Phong Thủy',       'bonsai-phong-thuy',  true),
+(15, 1,    'Bonsai Hoa & Quả',        'bonsai-hoa-qua',     true),
+-- Sub: Dụng Cụ Làm Vườn
+(21, 2,    'Kéo Tỉa & Kìm Cạp',      'keo-tia-kim-cap',    true),
+(22, 2,    'Đất & Giá Thể',           'dat-gia-the',        true),
+(23, 2,    'Chậu & Khay Bonsai',      'chau-khay-bonsai',   true),
+(24, 2,    'Dây Buộc & Phụ Kiện Uốn', 'day-buoc-phu-kien-uon', true),
+(25, 2,    'Bình Tưới & Phun Sương',  'binh-tuoi-phun-suong', true);
 
--- Attributes
+-- ============================================================
+-- ATTRIBUTES
+-- ============================================================
 INSERT INTO attributes (attribute_id, attribute_code, attribute_title, attribute_data_type, attribute_options, attribute_published) VALUES
-(1, 'dang_cay', 'Dáng Thế', 'enum', '["Dáng Trực", "Dáng Xiên", "Dáng Hoành", "Dáng Huyền", "Dáng Văn Nhân", "Dáng Thác Đổ"]', true),
-(2, 'chieu_cao', 'Chiều cao (cm)', 'number', NULL, true),
-(3, 'hoanh_goc', 'Hoành gốc (cm)', 'number', NULL, true),
-(4, 'tuoi_cay', 'Tuổi cây (năm)', 'number', NULL, true),
-(5, 'nguon_goc', 'Nguồn gốc', 'text', NULL, true);
+-- Dành cho Cây Cảnh Bonsai
+(1, 'dang_cay',   'Dáng Thế',         'enum',   '["Dáng Trực","Dáng Xiên","Dáng Hoành","Dáng Huyền","Dáng Văn Nhân","Dáng Thác Đổ","Dáng Bạt Phong","Dáng Song Thụ"]', true),
+(2, 'chieu_cao',  'Chiều cao (cm)',    'number', NULL, true),
+(3, 'hoanh_goc',  'Hoành gốc (cm)',   'number', NULL, true),
+(4, 'tuoi_cay',   'Tuổi cây (năm)',   'number', NULL, true),
+(5, 'nguon_goc',  'Nguồn gốc',        'text',   NULL, true),
+-- Dành cho Dụng Cụ Làm Vườn
+(6, 'chat_lieu',  'Chất liệu',        'enum',   '["Thép Carbon","Thép Không Gỉ (Inox)","Nhựa PP","Gỗ","Nhôm","Đồng Thau","Gốm Nung"]', true),
+(7, 'thuong_hieu','Thương hiệu',      'text',   NULL, true),
+(8, 'xuat_xu',    'Xuất xứ',          'enum',   '["Nhật Bản","Trung Quốc","Việt Nam","Đài Loan","Hàn Quốc"]', true);
 
 -- Category-Attribute Mapping
 INSERT INTO category_attributes (category_attribute_category_id, category_attribute_attribute_id, category_attribute_required) VALUES
-(1, 1, true), (1, 2, true), (1, 3, true), (1, 4, false), (1, 5, false),
-(11, 1, true), (11, 2, true), (12, 1, true), (12, 3, true);
+-- Cây Cảnh Bonsai (gốc) → kế thừa cho tất cả sub
+(1,  1, true),  (1,  2, true),  (1,  3, false), (1,  4, false), (1,  5, false),
+-- Bonsai Mini
+(11, 1, true),  (11, 2, true),  (11, 3, true),
+-- Bonsai Tầm Trung
+(12, 1, true),  (12, 2, true),  (12, 3, true),  (12, 4, false),
+-- Bonsai Đại
+(13, 1, true),  (13, 2, true),  (13, 3, true),  (13, 4, true),  (13, 5, false),
+-- Bonsai Phong Thủy
+(14, 1, true),  (14, 2, true),
+-- Bonsai Hoa & Quả
+(15, 1, true),  (15, 2, true),  (15, 5, false),
+-- Dụng Cụ Làm Vườn (gốc)
+(2,  6, true),  (2,  7, false), (2,  8, false),
+-- Kéo Tỉa & Kìm Cạp
+(21, 6, true),  (21, 7, true),  (21, 8, true),
+-- Đất & Giá Thể
+(22, 7, false), (22, 8, true),
+-- Chậu & Khay Bonsai
+(23, 6, true),  (23, 7, false), (23, 8, true),
+-- Dây Buộc & Phụ Kiện Uốn
+(24, 6, true),  (24, 8, false),
+-- Bình Tưới & Phun Sương
+(25, 6, true),  (25, 7, false), (25, 8, false);
 
--- Posts
-INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_title, post_slug, post_content, post_price, post_location, post_status, post_contact_phone) VALUES
-(1, 1, 1, 11, 'Sanh Nam Điền Mini Dáng Văn Nhân', 'sanh-nam-dien-mini-123', 'Cây Sanh Nam Điền già, u nần, cốt cách thanh thoát.', 2500000, 'Bắc Ninh', 'approved', '0978195419'),
-(2, 3, 2, 12, 'Tùng La Hán Dáng Trực Cổ Thụ', 'tung-la-han-truc-456', 'Siêu phẩm Tùng La Hán cốt cách Nam Định, tay cành hoàn thiện.', 150000000, 'Nam Định', 'approved', '0123456789'),
-(3, 4, 3, 12, 'Linh Sam Sông Hinh Lũa Thép', 'linh-sam-lua-thep-789', 'Cây Linh Sam lũa tự nhiên cực đẹp, hoa tím thơm.', 8500000, 'Bến Tre', 'approved', '0912345678'),
-(4, 3, 2, 13, 'Sanh Quê Dáng Làng Đại Thụ', 'sanh-que-dang-lang-101', 'Cây sanh quê bóng mát rộng 3m, thích hợp sân vườn lớn.', 45000000, 'Nam Định', 'approved', '0123456789'),
-(5, 1, 1, 31, 'Kìm Cạp Xéo Thép Đen Nhật Bản', 'kim-cap-nhat-202', 'Dụng cụ chuyên dụng cho nghệ nhân bonsai.', 1200000, 'Bắc Ninh', 'approved', '0978195419'),
-(6, 4, 3, 11, 'Mai Chiếu Thủy Nu Gò Công Mini', 'mct-nu-mini-303', 'Cây mini bỏ túi, nu mặt quỷ cực già.', 3500000, 'Bến Tre', 'approved', '0912345678'),
-(7, 2, NULL, 12, 'Thông Đen Nhật Bản Thành Thẩm', 'thong-den-nhat-ban-404', 'Cây thông đen nuôi 10 năm từ hạt, dáng trực quân tử.', 25000000, 'Hà Nội', 'approved', '0982703398');
+-- ============================================================
+-- POSTS (15 bài đăng: 9 bonsai + 6 dụng cụ)
+-- ============================================================
+INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_title, post_slug, post_content, post_price, post_location, post_status, post_contact_phone, post_view_count, post_contact_count, post_published, post_submitted_at, post_published_at) VALUES
+-- === CÂY CẢNH BONSAI ===
+(1,  1, 1, 11, 'Sanh Nam Điền Mini Dáng Văn Nhân',
+    'sanh-nam-dien-mini-dang-van-nhan',
+    'Cây Sanh Nam Điền già, u nần, cốt cách thanh thoát. Lá đã thu nhỏ hoàn thiện. Phôi gốc 15 năm, tạo tác 5 năm. Phù hợp để bàn làm việc hoặc bàn trà.',
+    2500000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 234, 12, true, now() - interval '30 days', now() - interval '29 days'),
+
+(2,  3, 2, 12, 'Tùng La Hán Dáng Trực Cổ Thụ',
+    'tung-la-han-dang-truc-co-thu',
+    'Siêu phẩm Tùng La Hán cốt cách Nam Định, tay cành hoàn thiện 4 tầng tán. Gốc hoành 85cm, thân xù xì cổ kính. Đã đạt giải nhì triển lãm SVC 2025.',
+    150000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 1520, 45, true, now() - interval '25 days', now() - interval '24 days'),
+
+(3,  4, 3, 12, 'Linh Sam Sông Hinh Lũa Thép',
+    'linh-sam-song-hinh-lua-thep',
+    'Cây Linh Sam lũa tự nhiên cực đẹp, hoa tím thơm quanh năm. Gốc từ Sông Hinh, Phú Yên. Lũa trắng, thân cứng như thép. Nuôi chậu 8 năm, tán đã ổn định.',
+    8500000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 876, 28, true, now() - interval '20 days', now() - interval '19 days'),
+
+(4,  3, 2, 13, 'Sanh Quê Dáng Làng Đại Thụ',
+    'sanh-que-dang-lang-dai-thu',
+    'Cây sanh quê bóng mát rộng 3m, thích hợp sân vườn biệt thự hoặc quán cà phê. Phôi 30 năm, dáng cây làng quê Bắc Bộ. Giao cây tận nơi bằng xe tải.',
+    45000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 432, 15, true, now() - interval '18 days', now() - interval '17 days'),
+
+(5,  4, 3, 11, 'Mai Chiếu Thủy Nu Gò Công Mini',
+    'mai-chieu-thuy-nu-go-cong-mini',
+    'Cây MCT mini bỏ túi, nu mặt quỷ cực già, gốc từ Gò Công, Tiền Giang. Hoa trắng thơm ngát. Kích thước 15cm, phù hợp bàn làm việc.',
+    3500000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 567, 19, true, now() - interval '15 days', now() - interval '14 days'),
+
+(6,  2, NULL, 12, 'Thông Đen Nhật Bản Thành Thẩm',
+    'thong-den-nhat-ban-thanh-tham',
+    'Cây thông đen (Pinus thunbergii) nuôi 10 năm từ hạt nhập khẩu Nhật. Dáng trực quân tử, vỏ nứt đẹp. Lá kim dày, khỏe. Chậu Tokoname men nâu đi kèm.',
+    25000000, 'Hoàng Mai, Hà Nội', 'approved', '0982703398', 345, 8, true, now() - interval '12 days', now() - interval '11 days'),
+
+(7,  1, 1, 14, 'Si Bonsai Phong Thủy Tài Lộc',
+    'si-bonsai-phong-thuy-tai-loc',
+    'Cây Si bonsai dáng trực, rễ khí buông dày tượng trưng mưa thuận gió hòa, tài lộc. Phù hợp đặt phòng khách, quầy thu ngân. Kèm chậu sứ Bát Tràng.',
+    4200000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 189, 7, true, now() - interval '10 days', now() - interval '9 days'),
+
+(8,  4, 3, 15, 'Mai Vàng Bonsai Nghệ Thuật',
+    'mai-vang-bonsai-nghe-thuat',
+    'Mai vàng 5 cánh Bến Tre, phôi 12 năm, dáng hoành ấn tượng. Nở hoa vàng rực mỗi dịp Tết. Đã xử lý cho ra hoa đúng mùa. Giao hàng cẩn thận, bảo hành sống.',
+    12000000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 723, 31, true, now() - interval '8 days', now() - interval '7 days'),
+
+(9,  3, 2, 11, 'Tùng Bách Tán Lùn Nhật Mini',
+    'tung-bach-tan-lun-nhat-mini',
+    'Tùng Bách Tán lùn (Pinus parviflora) nhập giống Nhật. Lá ngắn xanh bạc, dáng xiên gió thổi. Chậu men xanh ngọc Tokoname. Kích thước 20cm, rất dễ chăm.',
+    6800000, 'Nam Trực, Nam Định', 'approved', '0123456789', 298, 11, true, now() - interval '5 days', now() - interval '4 days'),
+
+-- === DỤNG CỤ LÀM VƯỜN ===
+(10, 1, 1, 21, 'Kìm Cạp Xéo Thép Đen Nhật Bản Kaneshin',
+    'kim-cap-xeo-thep-den-kaneshin',
+    'Kìm cạp xéo (concave cutter) Kaneshin No.3, thép carbon rèn thủ công. Cắt sát gốc, vết cắt liền sẹo nhanh. Kèm bao da bảo quản. Hàng auth có tem.',
+    1200000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 156, 22, true, now() - interval '28 days', now() - interval '27 days'),
+
+(11, 6, 4, 21, 'Bộ Kéo Tỉa Bonsai Cao Cấp 5 Món',
+    'bo-keo-tia-bonsai-cao-cap-5-mon',
+    'Bộ 5 dụng cụ bonsai chuyên nghiệp: kéo lá, kéo cành, kìm cạp lõm, kìm bấm dây, cào rễ. Thép không gỉ, tay cầm cao su chống trượt. Hộp gỗ sang trọng.',
+    2850000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 412, 35, true, now() - interval '22 days', now() - interval '21 days'),
+
+(12, 6, 4, 22, 'Đất Akadama Nhật Bản Túi 14L',
+    'dat-akadama-nhat-ban-14l',
+    'Đất Akadama hạt trung (medium grain) nhập khẩu trực tiếp từ Ibaraki, Nhật Bản. Thoát nước tuyệt vời, giữ ẩm vừa phải. Chuyên dùng cho bonsai cao cấp. Còn hàng 50+ túi.',
+    320000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 534, 48, true, now() - interval '26 days', now() - interval '25 days'),
+
+(13, 6, 4, 23, 'Chậu Tokoname Men Xanh Ngọc Nhật Bản',
+    'chau-tokoname-men-xanh-ngoc',
+    'Chậu bonsai Tokoname chính hãng, men xanh ngọc bích. Kích thước 30x22x8cm, hình chữ nhật bo góc. Lỗ thoát nước đáy. Phù hợp bonsai tầm trung dáng hoành.',
+    850000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 267, 16, true, now() - interval '16 days', now() - interval '15 days'),
+
+(14, 6, 4, 24, 'Bộ Dây Nhôm Uốn Cành 6 Size',
+    'bo-day-nhom-uon-canh-6-size',
+    'Bộ 6 cuộn dây nhôm anodized chuyên uốn bonsai: 1mm, 1.5mm, 2mm, 2.5mm, 3mm, 4mm. Mỗi cuộn 100g. Màu nâu đồng, mềm dẻo, không gỉ, không gây thương cành.',
+    280000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 189, 27, true, now() - interval '14 days', now() - interval '13 days'),
+
+(15, 1, 1, 25, 'Bình Phun Sương Đồng Thau Kiểu Nhật',
+    'binh-phun-suong-dong-thau-kieu-nhat',
+    'Bình phun sương đồng thau 300ml, thiết kế kiểu Nhật truyền thống. Phun sương mịn đều, không đọng giọt. Dùng tưới lá bonsai, rêu, cỏ phủ chậu. Tặng kèm đầu phun thay thế.',
+    450000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days');
 
 -- Post Attribute Values
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
-(1, 1, 'Dáng Văn Nhân'), (1, 2, '25'), (1, 3, '15'),
-(2, 1, 'Dáng Trực'), (2, 2, '180'), (2, 3, '85'), (2, 5, 'Nam Định'),
-(3, 1, 'Dáng Thác Đổ'), (3, 2, '45'), (3, 3, '28'), (3, 5, 'Phú Yên'),
-(6, 1, 'Dáng Hoành'), (6, 2, '15'), (6, 3, '22'),
-(7, 1, 'Dáng Trực'), (7, 5, 'Nhập khẩu Nhật Bản');
+-- Post 1: Sanh Mini
+(1,  1, 'Dáng Văn Nhân'), (1,  2, '25'),  (1,  3, '15'),  (1,  4, '15'),
+-- Post 2: Tùng La Hán
+(2,  1, 'Dáng Trực'),     (2,  2, '180'), (2,  3, '85'),  (2,  4, '35'), (2,  5, 'Nam Định'),
+-- Post 3: Linh Sam
+(3,  1, 'Dáng Thác Đổ'),  (3,  2, '45'),  (3,  3, '28'),  (3,  4, '8'),  (3,  5, 'Sông Hinh, Phú Yên'),
+-- Post 4: Sanh Quê Đại
+(4,  1, 'Dáng Trực'),     (4,  2, '300'), (4,  3, '120'), (4,  4, '30'), (4,  5, 'Nam Định'),
+-- Post 5: MCT Mini
+(5,  1, 'Dáng Hoành'),    (5,  2, '15'),  (5,  3, '22'),  (5,  5, 'Gò Công, Tiền Giang'),
+-- Post 6: Thông Đen
+(6,  1, 'Dáng Trực'),     (6,  2, '55'),  (6,  3, '18'),  (6,  4, '10'), (6,  5, 'Nhập khẩu Nhật Bản'),
+-- Post 7: Si Phong Thủy
+(7,  1, 'Dáng Trực'),     (7,  2, '40'),  (7,  3, '25'),
+-- Post 8: Mai Vàng
+(8,  1, 'Dáng Hoành'),    (8,  2, '60'),  (8,  3, '35'),  (8,  4, '12'), (8,  5, 'Bến Tre'),
+-- Post 9: Tùng Bách Tán
+(9,  1, 'Dáng Xiên'),     (9,  2, '20'),  (9,  3, '12'),  (9,  5, 'Giống Nhật Bản'),
+-- Post 10: Kìm Cạp Kaneshin
+(10, 6, 'Thép Carbon'),   (10, 7, 'Kaneshin'),            (10, 8, 'Nhật Bản'),
+-- Post 11: Bộ Kéo 5 Món
+(11, 6, 'Thép Không Gỉ (Inox)'), (11, 7, 'TianBonsai'),  (11, 8, 'Trung Quốc'),
+-- Post 12: Đất Akadama
+(12, 7, 'Ibaraki Akadama'),       (12, 8, 'Nhật Bản'),
+-- Post 13: Chậu Tokoname
+(13, 6, 'Gốm Nung'),     (13, 7, 'Tokoname'),            (13, 8, 'Nhật Bản'),
+-- Post 14: Dây Nhôm
+(14, 6, 'Nhôm'),          (14, 8, 'Trung Quốc'),
+-- Post 15: Bình Phun Sương
+(15, 6, 'Đồng Thau'),     (15, 8, 'Nhật Bản');
 
--- Post Images (Placeholder URLs)
+-- Post Images
 INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
-(1, 'https://example.com/images/sanh-mini-1.jpg', 0),
-(1, 'https://example.com/images/sanh-mini-2.jpg', 1),
-(2, 'https://example.com/images/tung-la-han.jpg', 0),
-(3, 'https://example.com/images/linh-sam.jpg', 0),
-(7, 'https://example.com/images/thong-den.jpg', 0);
+(1,  'http://localhost:5000/uploads/sanh-nam-dien-mini-1.jpg', 0),
+(1,  'http://localhost:5000/uploads/sanh-nam-dien-mini-2.jpg', 1),
+(1,  'http://localhost:5000/uploads/sanh-nam-dien-mini-3.jpg', 2),
+(2,  'http://localhost:5000/uploads/tung-la-han-1.jpg', 0),
+(2,  'http://localhost:5000/uploads/tung-la-han-2.jpg', 1),
+(3,  'http://localhost:5000/uploads/linh-sam-1.jpg', 0),
+(3,  'http://localhost:5000/uploads/linh-sam-2.jpg', 1),
+(4,  'http://localhost:5000/uploads/sanh-que-dai-1.jpg', 0),
+(5,  'http://localhost:5000/uploads/mct-mini-1.jpg', 0),
+(5,  'http://localhost:5000/uploads/mct-mini-2.jpg', 1),
+(6,  'http://localhost:5000/uploads/thong-den-1.jpg', 0),
+(7,  'http://localhost:5000/uploads/si-phong-thuy-1.jpg', 0),
+(8,  'http://localhost:5000/uploads/mai-vang-1.jpg', 0),
+(8,  'http://localhost:5000/uploads/mai-vang-2.jpg', 1),
+(9,  'http://localhost:5000/uploads/tung-bach-tan-1.jpg', 0),
+(10, 'http://localhost:5000/uploads/kim-cap-kaneshin-1.jpg', 0),
+(11, 'http://localhost:5000/uploads/bo-keo-5-mon-1.jpg', 0),
+(11, 'http://localhost:5000/uploads/bo-keo-5-mon-2.jpg', 1),
+(12, 'http://localhost:5000/uploads/dat-akadama-1.jpg', 0),
+(13, 'http://localhost:5000/uploads/chau-tokoname-1.jpg', 0),
+(13, 'http://localhost:5000/uploads/chau-tokoname-2.jpg', 1),
+(14, 'http://localhost:5000/uploads/day-nhom-uon-1.jpg', 0),
+(15, 'http://localhost:5000/uploads/binh-phun-suong-1.jpg', 0);
+
+-- Favorite Posts (Bookmarks)
+INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favorite_post_created_at) VALUES
+(5, 1, now() - interval '20 days'),
+(5, 3, now() - interval '15 days'),
+(5, 8, now() - interval '5 days'),
+(7, 2, now() - interval '18 days'),
+(7, 5, now() - interval '10 days'),
+(7, 13, now() - interval '8 days'),
+(2, 9, now() - interval '3 days');
+
+-- ============================================================
+-- PLACEMENT SLOTS & PROMOTION PACKAGES
+-- ============================================================
+INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_slot_title, placement_slot_capacity, placement_slot_rules, placement_slot_published) VALUES
+(1, 'HOMEPAGE_BANNER',  'Banner Trang Chủ',          5,  '{"max_per_shop": 1, "min_post_status": "approved"}', true),
+(2, 'CATEGORY_TOP',     'Đầu Trang Danh Mục',        10, '{"max_per_shop": 2, "min_post_status": "approved"}', true),
+(3, 'SEARCH_HIGHLIGHT', 'Nổi Bật Trong Tìm Kiếm',    20, '{"max_per_shop": 3, "min_post_status": "approved"}', true);
+
+INSERT INTO promotion_packages (promotion_package_id, promotion_package_slot_id, promotion_package_title, promotion_package_duration_days, promotion_package_price, promotion_package_published) VALUES
+(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  150000, true),
+(2, 1, 'Banner Trang Chủ - 30 ngày',  30, 500000, true),
+(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  80000,  true),
+(4, 2, 'Đầu Danh Mục - 30 ngày',      30, 250000, true),
+(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  50000,  true),
+(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, 150000, true);
+
+-- ============================================================
+-- BANNED KEYWORDS
+-- ============================================================
+INSERT INTO banned_keywords (banned_keyword_keyword, banned_keyword_published) VALUES
+('lừa đảo', true),
+('scam', true),
+('fake', true),
+('hàng giả', true),
+('cây chết', true),
+('gỗ lậu', true);
+
+-- ============================================================
+-- SYSTEM SETTINGS
+-- ============================================================
+INSERT INTO system_settings (system_setting_key, system_setting_value, system_setting_updated_by) VALUES
+('site_name', 'GreenMarket', 1),
+('site_description', 'Sàn mua bán cây cảnh bonsai và dụng cụ làm vườn hàng đầu Việt Nam', 1),
+('max_images_per_post', '10', 1),
+('max_video_per_post', '2', 1),
+('post_auto_approve', 'false', 1),
+('otp_expire_minutes', '10', 1),
+('vnpay_sandbox', 'true', 1),
+('contact_email', 'support@greenmarket.com', 1),
+('contact_phone', '1900-xxxx', 1);
 
 -- OTP Requests (Sample)
 INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_expire_at, otp_request_status) VALUES
@@ -569,3 +784,7 @@ SELECT setval('post_images_image_id_seq', (SELECT COALESCE(MAX(image_id), 1) FRO
 SELECT setval('post_videos_post_video_id_seq', (SELECT COALESCE(MAX(post_video_id), 1) FROM post_videos));
 SELECT setval('post_attribute_values_value_id_seq', (SELECT COALESCE(MAX(value_id), 1) FROM post_attribute_values));
 SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM reports), false);
+SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
+SELECT setval('promotion_packages_promotion_package_id_seq', (SELECT COALESCE(MAX(promotion_package_id), 1) FROM promotion_packages));
+SELECT setval('banned_keywords_banned_keyword_id_seq', (SELECT COALESCE(MAX(banned_keyword_id), 1) FROM banned_keywords));
+SELECT setval('system_settings_system_setting_id_seq', (SELECT COALESCE(MAX(system_setting_id), 1) FROM system_settings));

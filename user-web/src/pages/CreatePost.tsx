@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Image as ImageIcon, MapPin, Tag, CircleDollarSign, CheckCircle, ArrowRight, X, UploadCloud } from 'lucide-react';
 import { getCategories, getCategoryAttributes, createPost, uploadMedia } from '../services/api';
+import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
 const CreatePost: React.FC = () => {
     const navigate = useNavigate();
@@ -14,12 +15,12 @@ const CreatePost: React.FC = () => {
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [videoFiles, setVideoFiles] = useState<File[]>([]);
     const [previews, setPreviews] = useState<{ url: string, type: 'image' | 'video' }[]>([]);
+    const postPriceInput = useCurrencyInput("");
 
     const [formData, setFormData] = useState({
         categoryId: '',
         postTitle: '',
         postContent: '',
-        postPrice: '',
         postLocation: '',
         attributes: {} as Record<number, string>
     });
@@ -132,6 +133,7 @@ const CreatePost: React.FC = () => {
             const payload = {
                 ...formData,
                 categoryId: Number(formData.categoryId),
+                postPrice: postPriceInput.rawValue,
                 images: imageUrls,
                 videos: videoUrls,
                 attributes: formattedAttributes
@@ -226,11 +228,13 @@ const CreatePost: React.FC = () => {
                             </label>
                             <input
                                 required
-                                type="number"
+                                type="text"
                                 placeholder="0"
                                 className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
-                                value={formData.postPrice}
-                                onChange={(e) => setFormData({ ...formData, postPrice: e.target.value })}
+                                ref={postPriceInput.inputRef}
+                                value={postPriceInput.displayValue}
+                                onChange={postPriceInput.handleChange}
+                                inputMode="numeric"
                             />
                         </div>
                     </div>

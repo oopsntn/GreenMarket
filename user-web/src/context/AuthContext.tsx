@@ -18,6 +18,10 @@ interface Shop {
   shopDescription?: string;
   shopPhone?: string;
   shopLocation?: string;
+  shopLogoUrl?: string | null;
+  shopCoverUrl?: string | null;
+  shopGalleryImages?: string[];
+  shopPreviewImageUrl?: string | null;
   shopLat?: number;
   shopLng?: number;
 }

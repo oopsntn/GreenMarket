@@ -6,6 +6,36 @@ import { posts, postImages } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 
+const SHOP_GALLERY_DELIMITER = "|";
+
+const parseShopGalleryImages = (rawCover: string | null | undefined): string[] => {
+    if (!rawCover) return [];
+    return rawCover
+        .split(SHOP_GALLERY_DELIMITER)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+};
+
+const serializeShopGalleryImages = (images: unknown): string | null => {
+    if (!Array.isArray(images)) return null;
+    const normalized = images
+        .map((item) => String(item || "").trim())
+        .filter((item) => item.length > 0)
+        .slice(0, 4);
+
+    if (normalized.length === 0) return null;
+    return normalized.join(SHOP_GALLERY_DELIMITER);
+};
+
+const withShopGallery = <T extends { shopCoverUrl?: string | null }>(shop: T) => {
+    const shopGalleryImages = parseShopGalleryImages(shop.shopCoverUrl);
+    return {
+        ...shop,
+        shopGalleryImages,
+        shopPreviewImageUrl: shopGalleryImages[0] || null,
+    };
+};
+
 
 export const registerShop = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -15,7 +45,7 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        const { shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng, shopLogoUrl, shopCoverUrl } = req.body;
+        const { shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng, shopLogoUrl, shopCoverUrl, shopGalleryImages } = req.body;
 
         if (!shopName) {
             res.status(400).json({ error: "Shop Name is required" });
@@ -29,6 +59,8 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
+        const galleryCover = serializeShopGalleryImages(shopGalleryImages);
+
         const [newShop] = await db.insert(shops).values({
             shopOwnerId: userId,
             shopName,
@@ -36,13 +68,13 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             shopLocation,
             shopDescription,
             shopLogoUrl,
-            shopCoverUrl,
+            shopCoverUrl: galleryCover ?? shopCoverUrl ?? null,
             shopLat: shopLat ? String(shopLat) : null,
             shopLng: shopLng ? String(shopLng) : null,
             shopStatus: "pending"
         }).returning();
 
-        res.status(201).json(newShop);
+        res.status(201).json(withShopGallery(newShop));
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -63,7 +95,7 @@ export const getMyShop = async (req: AuthRequest, res: Response): Promise<void> 
             return;
         }
 
-        res.json(myShop);
+        res.json(withShopGallery(myShop));
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -102,8 +134,10 @@ export const getPublicShopById = async (req: Request<{ id: string }>, res: Respo
             }));
         }
 
+        const decoratedShop = withShopGallery(shop);
+
         res.json({
-            ...shop,
+            ...decoratedShop,
             posts: postsWithImages
         });
     } catch (error) {
@@ -137,7 +171,9 @@ export const updateShop = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const { shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng, shopLogoUrl, shopCoverUrl } = req.body;
+        const { shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng, shopLogoUrl, shopCoverUrl, shopGalleryImages } = req.body;
+
+        const galleryCover = serializeShopGalleryImages(shopGalleryImages);
 
         const [updatedShop] = await db.update(shops)
             .set({ 
@@ -146,7 +182,7 @@ export const updateShop = async (req: AuthRequest, res: Response): Promise<void>
                 shopLocation, 
                 shopDescription, 
                 shopLogoUrl,
-                shopCoverUrl,
+                shopCoverUrl: galleryCover ?? shopCoverUrl,
                 shopLat: shopLat !== undefined ? String(shopLat) : undefined,
                 shopLng: shopLng !== undefined ? String(shopLng) : undefined,
                 shopUpdatedAt: new Date() 
@@ -154,7 +190,7 @@ export const updateShop = async (req: AuthRequest, res: Response): Promise<void>
             .where(eq(shops.shopId, id))
             .returning();
 
-        res.json(updatedShop);
+        res.json(withShopGallery(updatedShop));
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -183,7 +219,7 @@ export const getAllShops = async (req: Request, res: Response): Promise<void> =>
         const totalItems = Number(countResult[0]?.count) || 0;
 
         res.json({
-            data,
+            data: data.map((shop) => withShopGallery(shop)),
             meta: { totalItems, totalPages: Math.ceil(totalItems / limit), currentPage: page, limit }
         });
     } catch (error) {

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { getAllShops } from '../services/api';
 import { Store, MapPin, Phone, Loader2, ShieldCheck } from 'lucide-react';
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+
 const ShopList: React.FC = () => {
   const [shops, setShops] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,11 @@ const ShopList: React.FC = () => {
 
     fetchShops();
   }, [page]);
+
+  const toMediaUrl = (url?: string | null) => {
+    if (!url) return '';
+    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -53,9 +60,9 @@ const ShopList: React.FC = () => {
               >
                 <div className="flex items-center gap-4 mb-5">
                   <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center overflow-hidden">
-                    {shop.shopLogoUrl ? (
+                    {(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl) ? (
                       <img
-                        src={shop.shopLogoUrl.startsWith('http') ? shop.shopLogoUrl : `http://localhost:5000${shop.shopLogoUrl}`}
+                        src={toMediaUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl)}
                         alt={shop.shopName}
                         className="w-full h-full object-cover"
                       />

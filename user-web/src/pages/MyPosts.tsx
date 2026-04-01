@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { getMyPosts, deleteUserPost, updateUserPost, getPromotionPackages, buyPromotionPackage } from '../services/api';
-import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck } from 'lucide-react';
+import { getMyPosts, deleteUserPost, updateUserPost, getPromotionPackages, buyPromotionPackage, getCategories, getCategoryAttributes } from '../services/api';
+import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCurrencyInput } from '../hooks/useCurrencyInput';
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 
 const MyPosts: React.FC = () => {
   const { user, shop } = useAuth();
@@ -14,7 +17,14 @@ const MyPosts: React.FC = () => {
   // Edit Modal State
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editPrice, setEditPrice] = useState("");
+  const editPriceInput = useCurrencyInput("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editContactPhone, setEditContactPhone] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [categories, setCategories] = useState<any[]>([]);
+  const [editCategoryAttributes, setEditCategoryAttributes] = useState<any[]>([]);
+  const [editAttributes, setEditAttributes] = useState<Record<number, string>>({});
   const [boostingPost, setBoostingPost] = useState<any | null>(null);
   const [boostPackages, setBoostPackages] = useState<any[]>([]);
   const [boostLoading, setBoostLoading] = useState(false);
@@ -40,6 +50,18 @@ const MyPosts: React.FC = () => {
     fetchPosts();
   }, [user?.id]);
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await getCategories();
+        setCategories(res.data || []);
+      } catch (error) {
+        console.error('Failed to fetch categories for edit modal:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const handleDelete = async (postId: number) => {
     if (!user?.id) return;
     if (window.confirm('Bạn có chắc chắn muốn xóa bài đăng này không?')) {
@@ -54,10 +76,87 @@ const MyPosts: React.FC = () => {
     }
   };
 
-  const openEditModal = (post: any) => {
+  const loadCategoryAttributes = async (categoryId: string) => {
+    if (!categoryId) {
+      setEditCategoryAttributes([]);
+      setEditAttributes({});
+      return;
+    }
+    try {
+      const res = await getCategoryAttributes(Number(categoryId));
+      setEditCategoryAttributes(res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch category attributes for edit modal:', error);
+      setEditCategoryAttributes([]);
+    }
+  };
+
+  const handleEditCategoryChange = async (categoryId: string) => {
+    setEditCategoryId(categoryId);
+    setEditAttributes({});
+    await loadCategoryAttributes(categoryId);
+  };
+
+  const handleEditAttributeChange = (attrId: number, value: string) => {
+    setEditAttributes(prev => ({
+      ...prev,
+      [attrId]: value
+    }));
+  };
+
+  const toMediaUrl = (url?: string | null) => {
+    if (!url) return '';
+    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  };
+
+  const getSellerAvatar = (post: any) => {
+    if (post?.postShopId) {
+      return toMediaUrl(
+        post?.shop?.shopPreviewImageUrl
+        || post?.shop?.shopGalleryImages?.[0]
+        || post?.shop?.shopLogoUrl
+        || shop?.shopPreviewImageUrl
+        || shop?.shopGalleryImages?.[0]
+        || shop?.shopLogoUrl
+        || ''
+      );
+    }
+    return toMediaUrl(post?.author?.userAvatarUrl || user?.userAvatarUrl || '');
+  };
+
+  const getSellerName = (post: any) => {
+    if (post?.postShopId) {
+      return post?.shop?.shopName || shop?.shopName || 'Nha vuon';
+    }
+    return post?.author?.userDisplayName || post?.author?.userMobile || user?.userDisplayName || user?.userMobile || 'Nguoi ban';
+  };
+
+  const getPrefilledAttributes = (post: any): Record<number, string> => {
+    if (!Array.isArray(post?.attributes)) return {};
+
+    return post.attributes.reduce((acc: Record<number, string>, item: any) => {
+      const rawId = item?.attributeId ?? item?.id;
+      const rawValue = item?.value ?? item?.attributeValue;
+      const attributeId = Number(rawId);
+
+      if (!Number.isNaN(attributeId) && rawValue !== undefined && rawValue !== null) {
+        acc[attributeId] = String(rawValue);
+      }
+
+      return acc;
+    }, {});
+  };
+
+  const openEditModal = async (post: any) => {
     setEditingPost(post);
     setEditTitle(post.postTitle);
-    setEditPrice(post.postPrice);
+    editPriceInput.setRawValue(post.postPrice ?? "");
+    setEditCategoryId(post.categoryId ? String(post.categoryId) : "");
+    setEditLocation(post.postLocation || "");
+    setEditContactPhone(post.postContactPhone || "");
+    setEditContent(post.postContent || "");
+    setEditAttributes(getPrefilledAttributes(post));
+    await loadCategoryAttributes(post.categoryId ? String(post.categoryId) : "");
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -65,11 +164,27 @@ const MyPosts: React.FC = () => {
     if (!editingPost || !user?.id) return;
 
     try {
+      const formattedAttributes = Object.entries(editAttributes)
+        .filter(([, value]) => String(value).trim() !== "")
+        .map(([attributeId, value]) => ({
+          attributeId: Number(attributeId),
+          value
+        }));
+
       await updateUserPost(editingPost.postId, {
+        categoryId: editCategoryId ? Number(editCategoryId) : undefined,
         postTitle: editTitle,
-        postPrice: editPrice
+        postPrice: editPriceInput.rawValue,
+        postLocation: editLocation,
+        postContactPhone: editContactPhone,
+        postContent: editContent,
+        attributes: formattedAttributes,
       });
-      alert('Đã cập nhật bài đăng thành công! Bài viết sẽ được chuyển về trạng thái chờ duyệt.');
+      if (shop?.shopStatus === 'active') {
+        alert('Đã cập nhật bài đăng thành công! Bài viết được hiển thị ngay.');
+      } else {
+        alert('Đã cập nhật bài đăng thành công! Bài viết sẽ được chuyển về trạng thái chờ duyệt.');
+      }
       setEditingPost(null);
       // Refresh list to get updated status
       const postsRes = await getMyPosts();
@@ -216,9 +331,19 @@ const MyPosts: React.FC = () => {
             {shop ? (
               <div className="glass p-8 rounded-4xl border-emerald-500/20 shadow-2xl shadow-emerald-500/5 flex flex-col md:flex-row gap-8 items-center bg-linear-to-br from-surface to-background relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-3xl -mr-32 -mt-32"></div>
-                <div className="w-24 h-24 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500 shrink-0">
-                  <Store className="w-12 h-12" />
-                </div>
+                {(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl) ? (
+                  <div className="w-24 h-24 rounded-3xl overflow-hidden border border-emerald-500/20 shrink-0">
+                    <img
+                      src={toMediaUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl || '')}
+                      alt={shop.shopName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500 shrink-0">
+                    <Store className="w-12 h-12" />
+                  </div>
+                )}
                 <Link
                   to={`/shop/${shop.shopId}`}
                   className="flex-1 text-center md:text-left group/shopLink cursor-pointer"
@@ -270,12 +395,35 @@ const MyPosts: React.FC = () => {
               {filteredPosts.map((post) => (
                 <div key={post.postId} className="glass p-4 rounded-3xl border-white/5 hover:border-emerald-500/30 transition-all flex flex-col sm:flex-row items-center gap-6 group">
                   <div className="w-full sm:w-32 h-32 bg-white/5 rounded-2xl overflow-hidden shrink-0 relative">
-                    <div className="w-full h-full flex items-center justify-center text-slate-700">
-                      <PackageOpen className="w-10 h-10 group-hover:scale-110 transition-transform" />
-                    </div>
+                    {toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl) ? (
+                      <img
+                        src={toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl)}
+                        alt={post.postTitle}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-700">
+                        <PackageOpen className="w-10 h-10 group-hover:scale-110 transition-transform" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                      {getSellerAvatar(post) ? (
+                        <img
+                          src={getSellerAvatar(post)}
+                          alt={getSellerName(post)}
+                          className="w-7 h-7 rounded-full object-cover border border-white/10"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                          <User className="w-4 h-4 text-slate-500" />
+                        </div>
+                      )}
+                      <span className="text-xs text-slate-400 font-medium truncate">{getSellerName(post)}</span>
+                    </div>
+
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
                       <h3 className="text-base font-bold line-clamp-2 group-hover:text-emerald-400 transition-colors uppercase">{post.postTitle}</h3>
                       <div className="flex justify-center sm:justify-start">
@@ -424,35 +572,129 @@ const MyPosts: React.FC = () => {
       {/* Edit Modal */}
       {editingPost && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm shadow-2xl flex items-center justify-center z-50 p-4">
-          <div className="bg-surface border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl relative overflow-hidden">
+          <div className="bg-surface border border-white/10 p-8 rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl relative overflow-x-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl -mr-16 -mt-16"></div>
-            <h2 className="text-2xl font-black mb-6 flex items-center gap-2 tracking-tight text-white"><Store className="w-6 h-6 text-emerald-500" /> Sửa bài đăng</h2>
-            <form onSubmit={handleEditSubmit} className="relative z-10">
-              <div className="mb-5">
+            <h2 className="text-2xl font-black mb-6 flex items-center gap-2 tracking-tight text-white">
+              <Store className="w-6 h-6 text-emerald-500" /> Sửa bài đăng
+            </h2>
+
+            <form onSubmit={handleEditSubmit} className="relative z-10 space-y-5">
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Danh mục</label>
+                <select
+                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  value={editCategoryId}
+                  onChange={(e) => handleEditCategoryChange(e.target.value)}
+                  required
+                >
+                  <option value="">Chọn danh mục</option>
+                  {categories.map((cat) => (
+                    <option key={cat.categoryId} value={cat.categoryId}>{cat.categoryTitle}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Tiêu đề bài viết</label>
                 <input
                   type="text"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   required
                 />
               </div>
-              <div className="mb-8">
-                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Giá bán (VNĐ)</label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Giá bán (VND)</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="0"
+                    className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                    ref={editPriceInput.inputRef}
+                    value={editPriceInput.displayValue}
+                    onChange={editPriceInput.handleChange}
+                    inputMode="numeric"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Khu vực</label>
+                  <input
+                    type="text"
+                    className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder="Ví dụ: Thạch Thất, Hà Nội"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Số điện thoại liên hệ</label>
                 <input
-                  type="number"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                  required
+                  type="text"
+                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  value={editContactPhone}
+                  onChange={(e) => setEditContactPhone(e.target.value)}
+                  placeholder="Nhập SĐT để người mua liên hệ"
                 />
               </div>
-              <div className="flex items-center gap-4">
+
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Mô tả chi tiết</label>
+                <textarea
+                  rows={5}
+                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="Mô tả chi tiết về cây, kích thước, tuổi, cách chăm sóc..."
+                />
+              </div>
+
+              {editCategoryAttributes.length > 0 && (
+                <div className="space-y-4">
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider">Thuộc tính chi tiết</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {editCategoryAttributes.map((attr) => (
+                      <div key={attr.attributeId} className="space-y-2">
+                        <label className="text-xs text-slate-400">
+                          {attr.attributeTitle} {attr.required && '*'}
+                        </label>
+                        {attr.attributeDataType === 'enum' && attr.attributeOptions ? (
+                          <select
+                            required={attr.required}
+                            className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                            value={editAttributes[attr.attributeId] || ''}
+                            onChange={(e) => handleEditAttributeChange(attr.attributeId, e.target.value)}
+                          >
+                            <option value="">Chọn {attr.attributeTitle}</option>
+                            {attr.attributeOptions.map((opt: string) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            required={attr.required}
+                            type={attr.attributeDataType === 'number' ? 'number' : 'text'}
+                            className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                            value={editAttributes[attr.attributeId] || ''}
+                            onChange={(e) => handleEditAttributeChange(attr.attributeId, e.target.value)}
+                            placeholder={`Nhập ${attr.attributeTitle}`}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => setEditingPost(null)}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-slate-400 bg-white/5 hover:bg-white/10 hover:text-white transition-all"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-slate-400 bg-surface hover:bg-white/10 hover:text-white transition-all"
                 >
                   Hủy bỏ
                 </button>

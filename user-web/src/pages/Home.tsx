@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getPublicPosts, getCategories } from '../services/api';
 import { Leaf, Search, ShoppingBag, Filter, MapPin, ListFilter, DollarSign } from 'lucide-react';
+import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
 const VIETNAM_PROVINCES = [
   'Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ',
@@ -31,8 +32,8 @@ const Home: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
+  const minPriceInput = useCurrencyInput('');
+  const maxPriceInput = useCurrencyInput('');
   const [location, setLocation] = useState('');
 
   const [appliedFilters, setAppliedFilters] = useState({
@@ -56,16 +57,16 @@ const Home: React.FC = () => {
   const applyFilters = () => {
     setPage(1);
     setAppliedFilters({
-      minPrice,
-      maxPrice,
+      minPrice: minPriceInput.rawValue,
+      maxPrice: maxPriceInput.rawValue,
       categoryId: selectedCategoryId,
       location,
     });
   };
 
   const clearFilters = () => {
-    setMinPrice('');
-    setMaxPrice('');
+    minPriceInput.reset();
+    maxPriceInput.reset();
     setSelectedCategoryId('');
     setLocation('');
     setPage(1);
@@ -218,18 +219,22 @@ const Home: React.FC = () => {
               </label>
               <div className="flex items-center gap-2">
                 <input
-                  type="number"
+                  ref={minPriceInput.inputRef}
+                  type="text"
+                  inputMode="numeric"
                   placeholder="Từ..."
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
+                  value={minPriceInput.displayValue}
+                  onChange={minPriceInput.handleChange}
                   className="w-full bg-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-emerald-500 outline-none"
                 />
                 <span className="text-slate-500">-</span>
                 <input
-                  type="number"
+                  ref={maxPriceInput.inputRef}
+                  type="text"
+                  inputMode="numeric"
                   placeholder="Đến..."
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
+                  value={maxPriceInput.displayValue}
+                  onChange={maxPriceInput.handleChange}
                   className="w-full bg-surface border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:border-emerald-500 outline-none"
                 />
               </div>

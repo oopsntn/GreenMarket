@@ -38,6 +38,9 @@ export const registerShop = (data: {
   shopPhone: string;
   shopLocation: string;
   shopDescription?: string;
+  shopLogoUrl?: string;
+  shopCoverUrl?: string;
+  shopGalleryImages?: string[];
   shopLat?: number;
   shopLng?: number;
 }) => api.post('/shops/register', data);
@@ -49,6 +52,9 @@ export const updateShop = (shopId: number, data: {
   shopPhone?: string;
   shopLocation?: string;
   shopDescription?: string;
+  shopLogoUrl?: string;
+  shopCoverUrl?: string;
+  shopGalleryImages?: string[];
   shopLat?: number;
   shopLng?: number;
 }) => api.patch(`/shops/${shopId}`, data);
@@ -84,6 +90,14 @@ export const uploadMedia = (files: File[]) => {
   const formData = new FormData();
   files.forEach(file => formData.append("media", file));
   return api.post("/upload", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+};
+
+export const uploadImages = (files: File[]) => {
+  const formData = new FormData();
+  files.forEach(file => formData.append("media", file));
+  return api.post("/upload/images", formData, {
     headers: { "Content-Type": "multipart/form-data" }
   });
 };

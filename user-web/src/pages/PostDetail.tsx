@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPostDetail, recordContactClick, submitReport } from '../services/api';
-import {
-    MapPin, Phone, Calendar, ChevronLeft, ChevronRight,
-    Store, ShieldCheck, Share2, Heart, MessageCircle, Info,
-    Play, Maximize2, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink
+import { 
+  Phone, Calendar, ChevronLeft, ChevronRight, 
+  Store, ShieldCheck, Share2, Heart, MessageCircle, Info,
+  Play, Maximize2, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn
 } from 'lucide-react';
+import ImageModal from '../components/ImageModal';
 
 const PostDetail: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -14,6 +15,7 @@ const PostDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [contactRevealed, setContactRevealed] = useState(false);
+    const [previewImageIndex, setPreviewImageIndex] = useState<number | null>(null);
 
     const handleRevealContact = async () => {
         setContactRevealed(true);
@@ -118,16 +120,31 @@ const PostDetail: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
 
                     {/* Left Column: Media Gallery */}
-                    <div className="lg:col-span-7 space-y-6">
-                        <div className="relative aspect-square rounded-4xl overflow-hidden glass border-white/5 bg-surface group">
+                    <div className="lg:col-span-7 space-y-4">
+                        <div className="relative aspect-3/2 max-h-[520px] rounded-4xl overflow-hidden glass border-white/5 bg-surface group">
                             {mediaList.length > 0 ? (
                                 <>
                                     {currentMedia.type === 'image' ? (
-                                        <img
-                                            src={currentMedia.url.startsWith('http') ? currentMedia.url : `http://localhost:5000${currentMedia.url}`}
-                                            alt={post.postTitle}
-                                            className="w-full h-full object-cover"
-                                        />
+                                        <div 
+                                            className="relative w-full h-full cursor-zoom-in group/main" 
+                                            onClick={() => {
+                                                const imageIndex = mediaList
+                                                    .filter(m => m.type === 'image')
+                                                    .findIndex(m => m.url === currentMedia.url);
+                                                setPreviewImageIndex(imageIndex);
+                                            }}
+                                        >
+                                            <img
+                                                src={currentMedia.url.startsWith('http') ? currentMedia.url : `http://localhost:5000${currentMedia.url}`}
+                                                alt={post.postTitle}
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover/main:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/main:opacity-100 transition-opacity flex items-center justify-center">
+                                                <div className="p-4 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+                                                    <ZoomIn className="w-8 h-8 text-white" />
+                                                </div>
+                                            </div>
+                                        </div>
                                     ) : (
                                         <video
                                             src={currentMedia.url.startsWith('http') ? currentMedia.url : `http://localhost:5000${currentMedia.url}`}
@@ -181,8 +198,8 @@ const PostDetail: React.FC = () => {
                             ))}
                         </div>
                         {/* Content Section */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-10">
-                            <div className="lg:col-span-8 space-y-8">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-6">
+                            <div className="lg:col-span-8 space-y-6">
                                 {/* Description */}
                                 <div className="space-y-6">
                                     <h2 className="text-2xl font-black flex items-center gap-3">
@@ -238,7 +255,7 @@ const PostDetail: React.FC = () => {
                                 <span className="text-slate-500 font-medium">/ cây/gốc</span>
                             </div>
 
-                            <div className="space-y-4 pb-6 border-b border-white/5">
+                            <div className="space-y-4 pb-2">
                                 {!contactRevealed ? (
                                     <button
                                         onClick={handleRevealContact}
@@ -264,21 +281,6 @@ const PostDetail: React.FC = () => {
                                         </a>
                                     </>
                                 )}
-                            </div>
-
-                            <div className="flex items-center justify-between gap-3 text-slate-300">
-                                <div className="flex items-center gap-3">
-                                    <MapPin className="w-5 h-5 text-emerald-500" />
-                                    <span className="font-medium">{post.postLocation || 'Thạch Thất, Hà Nội'}</span>
-                                </div>
-                                <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.postLocation || 'Hà Nội')}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest hover:underline whitespace-nowrap"
-                                >
-                                    Xem bản đồ
-                                </a>
                             </div>
                         </div>
 
@@ -354,9 +356,19 @@ const PostDetail: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <ImageModal 
+                isOpen={previewImageIndex !== null} 
+                images={mediaList
+                    .filter(m => m.type === 'image')
+                    .map(m => m.url.startsWith('http') ? m.url : `http://localhost:5000${m.url}`)
+                }
+                initialIndex={previewImageIndex || 0}
+                onClose={() => setPreviewImageIndex(null)} 
+                alt={post.postTitle}
+            />
         </div>
     );
 };
 
 export default PostDetail;
-

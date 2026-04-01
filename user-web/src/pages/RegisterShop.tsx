@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { registerShop, uploadMedia } from '../services/api';
+import { registerShop, uploadImages } from '../services/api';
 import { Store, CheckCircle, ArrowRight, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import AddressPicker from '../components/AddressPicker';
 
@@ -22,7 +22,7 @@ const RegisterShop: React.FC = () => {
     if (!e.target.files || e.target.files.length === 0) return;
     setUploading(true);
     try {
-      const resp = await uploadMedia([e.target.files[0]]);
+      const resp = await uploadImages([e.target.files[0]]);
       if (resp.data.urls && resp.data.urls.length > 0) {
         setFormData(prev => ({ ...prev, [field]: resp.data.urls[0] }));
       }
