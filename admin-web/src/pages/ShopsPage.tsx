@@ -28,6 +28,10 @@ function ShopsPage() {
 
   const [searchInput, setSearchInput] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+    ShopStatus | "All"
+  >("All");
 
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
@@ -80,18 +84,21 @@ function ShopsPage() {
   }, []);
 
   const filteredShops = useMemo(() => {
-    return shops.filter((shop) => {
-      const keyword = searchKeyword.trim().toLowerCase();
+      return shops.filter((shop) => {
+        const keyword = searchKeyword.trim().toLowerCase();
+        const matchesStatus =
+          selectedStatusFilter === "All" || shop.status === selectedStatusFilter;
 
-      if (!keyword) return true;
+      if (!keyword) return matchesStatus;
 
-      return (
+      const matchesKeyword =
         shop.name.toLowerCase().includes(keyword) ||
         shop.ownerName.toLowerCase().includes(keyword) ||
-        shop.ownerEmail.toLowerCase().includes(keyword)
-      );
+        shop.ownerEmail.toLowerCase().includes(keyword);
+
+      return matchesKeyword && matchesStatus;
     });
-  }, [shops, searchKeyword]);
+  }, [searchKeyword, selectedStatusFilter, shops]);
 
   const handleApplyFilter = () => {
     setSearchKeyword(searchInput.trim());
@@ -253,8 +260,39 @@ function ShopsPage() {
         placeholder="Search by shop name or owner"
         searchValue={searchInput}
         onSearchChange={setSearchInput}
-        onFilterClick={handleApplyFilter}
+        onSearchSubmit={handleApplyFilter}
+        onFilterClick={() => setShowFilters((prev) => !prev)}
+        filterLabel="Filter by shop status"
+        filterSummary={`Current status filter: ${selectedStatusFilter}`}
       />
+
+      {showFilters ? (
+        <SectionCard
+          title="Shop Filters"
+          description="Refine shop records by approval and operating status."
+        >
+          <div className="shops-filters">
+            <div className="shops-filters__field">
+              <label htmlFor="shops-status-filter">Status</label>
+              <select
+                id="shops-status-filter"
+                value={selectedStatusFilter}
+                onChange={(event) =>
+                  setSelectedStatusFilter(
+                    event.target.value as ShopStatus | "All",
+                  )
+                }
+              >
+                <option value="All">All</option>
+                <option value="Pending">Pending</option>
+                <option value="Active">Active</option>
+                <option value="Suspended">Suspended</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
 
       <SectionCard
         title="Shop Directory"
