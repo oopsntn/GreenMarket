@@ -4,7 +4,7 @@ export type Category = {
   id: number;
   name: string;
   slug: string;
-  attributesCount: number;
+  attributesCount: number | null;
   status: CategoryStatus;
   createdAt: string;
 };
@@ -12,6 +12,14 @@ export type Category = {
 export type CategoryFormState = {
   name: string;
   slug: string;
-  attributesCount: number;
-  status: CategoryStatus;
+};
+
+export type CategoryApiResponse = {
+  categoryId: number;
+  categoryParentId: number | null;
+  categoryTitle: string | null;
+  categorySlug: string | null;
+  categoryPublished: boolean | null;
+  categoryCreatedAt: string | null;
+  categoryUpdatedAt: string | null;
 };

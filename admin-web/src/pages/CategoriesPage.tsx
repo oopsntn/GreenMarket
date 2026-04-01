@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -7,7 +7,6 @@ import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
-import { emptyCategoryForm } from "../mock-data/categories";
 import { categoryService } from "../services/categoryService";
 import type { Category, CategoryFormState } from "../types/category";
 import "./CategoriesPage.css";
@@ -21,16 +20,22 @@ type ConfirmState = {
 };
 
 function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>(
-    categoryService.getCategories(),
-  );
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null,
   );
-  const [formData, setFormData] =
-    useState<CategoryFormState>(emptyCategoryForm);
+  const [formData, setFormData] = useState<CategoryFormState>(
+    categoryService.getEmptyForm(),
+  );
+  const [formError, setFormError] = useState("");
+
   const [searchKeyword, setSearchKeyword] = useState("");
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
@@ -38,6 +43,24 @@ function CategoriesPage() {
     action: null,
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const loadCategories = async () => {
+    try {
+      setPageError("");
+      const data = await categoryService.getCategories();
+      setCategories(data);
+    } catch (error) {
+      setPageError(
+        error instanceof Error ? error.message : "Failed to load categories.",
+      );
+    } finally {
+      setIsInitialLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadCategories();
+  }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -63,10 +86,8 @@ function CategoriesPage() {
   const openAddModal = () => {
     setModalMode("add");
     setSelectedCategoryId(null);
-    setFormData({
-      ...emptyCategoryForm,
-      status: "Active",
-    });
+    setFormData(categoryService.getEmptyForm());
+    setFormError("");
     setIsModalOpen(true);
   };
 
@@ -76,9 +97,8 @@ function CategoriesPage() {
     setFormData({
       name: category.name,
       slug: category.slug,
-      attributesCount: category.attributesCount,
-      status: category.status,
     });
+    setFormError("");
     setIsModalOpen(true);
   };
 
@@ -88,14 +108,14 @@ function CategoriesPage() {
     setFormData({
       name: category.name,
       slug: category.slug,
-      attributesCount: category.attributesCount,
-      status: category.status,
     });
+    setFormError("");
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setSelectedCategoryId(null);
+    setFormError("");
     setIsModalOpen(false);
   };
 
@@ -122,71 +142,117 @@ function CategoriesPage() {
 
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "attributesCount" ? Number(value) : value,
+      [name]: value,
     }));
+
+    if (formError) {
+      setFormError("");
+    }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (modalMode === "add") {
-      setCategories((prev) =>
-        categoryService.createCategory(prev, {
-          ...formData,
-          status: "Active",
-        }),
-      );
-      showToast("Category added successfully.");
+    if (!formData.name.trim()) {
+      setFormError("Category name is required.");
+      return;
     }
 
-    if (modalMode === "edit" && selectedCategoryId !== null) {
-      const currentCategory = categories.find(
-        (category) => category.id === selectedCategoryId,
-      );
+    try {
+      setIsSubmitting(true);
+      setFormError("");
 
-      setCategories((prev) =>
-        categoryService.updateCategory(prev, selectedCategoryId, {
-          ...formData,
-          status: currentCategory?.status ?? "Active",
-        }),
+      if (modalMode === "add") {
+        const newCategory = await categoryService.createCategory(formData);
+        setCategories((prev) => [newCategory, ...prev]);
+        showToast("Category added successfully.");
+      }
+
+      if (modalMode === "edit" && selectedCategoryId !== null) {
+        const currentCategory = categories.find(
+          (category) => category.id === selectedCategoryId,
+        );
+
+        if (!currentCategory) {
+          setFormError("Selected category no longer exists.");
+          return;
+        }
+
+        const updatedCategory = await categoryService.updateCategory(
+          selectedCategoryId,
+          formData,
+          currentCategory.status,
+        );
+
+        setCategories((prev) =>
+          prev.map((category) =>
+            category.id === selectedCategoryId ? updatedCategory : category,
+          ),
+        );
+        showToast("Category updated successfully.");
+      }
+
+      closeModal();
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Failed to save category.",
       );
-      showToast("Category updated successfully.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    closeModal();
   };
 
-  const handleToggleStatus = (category: Category) => {
-    const nextStatus = category.status === "Active" ? "Disabled" : "Active";
-    setCategories((prev) =>
-      categoryService.updateCategoryStatus(prev, category.id, nextStatus),
-    );
-  };
-
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (confirmState.categoryId === null || confirmState.action === null)
       return;
 
     const targetCategory = categories.find(
       (item) => item.id === confirmState.categoryId,
     );
+
     if (!targetCategory) {
       closeConfirmDialog();
       return;
     }
 
-    handleToggleStatus(targetCategory);
+    const nextStatus =
+      confirmState.action === "disable" ? "Disabled" : "Active";
 
-    if (confirmState.action === "disable") {
-      showToast(
-        `${targetCategory.name} has been disabled successfully.`,
-        "info",
+    try {
+      setIsStatusUpdating(confirmState.categoryId);
+
+      const updatedCategory = await categoryService.updateCategoryStatus(
+        confirmState.categoryId,
+        nextStatus,
+        targetCategory,
       );
-    } else {
-      showToast(`${targetCategory.name} has been enabled successfully.`);
-    }
 
-    closeConfirmDialog();
+      setCategories((prev) =>
+        prev.map((item) =>
+          item.id === confirmState.categoryId ? updatedCategory : item,
+        ),
+      );
+
+      if (confirmState.action === "disable") {
+        showToast(
+          `${targetCategory.name} has been disabled successfully.`,
+          "info",
+        );
+      } else {
+        showToast(`${targetCategory.name} has been enabled successfully.`);
+      }
+
+      closeConfirmDialog();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to update category status.",
+        "error",
+      );
+    } finally {
+      setIsStatusUpdating(null);
+    }
   };
 
   const filteredCategories = useMemo(() => {
@@ -202,6 +268,11 @@ function CategoriesPage() {
     });
   }, [categories, searchKeyword]);
 
+  const selectedCategory =
+    selectedCategoryId !== null
+      ? (categories.find((item) => item.id === selectedCategoryId) ?? null)
+      : null;
+
   const modalTitle =
     modalMode === "add"
       ? "Add Category"
@@ -213,7 +284,7 @@ function CategoriesPage() {
     modalMode === "add"
       ? "Create a new category. New categories are created as active by default."
       : modalMode === "edit"
-        ? "Update category information and attribute count. Use Enable or Disable in the table to change status."
+        ? "Update category information. Use Enable or Disable in the table to change status."
         : "Review category information and current activation status.";
 
   const confirmCategory =
@@ -263,9 +334,15 @@ function CategoriesPage() {
 
       <SectionCard
         title="Category Directory"
-        description="Review category information, status, and attribute counts."
+        description="Review category information, publication status, and creation date."
       >
-        {filteredCategories.length === 0 ? (
+        {isInitialLoading ? (
+          <div className="categories-state">Loading categories...</div>
+        ) : pageError ? (
+          <div className="categories-state categories-state--error">
+            {pageError}
+          </div>
+        ) : filteredCategories.length === 0 ? (
           <EmptyState
             title="No categories found"
             description="No categories match your current search. Try another keyword or create a new category."
@@ -290,8 +367,8 @@ function CategoriesPage() {
                   <tr key={category.id}>
                     <td>#{category.id}</td>
                     <td>{category.name}</td>
-                    <td>{category.slug}</td>
-                    <td>{category.attributesCount}</td>
+                    <td>{category.slug || "—"}</td>
+                    <td>{category.attributesCount ?? "—"}</td>
                     <td>
                       <StatusBadge
                         label={category.status}
@@ -300,7 +377,7 @@ function CategoriesPage() {
                         }
                       />
                     </td>
-                    <td>{category.createdAt}</td>
+                    <td>{category.createdAt || "—"}</td>
                     <td>
                       <div className="categories-actions">
                         <button
@@ -326,6 +403,7 @@ function CategoriesPage() {
                             onClick={() =>
                               openConfirmDialog(category.id, "disable")
                             }
+                            disabled={isStatusUpdating === category.id}
                           >
                             Disable
                           </button>
@@ -336,6 +414,7 @@ function CategoriesPage() {
                             onClick={() =>
                               openConfirmDialog(category.id, "enable")
                             }
+                            disabled={isStatusUpdating === category.id}
                           >
                             Enable
                           </button>
@@ -365,7 +444,7 @@ function CategoriesPage() {
               type="text"
               value={formData.name}
               onChange={handleChange}
-              disabled={modalMode === "view"}
+              disabled={modalMode === "view" || isSubmitting}
               placeholder="Enter category name"
             />
           </div>
@@ -378,43 +457,56 @@ function CategoriesPage() {
               type="text"
               value={formData.slug}
               onChange={handleChange}
-              disabled={modalMode === "view"}
-              placeholder="Enter slug"
+              disabled={modalMode === "view" || isSubmitting}
+              placeholder="Leave blank to auto-generate from category name"
             />
           </div>
 
-          <div className="categories-modal__field">
-            <label htmlFor="attributesCount">Attributes Count</label>
-            <input
-              id="attributesCount"
-              name="attributesCount"
-              type="number"
-              value={formData.attributesCount}
-              onChange={handleChange}
-              disabled={modalMode === "view"}
-              placeholder="Enter number of attributes"
-            />
-          </div>
+          {modalMode === "view" && selectedCategory ? (
+            <>
+              <div className="categories-modal__field">
+                <label>Status</label>
+                <input type="text" value={selectedCategory.status} disabled />
+              </div>
 
-          {modalMode === "view" && (
-            <div className="categories-modal__field">
-              <label>Status</label>
-              <input type="text" value={formData.status} disabled />
+              <div className="categories-modal__field">
+                <label>Created Date</label>
+                <input
+                  type="text"
+                  value={selectedCategory.createdAt || "—"}
+                  disabled
+                />
+              </div>
+            </>
+          ) : null}
+
+          {formError ? (
+            <div className="categories-state categories-state--error">
+              {formError}
             </div>
-          )}
+          ) : null}
 
           <div className="categories-modal__actions">
             <button
               type="button"
               className="categories-modal__cancel"
               onClick={closeModal}
+              disabled={isSubmitting}
             >
               Close
             </button>
 
             {modalMode !== "view" && (
-              <button type="submit" className="categories-modal__submit">
-                {modalMode === "add" ? "Add Category" : "Save Changes"}
+              <button
+                type="submit"
+                className="categories-modal__submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Saving..."
+                  : modalMode === "add"
+                    ? "Add Category"
+                    : "Save Changes"}
               </button>
             )}
           </div>
