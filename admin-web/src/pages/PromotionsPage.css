@@ -47,13 +47,14 @@
 }
 
 .promotions-table-wrapper {
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .promotions-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 1280px;
 }
 
 .promotions-table thead {
@@ -86,22 +87,22 @@
 
 .promotions-table th:nth-child(1),
 .promotions-table td:nth-child(1) {
-  width: 7%;
+  width: 6%;
 }
 
 .promotions-table th:nth-child(2),
 .promotions-table td:nth-child(2) {
-  width: 18%;
+  width: 16%;
 }
 
 .promotions-table th:nth-child(3),
 .promotions-table td:nth-child(3) {
-  width: 14%;
+  width: 12%;
 }
 
 .promotions-table th:nth-child(4),
 .promotions-table td:nth-child(4) {
-  width: 11%;
+  width: 10%;
   text-align: center;
 }
 
@@ -118,19 +119,25 @@
 
 .promotions-table th:nth-child(7),
 .promotions-table td:nth-child(7) {
-  width: 10%;
+  width: 9%;
   text-align: center;
 }
 
 .promotions-table th:nth-child(8),
 .promotions-table td:nth-child(8) {
-  width: 8%;
+  width: 9%;
   text-align: center;
 }
 
 .promotions-table th:nth-child(9),
 .promotions-table td:nth-child(9) {
-  width: 10%;
+  width: 8%;
+  text-align: center;
+}
+
+.promotions-table th:nth-child(10),
+.promotions-table td:nth-child(10) {
+  width: 8%;
   text-align: center;
 }
 
@@ -337,14 +344,6 @@
 @media (max-width: 1024px) {
   .promotions-filters {
     grid-template-columns: 1fr;
-  }
-
-  .promotions-table-wrapper {
-    overflow-x: auto;
-  }
-
-  .promotions-table {
-    min-width: 1100px;
   }
 
   .promotions-modal__grid {

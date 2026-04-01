@@ -234,13 +234,13 @@ function PromotionsPage() {
         return;
       }
 
-      setPromotions((prev) =>
-        promotionService.updatePromotionStatus(
-          prev,
-          targetPromotion.id,
-          "Paused",
-        ),
+      const nextPromotions = promotionService.updatePromotionStatus(
+        promotions,
+        targetPromotion.id,
+        "Paused",
       );
+
+      setPromotions(nextPromotions);
 
       showToast(
         `${targetPromotion.postTitle} has been paused successfully.`,
@@ -248,17 +248,8 @@ function PromotionsPage() {
       );
 
       if (selectedPromotion?.id === targetPromotion.id) {
-        setSelectedPromotion((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: "Paused",
-                canPause: false,
-                canResume: true,
-                pauseBlockedReason: "This promotion is already paused.",
-                resumeBlockedReason: undefined,
-              }
-            : null,
+        setSelectedPromotion(
+          nextPromotions.find((item) => item.id === targetPromotion.id) ?? null,
         );
       }
     }
@@ -273,29 +264,19 @@ function PromotionsPage() {
         return;
       }
 
-      setPromotions((prev) =>
-        promotionService.updatePromotionStatus(
-          prev,
-          targetPromotion.id,
-          "Active",
-        ),
+      const nextPromotions = promotionService.updatePromotionStatus(
+        promotions,
+        targetPromotion.id,
+        "Active",
       );
+
+      setPromotions(nextPromotions);
 
       showToast(`${targetPromotion.postTitle} has been resumed successfully.`);
 
       if (selectedPromotion?.id === targetPromotion.id) {
-        setSelectedPromotion((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: "Active",
-                canPause: true,
-                canResume: false,
-                pauseBlockedReason: undefined,
-                resumeBlockedReason:
-                  "This promotion is already active and does not need resume action.",
-              }
-            : null,
+        setSelectedPromotion(
+          nextPromotions.find((item) => item.id === targetPromotion.id) ?? null,
         );
       }
     }
@@ -303,11 +284,12 @@ function PromotionsPage() {
     closeConfirmDialog();
   };
 
+
   return (
     <div className="promotions-page">
       <PageHeader
         title="Promotions Management"
-        description="Monitor boosted posts, placement slots, package windows, and admin intervention status."
+        description="Monitor boosted posts, placement slots, package windows, and payment confirmation status."
       />
 
       <div className="promotions-summary-grid">
@@ -326,6 +308,8 @@ function PromotionsPage() {
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
+        filterLabel="Filter by slot & status"
+        filterSummary={`Current filters: ${selectedSlotFilter} • ${selectedStatusFilter}`}
       />
 
       {showFilters && (
@@ -377,7 +361,7 @@ function PromotionsPage() {
 
       <SectionCard
         title="Promotion Directory"
-        description="Review promoted posts, package details, schedule, and current status."
+        description="Review promoted posts, payment confirmation, package details, schedule, and current status."
       >
         {filteredPromotions.length === 0 ? (
           <EmptyState
@@ -395,6 +379,7 @@ function PromotionsPage() {
                     <th>Owner</th>
                     <th>Placement Slot</th>
                     <th>Package</th>
+                    <th>Payment</th>
                     <th>Start Date</th>
                     <th>End Date</th>
                     <th>Status</th>
@@ -412,6 +397,16 @@ function PromotionsPage() {
                         <StatusBadge label={promotion.slot} variant="slot" />
                       </td>
                       <td>{promotion.packageName}</td>
+                      <td>
+                        <StatusBadge
+                          label={promotion.paymentStatus}
+                          variant={
+                            promotion.paymentStatus === "Paid"
+                              ? "success"
+                              : "processing"
+                          }
+                        />
+                      </td>
                       <td>{promotion.startDate}</td>
                       <td>{promotion.endDate}</td>
                       <td>
@@ -516,9 +511,9 @@ function PromotionsPage() {
       <BaseModal
         isOpen={isModalOpen}
         title="Promotion Details"
-        description="Review package setup, placement schedule, and current runtime status."
+        description="Review package setup, placement schedule, payment confirmation, and current runtime status."
         onClose={closeModal}
-        maxWidth="720px"
+        maxWidth="820px"
       >
         {selectedPromotion ? (
           <div className="promotions-modal__content">
@@ -549,6 +544,20 @@ function PromotionsPage() {
                   value={selectedPromotion.packageName}
                   disabled
                 />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>Payment Status</label>
+                <input
+                  type="text"
+                  value={selectedPromotion.paymentStatus}
+                  disabled
+                />
+              </div>
+
+              <div className="promotions-modal__field">
+                <label>Handled By</label>
+                <input type="text" value={selectedPromotion.handledBy} disabled />
               </div>
 
               <div className="promotions-modal__field">
@@ -648,7 +657,15 @@ function PromotionsPage() {
                 >
                   Resume Promotion
                 </button>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  className="promotions-modal__close"
+                  disabled
+                >
+                  Closed Promotion
+                </button>
+              )}
             </div>
           </div>
         ) : null}
