@@ -8,8 +8,16 @@ export type BoostedPostStatus =
   | "Expired"
   | "Closed";
 
+export type BoostedPostDeliveryHealth = "Healthy" | "Watch" | "At Risk";
+
+export type BoostedPostReviewStatus =
+  | "Approved"
+  | "Needs Update"
+  | "Escalated";
+
 export type BoostedPost = {
   id: number;
+  campaignCode: string;
   postTitle: string;
   ownerName: string;
   slot: BoostedPostSlot;
@@ -17,9 +25,14 @@ export type BoostedPost = {
   startDate: string;
   endDate: string;
   status: BoostedPostStatus;
+  deliveryHealth: BoostedPostDeliveryHealth;
+  reviewStatus: BoostedPostReviewStatus;
+  assignedOperator: string;
+  totalQuota: number;
+  usedQuota: number;
   impressions: number;
   clicks: number;
-  remainingQuota: number;
+  lastOptimizedAt: string;
   notes: string;
 };
 

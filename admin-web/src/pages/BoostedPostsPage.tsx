@@ -3,12 +3,16 @@ import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
+import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { boostedPostService } from "../services/boostedPostService";
 import type {
   BoostedPost,
+  BoostedPostDeliveryHealth,
+  BoostedPostReviewStatus,
   BoostedPostSlot,
   BoostedPostStatus,
 } from "../types/boostedPost";
@@ -39,27 +43,71 @@ const statusFilterOptions: Array<BoostedPostStatus | "All"> = [
   "Closed",
 ];
 
+const reviewFilterOptions: Array<BoostedPostReviewStatus | "All"> = [
+  "All",
+  "Approved",
+  "Needs Update",
+  "Escalated",
+];
+
+const healthFilterOptions: Array<BoostedPostDeliveryHealth | "All"> = [
+  "All",
+  "Healthy",
+  "Watch",
+  "At Risk",
+];
+
+const formatCtr = (clicks: number, impressions: number) => {
+  if (impressions === 0) {
+    return "0.00%";
+  }
+
+  return `${((clicks / impressions) * 100).toFixed(2)}%`;
+};
+
+const formatQuotaUsage = (usedQuota: number, totalQuota: number) => {
+  return `${usedQuota.toLocaleString("en-US")} / ${totalQuota.toLocaleString(
+    "en-US",
+  )}`;
+};
+
+const getHealthVariant = (health: BoostedPostDeliveryHealth) => {
+  if (health === "Healthy") return "active";
+  if (health === "Watch") return "processing";
+  return "negative";
+};
+
+const getReviewVariant = (reviewStatus: BoostedPostReviewStatus) => {
+  if (reviewStatus === "Approved") return "success";
+  if (reviewStatus === "Needs Update") return "pending";
+  return "negative";
+};
+
 function BoostedPostsPage() {
   const [posts, setPosts] = useState<BoostedPost[]>(
     boostedPostService.getBoostedPosts(),
   );
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedSlotFilter, setSelectedSlotFilter] = useState<
     BoostedPostSlot | "All"
   >("All");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     BoostedPostStatus | "All"
   >("All");
-
+  const [selectedReviewFilter, setSelectedReviewFilter] = useState<
+    BoostedPostReviewStatus | "All"
+  >("All");
+  const [selectedHealthFilter, setSelectedHealthFilter] = useState<
+    BoostedPostDeliveryHealth | "All"
+  >("All");
   const [selectedPost, setSelectedPost] = useState<BoostedPost | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     postId: null,
     action: null,
   });
-
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards = boostedPostService.getSummaryCards(posts);
@@ -84,9 +132,10 @@ function BoostedPostsPage() {
     return posts.filter((item) => {
       const matchesKeyword =
         !keyword ||
+        item.campaignCode.toLowerCase().includes(keyword) ||
         item.postTitle.toLowerCase().includes(keyword) ||
         item.ownerName.toLowerCase().includes(keyword) ||
-        item.packageName.toLowerCase().includes(keyword);
+        item.assignedOperator.toLowerCase().includes(keyword);
 
       const matchesSlot =
         selectedSlotFilter === "All" || item.slot === selectedSlotFilter;
@@ -94,9 +143,30 @@ function BoostedPostsPage() {
       const matchesStatus =
         selectedStatusFilter === "All" || item.status === selectedStatusFilter;
 
-      return matchesKeyword && matchesSlot && matchesStatus;
+      const matchesReview =
+        selectedReviewFilter === "All" ||
+        item.reviewStatus === selectedReviewFilter;
+
+      const matchesHealth =
+        selectedHealthFilter === "All" ||
+        item.deliveryHealth === selectedHealthFilter;
+
+      return (
+        matchesKeyword &&
+        matchesSlot &&
+        matchesStatus &&
+        matchesReview &&
+        matchesHealth
+      );
     });
-  }, [posts, searchKeyword, selectedSlotFilter, selectedStatusFilter]);
+  }, [
+    posts,
+    searchKeyword,
+    selectedSlotFilter,
+    selectedStatusFilter,
+    selectedReviewFilter,
+    selectedHealthFilter,
+  ]);
 
   const openViewModal = (item: BoostedPost) => {
     setSelectedPost(item);
@@ -167,14 +237,14 @@ function BoostedPostsPage() {
 
     if (confirmState.action === "pause") {
       showToast(
-        `${targetPost.postTitle} has been paused successfully.`,
+        `${targetPost.campaignCode} has been paused successfully.`,
         "info",
       );
     } else if (confirmState.action === "resume") {
-      showToast(`${targetPost.postTitle} has been resumed successfully.`);
+      showToast(`${targetPost.campaignCode} has been resumed successfully.`);
     } else {
       showToast(
-        `${targetPost.postTitle} has been closed successfully.`,
+        `${targetPost.campaignCode} has been closed successfully.`,
         "info",
       );
     }
@@ -190,105 +260,131 @@ function BoostedPostsPage() {
 
   const confirmMessageMap: Record<ConfirmAction, string> = {
     pause: `Are you sure you want to pause ${
-      confirmPost?.postTitle ?? "this boosted post"
-    }? Delivery will stop until the campaign is resumed.`,
+      confirmPost?.campaignCode ?? "this boosted campaign"
+    }? Delivery will stop until operations resumes it.`,
     resume: `Are you sure you want to resume ${
-      confirmPost?.postTitle ?? "this boosted post"
-    }? The campaign will continue using the assigned package and slot.`,
+      confirmPost?.campaignCode ?? "this boosted campaign"
+    }? Delivery will continue using the assigned slot and quota.`,
     close: `Are you sure you want to close ${
-      confirmPost?.postTitle ?? "this boosted post"
-    }? This campaign will be marked as closed and no longer run.`,
-  };
-
-  const renderStatusVariant = (status: BoostedPostStatus) => {
-    if (status === "Active") return "active";
-    if (status === "Scheduled") return "pending";
-    if (status === "Paused") return "paused";
-    return "expired";
+      confirmPost?.campaignCode ?? "this boosted campaign"
+    }? It will be removed from the delivery queue.`,
   };
 
   return (
     <div className="boosted-posts-page">
       <PageHeader
         title="Boosted Posts Management"
-        description="Monitor scheduled, active, paused, and completed boosted post campaigns across all promotion slots."
+        description="Operate boosted delivery campaigns, monitor quota usage, review campaign health, and follow up with operations assignments."
       />
 
       <div className="boosted-posts-summary-grid">
         {summaryCards.map((card) => (
-          <div key={card.title} className="boosted-posts-summary-card">
-            <span className="boosted-posts-summary-card__label">
-              {card.title}
-            </span>
-            <strong className="boosted-posts-summary-card__value">
-              {card.value}
-            </strong>
-            <p className="boosted-posts-summary-card__subtitle">
-              {card.subtitle}
-            </p>
-          </div>
+          <StatCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            subtitle={card.subtitle}
+          />
         ))}
       </div>
 
-      <SectionCard
-        title="Campaign Filters"
-        description="Search and refine boosted campaigns by slot and delivery status."
-      >
-        <div className="boosted-posts-filters">
-          <div className="boosted-posts-filters__field boosted-posts-filters__field--search">
-            <label htmlFor="boosted-post-search">Search</label>
-            <input
-              id="boosted-post-search"
-              type="text"
-              value={searchKeyword}
-              onChange={(event) => setSearchKeyword(event.target.value)}
-              placeholder="Search by post title, owner, or package"
-            />
-          </div>
+      <SearchToolbar
+        placeholder="Search by campaign code, post title, owner, or operator"
+        searchValue={searchKeyword}
+        onSearchChange={setSearchKeyword}
+        onFilterClick={() => setShowFilters((prev) => !prev)}
+        filterLabel="Filter by slot, status, review, health"
+        filterSummary={`Current filters: ${selectedSlotFilter} • ${selectedStatusFilter} • ${selectedReviewFilter} • ${selectedHealthFilter}`}
+      />
 
-          <div className="boosted-posts-filters__field">
-            <label htmlFor="boosted-post-slot-filter">Slot</label>
-            <select
-              id="boosted-post-slot-filter"
-              value={selectedSlotFilter}
-              onChange={(event) =>
-                setSelectedSlotFilter(
-                  event.target.value as BoostedPostSlot | "All",
-                )
-              }
-            >
-              {slotFilterOptions.map((slot) => (
-                <option key={slot} value={slot}>
-                  {slot}
-                </option>
-              ))}
-            </select>
-          </div>
+      {showFilters && (
+        <SectionCard
+          title="Campaign Filters"
+          description="Refine boosted delivery records by slot, runtime status, review state, and campaign health."
+        >
+          <div className="boosted-posts-filters">
+            <div className="boosted-posts-filters__field">
+              <label htmlFor="boosted-post-slot-filter">Slot</label>
+              <select
+                id="boosted-post-slot-filter"
+                value={selectedSlotFilter}
+                onChange={(event) =>
+                  setSelectedSlotFilter(
+                    event.target.value as BoostedPostSlot | "All",
+                  )
+                }
+              >
+                {slotFilterOptions.map((slot) => (
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="boosted-posts-filters__field">
-            <label htmlFor="boosted-post-status-filter">Status</label>
-            <select
-              id="boosted-post-status-filter"
-              value={selectedStatusFilter}
-              onChange={(event) =>
-                setSelectedStatusFilter(
-                  event.target.value as BoostedPostStatus | "All",
-                )
-              }
-            >
-              {statusFilterOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+            <div className="boosted-posts-filters__field">
+              <label htmlFor="boosted-post-status-filter">Campaign Status</label>
+              <select
+                id="boosted-post-status-filter"
+                value={selectedStatusFilter}
+                onChange={(event) =>
+                  setSelectedStatusFilter(
+                    event.target.value as BoostedPostStatus | "All",
+                  )
+                }
+              >
+                {statusFilterOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="boosted-posts-filters__field">
+              <label htmlFor="boosted-post-review-filter">Review Status</label>
+              <select
+                id="boosted-post-review-filter"
+                value={selectedReviewFilter}
+                onChange={(event) =>
+                  setSelectedReviewFilter(
+                    event.target.value as BoostedPostReviewStatus | "All",
+                  )
+                }
+              >
+                {reviewFilterOptions.map((reviewStatus) => (
+                  <option key={reviewStatus} value={reviewStatus}>
+                    {reviewStatus}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="boosted-posts-filters__field">
+              <label htmlFor="boosted-post-health-filter">Delivery Health</label>
+              <select
+                id="boosted-post-health-filter"
+                value={selectedHealthFilter}
+                onChange={(event) =>
+                  setSelectedHealthFilter(
+                    event.target.value as BoostedPostDeliveryHealth | "All",
+                  )
+                }
+              >
+                {healthFilterOptions.map((health) => (
+                  <option key={health} value={health}>
+                    {health}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
-      </SectionCard>
+        </SectionCard>
+      )}
 
       <SectionCard
         title="Boosted Campaign Directory"
-        description="Review campaign owner, slot assignment, package coverage, delivery status, and quota usage."
+        description="Review operational delivery state, quota consumption, assigned operator, and optimization activity."
       >
         {filteredPosts.length === 0 ? (
           <EmptyState
@@ -300,15 +396,15 @@ function BoostedPostsPage() {
             <table className="boosted-posts-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Post Title</th>
+                  <th>Campaign</th>
+                  <th>Post</th>
                   <th>Owner</th>
                   <th>Slot</th>
-                  <th>Package</th>
-                  <th>Start Date</th>
-                  <th>End Date</th>
-                  <th>Status</th>
-                  <th>Remaining Quota</th>
+                  <th>Delivery</th>
+                  <th>Review</th>
+                  <th>CTR</th>
+                  <th>Quota Used</th>
+                  <th>Operator</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -316,22 +412,42 @@ function BoostedPostsPage() {
               <tbody>
                 {filteredPosts.map((item) => (
                   <tr key={item.id}>
-                    <td>#{item.id}</td>
+                    <td>
+                      <div className="boosted-posts-cell">
+                        <strong>{item.campaignCode}</strong>
+                        <span>
+                          {item.startDate} to {item.endDate}
+                        </span>
+                      </div>
+                    </td>
                     <td>{item.postTitle}</td>
                     <td>{item.ownerName}</td>
                     <td>
                       <StatusBadge label={item.slot} variant="slot" />
                     </td>
-                    <td>{item.packageName}</td>
-                    <td>{item.startDate}</td>
-                    <td>{item.endDate}</td>
+                    <td>
+                      <div className="boosted-posts-cell">
+                        <StatusBadge
+                          label={item.deliveryHealth}
+                          variant={getHealthVariant(item.deliveryHealth)}
+                        />
+                        <span>{item.status}</span>
+                      </div>
+                    </td>
                     <td>
                       <StatusBadge
-                        label={item.status}
-                        variant={renderStatusVariant(item.status)}
+                        label={item.reviewStatus}
+                        variant={getReviewVariant(item.reviewStatus)}
                       />
                     </td>
-                    <td>{item.remainingQuota.toLocaleString("en-US")}</td>
+                    <td>{formatCtr(item.clicks, item.impressions)}</td>
+                    <td>{formatQuotaUsage(item.usedQuota, item.totalQuota)}</td>
+                    <td>
+                      <div className="boosted-posts-cell">
+                        <strong>{item.assignedOperator}</strong>
+                        <span>{item.lastOptimizedAt}</span>
+                      </div>
+                    </td>
                     <td>
                       <div className="boosted-posts-actions">
                         <button
@@ -386,13 +502,18 @@ function BoostedPostsPage() {
       <BaseModal
         isOpen={isViewModalOpen}
         title="Boosted Campaign Details"
-        description="Review package assignment, slot placement, delivery metrics, and campaign notes."
+        description="Review operational delivery metrics, optimization ownership, and campaign notes."
         onClose={closeViewModal}
         maxWidth="760px"
       >
         {selectedPost ? (
           <div className="boosted-posts-modal__content">
             <div className="boosted-posts-modal__grid">
+              <div className="boosted-posts-modal__field">
+                <label>Campaign Code</label>
+                <input type="text" value={selectedPost.campaignCode} disabled />
+              </div>
+
               <div className="boosted-posts-modal__field">
                 <label>Post Title</label>
                 <input type="text" value={selectedPost.postTitle} disabled />
@@ -404,35 +525,76 @@ function BoostedPostsPage() {
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Slot</label>
+                <label>Assigned Operator</label>
+                <input
+                  type="text"
+                  value={selectedPost.assignedOperator}
+                  disabled
+                />
+              </div>
+
+              <div className="boosted-posts-modal__field">
+                <label>Placement Slot</label>
                 <input type="text" value={selectedPost.slot} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Package</label>
-                <input type="text" value={selectedPost.packageName} disabled />
-              </div>
-
-              <div className="boosted-posts-modal__field">
-                <label>Start Date</label>
-                <input type="text" value={selectedPost.startDate} disabled />
-              </div>
-
-              <div className="boosted-posts-modal__field">
-                <label>End Date</label>
-                <input type="text" value={selectedPost.endDate} disabled />
-              </div>
-
-              <div className="boosted-posts-modal__field">
-                <label>Status</label>
+                <label>Campaign Status</label>
                 <input type="text" value={selectedPost.status} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Remaining Quota</label>
+                <label>Delivery Health</label>
                 <input
                   type="text"
-                  value={selectedPost.remainingQuota.toLocaleString("en-US")}
+                  value={selectedPost.deliveryHealth}
+                  disabled
+                />
+              </div>
+
+              <div className="boosted-posts-modal__field">
+                <label>Review Status</label>
+                <input
+                  type="text"
+                  value={selectedPost.reviewStatus}
+                  disabled
+                />
+              </div>
+
+              <div className="boosted-posts-modal__field">
+                <label>Package Context</label>
+                <input type="text" value={selectedPost.packageName} disabled />
+              </div>
+
+              <div className="boosted-posts-modal__field">
+                <label>Delivery Window</label>
+                <input
+                  type="text"
+                  value={`${selectedPost.startDate} to ${selectedPost.endDate}`}
+                  disabled
+                />
+              </div>
+
+              <div className="boosted-posts-modal__field">
+                <label>Quota Used</label>
+                <input
+                  type="text"
+                  value={formatQuotaUsage(
+                    selectedPost.usedQuota,
+                    selectedPost.totalQuota,
+                  )}
+                  disabled
+                />
+              </div>
+
+              <div className="boosted-posts-modal__field">
+                <label>CTR</label>
+                <input
+                  type="text"
+                  value={formatCtr(
+                    selectedPost.clicks,
+                    selectedPost.impressions,
+                  )}
                   disabled
                 />
               </div>
@@ -451,6 +613,15 @@ function BoostedPostsPage() {
                 <input
                   type="text"
                   value={selectedPost.clicks.toLocaleString("en-US")}
+                  disabled
+                />
+              </div>
+
+              <div className="boosted-posts-modal__field boosted-posts-modal__field--full">
+                <label>Last Optimized</label>
+                <input
+                  type="text"
+                  value={selectedPost.lastOptimizedAt}
                   disabled
                 />
               </div>

@@ -525,7 +525,7 @@ function PromotionsPage() {
     <div className="promotions-page">
       <PageHeader
         title="Promotions Management"
-        description="Monitor boosted posts, placement slots, package windows, payment confirmation status, package change handling, and admin reopen actions."
+        description="Manage purchased promotion packages, verify payment state, handle package changes, and reopen expired packages when admin confirms customer payment."
       />
 
       <div className="promotions-summary-grid">
@@ -597,7 +597,7 @@ function PromotionsPage() {
 
       <SectionCard
         title="Promotion Directory"
-        description="Review promoted posts, payment confirmation, package details, schedule, and current status."
+        description="Review billing state, package window, admin handling, and status for each purchased promotion."
       >
         {filteredPromotions.length === 0 ? (
           <EmptyState
@@ -615,9 +615,9 @@ function PromotionsPage() {
                     <th>Owner</th>
                     <th>Placement Slot</th>
                     <th>Package</th>
-                    <th>Payment</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
+                    <th>Billing</th>
+                    <th>Delivery Window</th>
+                    <th>Handled By</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -634,17 +634,25 @@ function PromotionsPage() {
                       </td>
                       <td>{promotion.packageName}</td>
                       <td>
-                        <StatusBadge
-                          label={promotion.paymentStatus}
-                          variant={
-                            promotion.paymentStatus === "Paid"
-                              ? "success"
-                              : "processing"
-                          }
-                        />
+                        <div className="promotions-cell">
+                          <StatusBadge
+                            label={promotion.paymentStatus}
+                            variant={
+                              promotion.paymentStatus === "Paid"
+                                ? "success"
+                                : "processing"
+                            }
+                          />
+                          <span>{promotion.budget}</span>
+                        </div>
                       </td>
-                      <td>{promotion.startDate}</td>
-                      <td>{promotion.endDate}</td>
+                      <td>
+                        <div className="promotions-cell">
+                          <strong>{promotion.startDate}</strong>
+                          <span>{promotion.endDate}</span>
+                        </div>
+                      </td>
+                      <td>{promotion.handledBy}</td>
                       <td>
                         <StatusBadge
                           label={promotion.status}
