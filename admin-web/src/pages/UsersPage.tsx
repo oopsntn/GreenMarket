@@ -331,6 +331,8 @@ function UsersPage() {
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
+        filterLabel="Filter by role & status"
+        filterSummary={`Current filters: ${selectedRoleFilter} • ${selectedStatusFilter}`}
       />
 
       {showFilters && (
