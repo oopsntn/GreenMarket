@@ -35,6 +35,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
 }
 
 .admin-sidebar__link {
@@ -115,7 +116,7 @@
   font-size: 12px;
   color: #486150;
   line-height: 1.2;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 .admin-header__logout {
@@ -152,6 +153,11 @@
   .admin-sidebar {
     width: 100%;
     box-shadow: none;
+  }
+
+  .admin-sidebar__nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
   .admin-header {
