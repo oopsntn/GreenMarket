@@ -1,6 +1,7 @@
 import { initialPromotions } from "../mock-data/promotions";
 import type {
   Promotion,
+  PromotionPackageActionPayload,
   PromotionStatus,
   PromotionSummaryCard,
 } from "../types/promotion";
@@ -79,6 +80,63 @@ export const promotionService = {
       promotion.paymentStatus === "Paid" &&
       promotion.reopenEligible
     );
+  },
+
+  changePromotionPackage(
+    promotions: Promotion[],
+    promotionId: number,
+    payload: PromotionPackageActionPayload,
+  ) {
+    return promotions.map((promotion) => {
+      if (promotion.id !== promotionId) return promotion;
+
+      const updatedPromotion: Promotion = {
+        ...promotion,
+        packageId: payload.packageId,
+        packageName: payload.packageName,
+        slot: payload.slot,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        budget: payload.budget,
+        paymentStatus: payload.paymentStatus,
+        handledBy: "Admin",
+        note:
+          payload.adminNote.trim() ||
+          `Package changed by admin to ${payload.packageName}.`,
+      };
+
+      return applyPromotionState(updatedPromotion, promotion.status);
+    });
+  },
+
+  reopenPromotion(
+    promotions: Promotion[],
+    promotionId: number,
+    payload: PromotionPackageActionPayload,
+  ) {
+    return promotions.map((promotion) => {
+      if (promotion.id !== promotionId) return promotion;
+
+      const reopenedPromotion: Promotion = {
+        ...promotion,
+        packageId: payload.packageId,
+        packageName: payload.packageName,
+        slot: payload.slot,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        budget: payload.budget,
+        paymentStatus: payload.paymentStatus,
+        handledBy: "Admin",
+        reopenEligible: false,
+        reopenBlockedReason:
+          "This promotion has already been reopened by admin.",
+        note:
+          payload.adminNote.trim() ||
+          `Expired package reopened by admin after confirming payment for ${payload.packageName}.`,
+      };
+
+      return applyPromotionState(reopenedPromotion, "Active");
+    });
   },
 
   getActionBlockedReason(
