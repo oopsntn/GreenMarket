@@ -21,7 +21,7 @@ import type {
 import "./PromotionsPage.css";
 
 type ConfirmAction = "pause" | "resume";
-type ActionModalMode = "change";
+type ActionModalMode = "change" | "reopen";
 
 type ConfirmState = {
   isOpen: boolean;
@@ -53,6 +53,7 @@ const statusFilterOptions: Array<PromotionStatus | "All"> = [
   "Expired",
 ];
 
+const DEFAULT_REOPEN_START_DATE = "2026-04-01";
 const PAGE_SIZE = 5;
 
 const formatDateInput = (value: Date) => {
@@ -182,6 +183,37 @@ function PromotionsPage() {
       endDate: promotion.endDate,
       paymentStatus: promotion.paymentStatus,
       adminNote: promotion.note,
+    });
+    setIsActionModalOpen(true);
+  };
+
+  const openReopenModal = (promotion: Promotion) => {
+    if (!promotionService.canReopenPromotion(promotion)) {
+      showToast(
+        promotionService.getActionBlockedReason(promotion, "reopen"),
+        "error",
+      );
+      return;
+    }
+
+    const preferredPackage = getPreferredPackage(promotion);
+    if (!preferredPackage) {
+      showToast("No active promotion packages are available right now.", "error");
+      return;
+    }
+
+    setActionPromotionId(promotion.id);
+    setActionModalMode("reopen");
+    setActionFormData({
+      slot: preferredPackage.slot,
+      packageId: String(preferredPackage.id),
+      startDate: DEFAULT_REOPEN_START_DATE,
+      endDate: calculateEndDate(
+        DEFAULT_REOPEN_START_DATE,
+        preferredPackage.durationDays,
+      ),
+      paymentStatus: "Paid",
+      adminNote: `Admin reopened package after confirming payment from ${promotion.owner}.`,
     });
     setIsActionModalOpen(true);
   };
@@ -438,6 +470,14 @@ function PromotionsPage() {
       return;
     }
 
+    if (actionModalMode === "reopen" && actionFormData.paymentStatus !== "Paid") {
+      showToast(
+        "Admin can reopen an expired package only after payment is confirmed.",
+        "error",
+      );
+      return;
+    }
+
     const payload: PromotionPackageActionPayload = {
       packageId: selectedActionPackage.id,
       packageName: selectedActionPackage.name,
@@ -449,11 +489,18 @@ function PromotionsPage() {
       adminNote: actionFormData.adminNote,
     };
 
-    const nextPromotions = promotionService.changePromotionPackage(
-      promotions,
-      actionTargetPromotion.id,
-      payload,
-    );
+    const nextPromotions =
+      actionModalMode === "reopen"
+        ? promotionService.reopenPromotion(
+            promotions,
+            actionTargetPromotion.id,
+            payload,
+          )
+        : promotionService.changePromotionPackage(
+            promotions,
+            actionTargetPromotion.id,
+            payload,
+          );
 
     setPromotions(nextPromotions);
 
@@ -465,7 +512,9 @@ function PromotionsPage() {
     }
 
     showToast(
-      `${actionTargetPromotion.postTitle} has been moved to ${selectedActionPackage.name}.`,
+      actionModalMode === "reopen"
+        ? `${actionTargetPromotion.postTitle} has been reopened by admin.`
+        : `${actionTargetPromotion.postTitle} has been moved to ${selectedActionPackage.name}.`,
     );
 
     closeActionModal();
@@ -476,7 +525,7 @@ function PromotionsPage() {
     <div className="promotions-page">
       <PageHeader
         title="Promotions Management"
-        description="Monitor boosted posts, placement slots, package windows, payment confirmation status, and package change handling."
+        description="Monitor boosted posts, placement slots, package windows, payment confirmation status, package change handling, and admin reopen actions."
       />
 
       <div className="promotions-summary-grid">
@@ -679,11 +728,25 @@ function PromotionsPage() {
                           ) : (
                             <button
                               type="button"
-                              className="promotions-actions__disabled"
-                              disabled
-                              title="Expired promotions are already closed."
+                              className={
+                                promotionService.canReopenPromotion(promotion)
+                                  ? "promotions-actions__reopen"
+                                  : "promotions-actions__disabled"
+                              }
+                              onClick={() => openReopenModal(promotion)}
+                              disabled={
+                                !promotionService.canReopenPromotion(promotion)
+                              }
+                              title={
+                                !promotionService.canReopenPromotion(promotion)
+                                  ? promotionService.getActionBlockedReason(
+                                      promotion,
+                                      "reopen",
+                                    )
+                                  : "Reopen this expired promotion"
+                              }
                             >
-                              Closed
+                              Reopen
                             </button>
                           )}
                         </div>
@@ -824,6 +887,16 @@ function PromotionsPage() {
                 </div>
               )}
 
+            {selectedPromotion.status === "Expired" &&
+              !promotionService.canReopenPromotion(selectedPromotion) && (
+                <div className="promotions-modal__notice">
+                  {promotionService.getActionBlockedReason(
+                    selectedPromotion,
+                    "reopen",
+                  )}
+                </div>
+              )}
+
             <div className="promotions-modal__actions">
               <button
                 type="button"
@@ -898,8 +971,23 @@ function PromotionsPage() {
                   Change Package
                 </button>
               ) : (
-                <button type="button" className="promotions-modal__close" disabled>
-                  Closed Promotion
+                <button
+                  type="button"
+                  className="promotions-modal__reopen"
+                  onClick={() => openReopenModal(selectedPromotion)}
+                  disabled={
+                    !promotionService.canReopenPromotion(selectedPromotion)
+                  }
+                  title={
+                    !promotionService.canReopenPromotion(selectedPromotion)
+                      ? promotionService.getActionBlockedReason(
+                          selectedPromotion,
+                          "reopen",
+                        )
+                      : "Reopen this expired promotion"
+                  }
+                >
+                  Reopen Package
                 </button>
               )}
             </div>
@@ -909,8 +997,16 @@ function PromotionsPage() {
 
       <BaseModal
         isOpen={isActionModalOpen}
-        title="Change Promotion Package"
-        description="Move the customer to another package and update the delivery schedule from admin."
+        title={
+          actionModalMode === "reopen"
+            ? "Reopen Expired Package"
+            : "Change Promotion Package"
+        }
+        description={
+          actionModalMode === "reopen"
+            ? "Confirm payment, choose the replacement package, and reopen the campaign as admin."
+            : "Move the customer to another package and update the delivery schedule from admin."
+        }
         onClose={closeActionModal}
         maxWidth="760px"
       >
@@ -1005,7 +1101,7 @@ function PromotionsPage() {
                 rows={4}
                 value={actionFormData.adminNote}
                 onChange={handlePackageActionChange}
-                placeholder="Explain why the package was changed"
+                placeholder="Explain why the package was changed or reopened"
               />
             </div>
 
@@ -1017,8 +1113,17 @@ function PromotionsPage() {
               >
                 Cancel
               </button>
-              <button type="submit" className="promotions-modal__change">
-                Save Package Change
+              <button
+                type="submit"
+                className={
+                  actionModalMode === "reopen"
+                    ? "promotions-modal__reopen"
+                    : "promotions-modal__change"
+                }
+              >
+                {actionModalMode === "reopen"
+                  ? "Reopen Package"
+                  : "Save Package Change"}
               </button>
             </div>
           </form>
