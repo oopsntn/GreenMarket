@@ -36,9 +36,33 @@ export const initialPromotionPackages: PromotionPackage[] = [
     price: "320,000 VND",
     maxPosts: 1,
     displayQuota: 15000,
-    status: "Disabled",
+    status: "Active",
     description:
       "Search result boosting package reserved for campaigns that need temporary ranking support.",
+  },
+  {
+    id: 4,
+    name: "Search Boost 5 Days",
+    slot: "Search Boost",
+    durationDays: 5,
+    price: "500,000 VND",
+    maxPosts: 1,
+    displayQuota: 24000,
+    status: "Active",
+    description:
+      "Extended search boosting package for sellers who need longer ranking support.",
+  },
+  {
+    id: 5,
+    name: "Homepage Flash 3 Days",
+    slot: "Home Top",
+    durationDays: 3,
+    price: "680,000 VND",
+    maxPosts: 1,
+    displayQuota: 18000,
+    status: "Disabled",
+    description:
+      "Short-term homepage slot reserved for campaigns that are temporarily hidden from sale.",
   },
 ];
 
