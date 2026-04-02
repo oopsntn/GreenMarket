@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -20,6 +20,8 @@ type ConfirmState = {
   action: ConfirmAction | null;
 };
 
+const PAGE_SIZE = 5;
+
 function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>(
     templateService.getTemplates(),
@@ -32,6 +34,7 @@ function TemplatesPage() {
   const [formData, setFormData] =
     useState<TemplateFormState>(emptyTemplateForm);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [page, setPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     templateId: null,
@@ -203,6 +206,23 @@ function TemplatesPage() {
       );
     });
   }, [templates, searchKeyword]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / PAGE_SIZE));
+
+  const paginatedTemplates = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredTemplates.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredTemplates, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const modalTitle =
     modalMode === "add"
