@@ -1,30 +1,10 @@
+import { apiClient } from "../lib/apiClient";
 import type {
   Category,
   CategoryApiResponse,
   CategoryFormState,
   CategoryStatus,
 } from "../types/category";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:5000";
-
-const getAdminToken = () => {
-  return (
-    localStorage.getItem("adminToken") ||
-    sessionStorage.getItem("adminToken") ||
-    ""
-  );
-};
-
-const buildHeaders = () => {
-  const token = getAdminToken();
-
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-};
 
 const formatDate = (value: string | null) => {
   if (!value) return "";
@@ -46,35 +26,6 @@ const mapApiCategoryToUi = (item: CategoryApiResponse): Category => {
   };
 };
 
-const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      ...buildHeaders(),
-      ...(init?.headers || {}),
-    },
-  });
-
-  if (!response.ok) {
-    let errorMessage = "Request failed.";
-
-    try {
-      const errorData = (await response.json()) as { error?: string };
-      errorMessage = errorData.error || errorMessage;
-    } catch {
-      // ignore json parse error
-    }
-
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("Your admin session has expired or is not authorized.");
-    }
-
-    throw new Error(errorMessage);
-  }
-
-  return (await response.json()) as T;
-};
-
 export const categoryService = {
   getEmptyForm(): CategoryFormState {
     return {
@@ -84,7 +35,12 @@ export const categoryService = {
   },
 
   async getCategories(): Promise<Category[]> {
-    const data = await request<CategoryApiResponse[]>("/api/admin/categories");
+    const data = await apiClient.request<CategoryApiResponse[]>(
+      "/api/admin/categories",
+      {
+        defaultErrorMessage: "Unable to load categories.",
+      },
+    );
     return data.map(mapApiCategoryToUi);
   },
 
@@ -95,10 +51,15 @@ export const categoryService = {
       categoryPublished: true,
     };
 
-    const data = await request<CategoryApiResponse>("/api/admin/categories", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const data = await apiClient.request<CategoryApiResponse>(
+      "/api/admin/categories",
+      {
+        method: "POST",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to create category.",
+        body: JSON.stringify(payload),
+      },
+    );
 
     return mapApiCategoryToUi(data);
   },
@@ -114,10 +75,12 @@ export const categoryService = {
       categoryPublished: currentStatus === "Active",
     };
 
-    const data = await request<CategoryApiResponse>(
+    const data = await apiClient.request<CategoryApiResponse>(
       `/api/admin/categories/${categoryId}`,
       {
         method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update category.",
         body: JSON.stringify(payload),
       },
     );
@@ -136,10 +99,12 @@ export const categoryService = {
       categoryPublished: status === "Active",
     };
 
-    const data = await request<CategoryApiResponse>(
+    const data = await apiClient.request<CategoryApiResponse>(
       `/api/admin/categories/${categoryId}`,
       {
         method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update category status.",
         body: JSON.stringify(payload),
       },
     );
