@@ -6,6 +6,7 @@ import {
   Routes,
 } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
+import ActivityLogPage from "../pages/ActivityLogPage";
 import AnalyticsPage from "../pages/AnalyticsPage";
 import AttributesPage from "../pages/AttributesPage";
 import BoostedPostsPage from "../pages/BoostedPostsPage";
@@ -85,6 +86,7 @@ function AppRoutes() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="activity-log" element={<ActivityLogPage />} />
             <Route path="shops" element={<ShopsPage />} />
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="attributes" element={<AttributesPage />} />
