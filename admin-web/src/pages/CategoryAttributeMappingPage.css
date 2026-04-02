@@ -24,7 +24,7 @@
   border-bottom: 1px solid #eef3ea;
   font-size: 14px;
   vertical-align: middle;
-  text-align: left;
+  text-align: center;
 }
 
 .mapping-table th {
@@ -42,18 +42,18 @@
 
 .mapping-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 .mapping-actions button {
-  width: 100px;
-  height: 36px;
+  min-width: 82px;
+  height: 34px;
   padding: 0 12px;
   border: none;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -79,6 +79,42 @@
 .mapping-actions__remove {
   background-color: #fff1f0;
   color: #c62828;
+}
+
+.mapping-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.mapping-pagination__info {
+  font-size: 14px;
+  color: #6b7b6d;
+}
+
+.mapping-pagination__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mapping-pagination__actions button {
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 12px;
+  background-color: #f3f7f1;
+  color: #486150;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mapping-pagination__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .mapping-preview {
@@ -292,6 +328,12 @@
 @media (max-width: 1024px) {
   .mapping-preview__grid {
     grid-template-columns: 1fr;
+  }
+
+  .mapping-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 20px 20px;
   }
 }
 
