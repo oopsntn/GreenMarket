@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -196,16 +196,18 @@ function UsersPage() {
     closeModal();
   };
 
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return true;
+    if (!keyword) return users;
 
-    return (
-      user.fullName.toLowerCase().includes(keyword) ||
-      user.email.toLowerCase().includes(keyword)
-    );
-  });
+    return users.filter((user) => {
+      return (
+        user.fullName.toLowerCase().includes(keyword) ||
+        user.email.toLowerCase().includes(keyword)
+      );
+    });
+  }, [users, searchKeyword]);
 
   const modalTitle =
     modalMode === "add"
@@ -213,6 +215,13 @@ function UsersPage() {
       : modalMode === "edit"
         ? "Edit User"
         : "User Details";
+
+  const modalDescription =
+    modalMode === "add"
+      ? "Create a new internal user account and assign the appropriate role."
+      : modalMode === "edit"
+        ? "Update user account information, role assignment, and status."
+        : "Review user account information and current access status.";
 
   const confirmTitle =
     confirmState.action === "lock"
@@ -340,7 +349,7 @@ function UsersPage() {
       <BaseModal
         isOpen={isModalOpen}
         title={modalTitle}
-        description="Manage user information and account settings."
+        description={modalDescription}
         onClose={closeModal}
       >
         <form className="users-modal__form" onSubmit={handleSubmit}>

@@ -10,21 +10,6 @@
   gap: 20px;
 }
 
-.dashboard-card {
-  padding: 22px;
-}
-
-.dashboard-card h3 {
-  font-size: 15px;
-  color: #6b7b6d;
-  margin-bottom: 12px;
-}
-
-.dashboard-card strong {
-  font-size: 28px;
-  color: #1b5e20;
-}
-
 .dashboard-panel {
   padding: 24px;
 }

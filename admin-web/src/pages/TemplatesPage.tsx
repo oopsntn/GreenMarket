@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -176,16 +176,18 @@ function TemplatesPage() {
     closeConfirmDialog();
   };
 
-  const filteredTemplates = templates.filter((template) => {
+  const filteredTemplates = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    if (!keyword) return true;
+    if (!keyword) return templates;
 
-    return (
-      template.name.toLowerCase().includes(keyword) ||
-      template.type.toLowerCase().includes(keyword)
-    );
-  });
+    return templates.filter((template) => {
+      return (
+        template.name.toLowerCase().includes(keyword) ||
+        template.type.toLowerCase().includes(keyword)
+      );
+    });
+  }, [templates, searchKeyword]);
 
   const modalTitle =
     modalMode === "add"
@@ -193,6 +195,13 @@ function TemplatesPage() {
       : modalMode === "edit"
         ? "Edit Template"
         : "Template Details";
+
+  const modalDescription =
+    modalMode === "add"
+      ? "Create a new template for rejection reasons, report messages, or notifications."
+      : modalMode === "edit"
+        ? "Update template type, content, and current activation status."
+        : "Review template information, content preview, and current status.";
 
   const confirmTemplate =
     confirmState.templateId !== null
@@ -335,7 +344,7 @@ function TemplatesPage() {
       <BaseModal
         isOpen={isModalOpen}
         title={modalTitle}
-        description="Manage template details and content configuration."
+        description={modalDescription}
         onClose={closeModal}
         maxWidth="620px"
       >
