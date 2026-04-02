@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../services/authApi";
+import {
+  clearAdminSession,
+  hasAllowedAdminRole,
+  hasActiveAdminSession,
+  setAdminSession,
+} from "../utils/adminSession";
 import "./LoginPage.css";
-
-const ADMIN_WEB_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"];
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -16,33 +20,8 @@ function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const existingToken =
-      localStorage.getItem("adminToken") ||
-      sessionStorage.getItem("adminToken");
-
-    const existingProfile =
-      localStorage.getItem("adminProfile") ||
-      sessionStorage.getItem("adminProfile");
-
-    if (!existingToken || !existingProfile) return;
-
-    try {
-      const parsedProfile = JSON.parse(existingProfile) as {
-        roleCodes?: string[];
-      };
-
-      const isAllowed = (parsedProfile.roleCodes ?? []).some((code) =>
-        ADMIN_WEB_ROLE_CODES.includes(code),
-      );
-
-      if (isAllowed) {
-        navigate("/dashboard", { replace: true });
-      }
-    } catch {
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("adminProfile");
-      sessionStorage.removeItem("adminToken");
-      sessionStorage.removeItem("adminProfile");
+    if (hasActiveAdminSession()) {
+      navigate("/dashboard", { replace: true });
     }
   }, [navigate]);
 
@@ -58,30 +37,16 @@ function LoginPage() {
         password,
       });
 
-      const isAllowed = response.admin.roleCodes.some((code) =>
-        ADMIN_WEB_ROLE_CODES.includes(code),
-      );
-
-      if (!isAllowed) {
+      if (!hasAllowedAdminRole(response.admin)) {
         setError("This account is not allowed to access admin web.");
         return;
       }
 
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("adminProfile");
-      sessionStorage.removeItem("adminToken");
-      sessionStorage.removeItem("adminProfile");
-
-      if (rememberMe) {
-        localStorage.setItem("adminToken", response.token);
-        localStorage.setItem("adminProfile", JSON.stringify(response.admin));
-      } else {
-        sessionStorage.setItem("adminToken", response.token);
-        sessionStorage.setItem("adminProfile", JSON.stringify(response.admin));
-      }
+      setAdminSession(response.token, response.admin, rememberMe);
 
       navigate("/dashboard", { replace: true });
     } catch (err) {
+      clearAdminSession();
       setError(err instanceof Error ? err.message : "Login failed.");
     } finally {
       setIsSubmitting(false);

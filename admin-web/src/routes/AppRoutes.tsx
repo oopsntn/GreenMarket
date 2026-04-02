@@ -26,53 +26,14 @@ import ShopsPage from "../pages/ShopsPage";
 import TemplateBuilderPage from "../pages/TemplateBuilderPage";
 import TemplatesPage from "../pages/TemplatesPage";
 import UsersPage from "../pages/UsersPage";
-
-const ADMIN_WEB_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"];
-
-const getAdminToken = () => {
-  return (
-    localStorage.getItem("adminToken") ||
-    sessionStorage.getItem("adminToken") ||
-    ""
-  );
-};
-
-const getAdminProfile = () => {
-  const profileText =
-    localStorage.getItem("adminProfile") ||
-    sessionStorage.getItem("adminProfile");
-
-  if (!profileText) return null;
-
-  try {
-    return JSON.parse(profileText) as {
-      id: number;
-      email: string;
-      name: string;
-      roleCodes?: string[];
-    };
-  } catch {
-    return null;
-  }
-};
-
-const isAllowedAdmin = () => {
-  const token = getAdminToken();
-  const profile = getAdminProfile();
-
-  if (!token || !profile) return false;
-
-  return (profile.roleCodes ?? []).some((code) =>
-    ADMIN_WEB_ROLE_CODES.includes(code),
-  );
-};
+import { hasActiveAdminSession } from "../utils/adminSession";
 
 function ProtectedAdminRoute() {
-  return isAllowedAdmin() ? <Outlet /> : <Navigate to="/login" replace />;
+  return hasActiveAdminSession() ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
 function PublicOnlyRoute() {
-  return isAllowedAdmin() ? <Navigate to="/dashboard" replace /> : <Outlet />;
+  return hasActiveAdminSession() ? <Navigate to="/dashboard" replace /> : <Outlet />;
 }
 
 function AppRoutes() {

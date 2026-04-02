@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { clearAdminSession, getAdminProfile } from "../utils/adminSession";
 import "./AdminLayout.css";
 
 const menuItems = [
@@ -23,45 +24,12 @@ const menuItems = [
   { label: "Export CSV", path: "/export" },
 ];
 
-type AdminProfile = {
-  name?: string;
-  email?: string;
-};
-
-const getStoredProfile = (): AdminProfile | null => {
-  const profileText =
-    localStorage.getItem("adminProfile") ||
-    sessionStorage.getItem("adminProfile");
-
-  if (!profileText) return null;
-
-  try {
-    const parsed = JSON.parse(profileText) as AdminProfile | null;
-
-    if (!parsed || typeof parsed !== "object") {
-      return null;
-    }
-
-    return {
-      name: typeof parsed.name === "string" ? parsed.name : undefined,
-      email: typeof parsed.email === "string" ? parsed.email : undefined,
-    };
-  } catch {
-    localStorage.removeItem("adminProfile");
-    sessionStorage.removeItem("adminProfile");
-    return null;
-  }
-};
-
 function AdminLayout() {
   const navigate = useNavigate();
-  const profile = getStoredProfile();
+  const profile = getAdminProfile();
 
   const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminProfile");
-    sessionStorage.removeItem("adminToken");
-    sessionStorage.removeItem("adminProfile");
+    clearAdminSession();
     navigate("/login", { replace: true });
   };
 
