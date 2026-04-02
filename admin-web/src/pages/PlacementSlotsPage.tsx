@@ -375,84 +375,109 @@ function PlacementSlotsPage() {
             description="No placement slots match the current search or filter settings."
           />
         ) : (
-          <div className="placement-slots-table-wrapper">
-            <table className="placement-slots-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Slot Name</th>
-                  <th>Scope</th>
-                  <th>Position Code</th>
-                  <th>Capacity</th>
-                  <th>Display Rule</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredSlots.map((slot) => (
-                  <tr key={slot.id}>
-                    <td>#{slot.id}</td>
-                    <td>{slot.name}</td>
-                    <td>{slot.scope}</td>
-                    <td>{slot.positionCode}</td>
-                    <td>{slot.capacity}</td>
-                    <td>{slot.displayRule}</td>
-                    <td>{slot.priority}</td>
-                    <td>
-                      <StatusBadge
-                        label={slot.status}
-                        variant={
-                          slot.status === "Active" ? "active" : "disabled"
-                        }
-                      />
-                    </td>
-                    <td>
-                      <div className="placement-slots-actions">
-                        <button
-                          type="button"
-                          className="placement-slots-actions__view"
-                          onClick={() => openViewModal(slot)}
-                        >
-                          View
-                        </button>
-
-                        <button
-                          type="button"
-                          className="placement-slots-actions__edit"
-                          onClick={() => openEditModal(slot)}
-                        >
-                          Edit
-                        </button>
-
-                        {slot.status === "Active" ? (
-                          <button
-                            type="button"
-                            className="placement-slots-actions__disable"
-                            onClick={() =>
-                              openConfirmDialog(slot.id, "disable")
-                            }
-                          >
-                            Disable
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="placement-slots-actions__enable"
-                            onClick={() => openConfirmDialog(slot.id, "enable")}
-                          >
-                            Enable
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="placement-slots-table-wrapper">
+              <table className="placement-slots-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Slot Name</th>
+                    <th>Scope</th>
+                    <th>Position Code</th>
+                    <th>Capacity</th>
+                    <th>Display Rule</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedSlots.map((slot) => (
+                    <tr key={slot.id}>
+                      <td>#{slot.id}</td>
+                      <td>{slot.name}</td>
+                      <td>{slot.scope}</td>
+                      <td>{slot.positionCode}</td>
+                      <td>{slot.capacity}</td>
+                      <td>{slot.displayRule}</td>
+                      <td>{slot.priority}</td>
+                      <td>
+                        <StatusBadge
+                          label={slot.status}
+                          variant={
+                            slot.status === "Active" ? "active" : "disabled"
+                          }
+                        />
+                      </td>
+                      <td>
+                        <div className="placement-slots-actions">
+                          <button
+                            type="button"
+                            className="placement-slots-actions__view"
+                            onClick={() => openViewModal(slot)}
+                          >
+                            View
+                          </button>
+
+                          <button
+                            type="button"
+                            className="placement-slots-actions__edit"
+                            onClick={() => openEditModal(slot)}
+                          >
+                            Edit
+                          </button>
+
+                          {slot.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="placement-slots-actions__disable"
+                              onClick={() =>
+                                openConfirmDialog(slot.id, "disable")
+                              }
+                            >
+                              Disable
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="placement-slots-actions__enable"
+                              onClick={() => openConfirmDialog(slot.id, "enable")}
+                            >
+                              Enable
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="placement-slots-pagination">
+              <span className="placement-slots-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="placement-slots-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </SectionCard>
 
