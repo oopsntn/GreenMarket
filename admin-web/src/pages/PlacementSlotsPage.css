@@ -98,7 +98,7 @@
   padding: 16px 14px;
   border-bottom: 1px solid #eef3ea;
   font-size: 14px;
-  text-align: left;
+  text-align: center;
   vertical-align: middle;
 }
 
@@ -114,14 +114,15 @@
 
 .placement-slots-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 .placement-slots-actions button {
-  width: 96px;
-  height: 36px;
+  min-width: 82px;
+  height: 34px;
+  padding: 0 12px;
   border: none;
   border-radius: 12px;
   font-size: 13px;
@@ -147,6 +148,42 @@
 .placement-slots-actions__enable {
   background-color: #e8f5e9;
   color: #2e7d32;
+}
+
+.placement-slots-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.placement-slots-pagination__info {
+  font-size: 14px;
+  color: #6b7b6d;
+}
+
+.placement-slots-pagination__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.placement-slots-pagination__actions button {
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 12px;
+  background-color: #f3f7f1;
+  color: #486150;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.placement-slots-pagination__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .placement-slots-form {
@@ -258,6 +295,12 @@
 @media (max-width: 1024px) {
   .placement-slots-modal__grid {
     grid-template-columns: 1fr;
+  }
+
+  .placement-slots-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 20px 20px;
   }
 }
 
