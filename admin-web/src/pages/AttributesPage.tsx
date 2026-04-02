@@ -401,7 +401,7 @@ function AttributesPage() {
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Filter by type & status"
-        filterSummary={`Current filters: ${selectedTypeFilter} • ${selectedStatusFilter}`}
+        filterSummaryItems={[selectedTypeFilter, selectedStatusFilter]}
       />
 
       {showFilters ? (
@@ -467,92 +467,117 @@ function AttributesPage() {
             description="No attributes match your current search. Try another keyword or create a new attribute."
           />
         ) : (
-          <div className="attributes-table-wrapper">
-            <table className="attributes-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Attribute Name</th>
-                  <th>Code</th>
-                  <th>Type</th>
-                  <th>Used In</th>
-                  <th>Status</th>
-                  <th>Created Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredAttributes.map((attribute) => (
-                  <tr key={attribute.id}>
-                    <td>#{attribute.id}</td>
-                    <td>{attribute.name}</td>
-                    <td>{attribute.code || "—"}</td>
-                    <td>
-                      <StatusBadge label={attribute.type} variant="type" />
-                    </td>
-                    <td>
-                      {attribute.usedIn.length > 0
-                        ? attribute.usedIn.join(", ")
-                        : "—"}
-                    </td>
-                    <td>
-                      <StatusBadge
-                        label={attribute.status}
-                        variant={
-                          attribute.status === "Active" ? "active" : "disabled"
-                        }
-                      />
-                    </td>
-                    <td>{attribute.createdAt || "—"}</td>
-                    <td>
-                      <div className="attributes-actions">
-                        <button
-                          type="button"
-                          className="attributes-actions__view"
-                          onClick={() => openViewModal(attribute)}
-                        >
-                          View
-                        </button>
-
-                        <button
-                          type="button"
-                          className="attributes-actions__edit"
-                          onClick={() => openEditModal(attribute)}
-                        >
-                          Edit
-                        </button>
-
-                        {attribute.status === "Active" ? (
-                          <button
-                            type="button"
-                            className="attributes-actions__disable"
-                            onClick={() =>
-                              openConfirmDialog(attribute.id, "disable")
-                            }
-                            disabled={isStatusUpdating === attribute.id}
-                          >
-                            Disable
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="attributes-actions__enable"
-                            onClick={() =>
-                              openConfirmDialog(attribute.id, "enable")
-                            }
-                            disabled={isStatusUpdating === attribute.id}
-                          >
-                            Enable
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="attributes-table-wrapper">
+              <table className="attributes-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Attribute Name</th>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th>Used In</th>
+                    <th>Status</th>
+                    <th>Created Date</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedAttributes.map((attribute) => (
+                    <tr key={attribute.id}>
+                      <td>#{attribute.id}</td>
+                      <td>{attribute.name}</td>
+                      <td>{attribute.code || "—"}</td>
+                      <td>
+                        <StatusBadge label={attribute.type} variant="type" />
+                      </td>
+                      <td>
+                        {attribute.usedIn.length > 0
+                          ? attribute.usedIn.join(", ")
+                          : "—"}
+                      </td>
+                      <td>
+                        <StatusBadge
+                          label={attribute.status}
+                          variant={
+                            attribute.status === "Active" ? "active" : "disabled"
+                          }
+                        />
+                      </td>
+                      <td>{attribute.createdAt || "—"}</td>
+                      <td>
+                        <div className="attributes-actions">
+                          <button
+                            type="button"
+                            className="attributes-actions__view"
+                            onClick={() => openViewModal(attribute)}
+                          >
+                            View
+                          </button>
+
+                          <button
+                            type="button"
+                            className="attributes-actions__edit"
+                            onClick={() => openEditModal(attribute)}
+                          >
+                            Edit
+                          </button>
+
+                          {attribute.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="attributes-actions__disable"
+                              onClick={() =>
+                                openConfirmDialog(attribute.id, "disable")
+                              }
+                              disabled={isStatusUpdating === attribute.id}
+                            >
+                              Disable
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="attributes-actions__enable"
+                              onClick={() =>
+                                openConfirmDialog(attribute.id, "enable")
+                              }
+                              disabled={isStatusUpdating === attribute.id}
+                            >
+                              Enable
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="attributes-pagination">
+              <span className="attributes-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="attributes-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </SectionCard>
 
