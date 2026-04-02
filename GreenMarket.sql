@@ -35,6 +35,54 @@ BEGIN NEW.system_setting_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$;
 CREATE OR REPLACE FUNCTION update_user_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN NEW.user_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$;
 
+-- Trigger: Tự động ghi audit log khi thêm / sửa gói quảng cáo
+CREATE OR REPLACE FUNCTION log_promotion_package_changes() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE v_action VARCHAR(50);
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        v_action := 'PACKAGE_CREATED';
+        INSERT INTO promotion_package_audit_log (action_type, package_id, before_state, after_state)
+        VALUES (v_action, NEW.promotion_package_id, NULL, row_to_json(NEW)::jsonb);
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF OLD.promotion_package_deleted_at IS NULL AND NEW.promotion_package_deleted_at IS NOT NULL THEN
+            v_action := 'PACKAGE_DELETED';
+        ELSIF OLD.promotion_package_deleted_at IS NOT NULL AND NEW.promotion_package_deleted_at IS NULL THEN
+            v_action := 'PACKAGE_RESTORED';
+        ELSE
+            v_action := 'PACKAGE_UPDATED';
+        END IF;
+        INSERT INTO promotion_package_audit_log (action_type, package_id, before_state, after_state)
+        VALUES (v_action, NEW.promotion_package_id, row_to_json(OLD)::jsonb, row_to_json(NEW)::jsonb);
+    END IF;
+    RETURN NEW;
+END; $$;
+
+-- Trigger: Tự động ghi audit log khi thêm / cập nhật bảng giá
+CREATE OR REPLACE FUNCTION log_promotion_price_changes() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE v_action VARCHAR(50);
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        -- Phân loại: áp dụng ngay vs lên lịch tương lai
+        IF NEW.effective_from > now() THEN
+            v_action := 'PRICE_SCHEDULED';
+        ELSE
+            v_action := 'PRICE_ADDED';
+        END IF;
+        INSERT INTO promotion_package_audit_log (action_type, package_id, price_id, before_state, after_state)
+        VALUES (v_action, NEW.package_id, NEW.price_id, NULL, row_to_json(NEW)::jsonb);
+    ELSIF TG_OP = 'UPDATE' THEN
+        -- effective_to được set → đóng lại bảng giá này
+        IF OLD.effective_from > now() THEN
+            v_action := 'PRICE_SCHEDULED_CANCELLED'; -- Admin hủy lịch giá tương lai
+        ELSE
+            v_action := 'PRICE_SUPERSEDED';          -- Giá cũ bị thay bởi giá mới
+        END IF;
+        INSERT INTO promotion_package_audit_log (action_type, package_id, price_id, before_state, after_state)
+        VALUES (v_action, NEW.package_id, NEW.price_id, row_to_json(OLD)::jsonb, row_to_json(NEW)::jsonb);
+    END IF;
+    RETURN NEW;
+END; $$;
+
 -- ============================================================
 -- TABLES
 -- ============================================================
@@ -288,13 +336,63 @@ CREATE TABLE placement_slots (
 
 -- Promotion Packages
 CREATE TABLE promotion_packages (
-    promotion_package_id SERIAL PRIMARY KEY,
+    promotion_package_id    SERIAL PRIMARY KEY,
     promotion_package_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
     promotion_package_title VARCHAR(150),
     promotion_package_duration_days INTEGER,
-    promotion_package_price DECIMAL(15, 2),
     promotion_package_published BOOLEAN DEFAULT FALSE,
+    promotion_package_deleted_at TIMESTAMP,               -- Soft delete: NULL = còn hoạt động
     promotion_package_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Promotion Package Prices (Lịch sử & lên lịch giá)
+-- Mỗi dòng là 1 mức giá cho 1 gói trong 1 khoảng thời gian.
+-- effective_from có thể là tương lai → admin lên lịch tăng/giảm giá trước.
+-- Giá hiện hành tại thời điểm T = dòng có effective_from <= T AND (effective_to IS NULL OR effective_to > T)
+CREATE TABLE promotion_package_prices (
+    price_id        SERIAL PRIMARY KEY,
+    package_id      INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
+    price           DECIMAL(15, 2) NOT NULL,
+    effective_from  TIMESTAMP NOT NULL DEFAULT now(),    -- Bắt đầu có hiệu lực (có thể là tương lai)
+    effective_to    TIMESTAMP,                            -- Kết thúc hiệu lực; NULL = chưa bị thay thế hoặc là mức giá tương lai chưa tới
+    note            TEXT,                                 -- Lý do điều chỉnh giá
+    created_by      INTEGER REFERENCES admins(admin_id) ON DELETE SET NULL,
+    created_at      TIMESTAMP DEFAULT now()
+);
+
+-- View: Giá đang áp dụng tại thời điểm hiện tại cho mỗi gói
+CREATE VIEW v_promotion_package_current_price AS
+SELECT
+    ppp.package_id,
+    ppp.price_id,
+    ppp.price,
+    ppp.effective_from,
+    ppp.effective_to
+FROM promotion_package_prices ppp
+WHERE ppp.effective_from <= now()
+  AND (ppp.effective_to IS NULL OR ppp.effective_to > now());
+
+-- Promotion Package Audit Log
+-- Ghi lại toàn bộ lịch sử hành động của admin lên gói quảng cáo và bảng giá.
+-- action_type:
+--   PACKAGE_CREATED         → Admin thêm gói mới
+--   PACKAGE_UPDATED         → Admin sửa tên / thời hạn / trạng thái published
+--   PACKAGE_DELETED         → Admin xóa mềm (deleted_at được set)
+--   PACKAGE_RESTORED        → Admin khôi phục gói đã xóa
+--   PRICE_ADDED             → Thêm bảng giá có hiệu lực ngay
+--   PRICE_SCHEDULED         → Lên lịch giá tương lai (effective_from > now())
+--   PRICE_SUPERSEDED        → Giá cũ bị đóng lại khi giá mới thay thế
+--   PRICE_SCHEDULED_CANCELLED → Admin hủy lịch giá tương lai trước khi có hiệu lực
+CREATE TABLE promotion_package_audit_log (
+    audit_id        SERIAL PRIMARY KEY,
+    action_type     VARCHAR(50) NOT NULL,
+    package_id      INTEGER REFERENCES promotion_packages(promotion_package_id) ON DELETE SET NULL,
+    price_id        INTEGER REFERENCES promotion_package_prices(price_id) ON DELETE SET NULL,
+    before_state    JSONB,             -- Snapshot trạng thái TRƯỚC khi thay đổi
+    after_state     JSONB,             -- Snapshot trạng thái SAU khi thay đổi
+    changed_by      INTEGER REFERENCES admins(admin_id) ON DELETE SET NULL,
+    changed_at      TIMESTAMP DEFAULT now(),
+    note            TEXT               -- Ghi chú bổ sung nếu cần
 );
 
 -- Post Promotions
@@ -312,14 +410,15 @@ CREATE TABLE post_promotions (
 
 -- Payment Transactions
 CREATE TABLE payment_txn (
-    payment_txn_id SERIAL PRIMARY KEY,
-    payment_txn_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    payment_txn_post_id INTEGER REFERENCES posts(post_id),
+    payment_txn_id       SERIAL PRIMARY KEY,
+    payment_txn_user_id  INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    payment_txn_post_id  INTEGER REFERENCES posts(post_id),
     payment_txn_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
-    payment_txn_amount DECIMAL(15, 2),
+    payment_txn_price_id INTEGER REFERENCES promotion_package_prices(price_id) ON DELETE SET NULL, -- Snapshot bảng giá tại thời điểm mua
+    payment_txn_amount   DECIMAL(15, 2),                  -- Số tiền thực thu (snapshot, không đổi dù giá gói thay đổi sau)
     payment_txn_provider VARCHAR(50),
     payment_txn_provider_txn_id VARCHAR(100) UNIQUE,
-    payment_txn_status VARCHAR(20),
+    payment_txn_status   VARCHAR(20),
     payment_txn_created_at TIMESTAMP DEFAULT now()
 );
 
@@ -439,9 +538,16 @@ CREATE INDEX idx_post_promotions_slot ON post_promotions(post_promotion_slot_id)
 CREATE INDEX idx_post_promotions_status ON post_promotions(post_promotion_status);
 CREATE INDEX idx_post_promotions_dates ON post_promotions(post_promotion_start_at, post_promotion_end_at);
 
+-- Promotion Package Prices
+CREATE INDEX idx_pkg_prices_package      ON promotion_package_prices(package_id);
+CREATE INDEX idx_pkg_prices_effective    ON promotion_package_prices(package_id, effective_from, effective_to);
+-- Index nhanh cho truy vấn: "gói này có bảng giá nào chưa hết hạn?" (bao gồm cả giá tương lai)
+CREATE INDEX idx_pkg_prices_open_ended   ON promotion_package_prices(package_id, effective_from) WHERE effective_to IS NULL;
+
 -- Payments
-CREATE INDEX idx_payment_txn_user ON payment_txn(payment_txn_user_id);
-CREATE INDEX idx_payment_txn_status ON payment_txn(payment_txn_status);
+CREATE INDEX idx_payment_txn_user        ON payment_txn(payment_txn_user_id);
+CREATE INDEX idx_payment_txn_status      ON payment_txn(payment_txn_status);
+CREATE INDEX idx_payment_txn_price       ON payment_txn(payment_txn_price_id);
 
 -- Analytics
 CREATE INDEX idx_daily_metrics_date ON daily_placement_metrics(daily_placement_metric_date);
@@ -455,6 +561,13 @@ CREATE INDEX idx_event_logs_time ON event_logs(event_log_event_time);
 -- OTP
 CREATE INDEX idx_otp_requests_mobile_code ON otp_requests(otp_request_mobile, otp_request_otp_code);
 
+-- Promotion Package Audit Log
+CREATE INDEX idx_pkg_audit_package    ON promotion_package_audit_log(package_id);
+CREATE INDEX idx_pkg_audit_price      ON promotion_package_audit_log(price_id);
+CREATE INDEX idx_pkg_audit_action     ON promotion_package_audit_log(action_type);
+CREATE INDEX idx_pkg_audit_changed_by ON promotion_package_audit_log(changed_by);
+CREATE INDEX idx_pkg_audit_changed_at ON promotion_package_audit_log(changed_at DESC);
+
 -- ============================================================
 -- TRIGGERS
 -- ============================================================
@@ -465,6 +578,15 @@ CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops FOR EACH ROW EXECU
 CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION update_post_updated_at();
 CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON reports FOR EACH ROW EXECUTE FUNCTION update_report_updated_at();
 CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_system_setting_updated_at();
+
+-- Audit triggers cho promotion packages
+CREATE TRIGGER trg_audit_promotion_packages
+    AFTER INSERT OR UPDATE ON promotion_packages
+    FOR EACH ROW EXECUTE FUNCTION log_promotion_package_changes();
+
+CREATE TRIGGER trg_audit_promotion_prices
+    AFTER INSERT OR UPDATE ON promotion_package_prices
+    FOR EACH ROW EXECUTE FUNCTION log_promotion_price_changes();
 
 -- ============================================================
 -- SEED DATA
@@ -731,13 +853,30 @@ INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_s
 (2, 'CATEGORY_TOP',     'Đầu Trang Danh Mục',        10, '{"max_per_shop": 2, "min_post_status": "approved"}', true),
 (3, 'SEARCH_HIGHLIGHT', 'Nổi Bật Trong Tìm Kiếm',    20, '{"max_per_shop": 3, "min_post_status": "approved"}', true);
 
-INSERT INTO promotion_packages (promotion_package_id, promotion_package_slot_id, promotion_package_title, promotion_package_duration_days, promotion_package_price, promotion_package_published) VALUES
-(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  150000, true),
-(2, 1, 'Banner Trang Chủ - 30 ngày',  30, 500000, true),
-(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  80000,  true),
-(4, 2, 'Đầu Danh Mục - 30 ngày',      30, 250000, true),
-(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  50000,  true),
-(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, 150000, true);
+INSERT INTO promotion_packages (promotion_package_id, promotion_package_slot_id, promotion_package_title, promotion_package_duration_days, promotion_package_published) VALUES
+(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  true),
+(2, 1, 'Banner Trang Chủ - 30 ngày',  30, true),
+(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  true),
+(4, 2, 'Đầu Danh Mục - 30 ngày',      30, true),
+(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  true),
+(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, true);
+
+-- Promotion Package Prices (giá khởi tạo + ví dụ lên lịch tăng giá tương lai)
+INSERT INTO promotion_package_prices (package_id, price, effective_from, effective_to, note, created_by) VALUES
+-- Gói 1: Banner 7 ngày — giá gốc, sau đó tăng (effective_to đóng lại), rồi lên lịch giá mới
+(1, 150000, now() - interval '90 days', now() - interval '10 days', 'Giá khởi tạo ban đầu',          1),
+(1, 180000, now() - interval '10 days', NULL,                         'Điều chỉnh giá tháng 3/2026',   1),
+-- Gói 2: Banner 30 ngày — giá ổn định
+(2, 500000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
+-- Gói 3: Đầu Danh Mục 7 ngày — hiện tại + lên lịch tăng giá từ 15/4/2026
+(3, 80000,  now() - interval '90 days', '2026-04-15 00:00:00',        'Giá khởi tạo ban đầu',          1),
+(3, 95000,  '2026-04-15 00:00:00',     NULL,                          'Lên lịch tăng giá từ 15/4',     1),
+-- Gói 4: Đầu Danh Mục 30 ngày
+(4, 250000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
+-- Gói 5: Nổi Bật Tìm Kiếm 7 ngày
+(5, 50000,  now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
+-- Gói 6: Nổi Bật Tìm Kiếm 30 ngày
+(6, 150000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1);
 
 -- ============================================================
 -- BANNED KEYWORDS
@@ -786,5 +925,7 @@ SELECT setval('post_attribute_values_value_id_seq', (SELECT COALESCE(MAX(value_i
 SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM reports), false);
 SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
 SELECT setval('promotion_packages_promotion_package_id_seq', (SELECT COALESCE(MAX(promotion_package_id), 1) FROM promotion_packages));
+SELECT setval('promotion_package_prices_price_id_seq',          (SELECT COALESCE(MAX(price_id),              1) FROM promotion_package_prices));
+SELECT setval('promotion_package_audit_log_audit_id_seq',        (SELECT COALESCE(MAX(audit_id),              1) FROM promotion_package_audit_log));
 SELECT setval('banned_keywords_banned_keyword_id_seq', (SELECT COALESCE(MAX(banned_keyword_id), 1) FROM banned_keywords));
 SELECT setval('system_settings_system_setting_id_seq', (SELECT COALESCE(MAX(system_setting_id), 1) FROM system_settings));

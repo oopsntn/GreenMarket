@@ -45,7 +45,7 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        const { shopName, shopPhone, shopLocation, shopDescription, shopLat, shopLng, shopLogoUrl, shopCoverUrl, shopGalleryImages } = req.body;
+        const { shopName, shopEmail, shopPhone, shopLocation, shopDescription, shopLat, shopLng, shopLogoUrl, shopCoverUrl, shopGalleryImages } = req.body;
 
         if (!shopName) {
             res.status(400).json({ error: "Shop Name is required" });
@@ -64,6 +64,7 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
         const [newShop] = await db.insert(shops).values({
             shopOwnerId: userId,
             shopName,
+            shopEmail,
             shopPhone,
             shopLocation,
             shopDescription,
@@ -127,7 +128,7 @@ export const getPublicShopById = async (req: Request<{ id: string }>, res: Respo
             const images = await db.select()
                 .from(postImages)
                 .where(inArray(postImages.postId, postIds));
-            
+
             postsWithImages = shopPosts.map(post => ({
                 ...post,
                 images: images.filter(img => img.postId === post.postId)
@@ -176,16 +177,16 @@ export const updateShop = async (req: AuthRequest, res: Response): Promise<void>
         const galleryCover = serializeShopGalleryImages(shopGalleryImages);
 
         const [updatedShop] = await db.update(shops)
-            .set({ 
-                shopName, 
-                shopPhone, 
-                shopLocation, 
-                shopDescription, 
+            .set({
+                shopName,
+                shopPhone,
+                shopLocation,
+                shopDescription,
                 shopLogoUrl,
                 shopCoverUrl: galleryCover ?? shopCoverUrl,
                 shopLat: shopLat !== undefined ? String(shopLat) : undefined,
                 shopLng: shopLng !== undefined ? String(shopLng) : undefined,
-                shopUpdatedAt: new Date() 
+                shopUpdatedAt: new Date()
             })
             .where(eq(shops.shopId, id))
             .returning();
