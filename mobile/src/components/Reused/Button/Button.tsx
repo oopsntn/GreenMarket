@@ -1,26 +1,31 @@
 import React from 'react'
-import { StyleSheet, TextStyle, TouchableOpacity, View, ViewStyle, Text, KeyboardTypeOptions } from 'react-native';
+import { StyleSheet, TextStyle, TouchableOpacity, View, ViewStyle, Text, KeyboardTypeOptions, ActivityIndicator } from 'react-native';
 
 interface ButtonProps {
     children: React.ReactNode;
     variant?: 'primary' | 'outline';
     onPress?: () => void;
     disabled?: boolean;
+    loading?: boolean;
     fullWidth?: boolean;
     size?: 'small' | 'medium' | 'large';
     icon?: React.ReactNode;
     style?: ViewStyle;
+    textStyle?: TextStyle;
 }
 const Button: React.FC<ButtonProps> = ({
     children,
     variant = 'primary',
     onPress,
     disabled = false,
+    loading = false,
     fullWidth = false,
     size = 'medium',
     icon = null,
     style,
+    textStyle,
 }) => {
+    const isDisabled = disabled || loading;
     return (
         <TouchableOpacity
             onPress={onPress}
@@ -33,17 +38,29 @@ const Button: React.FC<ButtonProps> = ({
                 fullWidth && styles.btnFull,
                 disabled && styles.btnDisabled,
                 style,
+                
             ]}
         >
-            {icon && <View style={styles.btnIcon}>{icon}</View>}
-            <Text style={[
-                styles.btnText,
-                styles[`text${variant.charAt(0).toUpperCase() + variant.slice(1)}` as keyof typeof styles],
-                styles[`fontSize${size.charAt(0).toUpperCase() + size.slice(1)}` as keyof typeof styles],
-            ]}>
-                {children}
-            </Text>
-        </TouchableOpacity>
+            {loading ? (
+                <ActivityIndicator
+                    size="small"
+                    color={variant === 'primary' ? '#fff' : '#52c41a'}
+                />
+            ) : (
+                <>
+                    {icon && <View style={styles.btnIcon}>{icon}</View>}
+                    <Text style={[
+                        styles.btnText,
+                        styles[`text${variant.charAt(0).toUpperCase() + variant.slice(1)}` as keyof typeof styles],
+                        styles[`fontSize${size.charAt(0).toUpperCase() + size.slice(1)}` as keyof typeof styles],
+                    ]}>
+                        {children}
+                    </Text>
+                </>
+            )
+            }
+
+        </TouchableOpacity >
 
     )
 }
