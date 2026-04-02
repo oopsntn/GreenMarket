@@ -22,6 +22,8 @@ services:
       - ./back-end/.env
     ports:
       - "5000:5000"
+    volumes:
+      - ./back-end/uploads:/app/uploads
     environment:
       - DATABASE_URL=postgresql://postgres:admin@db:5432/GreenMarket
     depends_on:

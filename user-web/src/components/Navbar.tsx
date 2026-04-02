@@ -13,20 +13,31 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const { user, shop, isAuthenticated, logout } = useAuth();
 
-  const baseNavItems = [
-    { label: 'Chợ Bonsai', path: '/', icon: ShoppingBag },
-    { label: 'Đăng Tin', path: '/create-post', icon: PlusCircle },
+  const displayIdentity = user?.userDisplayName?.trim() || user?.userMobile || 'Người dùng';
+  const isGardenOwner = shop?.shopStatus === 'active';
+
+  const guestNavItems = [
+    { label: 'Trang chủ', path: '/', icon: ShoppingBag },
+    { label: 'Danh sách nhà vườn', path: '/shops', icon: Store },
   ];
 
-  const navItems = shop
-    ? [
+  const baseNavItems = [
+    { label: 'Chợ bonsai', path: '/', icon: ShoppingBag },
+    { label: 'Danh sách nhà vườn', path: '/shops', icon: Store },
+    { label: 'Đăng tin', path: '/create-post', icon: PlusCircle },
+  ];
+
+  const navItems = !isAuthenticated
+    ? guestNavItems
+    : isGardenOwner
+      ? [
         ...baseNavItems,
-        { label: shop.shopName, path: '/my-posts', icon: Store },
+        { label: shop?.shopName || 'Nhà vườn', path: '/my-posts', icon: Store },
       ]
-    : [
+      : [
         ...baseNavItems,
-        { label: 'Lên Shop', path: '/register-shop', icon: Store },
-        { label: 'Của Tôi', path: '/my-posts', icon: User },
+        { label: 'Lên shop', path: '/register-shop', icon: Store },
+        { label: 'Cá nhân', path: '/my-posts', icon: User },
       ];
 
   return (
@@ -43,10 +54,9 @@ const Navbar: React.FC = () => {
               key={item.label}
               to={item.path}
               className={cn(
-                "flex items-center gap-2 text-sm font-medium transition-colors hover:text-emerald-400",
-                location.pathname === item.path ? "text-emerald-500" : "text-slate-400",
-                // Highlight shop name in emerald if active shop
-                shop && item.label === shop.shopName ? "text-emerald-400" : ""
+                'flex items-center gap-2 text-sm font-medium transition-colors hover:text-emerald-400',
+                location.pathname === item.path ? 'text-emerald-500' : 'text-slate-400',
+                isGardenOwner && item.label === shop?.shopName ? 'text-emerald-400' : ''
               )}
             >
               <item.icon className="w-4 h-4" />
@@ -58,23 +68,20 @@ const Navbar: React.FC = () => {
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
-              <Link 
-                to="/profile"
-                className="hidden lg:block text-right hover:opacity-80 transition-opacity"
-              >
-                {shop?.shopStatus === 'active' ? (
+              <Link to="/profile" className="hidden lg:block text-right hover:opacity-80 transition-opacity">
+                {isGardenOwner ? (
                   <>
-                    <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Chủ Vườn</div>
-                    <div className="text-sm font-medium text-slate-300">{user?.userDisplayName || user?.userMobile}</div>
+                    <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Chủ vườn</div>
+                    <div className="text-sm font-medium text-slate-300">{displayIdentity}</div>
                   </>
                 ) : (
                   <>
                     <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Nghệ nhân</div>
-                    <div className="text-sm font-medium text-slate-300">{user?.userDisplayName || user?.userMobile}</div>
+                    <div className="text-sm font-medium text-slate-300">{displayIdentity}</div>
                   </>
                 )}
               </Link>
-              <button 
+              <button
                 onClick={logout}
                 className="glass p-2 rounded-xl text-slate-400 hover:text-red-400 transition-all"
                 title="Đăng xuất"
@@ -83,10 +90,7 @@ const Navbar: React.FC = () => {
               </button>
             </div>
           ) : (
-            <Link 
-              to="/login"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl text-sm font-bold transition-all"
-            >
+            <Link to="/login" className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl text-sm font-bold transition-all">
               Đăng nhập
             </Link>
           )}

@@ -1,67 +1,110 @@
+import { Platform } from 'react-native'
 import { api } from '../../../config/api'
+
+export interface BrowsePostsParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+    categoryId?: number;
+    minPrice?: number;
+    maxPrice?: number;
+    location?: string;
+}
+
+export interface PostPayload {
+    categoryId: number;
+    postTitle: string;
+    postContent?: string;
+    postPrice?: string | number;
+    postLocation?: string;
+    postContactPhone?: string;
+    images?: string[];
+    videos?: string[];
+    attributes?: Array<{
+        attributeId: number;
+        value: string;
+    }>;
+}
+
 export const postService = {
-    getMyPosts: async (userId: number) => {
-        try {
-            const response = await api.get('/posts/my-posts', { params: { userId } })
-            return response.data
-        } catch (error) {
-            console.error('Error fetching my posts:', error)
-        }
+    getPublicPosts: async (params?: BrowsePostsParams) => {
+        const response = await api.get('/posts/browse', { params })
+        return response.data
     },
 
-    createPost: async (postData: any) => {
-        try {
-            const response = await api.post('/posts', postData)
-            return response.data
-        } catch (error) {
-            console.error('Error creating post:', error)
-        }
+    getPostDetail: async (slug: string) => {
+        const response = await api.get(`/posts/detail/${slug}`)
+        return response.data
     },
 
-    updatePost: async (postId: number, data: any) => {
-        try {
-            const response = await api.patch(`/posts/${postId}`, data)
-            return response.data
-        } catch (error) {
-            console.error('Error updating post:', error)
-        }
+    recordContactClick: async (postId: number) => {
+        const response = await api.post(`/posts/${postId}/contact-click`)
+        return response.data
     },
 
-    // Upload ảnh (Dùng FormData cho Mobile)
-    uploadMedia: async (imageUris: string[]) => {
-        const formData = new FormData();
-        imageUris.forEach((uri, index) => {
-            const fileName = uri.split('/').pop();
-            const match = /\.(\w+)$/.exec(fileName || '');
-            const type = match ? `image/${match[1]}` : `image`;
+    getMyPosts: async () => {
+        const response = await api.get('/posts/my-posts')
+        return response.data
+    },
 
-            formData.append('media', {
-                uri,
-                name: fileName,
-                type,
-            } as any);
-        });
+    createPost: async (postData: PostPayload) => {
+        const response = await api.post('/posts', postData)
+        return response.data
+    },
 
-        return api.post('/upload', formData, {
+    updatePost: async (postId: number, data: Partial<PostPayload>) => {
+        const response = await api.patch(`/posts/${postId}`, data)
+        return response.data
+    },
+
+    deletePost: async (postId: number) => {
+        const response = await api.delete(`/posts/${postId}`)
+        return response.data
+    },
+
+    uploadMedia: async (mediaUris: string[]) => {
+        const formData = new FormData()
+
+        for (const uri of mediaUris) {
+            const cleanUri = uri.split('?')[0]
+            const fileName = cleanUri.split('/').pop() || 'upload.jpg'
+            const extension = fileName.split('.').pop()?.toLowerCase()
+
+            let type = 'image/jpeg'
+            if (extension === 'png') type = 'image/png'
+            else if (extension === 'webp') type = 'image/webp'
+            else if (extension === 'mp4') type = 'video/mp4'
+            else if (extension === 'mov') type = 'video/quicktime'
+            else if (extension === 'avi') type = 'video/x-msvideo'
+
+            if (Platform.OS === 'web') {
+                const response = await fetch(uri)
+                const blob = await response.blob()
+                const file = new File([blob], fileName, { type: blob.type || type })
+                formData.append('media', file)
+            } else {
+                formData.append('media', {
+                    uri,
+                    name: fileName,
+                    type,
+                } as any)
+            }
+        }
+
+        const response = await api.post('/upload', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        })
+
+        return response.data
     },
 
-    //lay du lieu category va attribute
     getCategories: async () => {
-        try {
-            const response = await api.get('/categories')
-            return response.data
-        } catch (error) {
-            console.error('Error fetching categories:', error)
-        }
+        const response = await api.get('/categories')
+        return response.data
     },
+
     getCategoryAttributes: async (categoryId: number) => {
-        try {
-            const response = await api.get(`/categories/${categoryId}/attributes`)
-            return response.data
-        } catch (error) {
-            console.error('Error fetching category attributes:', error)
-        }
+        const response = await api.get(`/categories/${categoryId}/attributes`)
+        return response.data
     }
 }

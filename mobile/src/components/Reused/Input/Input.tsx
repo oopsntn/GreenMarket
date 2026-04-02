@@ -12,6 +12,8 @@ interface InputProps {
     required?: boolean;
     type?: 'text' | KeyboardTypeOptions; // Thêm type để xác định kiểu bàn phím
     secureTextEntry?: boolean; // Thêm cho trường hợp nhập password
+    multiline?: boolean;
+    numberOfLines?: number;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -25,6 +27,8 @@ const Input: React.FC<InputProps> = ({
     disabled = false,
     required = false,
     secureTextEntry = false, // Thêm cho trường hợp nhập password
+    multiline,
+    numberOfLines,
 }) => {
     const [isFocused, setIsFocused] = useState(false);
     const keyboardType = (type === 'text' ? 'default' : type) as KeyboardTypeOptions
@@ -53,6 +57,7 @@ const Input: React.FC<InputProps> = ({
                     style={[
                         styles.input,
                         icon ? styles.inputWithIcon : null,
+                        multiline ? { height: numberOfLines ? (numberOfLines * 24) : 100, textAlignVertical: 'top', paddingTop: 12 } : null // Thêm style cho multiline
                     ]}
                     value={value}
                     placeholder={placeholder}
@@ -63,6 +68,8 @@ const Input: React.FC<InputProps> = ({
                     secureTextEntry={secureTextEntry}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
+                    multiline={multiline}
+                    numberOfLines={numberOfLines}
                 />
             </View>
 
@@ -90,7 +97,7 @@ const styles = StyleSheet.create({
         position: 'relative',
         flexDirection: 'row',
         alignItems: 'center',
-        height: 44,
+        minHeight: 44,
         borderRadius: 8, // Giả định var(--radius-md)
         borderWidth: 1,
         borderColor: '#d9d9d9', // Giả định var(--border-color)
@@ -98,10 +105,11 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        height: '100%',
         paddingHorizontal: 12,
+        paddingVertical: 8,
         fontSize: 14,
         color: '#000',
+        minHeight: 44,
     },
     inputFocused: {
         borderColor: '#52c41a', // Giả định var(--green-primary)

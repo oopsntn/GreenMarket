@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getPostDetail, recordContactClick } from '../services/api';
+import { getPostDetail, recordContactClick, submitReport } from '../services/api';
 import { 
-  MapPin, Phone, Calendar, ChevronLeft, ChevronRight, 
+  Phone, Calendar, ChevronLeft, ChevronRight, 
   Store, ShieldCheck, Share2, Heart, MessageCircle, Info,
-  Play, Maximize2, ShoppingBag, Eye
+  Play, Maximize2, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn
 } from 'lucide-react';
+import ImageModal from '../components/ImageModal';
 
 const PostDetail: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -14,6 +15,7 @@ const PostDetail: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [contactRevealed, setContactRevealed] = useState(false);
+    const [previewImageIndex, setPreviewImageIndex] = useState<number | null>(null);
 
     const handleRevealContact = async () => {
         setContactRevealed(true);
@@ -22,6 +24,19 @@ const PostDetail: React.FC = () => {
                 await recordContactClick(post.postId);
             } catch (error) {
                 console.error("Failed to record contact click", error);
+            }
+        }
+    };
+
+    const handleReport = async () => {
+        const reason = window.prompt("Nhập lý do báo cáo bài đăng này:");
+        if (reason && post?.postId) {
+            try {
+                await submitReport({ postId: post.postId, reportReason: reason });
+                alert("Cảm ơn bạn! Báo cáo của bạn đã được gửi tới quản trị viên.");
+            } catch (error) {
+                console.error("Failed to submit report", error);
+                alert("Có lỗi xảy ra khi gửi báo cáo.");
             }
         }
     };
@@ -65,6 +80,15 @@ const PostDetail: React.FC = () => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(price));
     };
 
+    const hasExactCoordinates = Boolean(post?.shop?.shopLat && post?.shop?.shopLng);
+    const locationLabel = post?.shop?.shopLocation || post?.postLocation || 'Ha Noi';
+    const mapEmbedUrl = hasExactCoordinates
+        ? `https://maps.google.com/maps?q=${post.shop.shopLat},${post.shop.shopLng}&t=&z=14&ie=UTF8&iwloc=&output=embed`
+        : `https://maps.google.com/maps?q=${encodeURIComponent(locationLabel)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
+    const directionsUrl = hasExactCoordinates
+        ? `https://www.google.com/maps/search/?api=1&query=${post.shop.shopLat},${post.shop.shopLng}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationLabel)}`;
+
     return (
         <div className="min-h-screen pb-24">
             {/* Top Navigation Bar */}
@@ -81,26 +105,48 @@ const PostDetail: React.FC = () => {
                         <button className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-500 transition-all">
                             <Heart className="w-5 h-5" />
                         </button>
+                        <button
+                            onClick={handleReport}
+                            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-amber-500 transition-all"
+                            title="Báo cáo bài đăng"
+                        >
+                            <AlertCircle className="w-5 h-5" />
+                        </button>
                     </div>
                 </div>
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                    
+
                     {/* Left Column: Media Gallery */}
-                    <div className="lg:col-span-7 space-y-6">
-                        <div className="relative aspect-square rounded-4xl overflow-hidden glass border-white/5 bg-surface group">
+                    <div className="lg:col-span-7 space-y-4">
+                        <div className="relative aspect-3/2 max-h-[520px] rounded-4xl overflow-hidden glass border-white/5 bg-surface group">
                             {mediaList.length > 0 ? (
                                 <>
                                     {currentMedia.type === 'image' ? (
-                                        <img 
-                                            src={currentMedia.url.startsWith('http') ? currentMedia.url : `http://localhost:5000${currentMedia.url}`} 
-                                            alt={post.postTitle}
-                                            className="w-full h-full object-cover"
-                                        />
+                                        <div 
+                                            className="relative w-full h-full cursor-zoom-in group/main" 
+                                            onClick={() => {
+                                                const imageIndex = mediaList
+                                                    .filter(m => m.type === 'image')
+                                                    .findIndex(m => m.url === currentMedia.url);
+                                                setPreviewImageIndex(imageIndex);
+                                            }}
+                                        >
+                                            <img
+                                                src={currentMedia.url.startsWith('http') ? currentMedia.url : `http://localhost:5000${currentMedia.url}`}
+                                                alt={post.postTitle}
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover/main:scale-105"
+                                            />
+                                            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/main:opacity-100 transition-opacity flex items-center justify-center">
+                                                <div className="p-4 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+                                                    <ZoomIn className="w-8 h-8 text-white" />
+                                                </div>
+                                            </div>
+                                        </div>
                                     ) : (
-                                        <video 
+                                        <video
                                             src={currentMedia.url.startsWith('http') ? currentMedia.url : `http://localhost:5000${currentMedia.url}`}
                                             controls
                                             className="w-full h-full object-contain bg-black"
@@ -110,13 +156,13 @@ const PostDetail: React.FC = () => {
                                     {/* Arrow Navigation */}
                                     {mediaList.length > 1 && (
                                         <>
-                                            <button 
+                                            <button
                                                 onClick={() => setActiveMediaIndex(prev => prev === 0 ? mediaList.length - 1 : prev - 1)}
                                                 className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-black/40 backdrop-blur-md text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-600"
                                             >
                                                 <ChevronLeft className="w-6 h-6" />
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => setActiveMediaIndex(prev => prev === mediaList.length - 1 ? 0 : prev + 1)}
                                                 className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-black/40 backdrop-blur-md text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-600"
                                             >
@@ -136,7 +182,7 @@ const PostDetail: React.FC = () => {
                         {/* Thumbnails */}
                         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
                             {mediaList.map((media, idx) => (
-                                <button 
+                                <button
                                     key={idx}
                                     onClick={() => setActiveMediaIndex(idx)}
                                     className={`relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 border-2 transition-all ${activeMediaIndex === idx ? 'border-emerald-500 scale-105 shadow-lg shadow-emerald-500/20' : 'border-transparent opacity-60 hover:opacity-100'}`}
@@ -150,6 +196,38 @@ const PostDetail: React.FC = () => {
                                     )}
                                 </button>
                             ))}
+                        </div>
+                        {/* Content Section */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-6">
+                            <div className="lg:col-span-8 space-y-6">
+                                {/* Description */}
+                                <div className="space-y-6">
+                                    <h2 className="text-2xl font-black flex items-center gap-3">
+                                        <Info className="w-8 h-8 text-emerald-500" /> Chi tiết sản phẩm
+                                    </h2>
+                                    <div className="glass p-6 rounded-3xl border-white/5 prose prose-invert max-w-none text-slate-300 leading-relaxed text-sm">
+                                        {post.postContent || 'Không có mô tả chi tiết cho sản phẩm này.'}
+                                    </div>
+                                </div>
+
+                                {/* Specifications/Attributes */}
+                                {post.attributes && post.attributes.length > 0 && (
+                                    <div className="space-y-6">
+                                        <h2 className="text-2xl font-black flex items-center gap-3">
+                                            <Maximize2 className="w-8 h-8 text-emerald-500" /> Thông số kỹ thuật
+                                        </h2>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {post.attributes.map((attr: any, idx: number) => (
+                                                <div key={idx} className="glass p-4 rounded-2xl border-white/5 flex items-center justify-between">
+                                                    <span className="text-slate-400 text-sm">{attr.name || `Thông số ${idx + 1}`}</span>
+                                                    <span className="text-white font-bold text-sm uppercase">{attr.value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="text-xs text-slate-600 italic mt-2">* Thông số hiển thị dựa trên mã định danh thuộc tính hệ thống.</div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -177,9 +255,9 @@ const PostDetail: React.FC = () => {
                                 <span className="text-slate-500 font-medium">/ cây/gốc</span>
                             </div>
 
-                            <div className="space-y-4 pb-6 border-b border-white/5">
+                            <div className="space-y-4 pb-2">
                                 {!contactRevealed ? (
-                                    <button 
+                                    <button
                                         onClick={handleRevealContact}
                                         className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/40"
                                     >
@@ -187,13 +265,13 @@ const PostDetail: React.FC = () => {
                                     </button>
                                 ) : (
                                     <>
-                                        <a 
+                                        <a
                                             href={`tel:${post.shop?.shopPhone || post.postContactPhone}`}
                                             className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/40"
                                         >
                                             <Phone className="w-6 h-6" /> {post.shop?.shopPhone || post.postContactPhone || 'Không có số'}
                                         </a>
-                                        <a 
+                                        <a
                                             href={`https://zalo.me/${post.shop?.shopPhone || post.postContactPhone}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
@@ -204,26 +282,54 @@ const PostDetail: React.FC = () => {
                                     </>
                                 )}
                             </div>
-
-                            <div className="flex items-center justify-between gap-3 text-slate-300">
-                                <div className="flex items-center gap-3">
-                                    <MapPin className="w-5 h-5 text-emerald-500" />
-                                    <span className="font-medium">{post.postLocation || 'Thạch Thất, Hà Nội'}</span>
-                                </div>
-                                <a 
-                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(post.postLocation || 'Hà Nội')}`}
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                    className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest hover:underline whitespace-nowrap"
-                                >
-                                    Xem bản đồ
-                                </a>
-                            </div>
                         </div>
 
                         {/* Shop Profile Card */}
+                        <div className="glass p-6 rounded-4xl border-white/5 space-y-5">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                    <MapIcon className="w-5 h-5 text-emerald-500" />
+                                </div>
+                                <h2 className="text-xl font-black tracking-tight uppercase">Bản đồ vị trí</h2>
+                            </div>
+
+                            <div className="relative aspect-square rounded-3xl border border-white/5 overflow-hidden shadow-2xl bg-slate-900">
+                                <iframe
+                                    title="Google Maps Post Location"
+                                    width="100%"
+                                    height="100%"
+                                    frameBorder="0"
+                                    style={{ border: 0 }}
+                                    src={mapEmbedUrl}
+                                    allowFullScreen
+                                />
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500">Địa chỉ</p>
+                                    <p className="text-sm font-bold text-slate-200">{locationLabel}</p>
+                                </div>
+
+                                <a
+                                    href={directionsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-3 transition-all group shadow-xl shadow-emerald-900/40"
+                                >
+                                    <ExternalLink className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                                    Nhận chỉ đường
+                                </a>
+
+                                <div className="flex items-center gap-3 text-[10px] text-slate-500 italic bg-white/5 p-3 rounded-xl border border-white/5">
+                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500/50" />
+                                    <span>{hasExactCoordinates ? 'Vị trí theo tọa độ của nhà vườn.' : 'Vị trí ước tính theo địa chỉ bài đăng.'}</span>
+                                </div>
+                            </div>
+                        </div>
+
                         {post.shop && (
-                            <Link 
+                            <Link
                                 to={`/shop/${post.postShopId}`}
                                 className="glass p-8 rounded-4xl border-emerald-500/20 bg-linear-to-br from-emerald-500/5 to-transparent space-y-6 group cursor-pointer overflow-hidden relative block"
                             >
@@ -249,40 +355,18 @@ const PostDetail: React.FC = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Content Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mt-16">
-                    <div className="lg:col-span-8 space-y-12">
-                        {/* Description */}
-                        <div className="space-y-6">
-                            <h2 className="text-3xl font-black flex items-center gap-4">
-                                <Info className="w-8 h-8 text-emerald-500" /> Chi tiết sản phẩm
-                            </h2>
-                            <div className="glass p-8 rounded-4xl border-white/5 prose prose-invert max-w-none text-slate-300 leading-loose">
-                                {post.postContent || 'Không có mô tả chi tiết cho sản phẩm này.'}
-                            </div>
-                        </div>
-
-                        {/* Specifications/Attributes */}
-                        {post.attributes && post.attributes.length > 0 && (
-                            <div className="space-y-6">
-                                <h2 className="text-3xl font-black flex items-center gap-4">
-                                    <Maximize2 className="w-8 h-8 text-emerald-500" /> Thông số kỹ thuật
-                                </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {post.attributes.map((attr: any, idx: number) => (
-                                        <div key={idx} className="glass p-6 rounded-3xl border-white/5 flex items-center justify-between">
-                                            <span className="text-slate-400 font-medium">{attr.name || `Thông số ${idx + 1}`}</span>
-                                            <span className="text-white font-black uppercase">{attr.value}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="text-xs text-slate-600 italic mt-2">* Thông số hiển thị dựa trên mã định danh thuộc tính hệ thống.</div>
-                            </div>
-                        )}
-                    </div>
-                </div>
             </div>
+
+            <ImageModal 
+                isOpen={previewImageIndex !== null} 
+                images={mediaList
+                    .filter(m => m.type === 'image')
+                    .map(m => m.url.startsWith('http') ? m.url : `http://localhost:5000${m.url}`)
+                }
+                initialIndex={previewImageIndex || 0}
+                onClose={() => setPreviewImageIndex(null)} 
+                alt={post.postTitle}
+            />
         </div>
     );
 };

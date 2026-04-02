@@ -1,6 +1,6 @@
 # GreenMarket API Documentation
 
-Last updated: 2026-03-27
+Last updated: 2026-03-31
 
 This document lists APIs that are already implemented in `back-end/src/routes`.
 It is intended for `mobile` and `admin-web` teams.
@@ -54,25 +54,50 @@ It is intended for `mobile` and `admin-web` teams.
 |---|---|---|---|---|
 | GET | `/api/posts/browse` | No | Get public posts with filters | query filters supported by backend service |
 | GET | `/api/posts/detail/:slug` | No | Get public post detail | path `slug` |
-| POST | `/api/posts` | No | Create user post | required: `userId`, `categoryId`, `postTitle` |
-| GET | `/api/posts/my-posts` | No | Get current user posts | query `userId` |
-| PATCH | `/api/posts/:id` | No | Update user post | body must include `userId`; post owner only |
-| DELETE | `/api/posts/:id` | No | Soft delete user post | body must include `userId`; post owner only |
+| POST | `/api/posts/:id/contact-click` | No | Record buyer contact click (analytics counter) | path `id` |
+| POST | `/api/posts` | User token | Create user post | required: `categoryId`, `postTitle` |
+| GET | `/api/posts/my-posts` | User token | Get current user posts | none |
+| PATCH | `/api/posts/:id` | User token | Update user post | path `id` (post owner only) |
+| DELETE | `/api/posts/:id` | User token | Soft delete user post | path `id` (post owner only) |
 
 ### Shops
 
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
-| POST | `/api/shops/register` | No | Register shop | required: `userId`, `shopName` |
-| GET | `/api/shops/my-shop` | No | Get user shop | query `userId` |
+| GET | `/api/shops/browse` | No | Browse active public shops (paginated) | optional query: `page`, `limit` |
+| POST | `/api/shops/register` | User token | Register shop | required: `shopName` |
+| GET | `/api/shops/my-shop` | User token | Get current user's shop | none |
 | GET | `/api/shops/:id` | No | Get public shop detail with approved posts | path `id` |
-| PATCH | `/api/shops/:id` | No | Update shop info | `shopName`, `shopPhone`, `shopLocation`, `shopDescription`, `shopLat`, `shopLng` |
+| PATCH | `/api/shops/:id` | User token | Update shop info | `shopName`, `shopPhone`, `shopLocation`, `shopDescription`, `shopLat`, `shopLng` |
 
 ### Reports
 
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
 | POST | `/api/reports` | No | Submit report for post | required: `postId`, `reportReason`; optional: `reporterId` |
+
+### Promotion (User)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/promotions/packages` | No | Get published promotion packages | none |
+| GET | `/api/promotions/packages/:id` | No | Get promotion package detail | path `id` |
+
+**Response fields (highlights):**
+- `promotionPackageId`, `promotionPackageTitle`, `promotionPackageDurationDays`, `promotionPackagePrice`
+- `slotCode`, `slotTitle`, `slotCapacity`
+- `slotRules` (JSON): currently supports `priority` for feed ranking weight.
+
+**Promotion ranking behavior:**
+- `/api/posts/browse` prioritizes promoted posts by `slotRules.priority` (descending).
+- If slot priority is missing/invalid, fallback priority is `1`.
+
+### Payment (User)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| POST | `/api/payment/buy-package` | User token | Create VNPay payment URL for package | `postId`, `packageId` |
+| GET | `/api/payment/vnpay-return` | No | VNPay redirect result (callback) | query params from VNPay |
 
 ## Admin APIs
 
@@ -163,9 +188,9 @@ All admin APIs are mounted under `/api/admin/*` and require:
 
 ## Current Implementation Notes
 
-- `mobile/user` domain has mixed auth style:
-  - `/api/profile` uses JWT user token.
-  - Many other user endpoints currently use `userId` from query/body and do not enforce JWT yet.
+- User APIs are split into:
+  - Public endpoints: browse/detail APIs (`/api/posts/browse`, `/api/posts/detail/:slug`, `/api/shops/browse`, `/api/shops/:id`).
+  - Protected endpoints: user-owned resource APIs require JWT (`/api/profile`, `/api/posts`, `/api/posts/my-posts`, `/api/shops/register`, `/api/shops/my-shop`, etc.).
+- `POST /api/posts/:id/contact-click` tracks buyer contact intent per post for analytics.
 - `admin` domain is now protected by JWT and role-based checks.
 - Static uploaded files are served at `/uploads/<filename>`.
-

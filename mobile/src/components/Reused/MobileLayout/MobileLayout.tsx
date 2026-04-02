@@ -20,6 +20,7 @@ interface MobileLayoutProps {
     children: React.ReactNode;
     bottom?: React.ReactNode;
     backButton?: () => void;
+    leftAction?: React.ReactNode;
     rightAction?: React.ReactNode;
     headerStyle?: 'default' | 'transparent' | 'gradient';
     containerStyle?: ViewStyle;
@@ -31,6 +32,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     children,
     bottom,
     backButton,
+    leftAction,
     rightAction,
     headerStyle = 'default',
     containerStyle,
@@ -40,11 +42,15 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     // Tach phan noi dung ben trong Header ra de dung chung
     const renderHeaderContent = () => (
         <View style={styles.headerContent}>
-            {backButton && (
-                <TouchableOpacity onPress={backButton} style={styles.backButton}>
-                    <ChevronLeft size={28} color={headerStyle === 'default' ? '#fff' : '#333'} />
-                </TouchableOpacity>
-            )}
+            <View style={styles.leftAction}>
+                {leftAction ? leftAction : (
+                    backButton && (
+                        <TouchableOpacity onPress={backButton}>
+                            <ChevronLeft size={28} color={headerStyle === 'default' ? '#fff' : '#333'} />
+                        </TouchableOpacity>
+                    )
+                )}
+            </View>
 
             <Text numberOfLines={1}
                 style={[
@@ -158,6 +164,10 @@ const styles = StyleSheet.create({
         textAlign: 'center', // Căn giữa tiêu đề (đặc trưng Mobile)
     },
     backButton: {
+        paddingRight: 12,
+        zIndex: 1,
+    },
+    leftAction: {
         paddingRight: 12,
         zIndex: 1,
     },

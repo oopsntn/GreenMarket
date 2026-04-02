@@ -18,6 +18,10 @@ interface Shop {
   shopDescription?: string;
   shopPhone?: string;
   shopLocation?: string;
+  shopLogoUrl?: string | null;
+  shopCoverUrl?: string | null;
+  shopGalleryImages?: string[];
+  shopPreviewImageUrl?: string | null;
   shopLat?: number;
   shopLng?: number;
 }
@@ -35,6 +39,26 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const normalizeUser = (rawUser: any): User | null => {
+  if (!rawUser) return null;
+
+  const id = Number(rawUser.id ?? rawUser.userId);
+  if (!Number.isFinite(id)) return null;
+
+  const userMobile = rawUser.userMobile ?? rawUser.mobile ?? "";
+  const userDisplayName = rawUser.userDisplayName ?? rawUser.name ?? null;
+
+  return {
+    id,
+    userMobile,
+    userDisplayName,
+    userAvatarUrl: rawUser.userAvatarUrl ?? null,
+    userEmail: rawUser.userEmail ?? null,
+    userLocation: rawUser.userLocation ?? null,
+    userBio: rawUser.userBio ?? null,
+  };
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -56,20 +80,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const storedUser = localStorage.getItem('user');
 
     if (storedToken && storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setToken(storedToken);
-      setUser(parsedUser);
-      // Fetch shop in background
-      fetchShop();
+      const parsedUser = normalizeUser(JSON.parse(storedUser));
+      if (parsedUser) {
+        setToken(storedToken);
+        setUser(parsedUser);
+        localStorage.setItem('user', JSON.stringify(parsedUser));
+        // Fetch shop in background
+        fetchShop();
+      } else {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
 
   const login = (newToken: string, newUser: User) => {
+    const normalizedUser = normalizeUser(newUser);
+    if (!normalizedUser) return;
+
     setToken(newToken);
-    setUser(newUser);
+    setUser(normalizedUser);
     localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(newUser));
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
     // Fetch shop after login
     fetchShop();
   };

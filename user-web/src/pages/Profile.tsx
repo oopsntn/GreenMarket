@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail } from 'lucide-react';
-import { updateProfile, updateShop, getProfile, uploadMedia } from '../services/api';
+import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X } from 'lucide-react';
+import { updateProfile, updateShop, getProfile, uploadImages } from '../services/api';
 import clsx from 'clsx';
 import AddressPicker from '../components/AddressPicker';
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 
 const Profile: React.FC = () => {
   const { user, shop, updateUser, refreshShop } = useAuth();
@@ -22,11 +24,14 @@ const Profile: React.FC = () => {
   const [shopDescription, setShopDescription] = useState('');
   const [shopLat, setShopLat] = useState<number | undefined>();
   const [shopLng, setShopLng] = useState<number | undefined>();
+  const [shopGalleryImages, setShopGalleryImages] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const shopGalleryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,6 +52,7 @@ const Profile: React.FC = () => {
           setShopDescription(shop.shopDescription || '');
           setShopLat(shop.shopLat);
           setShopLng(shop.shopLng);
+          setShopGalleryImages(Array.isArray((shop as any).shopGalleryImages) ? (shop as any).shopGalleryImages : []);
         }
       } catch (error) {
         console.error("Failed to fetch data:", error);
@@ -63,13 +69,18 @@ const Profile: React.FC = () => {
     fileInputRef.current?.click();
   };
 
+  const toMediaUrl = (url?: string | null) => {
+    if (!url) return '';
+    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setSaving(true);
     try {
-      const res = await uploadMedia([file]);
+      const res = await uploadImages([file]);
       const newAvatarUrl = res.data.urls[0];
       setAvatarUrl(newAvatarUrl);
       setMessage({ type: 'success', text: 'Đã tải ảnh lên. Nhấn Lưu để hoàn tất.' });
@@ -79,6 +90,33 @@ const Profile: React.FC = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleShopGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0) return;
+
+    setUploadingGallery(true);
+    try {
+      const res = await uploadImages(files);
+      const uploadedUrls: string[] = Array.isArray(res.data?.urls) ? res.data.urls : [];
+      if (uploadedUrls.length > 0) {
+        setShopGalleryImages((prev) => [...prev, ...uploadedUrls].slice(0, 4));
+        setMessage({ type: 'success', text: 'Da tai anh nha vuon. Nhan Luu de cap nhat.' });
+      }
+    } catch (error) {
+      console.error("Failed to upload shop gallery:", error);
+      setMessage({ type: 'error', text: 'Khong the tai anh nha vuon.' });
+    } finally {
+      setUploadingGallery(false);
+      if (shopGalleryInputRef.current) {
+        shopGalleryInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeShopGalleryImage = (index: number) => {
+    setShopGalleryImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -94,13 +132,13 @@ const Profile: React.FC = () => {
           shopPhone,
           shopLocation,
           shopDescription,
+          shopGalleryImages,
           shopLat,
           shopLng
         });
 
         // Also update regular profile parts that might be shared (like avatar/email)
         await updateProfile({
-          userAvatarUrl: avatarUrl,
           userEmail: email,
           userDisplayName: shopName // Keep display name in sync with shop name for shop owners
         });
@@ -146,33 +184,41 @@ const Profile: React.FC = () => {
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl -z-10" />
 
             <div className="relative inline-block mb-6">
-              <div
-                onClick={handleAvatarClick}
-                className="w-32 h-32 rounded-full border-4 border-white/10 overflow-hidden bg-surface cursor-pointer group-hover:border-emerald-500/50 transition-all shadow-2xl"
-              >
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl.startsWith('http') ? avatarUrl : `http://localhost:5000${avatarUrl}`}
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-emerald-500/10">
-                    <User className="w-12 h-12 text-emerald-500" />
-                  </div>
-                )}
-
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="w-8 h-8 text-white" />
+              {shop ? (
+                <div className="w-32 h-32 rounded-3xl border-4 border-white/10 overflow-hidden bg-surface transition-all shadow-2xl flex items-center justify-center">
+                  <Store className="w-12 h-12 text-emerald-500" />
                 </div>
-              </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={handleFileChange}
-              />
+              ) : (
+                <>
+                  <div
+                    onClick={handleAvatarClick}
+                    className="w-32 h-32 rounded-full border-4 border-white/10 overflow-hidden bg-surface cursor-pointer group-hover:border-emerald-500/50 transition-all shadow-2xl"
+                  >
+                    {avatarUrl ? (
+                      <img
+                        src={toMediaUrl(avatarUrl)}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-emerald-500/10">
+                        <User className="w-12 h-12 text-emerald-500" />
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                </>
+              )}
             </div>
 
             <h2 className="text-xl font-bold mb-1 line-clamp-1 uppercase tracking-tight">
@@ -317,6 +363,56 @@ const Profile: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {shop && (
+                <div className="space-y-4">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
+                    Anh nha vuon (toi da 4 anh)
+                  </label>
+
+                  {shopGalleryImages.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {shopGalleryImages.map((imageUrl, index) => (
+                        <div key={`${imageUrl}-${index}`} className="relative rounded-2xl overflow-hidden border border-white/10 bg-surface aspect-square">
+                          <img
+                            src={toMediaUrl(imageUrl)}
+                            alt={`Anh nha vuon ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeShopGalleryImage(index)}
+                            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 border border-white/20 text-white flex items-center justify-center hover:bg-rose-600 transition-colors"
+                            title="Xoa anh"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/10 p-4 text-xs text-slate-500">
+                      Chua co anh nha vuon. Tai anh de tang do tin cay khi khach vao trang shop.
+                    </div>
+                  )}
+
+                  <div className="relative border border-dashed border-white/10 rounded-2xl p-4 bg-surface hover:border-emerald-500/40 transition-all">
+                    <input
+                      ref={shopGalleryInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      disabled={uploadingGallery || shopGalleryImages.length >= 4}
+                      onChange={handleShopGalleryUpload}
+                      className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                    />
+                    <div className="flex items-center gap-3 text-sm text-slate-300">
+                      <UploadCloud className="w-5 h-5 text-emerald-500" />
+                      <span>{uploadingGallery ? 'Dang tai anh...' : (shopGalleryImages.length >= 4 ? 'Da dat gioi han 4 anh' : 'Bam de tai them anh nha vuon')}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
         {/* Expansion Section */}
         <div className="space-y-6">

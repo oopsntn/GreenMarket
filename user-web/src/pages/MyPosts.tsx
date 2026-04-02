@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { getMyPosts, deleteUserPost, updateUserPost } from '../services/api';
-import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2 } from 'lucide-react';
+import { getMyPosts, deleteUserPost, updateUserPost, getPromotionPackages, buyPromotionPackage, getCategories, getCategoryAttributes } from '../services/api';
+import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useCurrencyInput } from '../hooks/useCurrencyInput';
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 
 const MyPosts: React.FC = () => {
   const { user, shop } = useAuth();
@@ -14,7 +17,18 @@ const MyPosts: React.FC = () => {
   // Edit Modal State
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [editPrice, setEditPrice] = useState("");
+  const editPriceInput = useCurrencyInput("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editContactPhone, setEditContactPhone] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [categories, setCategories] = useState<any[]>([]);
+  const [editCategoryAttributes, setEditCategoryAttributes] = useState<any[]>([]);
+  const [editAttributes, setEditAttributes] = useState<Record<number, string>>({});
+  const [boostingPost, setBoostingPost] = useState<any | null>(null);
+  const [boostPackages, setBoostPackages] = useState<any[]>([]);
+  const [boostLoading, setBoostLoading] = useState(false);
+  const [boostBuyingId, setBoostBuyingId] = useState<number | null>(null);
 
   useEffect(() => {
     // Default to shop tab if user has a shop
@@ -36,6 +50,18 @@ const MyPosts: React.FC = () => {
     fetchPosts();
   }, [user?.id]);
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await getCategories();
+        setCategories(res.data || []);
+      } catch (error) {
+        console.error('Failed to fetch categories for edit modal:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const handleDelete = async (postId: number) => {
     if (!user?.id) return;
     if (window.confirm('Bạn có chắc chắn muốn xóa bài đăng này không?')) {
@@ -50,10 +76,87 @@ const MyPosts: React.FC = () => {
     }
   };
 
-  const openEditModal = (post: any) => {
+  const loadCategoryAttributes = async (categoryId: string) => {
+    if (!categoryId) {
+      setEditCategoryAttributes([]);
+      setEditAttributes({});
+      return;
+    }
+    try {
+      const res = await getCategoryAttributes(Number(categoryId));
+      setEditCategoryAttributes(res.data || []);
+    } catch (error) {
+      console.error('Failed to fetch category attributes for edit modal:', error);
+      setEditCategoryAttributes([]);
+    }
+  };
+
+  const handleEditCategoryChange = async (categoryId: string) => {
+    setEditCategoryId(categoryId);
+    setEditAttributes({});
+    await loadCategoryAttributes(categoryId);
+  };
+
+  const handleEditAttributeChange = (attrId: number, value: string) => {
+    setEditAttributes(prev => ({
+      ...prev,
+      [attrId]: value
+    }));
+  };
+
+  const toMediaUrl = (url?: string | null) => {
+    if (!url) return '';
+    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+  };
+
+  const getSellerAvatar = (post: any) => {
+    if (post?.postShopId) {
+      return toMediaUrl(
+        post?.shop?.shopPreviewImageUrl
+        || post?.shop?.shopGalleryImages?.[0]
+        || post?.shop?.shopLogoUrl
+        || shop?.shopPreviewImageUrl
+        || shop?.shopGalleryImages?.[0]
+        || shop?.shopLogoUrl
+        || ''
+      );
+    }
+    return toMediaUrl(post?.author?.userAvatarUrl || user?.userAvatarUrl || '');
+  };
+
+  const getSellerName = (post: any) => {
+    if (post?.postShopId) {
+      return post?.shop?.shopName || shop?.shopName || 'Nha vuon';
+    }
+    return post?.author?.userDisplayName || post?.author?.userMobile || user?.userDisplayName || user?.userMobile || 'Nguoi ban';
+  };
+
+  const getPrefilledAttributes = (post: any): Record<number, string> => {
+    if (!Array.isArray(post?.attributes)) return {};
+
+    return post.attributes.reduce((acc: Record<number, string>, item: any) => {
+      const rawId = item?.attributeId ?? item?.id;
+      const rawValue = item?.value ?? item?.attributeValue;
+      const attributeId = Number(rawId);
+
+      if (!Number.isNaN(attributeId) && rawValue !== undefined && rawValue !== null) {
+        acc[attributeId] = String(rawValue);
+      }
+
+      return acc;
+    }, {});
+  };
+
+  const openEditModal = async (post: any) => {
     setEditingPost(post);
     setEditTitle(post.postTitle);
-    setEditPrice(post.postPrice);
+    editPriceInput.setRawValue(post.postPrice ?? "");
+    setEditCategoryId(post.categoryId ? String(post.categoryId) : "");
+    setEditLocation(post.postLocation || "");
+    setEditContactPhone(post.postContactPhone || "");
+    setEditContent(post.postContent || "");
+    setEditAttributes(getPrefilledAttributes(post));
+    await loadCategoryAttributes(post.categoryId ? String(post.categoryId) : "");
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -61,11 +164,27 @@ const MyPosts: React.FC = () => {
     if (!editingPost || !user?.id) return;
 
     try {
+      const formattedAttributes = Object.entries(editAttributes)
+        .filter(([, value]) => String(value).trim() !== "")
+        .map(([attributeId, value]) => ({
+          attributeId: Number(attributeId),
+          value
+        }));
+
       await updateUserPost(editingPost.postId, {
+        categoryId: editCategoryId ? Number(editCategoryId) : undefined,
         postTitle: editTitle,
-        postPrice: editPrice
+        postPrice: editPriceInput.rawValue,
+        postLocation: editLocation,
+        postContactPhone: editContactPhone,
+        postContent: editContent,
+        attributes: formattedAttributes,
       });
-      alert('Đã cập nhật bài đăng thành công! Bài viết sẽ được chuyển về trạng thái chờ duyệt.');
+      if (shop?.shopStatus === 'active') {
+        alert('Đã cập nhật bài đăng thành công! Bài viết được hiển thị ngay.');
+      } else {
+        alert('Đã cập nhật bài đăng thành công! Bài viết sẽ được chuyển về trạng thái chờ duyệt.');
+      }
       setEditingPost(null);
       // Refresh list to get updated status
       const postsRes = await getMyPosts();
@@ -73,6 +192,71 @@ const MyPosts: React.FC = () => {
     } catch (error) {
       console.error('Failed to update post', error);
       alert('Có lỗi xảy ra khi cập nhật bài đăng.');
+    }
+  };
+
+  const getPlanType = (days: number) => {
+    if (days <= 3) {
+      return { label: 'Gói Ngày', subtitle: 'Thử nghiệm nhanh cho bài mới' };
+    }
+    if (days <= 14) {
+      return { label: 'Gói Tuần', subtitle: 'Phù hợp chu kỳ cân nhắc của người mua' };
+    }
+    return { label: 'Gói Tháng', subtitle: 'Duy trì hiện diện ổn định, bền vững' };
+  };
+
+  const getDisplayPackages = (allPackages: any[]) => {
+    const sorted = [...allPackages].sort(
+      (a, b) => Number(a.promotionPackageDurationDays || 0) - Number(b.promotionPackageDurationDays || 0)
+    );
+
+    const pickClosest = (target: number, filter: (days: number) => boolean) => {
+      const filtered = sorted.filter((pkg) => filter(Number(pkg.promotionPackageDurationDays || 0)));
+      if (filtered.length === 0) return null;
+      return filtered.reduce((best, current) => {
+        const bestDiff = Math.abs(Number(best.promotionPackageDurationDays || 0) - target);
+        const currentDiff = Math.abs(Number(current.promotionPackageDurationDays || 0) - target);
+        return currentDiff < bestDiff ? current : best;
+      });
+    };
+
+    return [
+      pickClosest(1, (days) => days <= 3),
+      pickClosest(7, (days) => days > 3 && days <= 14),
+      pickClosest(30, (days) => days > 14),
+    ].filter(Boolean);
+  };
+
+  const openBoostModal = async (post: any) => {
+    setBoostingPost(post);
+    setBoostLoading(true);
+    try {
+      const res = await getPromotionPackages();
+      setBoostPackages(getDisplayPackages(res.data || []));
+    } catch (error) {
+      console.error('Failed to load boost packages:', error);
+      alert('Khong the tai goi uu tien hien thi. Vui long thu lai.');
+      setBoostingPost(null);
+    } finally {
+      setBoostLoading(false);
+    }
+  };
+
+  const handleBuyBoost = async (packageId: number) => {
+    if (!boostingPost?.postId) return;
+    setBoostBuyingId(packageId);
+    try {
+      const res = await buyPromotionPackage(boostingPost.postId, packageId);
+      if (res.data.paymentUrl) {
+        window.location.href = res.data.paymentUrl;
+      } else {
+        alert('Không nhận được URL thanh toán từ hệ thống.');
+      }
+    } catch (err: any) {
+      console.error('Failed to create boost payment', err);
+      alert(err.response?.data?.error || 'Có lỗi xảy ra khi tạo giao dịch thanh toán.');
+    } finally {
+      setBoostBuyingId(null);
     }
   };
 
@@ -147,10 +331,20 @@ const MyPosts: React.FC = () => {
             {shop ? (
               <div className="glass p-8 rounded-4xl border-emerald-500/20 shadow-2xl shadow-emerald-500/5 flex flex-col md:flex-row gap-8 items-center bg-linear-to-br from-surface to-background relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-3xl -mr-32 -mt-32"></div>
-                <div className="w-24 h-24 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500 shrink-0">
-                  <Store className="w-12 h-12" />
-                </div>
-                <Link 
+                {(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl) ? (
+                  <div className="w-24 h-24 rounded-3xl overflow-hidden border border-emerald-500/20 shrink-0">
+                    <img
+                      src={toMediaUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl || '')}
+                      alt={shop.shopName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500 shrink-0">
+                    <Store className="w-12 h-12" />
+                  </div>
+                )}
+                <Link
                   to={`/shop/${shop.shopId}`}
                   className="flex-1 text-center md:text-left group/shopLink cursor-pointer"
                 >
@@ -182,7 +376,7 @@ const MyPosts: React.FC = () => {
                   onClick={() => navigate('/register-shop')}
                   className="bg-amber-500 text-black px-10 py-4 rounded-2xl font-black uppercase text-sm hover:bg-amber-400 transition-all shadow-xl shadow-amber-950/20"
                 >
-                  🚀 Mở Nhà Vườn Ngay
+                  Mở Nhà Vườn Ngay
                 </button>
               </div>
             )}
@@ -201,12 +395,35 @@ const MyPosts: React.FC = () => {
               {filteredPosts.map((post) => (
                 <div key={post.postId} className="glass p-4 rounded-3xl border-white/5 hover:border-emerald-500/30 transition-all flex flex-col sm:flex-row items-center gap-6 group">
                   <div className="w-full sm:w-32 h-32 bg-white/5 rounded-2xl overflow-hidden shrink-0 relative">
-                    <div className="w-full h-full flex items-center justify-center text-slate-700">
-                      <PackageOpen className="w-10 h-10 group-hover:scale-110 transition-transform" />
-                    </div>
+                    {toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl) ? (
+                      <img
+                        src={toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl)}
+                        alt={post.postTitle}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-700">
+                        <PackageOpen className="w-10 h-10 group-hover:scale-110 transition-transform" />
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-2 mb-2">
+                      {getSellerAvatar(post) ? (
+                        <img
+                          src={getSellerAvatar(post)}
+                          alt={getSellerName(post)}
+                          className="w-7 h-7 rounded-full object-cover border border-white/10"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                          <User className="w-4 h-4 text-slate-500" />
+                        </div>
+                      )}
+                      <span className="text-xs text-slate-400 font-medium truncate">{getSellerName(post)}</span>
+                    </div>
+
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
                       <h3 className="text-base font-bold line-clamp-2 group-hover:text-emerald-400 transition-colors uppercase">{post.postTitle}</h3>
                       <div className="flex justify-center sm:justify-start">
@@ -256,6 +473,15 @@ const MyPosts: React.FC = () => {
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
+                    {post.postStatus === 'approved' && (
+                      <button
+                        title="Quảng bá bài viết"
+                        onClick={() => openBoostModal(post)}
+                        className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 hover:text-white hover:bg-emerald-600 transition-all group-hover:translate-x-1 border border-emerald-500/20"
+                      >
+                        <Zap className="w-5 h-5 fill-emerald-500 group-hover:fill-white" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -276,38 +502,199 @@ const MyPosts: React.FC = () => {
         </div>
       </div>
 
+      {boostingPost && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm shadow-2xl flex items-center justify-center z-50 p-4">
+          <div className="bg-surface border border-white/10 p-8 rounded-3xl w-full max-w-3xl shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl -mr-16 -mt-16"></div>
+            <div className="relative z-10 flex items-center justify-between mb-6 gap-4">
+              <div>
+                <h2 className="text-2xl font-black tracking-tight text-white">Chọn gói ưu tiên hiển thị</h2>
+                <p className="text-slate-400 text-sm mt-1 line-clamp-1">Bài đăng: {boostingPost.postTitle}</p>
+              </div>
+              <button
+                onClick={() => setBoostingPost(null)}
+                className="px-4 py-2 rounded-xl font-bold text-slate-400 bg-white/5 hover:bg-white/10 hover:text-white transition-all"
+              >
+                Đóng
+              </button>
+            </div>
+
+            {boostLoading ? (
+              <div className="min-h-[220px] flex flex-col items-center justify-center gap-3 text-slate-400">
+                <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                <p>Đang tải gói ưu tiên...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {boostPackages.map((pkg) => {
+                  const plan = getPlanType(Number(pkg.promotionPackageDurationDays || 0));
+                  return (
+                    <div key={pkg.promotionPackageId} className="glass p-5 rounded-2xl border border-white/10 hover:border-emerald-500/30 transition-all flex flex-col">
+                      <div className="mb-4">
+                        <h3 className="text-lg font-black uppercase tracking-tight text-white">{plan.label}</h3>
+                        <p className="text-xs text-slate-400 mt-1">{plan.subtitle}</p>
+                      </div>
+
+                      <div className="mb-4">
+                        <div className="text-2xl font-black text-white">
+                          {Number(pkg.promotionPackagePrice).toLocaleString()} <span className="text-sm text-slate-500">VND</span>
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1">Thời hạn: {pkg.promotionPackageDurationDays} ngày</div>
+                      </div>
+
+                      <ul className="space-y-2 mb-5 flex-1">
+                        <li className="flex items-start gap-2 text-xs text-slate-300">
+                          <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Ưu tiên hiển thị trong {pkg.promotionPackageDurationDays} ngày</span>
+                        </li>
+                        <li className="flex items-start gap-2 text-xs text-slate-300">
+                          <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                          <span>Cùng một cơ chế ưu tiên cho mỗi gói</span>
+                        </li>
+                      </ul>
+
+                      <button
+                        disabled={boostBuyingId !== null}
+                        onClick={() => handleBuyBoost(pkg.promotionPackageId)}
+                        className="w-full py-3 rounded-xl border font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all bg-emerald-600 border-emerald-500 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {boostBuyingId === pkg.promotionPackageId ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Mua gói'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Edit Modal */}
       {editingPost && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm shadow-2xl flex items-center justify-center z-50 p-4">
-          <div className="bg-surface border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl relative overflow-hidden">
+          <div className="bg-surface border border-white/10 p-8 rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl relative overflow-x-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl -mr-16 -mt-16"></div>
-            <h2 className="text-2xl font-black mb-6 flex items-center gap-2 tracking-tight text-white"><Store className="w-6 h-6 text-emerald-500" /> Sửa bài đăng</h2>
-            <form onSubmit={handleEditSubmit} className="relative z-10">
-              <div className="mb-5">
+            <h2 className="text-2xl font-black mb-6 flex items-center gap-2 tracking-tight text-white">
+              <Store className="w-6 h-6 text-emerald-500" /> Sửa bài đăng
+            </h2>
+
+            <form onSubmit={handleEditSubmit} className="relative z-10 space-y-5">
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Danh mục</label>
+                <select
+                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  value={editCategoryId}
+                  onChange={(e) => handleEditCategoryChange(e.target.value)}
+                  required
+                >
+                  <option value="">Chọn danh mục</option>
+                  {categories.map((cat) => (
+                    <option key={cat.categoryId} value={cat.categoryId}>{cat.categoryTitle}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Tiêu đề bài viết</label>
                 <input
                   type="text"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   required
                 />
               </div>
-              <div className="mb-8">
-                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Giá bán (VNĐ)</label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Giá bán (VND)</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="0"
+                    className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                    ref={editPriceInput.inputRef}
+                    value={editPriceInput.displayValue}
+                    onChange={editPriceInput.handleChange}
+                    inputMode="numeric"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Khu vực</label>
+                  <input
+                    type="text"
+                    className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    placeholder="Ví dụ: Thạch Thất, Hà Nội"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Số điện thoại liên hệ</label>
                 <input
-                  type="number"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                  value={editPrice}
-                  onChange={(e) => setEditPrice(e.target.value)}
-                  required
+                  type="text"
+                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  value={editContactPhone}
+                  onChange={(e) => setEditContactPhone(e.target.value)}
+                  placeholder="Nhập SĐT để người mua liên hệ"
                 />
               </div>
-              <div className="flex items-center gap-4">
+
+              <div>
+                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Mô tả chi tiết</label>
+                <textarea
+                  rows={5}
+                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="Mô tả chi tiết về cây, kích thước, tuổi, cách chăm sóc..."
+                />
+              </div>
+
+              {editCategoryAttributes.length > 0 && (
+                <div className="space-y-4">
+                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider">Thuộc tính chi tiết</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {editCategoryAttributes.map((attr) => (
+                      <div key={attr.attributeId} className="space-y-2">
+                        <label className="text-xs text-slate-400">
+                          {attr.attributeTitle} {attr.required && '*'}
+                        </label>
+                        {attr.attributeDataType === 'enum' && attr.attributeOptions ? (
+                          <select
+                            required={attr.required}
+                            className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                            value={editAttributes[attr.attributeId] || ''}
+                            onChange={(e) => handleEditAttributeChange(attr.attributeId, e.target.value)}
+                          >
+                            <option value="">Chọn {attr.attributeTitle}</option>
+                            {attr.attributeOptions.map((opt: string) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            required={attr.required}
+                            type={attr.attributeDataType === 'number' ? 'number' : 'text'}
+                            className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                            value={editAttributes[attr.attributeId] || ''}
+                            onChange={(e) => handleEditAttributeChange(attr.attributeId, e.target.value)}
+                            placeholder={`Nhập ${attr.attributeTitle}`}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-4 pt-2">
                 <button
                   type="button"
                   onClick={() => setEditingPost(null)}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-slate-400 bg-white/5 hover:bg-white/10 hover:text-white transition-all"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-slate-400 bg-surface hover:bg-white/10 hover:text-white transition-all"
                 >
                   Hủy bỏ
                 </button>
