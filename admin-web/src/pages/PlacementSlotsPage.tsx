@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -36,6 +36,8 @@ const statusFilterOptions: Array<PlacementSlotStatus | "All"> = [
   "Disabled",
 ];
 
+const PAGE_SIZE = 5;
+
 function PlacementSlotsPage() {
   const [slots, setSlots] = useState<PlacementSlot[]>(
     placementSlotService.getPlacementSlots(),
@@ -47,6 +49,7 @@ function PlacementSlotsPage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     PlacementSlotStatus | "All"
   >("All");
+  const [page, setPage] = useState(1);
 
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -100,6 +103,23 @@ function PlacementSlotsPage() {
       return matchesKeyword && matchesScope && matchesStatus;
     });
   }, [slots, searchKeyword, selectedScopeFilter, selectedStatusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredSlots.length / PAGE_SIZE));
+
+  const paginatedSlots = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredSlots.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredSlots, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword, selectedScopeFilter, selectedStatusFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const openViewModal = (slot: PlacementSlot) => {
     setSelectedSlot(slot);
