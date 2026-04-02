@@ -366,91 +366,116 @@ function CategoryAttributeMappingPage() {
             description="No category-attribute mappings match your current search. Try another keyword or add a new mapping."
           />
         ) : (
-          <div className="mapping-table-wrapper">
-            <table className="mapping-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Category</th>
-                  <th>Attribute</th>
-                  <th>Code</th>
-                  <th>Type</th>
-                  <th>Required</th>
-                  <th>Display Order</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredMappings.map((item) => (
-                  <tr key={item.id}>
-                    <td>#{item.id}</td>
-                    <td>{item.categoryName}</td>
-                    <td>{item.attributeName}</td>
-                    <td>{item.attributeCode}</td>
-                    <td>
-                      <StatusBadge label={item.attributeType} variant="type" />
-                    </td>
-                    <td>
-                      <StatusBadge
-                        label={item.required ? "Required" : "Optional"}
-                        variant={item.required ? "required" : "optional"}
-                      />
-                    </td>
-                    <td>{item.displayOrder}</td>
-                    <td>
-                      <StatusBadge
-                        label={item.status}
-                        variant={
-                          item.status === "Active" ? "active" : "disabled"
-                        }
-                      />
-                    </td>
-                    <td>
-                      <div className="mapping-actions">
-                        <button
-                          type="button"
-                          className="mapping-actions__edit"
-                          onClick={() => openEditModal(item)}
-                        >
-                          Edit
-                        </button>
-
-                        {item.status === "Active" ? (
-                          <button
-                            type="button"
-                            className="mapping-actions__disable"
-                            onClick={() =>
-                              openConfirmDialog(item.id, "disable")
-                            }
-                          >
-                            Disable
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="mapping-actions__enable"
-                            onClick={() => openConfirmDialog(item.id, "enable")}
-                          >
-                            Enable
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          className="mapping-actions__remove"
-                          onClick={() => openConfirmDialog(item.id, "remove")}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className="mapping-table-wrapper">
+              <table className="mapping-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Category</th>
+                    <th>Attribute</th>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th>Required</th>
+                    <th>Display Order</th>
+                    <th>Status</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedMappings.map((item) => (
+                    <tr key={item.id}>
+                      <td>#{item.id}</td>
+                      <td>{item.categoryName}</td>
+                      <td>{item.attributeName}</td>
+                      <td>{item.attributeCode}</td>
+                      <td>
+                        <StatusBadge label={item.attributeType} variant="type" />
+                      </td>
+                      <td>
+                        <StatusBadge
+                          label={item.required ? "Required" : "Optional"}
+                          variant={item.required ? "required" : "optional"}
+                        />
+                      </td>
+                      <td>{item.displayOrder}</td>
+                      <td>
+                        <StatusBadge
+                          label={item.status}
+                          variant={
+                            item.status === "Active" ? "active" : "disabled"
+                          }
+                        />
+                      </td>
+                      <td>
+                        <div className="mapping-actions">
+                          <button
+                            type="button"
+                            className="mapping-actions__edit"
+                            onClick={() => openEditModal(item)}
+                          >
+                            Edit
+                          </button>
+
+                          {item.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="mapping-actions__disable"
+                              onClick={() =>
+                                openConfirmDialog(item.id, "disable")
+                              }
+                            >
+                              Disable
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="mapping-actions__enable"
+                              onClick={() => openConfirmDialog(item.id, "enable")}
+                            >
+                              Enable
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            className="mapping-actions__remove"
+                            onClick={() => openConfirmDialog(item.id, "remove")}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mapping-pagination">
+              <span className="mapping-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="mapping-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </SectionCard>
 
