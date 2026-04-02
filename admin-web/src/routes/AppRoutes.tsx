@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 import ActivityLogPage from "../pages/ActivityLogPage";
+import AIInsightsPage from "../pages/AIInsightsPage";
 import AnalyticsPage from "../pages/AnalyticsPage";
 import AttributesPage from "../pages/AttributesPage";
 import BoostedPostsPage from "../pages/BoostedPostsPage";
@@ -106,6 +107,7 @@ function AppRoutes() {
             <Route path="boosted-posts" element={<BoostedPostsPage />} />
             <Route path="promotions" element={<PromotionsPage />} />
             <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="ai-insights" element={<AIInsightsPage />} />
             <Route path="revenue" element={<RevenuePage />} />
             <Route
               path="customer-spending"

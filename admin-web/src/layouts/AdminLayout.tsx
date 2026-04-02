@@ -17,6 +17,7 @@ const menuItems = [
   { label: "Boosted Posts", path: "/boosted-posts" },
   { label: "Promotions", path: "/promotions" },
   { label: "Analytics", path: "/analytics" },
+  { label: "AI Insights", path: "/ai-insights" },
   { label: "Revenue", path: "/revenue" },
   { label: "Customer Spending", path: "/customer-spending" },
   { label: "Export CSV", path: "/export" },
