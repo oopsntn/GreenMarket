@@ -4,9 +4,14 @@ import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { templateService } from "../services/templateService";
 import type { Template, TemplateType } from "../types/template";
 import "./TemplateBuilderPage.css";
+
+type BuilderChannel = "Email" | "In-App Notification" | "Moderation Note";
+type BuilderAudience = "Seller" | "Reporter" | "Internal Admin";
+type BuilderTone = "Formal" | "Supportive" | "Direct";
 
 const PAGE_SIZE = 4;
 
@@ -17,6 +22,46 @@ const typeFilterOptions: Array<TemplateType | "All"> = [
   "Notification",
 ];
 
+const buildPreviewMessage = (
+  template: Template | null,
+  audience: BuilderAudience,
+  tone: BuilderTone,
+  fields: {
+    shopName: string;
+    postTitle: string;
+    reason: string;
+    slotName: string;
+    contactEmail: string;
+    adminNote: string;
+  },
+) => {
+  if (!template) return "";
+
+  const toneLead: Record<BuilderTone, string> = {
+    Formal: "Please review the following update from the GreenMarket admin team.",
+    Supportive:
+      "We wanted to share a quick update and the next recommended action for this case.",
+    Direct: "Review the following action immediately.",
+  };
+
+  const audienceTail: Record<BuilderAudience, string> = {
+    Seller: `Affected shop: ${fields.shopName}. Related post: ${fields.postTitle}.`,
+    Reporter: `Report context: ${fields.reason}. Assigned contact: ${fields.contactEmail}.`,
+    "Internal Admin": `Operational focus: ${fields.slotName}. Escalation contact: ${fields.contactEmail}.`,
+  };
+
+  return [
+    toneLead[tone],
+    "",
+    template.content,
+    "",
+    audienceTail[audience],
+    `Reference reason: ${fields.reason}.`,
+    `Admin note: ${fields.adminNote || "No additional note."}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
 
 function TemplateBuilderPage() {
   const [templates] = useState<Template[]>(templateService.getTemplates());
@@ -26,6 +71,21 @@ function TemplateBuilderPage() {
     TemplateType | "All"
   >("All");
   const [page, setPage] = useState(1);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
+    null,
+  );
+  const [channel, setChannel] = useState<BuilderChannel>("Email");
+  const [audience, setAudience] = useState<BuilderAudience>("Seller");
+  const [tone, setTone] = useState<BuilderTone>("Supportive");
+  const [shopName, setShopName] = useState("Green Corner Garden");
+  const [postTitle, setPostTitle] = useState("Rare Monstera Deliciosa for Sale");
+  const [reason, setReason] = useState("Listing is missing mandatory details.");
+  const [slotName, setSlotName] = useState("Home Top");
+  const [contactEmail, setContactEmail] = useState("ops@greenmarket.com");
+  const [adminNote, setAdminNote] = useState(
+    "Update the content and resubmit within 24 hours.",
+  );
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const filteredTemplates = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -61,11 +121,46 @@ function TemplateBuilderPage() {
     }
   }, [page, totalPages]);
 
+  useEffect(() => {
+    if (!selectedTemplateId && templates.length > 0) {
+      setSelectedTemplateId(templates[0].id);
+    }
+  }, [selectedTemplateId, templates]);
+
+  const selectedTemplate =
+    templates.find((template) => template.id === selectedTemplateId) ?? null;
+
+  const previewMessage = buildPreviewMessage(selectedTemplate, audience, tone, {
+    shopName,
+    postTitle,
+    reason,
+    slotName,
+    contactEmail,
+    adminNote,
+  });
+
+  const showToast = (
+    message: string,
+    toneValue: ToastItem["tone"] = "success",
+  ) => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [...prev, { id: toastId, message, tone: toneValue }]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
   return (
     <div className="template-builder-page">
       <PageHeader
         title="Template Builder"
-        description="Choose a base template and prepare the builder workspace for outbound admin messaging."
+        description="Assemble template delivery settings, switch communication tone, and preview outbound admin messaging before publishing."
       />
 
       <SearchToolbar
@@ -74,7 +169,7 @@ function TemplateBuilderPage() {
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Filter library"
-        filterSummaryItems={[selectedTypeFilter]}
+        filterSummaryItems={[selectedTypeFilter, channel, audience]}
       />
 
       {showFilters ? (
@@ -106,7 +201,7 @@ function TemplateBuilderPage() {
       <div className="template-builder-grid">
         <SectionCard
           title="Template Library"
-          description="Review available templates before opening the dedicated builder workspace."
+          description="Choose an active template as the base content for your builder workspace."
         >
           {filteredTemplates.length === 0 ? (
             <EmptyState
@@ -124,6 +219,7 @@ function TemplateBuilderPage() {
                       <th>Type</th>
                       <th>Status</th>
                       <th>Updated</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
 
@@ -144,6 +240,19 @@ function TemplateBuilderPage() {
                           />
                         </td>
                         <td>{template.updatedAt}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className={
+                              selectedTemplateId === template.id
+                                ? "template-builder-table__use template-builder-table__use--active"
+                                : "template-builder-table__use"
+                            }
+                            onClick={() => setSelectedTemplateId(template.id)}
+                          >
+                            {selectedTemplateId === template.id ? "Selected" : "Use"}
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -180,17 +289,189 @@ function TemplateBuilderPage() {
 
         <SectionCard
           title="Builder Workspace"
-          description="The detailed variable editor and live preview are prepared in the next implementation step."
+          description="Adjust channel, audience, and sample variables to validate final message formatting."
         >
-          <div className="template-builder-placeholder">
-            <strong>Builder setup pending</strong>
-            <p>
-              This workspace will include channel setup, variable mapping, tone
-              selection, and live message preview in the next commit.
-            </p>
-          </div>
+          {selectedTemplate ? (
+            <div className="template-builder-form">
+              <div className="template-builder-form__grid">
+                <div className="template-builder-form__field">
+                  <label>Selected Template</label>
+                  <input type="text" value={selectedTemplate.name} disabled />
+                </div>
+
+                <div className="template-builder-form__field">
+                  <label htmlFor="template-builder-channel">Channel</label>
+                  <select
+                    id="template-builder-channel"
+                    value={channel}
+                    onChange={(event) =>
+                      setChannel(event.target.value as BuilderChannel)
+                    }
+                  >
+                    <option>Email</option>
+                    <option>In-App Notification</option>
+                    <option>Moderation Note</option>
+                  </select>
+                </div>
+
+                <div className="template-builder-form__field">
+                  <label htmlFor="template-builder-audience">Audience</label>
+                  <select
+                    id="template-builder-audience"
+                    value={audience}
+                    onChange={(event) =>
+                      setAudience(event.target.value as BuilderAudience)
+                    }
+                  >
+                    <option>Seller</option>
+                    <option>Reporter</option>
+                    <option>Internal Admin</option>
+                  </select>
+                </div>
+
+                <div className="template-builder-form__field">
+                  <label htmlFor="template-builder-tone">Tone</label>
+                  <select
+                    id="template-builder-tone"
+                    value={tone}
+                    onChange={(event) =>
+                      setTone(event.target.value as BuilderTone)
+                    }
+                  >
+                    <option>Formal</option>
+                    <option>Supportive</option>
+                    <option>Direct</option>
+                  </select>
+                </div>
+
+                <div className="template-builder-form__field">
+                  <label htmlFor="template-builder-shop-name">Shop Name</label>
+                  <input
+                    id="template-builder-shop-name"
+                    type="text"
+                    value={shopName}
+                    onChange={(event) => setShopName(event.target.value)}
+                  />
+                </div>
+
+                <div className="template-builder-form__field">
+                  <label htmlFor="template-builder-post-title">Post Title</label>
+                  <input
+                    id="template-builder-post-title"
+                    type="text"
+                    value={postTitle}
+                    onChange={(event) => setPostTitle(event.target.value)}
+                  />
+                </div>
+
+                <div className="template-builder-form__field">
+                  <label htmlFor="template-builder-reason">Reason</label>
+                  <input
+                    id="template-builder-reason"
+                    type="text"
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
+                  />
+                </div>
+
+                <div className="template-builder-form__field">
+                  <label htmlFor="template-builder-slot">Placement Slot</label>
+                  <input
+                    id="template-builder-slot"
+                    type="text"
+                    value={slotName}
+                    onChange={(event) => setSlotName(event.target.value)}
+                  />
+                </div>
+
+                <div className="template-builder-form__field">
+                  <label htmlFor="template-builder-contact">
+                    Contact Email
+                  </label>
+                  <input
+                    id="template-builder-contact"
+                    type="email"
+                    value={contactEmail}
+                    onChange={(event) => setContactEmail(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="template-builder-form__field">
+                <label htmlFor="template-builder-note">Admin Note</label>
+                <textarea
+                  id="template-builder-note"
+                  rows={4}
+                  value={adminNote}
+                  onChange={(event) => setAdminNote(event.target.value)}
+                />
+              </div>
+
+              <div className="template-builder-form__actions">
+                <button
+                  type="button"
+                  className="template-builder-form__action template-builder-form__action--secondary"
+                  onClick={() =>
+                    showToast(
+                      `Preview refreshed for ${selectedTemplate.name} via ${channel}.`,
+                      "info",
+                    )
+                  }
+                >
+                  Refresh Preview
+                </button>
+                <button
+                  type="button"
+                  className="template-builder-form__action"
+                  onClick={() =>
+                    showToast(
+                      `${selectedTemplate.name} builder preset saved successfully.`,
+                    )
+                  }
+                >
+                  Save Builder Preset
+                </button>
+              </div>
+            </div>
+          ) : (
+            <EmptyState
+              title="No template selected"
+              description="Choose a template from the library to continue editing builder settings."
+            />
+          )}
         </SectionCard>
       </div>
+
+      <SectionCard
+        title="Live Preview"
+        description="Preview the composed message before it is used in moderation or notification workflows."
+      >
+        {selectedTemplate ? (
+          <div className="template-builder-preview">
+            <div className="template-builder-preview__meta">
+              <StatusBadge label={selectedTemplate.type} variant="type" />
+              <StatusBadge label={channel} variant="processing" />
+              <StatusBadge label={tone} variant="success" />
+            </div>
+
+            <div className="template-builder-preview__card">
+              <div className="template-builder-preview__header">
+                <strong>{selectedTemplate.name}</strong>
+                <span>{audience}</span>
+              </div>
+
+              <pre>{previewMessage}</pre>
+            </div>
+          </div>
+        ) : (
+          <EmptyState
+            title="Preview unavailable"
+            description="Select a template from the library to generate a live preview."
+          />
+        )}
+      </SectionCard>
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
