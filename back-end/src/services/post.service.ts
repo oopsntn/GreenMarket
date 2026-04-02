@@ -1,6 +1,6 @@
 import { db } from "../config/db.ts";
-import { posts, postImages } from "../models/schema/index.ts";
-import { eq, and, or, ilike, gte, lte, sql, SQL, inArray } from "drizzle-orm";
+import { posts, postImages, postPromotions, placementSlots } from "../models/schema/index.ts";
+import { eq, and, or, ilike, gte, lte, sql, SQL, inArray, getTableColumns } from "drizzle-orm";
 import { GetPostsQueryDto } from "../dtos/post.ts";
 
 export class PostService {
@@ -54,13 +54,54 @@ export class PostService {
             }
         }
 
-        const queryBuilder = db.select().from(posts);
+        // Aggregate active promotions per post so one post stays one row (avoid duplicate rows
+        // when users buy multiple packages for the same post).
+        const activePromotions = db
+            .select({
+                postId: postPromotions.postPromotionPostId,
+                promotionPriority: sql<number>`
+                    MAX(
+                        CASE
+                            WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$'
+                                THEN (${placementSlots.placementSlotRules} ->> 'priority')::int
+                            ELSE 1
+                        END
+                    )
+                `.as("promotionPriority"),
+            })
+            .from(postPromotions)
+            .leftJoin(
+                placementSlots,
+                eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId)
+            )
+            .where(
+                and(
+                    eq(postPromotions.postPromotionStatus, "active"),
+                    sql`${postPromotions.postPromotionEndAt} > NOW()`
+                )
+            )
+            .groupBy(postPromotions.postPromotionPostId)
+            .as("activePromotions");
+
+        const queryBuilder = db.select({
+            ...getTableColumns(posts),
+            isPromoted: sql<boolean>`CASE WHEN ${activePromotions.postId} IS NOT NULL THEN true ELSE false END`.as("isPromoted"),
+            promotionPriority: sql<number>`COALESCE(${activePromotions.promotionPriority}, 0)`.as("promotionPriority"),
+        })
+        .from(posts)
+        .leftJoin(
+            activePromotions,
+            eq(posts.postId, activePromotions.postId)
+        );
 
         const data = await queryBuilder
             .where(and(...conditions))
             .limit(limit)
             .offset(offset)
-            .orderBy(sql`${posts.postCreatedAt} DESC`);
+            .orderBy(
+                sql`COALESCE(${activePromotions.promotionPriority}, 0) DESC`,
+                sql`${posts.postCreatedAt} DESC`
+            );
 
         const countResult = await db.select({ count: sql<number>`count(*)` })
             .from(posts)
@@ -70,7 +111,7 @@ export class PostService {
         const totalPages = Math.ceil(totalItems / limit);
 
         if (data.length > 0) {
-            const postIds = data.map(p => p.postId);
+            const postIds = data.map(p => p.postId as number);
             const images = await db.select()
                 .from(postImages)
                 .where(inArray(postImages.postId, postIds));

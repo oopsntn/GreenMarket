@@ -10,16 +10,22 @@ import PostDetail from './pages/PostDetail';
 import Login from './pages/Login';
 import Profile from './pages/Profile';
 import ShopDetail from './pages/ShopDetail';
+import ShopList from './pages/ShopList';
+import PaymentResult from './pages/PaymentResult';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
     <AuthProvider>
       <Router>
+        <ScrollToTop />
         <div className="min-h-screen">
           <Navbar />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/shops" element={<ShopList />} />
+            <Route path="/payment-result" element={<PaymentResult />} />
             <Route path="/detail/:slug" element={<PostDetail />} />
             <Route path="/shop/:id" element={<ShopDetail />} />
 

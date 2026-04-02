@@ -33,6 +33,8 @@ export { moderationActions, type ModerationAction, type NewModerationAction } fr
 // Monetization
 export { placementSlots, type PlacementSlot, type NewPlacementSlot } from "./placement-slots.ts";
 export { promotionPackages, type PromotionPackage, type NewPromotionPackage } from "./promotion-packages.ts";
+export { promotionPackagePrices, type PromotionPackagePrice, type NewPromotionPackagePrice } from "./promotion-package-prices.ts";
+export { promotionPackageAuditLog, type PromotionPackageAuditLog, type NewPromotionPackageAuditLog } from "./promotion-package-audit-log.ts";
 export { postPromotions, type PostPromotion, type NewPostPromotion } from "./post-promotions.ts";
 export { paymentTxn, type PaymentTxn, type NewPaymentTxn } from "./payment-txn.ts";
 

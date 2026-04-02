@@ -7,6 +7,7 @@ export const shops = pgTable("shops", {
     shopOwnerId: integer("shop_owner_id").references(() => users.userId, { onDelete: "cascade" }).notNull().unique(),
     shopName: varchar("shop_name", { length: 150 }).notNull(),
     shopPhone: varchar("shop_phone", { length: 20 }),
+    shopEmail: varchar("shop_email", { length: 255 }),
     shopLocation: varchar("shop_location", { length: 255 }), // Can be a Google Maps link or address
     shopDescription: text("shop_description"),
     shopLogoUrl: varchar("shop_logo_url", { length: 255 }),

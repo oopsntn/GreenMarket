@@ -1,12 +1,21 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, ne, sql, inArray } from "drizzle-orm";
 import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 
 const actionCache = new Set<string>();
+const SHOP_GALLERY_DELIMITER = "|";
+
+const parseShopGalleryImages = (rawCover: string | null | undefined): string[] => {
+    if (!rawCover) return [];
+    return rawCover
+        .split(SHOP_GALLERY_DELIMITER)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+};
 
 export const createPost = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
@@ -99,8 +108,130 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const userPosts = await db.select().from(posts).where(eq(posts.postAuthorId, userId));
-        res.json(userPosts);
+        const userPosts = await db.select().from(posts).where(
+            and(
+                eq(posts.postAuthorId, userId),
+                ne(posts.postStatus, "hidden")
+            )
+        );
+
+        if (userPosts.length === 0) {
+            res.json([]);
+            return;
+        }
+
+        const postIds = userPosts.map((post) => post.postId);
+        const postAttributes = await db.select({
+            postId: postAttributeValues.postId,
+            attributeId: postAttributeValues.attributeId,
+            attributeTitle: attributes.attributeTitle,
+            value: postAttributeValues.attributeValue,
+        })
+            .from(postAttributeValues)
+            .leftJoin(attributes, eq(postAttributeValues.attributeId, attributes.attributeId))
+            .where(inArray(postAttributeValues.postId, postIds));
+
+        const postImageRows = await db.select({
+            postId: postImages.postId,
+            imageId: postImages.imageId,
+            imageUrl: postImages.imageUrl,
+            imageSortOrder: postImages.imageSortOrder,
+        })
+            .from(postImages)
+            .where(inArray(postImages.postId, postIds))
+            .orderBy(postImages.postId, postImages.imageSortOrder, postImages.imageId);
+
+        const [author] = await db.select({
+            userId: users.userId,
+            userDisplayName: users.userDisplayName,
+            userMobile: users.userMobile,
+            userAvatarUrl: users.userAvatarUrl,
+        })
+            .from(users)
+            .where(eq(users.userId, userId))
+            .limit(1);
+
+        const uniqueShopIds = Array.from(
+            new Set(
+                userPosts
+                    .map((post) => post.postShopId)
+                    .filter((shopId): shopId is number => shopId !== null)
+            )
+        );
+
+        const shopRows = uniqueShopIds.length > 0
+            ? await db.select({
+                shopId: shops.shopId,
+                shopName: shops.shopName,
+                shopStatus: shops.shopStatus,
+                shopLogoUrl: shops.shopLogoUrl,
+                shopCoverUrl: shops.shopCoverUrl,
+            })
+                .from(shops)
+                .where(inArray(shops.shopId, uniqueShopIds))
+            : [];
+
+        const attributesByPostId = new Map<number, Array<{
+            attributeId: number;
+            attributeTitle: string | null;
+            value: string;
+        }>>();
+
+        for (const item of postAttributes) {
+            if (!item.postId || !item.attributeId) continue;
+
+            const list = attributesByPostId.get(item.postId) || [];
+            list.push({
+                attributeId: item.attributeId,
+                attributeTitle: item.attributeTitle ?? null,
+                value: item.value,
+            });
+            attributesByPostId.set(item.postId, list);
+        }
+
+        const imagesByPostId = new Map<number, Array<{
+            imageId: number;
+            imageUrl: string;
+            imageSortOrder: number | null;
+        }>>();
+
+        for (const image of postImageRows) {
+            if (!image.postId) continue;
+
+            const list = imagesByPostId.get(image.postId) || [];
+            list.push({
+                imageId: image.imageId,
+                imageUrl: image.imageUrl,
+                imageSortOrder: image.imageSortOrder,
+            });
+            imagesByPostId.set(image.postId, list);
+        }
+
+        const shopById = new Map<number, any>();
+
+        for (const shopItem of shopRows) {
+            const shopGalleryImages = parseShopGalleryImages(shopItem.shopCoverUrl);
+            shopById.set(shopItem.shopId, {
+                ...shopItem,
+                shopGalleryImages,
+                shopPreviewImageUrl: shopGalleryImages[0] || null,
+            });
+        }
+
+        const response = userPosts.map((post) => {
+            const postImagesData = imagesByPostId.get(post.postId) || [];
+
+            return {
+                ...post,
+                images: postImagesData,
+                coverImageUrl: postImagesData[0]?.imageUrl || null,
+                attributes: attributesByPostId.get(post.postId) || [],
+                author: author || null,
+                shop: post.postShopId ? (shopById.get(post.postShopId) || null) : null,
+            };
+        });
+
+        res.json(response);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -116,7 +247,15 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const updateData = req.body;
+        const {
+            categoryId,
+            postTitle,
+            postContent,
+            postPrice,
+            postLocation,
+            postContactPhone,
+            attributes: updatedAttributes
+        } = req.body;
 
         // Ensure user owns the post
         const [existingPost] = await db.select().from(posts).where(eq(posts.postId, postId)).limit(1);
@@ -129,14 +268,56 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
+        // Shop owners with active shops can publish edits immediately.
+        const [activeShop] = await db.select()
+            .from(shops)
+            .where(and(eq(shops.shopOwnerId, userId), eq(shops.shopStatus, "active")))
+            .limit(1);
+
+        const now = new Date();
+        const isActiveGardenOwner = Boolean(activeShop);
+
+        const postUpdatePayload: Record<string, any> = {
+            postUpdatedAt: now,
+            postStatus: isActiveGardenOwner ? "approved" : "pending",
+        };
+
+        if (isActiveGardenOwner) {
+            postUpdatePayload.postModeratedAt = now;
+            postUpdatePayload.postSubmittedAt = now;
+            postUpdatePayload.postPublishedAt = now;
+            if (!existingPost.postShopId && activeShop?.shopId) {
+                postUpdatePayload.postShopId = activeShop.shopId;
+            }
+        }
+
+        if (categoryId !== undefined) postUpdatePayload.categoryId = Number(categoryId);
+        if (postTitle !== undefined) postUpdatePayload.postTitle = postTitle;
+        if (postContent !== undefined) postUpdatePayload.postContent = postContent;
+        if (postPrice !== undefined) postUpdatePayload.postPrice = postPrice?.toString();
+        if (postLocation !== undefined) postUpdatePayload.postLocation = postLocation;
+        if (postContactPhone !== undefined) postUpdatePayload.postContactPhone = postContactPhone;
+
         const [updatedPost] = await db.update(posts)
-            .set({
-                ...updateData,
-                postUpdatedAt: new Date(),
-                postStatus: "pending" // Re-moderate on edit
-            })
+            .set(postUpdatePayload)
             .where(eq(posts.postId, postId))
             .returning();
+
+        if (Array.isArray(updatedAttributes)) {
+            await db.delete(postAttributeValues).where(eq(postAttributeValues.postId, postId));
+
+            const attrRecords = updatedAttributes
+                .filter((attr: any) => attr?.attributeId && attr?.value !== undefined && attr?.value !== null && String(attr.value).trim() !== "")
+                .map((attr: any) => ({
+                    postId: postId,
+                    attributeId: Number(attr.attributeId),
+                    attributeValue: String(attr.value),
+                }));
+
+            if (attrRecords.length > 0) {
+                await db.insert(postAttributeValues).values(attrRecords);
+            }
+        }
 
         res.json(updatedPost);
     } catch (error) {

@@ -12,7 +12,7 @@ router.post("/register", verifyToken, registerShop);
 router.get("/my-shop", verifyToken, getMyShop);
 router.patch("/:id", verifyToken, updateShop);
 
-// Public dynamic route must stay after static routes like /my-shop
+// Public route with path param must stay after static paths like /my-shop
 router.get("/:id", getPublicShopById);
 
 export default router;

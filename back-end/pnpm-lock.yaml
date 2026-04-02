@@ -38,6 +38,9 @@ importers:
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
+      vnpay:
+        specifier: ^2.4.4
+        version: 2.4.4
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -1589,6 +1592,9 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
+  vnpay@2.4.4:
+    resolution: {integrity: sha512-NvftKF1K+JRAyZ7I11Nz/nxmSOaya6Txy/fcW2xFGpBzUsKjfyr2YEg210YitgVHvgtZ94j2/8DFRm8PwjUHjA==}
+
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
@@ -2945,6 +2951,10 @@ snapshots:
   uuid@13.0.0: {}
 
   vary@1.1.2: {}
+
+  vnpay@2.4.4:
+    dependencies:
+      dayjs: 1.11.19
 
   which@2.0.2:
     dependencies:
