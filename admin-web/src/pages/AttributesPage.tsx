@@ -38,6 +38,8 @@ const typeFilterOptions: Array<AttributeType | "All"> = [
   "Boolean",
 ];
 
+const PAGE_SIZE = 5;
+
 function AttributesPage() {
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -63,6 +65,7 @@ function AttributesPage() {
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<
     AttributeType | "All"
   >("All");
+  const [page, setPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     attributeId: null,
@@ -312,6 +315,26 @@ function AttributesPage() {
       return matchesKeyword && matchesStatus && matchesType;
     });
   }, [attributes, searchKeyword, selectedStatusFilter, selectedTypeFilter]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAttributes.length / PAGE_SIZE),
+  );
+
+  const paginatedAttributes = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredAttributes.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredAttributes, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword, selectedStatusFilter, selectedTypeFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const selectedAttribute =
     selectedAttributeId !== null
