@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -27,11 +27,14 @@ type ConfirmState = {
   action: ConfirmAction | null;
 };
 
+const PAGE_SIZE = 5;
+
 function CategoryAttributeMappingPage() {
   const [mappings, setMappings] = useState<CategoryMapping[]>(
     categoryMappingService.getMappings(),
   );
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [page, setPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     mappingId: null,
@@ -225,6 +228,23 @@ function CategoryAttributeMappingPage() {
       );
     });
   }, [mappings, searchKeyword]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMappings.length / PAGE_SIZE));
+
+  const paginatedMappings = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredMappings.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredMappings, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const confirmMapping =
     confirmState.mappingId !== null
