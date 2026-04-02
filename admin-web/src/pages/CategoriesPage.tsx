@@ -29,6 +29,8 @@ const statusFilterOptions: Array<CategoryStatus | "All"> = [
   "Disabled",
 ];
 
+const PAGE_SIZE = 5;
+
 function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -51,6 +53,7 @@ function CategoriesPage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     CategoryStatus | "All"
   >("All");
+  const [page, setPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     categoryId: null,
@@ -284,6 +287,26 @@ function CategoriesPage() {
       return matchesKeyword && matchesStatus;
     });
   }, [categories, searchKeyword, selectedStatusFilter]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredCategories.length / PAGE_SIZE),
+  );
+
+  const paginatedCategories = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredCategories.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredCategories, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword, selectedStatusFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const selectedCategory =
     selectedCategoryId !== null
