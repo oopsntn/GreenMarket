@@ -49,13 +49,14 @@
 }
 
 .attributes-table-wrapper {
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .attributes-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 1040px;
 }
 
 .attributes-table thead {
@@ -73,13 +74,14 @@
 .attributes-table th {
   color: #486150;
   font-weight: 700;
-  text-align: left;
+  text-align: center;
 }
 
 .attributes-table td {
   color: #223127;
   line-height: 1.5;
   word-break: break-word;
+  text-align: center;
 }
 
 .attributes-table tbody tr:hover {
@@ -133,18 +135,18 @@
 
 .attributes-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 .attributes-actions button {
-  width: 100px;
-  height: 36px;
+  min-width: 82px;
+  height: 34px;
   padding: 0 12px;
   border: none;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -179,6 +181,45 @@
 .attributes-actions__enable {
   background-color: #e8f5e9;
   color: #2e7d32;
+}
+
+.attributes-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 0;
+}
+
+.attributes-pagination__info {
+  font-size: 14px;
+  font-weight: 600;
+  color: #486150;
+}
+
+.attributes-pagination__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.attributes-pagination__actions button {
+  min-width: 110px;
+  height: 40px;
+  border: none;
+  border-radius: 999px;
+  background-color: #f1f6ee;
+  color: #325343;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.attributes-pagination__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .attributes-modal__form {
@@ -259,12 +300,6 @@
     padding: 16px 10px;
     font-size: 13px;
   }
-
-  .attributes-actions button {
-    width: 92px;
-    height: 34px;
-    font-size: 13px;
-  }
 }
 
 @media (max-width: 1024px) {
@@ -272,11 +307,9 @@
     grid-template-columns: 1fr;
   }
 
-  .attributes-table-wrapper {
-    overflow-x: auto;
-  }
-
-  .attributes-table {
-    min-width: 1040px;
+  .attributes-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 20px 20px;
   }
 }
