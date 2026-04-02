@@ -1,0 +1,239 @@
+.template-builder-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.template-builder-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.template-builder-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 280px);
+  gap: 18px;
+}
+
+.template-builder-filters__field,
+.template-builder-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.template-builder-filters__field label,
+.template-builder-form__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.template-builder-filters__field select,
+.template-builder-form__field input,
+.template-builder-form__field select,
+.template-builder-form__field textarea {
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+  font-family: inherit;
+}
+
+.template-builder-filters__field select,
+.template-builder-form__field input,
+.template-builder-form__field select {
+  height: 46px;
+}
+
+.template-builder-form__field textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.template-builder-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.template-builder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.template-builder-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.template-builder-form__action {
+  height: 42px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.template-builder-form__action--secondary {
+  background: #eef4ff;
+  color: #1d4ed8;
+}
+
+.template-builder-table-wrapper {
+  overflow-x: auto;
+}
+
+.template-builder-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.template-builder-table thead {
+  background-color: #f6faf5;
+}
+
+.template-builder-table th,
+.template-builder-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #eef3ea;
+  font-size: 14px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.template-builder-table th {
+  color: #486150;
+  font-weight: 700;
+}
+
+.template-builder-table td {
+  color: #223127;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.template-builder-table__use {
+  min-width: 88px;
+  height: 34px;
+  border: none;
+  border-radius: 12px;
+  background-color: #edf7ee;
+  color: #1b5e20;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.template-builder-table__use--active {
+  background-color: #1b5e20;
+  color: #ffffff;
+}
+
+.template-builder-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0 0;
+}
+
+.template-builder-pagination__info {
+  font-size: 14px;
+  color: #6b7b6d;
+}
+
+.template-builder-pagination__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.template-builder-pagination__actions button {
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 12px;
+  background-color: #f3f7f1;
+  color: #486150;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.template-builder-pagination__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.template-builder-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.template-builder-preview__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.template-builder-preview__card {
+  border: 1px solid #e3eee2;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fdfefd 0%, #f6faf5 100%);
+  padding: 22px;
+}
+
+.template-builder-preview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #34503d;
+}
+
+.template-builder-preview__card pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #223127;
+}
+
+@media (max-width: 1100px) {
+  .template-builder-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .template-builder-form__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .template-builder-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .template-builder-preview__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
