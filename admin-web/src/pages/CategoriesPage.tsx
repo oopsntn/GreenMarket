@@ -372,7 +372,8 @@ function CategoriesPage() {
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Filter by status"
-        filterSummary={`Current status filter: ${selectedStatusFilter}`}
+        filterSummaryLabel="Current status"
+        filterSummaryItems={[selectedStatusFilter]}
       />
 
       {showFilters ? (
@@ -419,84 +420,109 @@ function CategoriesPage() {
             description="No categories match your current search. Try another keyword or create a new category."
           />
         ) : (
-          <div className="categories-table-wrapper">
-            <table className="categories-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Category Name</th>
-                  <th>Slug</th>
-                  <th>Attributes</th>
-                  <th>Status</th>
-                  <th>Created Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredCategories.map((category) => (
-                  <tr key={category.id}>
-                    <td>#{category.id}</td>
-                    <td>{category.name}</td>
-                    <td>{category.slug || "—"}</td>
-                    <td>{category.attributesCount ?? "—"}</td>
-                    <td>
-                      <StatusBadge
-                        label={category.status}
-                        variant={
-                          category.status === "Active" ? "active" : "disabled"
-                        }
-                      />
-                    </td>
-                    <td>{category.createdAt || "—"}</td>
-                    <td>
-                      <div className="categories-actions">
-                        <button
-                          type="button"
-                          className="categories-actions__view"
-                          onClick={() => openViewModal(category)}
-                        >
-                          View
-                        </button>
-
-                        <button
-                          type="button"
-                          className="categories-actions__edit"
-                          onClick={() => openEditModal(category)}
-                        >
-                          Edit
-                        </button>
-
-                        {category.status === "Active" ? (
-                          <button
-                            type="button"
-                            className="categories-actions__disable"
-                            onClick={() =>
-                              openConfirmDialog(category.id, "disable")
-                            }
-                            disabled={isStatusUpdating === category.id}
-                          >
-                            Disable
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="categories-actions__enable"
-                            onClick={() =>
-                              openConfirmDialog(category.id, "enable")
-                            }
-                            disabled={isStatusUpdating === category.id}
-                          >
-                            Enable
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="categories-table-wrapper">
+              <table className="categories-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Category Name</th>
+                    <th>Slug</th>
+                    <th>Attributes</th>
+                    <th>Status</th>
+                    <th>Created Date</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedCategories.map((category) => (
+                    <tr key={category.id}>
+                      <td>#{category.id}</td>
+                      <td>{category.name}</td>
+                      <td>{category.slug || "—"}</td>
+                      <td>{category.attributesCount ?? "—"}</td>
+                      <td>
+                        <StatusBadge
+                          label={category.status}
+                          variant={
+                            category.status === "Active" ? "active" : "disabled"
+                          }
+                        />
+                      </td>
+                      <td>{category.createdAt || "—"}</td>
+                      <td>
+                        <div className="categories-actions">
+                          <button
+                            type="button"
+                            className="categories-actions__view"
+                            onClick={() => openViewModal(category)}
+                          >
+                            View
+                          </button>
+
+                          <button
+                            type="button"
+                            className="categories-actions__edit"
+                            onClick={() => openEditModal(category)}
+                          >
+                            Edit
+                          </button>
+
+                          {category.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="categories-actions__disable"
+                              onClick={() =>
+                                openConfirmDialog(category.id, "disable")
+                              }
+                              disabled={isStatusUpdating === category.id}
+                            >
+                              Disable
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="categories-actions__enable"
+                              onClick={() =>
+                                openConfirmDialog(category.id, "enable")
+                              }
+                              disabled={isStatusUpdating === category.id}
+                            >
+                              Enable
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="categories-pagination">
+              <span className="categories-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="categories-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </SectionCard>
 
