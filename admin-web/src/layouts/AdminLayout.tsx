@@ -10,6 +10,7 @@ const menuItems = [
   { label: "Attributes", path: "/attributes" },
   { label: "Category Mapping", path: "/category-attributes" },
   { label: "Templates", path: "/templates" },
+  { label: "Template Builder", path: "/template-builder" },
   { label: "Settings", path: "/settings" },
   { label: "Placement Slots", path: "/placement-slots" },
   { label: "Promotion Packages", path: "/promotion-packages" },

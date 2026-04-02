@@ -22,6 +22,7 @@ import PromotionsPage from "../pages/PromotionsPage";
 import RevenuePage from "../pages/RevenuePage";
 import SettingsPage from "../pages/SettingsPage";
 import ShopsPage from "../pages/ShopsPage";
+import TemplateBuilderPage from "../pages/TemplateBuilderPage";
 import TemplatesPage from "../pages/TemplatesPage";
 import UsersPage from "../pages/UsersPage";
 
@@ -95,6 +96,7 @@ function AppRoutes() {
               element={<CategoryAttributeMappingPage />}
             />
             <Route path="templates" element={<TemplatesPage />} />
+            <Route path="template-builder" element={<TemplateBuilderPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="placement-slots" element={<PlacementSlotsPage />} />
             <Route
