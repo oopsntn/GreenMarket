@@ -6,11 +6,13 @@ const router = Router();
 
 // Public routes
 router.get("/browse", getAllShops);
-router.get("/:id", getPublicShopById);
 
 // Protected routes (JWT required)
 router.post("/register", verifyToken, registerShop);
 router.get("/my-shop", verifyToken, getMyShop);
 router.patch("/:id", verifyToken, updateShop);
+
+// Public dynamic route must stay after static routes like /my-shop
+router.get("/:id", getPublicShopById);
 
 export default router;

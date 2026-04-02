@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ActivityIndicator, FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import useMyPost from '../service/useMyPost'
 import { CheckCircle2, Clock, Plus, XCircle } from 'lucide-react-native'
@@ -20,29 +20,27 @@ const MyPostLayout = () => {
 
     const renderStatus = (status: string) => {
         const configs: any = {
-            pending: { label: 'Chờ duyệt', color: '#f59e0b', icon: <Clock size={12} color="#f59e0b" /> },
-            approved: { label: 'Đã duyệt', color: '#10b981', icon: <CheckCircle2 size={12} color="#10b981" /> },
-            rejected: { label: 'Bị từ chối', color: '#ef4444', icon: <XCircle size={12} color="#ef4444" /> }
+            pending: { label: 'Pending', color: '#f59e0b', icon: <Clock size={12} color="#f59e0b" /> },
+            approved: { label: 'Approved', color: '#10b981', icon: <CheckCircle2 size={12} color="#10b981" /> },
+            rejected: { label: 'Rejected', color: '#ef4444', icon: <XCircle size={12} color="#ef4444" /> }
         };
         const config = configs[status] || configs.pending
         return (
-            <View style={[styles.statusBadge, { borderColor: config.color }]}>
+            <View style={[styles.statusBadge, { borderColor: config.color }]}> 
                 {config.icon}
                 <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
             </View>
         )
     }
     return (
-        <MobileLayout title='Quản lý đăng tin' backButton={() => navigation.goBack()}
+        <MobileLayout title='Manage Posts' backButton={() => navigation.goBack()}
             rightAction={
                 <TouchableOpacity onPress={() => navigation.navigate('CreatePost')}>
                     <Plus color='#10b981' size={24} />
                 </TouchableOpacity>
             }>
-            {/* Tabs */}
-            {!state.shop && <PostTabs activeTab={state.activeTab} onTabChange={actions.setActiveTab} styles={styles} />}
+            <PostTabs activeTab={state.activeTab} onTabChange={actions.setActiveTab} hasShop={!!state.shop} styles={styles} />
 
-            {/* List Body */}
             {state.loading ? (
                 <ActivityIndicator style={{ marginTop: 50 }} />
             ) : (
@@ -51,14 +49,25 @@ const MyPostLayout = () => {
                         <PostItem
                             item={item}
                             onEdit={openEdit}
-                            onDelete={() => actions.handleDelete}
+                            onDelete={actions.handleDelete}
                             styles={styles}
                             renderStatus={renderStatus}
                         />
                     )}
+                    keyExtractor={(item) => item.postId.toString()}
+                    ListEmptyComponent={
+                        <View style={styles.empty}>
+                            <Text style={styles.emptyText}>
+                                {state.activeTab === 'trash'
+                                    ? 'No posts in the trash.'
+                                    : state.activeTab === 'shop'
+                                        ? 'No shop posts yet.'
+                                        : 'No personal posts yet.'}
+                            </Text>
+                        </View>
+                    }
                 />
             )}
-            {/* Edit Modal */}
             <EditPostModal
                 visible={!!state.editingPost}
                 editingPost={state.editingPost}
@@ -66,6 +75,7 @@ const MyPostLayout = () => {
                 setEditData={setEditData}
                 onClose={() => actions.setEditingPost(null)}
                 onSave={actions.handleUpdate}
+                saving={state.saving}
                 styles={styles}
             />
         </MobileLayout>

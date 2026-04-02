@@ -8,13 +8,16 @@ export const useShopDetail = () => {
     const [loading, setLoading] = useState(true)
 
     const fetchShop = async () => {
-        if (!user?.id) return
+        if (!user?.id) {
+            setLoading(false)
+            return
+        }
         try {
             setLoading(true)
-            const res = await ShopService.getMyShop(user.id)
+            const res = await ShopService.getMyShop()
             setShop(res)
         } catch (e) {
-            console.error("");
+            console.error('Error fetching shop detail:', e);
         } finally {
             setLoading(false)
         }

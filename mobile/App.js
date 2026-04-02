@@ -7,16 +7,11 @@ import MainStack from "./src/MainStack";
 import LoginScreen from "./src/components/LoginScreen";
 
 const RootNavigation = () => {
-  const { token, loading, login } = useAuth();
+  const { token, loading } = useAuth();
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Đây chính là "đệ tử" của handleLoginSuccess cũ
   const onLogin = async () => {
-    // await login(authToken, userData); // Gọi hàm login của Context để lưu token/user
-
-    // Hiện thông báo thành công
     setShowSuccess(true);
-    // Sau 5 giây thì ẩn đi
     setTimeout(() => {
       setShowSuccess(false);
     }, 5000);
@@ -36,19 +31,17 @@ const RootNavigation = () => {
         <View style={styles.inner}>
           <View style={styles.header}>
             <Text style={styles.appName}>GreenMarket</Text>
-            <Text style={styles.appDescription}>Đăng nhập để tiếp tục trải nghiệm mua sắm xanh</Text>
+            <Text style={styles.appDescription}>Sign in to continue your green shopping experience</Text>
           </View>
-          {/* Truyền hàm onLogin mới vào thay vì handleLoginSuccess cũ */}
           <LoginScreen onLoginSuccess={onLogin} />
         </View>
       ) : (
         <View style={{ flex: 1 }}>
           <MainStack />
 
-          {/* Giữ lại cái thông báo "vàng ngọc" của ông ở đây */}
           {showSuccess && (
             <View style={styles.successToast}>
-              <Text style={styles.title}>Đã đăng nhập thành công!</Text>
+              <Text style={styles.title}>Signed in successfully!</Text>
             </View>
           )}
         </View>
@@ -80,8 +73,8 @@ const styles = StyleSheet.create({
   },
   center: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
+    justifyContent: "center",
+    alignItems: "center",
   },
   header: {
     marginBottom: 24,
@@ -97,19 +90,19 @@ const styles = StyleSheet.create({
     color: "#4b5563",
   },
   successToast: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 50,
     left: 20,
     right: 20,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 15,
     borderRadius: 12,
-    elevation: 5, // Đổ bóng cho nổi lên
-    shadowColor: '#000',
+    elevation: 5,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    alignItems: 'center'
+    alignItems: "center",
   },
   title: {
     fontSize: 16,

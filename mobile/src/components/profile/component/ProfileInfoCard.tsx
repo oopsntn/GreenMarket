@@ -4,13 +4,13 @@ import { View, Text, StyleSheet } from 'react-native';
 export const ProfileInfoCard = ({ registeredAt }: { registeredAt?: string }) => (
   <View style={styles.card}>
     <View style={styles.row}>
-      <Text style={styles.label}>THÀNH VIÊN TỪ</Text>
-      <Text style={styles.value}>{registeredAt ? new Date(registeredAt).toLocaleDateString('vi-VN') : 'Mới'}</Text>
+      <Text style={styles.label}>MEMBER SINCE</Text>
+      <Text style={styles.value}>{registeredAt ? new Date(registeredAt).toLocaleDateString('en-GB') : 'New'}</Text>
     </View>
     <View style={styles.row}>
-      <Text style={styles.label}>TRẠNG THÁI</Text>
+      <Text style={styles.label}>STATUS</Text>
       <View style={styles.badge}>
-        <Text style={styles.badgeText}>Hoạt động</Text>
+        <Text style={styles.badgeText}>Active</Text>
       </View>
     </View>
   </View>

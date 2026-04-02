@@ -19,8 +19,11 @@ interface Shop {
     shopDescription?: string;
     shopPhone?: string;
     shopLocation?: string;
+    shopLogoUrl?: string;
+    shopCoverUrl?: string;
     shopLat?: number;
     shopLng?: number;
+    posts?: any[];
 }
 
 interface AuthContextType {
@@ -43,10 +46,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [token, setToken] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
-    const fetchShop = async (userId: number) => {
+    const fetchShop = async () => {
         try {
-            const res = await ShopService.getMyShop(userId)
+            const res = await ShopService.getMyShop()
+            console.log('Shop data from API:', res)
             setShop(res)
+
         } catch (e) {
             console.error('Error fetching shop:', e)
             setShop(null)
@@ -63,11 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const parsedUser = JSON.parse(storedUser);
                 setUser(parsedUser);
 
-                await fetchShop(parsedUser.id)
+                await fetchShop()
             }
 
         } catch (e) {
-            console.error("Lỗi load data:", e);
+            console.error('Error loading data:', e);
         } finally {
             setLoading(false)
         }
@@ -76,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadStoredData()
     }, [])
 
-    //Luu Toke + User vao may
+    // Save token and user locally
     const login = async (newToken: string, newUser: User) => {
         try {
             setToken(newToken)
@@ -84,13 +89,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await AsyncStorage.setItem('token', newToken)
             await AsyncStorage.setItem('user', JSON.stringify(newUser))
 
-            await fetchShop(newUser.id)
+            await fetchShop()
         } catch (e) {
-            console.error("Lỗi lưu thông tin login:", e);
+            console.error('Error saving login data:', e);
         }
     }
 
-    //Xoa sach dau vet
+    // Clear all persisted data
     const logout = async () => {
         setToken(null)
         setUser(null)
@@ -106,12 +111,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
             }
         } catch (e) {
-            console.error("Lỗi khi cập nhật thông tin user: ", e);
+            console.error('Error updating user information: ', e);
         }
 
     }
     const refreshShop = async () => {
-        if (user?.id) await fetchShop(user.id)
+        if (user?.id) await fetchShop()
     }
 
     return (

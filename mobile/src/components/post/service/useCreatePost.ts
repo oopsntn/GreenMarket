@@ -1,90 +1,219 @@
-import React, { useEffect, useState } from 'react'
-import { postService } from './postService'
+import { useEffect, useState } from 'react'
 import * as ImagePicker from 'expo-image-picker'
+import CustomAlert from '../../../utils/AlertHelper'
+import { postService } from './postService'
+
+interface Category {
+    categoryId: number;
+    categoryTitle: string;
+}
+
+interface CategoryAttribute {
+    attributeId: number;
+    attributeTitle: string;
+    attributeDataType?: string;
+    required?: boolean;
+}
+
+interface SelectedMedia {
+    uri: string;
+    type: 'image' | 'video';
+}
+
+interface CreatePostFormData {
+    categoryId: string;
+    postTitle: string;
+    postContent: string;
+    postPrice: string;
+    postLocation: string;
+    postContactPhone: string;
+    attributes: Record<number, string>;
+}
+
+const initialFormData: CreatePostFormData = {
+    categoryId: '',
+    postTitle: '',
+    postContent: '',
+    postPrice: '',
+    postLocation: '',
+    postContactPhone: '',
+    attributes: {},
+}
 
 const useCreatePost = () => {
-    const [categories, setCategories] = useState<any[]>([])
-    const [attributes, setAttributes] = useState<any[]>([])
+    const [categories, setCategories] = useState<Category[]>([])
+    const [attributes, setAttributes] = useState<CategoryAttribute[]>([])
+    const [loadingInitialData, setLoadingInitialData] = useState(true)
     const [loadingAttributes, setLoadingAttributes] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
-    const [media, setMedia] = useState<{ uri: string, type: 'image' | 'video' }[]>([])
-
-    const [formData, setFormData] = useState({
-        categoryId: '',
-        postTitle: '',
-        postContent: '',
-        postPrice: '',
-        postLocation: '',
-        attributes: {} as Record<number, string>
-    })
+    const [media, setMedia] = useState<SelectedMedia[]>([])
+    const [formData, setFormData] = useState<CreatePostFormData>(initialFormData)
 
     useEffect(() => {
-
+        fetchInitialData()
     }, [])
+
     const fetchInitialData = async () => {
         try {
+            setLoadingInitialData(true)
             const res = await postService.getCategories()
-            setCategories(res)
+            setCategories(Array.isArray(res) ? res : [])
         } catch (error) {
             console.error('Error fetching initial data:', error)
+            CustomAlert('Error', 'Unable to load post categories.')
+        } finally {
+            setLoadingInitialData(false)
         }
     }
 
     const handleCategorySelect = async (catId: string) => {
-        setFormData(prev => ({ ...prev, categoryId: catId, attributes: {} }))
+        setFormData((prev) => ({ ...prev, categoryId: catId, attributes: {} }))
+        setAttributes([])
+
         try {
             setLoadingAttributes(true)
             const res = await postService.getCategoryAttributes(Number(catId))
-            setAttributes(res)
+            setAttributes(Array.isArray(res) ? res : [])
         } catch (e) {
             console.error('Error fetching category attributes:', e)
+            CustomAlert('Error', 'Unable to load the attributes for the selected category.')
         } finally {
             setLoadingAttributes(false)
         }
     }
 
     const pickMedia = async () => {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+        if (!permission.granted) {
+            CustomAlert('Permission required', 'Please grant photo library access to select media.')
+            return
+        }
+
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.All,
+            mediaTypes: ['images', 'videos'],
             allowsMultipleSelection: true,
             quality: 1,
+            selectionLimit: 10,
         })
+
         if (!result.canceled) {
-            const selectedMedia = result.assets.map(asset => ({
+            const selectedMedia: SelectedMedia[] = result.assets.map((asset): SelectedMedia => ({
                 uri: asset.uri,
-                type: asset.type as 'image' | 'video'
+                type: asset.type === 'video' ? 'video' : 'image',
             }))
-            setMedia(prev => [...prev, ...selectedMedia])
+
+            setMedia((prev) => [...prev, ...selectedMedia].slice(0, 10))
         }
     }
 
     const removeMedia = (index: number) => {
-        setMedia(prev => prev.filter((_, i) => i !== index))
+        setMedia((prev) => prev.filter((_, i) => i !== index))
+    }
+
+    const resetForm = () => {
+        setFormData(initialFormData)
+        setAttributes([])
+        setMedia([])
+    }
+
+    const validateForm = () => {
+        if (!formData.postTitle.trim()) {
+            CustomAlert('Missing information', 'Please enter the post title.')
+            return false
+        }
+
+        if (!formData.categoryId) {
+            CustomAlert('Missing information', 'Please choose a category.')
+            return false
+        }
+
+        if (!formData.postPrice.trim() || Number.isNaN(Number(formData.postPrice)) || Number(formData.postPrice) < 0) {
+            CustomAlert('Invalid price', 'The selling price must be a number greater than or equal to 0.')
+            return false
+        }
+
+        if (media.length === 0) {
+            CustomAlert('Missing media', 'Please select at least one image or video.')
+            return false
+        }
+
+        const missingRequiredAttribute = attributes.find(
+            (attr) => attr.required && !formData.attributes[attr.attributeId]?.trim()
+        )
+
+        if (missingRequiredAttribute) {
+            CustomAlert('Missing attribute', `Please enter "${missingRequiredAttribute.attributeTitle}".`)
+            return false
+        }
+
+        return true
     }
 
     const submitForm = async () => {
-        if (!formData.postTitle || !formData.categoryId || media.length === 0) {
-            alert("Điền đầy đủ thông tin và chọn ít nhất 1 ảnh nhó!")
+        if (!validateForm()) {
             return
         }
+
         setSubmitting(true)
         try {
+            const uploadedMedia = await postService.uploadMedia(media.map((item) => item.uri))
+            const uploadedUrls = Array.isArray(uploadedMedia?.urls) ? uploadedMedia.urls : []
+
+            if (uploadedUrls.length !== media.length) {
+                throw new Error('Uploaded media count mismatch')
+            }
+
+            const images = uploadedUrls.filter((_: string, index: number) => media[index]?.type === 'image')
+            const videos = uploadedUrls.filter((_: string, index: number) => media[index]?.type === 'video')
+            const attributePayload = Object.entries(formData.attributes)
+                .filter(([, value]) => value.trim())
+                .map(([attributeId, value]) => ({
+                    attributeId: Number(attributeId),
+                    value: value.trim(),
+                }))
+
             await postService.createPost({
-                ...formData,
-                media: media.map(m => m.uri) // Gửi URI, backend sẽ xử lý upload
+                categoryId: Number(formData.categoryId),
+                postTitle: formData.postTitle.trim(),
+                postContent: formData.postContent.trim() || undefined,
+                postPrice: formData.postPrice.trim(),
+                postLocation: formData.postLocation.trim() || undefined,
+                postContactPhone: formData.postContactPhone.trim() || undefined,
+                images,
+                videos,
+                attributes: attributePayload,
             })
+
             setSubmitted(true)
+            resetForm()
         } catch (e) {
-            alert("Có lỗi xảy ra khi tạo bài đăng. Vui lòng thử lại.")
             console.error('Error submitting form:', e)
+            CustomAlert('Post creation failed', 'Something went wrong while creating the post. Please try again.')
         } finally {
             setSubmitting(false)
         }
     }
+
     return {
-        state: { categories, attributes, loadingAttributes, submitting, submitted, media, formData },
-        actions: { setFormData, handleCategorySelect, pickMedia, removeMedia, submitForm }
+        state: {
+            categories,
+            attributes,
+            loadingInitialData,
+            loadingAttributes,
+            submitting,
+            submitted,
+            media,
+            formData,
+        },
+        actions: {
+            setFormData,
+            setSubmitted,
+            handleCategorySelect,
+            pickMedia,
+            removeMedia,
+            submitForm,
+        }
     }
 }
 

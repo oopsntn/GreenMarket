@@ -1,38 +1,39 @@
-import { useState } from "react"
+import { useState } from 'react'
 import { Alert } from 'react-native'
-import { ReportService } from "./reportService"
+import { ReportService } from './reportService'
+import { useAuth } from '../../../context/AuthContext'
 
-export const useCreateReport = (postId: number, reporterId: number | null) => {
+export const useCreateReport = (postId: number) => {
+    const { user } = useAuth()
     const [reportReason, setReportReason] = useState('')
     const [description, setDescription] = useState('')
-    const [loading, setLoading] = useState(true)
+    const [loading, setLoading] = useState(false)
 
-    // Danh sách các lý do báo cáo để map vào reportReason
     const reasons = [
-        "Nội dung sai sự thật",
-        "Giá ảo / Lừa đảo",
-        "Hình ảnh không phù hợp",
-        "Sản phẩm cấm kinh doanh",
-        "Lý do khác"
-    ];
+        'False information',
+        'Fake price / Scam',
+        'Inappropriate images',
+        'Prohibited product',
+        'Other'
+    ]
 
     const handleSubmit = async (onSuccess: () => void) => {
         if (!reportReason) {
-            return Alert.alert("Thông báo", "Vui lòng chọn lý do báo cáo")
+            return Alert.alert('Notice', 'Please choose a report reason')
         }
         setLoading(true)
         try {
-            const finalReason = description ? `${reportReason} - Chi tiết: ${description}` : reportReason
+            const finalReason = description ? `${reportReason} - Details: ${description}` : reportReason
             await ReportService.createReport({
-                reporterId,
+                reporterId: user?.id ?? null,
                 postId,
                 reportReason: finalReason,
             })
-            Alert.alert("Thành công", "Báo cáo của bạn đã được gửi. Admin sẽ xem xét sớm nhất.")
-            // Quay lại màn hình trước đó
+            Alert.alert('Success', 'Your report has been submitted. The admin team will review it soon.')
             onSuccess()
         } catch (e) {
-            console.error("Lỗi", "Không thể gửi báo cáo. Vui lòng thử lại sau.");
+            console.error('Error', e)
+            Alert.alert('Error', 'Unable to submit the report. Please try again later.')
         } finally {
             setLoading(false)
         }

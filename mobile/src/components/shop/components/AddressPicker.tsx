@@ -4,6 +4,7 @@ import * as Location from 'expo-location';
 
 import { MapPin, Navigation } from 'lucide-react-native';
 import Input from '../../Reused/Input/Input';
+import CustomAlert from '../../../utils/AlertHelper';
 
 interface AddressPickerProps {
     address: string;
@@ -17,30 +18,50 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
 
     const getCurrentLocation = async () => {
         setLoading(true);
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-            alert('Quyền truy cập vị trí bị từ chối');
+        try {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                CustomAlert('Notice', 'Location access was denied');
+                return;
+            }
+
+            const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.High,
+            });
+
+            const { latitude, longitude } = location.coords;
+            onLocationSelect(latitude, longitude);
+
+            const addressResult = await Location.reverseGeocodeAsync({
+                latitude,
+                longitude,
+            });
+
+            if (addressResult.length > 0) {
+                const addr = addressResult[0];
+                const formattedAddr = [
+                    addr.streetNumber,
+                    addr.street,
+                    addr.district,
+                    addr.subregion,
+                    addr.region
+                ].filter(Boolean).join(', ');
+
+                onAddressChange(formattedAddr);
+            }
+        } catch (error) {
+            console.error(error);
+            CustomAlert('Error', 'Unable to get the current location');
+        } finally {
             setLoading(false);
-            return;
         }
-
-        let location = await Location.getCurrentPositionAsync({});
-        onLocationSelect(location.coords.latitude, location.coords.longitude);
-
-        // Reverse Geocoding (Chuyển tọa độ thành tên địa chỉ)
-        let address = await Location.reverseGeocodeAsync(location.coords);
-        if (address.length > 0) {
-            const formattedAddr = `${address[0].streetNumber || ''} ${address[0].street || ''}, ${address[0].subregion || ''}, ${address[0].region || ''}`;
-            onAddressChange(formattedAddr.trim());
-        }
-        setLoading(false);
     };
 
     return (
         <View style={styles.container}>
             <Input
                 label={label}
-                placeholder="Nhập địa chỉ hoặc lấy vị trí hiện tại"
+                placeholder="Enter an address or use the current location"
                 value={address}
                 icon={<MapPin size={18} color="#666" />}
                 onChangeText={onAddressChange}
@@ -52,7 +73,7 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
             >
                 <Navigation size={14} color="#10b981" />
                 <Text style={styles.locationBtnText}>
-                    {loading ? "Đang lấy vị trí..." : "Lấy vị trí hiện tại của vườn"}
+                    {loading ? 'Getting location...' : "Use the shop's current location"}
                 </Text>
             </TouchableOpacity>
         </View>

@@ -11,11 +11,12 @@ interface ModalProps {
   setEditData: (data: { title: string; price: string }) => void;
   onClose: () => void;
   onSave: (postId: number, data: any) => void;
+  saving?: boolean;
   styles: any;
 }
 
 const EditPostModal = ({
-  visible, editingPost, editData, setEditData, onClose, onSave, styles
+  visible, editingPost, editData, setEditData, onClose, onSave, saving = false, styles
 }: ModalProps) => {
   if (!editingPost) return null
 
@@ -23,16 +24,16 @@ const EditPostModal = ({
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalOverlay}>
         <Card style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Chỉnh sửa tin đăng</Text>
+          <Text style={styles.modalTitle}>Edit post</Text>
 
           <Input
-            label="Tiêu đề"
+            label="Title"
             value={editData.title}
             onChangeText={(t) => setEditData({ ...editData, title: t })}
           />
 
           <Input
-            label="Giá bán"
+            label="Price"
             type="numeric"
             value={editData.price}
             onChangeText={(t) => setEditData({ ...editData, price: t })}
@@ -42,20 +43,23 @@ const EditPostModal = ({
             <Button
               style={{ flex: 1, backgroundColor: '#666' }}
               onPress={onClose}
+              disabled={saving}
             >
-              Hủy
+              Cancel
             </Button>
 
             <View style={{ width: 10 }} />
 
             <Button
               style={{ flex: 1 }}
+              loading={saving}
+              disabled={saving}
               onPress={() => onSave(editingPost.postId, {
                 postTitle: editData.title,
                 postPrice: editData.price
               })}
             >
-              Lưu
+              Save
             </Button>
           </View>
         </Card>

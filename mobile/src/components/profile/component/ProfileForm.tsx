@@ -1,45 +1,63 @@
-import React from 'react';
-import { View } from 'react-native';
-import Input from '../../Reused/Input/Input';
-import { Store, User, Phone, Mail, MapPin } from 'lucide-react-native';
+import React from 'react'
+import { View } from 'react-native'
+import { Mail, MapPin, Phone, Store, User } from 'lucide-react-native'
+import Input from '../../Reused/Input/Input'
+import { ProfileFormData } from '../service/useProfile'
 
-export const ProfileForm = ({ formData, setFormData, isShop }: any) => (
+interface ProfileFormProps {
+    formData: ProfileFormData
+    setFormData: React.Dispatch<React.SetStateAction<ProfileFormData>>
+    isShop: boolean
+}
+
+export const ProfileForm = ({ formData, setFormData, isShop }: ProfileFormProps) => (
     <View>
         <Input
-            label={isShop ? "Tên nhà vườn" : "Tên hiển thị"}
+            label={isShop ? 'Shop name' : 'Display name'}
             value={isShop ? formData.shopName : formData.displayName}
-            onChangeText={(txt) => setFormData({ ...formData, [isShop ? 'shopName' : 'displayName']: txt })}
+            onChangeText={(txt) =>
+                setFormData((prev) => ({ ...prev, [isShop ? 'shopName' : 'displayName']: txt }))
+            }
             icon={isShop ? <Store size={18} color="#666" /> : <User size={18} color="#666" />}
+            required
         />
 
         <Input
-            label={isShop ? "Điện thoại vườn" : "Số điện thoại"}
+            label={isShop ? 'Shop phone number' : 'Phone number'}
             value={isShop ? formData.shopPhone : formData.mobile}
             disabled={!isShop}
-            onChangeText={(txt) => setFormData({ ...formData, shopPhone: txt })}
+            onChangeText={(txt) => setFormData((prev) => ({ ...prev, shopPhone: txt }))}
             icon={<Phone size={18} color="#666" />}
+            type="phone-pad"
+            required={isShop}
         />
 
         <Input
-            label="Email liên hệ"
+            label="Contact email"
             value={formData.email}
-            onChangeText={(txt) => setFormData({ ...formData, email: txt })}
+            onChangeText={(txt) => setFormData((prev) => ({ ...prev, email: txt }))}
             icon={<Mail size={18} color="#666" />}
+            type="email-address"
         />
 
         <Input
-            label="Địa chỉ"
+            label="Address"
             value={isShop ? formData.shopLocation : formData.location}
-            onChangeText={(txt) => setFormData({ ...formData, [isShop ? 'shopLocation' : 'location']: txt })}
+            onChangeText={(txt) =>
+                setFormData((prev) => ({ ...prev, [isShop ? 'shopLocation' : 'location']: txt }))
+            }
             icon={<MapPin size={18} color="#666" />}
+            required={isShop}
         />
 
         <Input
-            label={isShop ? "Mô tả nhà vườn" : "Giới thiệu bản thân"}
+            label={isShop ? 'Shop description' : 'About you'}
             value={isShop ? formData.shopDescription : formData.bio}
             multiline
             numberOfLines={4}
-            onChangeText={(txt) => setFormData({ ...formData, [isShop ? 'shopDescription' : 'bio']: txt })}
+            onChangeText={(txt) =>
+                setFormData((prev) => ({ ...prev, [isShop ? 'shopDescription' : 'bio']: txt }))
+            }
         />
     </View>
-);
+)

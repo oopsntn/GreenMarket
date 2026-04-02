@@ -8,51 +8,54 @@ import Input from '../../Reused/Input/Input'
 
 const CreateReportScreen = ({ route, navigation }: any) => {
     const { postId, postTitle } = route.params
-    const { reportReason,
+    const {
+        reportReason,
         setReportReason,
         description,
         setDescription,
         loading,
         reasons,
-        handleSubmit } = useCreateReport(postId, 1)
+        handleSubmit,
+    } = useCreateReport(postId)
 
     return (
-        <MobileLayout title="Báo cáo vi phạm" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Report Violation" backButton={() => navigation.goBack()}>
             <ScrollView style={styles.container}>
-                {/* Tóm tắt bài đăng bị báo cáo */}
                 <View style={styles.headerInfo}>
                     <AlertTriangle color="#ef4444" size={20} />
-                    <Text style={styles.headerText}>Bạn đang báo cáo bài đăng: </Text>
+                    <Text style={styles.headerText}>You are reporting the post: </Text>
                     <Text style={[styles.headerText, { fontWeight: 'bold' }]}>{postTitle}</Text>
                 </View>
 
-                <Text style={styles.sectionTitle}>Chọn lý do vi phạm</Text>
+                <Text style={styles.sectionTitle}>Choose a violation reason</Text>
 
                 {reasons.map((item) => (
-                    <TouchableOpacity key={item}
+                    <TouchableOpacity
+                        key={item}
                         style={[styles.reasonItem, reportReason === item && styles.activeReason]}
-                        onPress={() => setReportReason(item)}>
+                        onPress={() => setReportReason(item)}
+                    >
                         <Text style={[styles.reasonText, reportReason === item && styles.activeReasonText]}>{item}</Text>
                         <View style={[styles.radio, reportReason === item && styles.radioActive]} />
                     </TouchableOpacity>
                 ))}
 
-                <Text style={styles.sectionTitle}>Mô tả chi tiết (không bắt buộc)</Text>
+                <Text style={styles.sectionTitle}>Detailed description (optional)</Text>
                 <Input
-                    label="Mô tả chi tiết (không bắt buộc)"
+                    label="Detailed description (optional)"
                     value={description}
                     onChangeText={setDescription}
-                    placeholder="Cung cấp thêm thông tin để chúng tôi xử lý nhanh hơn..."
-                    multiline={true} // Bật chế độ nhiều dòng
+                    placeholder="Provide more information to help us review it faster..."
+                    multiline
                     numberOfLines={4}
-                    icon={<FileText size={18} color="#999" />} // Thêm icon cho đẹp
+                    icon={<FileText size={18} color="#999" />}
                 />
                 <Button
                     disabled={loading}
                     onPress={() => handleSubmit(() => navigation.goBack())}
                     style={styles.submitBtn}
                 >
-                    Gửi báo cáo
+                    Submit report
                 </Button>
             </ScrollView>
         </MobileLayout>
@@ -114,15 +117,6 @@ const styles = StyleSheet.create({
     radioActive: {
         borderColor: '#ef4444',
         backgroundColor: '#ef4444',
-    },
-    input: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 12,
-        textAlignVertical: 'top',
-        borderWidth: 1,
-        borderColor: '#eee',
-        marginBottom: 30,
     },
     submitBtn: {
         backgroundColor: '#ef4444',

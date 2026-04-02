@@ -7,13 +7,12 @@ import { ShopService } from '../service/shopService';
 import CustomAlert from '../../../utils/AlertHelper';
 import { useAuth } from '../../../context/AuthContext';
 import AddressPicker from '../components/AddressPicker';
-import { ProfileAvatar } from '../../profile/component/ProfileAvatar'; // Dùng lại component upload ảnh
 import { ProfileService } from '../../profile/service/ProfileService';
 import * as ImagePicker from 'expo-image-picker'
 import { Camera, ImageIcon } from 'lucide-react-native';
 
 const EditShopScreen = ({ route, navigation }: any) => {
-    const { shop } = route.params; // Lấy dữ liệu shop cũ truyền từ màn Detail sang
+    const { shop } = route.params;
     const { refreshShop } = useAuth();
     const [loading, setLoading] = useState(false);
 
@@ -28,9 +27,14 @@ const EditShopScreen = ({ route, navigation }: any) => {
         shopLng: shop?.shopLng,
     });
 
-    // Hàm chọn và upload ảnh (Quan trọng - phải có cái này mới có URL gửi Backend)
     const pickImage = async (field: 'shopLogoUrl' | 'shopCoverUrl') => {
-        let result = await ImagePicker.launchImageLibraryAsync({
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+            CustomAlert('Notice', 'Please grant photo library access');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
             allowsEditing: true,
             aspect: field === 'shopLogoUrl' ? [1, 1] : [16, 9],
             quality: 0.7,
@@ -44,7 +48,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     setFormData(prev => ({ ...prev, [field]: uploadRes.urls[0] }));
                 }
             } catch (e) {
-                CustomAlert("Lỗi", "Không thể tải ảnh lên");
+                CustomAlert('Error', 'Unable to upload the image');
             } finally {
                 setLoading(false);
             }
@@ -52,37 +56,36 @@ const EditShopScreen = ({ route, navigation }: any) => {
     };
 
     const handleUpdate = async () => {
-        if (!formData.shopName) return CustomAlert("Lỗi", "Tên vườn không được để trống");
+        if (!formData.shopName) return CustomAlert('Error', 'Shop name is required');
+        if (!formData.shopLat || !formData.shopLng) return CustomAlert('Error', 'Please update the shop location');
 
         setLoading(true);
         try {
-            // Đảm bảo ép kiểu Lat/Lng về String như Backend mong đợi
             const dataToSubmit = {
                 ...formData,
-                shopLat: formData.shopLat ? String(formData.shopLat) : "0",
-                shopLng: formData.shopLng ? String(formData.shopLng) : "0",
+                shopLat: formData.shopLat ? String(formData.shopLat) : '0',
+                shopLng: formData.shopLng ? String(formData.shopLng) : '0',
             };
 
             const res = await ShopService.updateShop(shop.shopId, dataToSubmit);
             if (res) {
                 await refreshShop();
-                CustomAlert("Thành công", "Đã cập nhật thông tin");
+                CustomAlert('Success', 'Information updated successfully');
                 navigation.goBack();
             }
         } catch (error: any) {
             console.error(error);
-            CustomAlert("Lỗi", error.response?.data?.error || "Cập nhật thất bại");
+            CustomAlert('Error', error.response?.data?.error || 'Update failed');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <MobileLayout title="Chỉnh sửa nhà vườn" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Edit Shop" backButton={() => navigation.goBack()}>
             <ScrollView style={styles.container}>
-                <Text style={styles.label}>Ảnh đại diện vườn</Text>
+                <Text style={styles.label}>Shop images</Text>
                 <View style={styles.imagePickerRow}>
-                    {/* Logo Picker */}
                     <TouchableOpacity onPress={() => pickImage('shopLogoUrl')} style={styles.pickerBox}>
                         {formData.shopLogoUrl ? (
                             <Image source={{ uri: formData.shopLogoUrl }} style={styles.previewLogo} />
@@ -94,45 +97,44 @@ const EditShopScreen = ({ route, navigation }: any) => {
                         )}
                     </TouchableOpacity>
 
-                    {/* Cover Picker */}
                     <TouchableOpacity onPress={() => pickImage('shopCoverUrl')} style={styles.pickerBoxCover}>
                         {formData.shopCoverUrl ? (
                             <Image source={{ uri: formData.shopCoverUrl }} style={styles.previewCover} />
                         ) : (
                             <View style={styles.pickerInner}>
                                 <Camera color="#94a3b8" size={24} />
-                                <Text style={styles.pickerText}>Ảnh bìa</Text>
+                                <Text style={styles.pickerText}>Cover image</Text>
                             </View>
                         )}
                     </TouchableOpacity>
                 </View>
 
                 <Input
-                    label="Tên nhà vườn"
+                    label="Shop name"
                     value={formData.shopName}
                     onChangeText={(txt) => setFormData({ ...formData, shopName: txt })}
                 />
 
                 <Input
-                    label="Số điện thoại"
+                    label="Phone number"
                     value={formData.shopPhone}
                     type="phone-pad"
                     onChangeText={(txt) => setFormData({ ...formData, shopPhone: txt })}
                 />
 
                 <Input
-                    label="Mô tả vườn"
+                    label="Shop description"
                     value={formData.shopDescription}
                     multiline
                     numberOfLines={4}
                     onChangeText={(txt) => setFormData({ ...formData, shopDescription: txt })}
                 />
 
-                <Text style={styles.label}>Địa chỉ & Vị trí</Text>
+                <Text style={styles.label}>Address & Location</Text>
                 <AddressPicker
-                    label="Địa chỉ vườn"
-                    address={formData.shopLocation} // Sửa từ initialAddress thành address
-                    onAddressChange={(addr) => setFormData({ ...formData, shopLocation: addr })} // Thêm hàm này
+                    label="Shop address"
+                    address={formData.shopLocation}
+                    onAddressChange={(addr) => setFormData({ ...formData, shopLocation: addr })}
                     onLocationSelect={(lat, lng) => {
                         setFormData({ ...formData, shopLat: lat, shopLng: lng })
                     }}
@@ -143,7 +145,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     loading={loading}
                     style={styles.saveBtn}
                 >
-                    Lưu thay đổi
+                    Save changes
                 </Button>
             </ScrollView>
         </MobileLayout>

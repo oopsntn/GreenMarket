@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, and, ne, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
@@ -99,12 +99,7 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const userPosts = await db.select().from(posts).where(
-            and(
-                eq(posts.postAuthorId, userId),
-                ne(posts.postStatus, "hidden")
-            )
-        );
+        const userPosts = await db.select().from(posts).where(eq(posts.postAuthorId, userId));
         res.json(userPosts);
     } catch (error) {
         console.error(error);
