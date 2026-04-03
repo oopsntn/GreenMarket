@@ -74,7 +74,7 @@ export const templateService = {
     selectedTemplateId: number,
     formData: TemplateFormState,
   ): Template[] {
-    return templates.map((template) =>
+    const updatedTemplates = templates.map((template) =>
       template.id === selectedTemplateId
         ? {
             ...template,

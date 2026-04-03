@@ -27,8 +27,8 @@ const typeFilterOptions: Array<TemplateType | "All"> = [
 
 const buildPreviewMessage = (
   template: Template | null,
-  audience: BuilderAudience,
-  tone: BuilderTone,
+  audience: TemplateBuilderAudience,
+  tone: TemplateBuilderTone,
   fields: {
     shopName: string;
     postTitle: string;
@@ -40,14 +40,14 @@ const buildPreviewMessage = (
 ) => {
   if (!template) return "";
 
-  const toneLead: Record<BuilderTone, string> = {
+  const toneLead: Record<TemplateBuilderTone, string> = {
     Formal: "Please review the following update from the GreenMarket admin team.",
     Supportive:
       "We wanted to share a quick update and the next recommended action for this case.",
     Direct: "Review the following action immediately.",
   };
 
-  const audienceTail: Record<BuilderAudience, string> = {
+  const audienceTail: Record<TemplateBuilderAudience, string> = {
     Seller: `Affected shop: ${fields.shopName}. Related post: ${fields.postTitle}.`,
     Reporter: `Report context: ${fields.reason}. Assigned contact: ${fields.contactEmail}.`,
     "Internal Admin": `Operational focus: ${fields.slotName}. Escalation contact: ${fields.contactEmail}.`,
@@ -343,10 +343,10 @@ function TemplateBuilderPage() {
                   <label htmlFor="template-builder-channel">Channel</label>
                   <select
                     id="template-builder-channel"
-                    value={channel}
-                    onChange={(event) =>
-                      setChannel(event.target.value as BuilderChannel)
-                    }
+                      value={channel}
+                      onChange={(event) =>
+                        setChannel(event.target.value as TemplateBuilderChannel)
+                      }
                   >
                     <option>Email</option>
                     <option>In-App Notification</option>
@@ -360,7 +360,7 @@ function TemplateBuilderPage() {
                     id="template-builder-audience"
                     value={audience}
                     onChange={(event) =>
-                      setAudience(event.target.value as BuilderAudience)
+                      setAudience(event.target.value as TemplateBuilderAudience)
                     }
                   >
                     <option>Seller</option>
@@ -375,7 +375,7 @@ function TemplateBuilderPage() {
                     id="template-builder-tone"
                     value={tone}
                     onChange={(event) =>
-                      setTone(event.target.value as BuilderTone)
+                      setTone(event.target.value as TemplateBuilderTone)
                     }
                   >
                     <option>Formal</option>
