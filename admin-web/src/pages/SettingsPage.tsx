@@ -6,10 +6,48 @@ import { settingsService } from "../services/settingsService";
 import type { SettingsState } from "../types/settings";
 import "./SettingsPage.css";
 
+const validateSettings = (settings: SettingsState) => {
+  if (!settings.general.platformName.trim()) {
+    throw new Error("Platform name is required.");
+  }
+
+  if (!settings.general.supportEmail.trim().includes("@")) {
+    throw new Error("Support email must be a valid email address.");
+  }
+
+  if (settings.moderation.reportLimit < 1) {
+    throw new Error("Max reports before review must be at least 1.");
+  }
+
+  if (settings.postLifecycle.postExpiryDays < 1) {
+    throw new Error("Post expiry days must be at least 1.");
+  }
+
+  if (settings.postLifecycle.restoreWindowDays < 1) {
+    throw new Error("Restore window must be at least 1 day.");
+  }
+
+  if (
+    settings.postLifecycle.restoreWindowDays >
+    settings.postLifecycle.postExpiryDays
+  ) {
+    throw new Error("Restore window cannot be greater than post expiry days.");
+  }
+
+  if (settings.media.maxImagesPerPost < 1) {
+    throw new Error("Max images per post must be at least 1.");
+  }
+
+  if (settings.media.maxFileSizeMb < 1) {
+    throw new Error("Max file size must be at least 1 MB.");
+  }
+};
+
 function SettingsPage() {
   const [settings, setSettings] = useState<SettingsState>(
     settingsService.getSettings(),
   );
+  const [formError, setFormError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
@@ -38,6 +76,10 @@ function SettingsPage() {
     field: string,
     value: string | number | boolean,
   ) => {
+    if (formError) {
+      setFormError("");
+    }
+
     setSettings((prev) => ({
       ...prev,
       [section]: {
@@ -48,9 +90,26 @@ function SettingsPage() {
   };
 
   const handleSave = () => {
-    const updated = settingsService.updateSettings(settings);
-    setSettings(updated);
-    showToast("Settings saved successfully.");
+    try {
+      validateSettings(settings);
+      setFormError("");
+
+      const updated = settingsService.updateSettings(settings);
+      setSettings(updated);
+      showToast("Settings saved successfully.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to save settings.";
+      setFormError(message);
+      showToast(message, "error");
+    }
+  };
+
+  const handleReset = () => {
+    const defaultSettings = settingsService.getDefaultSettings();
+    setSettings(defaultSettings);
+    setFormError("");
+    showToast("Settings were reset to defaults.", "info");
   };
 
   return (
@@ -61,6 +120,18 @@ function SettingsPage() {
         actionLabel="Save Changes"
         onActionClick={handleSave}
       />
+
+      <div className="settings-toolbar">
+        <button
+          type="button"
+          className="settings-toolbar__reset"
+          onClick={handleReset}
+        >
+          Reset To Defaults
+        </button>
+      </div>
+
+      {formError ? <div className="settings-error-banner">{formError}</div> : null}
 
       <div className="settings-grid">
         <SectionCard
