@@ -6,14 +6,14 @@ import { db } from "../config/db";
 import {
   admins,
   users,
-  otpRequests,
   adminRoles,
   roles,
 } from "../models/schema";
 import { AdminLoginBody } from "../dtos/admin";
 import { RequestOTPBody, VerifyOTPBody } from "../dtos/otp";
 
-import { otpService } from "../services/otp.service";
+import { verificationService } from "../services/verification.service";
+import { verifications } from "../models/schema/verifications";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
 const ADMIN_WEB_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"];
@@ -110,19 +110,16 @@ export const userRequestOtp = async (
       return;
     }
 
-    const sendResult = await otpService.sendOTP(mobile);
+    const sendResult = await verificationService.requestOTP(mobile, "phone");
 
     if (!sendResult.success) {
       res.status(500).json({ error: sendResult.message });
       return;
     }
 
-    await db.insert(otpRequests).values({
-      otpRequestMobile: mobile,
-      otpRequestOtpCode: "TWILIO_VERIFY",
-      otpRequestExpireAt: new Date(Date.now() + 10 * 60 * 1000),
-      otpRequestStatus: "pending",
-    });
+    // verifications table handles logging automatically inside service,
+    // but auth controller might still want to track specific login attempts if needed.
+    // However, the service already inserted into 'verifications'.
 
     res.json({ message: sendResult.message });
   } catch (error: any) {
@@ -146,7 +143,7 @@ export const userVerifyOtp = async (
       return;
     }
 
-    const verifyResult = await otpService.verifyOTP(mobile, otp);
+    const verifyResult = await verificationService.verifyOTP(mobile, otp, "phone");
 
     if (!verifyResult.success) {
       res.status(401).json({ error: verifyResult.message });
@@ -180,16 +177,6 @@ export const userVerifyOtp = async (
         .set({ userLastLoginAt: now })
         .where(eq(users.userId, user.userId));
     }
-
-    await db
-      .update(otpRequests)
-      .set({ otpRequestStatus: "verified" })
-      .where(
-        and(
-          eq(otpRequests.otpRequestMobile, mobile),
-          eq(otpRequests.otpRequestStatus, "pending"),
-        ),
-      );
 
     const token = jwt.sign(
       { id: user.userId, mobile: user.userMobile, role: "user" },

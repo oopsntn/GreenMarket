@@ -25,72 +25,74 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const { categoryId, postTitle, postContent, postPrice, postLocation, postContactPhone, images, videos, attributes } = req.body;
+        const {
+            categoryId,
+            postTitle,
+            postContent,
+            postPrice,
+            postLocation,
+            postContactPhone,
+            images,
+            attributes: attrValues
+        } = req.body;
 
-        if (!categoryId || !postTitle) {
-            res.status(400).json({ error: "Missing required fields (categoryId, postTitle)" });
+        if (!postTitle || !categoryId) {
+            res.status(400).json({ error: "Title and Category are required" });
             return;
         }
 
-        // Check if user has a verified shop
-        const [userShop] = await db.select()
+        // Check if user has an active shop
+        const [activeShop] = await db.select()
             .from(shops)
-            .where(and(eq(shops.shopOwnerId, userId), eq(shops.shopStatus, "active")))
+            .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
             .limit(1);
 
-        // Get user mobile if shop phone isn't available
-        let contactPhone = postContactPhone;
-        if (!contactPhone) {
-            if (userShop?.shopPhone) {
-                contactPhone = userShop.shopPhone;
-            } else {
-                const [userRecord] = await db.select().from(users).where(eq(users.userId, userId)).limit(1);
-                contactPhone = userRecord?.userMobile || "";
-            }
-        }
-
-        const postSlug = `${slugify(postTitle)}-${Date.now()}`;
+        const now = new Date();
+        const isActiveGardenOwner = Boolean(activeShop);
+        const finalSlug = slugify(postTitle) + "-" + Date.now().toString().slice(-4);
 
         const [newPost] = await db.insert(posts).values({
             postAuthorId: userId,
-            postShopId: userShop?.shopId || null,
-            categoryId,
+            postShopId: activeShop?.shopId || null,
+            categoryId: Number(categoryId),
             postTitle,
-            postSlug,
+            postSlug: finalSlug,
             postContent,
-            postPrice: postPrice?.toString() || "0",
+            postPrice: postPrice?.toString(),
             postLocation,
-            postContactPhone: contactPhone,
-            postStatus: userShop ? "approved" : "pending" // Shop owners are auto-approved
+            postContactPhone,
+            postStatus: isActiveGardenOwner ? "approved" : "pending",
+            postPublished: isActiveGardenOwner,
+            postSubmittedAt: now,
+            postPublishedAt: isActiveGardenOwner ? now : null,
+            postCreatedAt: now,
+            postUpdatedAt: now,
         }).returning();
 
-        // Handle images if provided
-        if (images && Array.isArray(images) && images.length > 0) {
-            const imageRecords = images.map(url => ({
-                postId: newPost.postId,
-                imageUrl: url
-            }));
-            await db.insert(postImages).values(imageRecords);
+        // Save images if provided
+        if (Array.isArray(images) && images.length > 0) {
+            await db.insert(postImages).values(
+                images.map((url: string, index: number) => ({
+                    postId: newPost.postId,
+                    imageUrl: url,
+                    imageSortOrder: index,
+                }))
+            );
         }
 
-        // Handle videos if provided
-        if (videos && Array.isArray(videos) && videos.length > 0) {
-            const videoRecords = videos.map((url, index) => ({
-                postId: newPost.postId,
-                videoUrl: url,
-                videoPosition: index
-            }));
-            await db.insert(postVideos).values(videoRecords);
-        }
+        // Save attribute values if provided
+        if (Array.isArray(attrValues) && attrValues.length > 0) {
+            const attrRecords = attrValues
+                .filter((attr: any) => attr?.attributeId && attr?.value !== undefined)
+                .map((attr: any) => ({
+                    postId: newPost.postId,
+                    attributeId: Number(attr.attributeId),
+                    attributeValue: String(attr.value),
+                }));
 
-        // Handle attributes if provided
-        if (attributes && Array.isArray(attributes) && attributes.length > 0) {
-            const attrRecords = attributes.map(attr => ({
-                postId: newPost.postId,
-                attributeId: attr.attributeId,
-                attributeValue: attr.value
-            }));
-            await db.insert(postAttributeValues).values(attrRecords);
+            if (attrRecords.length > 0) {
+                await db.insert(postAttributeValues).values(attrRecords);
+            }
         }
 
         res.status(201).json(newPost);
@@ -271,7 +273,7 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         // Shop owners with active shops can publish edits immediately.
         const [activeShop] = await db.select()
             .from(shops)
-            .where(and(eq(shops.shopOwnerId, userId), eq(shops.shopStatus, "active")))
+            .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
             .limit(1);
 
         const now = new Date();

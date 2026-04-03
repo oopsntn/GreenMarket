@@ -35,7 +35,7 @@ async function testUserPosting() {
         // 3. User registers and Admin verifies a shop
         console.log("\n3. User Registers Shop and Admin Verifies...");
         const [shop] = await db.insert(shops).values({
-            shopOwnerId: user.userId,
+            shopId: user.userId,
             shopName: "Vườn Tùng Hữu Nghĩa",
             shopStatus: "active" // Skip interactive step for test
         }).returning();

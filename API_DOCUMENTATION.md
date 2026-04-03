@@ -39,7 +39,8 @@ It is intended for `mobile` and `admin-web` teams.
 
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
-| POST | `/api/upload` | No | Upload images/videos | `media` (array, max 10 files) |
+| POST | `/api/upload` | No | Upload mixed media (images/videos) | `media` (array, max 10 files) |
+| POST | `/api/upload/images` | No | Upload images only | `media` (array, max 10 files) |
 
 ### Categories
 
@@ -68,7 +69,11 @@ It is intended for `mobile` and `admin-web` teams.
 | POST | `/api/shops/register` | User token | Register shop | required: `shopName` |
 | GET | `/api/shops/my-shop` | User token | Get current user's shop | none |
 | GET | `/api/shops/:id` | No | Get public shop detail with approved posts | path `id` |
-| PATCH | `/api/shops/:id` | User token | Update shop info | `shopName`, `shopPhone`, `shopLocation`, `shopDescription`, `shopLat`, `shopLng` |
+| PATCH | `/api/shops/:id` | User token | Update shop info (Note: Email change resets verification) | `shopName`, `shopEmail`, `shopLocation`, `shopDescription`, `shopLat`, `shopLng` |
+| POST | `/api/shops/verify/request` | User token | Request OTP for Email or Phone | `target` (email/phone string), `type` ("email" | "phone") |
+| POST | `/api/shops/verify/email` | User token | Confirm OTP to verify Shop Email | `email`, `otp` |
+| POST | `/api/shops/phones` | User token | Add and verify a secondary phone number (max 3) | `phone`, `otp` |
+| DELETE | `/api/shops/phones` | User token | Remove a phone number (min 1 required) | `phone` |
 
 ### Reports
 
@@ -137,6 +142,20 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | POST | `/api/admin/attributes` | Create attribute |
 | PUT | `/api/admin/attributes/:id` | Update attribute |
 | DELETE | `/api/admin/attributes/:id` | Delete attribute |
+|---|---|---|
+| **Placement Slots** | | |
+| GET | `/api/admin/placement-slots` | List placement slots |
+| GET | `/api/admin/placement-slots/:id` | Get slot detail |
+| POST | `/api/admin/placement-slots` | Create slot |
+| PUT | `/api/admin/placement-slots/:id` | Update slot |
+| DELETE | `/api/admin/placement-slots/:id` | Delete slot |
+|---|---|---|
+| **Promotion Packages** | | |
+| GET | `/api/admin/promotion-packages` | List packages |
+| GET | `/api/admin/promotion-packages/:id` | Get package detail |
+| POST | `/api/admin/promotion-packages` | Create package |
+| PUT | `/api/admin/promotion-packages/:id` | Update package |
+| DELETE | `/api/admin/promotion-packages/:id` | Delete package |
 
 ### Posts moderation
 
