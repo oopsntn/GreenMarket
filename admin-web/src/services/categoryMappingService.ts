@@ -1,5 +1,3 @@
-import { initialAttributes } from "../mock-data/attributes";
-import { initialCategories } from "../mock-data/categories";
 import { initialCategoryMappings } from "../mock-data/categoryMappings";
 import type { Attribute } from "../types/attribute";
 import type { Category } from "../types/category";
@@ -8,6 +6,9 @@ import type {
   CategoryMappingFormState,
   MappingStatus,
 } from "../types/categoryMapping";
+import { readStoredJson, writeStoredJson } from "../utils/browserStorage";
+
+const CATEGORY_MAPPING_STORAGE_KEY = "adminCategoryMappings";
 
 const getNextId = (mappings: CategoryMapping[]) => {
   if (mappings.length === 0) return 1;
@@ -16,16 +17,15 @@ const getNextId = (mappings: CategoryMapping[]) => {
 
 const toNumberId = (value: string) => Number(value);
 
-const getCategoryById = (categoryId: number) => {
-  return (
-    initialCategories.find((category) => category.id === categoryId) ?? null
+const getStoredMappings = () =>
+  readStoredJson<CategoryMapping[]>(
+    CATEGORY_MAPPING_STORAGE_KEY,
+    initialCategoryMappings,
   );
-};
 
-const getAttributeById = (attributeId: number) => {
-  return (
-    initialAttributes.find((attribute) => attribute.id === attributeId) ?? null
-  );
+const saveMappings = (mappings: CategoryMapping[]) => {
+  writeStoredJson(CATEGORY_MAPPING_STORAGE_KEY, mappings);
+  return mappings;
 };
 
 const hasDuplicateMapping = (
@@ -46,6 +46,8 @@ const hasDuplicateMapping = (
 };
 
 const buildMappingPayload = (
+  categories: Category[],
+  attributes: Attribute[],
   formData: CategoryMappingFormState,
   existingMappings: CategoryMapping[],
   excludeMappingId?: number,
@@ -57,8 +59,13 @@ const buildMappingPayload = (
     throw new Error("Please select both category and attribute.");
   }
 
-  const category = getCategoryById(categoryId);
-  const attribute = getAttributeById(attributeId);
+  const category =
+    categories.find((item) => item.id === categoryId && item.status === "Active") ??
+    null;
+  const attribute =
+    attributes.find(
+      (item) => item.id === attributeId && item.status === "Active",
+    ) ?? null;
 
   if (!category) {
     throw new Error("Selected category was not found.");
@@ -104,49 +111,64 @@ export const emptyCategoryMappingForm: CategoryMappingFormState = {
 
 export const categoryMappingService = {
   getMappings(): CategoryMapping[] {
-    return initialCategoryMappings;
+    return getStoredMappings();
   },
 
-  getAvailableCategories(): Category[] {
-    return initialCategories.filter((category) => category.status === "Active");
+  getAvailableCategories(categories: Category[]): Category[] {
+    return categories.filter((category) => category.status === "Active");
   },
 
-  getAvailableAttributes(): Attribute[] {
-    return initialAttributes.filter(
-      (attribute) => attribute.status === "Active",
-    );
+  getAvailableAttributes(attributes: Attribute[]): Attribute[] {
+    return attributes.filter((attribute) => attribute.status === "Active");
   },
 
   createMapping(
     mappings: CategoryMapping[],
+    categories: Category[],
+    attributes: Attribute[],
     formData: CategoryMappingFormState,
   ): CategoryMapping[] {
-    const payload = buildMappingPayload(formData, mappings);
+    const payload = buildMappingPayload(
+      categories,
+      attributes,
+      formData,
+      mappings,
+    );
 
-    return [
+    return saveMappings([
       ...mappings,
       {
         id: getNextId(mappings),
         ...payload,
         status: "Active",
       },
-    ];
+    ]);
   },
 
   updateMapping(
     mappings: CategoryMapping[],
+    categories: Category[],
+    attributes: Attribute[],
     mappingId: number,
     formData: CategoryMappingFormState,
   ): CategoryMapping[] {
-    const payload = buildMappingPayload(formData, mappings, mappingId);
+    const payload = buildMappingPayload(
+      categories,
+      attributes,
+      formData,
+      mappings,
+      mappingId,
+    );
 
-    return mappings.map((mapping) =>
+    return saveMappings(
+      mappings.map((mapping) =>
       mapping.id === mappingId
         ? {
             ...mapping,
             ...payload,
           }
         : mapping,
+      ),
     );
   },
 
@@ -155,8 +177,10 @@ export const categoryMappingService = {
     mappingId: number,
     status: MappingStatus,
   ): CategoryMapping[] {
-    return mappings.map((mapping) =>
+    return saveMappings(
+      mappings.map((mapping) =>
       mapping.id === mappingId ? { ...mapping, status } : mapping,
+      ),
     );
   },
 
@@ -164,7 +188,7 @@ export const categoryMappingService = {
     mappings: CategoryMapping[],
     mappingId: number,
   ): CategoryMapping[] {
-    return mappings.filter((mapping) => mapping.id !== mappingId);
+    return saveMappings(mappings.filter((mapping) => mapping.id !== mappingId));
   },
 
   getPreviewMappingsByCategory(

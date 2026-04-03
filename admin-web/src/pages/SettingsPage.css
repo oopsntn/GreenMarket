@@ -4,6 +4,34 @@
   gap: 24px;
 }
 
+.settings-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-toolbar__reset {
+  min-width: 180px;
+  height: 42px;
+  padding: 0 18px;
+  border: 1px solid #d9e8d7;
+  border-radius: 14px;
+  background-color: #f4f8f1;
+  color: #486150;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-error-banner {
+  padding: 14px 18px;
+  border: 1px solid #f5c7c4;
+  border-radius: 16px;
+  background-color: #fff4f3;
+  color: #b42318;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -82,5 +110,15 @@
 @media (max-width: 1024px) {
   .settings-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-toolbar {
+    justify-content: stretch;
+  }
+
+  .settings-toolbar__reset {
+    width: 100%;
   }
 }
