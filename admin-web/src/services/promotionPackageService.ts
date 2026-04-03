@@ -1,24 +1,62 @@
-import {
-  emptyPromotionPackageForm,
-  initialPromotionPackages,
-} from "../mock-data/promotionPackages";
+import { emptyPromotionPackageForm } from "../mock-data/promotionPackages";
+import { apiClient } from "../lib/apiClient";
+import type { PlacementSlotApiResponse } from "../types/placementSlot";
 import type {
   PromotionPackage,
+  PromotionPackageApiResponse,
   PromotionPackageFormState,
   PromotionPackageStatus,
   PromotionPackageSummaryCard,
 } from "../types/promotionPackage";
 
-const normalizeText = (value: string) => value.trim();
-
-const getNextPackageId = (packages: PromotionPackage[]) => {
-  if (packages.length === 0) return 1;
-  return Math.max(...packages.map((item) => item.id)) + 1;
+type PromotionPackageSlotOption = {
+  id: number;
+  code: string;
+  label: PromotionPackage["slot"];
 };
+
+const normalizeText = (value: string) => value.trim();
 
 const parseCurrencyValue = (value: string) => {
   const numeric = Number(value.replace(/[^\d]/g, ""));
   return Number.isNaN(numeric) ? 0 : numeric;
+};
+
+const formatCurrencyLabel = (value: string | number | null) => {
+  const numeric = Number(value ?? 0);
+
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return "0 VND";
+  }
+
+  return `${numeric.toLocaleString("en-US")} VND`;
+};
+
+const mapSlotToUi = (
+  slotCode: string | null,
+  slotTitle: string | null,
+): PromotionPackage["slot"] => {
+  const normalized = `${slotCode ?? ""} ${slotTitle ?? ""}`.toLowerCase();
+
+  if (normalized.includes("search")) return "Search Boost";
+  if (normalized.includes("category")) return "Category Top";
+  return "Home Top";
+};
+
+const mapApiPackageToUi = (
+  item: PromotionPackageApiResponse,
+): PromotionPackage => {
+  return {
+    id: item.promotionPackageId,
+    name: item.promotionPackageTitle?.trim() || "Untitled Package",
+    slot: mapSlotToUi(item.slotCode ?? null, item.slotTitle ?? null),
+    durationDays: item.promotionPackageDurationDays ?? 1,
+    price: formatCurrencyLabel(item.promotionPackagePrice),
+    maxPosts: item.promotionPackageMaxPosts ?? 1,
+    displayQuota: item.promotionPackageDisplayQuota ?? 1,
+    status: item.promotionPackagePublished ? "Active" : "Disabled",
+    description: item.promotionPackageDescription?.trim() || "",
+  };
 };
 
 const validatePromotionPackageForm = (
@@ -62,12 +100,42 @@ const validatePromotionPackageForm = (
   }
 };
 
+const buildPackagePayload = (
+  formData: PromotionPackageFormState,
+  slotId: number,
+  published: boolean,
+) => ({
+  promotionPackageSlotId: slotId,
+  promotionPackageTitle: normalizeText(formData.name),
+  promotionPackageDurationDays: formData.durationDays,
+  promotionPackagePrice: String(parseCurrencyValue(formData.price)),
+  promotionPackageMaxPosts: formData.maxPosts,
+  promotionPackageDisplayQuota: formData.displayQuota,
+  promotionPackageDescription: normalizeText(formData.description),
+  promotionPackagePublished: published,
+});
+
 export const promotionPackageService = {
-  getPromotionPackages(): PromotionPackage[] {
-    return initialPromotionPackages;
+  getSlotOptions(slotResponses: PlacementSlotApiResponse[]) {
+    return slotResponses.map((item) => ({
+      id: item.placementSlotId,
+      code: item.placementSlotCode?.trim() || "",
+      label: mapSlotToUi(item.placementSlotCode ?? null, item.placementSlotTitle ?? null),
+    }));
   },
 
-  getActivePromotionPackages(packages = initialPromotionPackages) {
+  async getPromotionPackages(): Promise<PromotionPackage[]> {
+    const data = await apiClient.request<PromotionPackageApiResponse[]>(
+      "/api/admin/promotion-packages",
+      {
+        defaultErrorMessage: "Unable to load promotion packages.",
+      },
+    );
+
+    return data.map(mapApiPackageToUi);
+  },
+
+  getActivePromotionPackages(packages: PromotionPackage[]) {
     return packages.filter((item) => item.status === "Active");
   },
 
@@ -120,57 +188,122 @@ export const promotionPackageService = {
     ];
   },
 
-  createPromotionPackage(
+  async createPromotionPackage(
     packages: PromotionPackage[],
+    slotOptions: PromotionPackageSlotOption[],
     formData: PromotionPackageFormState,
-  ): PromotionPackage[] {
+  ): Promise<PromotionPackage[]> {
     validatePromotionPackageForm(formData, packages);
+    const targetSlot = slotOptions.find((item) => item.label === formData.slot);
 
-    const newPackage: PromotionPackage = {
-      id: getNextPackageId(packages),
-      name: normalizeText(formData.name),
-      slot: formData.slot,
-      durationDays: formData.durationDays,
-      price: normalizeText(formData.price),
-      maxPosts: formData.maxPosts,
-      displayQuota: formData.displayQuota,
-      status: "Active",
-      description: normalizeText(formData.description),
-    };
+    if (!targetSlot) {
+      throw new Error("Selected placement slot could not be found.");
+    }
 
-    return [newPackage, ...packages];
+    const data = await apiClient.request<PromotionPackageApiResponse>(
+      "/api/admin/promotion-packages",
+      {
+        method: "POST",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to create promotion package.",
+        body: JSON.stringify(buildPackagePayload(formData, targetSlot.id, true)),
+      },
+    );
+
+    return [
+      mapApiPackageToUi({
+        ...data,
+        slotCode: targetSlot.code,
+      }),
+      ...packages,
+    ];
   },
 
-  updatePromotionPackage(
+  async updatePromotionPackage(
     packages: PromotionPackage[],
+    slotOptions: PromotionPackageSlotOption[],
     packageId: number,
     formData: PromotionPackageFormState,
-  ): PromotionPackage[] {
+  ): Promise<PromotionPackage[]> {
     validatePromotionPackageForm(formData, packages, packageId);
+    const currentPackage = packages.find((item) => item.id === packageId);
+    const targetSlot = slotOptions.find((item) => item.label === formData.slot);
+
+    if (!targetSlot) {
+      throw new Error("Selected placement slot could not be found.");
+    }
+
+    const data = await apiClient.request<PromotionPackageApiResponse>(
+      `/api/admin/promotion-packages/${packageId}`,
+      {
+        method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update promotion package.",
+        body: JSON.stringify(
+          buildPackagePayload(
+            formData,
+            targetSlot.id,
+            currentPackage?.status !== "Disabled",
+          ),
+        ),
+      },
+    );
 
     return packages.map((item) =>
       item.id === packageId
-        ? {
-            ...item,
-            name: normalizeText(formData.name),
-            slot: formData.slot,
-            durationDays: formData.durationDays,
-            price: normalizeText(formData.price),
-            maxPosts: formData.maxPosts,
-            displayQuota: formData.displayQuota,
-            description: normalizeText(formData.description),
-          }
+        ? mapApiPackageToUi({ ...data, slotCode: targetSlot.code })
         : item,
     );
   },
 
-  updatePromotionPackageStatus(
+  async updatePromotionPackageStatus(
     packages: PromotionPackage[],
+    slotOptions: PromotionPackageSlotOption[],
     packageId: number,
     status: PromotionPackageStatus,
-  ): PromotionPackage[] {
+  ): Promise<PromotionPackage[]> {
+    const currentPackage = packages.find((item) => item.id === packageId);
+
+    if (!currentPackage) {
+      return packages;
+    }
+
+    const targetSlot = slotOptions.find(
+      (item) => item.label === currentPackage.slot,
+    );
+
+    if (!targetSlot) {
+      throw new Error("Selected placement slot could not be found.");
+    }
+
+    const data = await apiClient.request<PromotionPackageApiResponse>(
+      `/api/admin/promotion-packages/${packageId}`,
+      {
+        method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update promotion package status.",
+        body: JSON.stringify(
+          buildPackagePayload(
+            {
+              name: currentPackage.name,
+              slot: currentPackage.slot,
+              durationDays: currentPackage.durationDays,
+              price: currentPackage.price,
+              maxPosts: currentPackage.maxPosts,
+              displayQuota: currentPackage.displayQuota,
+              description: currentPackage.description,
+            },
+            targetSlot.id,
+            status === "Active",
+          ),
+        ),
+      },
+    );
+
     return packages.map((item) =>
-      item.id === packageId ? { ...item, status } : item,
+      item.id === packageId
+        ? mapApiPackageToUi({ ...data, slotCode: targetSlot.code })
+        : item,
     );
   },
 };
