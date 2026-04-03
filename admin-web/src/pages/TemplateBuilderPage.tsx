@@ -93,10 +93,15 @@ function TemplateBuilderPage() {
   const [adminNote, setAdminNote] = useState(initialPreset.adminNote);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
+  const activeTemplates = useMemo(
+    () => templates.filter((template) => template.status === "Active"),
+    [templates],
+  );
+
   const filteredTemplates = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    return templates.filter((template) => {
+    return activeTemplates.filter((template) => {
       const matchesKeyword =
         !keyword ||
         template.name.toLowerCase().includes(keyword) ||
@@ -108,7 +113,7 @@ function TemplateBuilderPage() {
 
       return matchesKeyword && matchesType;
     });
-  }, [templates, searchKeyword, selectedTypeFilter]);
+  }, [activeTemplates, searchKeyword, selectedTypeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / PAGE_SIZE));
 
@@ -128,10 +133,10 @@ function TemplateBuilderPage() {
   }, [page, totalPages]);
 
   useEffect(() => {
-    if (!selectedTemplateId && templates.length > 0) {
-      setSelectedTemplateId(templates[0].id);
+    if (!selectedTemplateId && activeTemplates.length > 0) {
+      setSelectedTemplateId(activeTemplates[0].id);
     }
-  }, [selectedTemplateId, templates]);
+  }, [activeTemplates, selectedTemplateId]);
 
   useEffect(() => {
     templateBuilderService.savePreset({
@@ -162,7 +167,8 @@ function TemplateBuilderPage() {
   ]);
 
   const selectedTemplate =
-    templates.find((template) => template.id === selectedTemplateId) ?? null;
+    activeTemplates.find((template) => template.id === selectedTemplateId) ??
+    null;
 
   const previewMessage = buildPreviewMessage(selectedTemplate, audience, tone, {
     shopName,
