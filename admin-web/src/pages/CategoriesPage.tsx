@@ -160,6 +160,9 @@ function CategoriesPage() {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+      ...(name === "name" && !prev.slug.trim()
+        ? { slug: categoryService.buildSlug(value, "") }
+        : {}),
     }));
 
     if (formError) {
@@ -170,14 +173,14 @@ function CategoriesPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!formData.name.trim()) {
-      setFormError("Category name is required.");
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       setFormError("");
+      categoryService.validateCategoryForm(
+        categories,
+        formData,
+        selectedCategoryId,
+      );
 
       if (modalMode === "add") {
         const newCategory = await categoryService.createCategory(formData);

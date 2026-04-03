@@ -15,6 +15,15 @@ const formatDate = (value: string | null) => {
   return date.toISOString().slice(0, 10);
 };
 
+const normalizeText = (value: string) => value.trim().toLowerCase();
+
+const slugifyCategory = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 const mapApiCategoryToUi = (item: CategoryApiResponse): Category => {
   return {
     id: item.categoryId,
@@ -34,6 +43,50 @@ export const categoryService = {
     };
   },
 
+  buildSlug(name: string, slug: string) {
+    return slugifyCategory(slug || name);
+  },
+
+  validateCategoryForm(
+    categories: Category[],
+    formData: CategoryFormState,
+    selectedCategoryId?: number | null,
+  ) {
+    if (!formData.name.trim()) {
+      throw new Error("Category name is required.");
+    }
+
+    const nextSlug = this.buildSlug(formData.name, formData.slug);
+
+    if (!nextSlug) {
+      throw new Error("Slug could not be generated from the current category name.");
+    }
+
+    const duplicateName = categories.some((category) => {
+      if (selectedCategoryId && category.id === selectedCategoryId) {
+        return false;
+      }
+
+      return normalizeText(category.name) === normalizeText(formData.name);
+    });
+
+    if (duplicateName) {
+      throw new Error("Another category already uses this name.");
+    }
+
+    const duplicateSlug = categories.some((category) => {
+      if (selectedCategoryId && category.id === selectedCategoryId) {
+        return false;
+      }
+
+      return normalizeText(category.slug) === normalizeText(nextSlug);
+    });
+
+    if (duplicateSlug) {
+      throw new Error("Another category already uses this slug.");
+    }
+  },
+
   async getCategories(): Promise<Category[]> {
     const data = await apiClient.request<CategoryApiResponse[]>(
       "/api/admin/categories",
@@ -45,9 +98,11 @@ export const categoryService = {
   },
 
   async createCategory(formData: CategoryFormState): Promise<Category> {
+    const slug = this.buildSlug(formData.name, formData.slug);
+
     const payload = {
       categoryTitle: formData.name.trim(),
-      categorySlug: formData.slug.trim() || undefined,
+      categorySlug: slug || undefined,
       categoryPublished: true,
     };
 
@@ -69,9 +124,11 @@ export const categoryService = {
     formData: CategoryFormState,
     currentStatus: CategoryStatus,
   ): Promise<Category> {
+    const slug = this.buildSlug(formData.name, formData.slug);
+
     const payload = {
       categoryTitle: formData.name.trim(),
-      categorySlug: formData.slug.trim() || undefined,
+      categorySlug: slug || undefined,
       categoryPublished: currentStatus === "Active",
     };
 
