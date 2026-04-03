@@ -1,4 +1,4 @@
-export const ADMIN_WEB_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"];
+import { ADMIN_PORTAL_ROLE_CODES } from "./adminPermissions";
 
 export type AdminProfile = {
   id: number;
@@ -84,7 +84,7 @@ export const hasAllowedAdminRole = (profile: AdminProfile | null) => {
   if (!profile) return false;
 
   return (profile.roleCodes ?? []).some((code) =>
-    ADMIN_WEB_ROLE_CODES.includes(code),
+    ADMIN_PORTAL_ROLE_CODES.includes(code),
   );
 };
 
