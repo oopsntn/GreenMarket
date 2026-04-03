@@ -4,10 +4,13 @@ export const initialUsers: User[] = [
   {
     id: 1,
     fullName: "System Administrator",
+    phone: "0900000000",
     email: "admin@greenmarket.vn",
     role: "Admin",
     status: "Active",
     joinedAt: "2026-03-01",
+    location: "Ho Chi Minh City",
+    lastLoginAt: "2026-03-18 08:15",
     roleAssignments: [
       {
         id: 1,
@@ -37,10 +40,13 @@ export const initialUsers: User[] = [
   {
     id: 2,
     fullName: "Nguyen Van A",
+    phone: "0912345678",
     email: "vana@greenmarket.vn",
     role: "Customer",
     status: "Active",
     joinedAt: "2026-03-10",
+    location: "Da Nang",
+    lastLoginAt: "2026-03-20 09:20",
     roleAssignments: [
       {
         id: 1,
@@ -70,10 +76,13 @@ export const initialUsers: User[] = [
   {
     id: 3,
     fullName: "Tran Thi B",
+    phone: "0987654321",
     email: "thib@greenmarket.vn",
     role: "Manager",
     status: "Active",
     joinedAt: "2026-03-11",
+    location: "Can Tho",
+    lastLoginAt: "2026-03-19 14:10",
     roleAssignments: [
       {
         id: 1,
@@ -103,10 +112,13 @@ export const initialUsers: User[] = [
   {
     id: 4,
     fullName: "Le Van C",
+    phone: "0933555777",
     email: "vanc@greenmarket.vn",
     role: "Host",
     status: "Locked",
     joinedAt: "2026-03-12",
+    location: "Ha Noi",
+    lastLoginAt: "2026-03-17 11:05",
     roleAssignments: [
       {
         id: 1,
@@ -143,10 +155,13 @@ export const initialUsers: User[] = [
   {
     id: 5,
     fullName: "Pham Thi D",
+    phone: "0977001122",
     email: "thid@greenmarket.vn",
     role: "Collaborator",
     status: "Active",
     joinedAt: "2026-03-13",
+    location: "Hue",
+    lastLoginAt: "2026-03-21 10:40",
     roleAssignments: [
       {
         id: 1,
@@ -176,10 +191,13 @@ export const initialUsers: User[] = [
   {
     id: 6,
     fullName: "Hoang Van E",
+    phone: "0944112233",
     email: "vane@greenmarket.vn",
     role: "Operations Staff",
     status: "Active",
     joinedAt: "2026-03-14",
+    location: "Hai Phong",
+    lastLoginAt: "2026-03-22 16:50",
     roleAssignments: [
       {
         id: 1,
