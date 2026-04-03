@@ -13,7 +13,7 @@ async function seedMarketplace() {
         }).returning();
 
         const [shop] = await db.insert(shops).values({
-            shopOwnerId: user.userId,
+            shopId: user.userId,
             shopName: "Vườn Tùng Bách Diệp",
             shopLocation: "Nam Định",
             shopDescription: "Chuyên các dòng Tùng La Hán và Thông Đen cao cấp.",

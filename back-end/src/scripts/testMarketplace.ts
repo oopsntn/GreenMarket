@@ -18,7 +18,7 @@ async function testMarketplace() {
         // 2. Create a Shop
         console.log("\n2. Creating Shop...");
         const [nursery] = await db.insert(shops).values({
-            shopOwnerId: seller.userId,
+            shopId: seller.userId,
             shopName: "Bonsai Tùng Lộc Hải Dương",
             shopLocation: "Hải Dương, Việt Nam",
             shopPhone: "0987654321",

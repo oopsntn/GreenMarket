@@ -94,8 +94,6 @@ CREATE TABLE users (
     user_display_name VARCHAR(80),
     user_avatar_url VARCHAR(255),
     user_email VARCHAR(255),
-    user_location VARCHAR(255),
-    user_bio TEXT,
     user_status VARCHAR(20) DEFAULT 'active',
     user_registered_at TIMESTAMP DEFAULT now(),
     user_last_login_at TIMESTAMP,
@@ -132,15 +130,7 @@ CREATE TABLE admin_roles (
     PRIMARY KEY (admin_role_admin_id, admin_role_role_id)
 );
 
--- OTP Requests
-CREATE TABLE otp_requests (
-    otp_request_id SERIAL PRIMARY KEY,
-    otp_request_mobile VARCHAR(15),
-    otp_request_otp_code VARCHAR(20),
-    otp_request_expire_at TIMESTAMP,
-    otp_request_status VARCHAR(20),
-    otp_request_created_at TIMESTAMP DEFAULT now()
-);
+
 
 -- QR Sessions
 CREATE TABLE qr_sessions (
@@ -191,10 +181,14 @@ CREATE TABLE category_attributes (
 
 -- Shops
 CREATE TABLE shops (
-    shop_id SERIAL PRIMARY KEY,
-    shop_owner_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE UNIQUE,
+    shop_id INTEGER PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
     shop_name VARCHAR(150) NOT NULL,
-    shop_phone VARCHAR(20),
+    shop_phone VARCHAR(50), 
+    shop_email VARCHAR(255) UNIQUE,
+    shop_email_verified BOOLEAN DEFAULT FALSE,
+    shop_facebook VARCHAR(255),
+    shop_instagram VARCHAR(255),
+    shop_youtube VARCHAR(255),
     shop_location VARCHAR(255),
     shop_description TEXT,
     shop_logo_url VARCHAR(255),
@@ -204,6 +198,17 @@ CREATE TABLE shops (
     shop_lng DECIMAL(11, 8),
     shop_created_at TIMESTAMP DEFAULT now(),
     shop_updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Verifications Table for OTP
+CREATE TABLE verifications (
+    verification_id SERIAL PRIMARY KEY,
+    target VARCHAR(255) NOT NULL, -- email or phone number
+    otp_code VARCHAR(255) NOT NULL,
+    verification_type VARCHAR(20) NOT NULL, -- 'email' or 'phone'
+    expires_at TIMESTAMP NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT now()
 );
 
 -- Blocked Shops
@@ -558,8 +563,7 @@ CREATE INDEX idx_event_logs_user ON event_logs(event_log_user_id);
 CREATE INDEX idx_event_logs_type ON event_logs(event_log_event_type);
 CREATE INDEX idx_event_logs_time ON event_logs(event_log_event_time);
 
--- OTP
-CREATE INDEX idx_otp_requests_mobile_code ON otp_requests(otp_request_mobile, otp_request_otp_code);
+
 
 -- Promotion Package Audit Log
 CREATE INDEX idx_pkg_audit_package    ON promotion_package_audit_log(package_id);
@@ -608,27 +612,27 @@ INSERT INTO admin_roles (admin_role_admin_id, admin_role_role_id) VALUES
 (2, 2);
 
 -- Users
-INSERT INTO users (user_id, user_mobile, user_display_name, user_email, user_location, user_bio, user_status) VALUES
-(1, '0978195419', 'Nguyễn Thành Nam', 'nam.nguyen@gmail.com', 'Yên Phong, Bắc Ninh', 'Đam mê bonsai từ năm 2018, chuyên dòng mini và phong thủy.', 'active'),
-(2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'Hoàng Mai, Hà Nội', 'Sưu tầm và chăm sóc thông đen Nhật Bản.', 'active'),
-(3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'Nam Trực, Nam Định', 'Nghệ nhân cây cảnh cổ truyền, hơn 20 năm kinh nghiệm.', 'active'),
-(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Chủ vườn kiểng miền Tây, chuyên Linh Sam và Mai Chiếu Thủy.', 'active'),
-(5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Quận 7, TP.HCM', 'Người chơi bonsai nghiệp dư, thích tìm cây đẹp giá rẻ.', 'active'),
-(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Chuyên nhập khẩu và phân phối dụng cụ bonsai Nhật Bản.', 'active'),
-(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Ninh Kiều, Cần Thơ', 'Thích sưu tầm chậu bonsai men Nhật cổ.', 'active');
+INSERT INTO users (user_id, user_mobile, user_display_name, user_email, user_status) VALUES
+(1, '0978195419', 'Nguyễn Thành Nam', 'nam.nguyen@gmail.com', 'active'),
+(2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'active'),
+(3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'active'),
+(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'active'),
+(5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'active'),
+(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'active'),
+(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'active');
 
 -- Shops
-INSERT INTO shops (shop_id, shop_owner_id, shop_name, shop_phone, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
-(1, 1, 'Vườn Bonsai Phố Huyện', '0978195419', 'Yên Phong, Bắc Ninh',
+INSERT INTO shops (shop_id, shop_name, shop_phone, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
+(1, 'Vườn Bonsai Phố Huyện', '0978195419', 'Yên Phong, Bắc Ninh',
     'Chuyên bonsai mini và tầm trung. Nhận thiết kế, chăm sóc và phối thế bonsai theo yêu cầu. Ship toàn quốc qua Viettel Post.',
     'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', 21.1863, 106.0734),
-(2, 3, 'Nam Định Art Garden', '0123456789', 'Nam Trực, Nam Định',
+(3, 'Nam Định Art Garden', '0123456789', 'Nam Trực, Nam Định',
     'Nghệ nhân cây cảnh cổ truyền Nam Điền. Chuyên sanh, si, tùng la hán cốt cách truyền thống. Hơn 20 năm kinh nghiệm.',
     'http://localhost:5000/uploads/shop/nam-dinh-art-garden.jpg', 'active', 20.2506, 106.2355),
-(3, 4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'Chợ Lách, Bến Tre',
+(4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
     'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', 10.2350, 106.1511),
-(4, 6, 'Dụng Cụ Bonsai Pro', '0935112233', 'Đông Anh, Hà Nội',
+(6, 'Dụng Cụ Bonsai Pro', '0935112233', 'Đông Anh, Hà Nội',
     'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
     'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', 21.1395, 105.8544);
 

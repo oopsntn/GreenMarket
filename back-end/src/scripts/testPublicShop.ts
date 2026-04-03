@@ -20,7 +20,7 @@ async function testPublicShopDetail() {
         }).returning();
 
         const [shop] = await db.insert(shops).values({
-            shopOwnerId: user.userId,
+            shopId: user.userId,
             shopName: "Vườn Bonsai Test",
             shopStatus: "active",
             shopLocation: "Hà Nội",

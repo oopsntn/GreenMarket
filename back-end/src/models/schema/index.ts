@@ -3,7 +3,6 @@ export { admins, type Admin, type NewAdmin } from "./admins.ts";
 export { roles, type Role, type NewRole } from "./roles.ts";
 export { adminRoles, type AdminRole, type NewAdminRole } from "./admin-roles.ts";
 export { users, type User, type NewUser } from "./users.ts";
-export { otpRequests, type OTPRequest, type NewOTPRequest } from "./otp-requests.ts";
 export { qrSessions, type QRSession, type NewQRSession } from "./qr-sessions.ts";
 
 // Content
@@ -15,6 +14,7 @@ export { bannedKeywords, type BannedKeyword, type NewBannedKeyword } from "./ban
 // Shop
 export { shops, type Shop, type NewShop } from "./shops.ts";
 export { blockedShops, type BlockedShop, type NewBlockedShop } from "./blocked-shops.ts";
+export { verifications, type Verification, type NewVerification } from "./verifications.ts";
 
 // Posts
 export { posts, type Post, type NewPost } from "./posts.ts";

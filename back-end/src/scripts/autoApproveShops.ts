@@ -19,7 +19,7 @@ async function autoApproveShops() {
         for (const shop of result) {
             const { rowCount } = await db.update(posts)
                 .set({ postShopId: shop.shopId, postUpdatedAt: new Date() })
-                .where(eq(posts.postAuthorId, shop.shopOwnerId));
+                .where(eq(posts.postAuthorId, shop.shopId));
             
             console.log(`   - [ID: ${shop.shopId}] ${shop.shopName} (${rowCount ?? 0} posts reassigned)`);
         }

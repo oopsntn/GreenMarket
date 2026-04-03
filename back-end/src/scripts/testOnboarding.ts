@@ -16,7 +16,7 @@ async function testOnboarding() {
         // 2. User registers a shop
         console.log("\n2. User Registering Shop...");
         const [newShop] = await db.insert(shops).values({
-            shopOwnerId: user.userId,
+            shopId: user.userId,
             shopName: "Vườn Bonsai Hữu Tình",
             shopLocation: "Hà Nội",
             shopDescription: "Chuyên cây cảnh nghệ thuật.",

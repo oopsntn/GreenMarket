@@ -100,7 +100,7 @@ export const getShops = async (req: Request, res: Response): Promise<void> => {
         totalPosts: sql<number>`count(${posts.postId})`,
       })
       .from(shops)
-      .leftJoin(users, eq(shops.shopOwnerId, users.userId))
+      .leftJoin(users, eq(shops.shopId, users.userId))
       .leftJoin(posts, eq(posts.postShopId, shops.shopId))
       .groupBy(
         shops.shopId,
@@ -158,7 +158,7 @@ export const getShopById = async (
         totalPosts: sql<number>`count(${posts.postId})`,
       })
       .from(shops)
-      .leftJoin(users, eq(shops.shopOwnerId, users.userId))
+      .leftJoin(users, eq(shops.shopId, users.userId))
       .leftJoin(posts, eq(posts.postShopId, shops.shopId))
       .where(eq(shops.shopId, idNumber))
       .groupBy(
@@ -223,7 +223,7 @@ export const updateShopStatus = async (
           postShopId: updatedShop.shopId,
           postUpdatedAt: new Date(),
         })
-        .where(eq(posts.postAuthorId, updatedShop.shopOwnerId));
+        .where(eq(posts.postAuthorId, updatedShop.shopId));
 
       postsAssigned = rowCount ?? 0;
     }
@@ -240,7 +240,7 @@ export const updateShopStatus = async (
         totalPosts: sql<number>`count(${posts.postId})`,
       })
       .from(shops)
-      .leftJoin(users, eq(shops.shopOwnerId, users.userId))
+      .leftJoin(users, eq(shops.shopId, users.userId))
       .leftJoin(posts, eq(posts.postShopId, shops.shopId))
       .where(eq(shops.shopId, idNumber))
       .groupBy(
@@ -329,7 +329,7 @@ export const verifyShop = async (
         postShopId: updatedShop.shopId,
         postUpdatedAt: new Date(),
       })
-      .where(eq(posts.postAuthorId, updatedShop.shopOwnerId));
+      .where(eq(posts.postAuthorId, updatedShop.shopId));
 
     const [shopRow] = await db
       .select({
@@ -343,7 +343,7 @@ export const verifyShop = async (
         totalPosts: sql<number>`count(${posts.postId})`,
       })
       .from(shops)
-      .leftJoin(users, eq(shops.shopOwnerId, users.userId))
+      .leftJoin(users, eq(shops.shopId, users.userId))
       .leftJoin(posts, eq(posts.postShopId, shops.shopId))
       .where(eq(shops.shopId, idNumber))
       .groupBy(
