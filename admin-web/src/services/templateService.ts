@@ -17,7 +17,38 @@ const saveTemplates = (templates: Template[]) => {
   return templates;
 };
 
+const normalizeTemplateName = (value: string) => value.trim().toLowerCase();
+
 export const templateService = {
+  validateTemplateForm(
+    templates: Template[],
+    formData: TemplateFormState,
+    selectedTemplateId?: number | null,
+  ) {
+    if (!formData.name.trim()) {
+      throw new Error("Template name is required.");
+    }
+
+    if (!formData.content.trim()) {
+      throw new Error("Template content is required.");
+    }
+
+    const hasDuplicate = templates.some((template) => {
+      if (selectedTemplateId && template.id === selectedTemplateId) {
+        return false;
+      }
+
+      return (
+        normalizeTemplateName(template.name) ===
+          normalizeTemplateName(formData.name) && template.type === formData.type
+      );
+    });
+
+    if (hasDuplicate) {
+      throw new Error("A template with the same name and type already exists.");
+    }
+  },
+
   getTemplates(): Template[] {
     return getStoredTemplates();
   },
