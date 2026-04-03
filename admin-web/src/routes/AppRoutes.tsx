@@ -6,67 +6,67 @@ import {
   Routes,
 } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
+import ActivityLogPage from "../pages/ActivityLogPage";
+import AIInsightsPage from "../pages/AIInsightsPage";
 import AnalyticsPage from "../pages/AnalyticsPage";
 import AttributesPage from "../pages/AttributesPage";
+import BoostedPostsPage from "../pages/BoostedPostsPage";
 import CategoriesPage from "../pages/CategoriesPage";
 import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage";
 import CustomerSpendingPage from "../pages/CustomerSpendingPage";
 import DashboardPage from "../pages/DashboardPage";
 import ExportPage from "../pages/ExportPage";
 import LoginPage from "../pages/LoginPage";
+import PlacementSlotsPage from "../pages/PlacementSlotsPage";
+import PromotionPackagesPage from "../pages/PromotionPackagesPage";
 import PromotionsPage from "../pages/PromotionsPage";
 import RevenuePage from "../pages/RevenuePage";
 import SettingsPage from "../pages/SettingsPage";
 import ShopsPage from "../pages/ShopsPage";
+import TemplateBuilderPage from "../pages/TemplateBuilderPage";
 import TemplatesPage from "../pages/TemplatesPage";
 import UsersPage from "../pages/UsersPage";
-
-const ADMIN_WEB_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"];
-
-const getAdminToken = () => {
-  return (
-    localStorage.getItem("adminToken") ||
-    sessionStorage.getItem("adminToken") ||
-    ""
-  );
-};
-
-const getAdminProfile = () => {
-  const profileText =
-    localStorage.getItem("adminProfile") ||
-    sessionStorage.getItem("adminProfile");
-
-  if (!profileText) return null;
-
-  try {
-    return JSON.parse(profileText) as {
-      id: number;
-      email: string;
-      name: string;
-      roleCodes?: string[];
-    };
-  } catch {
-    return null;
-  }
-};
-
-const isAllowedAdmin = () => {
-  const token = getAdminToken();
-  const profile = getAdminProfile();
-
-  if (!token || !profile) return false;
-
-  return (profile.roleCodes ?? []).some((code) =>
-    ADMIN_WEB_ROLE_CODES.includes(code),
-  );
-};
+import {
+  canAccessAdminModule,
+  getDefaultAdminPath,
+  type AdminModuleKey,
+} from "../utils/adminPermissions";
+import {
+  getAdminProfile,
+  hasActiveAdminSession,
+} from "../utils/adminSession";
 
 function ProtectedAdminRoute() {
-  return isAllowedAdmin() ? <Outlet /> : <Navigate to="/login" replace />;
+  return hasActiveAdminSession() ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
 function PublicOnlyRoute() {
-  return isAllowedAdmin() ? <Navigate to="/dashboard" replace /> : <Outlet />;
+  const profile = getAdminProfile();
+
+  return hasActiveAdminSession() ? (
+    <Navigate to={getDefaultAdminPath(profile)} replace />
+  ) : (
+    <Outlet />
+  );
+}
+
+function AdminIndexRoute() {
+  const profile = getAdminProfile();
+  return <Navigate to={getDefaultAdminPath(profile)} replace />;
+}
+
+type ProtectedModuleRouteProps = Readonly<{
+  moduleKey: AdminModuleKey;
+}>;
+
+function ProtectedModuleRoute({ moduleKey }: ProtectedModuleRouteProps) {
+  const profile = getAdminProfile();
+
+  return canAccessAdminModule(profile, moduleKey) ? (
+    <Outlet />
+  ) : (
+    <Navigate to={getDefaultAdminPath(profile)} replace />
+  );
 }
 
 function AppRoutes() {
@@ -79,26 +79,107 @@ function AppRoutes() {
 
         <Route element={<ProtectedAdminRoute />}>
           <Route path="/" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="shops" element={<ShopsPage />} />
-            <Route path="categories" element={<CategoriesPage />} />
-            <Route path="attributes" element={<AttributesPage />} />
+            <Route index element={<AdminIndexRoute />} />
+
+            <Route element={<ProtectedModuleRoute moduleKey="dashboard" />}>
+              <Route path="dashboard" element={<DashboardPage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="users" />}>
+              <Route path="users" element={<UsersPage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="activityLog" />}>
+              <Route path="activity-log" element={<ActivityLogPage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="shops" />}>
+              <Route path="shops" element={<ShopsPage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="categories" />}>
+              <Route path="categories" element={<CategoriesPage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="attributes" />}>
+              <Route path="attributes" element={<AttributesPage />} />
+            </Route>
+
             <Route
-              path="category-attributes"
-              element={<CategoryAttributeMappingPage />}
-            />
-            <Route path="templates" element={<TemplatesPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="promotions" element={<PromotionsPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="revenue" element={<RevenuePage />} />
+              element={<ProtectedModuleRoute moduleKey="categoryMapping" />}
+            >
+              <Route
+                path="category-attributes"
+                element={<CategoryAttributeMappingPage />}
+              />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="templates" />}>
+              <Route path="templates" element={<TemplatesPage />} />
+            </Route>
+
             <Route
-              path="customer-spending"
-              element={<CustomerSpendingPage />}
-            />
-            <Route path="export" element={<ExportPage />} />
+              element={<ProtectedModuleRoute moduleKey="templateBuilder" />}
+            >
+              <Route
+                path="template-builder"
+                element={<TemplateBuilderPage />}
+              />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="settings" />}>
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="placementSlots" />}
+            >
+              <Route path="placement-slots" element={<PlacementSlotsPage />} />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="promotionPackages" />}
+            >
+              <Route
+                path="promotion-packages"
+                element={<PromotionPackagesPage />}
+              />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="boostedPosts" />}
+            >
+              <Route path="boosted-posts" element={<BoostedPostsPage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="promotions" />}>
+              <Route path="promotions" element={<PromotionsPage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="analytics" />}>
+              <Route path="analytics" element={<AnalyticsPage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="aiInsights" />}>
+              <Route path="ai-insights" element={<AIInsightsPage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="revenue" />}>
+              <Route path="revenue" element={<RevenuePage />} />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="customerSpending" />}
+            >
+              <Route
+                path="customer-spending"
+                element={<CustomerSpendingPage />}
+              />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="export" />}>
+              <Route path="export" element={<ExportPage />} />
+            </Route>
           </Route>
         </Route>
 

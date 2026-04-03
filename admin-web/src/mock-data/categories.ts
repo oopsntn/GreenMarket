@@ -38,6 +38,4 @@ export const initialCategories: Category[] = [
 export const emptyCategoryForm: CategoryFormState = {
   name: "",
   slug: "",
-  attributesCount: 0,
-  status: "Active",
 };

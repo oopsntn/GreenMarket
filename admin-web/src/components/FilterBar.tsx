@@ -3,9 +3,10 @@ import "./FilterBar.css";
 export type FilterField = {
   id: string;
   label: string;
+  type?: "select" | "date";
   value: string;
-  options: string[];
   onChange: (value: string) => void;
+  options?: string[];
 };
 
 type FilterBarProps = {
@@ -18,17 +19,27 @@ function FilterBar({ fields }: FilterBarProps) {
       {fields.map((field) => (
         <div key={field.id} className="filter-bar__field">
           <label htmlFor={field.id}>{field.label}</label>
-          <select
-            id={field.id}
-            value={field.value}
-            onChange={(event) => field.onChange(event.target.value)}
-          >
-            {field.options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+
+          {field.type === "date" ? (
+            <input
+              id={field.id}
+              type="date"
+              value={field.value}
+              onChange={(event) => field.onChange(event.target.value)}
+            />
+          ) : (
+            <select
+              id={field.id}
+              value={field.value}
+              onChange={(event) => field.onChange(event.target.value)}
+            >
+              {field.options?.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       ))}
     </div>

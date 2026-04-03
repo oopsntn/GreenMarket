@@ -1,41 +1,15 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { getVisibleAdminMenuItems } from "../utils/adminPermissions";
+import { clearAdminSession, getAdminProfile } from "../utils/adminSession";
 import "./AdminLayout.css";
-
-const menuItems = [
-  { label: "Dashboard", path: "/dashboard" },
-  { label: "Users", path: "/users" },
-  { label: "Shops", path: "/shops" },
-  { label: "Categories", path: "/categories" },
-  { label: "Attributes", path: "/attributes" },
-  { label: "Category Mapping", path: "/category-attributes" },
-  { label: "Templates", path: "/templates" },
-  { label: "Settings", path: "/settings" },
-  { label: "Promotions", path: "/promotions" },
-  { label: "Analytics", path: "/analytics" },
-  { label: "Revenue", path: "/revenue" },
-  { label: "Customer Spending", path: "/customer-spending" },
-  { label: "Export CSV", path: "/export" },
-];
 
 function AdminLayout() {
   const navigate = useNavigate();
-
-  const profileText =
-    localStorage.getItem("adminProfile") ||
-    sessionStorage.getItem("adminProfile");
-
-  const profile = profileText
-    ? (JSON.parse(profileText) as {
-        name: string;
-        email: string;
-      })
-    : null;
+  const profile = getAdminProfile();
+  const menuItems = getVisibleAdminMenuItems(profile);
 
   const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminProfile");
-    sessionStorage.removeItem("adminToken");
-    sessionStorage.removeItem("adminProfile");
+    clearAdminSession();
     navigate("/login", { replace: true });
   };
 

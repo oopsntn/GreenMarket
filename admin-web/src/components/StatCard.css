@@ -1,20 +1,29 @@
 .stat-card {
+  min-height: 148px;
   padding: 22px;
+  background: #ffffff;
+  border: 1px solid #e7efe6;
+  border-radius: 20px;
+  box-shadow: 0 10px 24px rgba(27, 94, 32, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .stat-card__title {
   display: block;
   color: #6b7b6d;
   font-size: 14px;
-  margin-bottom: 10px;
+  font-weight: 600;
 }
 
 .stat-card__value {
   display: block;
-  font-size: 30px;
+  font-size: 32px;
+  font-weight: 800;
   color: #1b4332;
-  margin-bottom: 8px;
-  line-height: 1.2;
+  line-height: 1.15;
+  word-break: break-word;
 }
 
 .stat-card__subtitle {
@@ -22,4 +31,5 @@
   color: #2e7d32;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.5;
 }

@@ -21,13 +21,20 @@ type ConfirmState = {
   action: ConfirmAction | null;
 };
 
+const PAGE_SIZE = 5;
+
 function ShopsPage() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [searchInput, setSearchInput] = useState("");
-  const [searchKeyword, setSearchKeyword] = useState("");
+const [searchInput, setSearchInput] = useState("");
+const [searchKeyword, setSearchKeyword] = useState("");
+const [showFilters, setShowFilters] = useState(false);
+const [page, setPage] = useState(1);
+const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+  ShopStatus | "All"
+>("All");
 
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
@@ -80,18 +87,38 @@ function ShopsPage() {
   }, []);
 
   const filteredShops = useMemo(() => {
-    return shops.filter((shop) => {
-      const keyword = searchKeyword.trim().toLowerCase();
+      return shops.filter((shop) => {
+        const keyword = searchKeyword.trim().toLowerCase();
+        const matchesStatus =
+          selectedStatusFilter === "All" || shop.status === selectedStatusFilter;
 
-      if (!keyword) return true;
+      if (!keyword) return matchesStatus;
 
-      return (
+      const matchesKeyword =
         shop.name.toLowerCase().includes(keyword) ||
         shop.ownerName.toLowerCase().includes(keyword) ||
-        shop.ownerEmail.toLowerCase().includes(keyword)
-      );
+        shop.ownerEmail.toLowerCase().includes(keyword);
+
+      return matchesKeyword && matchesStatus;
     });
-  }, [shops, searchKeyword]);
+  }, [searchKeyword, selectedStatusFilter, shops]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredShops.length / PAGE_SIZE));
+
+  const paginatedShops = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredShops.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredShops, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword, selectedStatusFilter]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const handleApplyFilter = () => {
     setSearchKeyword(searchInput.trim());
@@ -253,8 +280,40 @@ function ShopsPage() {
         placeholder="Search by shop name or owner"
         searchValue={searchInput}
         onSearchChange={setSearchInput}
-        onFilterClick={handleApplyFilter}
+        onSearchSubmit={handleApplyFilter}
+        onFilterClick={() => setShowFilters((prev) => !prev)}
+        filterLabel="Filter by shop status"
+        filterSummaryLabel="Current status"
+        filterSummaryItems={[selectedStatusFilter]}
       />
+
+      {showFilters ? (
+        <SectionCard
+          title="Shop Filters"
+          description="Refine shop records by approval and operating status."
+        >
+          <div className="shops-filters">
+            <div className="shops-filters__field">
+              <label htmlFor="shops-status-filter">Status</label>
+              <select
+                id="shops-status-filter"
+                value={selectedStatusFilter}
+                onChange={(event) =>
+                  setSelectedStatusFilter(
+                    event.target.value as ShopStatus | "All",
+                  )
+                }
+              >
+                <option value="All">All</option>
+                <option value="Pending">Pending</option>
+                <option value="Active">Active</option>
+                <option value="Suspended">Suspended</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
 
       <SectionCard
         title="Shop Directory"
@@ -278,111 +337,138 @@ function ShopsPage() {
             description="No shops match your current search. Try another keyword to continue."
           />
         ) : (
-          <div className="shops-table-wrapper">
-            <table className="shops-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Shop Name</th>
-                  <th>Owner</th>
-                  <th>Owner Email</th>
-                  <th>Total Posts</th>
-                  <th>Status</th>
-                  <th>Created Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredShops.map((shop) => (
-                  <tr key={shop.id}>
-                    <td>#{shop.id}</td>
-                    <td>{shop.name}</td>
-                    <td>{shop.ownerName}</td>
-                    <td
-                      className={!shop.ownerEmail ? "shops-table__muted" : ""}
-                    >
-                      {shop.ownerEmail || ""}
-                    </td>
-                    <td>{shop.totalPosts}</td>
-                    <td>
-                      <StatusBadge
-                        label={shop.status}
-                        variant={
-                          shop.status === "Active"
-                            ? "active"
-                            : shop.status === "Pending"
-                              ? "pending"
-                              : shop.status === "Suspended"
-                                ? "suspended"
-                                : "rejected"
-                        }
-                      />
-                    </td>
-                    <td>{shop.createdAt}</td>
-                    <td>
-                      <div className="shops-actions">
-                        <button
-                          type="button"
-                          className="shops-actions__view"
-                          onClick={() => void openViewModal(shop)}
-                        >
-                          View
-                        </button>
-
-                        {shop.status === "Pending" && (
-                          <>
-                            <button
-                              type="button"
-                              className="shops-actions__approve"
-                              onClick={() =>
-                                openConfirmDialog(shop.id, "approve")
-                              }
-                            >
-                              Approve
-                            </button>
-                            <button
-                              type="button"
-                              className="shops-actions__reject"
-                              onClick={() =>
-                                openConfirmDialog(shop.id, "reject")
-                              }
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-
-                        {shop.status === "Active" && (
-                          <button
-                            type="button"
-                            className="shops-actions__suspend"
-                            onClick={() =>
-                              openConfirmDialog(shop.id, "suspend")
-                            }
-                          >
-                            Suspend
-                          </button>
-                        )}
-
-                        {shop.status === "Suspended" && (
-                          <button
-                            type="button"
-                            className="shops-actions__reactivate"
-                            onClick={() =>
-                              openConfirmDialog(shop.id, "reactivate")
-                            }
-                          >
-                            Reactivate
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="shops-table-wrapper">
+              <table className="shops-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Shop Name</th>
+                    <th>Owner</th>
+                    <th>Owner Email</th>
+                    <th>Total Posts</th>
+                    <th>Status</th>
+                    <th>Created Date</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedShops.map((shop) => (
+                    <tr key={shop.id}>
+                      <td>#{shop.id}</td>
+                      <td>{shop.name}</td>
+                      <td>{shop.ownerName}</td>
+                      <td
+                        className={!shop.ownerEmail ? "shops-table__muted" : ""}
+                      >
+                        {shop.ownerEmail || ""}
+                      </td>
+                      <td>{shop.totalPosts}</td>
+                      <td>
+                        <StatusBadge
+                          label={shop.status}
+                          variant={
+                            shop.status === "Active"
+                              ? "active"
+                              : shop.status === "Pending"
+                                ? "pending"
+                                : shop.status === "Suspended"
+                                  ? "suspended"
+                                  : "rejected"
+                          }
+                        />
+                      </td>
+                      <td>{shop.createdAt}</td>
+                      <td>
+                        <div className="shops-actions">
+                          <button
+                            type="button"
+                            className="shops-actions__view"
+                            onClick={() => void openViewModal(shop)}
+                          >
+                            View
+                          </button>
+
+                          {shop.status === "Pending" && (
+                            <>
+                              <button
+                                type="button"
+                                className="shops-actions__approve"
+                                onClick={() =>
+                                  openConfirmDialog(shop.id, "approve")
+                                }
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                className="shops-actions__reject"
+                                onClick={() =>
+                                  openConfirmDialog(shop.id, "reject")
+                                }
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+
+                          {shop.status === "Active" && (
+                            <button
+                              type="button"
+                              className="shops-actions__suspend"
+                              onClick={() =>
+                                openConfirmDialog(shop.id, "suspend")
+                              }
+                            >
+                              Suspend
+                            </button>
+                          )}
+
+                          {shop.status === "Suspended" && (
+                            <button
+                              type="button"
+                              className="shops-actions__reactivate"
+                              onClick={() =>
+                                openConfirmDialog(shop.id, "reactivate")
+                              }
+                            >
+                              Reactivate
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="shops-pagination">
+              <span className="shops-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="shops-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </SectionCard>
 

@@ -5,13 +5,14 @@
 }
 
 .templates-table-wrapper {
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .templates-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  min-width: 980px;
 }
 
 .templates-table thead {
@@ -29,13 +30,14 @@
 .templates-table th {
   color: #486150;
   font-weight: 700;
-  text-align: left;
+  text-align: center;
 }
 
 .templates-table td {
   color: #223127;
   line-height: 1.5;
   word-break: break-word;
+  text-align: center;
 }
 
 .templates-table tbody tr:hover {
@@ -89,18 +91,18 @@
 
 .templates-actions {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 .templates-actions button {
-  width: 100px;
-  height: 36px;
+  min-width: 82px;
+  height: 34px;
   padding: 0 12px;
   border: none;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -130,6 +132,42 @@
 .templates-actions__enable {
   background-color: #e8f5e9;
   color: #2e7d32;
+}
+
+.templates-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.templates-pagination__info {
+  font-size: 14px;
+  color: #6b7b6d;
+}
+
+.templates-pagination__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.templates-pagination__actions button {
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 12px;
+  background-color: #f3f7f1;
+  color: #486150;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.templates-pagination__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .templates-modal__form {
@@ -216,19 +254,12 @@
     font-size: 13px;
   }
 
-  .templates-actions button {
-    width: 92px;
-    height: 34px;
-    font-size: 13px;
-  }
 }
 
 @media (max-width: 1024px) {
-  .templates-table-wrapper {
-    overflow-x: auto;
-  }
-
-  .templates-table {
-    min-width: 980px;
+  .templates-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 20px 20px;
   }
 }

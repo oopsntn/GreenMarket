@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -20,6 +20,8 @@ type ConfirmState = {
   action: ConfirmAction | null;
 };
 
+const PAGE_SIZE = 5;
+
 function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>(
     templateService.getTemplates(),
@@ -32,6 +34,7 @@ function TemplatesPage() {
   const [formData, setFormData] =
     useState<TemplateFormState>(emptyTemplateForm);
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [page, setPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     templateId: null,
@@ -63,7 +66,10 @@ function TemplatesPage() {
   const openAddModal = () => {
     setModalMode("add");
     setSelectedTemplateId(null);
-    setFormData(emptyTemplateForm);
+    setFormData({
+      ...emptyTemplateForm,
+      status: "Active",
+    });
     setIsModalOpen(true);
   };
 
@@ -129,13 +135,25 @@ function TemplatesPage() {
     event.preventDefault();
 
     if (modalMode === "add") {
-      setTemplates((prev) => templateService.createTemplate(prev, formData));
+      setTemplates((prev) =>
+        templateService.createTemplate(prev, {
+          ...formData,
+          status: "Active",
+        }),
+      );
       showToast("Template added successfully.");
     }
 
     if (modalMode === "edit" && selectedTemplateId !== null) {
+      const currentTemplate = templates.find(
+        (template) => template.id === selectedTemplateId,
+      );
+
       setTemplates((prev) =>
-        templateService.updateTemplate(prev, selectedTemplateId, formData),
+        templateService.updateTemplate(prev, selectedTemplateId, {
+          ...formData,
+          status: currentTemplate?.status ?? "Active",
+        }),
       );
       showToast("Template updated successfully.");
     }
@@ -189,6 +207,23 @@ function TemplatesPage() {
     });
   }, [templates, searchKeyword]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / PAGE_SIZE));
+
+  const paginatedTemplates = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredTemplates.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredTemplates, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKeyword]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
   const modalTitle =
     modalMode === "add"
       ? "Add Template"
@@ -198,9 +233,9 @@ function TemplatesPage() {
 
   const modalDescription =
     modalMode === "add"
-      ? "Create a new template for rejection reasons, report messages, or notifications."
+      ? "Create a new template. New templates are created as active by default."
       : modalMode === "edit"
-        ? "Update template type, content, and current activation status."
+        ? "Update template type and content. Use Enable or Disable in the table to change status."
         : "Review template information, content preview, and current status.";
 
   const confirmTemplate =
@@ -258,86 +293,111 @@ function TemplatesPage() {
             description="No templates match your current search. Try another keyword or create a new template."
           />
         ) : (
-          <div className="templates-table-wrapper">
-            <table className="templates-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Template Name</th>
-                  <th>Type</th>
-                  <th>Content Preview</th>
-                  <th>Status</th>
-                  <th>Updated Date</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredTemplates.map((template) => (
-                  <tr key={template.id}>
-                    <td>#{template.id}</td>
-                    <td>{template.name}</td>
-                    <td>
-                      <StatusBadge label={template.type} variant="type" />
-                    </td>
-                    <td className="templates-content-preview">
-                      {template.content}
-                    </td>
-                    <td>
-                      <StatusBadge
-                        label={template.status}
-                        variant={
-                          template.status === "Active" ? "active" : "disabled"
-                        }
-                      />
-                    </td>
-                    <td>{template.updatedAt}</td>
-                    <td>
-                      <div className="templates-actions">
-                        <button
-                          type="button"
-                          className="templates-actions__view"
-                          onClick={() => openViewModal(template)}
-                        >
-                          View
-                        </button>
-
-                        <button
-                          type="button"
-                          className="templates-actions__edit"
-                          onClick={() => openEditModal(template)}
-                        >
-                          Edit
-                        </button>
-
-                        {template.status === "Active" ? (
-                          <button
-                            type="button"
-                            className="templates-actions__disable"
-                            onClick={() =>
-                              openConfirmDialog(template.id, "disable")
-                            }
-                          >
-                            Disable
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="templates-actions__enable"
-                            onClick={() =>
-                              openConfirmDialog(template.id, "enable")
-                            }
-                          >
-                            Enable
-                          </button>
-                        )}
-                      </div>
-                    </td>
+          <>
+            <div className="templates-table-wrapper">
+              <table className="templates-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Template Name</th>
+                    <th>Type</th>
+                    <th>Content Preview</th>
+                    <th>Status</th>
+                    <th>Updated Date</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+
+                <tbody>
+                  {paginatedTemplates.map((template) => (
+                    <tr key={template.id}>
+                      <td>#{template.id}</td>
+                      <td>{template.name}</td>
+                      <td>
+                        <StatusBadge label={template.type} variant="type" />
+                      </td>
+                      <td className="templates-content-preview">
+                        {template.content}
+                      </td>
+                      <td>
+                        <StatusBadge
+                          label={template.status}
+                          variant={
+                            template.status === "Active" ? "active" : "disabled"
+                          }
+                        />
+                      </td>
+                      <td>{template.updatedAt}</td>
+                      <td>
+                        <div className="templates-actions">
+                          <button
+                            type="button"
+                            className="templates-actions__view"
+                            onClick={() => openViewModal(template)}
+                          >
+                            View
+                          </button>
+
+                          <button
+                            type="button"
+                            className="templates-actions__edit"
+                            onClick={() => openEditModal(template)}
+                          >
+                            Edit
+                          </button>
+
+                          {template.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="templates-actions__disable"
+                              onClick={() =>
+                                openConfirmDialog(template.id, "disable")
+                              }
+                            >
+                              Disable
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="templates-actions__enable"
+                              onClick={() =>
+                                openConfirmDialog(template.id, "enable")
+                              }
+                            >
+                              Enable
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="templates-pagination">
+              <span className="templates-pagination__info">
+                Page {page} of {totalPages}
+              </span>
+
+              <div className="templates-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  disabled={page === 1}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </SectionCard>
 
@@ -390,19 +450,12 @@ function TemplatesPage() {
             />
           </div>
 
-          <div className="templates-modal__field">
-            <label htmlFor="status">Status</label>
-            <select
-              id="status"
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              disabled={modalMode === "view"}
-            >
-              <option>Active</option>
-              <option>Disabled</option>
-            </select>
-          </div>
+          {modalMode === "view" && (
+            <div className="templates-modal__field">
+              <label>Status</label>
+              <input type="text" value={formData.status} disabled />
+            </div>
+          )}
 
           <div className="templates-modal__actions">
             <button

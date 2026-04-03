@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useState } from "react"
 import { ShopService } from "../components/shop/service/shopService";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface User {
     id: number;
@@ -18,8 +19,11 @@ interface Shop {
     shopDescription?: string;
     shopPhone?: string;
     shopLocation?: string;
+    shopLogoUrl?: string;
+    shopCoverUrl?: string;
     shopLat?: number;
     shopLng?: number;
+    posts?: any[];
 }
 
 interface AuthContextType {
@@ -42,35 +46,81 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [token, setToken] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
-    const fetchShop = async (userId: number) => {
+    const fetchShop = async () => {
         try {
-            const res = await ShopService.getMyShop(userId)
+            const res = await ShopService.getMyShop()
+            console.log('Shop data from API:', res)
             setShop(res)
+
         } catch (e) {
             console.error('Error fetching shop:', e)
             setShop(null)
         }
     }
 
-    useEffect(() => {
+    const loadStoredData = async () => {
+        try {
+            const storedToken = await AsyncStorage.getItem('token')
+            const storedUser = await AsyncStorage.getItem('user')
 
+            if (storedToken && storedUser) {
+                setToken(storedToken);
+                const parsedUser = JSON.parse(storedUser);
+                setUser(parsedUser);
+
+                await fetchShop()
+            }
+
+        } catch (e) {
+            console.error('Error loading data:', e);
+        } finally {
+            setLoading(false)
+        }
+    }
+    useEffect(() => {
+        loadStoredData()
     }, [])
 
+    // Save token and user locally
     const login = async (newToken: string, newUser: User) => {
+        try {
+            setToken(newToken)
+            setUser(newUser)
+            await AsyncStorage.setItem('token', newToken)
+            await AsyncStorage.setItem('user', JSON.stringify(newUser))
 
+            await fetchShop()
+        } catch (e) {
+            console.error('Error saving login data:', e);
+        }
     }
-    const logout = async () => {
 
+    // Clear all persisted data
+    const logout = async () => {
+        setToken(null)
+        setUser(null)
+        setShop(null)
+        await AsyncStorage.removeItem('token')
+        await AsyncStorage.removeItem('user')
     }
     const updateUser = async (newData: Partial<User>) => {
+        try {
+            if (user) {
+                const updatedUser = { ...user, ...newData };
+                setUser(updatedUser);
+                await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+            }
+        } catch (e) {
+            console.error('Error updating user information: ', e);
+        }
 
     }
     const refreshShop = async () => {
-        if (user?.id) await fetchShop(user.id)
+        if (user?.id) await fetchShop()
     }
 
     return (
-        <AuthContext.Provider value={{ user, shop, token, login, logout, updateUser, refreshShop }}>
+        <AuthContext.Provider value={{ user, shop, token, login, logout, updateUser, refreshShop, loading, isAuthenticated: !!token }}>
             {children}
         </AuthContext.Provider>
     )
