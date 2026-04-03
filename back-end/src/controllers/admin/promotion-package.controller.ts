@@ -19,6 +19,9 @@ export const getPromotionPackages = async (
                 promotionPackageTitle: promotionPackages.promotionPackageTitle,
                 promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
                 promotionPackagePrice: promotionPackages.promotionPackagePrice,
+                promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
+                promotionPackageDisplayQuota: promotionPackages.promotionPackageDisplayQuota,
+                promotionPackageDescription: promotionPackages.promotionPackageDescription,
                 promotionPackagePublished: promotionPackages.promotionPackagePublished,
                 promotionPackageCreatedAt: promotionPackages.promotionPackageCreatedAt,
                 slotCode: placementSlots.placementSlotCode,
@@ -53,6 +56,9 @@ export const getPromotionPackageById = async (
                 promotionPackageTitle: promotionPackages.promotionPackageTitle,
                 promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
                 promotionPackagePrice: promotionPackages.promotionPackagePrice,
+                promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
+                promotionPackageDisplayQuota: promotionPackages.promotionPackageDisplayQuota,
+                promotionPackageDescription: promotionPackages.promotionPackageDescription,
                 promotionPackagePublished: promotionPackages.promotionPackagePublished,
                 promotionPackageCreatedAt: promotionPackages.promotionPackageCreatedAt,
                 slotCode: placementSlots.placementSlotCode,
@@ -80,10 +86,30 @@ export const createPromotionPackage = async (
     res: Response
 ): Promise<void> => {
     try {
-        const { promotionPackageSlotId, promotionPackageTitle, promotionPackageDurationDays, promotionPackagePrice } = req.body;
+        const {
+            promotionPackageSlotId,
+            promotionPackageTitle,
+            promotionPackageDurationDays,
+            promotionPackagePrice,
+            promotionPackageMaxPosts,
+            promotionPackageDisplayQuota,
+        } = req.body;
 
-        if (!promotionPackageSlotId || !promotionPackageTitle || !promotionPackageDurationDays || !promotionPackagePrice) {
+        if (
+            !promotionPackageSlotId ||
+            !promotionPackageTitle ||
+            !promotionPackageDurationDays ||
+            !promotionPackagePrice
+        ) {
             res.status(400).json({ error: "slotId, title, durationDays, and price are required" });
+            return;
+        }
+
+        if (
+            (promotionPackageMaxPosts !== undefined && Number(promotionPackageMaxPosts) < 1) ||
+            (promotionPackageDisplayQuota !== undefined && Number(promotionPackageDisplayQuota) < 1)
+        ) {
+            res.status(400).json({ error: "maxPosts and displayQuota must be at least 1 when provided" });
             return;
         }
 
@@ -103,6 +129,8 @@ export const createPromotionPackage = async (
             .insert(promotionPackages)
             .values({
                 ...req.body,
+                promotionPackageMaxPosts: req.body.promotionPackageMaxPosts ?? 1,
+                promotionPackageDisplayQuota: req.body.promotionPackageDisplayQuota ?? 1,
                 promotionPackagePublished: req.body.promotionPackagePublished ?? false,
             })
             .returning();
