@@ -4,10 +4,22 @@ import type {
   TemplateFormState,
   TemplateStatus,
 } from "../types/template";
+import { readStoredJson, writeStoredJson } from "../utils/browserStorage";
+
+const TEMPLATE_STORAGE_KEY = "adminTemplateLibrary";
+const TEMPLATE_UPDATED_AT = "2026-04-04";
+
+const getStoredTemplates = () =>
+  readStoredJson<Template[]>(TEMPLATE_STORAGE_KEY, initialTemplates);
+
+const saveTemplates = (templates: Template[]) => {
+  writeStoredJson(TEMPLATE_STORAGE_KEY, templates);
+  return templates;
+};
 
 export const templateService = {
   getTemplates(): Template[] {
-    return initialTemplates;
+    return getStoredTemplates();
   },
 
   createTemplate(
@@ -20,10 +32,10 @@ export const templateService = {
       type: formData.type,
       content: formData.content,
       status: formData.status,
-      updatedAt: "2026-03-18",
+      updatedAt: TEMPLATE_UPDATED_AT,
     };
 
-    return [newTemplate, ...templates];
+    return saveTemplates([newTemplate, ...templates]);
   },
 
   updateTemplate(
@@ -39,10 +51,12 @@ export const templateService = {
             type: formData.type,
             content: formData.content,
             status: formData.status,
-            updatedAt: "2026-03-18",
+            updatedAt: TEMPLATE_UPDATED_AT,
           }
         : template,
     );
+
+    return saveTemplates(updatedTemplates);
   },
 
   updateTemplateStatus(
@@ -50,8 +64,10 @@ export const templateService = {
     templateId: number,
     status: TemplateStatus,
   ): Template[] {
-    return templates.map((template) =>
+    const updatedTemplates = templates.map((template) =>
       template.id === templateId ? { ...template, status } : template,
     );
+
+    return saveTemplates(updatedTemplates);
   },
 };
