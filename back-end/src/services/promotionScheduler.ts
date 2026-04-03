@@ -5,11 +5,25 @@ import { lte, and, eq } from "drizzle-orm";
 // Interval in milliseconds (e.g. 15 minutes = 15 * 60 * 1000)
 const CHECK_INTERVAL = 15 * 60 * 1000;
 
-const checkExpiredPromotions = async () => {
+const syncPromotionLifecycle = async () => {
     try {
         const now = new Date();
 
-        const result = await db.update(postPromotions)
+        const activatedPromotions = await db.update(postPromotions)
+            .set({ postPromotionStatus: "active" })
+            .where(
+                and(
+                    eq(postPromotions.postPromotionStatus, "scheduled"),
+                    lte(postPromotions.postPromotionStartAt, now)
+                )
+            )
+            .returning({ id: postPromotions.postPromotionId });
+
+        if (activatedPromotions.length > 0) {
+            console.log(`[Scheduler] Activated ${activatedPromotions.length} scheduled promotions.`);
+        }
+
+        const expiredPromotions = await db.update(postPromotions)
             .set({ postPromotionStatus: "expired" })
             .where(
                 and(
@@ -19,11 +33,11 @@ const checkExpiredPromotions = async () => {
             )
             .returning({ id: postPromotions.postPromotionId });
         
-        if (result.length > 0) {
-            console.log(`[Scheduler] Expired ${result.length} old promotions.`);
+        if (expiredPromotions.length > 0) {
+            console.log(`[Scheduler] Expired ${expiredPromotions.length} old promotions.`);
         }
     } catch (error) {
-        console.error("[Scheduler] Error expiring promotions:", error);
+        console.error("[Scheduler] Error syncing promotion lifecycle:", error);
     }
 };
 
@@ -32,10 +46,10 @@ const startPromotionScheduler = () => {
     console.log("[Scheduler] Promotion expiration scheduler started.");
     
     // Run immediately once
-    checkExpiredPromotions();
+    syncPromotionLifecycle();
 
     // Loop
-    setInterval(checkExpiredPromotions, CHECK_INTERVAL);
+    setInterval(syncPromotionLifecycle, CHECK_INTERVAL);
 };
 
 // Auto-start since we import this file globally in server.ts
