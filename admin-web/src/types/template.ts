@@ -19,3 +19,29 @@ export type TemplateFormState = {
   content: string;
   status: TemplateStatus;
 };
+
+export type TemplateBuilderChannel =
+  | "Email"
+  | "In-App Notification"
+  | "Moderation Note";
+
+export type TemplateBuilderAudience =
+  | "Seller"
+  | "Reporter"
+  | "Internal Admin";
+
+export type TemplateBuilderTone = "Formal" | "Supportive" | "Direct";
+
+export type TemplateBuilderPreset = {
+  selectedTemplateId: number | null;
+  selectedTypeFilter: TemplateType | "All";
+  channel: TemplateBuilderChannel;
+  audience: TemplateBuilderAudience;
+  tone: TemplateBuilderTone;
+  shopName: string;
+  postTitle: string;
+  reason: string;
+  slotName: string;
+  contactEmail: string;
+  adminNote: string;
+};
