@@ -36,6 +36,8 @@ export type BoostedPost = {
   notes: string;
 };
 
+export type BoostedPostApiResponse = BoostedPost;
+
 export type BoostedPostSummaryCard = {
   title: string;
   value: string;
