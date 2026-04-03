@@ -5,13 +5,16 @@ import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
+import { templateBuilderService } from "../services/templateBuilderService";
 import { templateService } from "../services/templateService";
-import type { Template, TemplateType } from "../types/template";
+import type {
+  Template,
+  TemplateBuilderAudience,
+  TemplateBuilderChannel,
+  TemplateBuilderTone,
+  TemplateType,
+} from "../types/template";
 import "./TemplateBuilderPage.css";
-
-type BuilderChannel = "Email" | "In-App Notification" | "Moderation Note";
-type BuilderAudience = "Seller" | "Reporter" | "Internal Admin";
-type BuilderTone = "Formal" | "Supportive" | "Direct";
 
 const PAGE_SIZE = 4;
 
@@ -65,26 +68,29 @@ const buildPreviewMessage = (
 
 function TemplateBuilderPage() {
   const [templates] = useState<Template[]>(templateService.getTemplates());
+  const initialPreset = templateBuilderService.getPreset();
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<
     TemplateType | "All"
-  >("All");
+  >(initialPreset.selectedTypeFilter);
   const [page, setPage] = useState(1);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
-    null,
+    initialPreset.selectedTemplateId,
   );
-  const [channel, setChannel] = useState<BuilderChannel>("Email");
-  const [audience, setAudience] = useState<BuilderAudience>("Seller");
-  const [tone, setTone] = useState<BuilderTone>("Supportive");
-  const [shopName, setShopName] = useState("Green Corner Garden");
-  const [postTitle, setPostTitle] = useState("Rare Monstera Deliciosa for Sale");
-  const [reason, setReason] = useState("Listing is missing mandatory details.");
-  const [slotName, setSlotName] = useState("Home Top");
-  const [contactEmail, setContactEmail] = useState("ops@greenmarket.com");
-  const [adminNote, setAdminNote] = useState(
-    "Update the content and resubmit within 24 hours.",
+  const [channel, setChannel] = useState<TemplateBuilderChannel>(
+    initialPreset.channel,
   );
+  const [audience, setAudience] = useState<TemplateBuilderAudience>(
+    initialPreset.audience,
+  );
+  const [tone, setTone] = useState<TemplateBuilderTone>(initialPreset.tone);
+  const [shopName, setShopName] = useState(initialPreset.shopName);
+  const [postTitle, setPostTitle] = useState(initialPreset.postTitle);
+  const [reason, setReason] = useState(initialPreset.reason);
+  const [slotName, setSlotName] = useState(initialPreset.slotName);
+  const [contactEmail, setContactEmail] = useState(initialPreset.contactEmail);
+  const [adminNote, setAdminNote] = useState(initialPreset.adminNote);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const filteredTemplates = useMemo(() => {
@@ -126,6 +132,34 @@ function TemplateBuilderPage() {
       setSelectedTemplateId(templates[0].id);
     }
   }, [selectedTemplateId, templates]);
+
+  useEffect(() => {
+    templateBuilderService.savePreset({
+      selectedTemplateId,
+      selectedTypeFilter,
+      channel,
+      audience,
+      tone,
+      shopName,
+      postTitle,
+      reason,
+      slotName,
+      contactEmail,
+      adminNote,
+    });
+  }, [
+    adminNote,
+    audience,
+    channel,
+    contactEmail,
+    postTitle,
+    reason,
+    selectedTemplateId,
+    selectedTypeFilter,
+    shopName,
+    slotName,
+    tone,
+  ]);
 
   const selectedTemplate =
     templates.find((template) => template.id === selectedTemplateId) ?? null;
@@ -424,12 +458,33 @@ function TemplateBuilderPage() {
                   type="button"
                   className="template-builder-form__action"
                   onClick={() =>
-                    showToast(
-                      `${selectedTemplate.name} builder preset saved successfully.`,
-                    )
+                    showToast(`${selectedTemplate.name} builder preset saved.`)
                   }
                 >
                   Save Builder Preset
+                </button>
+                <button
+                  type="button"
+                  className="template-builder-form__action template-builder-form__action--secondary"
+                  onClick={() => {
+                    const defaultPreset =
+                      templateBuilderService.getDefaultPreset();
+
+                    setSelectedTypeFilter(defaultPreset.selectedTypeFilter);
+                    setSelectedTemplateId(defaultPreset.selectedTemplateId);
+                    setChannel(defaultPreset.channel);
+                    setAudience(defaultPreset.audience);
+                    setTone(defaultPreset.tone);
+                    setShopName(defaultPreset.shopName);
+                    setPostTitle(defaultPreset.postTitle);
+                    setReason(defaultPreset.reason);
+                    setSlotName(defaultPreset.slotName);
+                    setContactEmail(defaultPreset.contactEmail);
+                    setAdminNote(defaultPreset.adminNote);
+                    showToast("Builder preset was reset to defaults.", "info");
+                  }}
+                >
+                  Reset Preset
                 </button>
               </div>
             </div>
