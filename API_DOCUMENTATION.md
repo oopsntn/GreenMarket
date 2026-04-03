@@ -156,6 +156,18 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | POST | `/api/admin/promotion-packages` | Create package |
 | PUT | `/api/admin/promotion-packages/:id` | Update package |
 | DELETE | `/api/admin/promotion-packages/:id` | Delete package |
+|---|---|---|
+| **Promotions** | | |
+| GET | `/api/admin/promotions` | List purchased promotion records |
+| GET | `/api/admin/promotions/:id` | Get promotion detail |
+| PATCH | `/api/admin/promotions/:id/status` | Pause or resume a promotion | `status` (`Active`, `Paused`) |
+| PATCH | `/api/admin/promotions/:id/package` | Change package, slot, and delivery window | `packageId`, `startDate`, `endDate`, `paymentStatus`, optional `adminNote` |
+| PATCH | `/api/admin/promotions/:id/reopen` | Reopen an expired promotion after payment confirmation | `packageId`, `startDate`, `endDate`, `paymentStatus`, optional `adminNote` |
+|---|---|---|
+| **Boosted Posts** | | |
+| GET | `/api/admin/boosted-posts` | List operational boosted campaign records |
+| GET | `/api/admin/boosted-posts/:id` | Get boosted campaign detail |
+| PATCH | `/api/admin/boosted-posts/:id/status` | Update campaign runtime state | `status` (`Active`, `Paused`, `Closed`) |
 
 ### Posts moderation
 
