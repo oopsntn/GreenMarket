@@ -1,32 +1,12 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { getVisibleAdminMenuItems } from "../utils/adminPermissions";
 import { clearAdminSession, getAdminProfile } from "../utils/adminSession";
 import "./AdminLayout.css";
-
-const menuItems = [
-  { label: "Dashboard", path: "/dashboard" },
-  { label: "Users", path: "/users" },
-  { label: "Activity Log", path: "/activity-log" },
-  { label: "Shops", path: "/shops" },
-  { label: "Categories", path: "/categories" },
-  { label: "Attributes", path: "/attributes" },
-  { label: "Category Mapping", path: "/category-attributes" },
-  { label: "Templates", path: "/templates" },
-  { label: "Template Builder", path: "/template-builder" },
-  { label: "Settings", path: "/settings" },
-  { label: "Placement Slots", path: "/placement-slots" },
-  { label: "Promotion Packages", path: "/promotion-packages" },
-  { label: "Boosted Posts", path: "/boosted-posts" },
-  { label: "Promotions", path: "/promotions" },
-  { label: "Analytics", path: "/analytics" },
-  { label: "AI Insights", path: "/ai-insights" },
-  { label: "Revenue", path: "/revenue" },
-  { label: "Customer Spending", path: "/customer-spending" },
-  { label: "Export CSV", path: "/export" },
-];
 
 function AdminLayout() {
   const navigate = useNavigate();
   const profile = getAdminProfile();
+  const menuItems = getVisibleAdminMenuItems(profile);
 
   const handleLogout = () => {
     clearAdminSession();
