@@ -1,18 +1,14 @@
 import {
   emptyPlacementSlotForm,
-  initialPlacementSlots,
 } from "../mock-data/placementSlots";
+import { apiClient } from "../lib/apiClient";
 import type {
   PlacementSlot,
+  PlacementSlotApiResponse,
   PlacementSlotFormState,
   PlacementSlotStatus,
   PlacementSlotSummaryCard,
 } from "../types/placementSlot";
-
-const getNextSlotId = (slots: PlacementSlot[]) => {
-  if (slots.length === 0) return 1;
-  return Math.max(...slots.map((slot) => slot.id)) + 1;
-};
 
 const normalizeText = (value: string) => value.trim();
 
@@ -49,9 +45,84 @@ const validateSlotForm = (
   }
 };
 
+const inferScopeFromSlot = (code: string, title: string): PlacementSlot["scope"] => {
+  const normalized = `${code} ${title}`.toLowerCase();
+
+  if (normalized.includes("search")) return "Search";
+  if (normalized.includes("category")) return "Category";
+  return "Homepage";
+};
+
+const mapRulesToUi = (rules: Record<string, unknown> | null) => {
+  return {
+    scope:
+      rules?.scope === "Category" || rules?.scope === "Search"
+        ? (rules.scope as PlacementSlot["scope"])
+        : ("Homepage" as PlacementSlot["scope"]),
+    displayRule:
+      rules?.displayRule === "First Purchased First Served" ||
+      rules?.displayRule === "Random" ||
+      rules?.displayRule === "Priority Score"
+        ? (rules.displayRule as PlacementSlot["displayRule"])
+        : ("Round Robin" as PlacementSlot["displayRule"]),
+    priority:
+      typeof rules?.priority === "number" && Number.isFinite(rules.priority)
+        ? rules.priority
+        : 1,
+    notes: typeof rules?.notes === "string" ? rules.notes : "",
+  };
+};
+
+const mapApiSlotToUi = (item: PlacementSlotApiResponse): PlacementSlot => {
+  const title = item.placementSlotTitle?.trim() || "Untitled Slot";
+  const code = item.placementSlotCode?.trim() || "";
+  const mappedRules = mapRulesToUi(item.placementSlotRules);
+  const inferredScope = inferScopeFromSlot(code, title);
+
+  return {
+    id: item.placementSlotId,
+    name: title,
+    scope:
+      mappedRules.scope === "Homepage" && inferredScope !== "Homepage"
+        ? inferredScope
+        : mappedRules.scope,
+    positionCode: code,
+    capacity: item.placementSlotCapacity ?? 1,
+    displayRule: mappedRules.displayRule,
+    priority: mappedRules.priority,
+    status: item.placementSlotPublished ? "Active" : "Disabled",
+    notes: mappedRules.notes,
+  };
+};
+
+const buildSlotPayload = (
+  formData: PlacementSlotFormState,
+  published: boolean,
+) => {
+  return {
+    placementSlotCode: normalizeText(formData.positionCode),
+    placementSlotTitle: normalizeText(formData.name),
+    placementSlotCapacity: formData.capacity,
+    placementSlotPublished: published,
+    placementSlotRules: {
+      scope: formData.scope,
+      displayRule: formData.displayRule,
+      priority: formData.priority,
+      notes: normalizeText(formData.notes),
+    },
+  };
+};
+
 export const placementSlotService = {
-  getPlacementSlots(): PlacementSlot[] {
-    return initialPlacementSlots;
+  async getPlacementSlots(): Promise<PlacementSlot[]> {
+    const data = await apiClient.request<PlacementSlotApiResponse[]>(
+      "/api/admin/placement-slots",
+      {
+        defaultErrorMessage: "Unable to load placement slots.",
+      },
+    );
+
+    return data.map(mapApiSlotToUi);
   },
 
   getEmptyForm(): PlacementSlotFormState {
@@ -89,57 +160,85 @@ export const placementSlotService = {
     ];
   },
 
-  createPlacementSlot(
+  async createPlacementSlot(
     slots: PlacementSlot[],
     formData: PlacementSlotFormState,
-  ): PlacementSlot[] {
+  ): Promise<PlacementSlot[]> {
     validateSlotForm(formData, slots);
+    const data = await apiClient.request<PlacementSlotApiResponse>(
+      "/api/admin/placement-slots",
+      {
+        method: "POST",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to create placement slot.",
+        body: JSON.stringify(buildSlotPayload(formData, true)),
+      },
+    );
 
-    const newSlot: PlacementSlot = {
-      id: getNextSlotId(slots),
-      name: normalizeText(formData.name),
-      scope: formData.scope,
-      positionCode: normalizeText(formData.positionCode),
-      capacity: formData.capacity,
-      displayRule: formData.displayRule,
-      priority: formData.priority,
-      status: "Active",
-      notes: normalizeText(formData.notes),
-    };
-
-    return [newSlot, ...slots];
+    return [mapApiSlotToUi(data), ...slots];
   },
 
-  updatePlacementSlot(
+  async updatePlacementSlot(
     slots: PlacementSlot[],
     slotId: number,
     formData: PlacementSlotFormState,
-  ): PlacementSlot[] {
+  ): Promise<PlacementSlot[]> {
     validateSlotForm(formData, slots, slotId);
+    const currentSlot = slots.find((slot) => slot.id === slotId);
+
+    const data = await apiClient.request<PlacementSlotApiResponse>(
+      `/api/admin/placement-slots/${slotId}`,
+      {
+        method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update placement slot.",
+        body: JSON.stringify(
+          buildSlotPayload(formData, currentSlot?.status !== "Disabled"),
+        ),
+      },
+    );
 
     return slots.map((slot) =>
-      slot.id === slotId
-        ? {
-            ...slot,
-            name: normalizeText(formData.name),
-            scope: formData.scope,
-            positionCode: normalizeText(formData.positionCode),
-            capacity: formData.capacity,
-            displayRule: formData.displayRule,
-            priority: formData.priority,
-            notes: normalizeText(formData.notes),
-          }
-        : slot,
+      slot.id === slotId ? mapApiSlotToUi(data) : slot,
     );
   },
 
-  updatePlacementSlotStatus(
+  async updatePlacementSlotStatus(
     slots: PlacementSlot[],
     slotId: number,
     status: PlacementSlotStatus,
-  ): PlacementSlot[] {
+  ): Promise<PlacementSlot[]> {
+    const currentSlot = slots.find((slot) => slot.id === slotId);
+
+    if (!currentSlot) {
+      return slots;
+    }
+
+    const data = await apiClient.request<PlacementSlotApiResponse>(
+      `/api/admin/placement-slots/${slotId}`,
+      {
+        method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update placement slot status.",
+        body: JSON.stringify(
+          buildSlotPayload(
+            {
+              name: currentSlot.name,
+              scope: currentSlot.scope,
+              positionCode: currentSlot.positionCode,
+              capacity: currentSlot.capacity,
+              displayRule: currentSlot.displayRule,
+              priority: currentSlot.priority,
+              notes: currentSlot.notes,
+            },
+            status === "Active",
+          ),
+        ),
+      },
+    );
+
     return slots.map((slot) =>
-      slot.id === slotId ? { ...slot, status } : slot,
+      slot.id === slotId ? mapApiSlotToUi(data) : slot,
     );
   },
 };

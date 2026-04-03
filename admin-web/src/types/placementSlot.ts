@@ -19,6 +19,16 @@ export type PlacementSlot = {
   notes: string;
 };
 
+export type PlacementSlotApiResponse = {
+  placementSlotId: number;
+  placementSlotCode: string | null;
+  placementSlotTitle: string | null;
+  placementSlotCapacity: number | null;
+  placementSlotRules: Record<string, unknown> | null;
+  placementSlotPublished: boolean | null;
+  placementSlotCreatedAt?: string | null;
+};
+
 export type PlacementSlotFormState = {
   name: string;
   scope: PlacementSlotScope;
