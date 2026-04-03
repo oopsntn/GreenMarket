@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -8,46 +9,22 @@ import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
-import { emptyUserForm } from "../mock-data/users";
 import { userService } from "../services/userService";
-import type {
-  AssignableUserRole,
-  FlattenedUserActivityItem,
-  User,
-  UserFormState,
-  UserRole,
-  UserRoleCountItem,
-  UserSummaryCard,
-  UserStatus,
-} from "../types/user";
+import type { User, UserSummaryCard, UserStatus } from "../types/user";
 import "./UsersPage.css";
 
-const assignableRoles: AssignableUserRole[] = [
-  "Customer",
-  "Manager",
-  "Host",
-  "Collaborator",
-  "Operations Staff",
-];
-
-const roleFilterOptions: Array<UserRole | "All"> = [
+const statusFilterOptions: Array<UserStatus | "All"> = ["All", "Active", "Locked"];
+const profileFilterOptions = [
   "All",
-  "Admin",
-  "Customer",
-  "Manager",
-  "Host",
-  "Collaborator",
-  "Operations Staff",
-];
-
-const statusFilterOptions: Array<UserStatus | "All"> = [
-  "All",
-  "Active",
-  "Locked",
-];
+  "Has Email",
+  "Missing Email",
+  "Has Location",
+  "Missing Location",
+] as const;
 
 const USER_PAGE_SIZE = 5;
-const ACTIVITY_PAGE_SIZE = 5;
+
+type ProfileFilterOption = (typeof profileFilterOptions)[number];
 
 type ConfirmState = {
   isOpen: boolean;
@@ -56,24 +33,19 @@ type ConfirmState = {
 };
 
 function UsersPage() {
-  const [users, setUsers] = useState<User[]>(userService.getUsers());
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [formData, setFormData] = useState<UserFormState>(emptyUserForm);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [selectedRoleFilter, setSelectedRoleFilter] = useState<
-    UserRole | "All"
-  >("All");
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
-    UserStatus | "All"
-  >("All");
+  const [selectedStatusFilter, setSelectedStatusFilter] =
+    useState<UserStatus | "All">("All");
+  const [selectedProfileFilter, setSelectedProfileFilter] =
+    useState<ProfileFilterOption>("All");
   const [showFilters, setShowFilters] = useState(false);
   const [userPage, setUserPage] = useState(1);
-  const [activitySearchKeyword, setActivitySearchKeyword] = useState("");
-  const [selectedActivityActionFilter, setSelectedActivityActionFilter] =
-    useState("All");
-  const [activityPage, setActivityPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     userId: null,
@@ -81,20 +53,14 @@ function UsersPage() {
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const selectedUser =
-    selectedUserId !== null
-      ? (users.find((user) => user.id === selectedUserId) ?? null)
-      : null;
-
-  const confirmUser =
-    confirmState.userId !== null
-      ? (users.find((user) => user.id === confirmState.userId) ?? null)
-      : null;
-
-  const isProtectedAdmin = selectedUser?.role === "Admin";
-
   const summaryCards: UserSummaryCard[] = userService.getSummaryCards(users);
-  const roleCounts: UserRoleCountItem[] = userService.getRoleCounts(users);
+  const usersWithEmailCount = users.filter((user) => user.email !== "No email").length;
+  const usersMissingLocationCount = users.filter(
+    (user) => user.location === "No location",
+  ).length;
+  const usersWithoutLoginCount = users.filter(
+    (user) => user.lastLoginAt === "No login yet",
+  ).length;
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -117,49 +83,51 @@ function UsersPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const openAddModal = () => {
-    setModalMode("add");
-    setSelectedUserId(null);
-    setFormData(emptyUserForm);
-    setIsModalOpen(true);
-  };
+  const loadUsers = async (showSuccessToast = false) => {
+    try {
+      setIsLoading(true);
+      setError("");
 
-  const openViewModal = (user: User) => {
-    setModalMode("view");
-    setSelectedUserId(user.id);
+      const nextUsers = await userService.fetchUsers();
+      setUsers(nextUsers);
 
-    if (user.role === "Admin") {
-      setFormData({
-        fullName: user.fullName,
-        email: user.email,
-        role: "Customer",
-      });
-    } else {
-      setFormData({
-        fullName: user.fullName,
-        email: user.email,
-        role: user.role,
-      });
+      if (showSuccessToast) {
+        showToast("User directory refreshed successfully.");
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unable to load users.";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsModalOpen(true);
   };
 
-  const openEditModal = (user: User) => {
-    if (user.role === "Admin") return;
+  useEffect(() => {
+    void loadUsers();
+  }, []);
 
-    setModalMode("edit");
-    setSelectedUserId(user.id);
-    setFormData({
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-    });
+  const openViewModal = async (user: User) => {
+    setSelectedUser(user);
     setIsModalOpen(true);
+    setIsDetailLoading(true);
+
+    try {
+      const detail = await userService.fetchUserById(user.id);
+      setSelectedUser(detail);
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Unable to load user details.",
+        "error",
+      );
+    } finally {
+      setIsDetailLoading(false);
+    }
   };
 
   const closeModal = () => {
-    setSelectedUserId(null);
+    setSelectedUser(null);
     setIsModalOpen(false);
   };
 
@@ -179,62 +147,38 @@ function UsersPage() {
     });
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (confirmState.userId === null || confirmState.action === null) return;
 
-    const userId = confirmState.userId;
-    const action = confirmState.action;
+    const targetUser = users.find((user) => user.id === confirmState.userId);
 
-    const targetUser = users.find((user) => user.id === userId);
-
-    setUsers((prev) =>
-      userService.updateUserStatus(
-        prev,
-        userId,
-        action === "lock" ? "Locked" : "Active",
-      ),
-    );
-
-    if (action === "lock") {
-      showToast(
-        `${targetUser?.fullName ?? "User"} has been locked successfully.`,
+    try {
+      const updatedUser = await userService.updateUserStatusById(
+        confirmState.userId,
+        confirmState.action === "lock" ? "Locked" : "Active",
       );
-    } else {
-      showToast(
-        `${targetUser?.fullName ?? "User"} has been unlocked successfully.`,
-      );
-    }
 
-    closeConfirmDialog();
-  };
-
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = event.target;
-
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (modalMode === "add") {
-      setUsers((prev) => userService.createUser(prev, formData));
-      showToast("User added successfully.");
-    }
-
-    if (modalMode === "edit" && selectedUserId !== null) {
       setUsers((prev) =>
-        userService.updateUser(prev, selectedUserId, formData),
+        prev.map((user) => (user.id === updatedUser.id ? updatedUser : user)),
       );
-      showToast("User updated successfully.");
-    }
 
-    closeModal();
+      setSelectedUser((prev) =>
+        prev && prev.id === updatedUser.id ? updatedUser : prev,
+      );
+
+      showToast(
+        `${targetUser?.fullName ?? "User"} has been ${
+          confirmState.action === "lock" ? "locked" : "unlocked"
+        } successfully.`,
+      );
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Unable to update user status.",
+        "error",
+      );
+    } finally {
+      closeConfirmDialog();
+    }
   };
 
   const filteredUsers = useMemo(() => {
@@ -244,17 +188,25 @@ function UsersPage() {
       const matchesKeyword =
         !keyword ||
         user.fullName.toLowerCase().includes(keyword) ||
-        user.email.toLowerCase().includes(keyword);
-
-      const matchesRole =
-        selectedRoleFilter === "All" || user.role === selectedRoleFilter;
+        user.email.toLowerCase().includes(keyword) ||
+        user.phone.toLowerCase().includes(keyword) ||
+        user.location.toLowerCase().includes(keyword);
 
       const matchesStatus =
         selectedStatusFilter === "All" || user.status === selectedStatusFilter;
 
-      return matchesKeyword && matchesRole && matchesStatus;
+      const matchesProfile =
+        selectedProfileFilter === "All" ||
+        (selectedProfileFilter === "Has Email" && user.email !== "No email") ||
+        (selectedProfileFilter === "Missing Email" && user.email === "No email") ||
+        (selectedProfileFilter === "Has Location" &&
+          user.location !== "No location") ||
+        (selectedProfileFilter === "Missing Location" &&
+          user.location === "No location");
+
+      return matchesKeyword && matchesStatus && matchesProfile;
     });
-  }, [users, searchKeyword, selectedRoleFilter, selectedStatusFilter]);
+  }, [users, searchKeyword, selectedStatusFilter, selectedProfileFilter]);
 
   const totalUserPages = Math.max(
     1,
@@ -266,52 +218,13 @@ function UsersPage() {
     return filteredUsers.slice(startIndex, startIndex + USER_PAGE_SIZE);
   }, [filteredUsers, userPage]);
 
-  const allActivities: FlattenedUserActivityItem[] = useMemo(() => {
-    return userService.getRecentActivityLogs(users);
+  const recentActivities = useMemo(() => {
+    return userService.getRecentActivityLogs(users).slice(0, 5);
   }, [users]);
-
-  const activityActionOptions = useMemo(() => {
-    return [
-      "All",
-      ...Array.from(new Set(allActivities.map((activity) => activity.action))),
-    ];
-  }, [allActivities]);
-
-  const filteredActivities: FlattenedUserActivityItem[] = useMemo(() => {
-    const keyword = activitySearchKeyword.trim().toLowerCase();
-
-    return allActivities.filter((activity) => {
-      const matchesKeyword =
-        !keyword ||
-        activity.userName.toLowerCase().includes(keyword) ||
-        activity.action.toLowerCase().includes(keyword) ||
-        activity.detail.toLowerCase().includes(keyword) ||
-        activity.performedBy.toLowerCase().includes(keyword);
-
-      const matchesAction =
-        selectedActivityActionFilter === "All" ||
-        activity.action === selectedActivityActionFilter;
-
-      return matchesKeyword && matchesAction;
-    });
-  }, [allActivities, activitySearchKeyword, selectedActivityActionFilter]);
-
-  const totalActivityPages = Math.max(
-    1,
-    Math.ceil(filteredActivities.length / ACTIVITY_PAGE_SIZE),
-  );
-
-  const paginatedActivities = useMemo(() => {
-    const startIndex = (activityPage - 1) * ACTIVITY_PAGE_SIZE;
-    return filteredActivities.slice(
-      startIndex,
-      startIndex + ACTIVITY_PAGE_SIZE,
-    );
-  }, [filteredActivities, activityPage]);
 
   useEffect(() => {
     setUserPage(1);
-  }, [searchKeyword, selectedRoleFilter, selectedStatusFilter]);
+  }, [searchKeyword, selectedStatusFilter, selectedProfileFilter]);
 
   useEffect(() => {
     if (userPage > totalUserPages) {
@@ -319,29 +232,10 @@ function UsersPage() {
     }
   }, [userPage, totalUserPages]);
 
-  useEffect(() => {
-    setActivityPage(1);
-  }, [activitySearchKeyword, selectedActivityActionFilter]);
-
-  useEffect(() => {
-    if (activityPage > totalActivityPages) {
-      setActivityPage(totalActivityPages);
-    }
-  }, [activityPage, totalActivityPages]);
-
-  const modalTitle =
-    modalMode === "add"
-      ? "Add User"
-      : modalMode === "edit"
-        ? "Edit User"
-        : "User Details";
-
-  const modalDescription =
-    modalMode === "add"
-      ? "Create a new internal user account and assign the appropriate role. New accounts are created as active by default."
-      : modalMode === "edit"
-        ? "Update user account information and role assignment. Use Lock or Unlock in the table to change status."
-        : "Review user account information, role assignment history, and recent access activity.";
+  const confirmUser =
+    confirmState.userId !== null
+      ? (users.find((user) => user.id === confirmState.userId) ?? null)
+      : null;
 
   const confirmTitle =
     confirmState.action === "lock"
@@ -361,9 +255,9 @@ function UsersPage() {
     <div className="users-page">
       <PageHeader
         title="Users Management"
-        description="Manage user accounts, roles, and account status."
-        actionLabel="+ Add User"
-        onActionClick={openAddModal}
+        description="Manage marketplace user accounts, account status, and profile quality signals."
+        actionLabel="Refresh Directory"
+        onActionClick={() => void loadUsers(true)}
       />
 
       <div className="users-summary-grid">
@@ -378,37 +272,20 @@ function UsersPage() {
       </div>
 
       <SearchToolbar
-        placeholder="Search by name or email"
+        placeholder="Search by name, phone, email, or location"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Filter by role & status"
-        filterSummaryItems={[selectedRoleFilter, selectedStatusFilter]}
+        filterLabel="Filter by status & profile"
+        filterSummaryItems={[selectedStatusFilter, selectedProfileFilter]}
       />
 
       {showFilters && (
         <SectionCard
           title="User Filters"
-          description="Refine the user directory and account activity by role and status."
+          description="Refine the user directory by account status and profile completeness."
         >
           <div className="users-filters">
-            <div className="users-filters__field">
-              <label htmlFor="users-role-filter">Role</label>
-              <select
-                id="users-role-filter"
-                value={selectedRoleFilter}
-                onChange={(event) =>
-                  setSelectedRoleFilter(event.target.value as UserRole | "All")
-                }
-              >
-                {roleFilterOptions.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="users-filters__field">
               <label htmlFor="users-status-filter">Status</label>
               <select
@@ -427,18 +304,44 @@ function UsersPage() {
                 ))}
               </select>
             </div>
+
+            <div className="users-filters__field">
+              <label htmlFor="users-profile-filter">Profile Signal</label>
+              <select
+                id="users-profile-filter"
+                value={selectedProfileFilter}
+                onChange={(event) =>
+                  setSelectedProfileFilter(
+                    event.target.value as ProfileFilterOption,
+                  )
+                }
+              >
+                {profileFilterOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </SectionCard>
       )}
 
       <SectionCard
         title="User Directory"
-        description="Review account information, role assignment, and account status."
+        description="Review user account information, contact details, and account status."
       >
-        {filteredUsers.length === 0 ? (
+        {isLoading ? (
+          <div className="users-empty-state">Loading user directory...</div>
+        ) : error ? (
+          <EmptyState
+            title="Unable to load users"
+            description={error}
+          />
+        ) : filteredUsers.length === 0 ? (
           <EmptyState
             title="No users found"
-            description="No users match your current search or filter settings. Try changing the conditions or create a new user."
+            description="No users match your current search or filter settings."
           />
         ) : (
           <>
@@ -446,12 +349,11 @@ function UsersPage() {
               <table className="users-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
+                    <th>User</th>
+                    <th>Contact</th>
                     <th>Status</th>
                     <th>Joined Date</th>
+                    <th>Last Login</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -459,11 +361,17 @@ function UsersPage() {
                 <tbody>
                   {paginatedUsers.map((user) => (
                     <tr key={user.id}>
-                      <td>#{user.id}</td>
-                      <td>{user.fullName}</td>
-                      <td>{user.email}</td>
                       <td>
-                        <StatusBadge label={user.role} variant="role" />
+                        <div className="users-user-cell">
+                          <strong>{user.fullName}</strong>
+                          <span>User #{user.id}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="users-contact-cell">
+                          <strong>{user.phone}</strong>
+                          <span>{user.email}</span>
+                        </div>
                       </td>
                       <td>
                         <StatusBadge
@@ -473,35 +381,19 @@ function UsersPage() {
                           }
                         />
                       </td>
-                      <td>{user.joinedAt}</td>
+                      <td>{user.joinedAt || "Unknown"}</td>
+                      <td>{user.lastLoginAt}</td>
                       <td>
                         <div className="users-actions">
                           <button
                             type="button"
                             className="users-actions__view"
-                            onClick={() => openViewModal(user)}
+                            onClick={() => void openViewModal(user)}
                           >
                             View
                           </button>
 
-                          <button
-                            type="button"
-                            className="users-actions__edit"
-                            onClick={() => openEditModal(user)}
-                            disabled={user.role === "Admin"}
-                          >
-                            Edit
-                          </button>
-
-                          {user.role === "Admin" ? (
-                            <button
-                              type="button"
-                              className="users-actions__disabled"
-                              disabled
-                            >
-                              Protected
-                            </button>
-                          ) : user.status === "Active" ? (
+                          {user.status === "Active" ? (
                             <button
                               type="button"
                               className="users-actions__lock"
@@ -558,292 +450,166 @@ function UsersPage() {
 
       <div className="users-insight-grid">
         <SectionCard
-          title="Role Assignment Overview"
-          description="Track how many accounts are assigned to each role."
+          title="Profile Coverage Overview"
+          description="Track contact completeness and location availability across marketplace users."
         >
           <div className="users-role-overview">
-            {roleCounts.map((item) => (
-              <div key={item.role} className="users-role-card">
-                <div className="users-role-card__header">
-                  <StatusBadge label={item.role} variant="role" />
-                </div>
-                <strong>{item.count}</strong>
-                <span>
-                  {item.count === 1 ? "account assigned" : "accounts assigned"}
-                </span>
-              </div>
-            ))}
+            <div className="users-role-card">
+              <strong>{usersWithEmailCount}</strong>
+              <span>profiles with email</span>
+            </div>
+            <div className="users-role-card">
+              <strong>{Math.max(users.length - usersWithEmailCount, 0)}</strong>
+              <span>profiles missing email</span>
+            </div>
+            <div className="users-role-card">
+              <strong>{usersMissingLocationCount}</strong>
+              <span>profiles missing location</span>
+            </div>
+            <div className="users-role-card">
+              <strong>{usersWithoutLoginCount}</strong>
+              <span>profiles without login yet</span>
+            </div>
           </div>
         </SectionCard>
 
         <SectionCard
-          title="Recent Account Activity"
-          description="Search and review the latest account changes recorded in the admin panel."
+          title="Activity Log Shortcut"
+          description="Recent derived activity is shown here, and you can open the full Activity Log screen for deeper filtering."
+          actions={
+            <Link className="users-shortcut-link" to="/activity-log">
+              Open Full Log
+            </Link>
+          }
         >
-          <div className="users-activity-section">
-            <div className="users-activity-toolbar">
-              <div className="users-activity-toolbar__field users-activity-toolbar__field--search">
-                <label htmlFor="users-activity-search">Search Activity</label>
-                <input
-                  id="users-activity-search"
-                  type="text"
-                  value={activitySearchKeyword}
-                  onChange={(event) =>
-                    setActivitySearchKeyword(event.target.value)
-                  }
-                  placeholder="Search by user, action, detail, or performer"
-                />
-              </div>
-
-              <div className="users-activity-toolbar__field">
-                <label htmlFor="users-activity-action-filter">
-                  Filter Action
-                </label>
-                <select
-                  id="users-activity-action-filter"
-                  value={selectedActivityActionFilter}
-                  onChange={(event) =>
-                    setSelectedActivityActionFilter(event.target.value)
-                  }
-                >
-                  {activityActionOptions.map((action) => (
-                    <option key={action} value={action}>
-                      {action}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {recentActivities.length === 0 ? (
+            <div className="users-empty-state">
+              No recent activity is available yet.
             </div>
-
-            {filteredActivities.length === 0 ? (
-              <EmptyState
-                title="No activity found"
-                description="No activity matches the current activity search or filter settings."
-              />
-            ) : (
-              <>
-                <div className="users-activity-table-wrapper">
-                  <table className="users-activity-table">
-                    <thead>
-                      <tr>
-                        <th>User</th>
-                        <th>Action</th>
-                        <th>Detail</th>
-                        <th>Performed By</th>
-                        <th>Timestamp</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedActivities.map((activity) => (
-                        <tr key={`${activity.userId}-${activity.id}`}>
-                          <td>{activity.userName}</td>
-                          <td>{activity.action}</td>
-                          <td>{activity.detail}</td>
-                          <td>{activity.performedBy}</td>
-                          <td>{activity.performedAt}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="users-activity-pagination">
-                  <span className="users-activity-pagination__info">
-                    Page {activityPage} of {totalActivityPages}
-                  </span>
-
-                  <div className="users-activity-pagination__actions">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActivityPage((prev) => Math.max(1, prev - 1))
+          ) : (
+            <div className="users-shortcut-list">
+              {recentActivities.map((activity) => (
+                <div
+                  key={`${activity.userId}-${activity.id}`}
+                  className="users-shortcut-item"
+                >
+                  <div className="users-shortcut-item__main">
+                    <strong>{activity.userName}</strong>
+                    <span>{activity.detail}</span>
+                  </div>
+                  <div className="users-shortcut-item__meta">
+                    <StatusBadge
+                      label={activity.action}
+                      variant={
+                        activity.action.includes("Locked")
+                          ? "locked"
+                          : activity.action.includes("Login")
+                            ? "processing"
+                            : "active"
                       }
-                      disabled={activityPage === 1}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActivityPage((prev) =>
-                          Math.min(totalActivityPages, prev + 1),
-                        )
-                      }
-                      disabled={activityPage === totalActivityPages}
-                    >
-                      Next
-                    </button>
+                    />
+                    <small>{activity.performedAt}</small>
                   </div>
                 </div>
-              </>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </SectionCard>
       </div>
 
       <BaseModal
         isOpen={isModalOpen}
-        title={modalTitle}
-        description={modalDescription}
+        title="User Details"
+        description="Review user profile details and the derived account activity timeline."
         onClose={closeModal}
         maxWidth="760px"
       >
-        <form className="users-modal__form" onSubmit={handleSubmit}>
-          <div className="users-modal__grid">
-            <div className="users-modal__field">
-              <label htmlFor="fullName">Full Name</label>
-              <input
-                id="fullName"
-                name="fullName"
-                type="text"
-                value={formData.fullName}
-                onChange={handleChange}
-                disabled={modalMode === "view"}
-                placeholder="Enter full name"
-              />
-            </div>
-
-            <div className="users-modal__field">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={modalMode === "view"}
-                placeholder="Enter email"
-              />
-            </div>
-
-            {isProtectedAdmin ? (
+        {isDetailLoading && !selectedUser ? (
+          <div className="users-empty-state">Loading user details...</div>
+        ) : selectedUser ? (
+          <div className="users-modal__form">
+            <div className="users-modal__grid">
               <div className="users-modal__field">
-                <label>Role</label>
-                <input type="text" value="Admin" disabled />
+                <label>Full Name</label>
+                <input type="text" value={selectedUser.fullName} disabled />
               </div>
-            ) : (
               <div className="users-modal__field">
-                <label htmlFor="role">Role</label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  disabled={modalMode === "view"}
-                >
-                  {assignableRoles.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
+                <label>Phone</label>
+                <input type="text" value={selectedUser.phone} disabled />
               </div>
-            )}
-
-            {modalMode === "view" && selectedUser ? (
-              <>
-                <div className="users-modal__field">
-                  <label>Status</label>
-                  <input type="text" value={selectedUser.status} disabled />
-                </div>
-
-                <div className="users-modal__field">
-                  <label>Joined Date</label>
-                  <input type="text" value={selectedUser.joinedAt} disabled />
-                </div>
-              </>
-            ) : null}
-          </div>
-
-          {isProtectedAdmin && (
-            <div className="users-modal__notice">
-              This is the only system Admin account. Role and status cannot be
-              changed.
+              <div className="users-modal__field">
+                <label>Email</label>
+                <input type="text" value={selectedUser.email} disabled />
+              </div>
+              <div className="users-modal__field">
+                <label>Status</label>
+                <input type="text" value={selectedUser.status} disabled />
+              </div>
+              <div className="users-modal__field">
+                <label>Location</label>
+                <input type="text" value={selectedUser.location} disabled />
+              </div>
+              <div className="users-modal__field">
+                <label>Last Login</label>
+                <input type="text" value={selectedUser.lastLoginAt} disabled />
+              </div>
             </div>
-          )}
 
-          {modalMode === "view" && selectedUser ? (
-            <>
-              <div className="users-modal__section">
-                <div className="users-modal__section-header">
-                  <h4>Role Assignment History</h4>
-                  <p>
-                    Review how this account's role has been assigned over time.
-                  </p>
-                </div>
-
-                <div className="users-modal__history-table-wrapper">
-                  <table className="users-modal__history-table">
-                    <thead>
-                      <tr>
-                        <th>Role</th>
-                        <th>Assigned By</th>
-                        <th>Assigned At</th>
-                        <th>Note</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedUser.roleAssignments.map((item) => (
-                        <tr key={item.id}>
-                          <td>{item.role}</td>
-                          <td>{item.assignedBy}</td>
-                          <td>{item.assignedAt}</td>
-                          <td>{item.note}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+            <div className="users-modal__section">
+              <div className="users-modal__section-header">
+                <h4>Derived Activity Timeline</h4>
+                <p>
+                  Timeline entries are generated from registration, login, and
+                  account update data currently available from backend APIs.
+                </p>
               </div>
 
-              <div className="users-modal__section">
-                <div className="users-modal__section-header">
-                  <h4>Recent Activity</h4>
-                  <p>Latest account actions performed for this user.</p>
-                </div>
-
-                <div className="users-modal__history-table-wrapper">
-                  <table className="users-modal__history-table">
-                    <thead>
+              <div className="users-modal__history-table-wrapper">
+                <table className="users-modal__history-table">
+                  <thead>
+                    <tr>
+                      <th>Action</th>
+                      <th>Detail</th>
+                      <th>Performed By</th>
+                      <th>Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedUser.activityLogs.length === 0 ? (
                       <tr>
-                        <th>Action</th>
-                        <th>Detail</th>
-                        <th>Performed By</th>
-                        <th>Timestamp</th>
+                        <td colSpan={4}>No activity data available.</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {selectedUser.activityLogs.map((item) => (
+                    ) : (
+                      selectedUser.activityLogs.map((item) => (
                         <tr key={item.id}>
                           <td>{item.action}</td>
                           <td>{item.detail}</td>
                           <td>{item.performedBy}</td>
                           <td>{item.performedAt}</td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </>
-          ) : null}
+            </div>
 
-          <div className="users-modal__actions">
-            <button
-              type="button"
-              className="users-modal__cancel"
-              onClick={closeModal}
-            >
-              Close
-            </button>
-
-            {modalMode !== "view" && (
-              <button type="submit" className="users-modal__submit">
-                {modalMode === "add" ? "Add User" : "Save Changes"}
+            <div className="users-modal__actions">
+              <button
+                type="button"
+                className="users-modal__cancel"
+                onClick={closeModal}
+              >
+                Close
               </button>
-            )}
+            </div>
           </div>
-        </form>
+        ) : (
+          <EmptyState
+            title="User detail unavailable"
+            description="No user detail is available for the selected record."
+          />
+        )}
       </BaseModal>
 
       <ConfirmDialog
@@ -855,7 +621,7 @@ function UsersPage() {
         }
         cancelText="Cancel"
         tone={confirmState.action === "lock" ? "danger" : "success"}
-        onConfirm={handleConfirmAction}
+        onConfirm={() => void handleConfirmAction()}
         onCancel={closeConfirmDialog}
       />
 

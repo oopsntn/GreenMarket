@@ -6,7 +6,7 @@ import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import { userService } from "../services/userService";
-import type { FlattenedUserActivityItem } from "../types/user";
+import type { FlattenedUserActivityItem, User } from "../types/user";
 import "./ActivityLogPage.css";
 
 const PAGE_SIZE = 8;
@@ -20,13 +20,31 @@ const getActionVariant = (action: string) => {
 };
 
 function ActivityLogPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedActionFilter, setSelectedActionFilter] = useState("All");
   const [selectedPerformerFilter, setSelectedPerformerFilter] = useState("All");
   const [page, setPage] = useState(1);
+ 
+  const loadUsers = async () => {
+    try {
+      setIsLoading(true);
+      setError("");
+      setUsers(await userService.fetchUsers());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load activity log.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const users = userService.getUsers();
+  useEffect(() => {
+    void loadUsers();
+  }, []);
+
   const activityLogs = useMemo(
     () => userService.getRecentActivityLogs(users),
     [users],
@@ -105,7 +123,9 @@ function ActivityLogPage() {
     <div className="activity-log-page">
       <PageHeader
         title="Activity Log"
-        description="Review account activity, role assignment history, and admin actions in one dedicated log screen."
+        description="Review derived account lifecycle activity and admin-side status changes in one dedicated log screen."
+        actionLabel="Refresh Log"
+        onActionClick={() => void loadUsers()}
       />
 
       <div className="activity-log-summary-grid">
@@ -183,9 +203,19 @@ function ActivityLogPage() {
 
       <SectionCard
         title="Account Activity Directory"
-        description="Follow account creation, role changes, status updates, and other admin-side actions."
+        description="Follow registration, login, status updates, and other lifecycle actions derived from user account data."
       >
-        {filteredLogs.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading activity log"
+            description="Fetching the latest user activity records from the admin API."
+          />
+        ) : error ? (
+          <EmptyState
+            title="Unable to load activity log"
+            description={error}
+          />
+        ) : filteredLogs.length === 0 ? (
           <EmptyState
             title="No activity found"
             description="No activity log entries match the current search or filter settings."

@@ -1,4 +1,6 @@
-const AUTH_API_URL = "http://localhost:5000/api/auth/admin/login";
+import { apiClient } from "../lib/apiClient";
+
+const AUTH_API_PATH = "/api/auth/admin/login";
 
 export type AdminLoginPayload = {
   email: string;
@@ -15,33 +17,14 @@ export type AdminLoginResponse = {
   };
 };
 
-const parseErrorMessage = async (response: Response) => {
-  try {
-    const data = (await response.json()) as {
-      error?: string;
-      message?: string;
-    };
-
-    return data.error || data.message || "Login failed.";
-  } catch {
-    return "Login failed.";
-  }
-};
-
 export const authApi = {
   async login(payload: AdminLoginPayload): Promise<AdminLoginResponse> {
-    const response = await fetch(AUTH_API_URL, {
+    return apiClient.request<AdminLoginResponse>(AUTH_API_PATH, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      includeJsonContentType: true,
+      skipAuth: true,
+      defaultErrorMessage: "Login failed.",
       body: JSON.stringify(payload),
     });
-
-    if (!response.ok) {
-      throw new Error(await parseErrorMessage(response));
-    }
-
-    return (await response.json()) as AdminLoginResponse;
   },
 };

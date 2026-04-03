@@ -1,5 +1,7 @@
+import { apiClient } from "../lib/apiClient";
 import { initialUsers } from "../mock-data/users";
 import type {
+  ApiUserResponse,
   FlattenedUserActivityItem,
   User,
   UserFormState,
@@ -47,7 +49,147 @@ const getNextNestedId = (
   return Math.max(...items.map((item) => item.id)) + 1;
 };
 
+const formatDate = (value: string | null) => {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toISOString().slice(0, 10);
+};
+
+const formatDateTime = (value: string | null) => {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return `${date.toISOString().slice(0, 10)} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+};
+
+const mapApiStatusToUiStatus = (value: string | null): UserStatus => {
+  return value?.toLowerCase() === "blocked" ? "Locked" : "Active";
+};
+
+const buildDerivedActivityLogs = (
+  user: ApiUserResponse,
+  displayName: string,
+): User["activityLogs"] => {
+  const registrationDateTime = formatDateTime(
+    user.userRegisteredAt || user.userCreatedAt,
+  );
+  const lastLoginDateTime = formatDateTime(user.userLastLoginAt);
+  const updatedDateTime = formatDateTime(user.userUpdatedAt);
+
+  const logs: User["activityLogs"] = [];
+
+  if (registrationDateTime) {
+    logs.push({
+      id: 1,
+      action: "Account Registered",
+      detail: "User account was registered in the marketplace.",
+      performedBy: "System",
+      performedAt: registrationDateTime,
+    });
+  }
+
+  if (lastLoginDateTime) {
+    logs.push({
+      id: logs.length + 1,
+      action: "Last Login Recorded",
+      detail: "Latest successful user sign-in captured by the system.",
+      performedBy: displayName,
+      performedAt: lastLoginDateTime,
+    });
+  }
+
+  if (
+    updatedDateTime &&
+    updatedDateTime !== registrationDateTime &&
+    updatedDateTime !== lastLoginDateTime
+  ) {
+    logs.push({
+      id: logs.length + 1,
+      action:
+        mapApiStatusToUiStatus(user.userStatus) === "Locked"
+          ? "Account Locked"
+          : "Profile Updated",
+      detail:
+        mapApiStatusToUiStatus(user.userStatus) === "Locked"
+          ? "Account access is currently blocked by admin action."
+          : "User profile information was updated.",
+      performedBy:
+        mapApiStatusToUiStatus(user.userStatus) === "Locked"
+          ? DEFAULT_ADMIN_NAME
+          : "System Sync",
+      performedAt: updatedDateTime,
+    });
+  }
+
+  return logs.sort((a, b) => b.performedAt.localeCompare(a.performedAt));
+};
+
+const mapApiUserToUi = (item: ApiUserResponse): User => {
+  const fullName =
+    item.userDisplayName?.trim() ||
+    item.userEmail?.trim() ||
+    item.userMobile?.trim() ||
+    `User #${item.userId}`;
+
+  return {
+    id: item.userId,
+    fullName,
+    phone: item.userMobile?.trim() || "N/A",
+    email: item.userEmail?.trim() || "No email",
+    role: "Customer",
+    status: mapApiStatusToUiStatus(item.userStatus),
+    joinedAt: formatDate(item.userRegisteredAt || item.userCreatedAt),
+    location: item.userLocation?.trim() || "No location",
+    lastLoginAt: formatDateTime(item.userLastLoginAt) || "No login yet",
+    roleAssignments: [],
+    activityLogs: buildDerivedActivityLogs(item, fullName),
+  };
+};
+
 export const userService = {
+  async fetchUsers(): Promise<User[]> {
+    const data = await apiClient.request<ApiUserResponse[]>("/api/admin/users", {
+      defaultErrorMessage: "Unable to load users.",
+    });
+
+    return data.map(mapApiUserToUi);
+  },
+
+  async fetchUserById(userId: number): Promise<User> {
+    const data = await apiClient.request<ApiUserResponse>(
+      `/api/admin/users/${userId}`,
+      {
+        defaultErrorMessage: "Unable to load user details.",
+      },
+    );
+
+    return mapApiUserToUi(data);
+  },
+
+  async updateUserStatusById(
+    userId: number,
+    status: UserStatus,
+  ): Promise<User> {
+    const data = await apiClient.request<ApiUserResponse>(
+      `/api/admin/users/${userId}/status`,
+      {
+        method: "PATCH",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update user status.",
+        body: JSON.stringify({
+          status: status === "Locked" ? "blocked" : "active",
+        }),
+      },
+    );
+
+    return mapApiUserToUi(data);
+  },
+
   getUsers(): User[] {
     return initialUsers;
   },
@@ -59,10 +201,13 @@ export const userService = {
     const newUser: User = {
       id: getNextUserId(users),
       fullName: formData.fullName.trim(),
+      phone: "Pending",
       email: formData.email.trim(),
       role: formData.role,
       status: "Active",
       joinedAt: currentDate,
+      location: "Not set",
+      lastLoginAt: "No login yet",
       roleAssignments: [
         {
           id: 1,

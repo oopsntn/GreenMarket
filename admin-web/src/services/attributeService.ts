@@ -1,3 +1,4 @@
+import { apiClient } from "../lib/apiClient";
 import type {
   Attribute,
   AttributeApiResponse,
@@ -5,27 +6,6 @@ import type {
   AttributeStatus,
   AttributeType,
 } from "../types/attribute";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://localhost:5000";
-
-const getAdminToken = () => {
-  return (
-    localStorage.getItem("adminToken") ||
-    sessionStorage.getItem("adminToken") ||
-    ""
-  );
-};
-
-const buildHeaders = () => {
-  const token = getAdminToken();
-
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-};
 
 const formatDate = (value: string | null) => {
   if (!value) return "";
@@ -79,35 +59,6 @@ const mapApiAttributeToUi = (item: AttributeApiResponse): Attribute => {
   };
 };
 
-const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      ...buildHeaders(),
-      ...(init?.headers || {}),
-    },
-  });
-
-  if (!response.ok) {
-    let errorMessage = "Request failed.";
-
-    try {
-      const errorData = (await response.json()) as { error?: string };
-      errorMessage = errorData.error || errorMessage;
-    } catch {
-      // ignore parse error
-    }
-
-    if (response.status === 401 || response.status === 403) {
-      throw new Error("Your admin session has expired or is not authorized.");
-    }
-
-    throw new Error(errorMessage);
-  }
-
-  return (await response.json()) as T;
-};
-
 export const attributeService = {
   getEmptyForm(): AttributeFormState {
     return {
@@ -119,7 +70,12 @@ export const attributeService = {
   },
 
   async getAttributes(): Promise<Attribute[]> {
-    const data = await request<AttributeApiResponse[]>("/api/admin/attributes");
+    const data = await apiClient.request<AttributeApiResponse[]>(
+      "/api/admin/attributes",
+      {
+        defaultErrorMessage: "Unable to load attributes.",
+      },
+    );
     return data.map(mapApiAttributeToUi);
   },
 
@@ -135,10 +91,15 @@ export const attributeService = {
       attributePublished: true,
     };
 
-    const data = await request<AttributeApiResponse>("/api/admin/attributes", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const data = await apiClient.request<AttributeApiResponse>(
+      "/api/admin/attributes",
+      {
+        method: "POST",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to create attribute.",
+        body: JSON.stringify(payload),
+      },
+    );
 
     return mapApiAttributeToUi(data);
   },
@@ -159,10 +120,12 @@ export const attributeService = {
       attributePublished: currentStatus === "Active",
     };
 
-    const data = await request<AttributeApiResponse>(
+    const data = await apiClient.request<AttributeApiResponse>(
       `/api/admin/attributes/${attributeId}`,
       {
         method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update attribute.",
         body: JSON.stringify(payload),
       },
     );
@@ -184,10 +147,12 @@ export const attributeService = {
       attributePublished: status === "Active",
     };
 
-    const data = await request<AttributeApiResponse>(
+    const data = await apiClient.request<AttributeApiResponse>(
       `/api/admin/attributes/${attributeId}`,
       {
         method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update attribute status.",
         body: JSON.stringify(payload),
       },
     );

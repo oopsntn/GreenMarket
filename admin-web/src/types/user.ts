@@ -34,12 +34,30 @@ export type UserActivityLogItem = {
 export type User = {
   id: number;
   fullName: string;
+  phone: string;
   email: string;
   role: UserRole;
   status: UserStatus;
   joinedAt: string;
+  location: string;
+  lastLoginAt: string;
   roleAssignments: RoleAssignmentHistoryItem[];
   activityLogs: UserActivityLogItem[];
+};
+
+export type ApiUserResponse = {
+  userId: number;
+  userMobile: string;
+  userDisplayName: string | null;
+  userAvatarUrl: string | null;
+  userEmail: string | null;
+  userLocation: string | null;
+  userBio: string | null;
+  userStatus: string | null;
+  userRegisteredAt: string | null;
+  userLastLoginAt: string | null;
+  userCreatedAt: string | null;
+  userUpdatedAt: string | null;
 };
 
 export type UserFormState = {
