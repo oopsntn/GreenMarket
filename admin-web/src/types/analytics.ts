@@ -12,3 +12,8 @@ export type TopPlacement = {
   ctr: string;
   revenue: string;
 };
+
+export type AnalyticsApiResponse = {
+  kpiCards: AnalyticsKpiCard[];
+  topPlacements: TopPlacement[];
+};

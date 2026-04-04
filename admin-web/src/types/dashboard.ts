@@ -7,3 +7,8 @@ export type DashboardSummary = {
   title: string;
   description: string;
 };
+
+export type DashboardApiResponse = {
+  statCards: DashboardStatCard[];
+  summary: DashboardSummary;
+};

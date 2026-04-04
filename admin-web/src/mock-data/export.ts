@@ -26,6 +26,6 @@ export const exportHistoryItems: ExportHistoryItem[] = [
     format: "XLSX",
     generatedBy: "Admin",
     date: "2026-03-15",
-    status: "Processing",
+    status: "In Progress",
   },
 ];

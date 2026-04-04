@@ -18,8 +18,11 @@ import "./RevenuePage.css";
 const PAGE_SIZE = 5;
 
 function RevenuePage() {
-  const summaryCards = revenueService.getRevenueCards();
-  const rows = revenueService.getRevenueRows();
+  const [revenueData, setRevenueData] = useState(
+    revenueService.getEmptyRevenue(),
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
 
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
@@ -28,6 +31,32 @@ function RevenuePage() {
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
+  const summaryCards = revenueData.summaryCards;
+  const rows = revenueData.rows;
+
+  useEffect(() => {
+    const loadRevenue = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+        const nextRevenue = await revenueService.getRevenueSummary(
+          fromDate,
+          toDate,
+        );
+        setRevenueData(nextRevenue);
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load revenue summary.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadRevenue();
+  }, [fromDate, toDate]);
 
   const filteredRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -133,23 +162,43 @@ function RevenuePage() {
         filterSummary={`Current slot filter: ${slotFilter} • ${dateRangeLabel}`}
       />
 
-      <div className="revenue-cards">
-        {summaryCards.map((card) => (
-          <SectionCard key={card.title}>
-            <StatCard
-              title={card.title}
-              value={card.value}
-              subtitle={`${card.note} • ${dateRangeLabel}`}
-            />
-          </SectionCard>
-        ))}
-      </div>
+      {isLoading ? (
+        <SectionCard title="Revenue KPIs">
+          <EmptyState
+            title="Loading revenue"
+            description="Fetching revenue metrics from the admin API."
+          />
+        </SectionCard>
+      ) : pageError ? (
+        <SectionCard title="Revenue KPIs">
+          <EmptyState title="Unable to load revenue" description={pageError} />
+        </SectionCard>
+      ) : (
+        <div className="revenue-cards">
+          {summaryCards.map((card) => (
+            <SectionCard key={card.title}>
+              <StatCard
+                title={card.title}
+                value={card.value}
+                subtitle={`${card.note} • ${dateRangeLabel}`}
+              />
+            </SectionCard>
+          ))}
+        </div>
+      )}
 
       <SectionCard
         title="Revenue by Package"
         description={`${dateRangeLabel} • ${slotFilter}`}
       >
-        {filteredRows.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading revenue rows"
+            description="Fetching revenue rows from the admin API."
+          />
+        ) : pageError ? (
+          <EmptyState title="Unable to load revenue rows" description={pageError} />
+        ) : filteredRows.length === 0 ? (
           <EmptyState
             title="No revenue rows found"
             description="No revenue package data matches the current filter settings."

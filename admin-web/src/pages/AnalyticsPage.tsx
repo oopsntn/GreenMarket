@@ -17,8 +17,11 @@ import "./AnalyticsPage.css";
 const PAGE_SIZE = 4;
 
 function AnalyticsPage() {
-  const kpiCards = analyticsService.getKpiCards();
-  const placementRows = analyticsService.getTopPlacements();
+  const [analyticsData, setAnalyticsData] = useState(
+    analyticsService.getEmptyAnalytics(),
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
 
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
@@ -27,6 +30,32 @@ function AnalyticsPage() {
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
+  const kpiCards = analyticsData.kpiCards;
+  const placementRows = analyticsData.topPlacements;
+
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+        const nextAnalytics = await analyticsService.getAnalyticsSummary(
+          fromDate,
+          toDate,
+        );
+        setAnalyticsData(nextAnalytics);
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load analytics summary.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadAnalytics();
+  }, [fromDate, toDate]);
 
   const filteredRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -138,17 +167,33 @@ function AnalyticsPage() {
         filterSummary={`Current scope: ${metricScope} • ${dateRangeLabel}`}
       />
 
-      <div className="analytics-kpis">
-        {kpiCards.map((card) => (
-          <SectionCard key={card.title}>
-            <StatCard
-              title={card.title}
-              value={card.value}
-              subtitle={`${card.change} • ${dateRangeLabel}`}
-            />
-          </SectionCard>
-        ))}
-      </div>
+      {isLoading ? (
+        <SectionCard title="Analytics KPIs">
+          <EmptyState
+            title="Loading analytics"
+            description="Fetching analytics metrics from the admin API."
+          />
+        </SectionCard>
+      ) : pageError ? (
+        <SectionCard title="Analytics KPIs">
+          <EmptyState
+            title="Unable to load analytics"
+            description={pageError}
+          />
+        </SectionCard>
+      ) : (
+        <div className="analytics-kpis">
+          {kpiCards.map((card) => (
+            <SectionCard key={card.title}>
+              <StatCard
+                title={card.title}
+                value={card.value}
+                subtitle={`${card.change} • ${dateRangeLabel}`}
+              />
+            </SectionCard>
+          ))}
+        </div>
+      )}
 
       <div className="analytics-chart-grid">
         <SectionCard
@@ -201,7 +246,14 @@ function AnalyticsPage() {
         title="Top Placement Performance"
         description={`${dateRangeLabel} • ${metricScope}`}
       >
-        {filteredRows.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading analytics data"
+            description="Fetching placement performance rows."
+          />
+        ) : pageError ? (
+          <EmptyState title="Unable to load analytics data" description={pageError} />
+        ) : filteredRows.length === 0 ? (
           <EmptyState
             title="No analytics data found"
             description="No placement performance matches the current filter settings."
