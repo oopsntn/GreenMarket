@@ -13,7 +13,7 @@ export type FinancialReportType =
   | "Customer Spending Report"
   | "Promotion Performance";
 
-export type ExportHistoryStatus = "Completed" | "Processing";
+export type ExportHistoryStatus = "Completed" | "In Progress";
 
 export type ExportHistoryItem = {
   id: number;
@@ -23,4 +23,11 @@ export type ExportHistoryItem = {
   generatedBy: string;
   date: string;
   status: ExportHistoryStatus;
+};
+
+export type ExportFileApiResponse = {
+  historyItem: ExportHistoryItem;
+  fileName: string;
+  mimeType: string;
+  content: string;
 };
