@@ -1,6 +1,7 @@
 import { apiClient } from "../lib/apiClient";
 import type {
   AnalyticsApiResponse,
+  AnalyticsDailyTrafficPoint,
   AnalyticsKpiCard,
   TopPlacement,
 } from "../types/analytics";
@@ -29,6 +30,7 @@ export const analyticsService = {
     return {
       kpiCards: [] as AnalyticsKpiCard[],
       topPlacements: [] as TopPlacement[],
+      dailyTraffic: [] as AnalyticsDailyTrafficPoint[],
     };
   },
 };

@@ -13,7 +13,18 @@ export type TopPlacement = {
   revenue: string;
 };
 
+export type AnalyticsDailyTrafficSlot = {
+  slot: string;
+  impressions: number;
+};
+
+export type AnalyticsDailyTrafficPoint = {
+  date: string;
+  slots: AnalyticsDailyTrafficSlot[];
+};
+
 export type AnalyticsApiResponse = {
   kpiCards: AnalyticsKpiCard[];
   topPlacements: TopPlacement[];
+  dailyTraffic: AnalyticsDailyTrafficPoint[];
 };
