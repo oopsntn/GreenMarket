@@ -174,15 +174,27 @@ function AnalyticsPage() {
     }));
   }, [chartSlots, dailyTraffic, metricScope]);
 
+  const visibleDailyTrafficPoints = useMemo(() => {
+    const nonZeroPoints = dailyTrafficPoints.filter((point) =>
+      point.slots.some((slot) => slot.impressions > 0),
+    );
+
+    return nonZeroPoints.length > 0 ? nonZeroPoints : dailyTrafficPoints;
+  }, [dailyTrafficPoints]);
+
   const maxDailyTraffic = Math.max(
-    ...dailyTrafficPoints.flatMap((point) =>
+    ...visibleDailyTrafficPoints.flatMap((point) =>
       point.slots.map((slot) => slot.impressions),
     ),
     1,
   );
 
   const dateLabelInterval =
-    dailyTrafficPoints.length > 24 ? 4 : dailyTrafficPoints.length > 16 ? 3 : 2;
+    visibleDailyTrafficPoints.length > 18
+      ? 3
+      : visibleDailyTrafficPoints.length > 10
+        ? 2
+        : 1;
 
   const totalRevenue = placementChartRows.reduce(
     (total, item) => total + item.revenue,
@@ -381,7 +393,7 @@ function AnalyticsPage() {
                     </div>
 
                     <div className="analytics-daily-chart__groups">
-                      {dailyTrafficPoints.map((point, index) => (
+                      {visibleDailyTrafficPoints.map((point, index) => (
                         <div
                           key={point.date}
                           className="analytics-daily-chart__group"
@@ -389,14 +401,14 @@ function AnalyticsPage() {
                           <div className="analytics-daily-chart__bars">
                             {point.slots.map((slot) => {
                               const barHeight = Math.max(
-                                slot.impressions === 0 ? 6 : 18,
+                                slot.impressions === 0 ? 8 : 28,
                                 (slot.impressions / maxDailyTraffic) * 100,
                               );
                               const showBarValue =
                                 slot.impressions > 0 &&
-                                (dailyTrafficPoints.length <= 12 ||
+                                (visibleDailyTrafficPoints.length <= 12 ||
                                   index === 0 ||
-                                  index === dailyTrafficPoints.length - 1 ||
+                                  index === visibleDailyTrafficPoints.length - 1 ||
                                   index % dateLabelInterval === 0);
 
                               return (
@@ -427,9 +439,9 @@ function AnalyticsPage() {
                           </div>
 
                           <span className="analytics-daily-chart__date">
-                            {dailyTrafficPoints.length <= 10 ||
+                            {visibleDailyTrafficPoints.length <= 10 ||
                             index === 0 ||
-                            index === dailyTrafficPoints.length - 1 ||
+                            index === visibleDailyTrafficPoints.length - 1 ||
                             index % dateLabelInterval === 0
                               ? formatChartDateLabel(point.date)
                               : ""}
