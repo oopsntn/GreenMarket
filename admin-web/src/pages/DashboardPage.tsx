@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import EmptyState from "../components/EmptyState";
 import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
@@ -12,13 +13,39 @@ import {
 import "./DashboardPage.css";
 
 function DashboardPage() {
-  const statCards = dashboardService.getStatCards();
-  const summary = dashboardService.getSummary();
+  const [dashboardData, setDashboardData] = useState(
+    dashboardService.getEmptyOverview(),
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
 
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
   const [overviewScope, setOverviewScope] = useState("All Metrics");
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
+  const statCards = dashboardData.statCards;
+  const summary = dashboardData.summary;
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+        const nextOverview = await dashboardService.getOverview(fromDate, toDate);
+        setDashboardData(nextOverview);
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load dashboard overview.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadDashboard();
+  }, [fromDate, toDate]);
 
   const filteredCards = useMemo(() => {
     if (overviewScope === "All Metrics") return statCards;
@@ -124,17 +151,33 @@ function DashboardPage() {
         </div>
       </SectionCard>
 
-      <div className="dashboard-cards">
-        {filteredCards.map((card) => (
-          <SectionCard key={card.title}>
-            <StatCard
-              title={card.title}
-              value={card.value}
-              subtitle={`${dateRangeLabel} • ${overviewScope}`}
-            />
-          </SectionCard>
-        ))}
-      </div>
+      {isLoading ? (
+        <SectionCard title="Dashboard KPIs">
+          <EmptyState
+            title="Loading dashboard"
+            description="Fetching dashboard metrics from the admin API."
+          />
+        </SectionCard>
+      ) : pageError ? (
+        <SectionCard title="Dashboard KPIs">
+          <EmptyState
+            title="Unable to load dashboard"
+            description={pageError}
+          />
+        </SectionCard>
+      ) : (
+        <div className="dashboard-cards">
+          {filteredCards.map((card) => (
+            <SectionCard key={card.title}>
+              <StatCard
+                title={card.title}
+                value={card.value}
+                subtitle={`${dateRangeLabel} • ${overviewScope}`}
+              />
+            </SectionCard>
+          ))}
+        </div>
+      )}
 
       <SectionCard title={summary.title}>
         <div className="dashboard-panel">
