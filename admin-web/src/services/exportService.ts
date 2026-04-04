@@ -1,63 +1,72 @@
-import { exportHistoryItems } from "../mock-data/export";
+import { apiClient } from "../lib/apiClient";
 import type {
   ExportFormat,
+  ExportFileApiResponse,
   ExportHistoryItem,
   FinancialReportType,
   GeneralExportModule,
 } from "../types/export";
 
-const padNumber = (value: number) => String(value).padStart(2, "0");
-
-const getCurrentDateTime = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = padNumber(now.getMonth() + 1);
-  const day = padNumber(now.getDate());
-  const hours = padNumber(now.getHours());
-  const minutes = padNumber(now.getMinutes());
-
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
-};
-
-const getNextHistoryId = (items: ExportHistoryItem[]) => {
-  if (items.length === 0) return 1;
-  return Math.max(...items.map((item) => item.id)) + 1;
+const downloadFile = (
+  fileName: string,
+  content: string,
+  mimeType: string,
+) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 };
 
 export const exportService = {
-  getExportHistory(): ExportHistoryItem[] {
-    return exportHistoryItems;
+  async getExportHistory(): Promise<ExportHistoryItem[]> {
+    return apiClient.request<ExportHistoryItem[]>("/api/admin/exports/history", {
+      defaultErrorMessage: "Unable to load export history.",
+    });
   },
 
-  createGeneralExportHistoryItem(
-    historyItems: ExportHistoryItem[],
+  async createGeneralExportHistoryItem(
     module: GeneralExportModule,
+    fromDate: string,
+    toDate: string,
     format: ExportFormat,
-  ): ExportHistoryItem {
-    return {
-      id: getNextHistoryId(historyItems),
-      reportName: `${module} Export`,
-      type: "General",
-      format,
-      generatedBy: "System Administrator",
-      date: getCurrentDateTime(),
-      status: "Completed",
-    };
+  ): Promise<ExportHistoryItem> {
+    const response = await apiClient.request<ExportFileApiResponse>(
+      "/api/admin/exports/general",
+      {
+        method: "POST",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to create general export.",
+        body: JSON.stringify({ module, fromDate, toDate, format }),
+      },
+    );
+
+    downloadFile(response.fileName, response.content, response.mimeType);
+    return response.historyItem;
   },
 
-  createFinancialExportHistoryItem(
-    historyItems: ExportHistoryItem[],
+  async createFinancialExportHistoryItem(
     reportType: FinancialReportType,
+    fromDate: string,
+    toDate: string,
     format: ExportFormat,
-  ): ExportHistoryItem {
-    return {
-      id: getNextHistoryId(historyItems),
-      reportName: reportType,
-      type: "Financial",
-      format,
-      generatedBy: "System Administrator",
-      date: getCurrentDateTime(),
-      status: "Completed",
-    };
+  ): Promise<ExportHistoryItem> {
+    const response = await apiClient.request<ExportFileApiResponse>(
+      "/api/admin/exports/financial",
+      {
+        method: "POST",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to create financial export.",
+        body: JSON.stringify({ reportType, fromDate, toDate, format }),
+      },
+    );
+
+    downloadFile(response.fileName, response.content, response.mimeType);
+    return response.historyItem;
   },
 };
