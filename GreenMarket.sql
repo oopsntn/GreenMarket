@@ -345,6 +345,10 @@ CREATE TABLE promotion_packages (
     promotion_package_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
     promotion_package_title VARCHAR(150),
     promotion_package_duration_days INTEGER,
+    promotion_package_price DECIMAL(15, 2),
+    promotion_package_max_posts INTEGER DEFAULT 1,
+    promotion_package_display_quota INTEGER DEFAULT 0,
+    promotion_package_description TEXT,
     promotion_package_published BOOLEAN DEFAULT FALSE,
     promotion_package_deleted_at TIMESTAMP,               -- Soft delete: NULL = còn hoạt động
     promotion_package_created_at TIMESTAMP DEFAULT now()
@@ -857,13 +861,23 @@ INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_s
 (2, 'CATEGORY_TOP',     'Đầu Trang Danh Mục',        10, '{"max_per_shop": 2, "min_post_status": "approved"}', true),
 (3, 'SEARCH_HIGHLIGHT', 'Nổi Bật Trong Tìm Kiếm',    20, '{"max_per_shop": 3, "min_post_status": "approved"}', true);
 
-INSERT INTO promotion_packages (promotion_package_id, promotion_package_slot_id, promotion_package_title, promotion_package_duration_days, promotion_package_published) VALUES
-(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  true),
-(2, 1, 'Banner Trang Chủ - 30 ngày',  30, true),
-(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  true),
-(4, 2, 'Đầu Danh Mục - 30 ngày',      30, true),
-(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  true),
-(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, true);
+INSERT INTO promotion_packages (
+    promotion_package_id,
+    promotion_package_slot_id,
+    promotion_package_title,
+    promotion_package_duration_days,
+    promotion_package_price,
+    promotion_package_max_posts,
+    promotion_package_display_quota,
+    promotion_package_description,
+    promotion_package_published
+) VALUES
+(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  180000, 1, 50000,  'Ưu tiên hiển thị trên trang chủ trong 7 ngày.', true),
+(2, 1, 'Banner Trang Chủ - 30 ngày',  30, 500000, 3, 200000, 'Ưu tiên hiển thị trên trang chủ trong 30 ngày.', true),
+(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  95000,  1, 30000,  'Nổi bật ở đầu danh mục trong 7 ngày.', true),
+(4, 2, 'Đầu Danh Mục - 30 ngày',      30, 250000, 3, 120000, 'Nổi bật ở đầu danh mục trong 30 ngày.', true),
+(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  50000,  1, 15000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 7 ngày.', true),
+(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, 150000, 3, 70000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 30 ngày.', true);
 
 -- Promotion Package Prices (giá khởi tạo + ví dụ lên lịch tăng giá tương lai)
 INSERT INTO promotion_package_prices (package_id, price, effective_from, effective_to, note, created_by) VALUES

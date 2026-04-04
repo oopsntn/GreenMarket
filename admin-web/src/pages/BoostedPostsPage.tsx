@@ -86,9 +86,10 @@ const getReviewVariant = (reviewStatus: BoostedPostReviewStatus) => {
 };
 
 function BoostedPostsPage() {
-  const [posts, setPosts] = useState<BoostedPost[]>(
-    boostedPostService.getBoostedPosts(),
-  );
+  const [posts, setPosts] = useState<BoostedPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedSlotFilter, setSelectedSlotFilter] = useState<
@@ -114,6 +115,27 @@ function BoostedPostsPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards = boostedPostService.getSummaryCards(posts);
+
+  useEffect(() => {
+    const loadBoostedPosts = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+        const nextPosts = await boostedPostService.getBoostedPosts();
+        setPosts(nextPosts);
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load boosted posts.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadBoostedPosts();
+  }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -225,7 +247,7 @@ function BoostedPostsPage() {
       ? (posts.find((item) => item.id === confirmState.postId) ?? null)
       : null;
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (confirmState.postId === null || confirmState.action === null) return;
 
     const postId = confirmState.postId;
@@ -246,36 +268,47 @@ function BoostedPostsPage() {
       nextStatus = "Closed";
     }
 
-    setPosts((prev) =>
-      boostedPostService.updateBoostedPostStatus(prev, postId, nextStatus),
-    );
-
-    if (selectedPost?.id === postId) {
-      setSelectedPost((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: nextStatus,
-            }
-          : null,
+    try {
+      setIsStatusUpdating(postId);
+      const nextPosts = await boostedPostService.updateBoostedPostStatus(
+        posts,
+        postId,
+        nextStatus,
       );
-    }
 
-    if (confirmState.action === "pause") {
+      setPosts(nextPosts);
+
+      if (selectedPost?.id === postId) {
+        setSelectedPost(
+          nextPosts.find((item) => item.id === postId) ?? selectedPost,
+        );
+      }
+
+      if (confirmState.action === "pause") {
+        showToast(
+          `${targetPost.campaignCode} has been paused successfully.`,
+          "info",
+        );
+      } else if (confirmState.action === "resume") {
+        showToast(`${targetPost.campaignCode} has been resumed successfully.`);
+      } else {
+        showToast(
+          `${targetPost.campaignCode} has been closed successfully.`,
+          "info",
+        );
+      }
+
+      closeConfirmDialog();
+    } catch (error) {
       showToast(
-        `${targetPost.campaignCode} has been paused successfully.`,
-        "info",
+        error instanceof Error
+          ? error.message
+          : "Failed to update boosted campaign status.",
+        "error",
       );
-    } else if (confirmState.action === "resume") {
-      showToast(`${targetPost.campaignCode} has been resumed successfully.`);
-    } else {
-      showToast(
-        `${targetPost.campaignCode} has been closed successfully.`,
-        "info",
-      );
+    } finally {
+      setIsStatusUpdating(null);
     }
-
-    closeConfirmDialog();
   };
 
   const confirmTitleMap: Record<ConfirmAction, string> = {
@@ -417,7 +450,14 @@ function BoostedPostsPage() {
         title="Boosted Campaign Directory"
         description="Review operational delivery state, quota consumption, assigned operator, and optimization activity."
       >
-        {filteredPosts.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading boosted campaigns"
+            description="Fetching boosted campaign records from the admin API."
+          />
+        ) : pageError ? (
+          <EmptyState title="Unable to load boosted campaigns" description={pageError} />
+        ) : filteredPosts.length === 0 ? (
           <EmptyState
             title="No boosted campaigns found"
             description="No boosted campaigns match the current search or filter settings."
@@ -495,6 +535,7 @@ function BoostedPostsPage() {
                               type="button"
                               className="boosted-posts-actions__pause"
                               onClick={() => openConfirmDialog(item.id, "pause")}
+                              disabled={isStatusUpdating === item.id}
                             >
                               Pause
                             </button>
@@ -505,6 +546,7 @@ function BoostedPostsPage() {
                               type="button"
                               className="boosted-posts-actions__resume"
                               onClick={() => openConfirmDialog(item.id, "resume")}
+                              disabled={isStatusUpdating === item.id}
                             >
                               Resume
                             </button>
@@ -517,6 +559,7 @@ function BoostedPostsPage() {
                               type="button"
                               className="boosted-posts-actions__close"
                               onClick={() => openConfirmDialog(item.id, "close")}
+                              disabled={isStatusUpdating === item.id}
                             >
                               Close
                             </button>

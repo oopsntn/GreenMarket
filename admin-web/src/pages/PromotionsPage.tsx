@@ -74,9 +74,14 @@ const calculateEndDate = (startDate: string, durationDays: number) => {
 };
 
 function PromotionsPage() {
-  const [promotions, setPromotions] = useState<Promotion[]>(
-    promotionService.getPromotions(),
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [activePackages, setActivePackages] = useState(
+    [] as ReturnType<typeof promotionPackageService.getActivePromotionPackages>,
   );
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
+  const [isActionSubmitting, setIsActionSubmitting] = useState(false);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(
     null,
   );
@@ -111,7 +116,6 @@ function PromotionsPage() {
     action: null,
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const activePackages = promotionPackageService.getActivePromotionPackages();
 
   const summaryCards: PromotionSummaryCard[] =
     promotionService.getSummaryCards(promotions);
@@ -126,6 +130,35 @@ function PromotionsPage() {
     availablePackages.find(
       (item) => item.id === Number(actionFormData.packageId),
     ) ?? null;
+
+  useEffect(() => {
+    const loadPromotionData = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+
+        const [nextPromotions, allPackages] = await Promise.all([
+          promotionService.getPromotions(),
+          promotionPackageService.getPromotionPackages(),
+        ]);
+
+        setPromotions(nextPromotions);
+        setActivePackages(
+          promotionPackageService.getActivePromotionPackages(allPackages),
+        );
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load promotions.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadPromotionData();
+  }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -336,7 +369,7 @@ function PromotionsPage() {
     openConfirmDialog(promotion.id, action);
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (confirmState.promotionId === null || confirmState.action === null)
       return;
 
@@ -348,64 +381,79 @@ function PromotionsPage() {
       return;
     }
 
-    if (confirmState.action === "pause") {
-      if (!promotionService.canPausePromotion(targetPromotion)) {
-        showToast(
-          promotionService.getActionBlockedReason(targetPromotion, "pause"),
-          "error",
+    try {
+      if (confirmState.action === "pause") {
+        if (!promotionService.canPausePromotion(targetPromotion)) {
+          showToast(
+            promotionService.getActionBlockedReason(targetPromotion, "pause"),
+            "error",
+          );
+          closeConfirmDialog();
+          return;
+        }
+
+        setIsStatusUpdating(targetPromotion.id);
+
+        const nextPromotions = await promotionService.updatePromotionStatus(
+          promotions,
+          targetPromotion.id,
+          "Paused",
         );
-        closeConfirmDialog();
-        return;
+
+        setPromotions(nextPromotions);
+
+        showToast(
+          `${targetPromotion.postTitle} has been paused successfully.`,
+          "info",
+        );
+
+        if (selectedPromotion?.id === targetPromotion.id) {
+          setSelectedPromotion(
+            nextPromotions.find((item) => item.id === targetPromotion.id) ?? null,
+          );
+        }
       }
 
-      const nextPromotions = promotionService.updatePromotionStatus(
-        promotions,
-        targetPromotion.id,
-        "Paused",
-      );
+      if (confirmState.action === "resume") {
+        if (!promotionService.canResumePromotion(targetPromotion)) {
+          showToast(
+            promotionService.getActionBlockedReason(targetPromotion, "resume"),
+            "error",
+          );
+          closeConfirmDialog();
+          return;
+        }
 
-      setPromotions(nextPromotions);
+        setIsStatusUpdating(targetPromotion.id);
 
+        const nextPromotions = await promotionService.updatePromotionStatus(
+          promotions,
+          targetPromotion.id,
+          "Active",
+        );
+
+        setPromotions(nextPromotions);
+
+        showToast(`${targetPromotion.postTitle} has been resumed successfully.`);
+
+        if (selectedPromotion?.id === targetPromotion.id) {
+          setSelectedPromotion(
+            nextPromotions.find((item) => item.id === targetPromotion.id) ?? null,
+          );
+        }
+      }
+
+      closeConfirmDialog();
+    } catch (error) {
       showToast(
-        `${targetPromotion.postTitle} has been paused successfully.`,
-        "info",
+        error instanceof Error
+          ? error.message
+          : "Failed to update promotion status.",
+        "error",
       );
-
-      if (selectedPromotion?.id === targetPromotion.id) {
-        setSelectedPromotion(
-          nextPromotions.find((item) => item.id === targetPromotion.id) ?? null,
-        );
-      }
+    } finally {
+      setIsStatusUpdating(null);
     }
-
-    if (confirmState.action === "resume") {
-      if (!promotionService.canResumePromotion(targetPromotion)) {
-        showToast(
-          promotionService.getActionBlockedReason(targetPromotion, "resume"),
-          "error",
-        );
-        closeConfirmDialog();
-        return;
-      }
-
-      const nextPromotions = promotionService.updatePromotionStatus(
-        promotions,
-        targetPromotion.id,
-        "Active",
-      );
-
-      setPromotions(nextPromotions);
-
-      showToast(`${targetPromotion.postTitle} has been resumed successfully.`);
-
-      if (selectedPromotion?.id === targetPromotion.id) {
-        setSelectedPromotion(
-          nextPromotions.find((item) => item.id === targetPromotion.id) ?? null,
-        );
-      }
-    }
-
-    closeConfirmDialog();
   };
 
   const handlePackageActionChange = (
@@ -462,7 +510,7 @@ function PromotionsPage() {
     });
   };
 
-  const handlePackageActionSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handlePackageActionSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!actionTargetPromotion || !selectedActionPackage) {
@@ -489,35 +537,48 @@ function PromotionsPage() {
       adminNote: actionFormData.adminNote,
     };
 
-    const nextPromotions =
-      actionModalMode === "reopen"
-        ? promotionService.reopenPromotion(
-            promotions,
-            actionTargetPromotion.id,
-            payload,
-          )
-        : promotionService.changePromotionPackage(
-            promotions,
-            actionTargetPromotion.id,
-            payload,
-          );
+    try {
+      setIsActionSubmitting(true);
 
-    setPromotions(nextPromotions);
+      const nextPromotions =
+        actionModalMode === "reopen"
+          ? await promotionService.reopenPromotion(
+              promotions,
+              actionTargetPromotion.id,
+              payload,
+            )
+          : await promotionService.changePromotionPackage(
+              promotions,
+              actionTargetPromotion.id,
+              payload,
+            );
 
-    if (selectedPromotion?.id === actionTargetPromotion.id) {
-      setSelectedPromotion(
-        nextPromotions.find((item) => item.id === actionTargetPromotion.id) ??
-          null,
+      setPromotions(nextPromotions);
+
+      if (selectedPromotion?.id === actionTargetPromotion.id) {
+        setSelectedPromotion(
+          nextPromotions.find((item) => item.id === actionTargetPromotion.id) ??
+            null,
+        );
+      }
+
+      showToast(
+        actionModalMode === "reopen"
+          ? `${actionTargetPromotion.postTitle} has been reopened by admin.`
+          : `${actionTargetPromotion.postTitle} has been moved to ${selectedActionPackage.name}.`,
       );
+
+      closeActionModal();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to update promotion package.",
+        "error",
+      );
+    } finally {
+      setIsActionSubmitting(false);
     }
-
-    showToast(
-      actionModalMode === "reopen"
-        ? `${actionTargetPromotion.postTitle} has been reopened by admin.`
-        : `${actionTargetPromotion.postTitle} has been moved to ${selectedActionPackage.name}.`,
-    );
-
-    closeActionModal();
   };
 
 
@@ -599,7 +660,14 @@ function PromotionsPage() {
         title="Promotion Directory"
         description="Review billing state, package window, admin handling, and status for each purchased promotion."
       >
-        {filteredPromotions.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading promotions"
+            description="Fetching promotion records from the admin API."
+          />
+        ) : pageError ? (
+          <EmptyState title="Unable to load promotions" description={pageError} />
+        ) : filteredPromotions.length === 0 ? (
           <EmptyState
             title="No promotions found"
             description="No promotions match your current search or filter settings. Try another condition to continue."
@@ -685,6 +753,7 @@ function PromotionsPage() {
                                 onClick={() =>
                                   handleActionClick(promotion, "pause")
                                 }
+                                disabled={isStatusUpdating === promotion.id}
                               >
                                 Pause
                               </button>
@@ -704,6 +773,7 @@ function PromotionsPage() {
                                 onClick={() =>
                                   handleActionClick(promotion, "resume")
                                 }
+                                disabled={isStatusUpdating === promotion.id}
                               >
                                 Resume
                               </button>
@@ -1118,6 +1188,7 @@ function PromotionsPage() {
                 type="button"
                 className="promotions-modal__close"
                 onClick={closeActionModal}
+                disabled={isActionSubmitting}
               >
                 Cancel
               </button>
@@ -1128,10 +1199,13 @@ function PromotionsPage() {
                     ? "promotions-modal__reopen"
                     : "promotions-modal__change"
                 }
+                disabled={isActionSubmitting}
               >
-                {actionModalMode === "reopen"
-                  ? "Reopen Package"
-                  : "Save Package Change"}
+                {isActionSubmitting
+                  ? "Saving..."
+                  : actionModalMode === "reopen"
+                    ? "Reopen Package"
+                    : "Save Package Change"}
               </button>
             </div>
           </form>

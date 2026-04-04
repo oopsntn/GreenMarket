@@ -6,9 +6,30 @@ import { placementSlots, promotionPackages } from '../models/schema';
 const SLOT_CODE = 'BOOST_PRIORITY';
 
 const PACKAGES = [
-  { title: 'Goi Ngay', durationDays: 1, price: '19000.00' },
-  { title: 'Goi Tuan', durationDays: 7, price: '99000.00' },
-  { title: 'Goi Thang', durationDays: 30, price: '299000.00' },
+  {
+    title: 'Goi Ngay',
+    durationDays: 1,
+    price: '19000.00',
+    maxPosts: 1,
+    displayQuota: 5000,
+    description: 'Gói ưu tiên hiển thị theo ngày.'
+  },
+  {
+    title: 'Goi Tuan',
+    durationDays: 7,
+    price: '99000.00',
+    maxPosts: 2,
+    displayQuota: 35000,
+    description: 'Gói ưu tiên hiển thị theo tuần.'
+  },
+  {
+    title: 'Goi Thang',
+    durationDays: 30,
+    price: '299000.00',
+    maxPosts: 5,
+    displayQuota: 150000,
+    description: 'Gói ưu tiên hiển thị theo tháng.'
+  },
 ];
 
 const run = async () => {
@@ -69,6 +90,9 @@ const run = async () => {
         .set({
           promotionPackageDurationDays: pkg.durationDays,
           promotionPackagePrice: pkg.price,
+          promotionPackageMaxPosts: pkg.maxPosts,
+          promotionPackageDisplayQuota: pkg.displayQuota,
+          promotionPackageDescription: pkg.description,
           promotionPackagePublished: true,
         })
         .where(eq(promotionPackages.promotionPackageId, existingPackage.promotionPackageId));
@@ -80,6 +104,9 @@ const run = async () => {
         promotionPackageTitle: pkg.title,
         promotionPackageDurationDays: pkg.durationDays,
         promotionPackagePrice: pkg.price,
+        promotionPackageMaxPosts: pkg.maxPosts,
+        promotionPackageDisplayQuota: pkg.displayQuota,
+        promotionPackageDescription: pkg.description,
         promotionPackagePublished: true,
       });
 

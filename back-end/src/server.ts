@@ -14,6 +14,8 @@ import adminUserRoutes from "./routes/admin/user.route.ts";
 import adminRoleRoutes from "./routes/admin/role.route.ts";
 import adminPlacementSlotRoutes from "./routes/admin/placement-slot.route.ts";
 import adminPromotionPackageRoutes from "./routes/admin/promotion-package.route.ts";
+import adminPromotionRoutes from "./routes/admin/promotion.route.ts";
+import adminBoostedPostRoutes from "./routes/admin/boosted-post.route.ts";
 import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
 import userReportRoutes from "./routes/user/report.route.ts";
@@ -41,6 +43,8 @@ app.use("/api/admin/users", verifyToken, isAdmin, adminUserRoutes);
 app.use("/api/admin/roles", verifyToken, isAdmin, adminRoleRoutes);
 app.use("/api/admin/placement-slots", verifyToken, isAdmin, adminPlacementSlotRoutes);
 app.use("/api/admin/promotion-packages", verifyToken, isAdmin, adminPromotionPackageRoutes);
+app.use("/api/admin/promotions", verifyToken, isAdmin, adminPromotionRoutes);
+app.use("/api/admin/boosted-posts", verifyToken, isAdmin, adminBoostedPostRoutes);
 
 // User Routes
 app.use("/api/shops", userShopRoutes);

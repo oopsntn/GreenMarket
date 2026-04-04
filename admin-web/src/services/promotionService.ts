@@ -1,69 +1,37 @@
-import { initialPromotions } from "../mock-data/promotions";
+import { apiClient } from "../lib/apiClient";
 import type {
   Promotion,
+  PromotionApiResponse,
   PromotionPackageActionPayload,
   PromotionStatus,
   PromotionSummaryCard,
 } from "../types/promotion";
 
-const applyPromotionState = (
-  promotion: Promotion,
-  status: PromotionStatus,
-): Promotion => {
-  if (status === "Paused") {
-    return {
-      ...promotion,
-      status: "Paused",
-      canPause: false,
-      canResume: true,
-      pauseBlockedReason: "This promotion is already paused.",
-      resumeBlockedReason: undefined,
-    };
-  }
-
-  if (status === "Active") {
-    return {
-      ...promotion,
-      status: "Active",
-      canPause: true,
-      canResume: false,
-      pauseBlockedReason: undefined,
-      resumeBlockedReason:
-        "This promotion is already active and does not need resume action.",
-    };
-  }
-
-  if (status === "Scheduled") {
-    return {
-      ...promotion,
-      status: "Scheduled",
-      canPause: false,
-      canResume: false,
-      pauseBlockedReason: "Scheduled promotions have not started yet.",
-      resumeBlockedReason: "Scheduled promotions do not need resume action.",
-    };
-  }
-
-  return {
-    ...promotion,
-    status,
-  };
-};
-
 export const promotionService = {
-  getPromotions(): Promotion[] {
-    return initialPromotions;
+  async getPromotions(): Promise<Promotion[]> {
+    return apiClient.request<PromotionApiResponse[]>("/api/admin/promotions", {
+      defaultErrorMessage: "Unable to load promotions.",
+    });
   },
 
-  updatePromotionStatus(
+  async updatePromotionStatus(
     promotions: Promotion[],
     promotionId: number,
     status: PromotionStatus,
-  ): Promotion[] {
-    return promotions.map((promotion) => {
-      if (promotion.id !== promotionId) return promotion;
-      return applyPromotionState(promotion, status);
-    });
+  ): Promise<Promotion[]> {
+    const updatedPromotion = await apiClient.request<PromotionApiResponse>(
+      `/api/admin/promotions/${promotionId}/status`,
+      {
+        method: "PATCH",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update promotion status.",
+        body: JSON.stringify({ status }),
+      },
+    );
+
+    return promotions.map((promotion) =>
+      promotion.id === promotionId ? updatedPromotion : promotion,
+    );
   },
 
   canPausePromotion(promotion: Promotion) {
@@ -82,61 +50,56 @@ export const promotionService = {
     );
   },
 
-  changePromotionPackage(
+  async changePromotionPackage(
     promotions: Promotion[],
     promotionId: number,
     payload: PromotionPackageActionPayload,
   ) {
-    return promotions.map((promotion) => {
-      if (promotion.id !== promotionId) return promotion;
+    const updatedPromotion = await apiClient.request<PromotionApiResponse>(
+      `/api/admin/promotions/${promotionId}/package`,
+      {
+        method: "PATCH",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to change promotion package.",
+        body: JSON.stringify({
+          packageId: payload.packageId,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+          paymentStatus: payload.paymentStatus,
+          adminNote: payload.adminNote,
+        }),
+      },
+    );
 
-      const updatedPromotion: Promotion = {
-        ...promotion,
-        packageId: payload.packageId,
-        packageName: payload.packageName,
-        slot: payload.slot,
-        startDate: payload.startDate,
-        endDate: payload.endDate,
-        budget: payload.budget,
-        paymentStatus: payload.paymentStatus,
-        handledBy: "Admin",
-        note:
-          payload.adminNote.trim() ||
-          `Package changed by admin to ${payload.packageName}.`,
-      };
-
-      return applyPromotionState(updatedPromotion, promotion.status);
-    });
+    return promotions.map((promotion) =>
+      promotion.id === promotionId ? updatedPromotion : promotion,
+    );
   },
 
-  reopenPromotion(
+  async reopenPromotion(
     promotions: Promotion[],
     promotionId: number,
     payload: PromotionPackageActionPayload,
   ) {
-    return promotions.map((promotion) => {
-      if (promotion.id !== promotionId) return promotion;
+    const updatedPromotion = await apiClient.request<PromotionApiResponse>(
+      `/api/admin/promotions/${promotionId}/reopen`,
+      {
+        method: "PATCH",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to reopen promotion.",
+        body: JSON.stringify({
+          packageId: payload.packageId,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+          paymentStatus: payload.paymentStatus,
+          adminNote: payload.adminNote,
+        }),
+      },
+    );
 
-      const reopenedPromotion: Promotion = {
-        ...promotion,
-        packageId: payload.packageId,
-        packageName: payload.packageName,
-        slot: payload.slot,
-        startDate: payload.startDate,
-        endDate: payload.endDate,
-        budget: payload.budget,
-        paymentStatus: payload.paymentStatus,
-        handledBy: "Admin",
-        reopenEligible: false,
-        reopenBlockedReason:
-          "This promotion has already been reopened by admin.",
-        note:
-          payload.adminNote.trim() ||
-          `Expired package reopened by admin after confirming payment for ${payload.packageName}.`,
-      };
-
-      return applyPromotionState(reopenedPromotion, "Active");
-    });
+    return promotions.map((promotion) =>
+      promotion.id === promotionId ? updatedPromotion : promotion,
+    );
   },
 
   getActionBlockedReason(

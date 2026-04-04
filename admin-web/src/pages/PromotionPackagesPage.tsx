@@ -6,6 +6,7 @@ import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
+import { placementSlotService } from "../services/placementSlotService";
 import { promotionPackageService } from "../services/promotionPackageService";
 import type {
   PromotionPackage,
@@ -39,9 +40,14 @@ const statusFilterOptions: Array<PromotionPackageStatus | "All"> = [
 const PAGE_SIZE = 5;
 
 function PromotionPackagesPage() {
-  const [packages, setPackages] = useState<PromotionPackage[]>(
-    promotionPackageService.getPromotionPackages(),
-  );
+  const [packages, setPackages] = useState<PromotionPackage[]>([]);
+  const [slotOptions, setSlotOptions] = useState<
+    Array<{ id: number; code: string; label: PromotionPackageSlot }>
+  >([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedSlotFilter, setSelectedSlotFilter] = useState<
     PromotionPackageSlot | "All"
@@ -70,6 +76,49 @@ function PromotionPackagesPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards = promotionPackageService.getSummaryCards(packages);
+
+  useEffect(() => {
+    const loadPromotionPackages = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+
+        const [slotResponses, nextPackages] = await Promise.all([
+          placementSlotService.getPlacementSlots(),
+          promotionPackageService.getPromotionPackages(),
+        ]);
+
+        setSlotOptions(
+          promotionPackageService.getSlotOptions(
+            slotResponses.map((slot) => ({
+              placementSlotId: slot.id,
+              placementSlotCode: slot.positionCode,
+              placementSlotTitle: slot.name,
+              placementSlotCapacity: slot.capacity,
+              placementSlotRules: {
+                scope: slot.scope,
+                displayRule: slot.displayRule,
+                priority: slot.priority,
+                notes: slot.notes,
+              },
+              placementSlotPublished: slot.status === "Active",
+            })),
+          ),
+        );
+        setPackages(nextPackages);
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load promotion packages.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadPromotionPackages();
+  }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -184,25 +233,29 @@ function PromotionPackagesPage() {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     try {
+      setIsSubmitting(true);
       if (modalMode === "add") {
-        setPackages((prev) =>
-          promotionPackageService.createPromotionPackage(prev, formData),
+        const nextPackages = await promotionPackageService.createPromotionPackage(
+          packages,
+          slotOptions,
+          formData,
         );
+        setPackages(nextPackages);
         showToast("Promotion package added successfully.");
       }
 
       if (modalMode === "edit" && selectedPackage) {
-        setPackages((prev) =>
-          promotionPackageService.updatePromotionPackage(
-            prev,
-            selectedPackage.id,
-            formData,
-          ),
+        const nextPackages = await promotionPackageService.updatePromotionPackage(
+          packages,
+          slotOptions,
+          selectedPackage.id,
+          formData,
         );
+        setPackages(nextPackages);
         showToast("Promotion package updated successfully.");
       }
 
@@ -213,6 +266,8 @@ function PromotionPackagesPage() {
           ? error.message
           : "Failed to save promotion package.",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -237,7 +292,7 @@ function PromotionPackagesPage() {
       ? (packages.find((item) => item.id === confirmState.packageId) ?? null)
       : null;
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (confirmState.packageId === null || confirmState.action === null) return;
 
     const packageId = confirmState.packageId;
@@ -251,35 +306,43 @@ function PromotionPackagesPage() {
     const nextStatus: PromotionPackageStatus =
       confirmState.action === "disable" ? "Disabled" : "Active";
 
-    setPackages((prev) =>
-      promotionPackageService.updatePromotionPackageStatus(
-        prev,
-        packageId,
-        nextStatus,
-      ),
-    );
+    try {
+      setIsStatusUpdating(packageId);
+      const nextPackages =
+        await promotionPackageService.updatePromotionPackageStatus(
+          packages,
+          slotOptions,
+          packageId,
+          nextStatus,
+        );
+      setPackages(nextPackages);
 
-    if (selectedPackage?.id === packageId) {
-      setSelectedPackage((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: nextStatus,
-            }
-          : null,
-      );
-    }
+      if (selectedPackage?.id === packageId) {
+        setSelectedPackage(
+          nextPackages.find((item) => item.id === packageId) ?? selectedPackage,
+        );
+      }
 
-    if (confirmState.action === "disable") {
+      if (confirmState.action === "disable") {
+        showToast(
+          `${targetPackage.name} has been disabled successfully.`,
+          "info",
+        );
+      } else {
+        showToast(`${targetPackage.name} has been enabled successfully.`);
+      }
+
+      closeConfirmDialog();
+    } catch (error) {
       showToast(
-        `${targetPackage.name} has been disabled successfully.`,
-        "info",
+        error instanceof Error
+          ? error.message
+          : "Failed to update promotion package status.",
+        "error",
       );
-    } else {
-      showToast(`${targetPackage.name} has been enabled successfully.`);
+    } finally {
+      setIsStatusUpdating(null);
     }
-
-    closeConfirmDialog();
   };
 
   const confirmTitle =
@@ -381,7 +444,14 @@ function PromotionPackagesPage() {
         title="Promotion Package Directory"
         description="Review package price, duration, slot assignment, quota, and sales availability."
       >
-        {filteredPackages.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading promotion packages"
+            description="Fetching package records from the admin API."
+          />
+        ) : pageError ? (
+          <EmptyState title="Unable to load promotion packages" description={pageError} />
+        ) : filteredPackages.length === 0 ? (
           <EmptyState
             title="No promotion packages found"
             description="No promotion packages match the current search or filter settings."
@@ -449,6 +519,7 @@ function PromotionPackagesPage() {
                               onClick={() =>
                                 openConfirmDialog(item.id, "disable")
                               }
+                              disabled={isStatusUpdating === item.id}
                             >
                               Disable
                             </button>
@@ -457,6 +528,7 @@ function PromotionPackagesPage() {
                               type="button"
                               className="promotion-packages-actions__enable"
                               onClick={() => openConfirmDialog(item.id, "enable")}
+                              disabled={isStatusUpdating === item.id}
                             >
                               Enable
                             </button>
@@ -598,6 +670,7 @@ function PromotionPackagesPage() {
                 type="text"
                 value={formData.name}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 placeholder="Enter package name"
               />
             </div>
@@ -609,10 +682,13 @@ function PromotionPackagesPage() {
                 name="slot"
                 value={formData.slot}
                 onChange={handleChange}
+                disabled={isSubmitting}
               >
-                <option>Home Top</option>
-                <option>Category Top</option>
-                <option>Search Boost</option>
+                {slotOptions.map((slot) => (
+                  <option key={slot.id} value={slot.label}>
+                    {slot.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -625,6 +701,7 @@ function PromotionPackagesPage() {
                 min={1}
                 value={formData.durationDays}
                 onChange={handleChange}
+                disabled={isSubmitting}
               />
             </div>
 
@@ -636,6 +713,7 @@ function PromotionPackagesPage() {
                 type="text"
                 value={formData.price}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 placeholder="Enter package price"
               />
             </div>
@@ -649,6 +727,7 @@ function PromotionPackagesPage() {
                 min={1}
                 value={formData.maxPosts}
                 onChange={handleChange}
+                disabled={isSubmitting}
               />
             </div>
 
@@ -661,6 +740,7 @@ function PromotionPackagesPage() {
                 min={1}
                 value={formData.displayQuota}
                 onChange={handleChange}
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -673,6 +753,7 @@ function PromotionPackagesPage() {
               rows={4}
               value={formData.description}
               onChange={handleChange}
+              disabled={isSubmitting}
               placeholder="Enter package description and benefits"
             />
           </div>
@@ -686,12 +767,21 @@ function PromotionPackagesPage() {
               type="button"
               className="promotion-packages-modal__close"
               onClick={closeFormModal}
+              disabled={isSubmitting}
             >
               Cancel
             </button>
 
-            <button type="submit" className="promotion-packages-modal__submit">
-              {modalMode === "add" ? "Add Package" : "Save Changes"}
+            <button
+              type="submit"
+              className="promotion-packages-modal__submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "Saving..."
+                : modalMode === "add"
+                  ? "Add Package"
+                  : "Save Changes"}
             </button>
           </div>
         </form>
