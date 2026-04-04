@@ -24,6 +24,11 @@ interface Shop {
   shopPreviewImageUrl?: string | null;
   shopLat?: number;
   shopLng?: number;
+  shopEmail?: string | null;
+  shopEmailVerified?: boolean;
+  shopFacebook?: string | null;
+  shopInstagram?: string | null;
+  shopYoutube?: string | null;
 }
 
 interface AuthContextType {
