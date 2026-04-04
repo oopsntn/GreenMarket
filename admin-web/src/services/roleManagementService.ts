@@ -1,121 +1,177 @@
-import { apiClient } from "../lib/apiClient";
-import { getAdminProfile } from "../utils/adminSession";
-import type {
-  ApiAdminRoleAssignmentsResponse,
-  ApiRoleResponse,
-  RoleFormState,
-  RoleManagementItem,
-} from "../types/roleManagement";
+import { readStoredJson, writeStoredJson } from "../utils/browserStorage";
+import type { RoleFormState, RoleManagementItem } from "../types/roleManagement";
 
-const formatDate = (value: string | null) => {
-  if (!value) return "Not available";
+const ROLE_CATALOG_STORAGE_KEY = "adminBusinessRoleCatalog";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not available";
+const defaultRoles: RoleManagementItem[] = [
+  {
+    id: 1,
+    code: "USER",
+    title: "User",
+    audienceGroup: "Marketplace",
+    accessScope: "Browse listings, save favorites, contact sellers, and submit abuse reports.",
+    summary:
+      "Marketplace customer role used by buyers and visitors who explore ornamental plant listings.",
+    responsibilities: [
+      "Search and review ornamental plant listings",
+      "Save posts and contact hosts",
+      "Submit reports when content looks suspicious",
+    ],
+    capabilities: [
+      "View approved posts",
+      "Report listings",
+      "Track personal purchase and contact history",
+    ],
+    createdAt: "2026-03-29",
+    status: "Core",
+  },
+  {
+    id: 2,
+    code: "HOST",
+    title: "Host",
+    audienceGroup: "Marketplace",
+    accessScope: "Operate a plant shop, publish listings, manage profile, and purchase promotion packages.",
+    summary:
+      "Seller-side business role for shop owners who list ornamental plants and manage promotion packages.",
+    responsibilities: [
+      "Create and maintain shop profile",
+      "Publish and update product posts",
+      "Buy promotion packages and monitor campaign delivery",
+    ],
+    capabilities: [
+      "Manage shop and posts",
+      "Purchase promotions",
+      "Track shop analytics",
+    ],
+    createdAt: "2026-03-29",
+    status: "Core",
+  },
+  {
+    id: 3,
+    code: "COLLABORATOR",
+    title: "Collaborator",
+    audienceGroup: "Marketplace",
+    accessScope: "Support a host with content preparation, listing updates, and media management.",
+    summary:
+      "Operational support role delegated by a host to help maintain listing quality and shop content.",
+    responsibilities: [
+      "Prepare content and media for listings",
+      "Update post details on behalf of the host",
+      "Coordinate with manager or operations staff when moderation feedback appears",
+    ],
+    capabilities: [
+      "Edit delegated posts",
+      "Upload media",
+      "Review moderation feedback",
+    ],
+    createdAt: "2026-03-29",
+    status: "Core",
+  },
+  {
+    id: 4,
+    code: "MANAGER",
+    title: "Manager",
+    audienceGroup: "Operations",
+    accessScope: "Oversee moderation, promotion follow-up, policy execution, and high-level business review.",
+    summary:
+      "Supervisory role that tracks operational quality, campaign handling, and staff coordination.",
+    responsibilities: [
+      "Review operational escalations",
+      "Approve campaign handling decisions",
+      "Monitor analytics and revenue summaries",
+    ],
+    capabilities: [
+      "Review reports and moderation outcomes",
+      "Supervise promotion handling",
+      "Access management dashboards",
+    ],
+    createdAt: "2026-03-29",
+    status: "Core",
+  },
+  {
+    id: 5,
+    code: "OPERATION_STAFF",
+    title: "Operation Staff",
+    audienceGroup: "Operations",
+    accessScope: "Execute daily moderation, support promotion reopening, export reports, and handle admin workflows.",
+    summary:
+      "Execution-focused staff role that carries out the day-to-day actions delegated by manager or admin.",
+    responsibilities: [
+      "Moderate reported content and user issues",
+      "Handle promotion reopening and package support",
+      "Prepare exports and operational summaries",
+    ],
+    capabilities: [
+      "Process moderation actions",
+      "Support campaign handling",
+      "Generate exports and logs",
+    ],
+    createdAt: "2026-03-29",
+    status: "Core",
+  },
+];
 
-  return date.toISOString().slice(0, 10);
-};
+const toMultilineText = (values: string[]) => values.join("\n");
 
-const mapRoleToUi = (item: ApiRoleResponse): RoleManagementItem => {
-  return {
-    id: item.roleId,
-    code: item.roleCode?.trim() || `ROLE_${item.roleId}`,
-    title: item.roleTitle?.trim() || "Untitled role",
-    createdAt: formatDate(item.roleCreatedAt),
-  };
-};
+const parseMultilineText = (value: string) =>
+  value
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
 
 export const roleManagementService = {
-  getEmptyForm(): RoleFormState {
+  getRoles(): RoleManagementItem[] {
+    return readStoredJson<RoleManagementItem[]>(
+      ROLE_CATALOG_STORAGE_KEY,
+      defaultRoles,
+    );
+  },
+
+  getDefaultRoles(): RoleManagementItem[] {
+    return defaultRoles.map((role) => ({
+      ...role,
+      responsibilities: [...role.responsibilities],
+      capabilities: [...role.capabilities],
+    }));
+  },
+
+  mapRoleToForm(role: RoleManagementItem): RoleFormState {
     return {
-      code: "",
-      title: "",
+      title: role.title,
+      audienceGroup: role.audienceGroup,
+      accessScope: role.accessScope,
+      summary: role.summary,
+      responsibilitiesText: toMultilineText(role.responsibilities),
+      capabilitiesText: toMultilineText(role.capabilities),
     };
   },
 
-  async fetchRoles(): Promise<RoleManagementItem[]> {
-    const data = await apiClient.request<ApiRoleResponse[]>("/api/admin/roles", {
-      defaultErrorMessage: "Unable to load roles.",
-    });
-
-    return data.map(mapRoleToUi);
-  },
-
-  async createRole(formData: RoleFormState): Promise<RoleManagementItem> {
-    const data = await apiClient.request<ApiRoleResponse>("/api/admin/roles", {
-      method: "POST",
-      includeJsonContentType: true,
-      defaultErrorMessage: "Unable to create role.",
-      body: JSON.stringify({
-        roleCode: formData.code.trim(),
-        roleTitle: formData.title.trim(),
-      }),
-    });
-
-    return mapRoleToUi(data);
-  },
-
-  async updateRole(
+  updateRole(
+    roles: RoleManagementItem[],
     roleId: number,
     formData: RoleFormState,
-  ): Promise<RoleManagementItem> {
-    const data = await apiClient.request<ApiRoleResponse>(
-      `/api/admin/roles/${roleId}`,
-      {
-        method: "PATCH",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update role.",
-        body: JSON.stringify({
-          roleCode: formData.code.trim(),
-          roleTitle: formData.title.trim(),
-        }),
-      },
+  ): RoleManagementItem[] {
+    const updatedRoles = roles.map((role) =>
+      role.id === roleId
+        ? {
+            ...role,
+            title: formData.title.trim(),
+            audienceGroup: formData.audienceGroup,
+            accessScope: formData.accessScope.trim(),
+            summary: formData.summary.trim(),
+            responsibilities: parseMultilineText(formData.responsibilitiesText),
+            capabilities: parseMultilineText(formData.capabilitiesText),
+          }
+        : role,
     );
 
-    return mapRoleToUi(data);
+    writeStoredJson(ROLE_CATALOG_STORAGE_KEY, updatedRoles);
+    return updatedRoles;
   },
 
-  async deleteRole(roleId: number): Promise<void> {
-    await apiClient.request(`/api/admin/roles/${roleId}`, {
-      method: "DELETE",
-      defaultErrorMessage: "Unable to delete role.",
-    });
-  },
-
-  async fetchCurrentAdminAssignments(): Promise<RoleManagementItem[]> {
-    const adminProfile = getAdminProfile();
-
-    if (!adminProfile?.id) {
-      return [];
-    }
-
-    const data = await apiClient.request<ApiAdminRoleAssignmentsResponse>(
-      `/api/admin/roles/admins/${adminProfile.id}/roles`,
-      {
-        defaultErrorMessage: "Unable to load current admin role assignments.",
-      },
-    );
-
-    return (data.roles ?? []).map(mapRoleToUi);
-  },
-
-  async replaceCurrentAdminAssignments(roleIds: number[]) {
-    const adminProfile = getAdminProfile();
-
-    if (!adminProfile?.id) {
-      throw new Error("Current admin profile is not available.");
-    }
-
-    const data = await apiClient.request<ApiAdminRoleAssignmentsResponse>(
-      `/api/admin/roles/admins/${adminProfile.id}/roles`,
-      {
-        method: "PUT",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update current admin role assignments.",
-        body: JSON.stringify({ roleIds }),
-      },
-    );
-
-    return (data.roles ?? []).map(mapRoleToUi);
+  resetRoles(): RoleManagementItem[] {
+    const resetRoles = this.getDefaultRoles();
+    writeStoredJson(ROLE_CATALOG_STORAGE_KEY, resetRoles);
+    return resetRoles;
   },
 };

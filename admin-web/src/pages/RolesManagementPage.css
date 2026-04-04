@@ -10,144 +10,134 @@
   gap: 20px;
 }
 
-.roles-management-grid {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 24px;
-  align-items: start;
-}
-
-.roles-management-list,
-.roles-assignment-panel {
-  padding: 24px;
-}
-
-.roles-management-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
-  border: 1px solid #eef3ea;
-  border-radius: 18px;
-  background-color: #fcfffc;
-}
-
 .roles-management-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
-.roles-management-card__content {
+.roles-management-card {
+  border: 1px solid #e8f1e8;
+  border-radius: 20px;
+  background-color: #fcfffc;
+  padding: 20px;
+}
+
+.roles-management-card__header {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.roles-management-card__content strong {
+.roles-management-card__header strong {
+  display: block;
+  margin-bottom: 8px;
   color: #223127;
-  font-size: 15px;
+  font-size: 18px;
 }
 
-.roles-management-card__content span,
-.roles-management-card__content small,
-.roles-assignment-panel__item span,
-.roles-assignment-panel__footer p {
-  color: #68786b;
-  font-size: 13px;
-  line-height: 1.5;
+.roles-management-card__header p {
+  margin: 0;
+  color: #5d7061;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
-.roles-management-card__actions,
-.roles-management-form__actions {
-  display: flex;
-  gap: 10px;
-}
-
-.roles-management-card__actions button,
-.roles-assignment-panel__footer button,
+.roles-management-card__header button,
 .roles-management-form__actions button {
-  min-width: 92px;
-  height: 36px;
-  padding: 0 14px;
+  min-width: 120px;
+  height: 38px;
+  padding: 0 16px;
   border: none;
   border-radius: 12px;
+  background-color: #eef5ef;
+  color: #31533a;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.roles-management-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.roles-management-card__details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.roles-management-card__details label {
+  display: block;
+  margin-bottom: 10px;
+  color: #36533d;
   font-size: 13px;
   font-weight: 700;
 }
 
-.roles-management-card__actions button,
-.roles-management-form__actions button:first-child {
-  background-color: #f3f7f1;
-  color: #486150;
+.roles-management-card__details p,
+.roles-management-card__details ul {
+  margin: 0;
+  color: #5f7263;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
-.roles-management-card__delete {
-  background-color: #fff1f0 !important;
-  color: #c62828 !important;
+.roles-management-card__details ul {
+  padding-left: 18px;
 }
 
-.roles-assignment-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.roles-capability-table-wrapper {
+  overflow-x: auto;
 }
 
-.roles-assignment-panel__list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.roles-capability-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
 }
 
-.roles-assignment-panel__item {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 14px 16px;
-  border: 1px solid #eef3ea;
-  border-radius: 16px;
-  background-color: #fcfffc;
+.roles-capability-table thead {
+  background-color: #f6faf5;
 }
 
-.roles-assignment-panel__item input {
-  margin-top: 3px;
-}
-
-.roles-assignment-panel__item div {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.roles-assignment-panel__item strong {
-  color: #223127;
+.roles-capability-table th,
+.roles-capability-table td {
+  padding: 16px 14px;
+  border-bottom: 1px solid #eef3ea;
+  text-align: center;
+  vertical-align: middle;
   font-size: 14px;
 }
 
-.roles-assignment-panel__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+.roles-capability-table th {
+  color: #496251;
+  font-weight: 700;
 }
 
-.roles-assignment-panel__footer button,
-.roles-management-form__actions button:last-child {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+.roles-capability-table td {
+  color: #223127;
 }
 
-.roles-assignment-panel__footer button:disabled,
-.roles-management-form__actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+.roles-capability-table td:first-child,
+.roles-capability-table th:first-child {
+  text-align: left;
 }
 
 .roles-management-form {
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+
+.roles-management-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -163,14 +153,41 @@
   color: #2f4f3a;
 }
 
-.roles-management-form__field input {
-  height: 46px;
-  padding: 0 14px;
+.roles-management-form__field input,
+.roles-management-form__field select,
+.roles-management-form__field textarea {
   border: 1px solid #d7e6d9;
   border-radius: 12px;
   background-color: #fcfffc;
   color: #223127;
   font-size: 14px;
+  padding: 12px 14px;
+}
+
+.roles-management-form__field input {
+  height: 46px;
+}
+
+.roles-management-form__field input:disabled {
+  background-color: #f4f7f4;
+  color: #6b7b6d;
+}
+
+.roles-management-form__field textarea {
+  resize: vertical;
+  min-height: 110px;
+  line-height: 1.6;
+}
+
+.roles-management-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.roles-management-form__actions button:last-child {
+  background-color: #e8f5e9;
+  color: #2e7d32;
 }
 
 @media (max-width: 1200px) {
@@ -178,21 +195,19 @@
     grid-template-columns: 1fr;
   }
 
-  .roles-management-grid {
+  .roles-management-card__details {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .roles-management-card,
-  .roles-assignment-panel__footer {
+  .roles-management-card__header,
+  .roles-management-form__actions {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .roles-management-card__actions,
-  .roles-management-form__actions {
-    width: 100%;
-    flex-wrap: wrap;
+  .roles-management-form__grid {
+    grid-template-columns: 1fr;
   }
 }

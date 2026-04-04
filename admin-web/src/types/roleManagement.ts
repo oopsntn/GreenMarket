@@ -1,23 +1,23 @@
-export type ApiRoleResponse = {
-  roleId: number;
-  roleCode: string | null;
-  roleTitle: string | null;
-  roleCreatedAt: string | null;
-};
-
-export type ApiAdminRoleAssignmentsResponse = {
-  adminId: number;
-  roles: ApiRoleResponse[];
-};
+export type RoleAudienceGroup = "Marketplace" | "Operations";
 
 export type RoleManagementItem = {
   id: number;
   code: string;
   title: string;
+  audienceGroup: RoleAudienceGroup;
+  accessScope: string;
+  summary: string;
+  responsibilities: string[];
+  capabilities: string[];
   createdAt: string;
+  status: "Core";
 };
 
 export type RoleFormState = {
-  code: string;
   title: string;
+  audienceGroup: RoleAudienceGroup;
+  accessScope: string;
+  summary: string;
+  responsibilitiesText: string;
+  capabilitiesText: string;
 };
