@@ -181,10 +181,8 @@ function AnalyticsPage() {
     1,
   );
 
-  const trafficChartMinWidth = Math.max(
-    760,
-    dailyTrafficPoints.length * Math.max(chartSlots.length, 1) * 42,
-  );
+  const dateLabelInterval =
+    dailyTrafficPoints.length > 24 ? 4 : dailyTrafficPoints.length > 16 ? 3 : 2;
 
   const totalRevenue = placementChartRows.reduce(
     (total, item) => total + item.revenue,
@@ -365,10 +363,7 @@ function AnalyticsPage() {
               </div>
 
               <div className="analytics-daily-chart-wrapper">
-                <div
-                  className="analytics-daily-chart"
-                  style={{ minWidth: `${trafficChartMinWidth}px` }}
-                >
+                <div className="analytics-daily-chart">
                   <div className="analytics-daily-chart__scale">
                     <span>{formatCompactMetric(maxDailyTraffic)}</span>
                     <span>{formatCompactMetric(maxDailyTraffic / 2)}</span>
@@ -386,7 +381,7 @@ function AnalyticsPage() {
                     </div>
 
                     <div className="analytics-daily-chart__groups">
-                      {dailyTrafficPoints.map((point) => (
+                      {dailyTrafficPoints.map((point, index) => (
                         <div
                           key={point.date}
                           className="analytics-daily-chart__group"
@@ -394,24 +389,35 @@ function AnalyticsPage() {
                           <div className="analytics-daily-chart__bars">
                             {point.slots.map((slot) => {
                               const barHeight = Math.max(
-                                10,
+                                slot.impressions === 0 ? 6 : 18,
                                 (slot.impressions / maxDailyTraffic) * 100,
                               );
+                              const showBarValue =
+                                slot.impressions > 0 &&
+                                (dailyTrafficPoints.length <= 12 ||
+                                  index === 0 ||
+                                  index === dailyTrafficPoints.length - 1 ||
+                                  index % dateLabelInterval === 0);
 
                               return (
                                 <div
                                   key={`${point.date}-${slot.slot}`}
                                   className="analytics-daily-chart__bar-column"
                                 >
-                                  <span className="analytics-daily-chart__value">
-                                    {formatCompactMetric(slot.impressions)}
-                                  </span>
+                                  {showBarValue ? (
+                                    <span className="analytics-daily-chart__value">
+                                      {formatCompactMetric(slot.impressions)}
+                                    </span>
+                                  ) : (
+                                    <span className="analytics-daily-chart__value analytics-daily-chart__value--spacer" />
+                                  )}
                                   <div
                                     className="analytics-daily-chart__bar"
                                     style={{
                                       height: `${barHeight}%`,
                                       backgroundColor:
                                         chartSlotColorMap[slot.slot],
+                                      opacity: slot.impressions === 0 ? 0.45 : 1,
                                     }}
                                     title={`${slot.slot}: ${slot.impressions.toLocaleString("en-US")} impressions on ${point.date}`}
                                   />
@@ -421,7 +427,12 @@ function AnalyticsPage() {
                           </div>
 
                           <span className="analytics-daily-chart__date">
-                            {formatChartDateLabel(point.date)}
+                            {dailyTrafficPoints.length <= 10 ||
+                            index === 0 ||
+                            index === dailyTrafficPoints.length - 1 ||
+                            index % dateLabelInterval === 0
+                              ? formatChartDateLabel(point.date)
+                              : ""}
                           </span>
                         </div>
                       ))}
