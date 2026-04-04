@@ -929,6 +929,11 @@ INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_
 -- ============================================================
 -- RESET SEQUENCES
 -- ============================================================
+INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_reason_code, report_reason, report_note, report_status, admin_note, report_created_at, report_updated_at) VALUES
+(1, 5, 1, 1, 'MISLEADING_INFO', 'Post title and product details are not consistent with the attached listing photos.', 'The seller describes a different bonsai shape in the text than in the gallery.', 'pending', NULL, '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
+(2, 5, 2, 2, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
+(3, 5, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00');
+
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
 SELECT setval('admins_admin_id_seq', (SELECT COALESCE(MAX(admin_id), 1) FROM admins));
 SELECT setval('roles_role_id_seq', (SELECT COALESCE(MAX(role_id), 1) FROM roles));
