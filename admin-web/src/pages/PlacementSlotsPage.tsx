@@ -403,8 +403,40 @@ function PlacementSlotsPage() {
       </SectionCard>
 
       <SectionCard
+        title="Field Guide"
+        description="These meanings help you read slot data consistently across packages, promotions, and analytics."
+      >
+        <div className="placement-slot-guide">
+          <div className="placement-slot-guide__item">
+            <strong>Scope</strong>
+            <span>Where the placement appears: homepage, category pages, or search results.</span>
+          </div>
+          <div className="placement-slot-guide__item">
+            <strong>Position Code</strong>
+            <span>The unique technical key used by promotion packages, admin APIs, and analytics mappings.</span>
+          </div>
+          <div className="placement-slot-guide__item">
+            <strong>Capacity</strong>
+            <span>How many campaigns or boosted posts can share this slot at the same time.</span>
+          </div>
+          <div className="placement-slot-guide__item">
+            <strong>Display Rule</strong>
+            <span>The ordering logic used when multiple eligible campaigns compete inside the same slot.</span>
+          </div>
+          <div className="placement-slot-guide__item">
+            <strong>Priority</strong>
+            <span>The ranking weight used when the rule depends on manual ordering or priority scoring.</span>
+          </div>
+          <div className="placement-slot-guide__item">
+            <strong>Notes</strong>
+            <span>Internal operational notes for admins, exceptions, or campaign handling reminders.</span>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
         title="Placement Slot Directory"
-        description="Review slot scope, capacity, display rule, priority, and current status."
+        description="Review slot scope, capacity, display rule, priority, and current status. Analytics only charts the slots that actually generated traffic in the selected date range."
       >
         {isLoading ? (
           <EmptyState
@@ -613,6 +645,12 @@ function PlacementSlotsPage() {
         maxWidth="720px"
       >
         <form className="placement-slots-form" onSubmit={handleSubmit}>
+          <div className="placement-slots-form__guide">
+            <p><strong>Scope</strong> controls where the slot is rendered.</p>
+            <p><strong>Capacity</strong> sets how many campaigns can be shown in parallel.</p>
+            <p><strong>Display Rule</strong> and <strong>Priority</strong> decide how those campaigns are ordered.</p>
+          </div>
+
           <div className="placement-slots-modal__grid">
             <div className="placement-slots-modal__field">
               <label htmlFor="name">Slot Name</label>

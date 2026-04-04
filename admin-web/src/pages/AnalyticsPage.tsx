@@ -183,20 +183,13 @@ function AnalyticsPage() {
 
   const chartTrafficPoints = useMemo(
     () =>
-      visibleDailyTrafficPoints.map((point) => ({
-        ...point,
-        slots: chartSlots.map((slotName) => {
-          const existingSlot = point.slots.find((slot) => slot.slot === slotName);
-
-          return (
-            existingSlot ?? {
-              slot: slotName,
-              impressions: 0,
-            }
-          );
-        }),
-      })),
-    [chartSlots, visibleDailyTrafficPoints],
+      visibleDailyTrafficPoints
+        .map((point) => ({
+          ...point,
+          slots: point.slots.filter((slot) => slot.impressions > 0),
+        }))
+        .filter((point) => point.slots.length > 0),
+    [visibleDailyTrafficPoints],
   );
 
   const maxDailyTraffic = Math.max(
@@ -384,6 +377,11 @@ function AnalyticsPage() {
                 ))}
               </div>
 
+              <p className="analytics-daily-note">
+                Only slots with recorded traffic in the selected date range are plotted here. The Placement Slots
+                screen can still contain additional configured slots that have no traffic yet.
+              </p>
+
               <div className="analytics-daily-chart-wrapper">
                 <div className="analytics-daily-chart">
                   <div className="analytics-daily-chart__scale">
@@ -413,21 +411,26 @@ function AnalyticsPage() {
                           key={point.date}
                           className="analytics-daily-chart__group"
                         >
+                          {(() => {
+                            const maxImpressionInGroup = Math.max(
+                              ...point.slots.map((slot) => slot.impressions),
+                              0,
+                            );
+
+                            return (
                           <div
                             className="analytics-daily-chart__bars"
                             style={{
-                              gridTemplateColumns: `repeat(${Math.max(chartSlots.length, 1)}, minmax(0, 1fr))`,
+                              gridTemplateColumns: `repeat(${Math.max(point.slots.length, 1)}, minmax(0, 1fr))`,
                             }}
                           >
                             {point.slots.map((slot) => {
-                              const barHeight =
-                                slot.impressions === 0
-                                  ? 2
-                                  : Math.max(
-                                      28,
-                                      (slot.impressions / maxDailyTraffic) * 100,
-                                    );
-                              const showBarValue = slot.impressions > 0;
+                              const barHeight = Math.max(
+                                28,
+                                (slot.impressions / maxDailyTraffic) * 100,
+                              );
+                              const showBarValue =
+                                slot.impressions === maxImpressionInGroup;
 
                               return (
                                 <div
@@ -447,7 +450,6 @@ function AnalyticsPage() {
                                       height: `${barHeight}%`,
                                       backgroundColor:
                                         chartSlotColorMap[slot.slot],
-                                      opacity: slot.impressions === 0 ? 0.18 : 1,
                                     }}
                                     title={`${slot.slot}: ${slot.impressions.toLocaleString("en-US")} impressions on ${point.date}`}
                                   />
@@ -455,6 +457,8 @@ function AnalyticsPage() {
                               );
                             })}
                           </div>
+                            );
+                          })()}
 
                           <span className="analytics-daily-chart__date">
                             {formatChartDateLabel(point.date)}
