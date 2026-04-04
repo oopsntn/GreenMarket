@@ -400,10 +400,13 @@ function AnalyticsPage() {
                         >
                           <div className="analytics-daily-chart__bars">
                             {point.slots.map((slot) => {
-                              const barHeight = Math.max(
-                                slot.impressions === 0 ? 8 : 28,
-                                (slot.impressions / maxDailyTraffic) * 100,
-                              );
+                              const barHeight =
+                                slot.impressions === 0
+                                  ? 0
+                                  : Math.max(
+                                      28,
+                                      (slot.impressions / maxDailyTraffic) * 100,
+                                    );
                               const showBarValue =
                                 slot.impressions > 0 &&
                                 (visibleDailyTrafficPoints.length <= 12 ||
@@ -429,7 +432,7 @@ function AnalyticsPage() {
                                       height: `${barHeight}%`,
                                       backgroundColor:
                                         chartSlotColorMap[slot.slot],
-                                      opacity: slot.impressions === 0 ? 0.45 : 1,
+                                      opacity: slot.impressions === 0 ? 0 : 1,
                                     }}
                                     title={`${slot.slot}: ${slot.impressions.toLocaleString("en-US")} impressions on ${point.date}`}
                                   />
