@@ -1,19 +1,18 @@
 export type UserStatus = "Active" | "Locked";
 
 export type UserRole =
-  | "Customer"
+  | "User"
   | "Manager"
   | "Host"
   | "Collaborator"
-  | "Operations Staff"
-  | "Admin";
+  | "Operation Staff";
 
 export type AssignableUserRole =
-  | "Customer"
+  | "User"
   | "Manager"
   | "Host"
   | "Collaborator"
-  | "Operations Staff";
+  | "Operation Staff";
 
 export type RoleAssignmentHistoryItem = {
   id: number;

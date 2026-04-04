@@ -1,7 +1,10 @@
 import { apiClient } from "../lib/apiClient";
 import { initialUsers } from "../mock-data/users";
+import { roleManagementService } from "./roleManagementService";
+import { readStoredJson, writeStoredJson } from "../utils/browserStorage";
 import type {
   ApiUserResponse,
+  AssignableUserRole,
   FlattenedUserActivityItem,
   User,
   UserFormState,
@@ -12,6 +15,13 @@ import type {
 } from "../types/user";
 
 const DEFAULT_ADMIN_NAME = "System Administrator";
+const USER_ROLE_STORAGE_KEY = "adminUserRoleAssignments";
+
+type StoredUserRoleAssignment = {
+  userId: number;
+  role: AssignableUserRole;
+  roleAssignments: User["roleAssignments"];
+};
 
 const padNumber = (value: number) => String(value).padStart(2, "0");
 
@@ -69,6 +79,58 @@ const formatDateTime = (value: string | null) => {
 
 const mapApiStatusToUiStatus = (value: string | null): UserStatus => {
   return value?.toLowerCase() === "blocked" ? "Locked" : "Active";
+};
+
+const getStoredUserRoles = () =>
+  readStoredJson<StoredUserRoleAssignment[]>(USER_ROLE_STORAGE_KEY, []);
+
+const saveStoredUserRoles = (assignments: StoredUserRoleAssignment[]) => {
+  writeStoredJson(USER_ROLE_STORAGE_KEY, assignments);
+  return assignments;
+};
+
+const defaultRoleAssignments: Record<number, AssignableUserRole> = {
+  1: "Host",
+  2: "Collaborator",
+  3: "Host",
+  4: "Host",
+  5: "User",
+};
+
+const getDefaultRole = (userId: number): AssignableUserRole =>
+  defaultRoleAssignments[userId] ?? "User";
+
+const buildDefaultRoleHistory = (
+  role: AssignableUserRole,
+  registeredAt: string,
+): User["roleAssignments"] => [
+  {
+    id: 1,
+    role,
+    assignedBy: DEFAULT_ADMIN_NAME,
+    assignedAt: registeredAt || getCurrentDate(),
+    note: `Initial ${role} role alignment based on the current system catalog.`,
+  },
+];
+
+const getStoredRoleState = (
+  userId: number,
+  registeredAt: string,
+): { role: UserRole; history: User["roleAssignments"] } => {
+  const existing = getStoredUserRoles().find((item) => item.userId === userId);
+
+  if (existing) {
+    return {
+      role: existing.role,
+      history: existing.roleAssignments,
+    };
+  }
+
+  const defaultRole = getDefaultRole(userId);
+  return {
+    role: defaultRole,
+    history: buildDefaultRoleHistory(defaultRole, registeredAt),
+  };
 };
 
 const buildDerivedActivityLogs = (
@@ -136,17 +198,20 @@ const mapApiUserToUi = (item: ApiUserResponse): User => {
     item.userMobile?.trim() ||
     `User #${item.userId}`;
 
+  const joinedAt = formatDate(item.userRegisteredAt || item.userCreatedAt);
+  const roleState = getStoredRoleState(item.userId, joinedAt);
+
   return {
     id: item.userId,
     fullName,
     phone: item.userMobile?.trim() || "N/A",
     email: item.userEmail?.trim() || "No email",
-    role: "Customer",
+    role: roleState.role,
     status: mapApiStatusToUiStatus(item.userStatus),
-    joinedAt: formatDate(item.userRegisteredAt || item.userCreatedAt),
+    joinedAt,
     location: item.userLocation?.trim() || "No location",
     lastLoginAt: formatDateTime(item.userLastLoginAt) || "No login yet",
-    roleAssignments: [],
+    roleAssignments: roleState.history,
     activityLogs: buildDerivedActivityLogs(item, fullName),
   };
 };
@@ -188,6 +253,68 @@ export const userService = {
     );
 
     return mapApiUserToUi(data);
+  },
+
+  getAssignableRoles(): AssignableUserRole[] {
+    return roleManagementService.getRoles().map(
+      (role) => role.title as AssignableUserRole,
+    );
+  },
+
+  assignUserRole(user: User, nextRole: AssignableUserRole): User {
+    const timestamp = getCurrentDate();
+    const activityTimestamp = getCurrentDateTime();
+
+    const nextRoleAssignments = [
+      ...user.roleAssignments,
+      {
+        id: getNextNestedId(user.roleAssignments),
+        role: nextRole,
+        assignedBy: DEFAULT_ADMIN_NAME,
+        assignedAt: timestamp,
+        note: `Role changed from ${user.role} to ${nextRole}.`,
+      },
+    ];
+
+    const storedAssignments = getStoredUserRoles();
+    const nextStoredAssignments = storedAssignments.some(
+      (item) => item.userId === user.id,
+    )
+      ? storedAssignments.map((item) =>
+          item.userId === user.id
+            ? {
+                ...item,
+                role: nextRole,
+                roleAssignments: nextRoleAssignments,
+              }
+            : item,
+        )
+      : [
+          ...storedAssignments,
+          {
+            userId: user.id,
+            role: nextRole,
+            roleAssignments: nextRoleAssignments,
+          },
+        ];
+
+    saveStoredUserRoles(nextStoredAssignments);
+
+    return {
+      ...user,
+      role: nextRole,
+      roleAssignments: nextRoleAssignments,
+      activityLogs: [
+        {
+          id: getNextNestedId(user.activityLogs),
+          action: "Role Assigned",
+          detail: `Assigned marketplace role: ${nextRole}.`,
+          performedBy: DEFAULT_ADMIN_NAME,
+          performedAt: activityTimestamp,
+        },
+        ...user.activityLogs,
+      ],
+    };
   },
 
   getUsers(): User[] {
@@ -332,7 +459,7 @@ export const userService = {
   getSummaryCards(users: User[]): UserSummaryCard[] {
     const activeCount = users.filter((user) => user.status === "Active").length;
     const lockedCount = users.filter((user) => user.status === "Locked").length;
-    const protectedCount = users.filter((user) => user.role === "Admin").length;
+    const roleAssignedCount = users.filter((user) => Boolean(user.role)).length;
 
     return [
       {
@@ -351,21 +478,20 @@ export const userService = {
         subtitle: "Restricted by admin action",
       },
       {
-        title: "Protected Admins",
-        value: String(protectedCount),
-        subtitle: "Role and status protected",
+        title: "Assigned Roles",
+        value: String(roleAssignedCount),
+        subtitle: "Marketplace roles maintained from the user directory",
       },
     ];
   },
 
   getRoleCounts(users: User[]): UserRoleCountItem[] {
     const roles: UserRole[] = [
-      "Admin",
-      "Customer",
+      "User",
       "Manager",
       "Host",
       "Collaborator",
-      "Operations Staff",
+      "Operation Staff",
     ];
 
     return roles.map((role) => ({
