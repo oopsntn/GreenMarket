@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
@@ -27,19 +27,19 @@ const typeFilterOptions: Array<TemplateType | "All"> = [
 
 const builderSteps = [
   {
-    title: "1. Chon Mau Noi Dung",
+    title: "1. Choose A Base Template",
     description:
-      "Chon mot template dang Active o thu vien de lam noi dung goc cho thong diep.",
+      "Pick one Active template from the library. This becomes the starting script for the message preview.",
   },
   {
-    title: "2. Dieu Chinh Du Lieu Mau",
+    title: "2. Fill A Sample Situation",
     description:
-      "Nhap channel, doi tuong nhan, tone, shop, bai dang va ly do de mo phong tinh huong thuc te.",
+      "Enter the sample shop, post, reason, tone, and channel so the preview reflects a real moderation or notification case.",
   },
   {
-    title: "3. Ap Vao Preview Va Luu",
+    title: "3. Apply And Review",
     description:
-      "Bam Apply to Preview de cap nhat ban xem truoc; bam Save Demo Preset neu muon giu bo tham so nay cho lan sau.",
+      "Click Apply to Preview to refresh the preview card below. Save Demo Preset only if you want to reopen this same sample later.",
   },
 ];
 
@@ -112,7 +112,10 @@ function TemplateBuilderPage() {
   const [appliedPreset, setAppliedPreset] = useState({
     ...initialPreset,
   });
+  const [lastAppliedAt, setLastAppliedAt] = useState("Not applied yet");
+  const [isPreviewHighlighted, setIsPreviewHighlighted] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const previewRef = useRef<HTMLDivElement | null>(null);
 
   const activeTemplates = useMemo(
     () => templates.filter((template) => template.status === "Active"),
@@ -210,16 +213,53 @@ function TemplateBuilderPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
+  const applyWorkspaceToPreview = () => {
+    const nextAppliedPreset = {
+      selectedTemplateId,
+      selectedTypeFilter,
+      channel,
+      audience,
+      tone,
+      shopName,
+      postTitle,
+      reason,
+      slotName,
+      contactEmail,
+      adminNote,
+    };
+
+    setAppliedPreset(nextAppliedPreset);
+    setLastAppliedAt(new Date().toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }));
+    setIsPreviewHighlighted(true);
+
+    window.setTimeout(() => {
+      setIsPreviewHighlighted(false);
+    }, 1800);
+
+    previewRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    showToast(
+      `Preview updated for ${selectedTemplate?.name ?? "the selected template"}.`,
+      "info",
+    );
+  };
+
   return (
     <div className="template-builder-page">
       <PageHeader
         title="Template Builder"
-        description="Assemble template delivery settings, switch communication tone, and preview outbound admin messaging before publishing."
+        description="Use this screen to simulate the exact message admin workflows would send before you approve a template for real use."
       />
 
       <SectionCard
-        title="How Template Builder Works"
-        description="Use this workspace to simulate the message an admin would send in moderation or notification flows."
+        title="How To Use This Screen"
+        description="This is a demo workspace for reviewing message content, not a sending screen."
       >
         <div className="template-builder-steps">
           {builderSteps.map((step) => (
@@ -357,17 +397,19 @@ function TemplateBuilderPage() {
 
         <SectionCard
           title="Builder Workspace"
-          description="Set the sample situation below, then apply the draft to the preview so you can validate the final message before using it."
+          description="Edit the sample case below, then click Apply to Preview to update the message card instantly."
         >
           {selectedTemplate ? (
             <div className="template-builder-form">
               <div className="template-builder-form__guide">
-                <strong>Current flow</strong>
+                <strong>What each button does</strong>
                 <p>
-                  Chinh cac truong du lieu mau o day, sau do bam{" "}
-                  <strong>Apply to Preview</strong> de cap nhat khung xem truoc.
-                  Neu muon giu bo tham so nay cho lan demo sau, bam{" "}
-                  <strong>Save Demo Preset</strong>.
+                  <strong>Apply to Preview</strong> refreshes the preview card
+                  below and scrolls to it for review.{" "}
+                  <strong>Save Demo Preset</strong> keeps this sample scenario in
+                  your current browser only.{" "}
+                  <strong>Restore Default Sample</strong> brings the builder back
+                  to the original demo values.
                 </p>
               </div>
 
@@ -489,25 +531,7 @@ function TemplateBuilderPage() {
                 <button
                   type="button"
                   className="template-builder-form__action template-builder-form__action--secondary"
-                  onClick={() => {
-                    setAppliedPreset({
-                      selectedTemplateId,
-                      selectedTypeFilter,
-                      channel,
-                      audience,
-                      tone,
-                      shopName,
-                      postTitle,
-                      reason,
-                      slotName,
-                      contactEmail,
-                      adminNote,
-                    });
-                    showToast(
-                      `Preview updated for ${selectedTemplate.name}.`,
-                      "info",
-                    );
-                  }}
+                  onClick={applyWorkspaceToPreview}
                 >
                   Apply to Preview
                 </button>
@@ -579,16 +603,46 @@ function TemplateBuilderPage() {
       >
         {appliedTemplate ? (
           <div className="template-builder-preview">
+            <div className="template-builder-preview__summary">
+              <div>
+                <strong>Preview source</strong>
+                <span>{appliedTemplate.name}</span>
+              </div>
+              <div>
+                <strong>Applied at</strong>
+                <span>{lastAppliedAt}</span>
+              </div>
+              <div>
+                <strong>Preview target</strong>
+                <span>
+                  {appliedPreset.channel} • {appliedPreset.audience}
+                </span>
+              </div>
+            </div>
+
             <div className="template-builder-preview__meta">
               <StatusBadge label={appliedTemplate.type} variant="type" />
               <StatusBadge label={appliedPreset.channel} variant="processing" />
               <StatusBadge label={appliedPreset.tone} variant="success" />
             </div>
 
-            <div className="template-builder-preview__card">
+            <div
+              ref={previewRef}
+              className={`template-builder-preview__card${
+                isPreviewHighlighted
+                  ? " template-builder-preview__card--highlighted"
+                  : ""
+              }`}
+            >
               <div className="template-builder-preview__header">
                 <strong>{appliedTemplate.name}</strong>
                 <span>{appliedPreset.audience}</span>
+              </div>
+
+              <div className="template-builder-preview__context">
+                <span>Shop: {appliedPreset.shopName}</span>
+                <span>Post: {appliedPreset.postTitle}</span>
+                <span>Reason: {appliedPreset.reason}</span>
               </div>
 
               <pre>{previewMessage}</pre>
