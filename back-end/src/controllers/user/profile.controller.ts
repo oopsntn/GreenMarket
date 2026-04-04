@@ -33,15 +33,13 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
             return;
         }
 
-        const { userDisplayName, userAvatarUrl, userEmail, userLocation, userBio } = req.body;
+        const { userDisplayName, userAvatarUrl, userEmail } = req.body;
 
         const [updatedUser] = await db.update(users)
             .set({ 
                 userDisplayName: userDisplayName,
                 userAvatarUrl: userAvatarUrl,
                 userEmail: userEmail,
-                userLocation: userLocation,
-                userBio: userBio,
                 userUpdatedAt: new Date()
             })
             .where(eq(users.userId, userId))
