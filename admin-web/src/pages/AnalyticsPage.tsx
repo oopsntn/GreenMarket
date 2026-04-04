@@ -41,9 +41,8 @@ const formatChartDateLabel = (value: string) => {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-      });
+      day: "2-digit",
+    });
 };
 
 function AnalyticsPage() {
@@ -423,7 +422,7 @@ function AnalyticsPage() {
                             {point.slots.map((slot) => {
                               const barHeight =
                                 slot.impressions === 0
-                                  ? 0
+                                  ? 2
                                   : Math.max(
                                       28,
                                       (slot.impressions / maxDailyTraffic) * 100,
@@ -448,7 +447,7 @@ function AnalyticsPage() {
                                       height: `${barHeight}%`,
                                       backgroundColor:
                                         chartSlotColorMap[slot.slot],
-                                      opacity: slot.impressions === 0 ? 0 : 1,
+                                      opacity: slot.impressions === 0 ? 0.18 : 1,
                                     }}
                                     title={`${slot.slot}: ${slot.impressions.toLocaleString("en-US")} impressions on ${point.date}`}
                                   />

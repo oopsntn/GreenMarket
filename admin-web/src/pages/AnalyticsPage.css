@@ -139,7 +139,7 @@
   height: 100%;
   display: grid;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
   padding: 0 4px 0 0;
 }
 
@@ -156,7 +156,8 @@
   height: 318px;
   display: grid;
   align-items: flex-end;
-  gap: 8px;
+  gap: 3px;
+  padding: 0 3px;
 }
 
 .analytics-daily-chart__bar-column {
@@ -193,11 +194,11 @@
 
 .analytics-daily-chart__date {
   color: #486150;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.4;
   text-align: center;
-  min-height: 32px;
+  min-height: 20px;
   white-space: nowrap;
 }
 
