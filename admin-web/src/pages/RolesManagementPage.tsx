@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -163,6 +164,22 @@ function RolesManagementPage() {
           "1 admin account",
         ]}
       />
+
+      <SectionCard
+        title="Where Role Assignment Happens"
+        description="This screen defines the role catalog only. User-by-user role assignment is handled in the Users Management screen."
+        actions={
+          <Link className="roles-management-link" to="/users">
+            Open Users Management
+          </Link>
+        }
+      >
+        <p className="roles-management-note">
+          Use this page to maintain the meaning of each business role. Open the
+          Users screen when you need to assign one of these roles to a specific
+          marketplace account.
+        </p>
+      </SectionCard>
 
       <SectionCard
         title="Role Catalog"

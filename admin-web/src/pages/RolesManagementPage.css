@@ -16,6 +16,27 @@
   gap: 16px;
 }
 
+.roles-management-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background-color: #eef7ef;
+  color: #1b5e20;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.roles-management-note {
+  margin: 0;
+  color: #5d7061;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
 .roles-management-card {
   border: 1px solid #e8f1e8;
   border-radius: 20px;
