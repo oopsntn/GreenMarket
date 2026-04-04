@@ -34,11 +34,24 @@ const mapStatus = (value: string | null): ReportModerationStatus => {
 const mapReportToUi = (
   item: ApiReportModerationResponse,
 ): ReportModerationItem => {
+  const reporterDisplayName =
+    item.reporterDisplayName?.trim() ||
+    (item.reporterId ? `User #${item.reporterId}` : "Anonymous");
+
+  const reporterSecondaryLabel =
+    item.reporterEmail?.trim() ||
+    (item.reporterId ? `Reporter ID ${item.reporterId}` : "Anonymous report");
+
   return {
     id: item.reportId,
-    reporterLabel: item.reporterId ? `User #${item.reporterId}` : "Anonymous",
-    postLabel: item.postId ? `Post #${item.postId}` : "No post linked",
-    shopLabel: item.reportShopId ? `Shop #${item.reportShopId}` : "No shop linked",
+    reporterLabel: reporterDisplayName,
+    reporterSecondaryLabel,
+    postLabel:
+      item.postTitle?.trim() ||
+      (item.postId ? `Post #${item.postId}` : "No post linked"),
+    shopLabel:
+      item.shopName?.trim() ||
+      (item.reportShopId ? `Shop #${item.reportShopId}` : "No shop linked"),
     reasonCode: item.reportReasonCode?.trim() || "General",
     reason: item.reportReason?.trim() || "No report reason",
     reporterNote: item.reportNote?.trim() || "No reporter note",
