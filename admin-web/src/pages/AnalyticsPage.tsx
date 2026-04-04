@@ -182,17 +182,35 @@ function AnalyticsPage() {
     return nonZeroPoints.length > 0 ? nonZeroPoints : dailyTrafficPoints;
   }, [dailyTrafficPoints]);
 
+  const chartTrafficPoints = useMemo(
+    () =>
+      visibleDailyTrafficPoints.map((point) => ({
+        ...point,
+        slots: chartSlots.map((slotName) => {
+          const existingSlot = point.slots.find((slot) => slot.slot === slotName);
+
+          return (
+            existingSlot ?? {
+              slot: slotName,
+              impressions: 0,
+            }
+          );
+        }),
+      })),
+    [chartSlots, visibleDailyTrafficPoints],
+  );
+
   const maxDailyTraffic = Math.max(
-    ...visibleDailyTrafficPoints.flatMap((point) =>
+    ...chartTrafficPoints.flatMap((point) =>
       point.slots.map((slot) => slot.impressions),
     ),
     1,
   );
 
   const dateLabelInterval =
-    visibleDailyTrafficPoints.length > 18
+    chartTrafficPoints.length > 18
       ? 3
-      : visibleDailyTrafficPoints.length > 10
+      : chartTrafficPoints.length > 10
         ? 2
         : 1;
 
@@ -392,13 +410,23 @@ function AnalyticsPage() {
                       ))}
                     </div>
 
-                    <div className="analytics-daily-chart__groups">
-                      {visibleDailyTrafficPoints.map((point, index) => (
+                    <div
+                      className="analytics-daily-chart__groups"
+                      style={{
+                        gridTemplateColumns: `repeat(${Math.max(chartTrafficPoints.length, 1)}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {chartTrafficPoints.map((point, index) => (
                         <div
                           key={point.date}
                           className="analytics-daily-chart__group"
                         >
-                          <div className="analytics-daily-chart__bars">
+                          <div
+                            className="analytics-daily-chart__bars"
+                            style={{
+                              gridTemplateColumns: `repeat(${Math.max(chartSlots.length, 1)}, minmax(0, 1fr))`,
+                            }}
+                          >
                             {point.slots.map((slot) => {
                               const barHeight =
                                 slot.impressions === 0
@@ -409,9 +437,9 @@ function AnalyticsPage() {
                                     );
                               const showBarValue =
                                 slot.impressions > 0 &&
-                                (visibleDailyTrafficPoints.length <= 12 ||
+                                (chartTrafficPoints.length <= 12 ||
                                   index === 0 ||
-                                  index === visibleDailyTrafficPoints.length - 1 ||
+                                  index === chartTrafficPoints.length - 1 ||
                                   index % dateLabelInterval === 0);
 
                               return (
@@ -442,9 +470,9 @@ function AnalyticsPage() {
                           </div>
 
                           <span className="analytics-daily-chart__date">
-                            {visibleDailyTrafficPoints.length <= 10 ||
+                            {chartTrafficPoints.length <= 10 ||
                             index === 0 ||
-                            index === visibleDailyTrafficPoints.length - 1 ||
+                            index === chartTrafficPoints.length - 1 ||
                             index % dateLabelInterval === 0
                               ? formatChartDateLabel(point.date)
                               : ""}

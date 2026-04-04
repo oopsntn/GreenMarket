@@ -115,14 +115,14 @@
 .analytics-daily-chart__canvas {
   position: relative;
   min-height: 360px;
-  padding: 12px 0 0 12px;
-  border-left: 1px solid rgba(61, 130, 77, 0.22);
-  border-bottom: 1px solid rgba(61, 130, 77, 0.22);
+  padding: 16px 16px 0 16px;
+  border-left: 2px solid rgba(61, 130, 77, 0.3);
+  border-bottom: 2px solid rgba(61, 130, 77, 0.3);
 }
 
 .analytics-daily-chart__grid {
   position: absolute;
-  inset: 12px 0 34px 12px;
+  inset: 16px 16px 34px 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -137,14 +137,13 @@
   position: relative;
   z-index: 1;
   height: 100%;
-  display: flex;
+  display: grid;
   align-items: flex-end;
   gap: 12px;
   padding: 0 4px 0 0;
 }
 
 .analytics-daily-chart__group {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -155,17 +154,15 @@
 .analytics-daily-chart__bars {
   width: 100%;
   height: 318px;
-  display: flex;
+  display: grid;
   align-items: flex-end;
-  justify-content: center;
   gap: 10px;
 }
 
 .analytics-daily-chart__bar-column {
-  flex: 0 1 24px;
-  width: 24px;
-  min-width: 18px;
-  max-width: 24px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   height: 100%;
   display: flex;
   flex-direction: column;
