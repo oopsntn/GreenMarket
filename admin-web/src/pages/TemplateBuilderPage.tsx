@@ -25,6 +25,24 @@ const typeFilterOptions: Array<TemplateType | "All"> = [
   "Notification",
 ];
 
+const builderSteps = [
+  {
+    title: "1. Chon Mau Noi Dung",
+    description:
+      "Chon mot template dang Active o thu vien de lam noi dung goc cho thong diep.",
+  },
+  {
+    title: "2. Dieu Chinh Du Lieu Mau",
+    description:
+      "Nhap channel, doi tuong nhan, tone, shop, bai dang va ly do de mo phong tinh huong thuc te.",
+  },
+  {
+    title: "3. Ap Vao Preview Va Luu",
+    description:
+      "Bam Apply to Preview de cap nhat ban xem truoc; bam Save Demo Preset neu muon giu bo tham so nay cho lan sau.",
+  },
+];
+
 const buildPreviewMessage = (
   template: Template | null,
   audience: TemplateBuilderAudience,
@@ -91,6 +109,9 @@ function TemplateBuilderPage() {
   const [slotName, setSlotName] = useState(initialPreset.slotName);
   const [contactEmail, setContactEmail] = useState(initialPreset.contactEmail);
   const [adminNote, setAdminNote] = useState(initialPreset.adminNote);
+  const [appliedPreset, setAppliedPreset] = useState({
+    ...initialPreset,
+  });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const activeTemplates = useMemo(
@@ -139,45 +160,38 @@ function TemplateBuilderPage() {
   }, [activeTemplates, selectedTemplateId]);
 
   useEffect(() => {
-    templateBuilderService.savePreset({
-      selectedTemplateId,
-      selectedTypeFilter,
-      channel,
-      audience,
-      tone,
-      shopName,
-      postTitle,
-      reason,
-      slotName,
-      contactEmail,
-      adminNote,
-    });
-  }, [
-    adminNote,
-    audience,
-    channel,
-    contactEmail,
-    postTitle,
-    reason,
-    selectedTemplateId,
-    selectedTypeFilter,
-    shopName,
-    slotName,
-    tone,
-  ]);
+    if (!appliedPreset.selectedTemplateId && activeTemplates.length > 0) {
+      setAppliedPreset((prev) => ({
+        ...prev,
+        selectedTemplateId: activeTemplates[0].id,
+      }));
+    }
+  }, [activeTemplates, appliedPreset.selectedTemplateId]);
 
   const selectedTemplate =
     activeTemplates.find((template) => template.id === selectedTemplateId) ??
     null;
 
-  const previewMessage = buildPreviewMessage(selectedTemplate, audience, tone, {
-    shopName,
-    postTitle,
-    reason,
-    slotName,
-    contactEmail,
-    adminNote,
-  });
+  const appliedTemplate =
+    activeTemplates.find(
+      (template) => template.id === appliedPreset.selectedTemplateId,
+    ) ??
+    selectedTemplate ??
+    null;
+
+  const previewMessage = buildPreviewMessage(
+    appliedTemplate,
+    appliedPreset.audience,
+    appliedPreset.tone,
+    {
+      shopName: appliedPreset.shopName,
+      postTitle: appliedPreset.postTitle,
+      reason: appliedPreset.reason,
+      slotName: appliedPreset.slotName,
+      contactEmail: appliedPreset.contactEmail,
+      adminNote: appliedPreset.adminNote,
+    },
+  );
 
   const showToast = (
     message: string,
@@ -203,13 +217,31 @@ function TemplateBuilderPage() {
         description="Assemble template delivery settings, switch communication tone, and preview outbound admin messaging before publishing."
       />
 
+      <SectionCard
+        title="How Template Builder Works"
+        description="Use this workspace to simulate the message an admin would send in moderation or notification flows."
+      >
+        <div className="template-builder-steps">
+          {builderSteps.map((step) => (
+            <div key={step.title} className="template-builder-step-card">
+              <strong>{step.title}</strong>
+              <p>{step.description}</p>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
       <SearchToolbar
         placeholder="Search templates by name, type, or content"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Filter library"
-        filterSummaryItems={[selectedTypeFilter, channel, audience]}
+        filterSummaryItems={[
+          selectedTypeFilter,
+          selectedTemplate?.type ?? "No template selected",
+          audience,
+        ]}
       />
 
       {showFilters ? (
@@ -241,7 +273,7 @@ function TemplateBuilderPage() {
       <div className="template-builder-grid">
         <SectionCard
           title="Template Library"
-          description="Choose an active template as the base content for your builder workspace."
+          description="Choose one active template, then use it as the base script for the builder workspace on the right."
         >
           {filteredTemplates.length === 0 ? (
             <EmptyState
@@ -250,53 +282,49 @@ function TemplateBuilderPage() {
             />
           ) : (
             <>
-              <div className="template-builder-table-wrapper">
-                <table className="template-builder-table">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Status</th>
-                      <th>Updated</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
+              <div className="template-builder-library">
+                {paginatedTemplates.map((template) => (
+                  <div
+                    key={template.id}
+                    className={`template-builder-library__card${
+                      selectedTemplateId === template.id
+                        ? " template-builder-library__card--selected"
+                        : ""
+                    }`}
+                  >
+                    <div className="template-builder-library__header">
+                      <div>
+                        <strong>
+                          #{template.id} {template.name}
+                        </strong>
+                        <p>Last updated {template.updatedAt}</p>
+                      </div>
 
-                  <tbody>
-                    {paginatedTemplates.map((template) => (
-                      <tr key={template.id}>
-                        <td>#{template.id}</td>
-                        <td>{template.name}</td>
-                        <td>
-                          <StatusBadge label={template.type} variant="type" />
-                        </td>
-                        <td>
-                          <StatusBadge
-                            label={template.status}
-                            variant={
-                              template.status === "Active" ? "active" : "disabled"
-                            }
-                          />
-                        </td>
-                        <td>{template.updatedAt}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className={
-                              selectedTemplateId === template.id
-                                ? "template-builder-table__use template-builder-table__use--active"
-                                : "template-builder-table__use"
-                            }
-                            onClick={() => setSelectedTemplateId(template.id)}
-                          >
-                            {selectedTemplateId === template.id ? "Selected" : "Use"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                      <button
+                        type="button"
+                        className={
+                          selectedTemplateId === template.id
+                            ? "template-builder-library__use template-builder-library__use--active"
+                            : "template-builder-library__use"
+                        }
+                        onClick={() => setSelectedTemplateId(template.id)}
+                      >
+                        {selectedTemplateId === template.id
+                          ? "Using in Builder"
+                          : "Use Template"}
+                      </button>
+                    </div>
+
+                    <div className="template-builder-library__meta">
+                      <StatusBadge label={template.type} variant="type" />
+                      <StatusBadge label={template.status} variant="active" />
+                    </div>
+
+                    <p className="template-builder-library__snippet">
+                      {template.content}
+                    </p>
+                  </div>
+                ))}
               </div>
 
               <div className="template-builder-pagination">
@@ -329,10 +357,20 @@ function TemplateBuilderPage() {
 
         <SectionCard
           title="Builder Workspace"
-          description="Adjust channel, audience, and sample variables to validate final message formatting."
+          description="Set the sample situation below, then apply the draft to the preview so you can validate the final message before using it."
         >
           {selectedTemplate ? (
             <div className="template-builder-form">
+              <div className="template-builder-form__guide">
+                <strong>Current flow</strong>
+                <p>
+                  Chinh cac truong du lieu mau o day, sau do bam{" "}
+                  <strong>Apply to Preview</strong> de cap nhat khung xem truoc.
+                  Neu muon giu bo tham so nay cho lan demo sau, bam{" "}
+                  <strong>Save Demo Preset</strong>.
+                </p>
+              </div>
+
               <div className="template-builder-form__grid">
                 <div className="template-builder-form__field">
                   <label>Selected Template</label>
@@ -451,23 +489,51 @@ function TemplateBuilderPage() {
                 <button
                   type="button"
                   className="template-builder-form__action template-builder-form__action--secondary"
-                  onClick={() =>
+                  onClick={() => {
+                    setAppliedPreset({
+                      selectedTemplateId,
+                      selectedTypeFilter,
+                      channel,
+                      audience,
+                      tone,
+                      shopName,
+                      postTitle,
+                      reason,
+                      slotName,
+                      contactEmail,
+                      adminNote,
+                    });
                     showToast(
-                      `Preview refreshed for ${selectedTemplate.name} via ${channel}.`,
+                      `Preview updated for ${selectedTemplate.name}.`,
                       "info",
-                    )
-                  }
+                    );
+                  }}
                 >
-                  Refresh Preview
+                  Apply to Preview
                 </button>
                 <button
                   type="button"
                   className="template-builder-form__action"
-                  onClick={() =>
-                    showToast(`${selectedTemplate.name} builder preset saved.`)
-                  }
+                  onClick={() => {
+                    templateBuilderService.savePreset({
+                      selectedTemplateId,
+                      selectedTypeFilter,
+                      channel,
+                      audience,
+                      tone,
+                      shopName,
+                      postTitle,
+                      reason,
+                      slotName,
+                      contactEmail,
+                      adminNote,
+                    });
+                    showToast(
+                      `${selectedTemplate.name} demo preset was saved to this browser.`,
+                    );
+                  }}
                 >
-                  Save Builder Preset
+                  Save Demo Preset
                 </button>
                 <button
                   type="button"
@@ -487,10 +553,14 @@ function TemplateBuilderPage() {
                     setSlotName(defaultPreset.slotName);
                     setContactEmail(defaultPreset.contactEmail);
                     setAdminNote(defaultPreset.adminNote);
-                    showToast("Builder preset was reset to defaults.", "info");
+                    setAppliedPreset({ ...defaultPreset });
+                    showToast(
+                      "Template Builder was reset to the default sample scenario.",
+                      "info",
+                    );
                   }}
                 >
-                  Reset Preset
+                  Restore Default Sample
                 </button>
               </div>
             </div>
@@ -507,18 +577,18 @@ function TemplateBuilderPage() {
         title="Live Preview"
         description="Preview the composed message before it is used in moderation or notification workflows."
       >
-        {selectedTemplate ? (
+        {appliedTemplate ? (
           <div className="template-builder-preview">
             <div className="template-builder-preview__meta">
-              <StatusBadge label={selectedTemplate.type} variant="type" />
-              <StatusBadge label={channel} variant="processing" />
-              <StatusBadge label={tone} variant="success" />
+              <StatusBadge label={appliedTemplate.type} variant="type" />
+              <StatusBadge label={appliedPreset.channel} variant="processing" />
+              <StatusBadge label={appliedPreset.tone} variant="success" />
             </div>
 
             <div className="template-builder-preview__card">
               <div className="template-builder-preview__header">
-                <strong>{selectedTemplate.name}</strong>
-                <span>{audience}</span>
+                <strong>{appliedTemplate.name}</strong>
+                <span>{appliedPreset.audience}</span>
               </div>
 
               <pre>{previewMessage}</pre>
