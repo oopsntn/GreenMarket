@@ -325,15 +325,15 @@ function AnalyticsPage() {
         >
           <div className="analytics-panel__body">
             <div className="analytics-donut-placeholder">
+              <div className="analytics-pie-summary">
+                <strong>{formatCompactMetric(totalRevenue)}</strong>
+                <span>Total revenue in the selected period</span>
+              </div>
+
               <div
                 className="analytics-donut"
                 style={{ background: donutBackground }}
-              >
-                <div className="analytics-donut__center">
-                  <strong>{formatCompactMetric(totalRevenue)}</strong>
-                  <span>Total revenue</span>
-                </div>
-              </div>
+              />
               <ul className="analytics-legend">
                 {donutSegments.map((segment) => (
                   <li key={segment.slot}>
