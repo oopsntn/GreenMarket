@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, TouchableOpacity, View } from 'react-native'
+import { Image, Text, TouchableOpacity, View } from 'react-native'
 import Card from '../../Reused/Card/Card'
 import { Edit, PackageOpen, Trash2 } from 'lucide-react-native';
 
@@ -14,7 +14,15 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
     <Card style={styles.postCard}>
         <View style={styles.postContent}>
             <View style={styles.imgPlaceholder}>
-                <PackageOpen color="#999" size={24} />
+                {item.images && item.images.length > 0 ? (
+                    <Image
+                        source={{ uri: item.images[0].imageUrl }}
+                        style={styles.postImage}
+                    />
+                ) : (
+                    <PackageOpen color="#999" size={24} />
+                )}
+
             </View>
 
             <View style={styles.info}>

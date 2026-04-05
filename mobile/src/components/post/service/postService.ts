@@ -70,12 +70,14 @@ export const postService = {
             const fileName = cleanUri.split('/').pop() || 'upload.jpg'
             const extension = fileName.split('.').pop()?.toLowerCase()
 
-            let type = 'image/jpeg'
-            if (extension === 'png') type = 'image/png'
-            else if (extension === 'webp') type = 'image/webp'
-            else if (extension === 'mp4') type = 'video/mp4'
-            else if (extension === 'mov') type = 'video/quicktime'
-            else if (extension === 'avi') type = 'video/x-msvideo'
+            let type = ''
+            if (['jpg', 'jpeg', 'png', 'webp'].includes(extension!)) {
+                type = `image/${extension === 'jpg' ? 'jpeg' : extension}`
+            } else if (['mp4', 'mov', 'm4x', 'avi'].includes(extension!)) {
+                type = `video/${extension === 'mov' ? 'quicktime' : extension}`
+            } else {
+                type = 'application/octet-stream'
+            }
 
             if (Platform.OS === 'web') {
                 const response = await fetch(uri)
