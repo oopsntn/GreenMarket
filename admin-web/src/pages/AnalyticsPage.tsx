@@ -186,10 +186,15 @@ function AnalyticsPage() {
       visibleDailyTrafficPoints
         .map((point) => ({
           ...point,
-          slots: point.slots.filter((slot) => slot.impressions > 0),
+          slots: point.slots
+            .filter((slot) => slot.impressions > 0)
+            .sort(
+              (left, right) =>
+                chartSlots.indexOf(left.slot) - chartSlots.indexOf(right.slot),
+            ),
         }))
         .filter((point) => point.slots.length > 0),
-    [visibleDailyTrafficPoints],
+    [chartSlots, visibleDailyTrafficPoints],
   );
 
   const maxDailyTraffic = Math.max(
@@ -416,21 +421,24 @@ function AnalyticsPage() {
                               ...point.slots.map((slot) => slot.impressions),
                               0,
                             );
+                            const maxImpressionIndex = point.slots.findIndex(
+                              (slot) => slot.impressions === maxImpressionInGroup,
+                            );
+                            const barGroupWidth =
+                              point.slots.length === 1 ? "28px" : "58px";
 
                             return (
                           <div
                             className="analytics-daily-chart__bars"
-                            style={{
-                              gridTemplateColumns: `repeat(${Math.max(point.slots.length, 1)}, minmax(0, 1fr))`,
-                            }}
+                            style={{ width: barGroupWidth }}
                           >
-                            {point.slots.map((slot) => {
+                            {point.slots.map((slot, slotIndex) => {
                               const barHeight = Math.max(
                                 28,
                                 (slot.impressions / maxDailyTraffic) * 100,
                               );
                               const showBarValue =
-                                slot.impressions === maxImpressionInGroup;
+                                slotIndex === maxImpressionIndex;
 
                               return (
                                 <div
