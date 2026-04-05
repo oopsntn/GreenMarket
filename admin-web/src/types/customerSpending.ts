@@ -13,3 +13,8 @@ export type CustomerSpendingRow = {
   avgOrderValue: string;
   lastPurchase: string;
 };
+
+export type CustomerSpendingApiResponse = {
+  summaryCards: CustomerSpendingCard[];
+  rows: CustomerSpendingRow[];
+};

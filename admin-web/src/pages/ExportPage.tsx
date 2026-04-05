@@ -23,9 +23,11 @@ import "./ExportPage.css";
 const PAGE_SIZE = 5;
 
 function ExportPage() {
-  const [historyItems, setHistoryItems] = useState<ExportHistoryItem[]>(
-    exportService.getExportHistory(),
-  );
+  const [historyItems, setHistoryItems] = useState<ExportHistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [isGeneralExporting, setIsGeneralExporting] = useState(false);
+  const [isFinancialExporting, setIsFinancialExporting] = useState(false);
   const [generalModule, setGeneralModule] =
     useState<GeneralExportModule>("Users");
   const [generalFromDate, setGeneralFromDate] = useState(
@@ -106,34 +108,82 @@ function ExportPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const handleExportGeneralData = () => {
-    const newHistoryItem = exportService.createGeneralExportHistoryItem(
-      historyItems,
-      generalModule,
-      generalFormat,
-    );
+  useEffect(() => {
+    const loadExportHistory = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+        const nextHistory = await exportService.getExportHistory();
+        setHistoryItems(nextHistory);
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load export history.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    setHistoryItems((prev) => [newHistoryItem, ...prev]);
-    setPage(1);
+    void loadExportHistory();
+  }, []);
 
-    showToast(
-      `${generalModule} export started for ${generalDateRangeLabel} in ${generalFormat} format.`,
-    );
+  const handleExportGeneralData = async () => {
+    try {
+      setIsGeneralExporting(true);
+      const newHistoryItem = await exportService.createGeneralExportHistoryItem(
+        generalModule,
+        generalFromDate,
+        generalToDate,
+        generalFormat,
+      );
+
+      setHistoryItems((prev) => [newHistoryItem, ...prev]);
+      setPage(1);
+
+      showToast(
+        `${generalModule} export started for ${generalDateRangeLabel} in ${generalFormat} format.`,
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to export general data.",
+        "error",
+      );
+    } finally {
+      setIsGeneralExporting(false);
+    }
   };
 
-  const handleExportFinancialReport = () => {
-    const newHistoryItem = exportService.createFinancialExportHistoryItem(
-      historyItems,
-      financialReportType,
-      financialFormat,
-    );
+  const handleExportFinancialReport = async () => {
+    try {
+      setIsFinancialExporting(true);
+      const newHistoryItem =
+        await exportService.createFinancialExportHistoryItem(
+          financialReportType,
+          financialFromDate,
+          financialToDate,
+          financialFormat,
+        );
 
-    setHistoryItems((prev) => [newHistoryItem, ...prev]);
-    setPage(1);
+      setHistoryItems((prev) => [newHistoryItem, ...prev]);
+      setPage(1);
 
-    showToast(
-      `${financialReportType} export started for ${financialDateRangeLabel} in ${financialFormat} format.`,
-    );
+      showToast(
+        `${financialReportType} export started for ${financialDateRangeLabel} in ${financialFormat} format.`,
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to export financial report.",
+        "error",
+      );
+    } finally {
+      setIsFinancialExporting(false);
+    }
   };
 
   return (
@@ -196,8 +246,9 @@ function ExportPage() {
               className="export-button"
               type="button"
               onClick={handleExportGeneralData}
+              disabled={isGeneralExporting}
             >
-              Export General Data
+              {isGeneralExporting ? "Exporting..." : "Export General Data"}
             </button>
           </div>
         </SectionCard>
@@ -252,8 +303,9 @@ function ExportPage() {
               className="export-button"
               type="button"
               onClick={handleExportFinancialReport}
+              disabled={isFinancialExporting}
             >
-              Export Financial Report
+              {isFinancialExporting ? "Exporting..." : "Export Financial Report"}
             </button>
           </div>
         </SectionCard>
@@ -292,7 +344,14 @@ function ExportPage() {
         title="Recent Export History"
         description={`Track recently generated reports • ${historyStatusFilter}`}
       >
-        {filteredHistory.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading export history"
+            description="Fetching export history from the admin API."
+          />
+        ) : pageError ? (
+          <EmptyState title="Unable to load export history" description={pageError} />
+        ) : filteredHistory.length === 0 ? (
           <EmptyState
             title="No export history found"
             description="Generated export records will appear here after you run an export."

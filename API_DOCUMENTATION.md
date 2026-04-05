@@ -168,6 +168,17 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | GET | `/api/admin/boosted-posts` | List operational boosted campaign records |
 | GET | `/api/admin/boosted-posts/:id` | Get boosted campaign detail |
 | PATCH | `/api/admin/boosted-posts/:id/status` | Update campaign runtime state | `status` (`Active`, `Paused`, `Closed`) |
+|---|---|---|
+| **Dashboard & Analytics** | | |
+| GET | `/api/admin/dashboard` | Get dashboard overview cards and summary | optional query `fromDate`, `toDate` |
+| GET | `/api/admin/analytics` | Get analytics KPI cards and top placement performance | optional query `fromDate`, `toDate` |
+| GET | `/api/admin/revenue` | Get revenue KPI cards and package revenue rows | optional query `fromDate`, `toDate` |
+| GET | `/api/admin/customer-spending` | Get customer spending KPI cards and customer rows | optional query `fromDate`, `toDate` |
+|---|---|---|
+| **Exports** | | |
+| GET | `/api/admin/exports/history` | List export history entries |
+| POST | `/api/admin/exports/general` | Generate a general report export | `module`, optional `fromDate`, `toDate`, `format` |
+| POST | `/api/admin/exports/financial` | Generate a financial report export | `reportType`, optional `fromDate`, `toDate`, `format` |
 
 ### Posts moderation
 

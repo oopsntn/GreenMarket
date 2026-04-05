@@ -24,8 +24,11 @@ const parseCurrencyValue = (value: string) => {
 };
 
 function CustomerSpendingPage() {
-  const summaryCards = customerSpendingService.getCustomerSpendingCards();
-  const rows = customerSpendingService.getCustomerSpendingRows();
+  const [customerSpendingData, setCustomerSpendingData] = useState(
+    customerSpendingService.getEmptyCustomerSpending(),
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
 
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
@@ -34,6 +37,33 @@ function CustomerSpendingPage() {
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
+  const summaryCards = customerSpendingData.summaryCards;
+  const rows = customerSpendingData.rows;
+
+  useEffect(() => {
+    const loadCustomerSpending = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+        const nextCustomerSpending =
+          await customerSpendingService.getCustomerSpendingSummary(
+            fromDate,
+            toDate,
+          );
+        setCustomerSpendingData(nextCustomerSpending);
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load customer spending summary.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadCustomerSpending();
+  }, [fromDate, toDate]);
 
   const filteredRows = useMemo(() => {
     let segmentRows = rows;
@@ -156,23 +186,49 @@ function CustomerSpendingPage() {
         filterSummary={`Current segment: ${customerSegment} • ${dateRangeLabel}`}
       />
 
-      <div className="customer-spending-cards">
-        {summaryCards.map((card) => (
-          <SectionCard key={card.title}>
-            <StatCard
-              title={card.title}
-              value={card.value}
-              subtitle={`${card.note} • ${dateRangeLabel}`}
-            />
-          </SectionCard>
-        ))}
-      </div>
+      {isLoading ? (
+        <SectionCard title="Customer Spending KPIs">
+          <EmptyState
+            title="Loading customer spending"
+            description="Fetching customer spend metrics from the admin API."
+          />
+        </SectionCard>
+      ) : pageError ? (
+        <SectionCard title="Customer Spending KPIs">
+          <EmptyState
+            title="Unable to load customer spending"
+            description={pageError}
+          />
+        </SectionCard>
+      ) : (
+        <div className="customer-spending-cards">
+          {summaryCards.map((card) => (
+            <SectionCard key={card.title}>
+              <StatCard
+                title={card.title}
+                value={card.value}
+                subtitle={`${card.note} • ${dateRangeLabel}`}
+              />
+            </SectionCard>
+          ))}
+        </div>
+      )}
 
       <SectionCard
         title="Top Customer Spending"
         description={`${dateRangeLabel} • ${customerSegment}`}
       >
-        {filteredRows.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading customer rows"
+            description="Fetching customer spend rows from the admin API."
+          />
+        ) : pageError ? (
+          <EmptyState
+            title="Unable to load customer spending rows"
+            description={pageError}
+          />
+        ) : filteredRows.length === 0 ? (
           <EmptyState
             title="No customer spending data found"
             description="No customer records match the current segment filter."
