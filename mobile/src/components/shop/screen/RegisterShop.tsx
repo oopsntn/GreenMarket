@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { ArrowRight, Camera, CheckCircle, Image as ImageIcon, Store } from 'lucide-react-native'
+import { ArrowRight, Camera, CheckCircle, Image as ImageIcon, Play, Plus, Store, User, X } from 'lucide-react-native'
 import * as ImagePicker from 'expo-image-picker'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Input from '../../Reused/Input/Input'
@@ -21,7 +21,12 @@ const RegisterShopScreen = ({ navigation }: any) => {
         shopLogoUrl: '',
         shopCoverUrl: '',
         shopLat: undefined as number | undefined,
-        shopLng: undefined as number | undefined
+        shopLng: undefined as number | undefined,
+        shopEmail: '',
+        shopFacebook: '',
+        shopInstagram: '',
+        shopYoutube: '',
+        shopGalleryImages: [] as string[],
     })
     const [loading, setLoading] = useState(false)
     const [uploadingImage, setUploadingImage] = useState(false)
@@ -32,7 +37,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
         [shop]
     )
 
-    const pickImage = async (field: 'shopLogoUrl' | 'shopCoverUrl') => {
+    const pickImage = async (field: 'shopLogoUrl' | 'shopCoverUrl' | 'shopGalleryImages') => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (!permission.granted) {
             CustomAlert('Notice', 'Please grant photo library access')
@@ -40,8 +45,9 @@ const RegisterShopScreen = ({ navigation }: any) => {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            allowsEditing: true,
+            allowsEditing: field !== 'shopGalleryImages',
             aspect: field === 'shopLogoUrl' ? [1, 1] : [16, 9],
+            selectionLimit: 4,
             quality: 0.7,
         })
 
@@ -50,15 +56,23 @@ const RegisterShopScreen = ({ navigation }: any) => {
         }
 
         try {
-            setUploadingImage(true)
-            const uploadRes = await ProfileService.uploadAvatar(result.assets[0].uri)
-
+            setUploadingImage(true);
+            const uploadRes = await ProfileService.uploadAvatar(result.assets[0].uri);
             if (uploadRes?.urls?.[0]) {
-                setFormData((prev) => ({ ...prev, [field]: uploadRes.urls[0] }))
-                return
+                const newUrl = uploadRes.urls[0];
+                // Xử lý riêng cho Gallery (Push vào mảng)
+                if (field === 'shopGalleryImages') {
+                    setFormData((prev) => ({
+                        ...prev,
+                        shopGalleryImages: [...prev.shopGalleryImages, newUrl].slice(0, 4) // Giới hạn 4 ảnh
+                    }));
+                } else {
+                    // Xử lý cho Logo/Cover (Ghi đè string)
+                    setFormData((prev) => ({ ...prev, [field]: newUrl }));
+                }
+                return;
             }
 
-            throw new Error('Invalid upload response')
         } catch (e) {
             console.error('Error uploading shop image:', e)
             CustomAlert('Upload error', 'Unable to upload the image. Please try again.')
@@ -114,16 +128,29 @@ const RegisterShopScreen = ({ navigation }: any) => {
             return
         }
 
+        const validateSocial = (url: string) => {
+            if (url && !url.startsWith('http')) {
+                return `https://${url}`; // Tự động thêm https nếu user quên
+            }
+            return url;
+        };
         setLoading(true)
         try {
             const cleanData = {
-                ...formData,
                 shopName: formData.shopName.trim(),
                 shopPhone: formData.shopPhone.trim(),
+                shopEmail: formData.shopEmail.trim() || undefined,
                 shopLocation: formData.shopLocation.trim(),
                 shopDescription: formData.shopDescription.trim(),
-                shopLat: String(formData.shopLat),
-                shopLng: String(formData.shopLng),
+                shopLat: formData.shopLat,
+                shopLng: formData.shopLng,
+                shopLogoUrl: formData.shopLogoUrl || undefined,
+                shopCoverUrl: formData.shopCoverUrl || undefined,
+                // Gửi mảng ảnh, BE sẽ tự xử lý join "|"
+                shopGalleryImages: formData.shopGalleryImages,
+                shopFacebook: validateSocial(formData.shopFacebook).trim() || undefined,
+                shopInstagram: validateSocial(formData.shopInstagram).trim() || undefined,
+                shopYoutube: validateSocial(formData.shopYoutube).trim() || undefined,
             }
 
             const res = await ShopService.createShop(cleanData)
@@ -254,6 +281,31 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         </TouchableOpacity>
                     </View>
 
+
+                    {/* Gallery Section */}
+                    <Text style={styles.label}>Shop Gallery (Max 4)</Text>
+                    <View style={styles.galleryContainer}>
+                        {formData.shopGalleryImages.map((url, index) => (
+                            <View key={index} style={styles.galleryItem}>
+                                <Image source={{ uri: url }} style={styles.galleryImage} />
+                                <TouchableOpacity
+                                    style={styles.removeBadge}
+                                    onPress={() => {
+                                        const newGallery = formData.shopGalleryImages.filter((_, i) => i !== index);
+                                        setFormData({ ...formData, shopGalleryImages: newGallery });
+                                    }}
+                                >
+                                    <X size={12} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+                        {formData.shopGalleryImages.length < 4 && (
+                            <TouchableOpacity style={styles.addGalleryBtn} onPress={pickImage.bind(null, 'shopGalleryImages')}>
+                                <Plus size={24} color="#94a3b8" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
                     <Text style={styles.helperText}>
                         {uploadingImage ? 'Uploading image...' : 'Logo and cover image are optional, but recommended to make your shop look more professional.'}
                     </Text>
@@ -289,6 +341,27 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         ) : null}
                     </View>
 
+                    {/* Social Media Section */}
+                    <Text style={styles.label}>Social Media</Text>
+                    <Input
+                        placeholder="Facebook URL"
+                        value={formData.shopFacebook}
+                        onChangeText={(t) => setFormData({ ...formData, shopFacebook: t })}
+                        icon={<User size={18} color="#1877F2" />}
+                    />
+                    <Input
+                        placeholder="Instagram URL"
+                        value={formData.shopInstagram}
+                        onChangeText={(t) => setFormData({ ...formData, shopInstagram: t })}
+                        icon={<Camera size={18} color="#E4405F" />}
+                    />
+                    <Input
+                        placeholder="Youtube URL"
+                        value={formData.shopYoutube}
+                        onChangeText={(t) => setFormData({ ...formData, shopYoutube: t })}
+                        icon={<Play size={18} color="#E4405F" />}
+                    />
+
                     <Button
                         onPress={handleSubmit}
                         loading={loading || uploadingImage}
@@ -305,6 +378,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
 }
 
 const styles = StyleSheet.create({
+    label: { fontSize: 14, fontWeight: '600', color: '#334155', marginBottom: 8, marginTop: 16 },
     container: { padding: 20 },
     header: { alignItems: 'center', marginVertical: 30 },
     title: { fontSize: 24, fontWeight: '800', color: '#1e293b', marginTop: 12 },
@@ -326,7 +400,12 @@ const styles = StyleSheet.create({
     successCard: { backgroundColor: '#fff', padding: 32, borderRadius: 32, alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20 },
     iconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#d1fae5', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
     successTitle: { fontSize: 22, fontWeight: '800', color: '#064e3b', marginBottom: 12, textAlign: 'center' },
-    successDesc: { textAlign: 'center', color: '#6b7280', lineHeight: 20, marginBottom: 24 }
+    successDesc: { textAlign: 'center', color: '#6b7280', lineHeight: 20, marginBottom: 24 },
+    galleryContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+    galleryItem: { width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' },
+    galleryImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+    removeBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, padding: 2 },
+    addGalleryBtn: { width: '48%', aspectRatio: 1, borderRadius: 12, borderWidth: 2, borderColor: '#cbd5e1', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
 })
 
 export default RegisterShopScreen
