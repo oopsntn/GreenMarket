@@ -95,7 +95,8 @@
 }
 
 .analytics-daily-chart-wrapper {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding-bottom: 2px;
 }
 

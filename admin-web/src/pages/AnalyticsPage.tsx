@@ -203,6 +203,12 @@ function AnalyticsPage() {
     ),
     1,
   );
+  const maxBarsPerDay = Math.max(
+    ...chartTrafficPoints.map((point) => point.slots.length),
+    1,
+  );
+  const chartDayMinWidth = maxBarsPerDay > 1 ? 72 : 46;
+  const chartMinWidth = chartTrafficPoints.length * chartDayMinWidth + 48;
 
   const totalRevenue = placementChartRows.reduce(
     (total, item) => total + item.revenue,
@@ -388,7 +394,10 @@ function AnalyticsPage() {
               </p>
 
               <div className="analytics-daily-chart-wrapper">
-                <div className="analytics-daily-chart">
+                <div
+                  className="analytics-daily-chart"
+                  style={{ minWidth: `${chartMinWidth}px` }}
+                >
                   <div className="analytics-daily-chart__scale">
                     <span>{formatCompactMetric(maxDailyTraffic)}</span>
                     <span>{formatCompactMetric(maxDailyTraffic / 2)}</span>
@@ -408,7 +417,7 @@ function AnalyticsPage() {
                     <div
                       className="analytics-daily-chart__groups"
                       style={{
-                        gridTemplateColumns: `repeat(${Math.max(chartTrafficPoints.length, 1)}, minmax(0, 1fr))`,
+                        gridTemplateColumns: `repeat(${Math.max(chartTrafficPoints.length, 1)}, minmax(${chartDayMinWidth}px, 1fr))`,
                       }}
                     >
                       {chartTrafficPoints.map((point) => (
