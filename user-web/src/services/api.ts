@@ -110,4 +110,8 @@ export const uploadImages = (files: File[]) => {
   });
 };
 
+export const checkIsSaved = (postId: number | string) => api.get(`/posts/${postId}/favorite`);
+export const toggleFavoritePost = (postId: number | string) => api.post(`/posts/${postId}/favorite`);
+export const getFavoritePosts = () => api.get('/profile/favorites');
+
 export default api;
