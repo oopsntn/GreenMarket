@@ -1,12 +1,39 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db";
-import { eq } from "drizzle-orm";
-import { reports, type Report } from "../../models/schema/reports.ts";
+import { desc, eq } from "drizzle-orm";
+import { reports } from "../../models/schema/reports.ts";
+import { users } from "../../models/schema/users.ts";
+import { posts } from "../../models/schema/posts.ts";
+import { shops } from "../../models/schema/shops.ts";
 import { parseId } from "../../utils/parseId";
+
+const reportSelection = {
+    reportId: reports.reportId,
+    reporterId: reports.reporterId,
+    postId: reports.postId,
+    reportShopId: reports.reportShopId,
+    reportReasonCode: reports.reportReasonCode,
+    reportReason: reports.reportReason,
+    reportNote: reports.reportNote,
+    reportStatus: reports.reportStatus,
+    adminNote: reports.adminNote,
+    reportCreatedAt: reports.reportCreatedAt,
+    reportUpdatedAt: reports.reportUpdatedAt,
+    reporterDisplayName: users.userDisplayName,
+    reporterEmail: users.userEmail,
+    postTitle: posts.postTitle,
+    shopName: shops.shopName,
+};
 
 export const getReports = async (req: Request, res: Response): Promise<void> => {
     try {
-        const allReports = await db.select().from(reports);
+        const allReports = await db
+            .select(reportSelection)
+            .from(reports)
+            .leftJoin(users, eq(reports.reporterId, users.userId))
+            .leftJoin(posts, eq(reports.postId, posts.postId))
+            .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
+            .orderBy(desc(reports.reportCreatedAt), desc(reports.reportId));
         res.json(allReports);
     } catch (error) {
         console.error(error);
@@ -22,7 +49,14 @@ export const getReportById = async (req: Request<{ id: string }>, res: Response)
             return;
         }
 
-        const [report] = await db.select().from(reports).where(eq(reports.reportId, idNumber)).limit(1);
+        const [report] = await db
+            .select(reportSelection)
+            .from(reports)
+            .leftJoin(users, eq(reports.reporterId, users.userId))
+            .leftJoin(posts, eq(reports.postId, posts.postId))
+            .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
+            .where(eq(reports.reportId, idNumber))
+            .limit(1);
         if (!report) {
             res.status(404).json({ error: "Report not found" });
             return;
@@ -59,7 +93,16 @@ export const resolveReport = async (req: Request<{ id: string }, {}, { status: s
             return;
         }
 
-        res.json(updatedReport);
+        const [enrichedReport] = await db
+            .select(reportSelection)
+            .from(reports)
+            .leftJoin(users, eq(reports.reporterId, users.userId))
+            .leftJoin(posts, eq(reports.postId, posts.postId))
+            .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
+            .where(eq(reports.reportId, updatedReport.reportId))
+            .limit(1);
+
+        res.json(enrichedReport ?? updatedReport);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

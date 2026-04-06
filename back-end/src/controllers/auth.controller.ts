@@ -1,22 +1,45 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../config/db";
 import {
   admins,
   users,
   adminRoles,
   roles,
+  businessRoles,
 } from "../models/schema";
 import { AdminLoginBody } from "../dtos/admin";
 import { RequestOTPBody, VerifyOTPBody } from "../dtos/otp";
-
 import { verificationService } from "../services/verification.service";
-import { verifications } from "../models/schema/verifications";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
 const ADMIN_WEB_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"];
+
+const buildUserAuthQuery = () =>
+  db
+    .select({
+      id: users.userId,
+      mobile: users.userMobile,
+      name: users.userDisplayName,
+      avatarUrl: users.userAvatarUrl,
+      email: users.userEmail,
+      location: users.userLocation,
+      bio: users.userBio,
+      status: users.userStatus,
+      businessRoleId: businessRoles.businessRoleId,
+      businessRoleCode: businessRoles.businessRoleCode,
+      businessRoleTitle: businessRoles.businessRoleTitle,
+      businessRoleAudienceGroup: businessRoles.businessRoleAudienceGroup,
+      businessRoleAccessScope: businessRoles.businessRoleAccessScope,
+      businessRoleStatus: businessRoles.businessRoleStatus,
+    })
+    .from(users)
+    .leftJoin(
+      businessRoles,
+      eq(users.userBusinessRoleId, businessRoles.businessRoleId),
+    );
 
 // --- Admin ---
 export const adminLogin = async (
@@ -117,10 +140,6 @@ export const userRequestOtp = async (
       return;
     }
 
-    // verifications table handles logging automatically inside service,
-    // but auth controller might still want to track specific login attempts if needed.
-    // However, the service already inserted into 'verifications'.
-
     res.json({ message: sendResult.message });
   } catch (error: any) {
     console.error("[AUTH CONTROLLER] userRequestOtp Error:", error);
@@ -143,22 +162,26 @@ export const userVerifyOtp = async (
       return;
     }
 
-    const verifyResult = await verificationService.verifyOTP(mobile, otp, "phone");
+    const verifyResult = await verificationService.verifyOTP(
+      mobile,
+      otp,
+      "phone",
+    );
 
     if (!verifyResult.success) {
       res.status(401).json({ error: verifyResult.message });
       return;
     }
 
-    let [user] = await db
+    let [existingUser] = await db
       .select()
       .from(users)
       .where(eq(users.userMobile, mobile));
 
     const now = new Date();
 
-    if (!user) {
-      const [newUser] = (await db
+    if (!existingUser) {
+      const [newUser] = await db
         .insert(users)
         .values({
           userMobile: mobile,
@@ -168,18 +191,30 @@ export const userVerifyOtp = async (
           userUpdatedAt: now,
           userLastLoginAt: now,
         })
-        .returning()) as any[];
+        .returning();
 
-      user = newUser;
+      existingUser = newUser;
     } else {
       await db
         .update(users)
-        .set({ userLastLoginAt: now })
-        .where(eq(users.userId, user.userId));
+        .set({
+          userLastLoginAt: now,
+          userUpdatedAt: now,
+        })
+        .where(eq(users.userId, existingUser.userId));
     }
 
+    const [userWithRole] = await buildUserAuthQuery()
+      .where(eq(users.userId, existingUser.userId))
+      .limit(1);
+
     const token = jwt.sign(
-      { id: user.userId, mobile: user.userMobile, role: "user" },
+      {
+        id: existingUser.userId,
+        mobile: existingUser.userMobile,
+        role: "user",
+        businessRoleCode: userWithRole?.businessRoleCode ?? null,
+      },
       JWT_SECRET,
       { expiresIn: "7d" },
     );
@@ -187,10 +222,21 @@ export const userVerifyOtp = async (
     res.json({
       message: "Login successful",
       token,
-      user: {
-        id: user.userId,
-        mobile: user.userMobile,
-        name: user.userDisplayName,
+      user: userWithRole ?? {
+        id: existingUser.userId,
+        mobile: existingUser.userMobile,
+        name: existingUser.userDisplayName,
+        avatarUrl: existingUser.userAvatarUrl,
+        email: existingUser.userEmail,
+        location: existingUser.userLocation,
+        bio: existingUser.userBio,
+        status: existingUser.userStatus,
+        businessRoleId: null,
+        businessRoleCode: null,
+        businessRoleTitle: null,
+        businessRoleAudienceGroup: null,
+        businessRoleAccessScope: null,
+        businessRoleStatus: null,
       },
     });
   } catch (error) {

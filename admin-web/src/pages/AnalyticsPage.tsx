@@ -16,6 +16,35 @@ import "./AnalyticsPage.css";
 
 const PAGE_SIZE = 4;
 
+const chartPalette = ["#216e2a", "#d48b15", "#207298", "#b54676", "#79c768"];
+
+const parseMetricNumber = (value: string) => {
+  const normalized = value.replace(/[^0-9.]/g, "");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatCompactMetric = (value: number) => {
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M`;
+  }
+
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1)}K`;
+  }
+
+  return value.toFixed(0);
+};
+
+const formatChartDateLabel = (value: string) => {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+    });
+};
+
 function AnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState(
     analyticsService.getEmptyAnalytics(),
@@ -32,6 +61,7 @@ function AnalyticsPage() {
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const kpiCards = analyticsData.kpiCards;
   const placementRows = analyticsData.topPlacements;
+  const dailyTraffic = analyticsData.dailyTraffic;
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -71,6 +101,141 @@ function AnalyticsPage() {
       return matchesScope && matchesKeyword;
     });
   }, [metricScope, placementRows, searchKeyword]);
+
+  const placementChartRows = useMemo(() => {
+    const grouped = placementRows.reduce<
+      Record<
+        string,
+        {
+          slot: string;
+          impressions: number;
+          clicks: number;
+          revenue: number;
+        }
+      >
+    >((accumulator, item) => {
+      const existing = accumulator[item.slot] ?? {
+        slot: item.slot,
+        impressions: 0,
+        clicks: 0,
+        revenue: 0,
+      };
+
+      existing.impressions += parseMetricNumber(item.impressions);
+      existing.clicks += parseMetricNumber(item.clicks);
+      existing.revenue += parseMetricNumber(item.revenue);
+
+      accumulator[item.slot] = existing;
+      return accumulator;
+    }, {});
+
+    return Object.values(grouped).sort((left, right) => right.impressions - left.impressions);
+  }, [placementRows]);
+
+  const chartSlots = useMemo(() => {
+    if (metricScope !== "All Placements") {
+      return [metricScope];
+    }
+
+    const slotOrder: string[] = [];
+
+    dailyTraffic.forEach((point) => {
+      point.slots.forEach((slot) => {
+        if (!slotOrder.includes(slot.slot)) {
+          slotOrder.push(slot.slot);
+        }
+      });
+    });
+
+    if (slotOrder.length > 0) {
+      return slotOrder;
+    }
+
+    return placementChartRows.map((item) => item.slot);
+  }, [dailyTraffic, metricScope, placementChartRows]);
+
+  const chartSlotColorMap = useMemo(
+    () =>
+      chartSlots.reduce<Record<string, string>>((accumulator, slot, index) => {
+        accumulator[slot] = chartPalette[index % chartPalette.length];
+        return accumulator;
+      }, {}),
+    [chartSlots],
+  );
+
+  const dailyTrafficPoints = useMemo(() => {
+    return dailyTraffic.map((point) => ({
+      ...point,
+      slots:
+        metricScope === "All Placements"
+          ? point.slots.filter((slot) => chartSlots.includes(slot.slot))
+          : point.slots.filter((slot) => slot.slot === metricScope),
+    }));
+  }, [chartSlots, dailyTraffic, metricScope]);
+
+  const visibleDailyTrafficPoints = useMemo(() => {
+    const nonZeroPoints = dailyTrafficPoints.filter((point) =>
+      point.slots.some((slot) => slot.impressions > 0),
+    );
+
+    return nonZeroPoints.length > 0 ? nonZeroPoints : dailyTrafficPoints;
+  }, [dailyTrafficPoints]);
+
+  const chartTrafficPoints = useMemo(
+    () =>
+      visibleDailyTrafficPoints
+        .map((point) => ({
+          ...point,
+          slots: point.slots
+            .filter((slot) => slot.impressions > 0)
+            .sort(
+              (left, right) =>
+                chartSlots.indexOf(left.slot) - chartSlots.indexOf(right.slot),
+            ),
+        }))
+        .filter((point) => point.slots.length > 0),
+    [chartSlots, visibleDailyTrafficPoints],
+  );
+
+  const maxDailyTraffic = Math.max(
+    ...chartTrafficPoints.flatMap((point) =>
+      point.slots.map((slot) => slot.impressions),
+    ),
+    1,
+  );
+  const maxBarsPerDay = Math.max(
+    ...chartTrafficPoints.map((point) => point.slots.length),
+    1,
+  );
+  const chartDayMinWidth = maxBarsPerDay > 1 ? 72 : 46;
+  const chartMinWidth = chartTrafficPoints.length * chartDayMinWidth + 48;
+
+  const totalRevenue = placementChartRows.reduce(
+    (total, item) => total + item.revenue,
+    0,
+  );
+
+  const donutSegments = placementChartRows.map((item, index) => ({
+    ...item,
+    color: chartPalette[index % chartPalette.length],
+    share: totalRevenue > 0 ? (item.revenue / totalRevenue) * 100 : 0,
+  }));
+
+  const donutBackground =
+    donutSegments.length === 0
+      ? "#dbe8db"
+      : `conic-gradient(${donutSegments
+          .reduce<string[]>((segments, segment, index) => {
+            const previousAngle = donutSegments
+              .slice(0, index)
+              .reduce((sum, current) => sum + current.share, 0);
+            const nextAngle = previousAngle + segment.share;
+            segments.push(
+              `${segment.color} ${(previousAngle * 3.6).toFixed(1)}deg ${(nextAngle * 3.6).toFixed(1)}deg`,
+            );
+            return segments;
+          }, [])
+          .join(", ")})`;
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
 
@@ -201,41 +366,160 @@ function AnalyticsPage() {
           description={`${dateRangeLabel} • ${metricScope}`}
         >
           <div className="analytics-panel__body">
-            <div className="analytics-chart-placeholder">
-              <div className="analytics-bars">
-                <div style={{ height: "42%" }} />
-                <div style={{ height: "58%" }} />
-                <div style={{ height: "48%" }} />
-                <div style={{ height: "72%" }} />
-                <div style={{ height: "68%" }} />
-                <div style={{ height: "84%" }} />
-                <div style={{ height: "76%" }} />
-                <div style={{ height: "88%" }} />
+            <div className="analytics-chart-placeholder analytics-chart-placeholder--bar">
+              <div className="analytics-chart-caption">
+                <span className="analytics-chart-caption__badge">
+                  Impressions
+                </span>
+                <span className="analytics-chart-caption__text">
+                  Compare daily impression volume across placement slots in the selected period.
+                </span>
+              </div>
+
+              <div className="analytics-daily-legend">
+                {chartSlots.map((slot) => (
+                  <div key={slot} className="analytics-daily-legend__item">
+                    <span
+                      className="analytics-daily-legend__dot"
+                      style={{ backgroundColor: chartSlotColorMap[slot] }}
+                    />
+                    <span>{slot}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="analytics-daily-note">
+                Only slots with recorded traffic in the selected date range are plotted here. The Placement Slots
+                screen can still contain additional configured slots that have no traffic yet.
+              </p>
+
+              <div className="analytics-daily-chart-wrapper">
+                <div
+                  className="analytics-daily-chart"
+                  style={{ minWidth: `${chartMinWidth}px` }}
+                >
+                  <div className="analytics-daily-chart__scale">
+                    <span>{formatCompactMetric(maxDailyTraffic)}</span>
+                    <span>{formatCompactMetric(maxDailyTraffic / 2)}</span>
+                    <span>0</span>
+                  </div>
+
+                  <div className="analytics-daily-chart__canvas">
+                    <div className="analytics-daily-chart__grid">
+                      {[0, 1, 2, 3].map((index) => (
+                        <span
+                          key={index}
+                          className="analytics-daily-chart__grid-line"
+                        />
+                      ))}
+                    </div>
+
+                    <div
+                      className="analytics-daily-chart__groups"
+                      style={{
+                        gridTemplateColumns: `repeat(${Math.max(chartTrafficPoints.length, 1)}, minmax(${chartDayMinWidth}px, 1fr))`,
+                      }}
+                    >
+                      {chartTrafficPoints.map((point) => (
+                        <div
+                          key={point.date}
+                          className="analytics-daily-chart__group"
+                        >
+                          {(() => {
+                            const maxImpressionInGroup = Math.max(
+                              ...point.slots.map((slot) => slot.impressions),
+                              0,
+                            );
+                            const maxImpressionIndex = point.slots.findIndex(
+                              (slot) => slot.impressions === maxImpressionInGroup,
+                            );
+                            const barGroupWidth =
+                              point.slots.length === 1 ? "28px" : "58px";
+
+                            return (
+                          <div
+                            className="analytics-daily-chart__bars"
+                            style={{ width: barGroupWidth }}
+                          >
+                            {point.slots.map((slot, slotIndex) => {
+                              const barHeight = Math.max(
+                                28,
+                                (slot.impressions / maxDailyTraffic) * 100,
+                              );
+                              const showBarValue =
+                                slotIndex === maxImpressionIndex;
+
+                              return (
+                                <div
+                                  key={`${point.date}-${slot.slot}`}
+                                  className="analytics-daily-chart__bar-column"
+                                >
+                                  {showBarValue ? (
+                                    <span className="analytics-daily-chart__value">
+                                      {formatCompactMetric(slot.impressions)}
+                                    </span>
+                                  ) : (
+                                    <span className="analytics-daily-chart__value analytics-daily-chart__value--spacer" />
+                                  )}
+                                  <div
+                                    className="analytics-daily-chart__bar"
+                                    style={{
+                                      height: `${barHeight}%`,
+                                      backgroundColor:
+                                        chartSlotColorMap[slot.slot],
+                                    }}
+                                    title={`${slot.slot}: ${slot.impressions.toLocaleString("en-US")} impressions on ${point.date}`}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                            );
+                          })()}
+
+                          <span className="analytics-daily-chart__date">
+                            {formatChartDateLabel(point.date)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </SectionCard>
 
         <SectionCard
-          title="Traffic Sources"
-          description={`${dateRangeLabel} • Distribution`}
+          title="Placement Mix"
+          description={`${dateRangeLabel} • Revenue share by placement`}
         >
           <div className="analytics-panel__body">
             <div className="analytics-donut-placeholder">
-              <div className="analytics-donut" />
+              <div className="analytics-pie-summary">
+                <strong>{formatCompactMetric(totalRevenue)}</strong>
+                <span>Total revenue in the selected period</span>
+              </div>
+
+              <div
+                className="analytics-donut"
+                style={{ background: donutBackground }}
+              />
               <ul className="analytics-legend">
-                <li>
-                  <span className="dot dot--dark" />
-                  Direct
-                </li>
-                <li>
-                  <span className="dot dot--mid" />
-                  Search
-                </li>
-                <li>
-                  <span className="dot dot--light" />
-                  Promotions
-                </li>
+                {donutSegments.map((segment) => (
+                  <li key={segment.slot}>
+                    <span
+                      className="dot"
+                      style={{ backgroundColor: segment.color }}
+                    />
+                    <div className="analytics-legend__content">
+                      <strong>{segment.slot}</strong>
+                      <span>
+                        {segment.share.toFixed(1)}% • {formatCompactMetric(segment.revenue)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

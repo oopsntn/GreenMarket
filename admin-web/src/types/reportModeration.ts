@@ -5,6 +5,10 @@ export type ApiReportModerationResponse = {
   reporterId: number | null;
   postId: number | null;
   reportShopId: number | null;
+  reporterDisplayName?: string | null;
+  reporterEmail?: string | null;
+  postTitle?: string | null;
+  shopName?: string | null;
   reportReasonCode: string | null;
   reportReason: string;
   reportNote: string | null;
@@ -17,6 +21,7 @@ export type ApiReportModerationResponse = {
 export type ReportModerationItem = {
   id: number;
   reporterLabel: string;
+  reporterSecondaryLabel: string;
   postLabel: string;
   shopLabel: string;
   reasonCode: string;
