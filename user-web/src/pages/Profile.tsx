@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X } from 'lucide-react';
-import { updateProfile, updateShop, getProfile, uploadImages } from '../services/api';
+import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube } from 'lucide-react';
+import { updateProfile, updateShop, getProfile, uploadImages, requestShopVerificationOTP, verifyShopEmailOTP, addShopPhoneOTP, deleteShopPhone } from '../services/api';
 import clsx from 'clsx';
 import AddressPicker from '../components/AddressPicker';
 
@@ -19,12 +19,23 @@ const Profile: React.FC = () => {
   const [bio, setBio] = useState('');
 
   const [shopName, setShopName] = useState('');
-  const [shopPhone, setShopPhone] = useState('');
+  const [shopPhones, setShopPhones] = useState<string[]>([]);
+  const [shopEmail, setShopEmail] = useState('');
+  const [shopEmailVerified, setShopEmailVerified] = useState(false);
   const [shopLocation, setShopLocation] = useState('');
   const [shopDescription, setShopDescription] = useState('');
   const [shopLat, setShopLat] = useState<number | undefined>();
   const [shopLng, setShopLng] = useState<number | undefined>();
   const [shopGalleryImages, setShopGalleryImages] = useState<string[]>([]);
+
+  const [shopFacebook, setShopFacebook] = useState('');
+  const [shopInstagram, setShopInstagram] = useState('');
+  const [shopYoutube, setShopYoutube] = useState('');
+
+  const [otpModalType, setOtpModalType] = useState<'email' | 'phone' | null>(null);
+  const [otpValue, setOtpValue] = useState('');
+  const [newPhoneValue, setNewPhoneValue] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,11 +58,16 @@ const Profile: React.FC = () => {
 
         if (shop) {
           setShopName(shop.shopName || '');
-          setShopPhone(shop.shopPhone || '');
+          setShopPhones(shop.shopPhone ? shop.shopPhone.split('|') : []);
+          setShopEmail(shop.shopEmail || '');
+          setShopEmailVerified(shop.shopEmailVerified || false);
           setShopLocation(shop.shopLocation || '');
           setShopDescription(shop.shopDescription || '');
           setShopLat(shop.shopLat);
           setShopLng(shop.shopLng);
+          setShopFacebook(shop.shopFacebook || '');
+          setShopInstagram(shop.shopInstagram || '');
+          setShopYoutube(shop.shopYoutube || '');
           setShopGalleryImages(Array.isArray((shop as any).shopGalleryImages) ? (shop as any).shopGalleryImages : []);
         }
       } catch (error) {
@@ -129,12 +145,15 @@ const Profile: React.FC = () => {
         // Update Shop Profile
         await updateShop(shop.shopId, {
           shopName,
-          shopPhone,
+          shopEmail,
           shopLocation,
           shopDescription,
           shopGalleryImages,
           shopLat,
-          shopLng
+          shopLng,
+          shopFacebook,
+          shopInstagram,
+          shopYoutube
         });
 
         // Also update regular profile parts that might be shared (like avatar/email)
@@ -163,6 +182,61 @@ const Profile: React.FC = () => {
       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi cập nhật.' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRequestOTP = async (type: 'email' | 'phone', target: string) => {
+    if (!target) return;
+    setOtpLoading(true);
+    try {
+      await requestShopVerificationOTP({ target, type });
+      setMessage({ type: 'success', text: `Đã gửi OTP đến ${target}` });
+      setOtpModalType(type);
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Không thể gửi OTP' });
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpValue) return;
+    setOtpLoading(true);
+    try {
+      if (otpModalType === 'email') {
+        await verifyShopEmailOTP({ email: shopEmail, otp: otpValue });
+        setMessage({ type: 'success', text: 'Xác thực Email thành công' });
+        setShopEmailVerified(true);
+      } else if (otpModalType === 'phone') {
+        const res = await addShopPhoneOTP({ phone: newPhoneValue, otp: otpValue });
+        setShopPhones(res.data.shopPhone.split('|'));
+        setMessage({ type: 'success', text: 'Thêm số điện thoại thành công' });
+      }
+      setOtpModalType(null);
+      setOtpValue('');
+      setNewPhoneValue('');
+      await refreshShop();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Xác thực thất bại' });
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleDeletePhone = async (phone: string) => {
+    if (confirm(`Bạn có chắc muốn xóa số điện thoại ${phone}?`)) {
+      setSaving(true);
+      try {
+        const res = await deleteShopPhone({ phone });
+        setShopPhones(res.data.shopPhone.split('|'));
+        setMessage({ type: 'success', text: 'Đã xóa số điện thoại' });
+        await refreshShop();
+      } catch (error: any) {
+        setMessage({ type: 'error', text: error.response?.data?.error || 'Không thể xóa số điện thoại' });
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -224,7 +298,7 @@ const Profile: React.FC = () => {
             <h2 className="text-xl font-bold mb-1 line-clamp-1 uppercase tracking-tight">
               {shop ? shopName : (displayName || 'Nghệ nhân')}
             </h2>
-            <p className="text-slate-400 text-sm mb-6">{shop ? shopPhone : mobile}</p>
+            <p className="text-slate-400 text-sm mb-6">{shop ? (shopPhones[0] || 'Chưa cập nhật SĐT') : mobile}</p>
 
             <div className="pt-6 border-t border-white/5 space-y-4">
               <div className="flex justify-between items-center text-xs">
@@ -280,27 +354,16 @@ const Profile: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
-                      {shop ? 'Điện thoại vườn' : 'Số điện thoại'}
+                      {shop ? 'Điện thoại chính' : 'Số điện thoại'}
                     </label>
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
-                      {shop ? (
-                        <input
-                          required
-                          type="text"
-                          className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 text-sm font-medium"
-                          placeholder="Số điện thoại liên hệ vườn..."
-                          value={shopPhone}
-                          onChange={(e) => setShopPhone(e.target.value)}
-                        />
-                      ) : (
-                        <input
-                          disabled
-                          type="text"
-                          className="w-full bg-white/5 border border-white/5 pl-12 pr-4 py-3.5 rounded-2xl text-slate-500 cursor-not-allowed opacity-60 text-sm font-medium"
-                          value={mobile}
-                        />
-                      )}
+                      <input
+                        disabled
+                        type="text"
+                        className="w-full bg-white/5 border border-white/5 pl-12 pr-4 py-3.5 rounded-2xl text-slate-500 cursor-not-allowed opacity-60 text-sm font-medium"
+                        value={shop ? (shopPhones[0] || mobile) : mobile}
+                      />
                     </div>
                   </div>
 
@@ -367,7 +430,7 @@ const Profile: React.FC = () => {
               {shop && (
                 <div className="space-y-4">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
-                    Anh nha vuon (toi da 4 anh)
+                    Ảnh nhà vườn (tối đa 4 ảnh)
                   </label>
 
                   {shopGalleryImages.length > 0 ? (
@@ -376,14 +439,14 @@ const Profile: React.FC = () => {
                         <div key={`${imageUrl}-${index}`} className="relative rounded-2xl overflow-hidden border border-white/10 bg-surface aspect-square">
                           <img
                             src={toMediaUrl(imageUrl)}
-                            alt={`Anh nha vuon ${index + 1}`}
+                            alt={`Ảnh nhà vườn ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
                           <button
                             type="button"
                             onClick={() => removeShopGalleryImage(index)}
                             className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 border border-white/20 text-white flex items-center justify-center hover:bg-rose-600 transition-colors"
-                            title="Xoa anh"
+                            title="Xóa ảnh"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -392,7 +455,7 @@ const Profile: React.FC = () => {
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-dashed border-white/10 p-4 text-xs text-slate-500">
-                      Chua co anh nha vuon. Tai anh de tang do tin cay khi khach vao trang shop.
+                      Chưa có ảnh nhà vườn. Tải ảnh để tăng độ tin cậy khi khách vào trang shop.
                     </div>
                   )}
 
@@ -408,69 +471,170 @@ const Profile: React.FC = () => {
                     />
                     <div className="flex items-center gap-3 text-sm text-slate-300">
                       <UploadCloud className="w-5 h-5 text-emerald-500" />
-                      <span>{uploadingGallery ? 'Dang tai anh...' : (shopGalleryImages.length >= 4 ? 'Da dat gioi han 4 anh' : 'Bam de tai them anh nha vuon')}</span>
+                      <span>{uploadingGallery ? 'Đang tải ảnh...' : (shopGalleryImages.length >= 4 ? 'Đã đạt giới hạn 4 ảnh' : 'Bấm để tải thêm ảnh nhà vườn')}</span>
                     </div>
                   </div>
                 </div>
               )}
 
-        {/* Expansion Section */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-0.5 flex-1 bg-white/5" />
-            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.2em] whitespace-nowrap">Liên hệ & Giới thiệu</span>
-            <div className="h-0.5 flex-1 bg-white/5" />
-          </div>
+              {/* Expansion Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="h-0.5 flex-1 bg-white/5" />
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.2em] whitespace-nowrap">Liên hệ & Giới thiệu</span>
+                  <div className="h-0.5 flex-1 bg-white/5" />
+                </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Email liên hệ</label>
-            <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
-              <input
-                type="email"
-                className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 text-sm font-medium"
-                placeholder="email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Email liên hệ</label>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <div className="relative group flex-1">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+                      <input
+                        type="email"
+                        className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 text-sm font-medium"
+                        placeholder="email@example.com"
+                        value={shop ? shopEmail : email}
+                        onChange={(e) => shop ? setShopEmail(e.target.value) : setEmail(e.target.value)}
+                      />
+                    </div>
+                    {shop && (
+                      shopEmailVerified ? (
+                        <div className="px-4 py-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center gap-2">
+                          <Shield className="w-4 h-4" />
+                          <span className="text-sm font-bold">Đã xác minh</span>
+                        </div>
+                      ) : (
+                        <button type="button" onClick={() => handleRequestOTP('email', shopEmail)} disabled={otpLoading || !shopEmail} className="px-4 py-3.5 rounded-2xl bg-surface border border-white/10 hover:border-emerald-500 text-sm font-bold flex justify-center items-center gap-2 transition-all">
+                          {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác thực ngay'}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  {shop && !shopEmailVerified && shopEmail && (
+                    <p className="text-xs text-amber-500 italic mt-1 ml-1 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl inline-block">Email chưa xác thực. OTP sẽ được gửi về email mới.</p>
+                  )}
+                </div>
+
+                {shop && (
+                  <div className="space-y-4">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Số điện thoại liên hệ ({shopPhones.length}/3)</label>
+                    <div className="space-y-2">
+                      {shopPhones.map((phone, idx) => (
+                        <div key={phone + idx} className="flex items-center gap-3">
+                          <div className="relative flex-1">
+                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                            <input disabled type="text" className="w-full bg-white/5 border border-white/5 pl-12 pr-4 py-3.5 rounded-2xl text-slate-300 opacity-80 text-sm font-medium" value={phone} />
+                          </div>
+                          {shopPhones.length > 1 && (
+                            <button type="button" onClick={() => handleDeletePhone(phone)} className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {shopPhones.length < 3 && (
+                      <button type="button" onClick={() => setOtpModalType('phone')} className="flex w-fit items-center gap-2 px-4 py-2 mt-2 text-sm text-emerald-500 font-bold hover:bg-emerald-500/10 rounded-xl transition-all">
+                        <Plus className="w-4 h-4" /> Thêm số điện thoại mới
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {shop && (
+                  <div className="space-y-4 pt-4 border-t border-white/5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Kênh mạng xã hội (Tùy chọn)</label>
+
+                    <div className="relative group">
+                      <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 focus-within:text-[#1877F2]" />
+                      <input type="url" placeholder="Link Facebook" className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl text-sm" value={shopFacebook} onChange={e => setShopFacebook(e.target.value)} />
+                    </div>
+                    <div className="relative group">
+                      <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 focus-within:text-[#E4405F]" />
+                      <input type="url" placeholder="Link Instagram" className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl text-sm" value={shopInstagram} onChange={e => setShopInstagram(e.target.value)} />
+                    </div>
+                    <div className="relative group">
+                      <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 focus-within:text-[#FF0000]" />
+                      <input type="url" placeholder="Link Youtube" className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl text-sm" value={shopYoutube} onChange={e => setShopYoutube(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
+                    {shop ? 'Mô tả Nhà Vườn' : 'Lời giới thiệu'}
+                  </label>
+                  <textarea
+                    rows={4}
+                    className="w-full bg-surface border border-white/10 px-6 py-4 rounded-3xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 text-sm font-medium leading-relaxed resize-none"
+                    placeholder={shop ? 'Giới thiệu về kinh nghiệm, các loại cây thế mạnh của vườn...' : 'Mô tả kỹ năng chăm sóc cây, kinh nghiệm làm vườn của bạn...'}
+                    value={shop ? shopDescription : bio}
+                    onChange={(e) => shop ? setShopDescription(e.target.value) : setBio(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-white/5">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full sm:w-auto px-12 bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-700 shadow-xl shadow-emerald-900/40 text-white"
+                >
+                  {saving ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5" />
+                      Lưu hồ sơ
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {/* OTP Modal */}
+      {otpModalType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#111] border border-white/10 p-8 rounded-[2rem] w-full max-w-sm relative shadow-2xl slide-in-from-bottom-4">
+            <button onClick={() => setOtpModalType(null)} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-full p-1.5">
+              <X className="w-5 h-5" />
+            </button>
+            <div className="mb-6">
+              <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4 border border-emerald-500/20">
+                <Shield className="w-6 h-6 text-emerald-500" />
+              </div>
+              <h3 className="text-xl font-black">{otpModalType === 'email' ? 'Xác thực Email' : 'Thêm số điện thoại'}</h3>
+              <p className="text-sm text-slate-400 mt-1">Mã xác thực 6 số bảo mật</p>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
-              {shop ? 'Mô tả Nhà Vườn' : 'Lời giới thiệu'}
-            </label>
-            <textarea
-              rows={4}
-              className="w-full bg-surface border border-white/10 px-6 py-4 rounded-3xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 text-sm font-medium leading-relaxed resize-none"
-              placeholder={shop ? 'Giới thiệu về kinh nghiệm, các loại cây thế mạnh của vườn...' : 'Mô tả kỹ năng chăm sóc cây, kinh nghiệm làm vườn của bạn...'}
-              value={shop ? shopDescription : bio}
-              onChange={(e) => shop ? setShopDescription(e.target.value) : setBio(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="pt-6 border-t border-white/5">
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full sm:w-auto px-12 bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-700 shadow-xl shadow-emerald-900/40 text-white"
-          >
-            {saving ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <>
-                <Save className="w-5 h-5" />
-                Lưu hồ sơ
-              </>
+            {otpModalType === 'phone' && (
+              <div className="mb-5 bg-white/5 p-4 rounded-2xl border border-white/10">
+                <label className="text-[10px] uppercase font-bold text-slate-500 tracking-widest block mb-2">Số điện thoại mới</label>
+                <input type="text" className="w-full bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-sm focus:border-emerald-500 outline-none transition-colors" placeholder="09xxxx..." value={newPhoneValue} onChange={e => setNewPhoneValue(e.target.value)} />
+                <button type="button" onClick={() => handleRequestOTP('phone', newPhoneValue)} disabled={!newPhoneValue || otpLoading} className="mt-3 w-full py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-bold hover:bg-white/10 transition-colors flex justify-center items-center gap-2">
+                  {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Gửi mã OTP'}
+                </button>
+              </div>
             )}
-          </button>
+
+            <form onSubmit={handleVerifyOTP}>
+              <div className="mb-6">
+                <label className="text-[10px] uppercase font-bold text-slate-500 tracking-widest block mb-2">Mã xác thực (OTP)</label>
+                <input required type="text" className="w-full bg-black/40 border border-emerald-500/30 px-4 py-4 rounded-2xl text-center text-3xl font-mono tracking-[0.3em] focus:border-emerald-500 outline-none transition-all placeholder:text-slate-700" placeholder="------" maxLength={6} value={otpValue} onChange={e => setOtpValue(e.target.value.replace(/\D/g, ''))} />
+              </div>
+
+              <button type="submit" disabled={otpValue.length < 6 || otpLoading} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded-2xl font-bold flex justify-center items-center gap-2 transition-all active:scale-95 text-white shadow-xl shadow-emerald-900/20">
+                {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Xác nhận ngay'}
+              </button>
+            </form>
+          </div>
         </div>
-      </form>
+      )}
     </div>
-        </div >
-      </div >
-    </div >
   );
 };
 

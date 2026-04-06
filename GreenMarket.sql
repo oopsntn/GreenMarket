@@ -5,6 +5,8 @@
 -- Categories: Cây Cảnh Bonsai, Dụng Cụ Làm Vườn
 -- ============================================================
 
+SET client_encoding = 'UTF8';
+
 -- ============================================================
 -- EXTENSIONS
 -- ============================================================
@@ -528,7 +530,7 @@ CREATE INDEX idx_admins_username ON admins(admin_username);
 CREATE INDEX idx_admins_status ON admins(admin_status);
 
 -- Shops
-CREATE INDEX idx_shops_owner ON shops(shop_owner_id);
+CREATE INDEX idx_shops_owner ON shops(shop_id);
 CREATE INDEX idx_shops_status ON shops(shop_status);
 
 -- Categories
@@ -636,6 +638,9 @@ INSERT INTO shops (shop_id, shop_name, shop_phone, shop_location, shop_descripti
 (4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
     'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', 10.2350, 106.1511),
+(2, 'Bonsai Trần Gia', '0982703398', 'Nam Trực, Nam Định',
+    'Vườn lan và bonsai nghệ thuật. Chuyên dòng tùng la hán và sanh cổ. Hỗ trợ kỹ thuật chăm sóc trọn đời.',
+    'http://localhost:5000/uploads/shop/tran-gia-bonsai.jpg', 'active', 20.2506, 106.2355),
 (6, 'Dụng Cụ Bonsai Pro', '0935112233', 'Đông Anh, Hà Nội',
     'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
     'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', 21.1395, 105.8544);
@@ -922,9 +927,9 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('contact_phone', '1900-xxxx', 1);
 
 -- OTP Requests (Sample)
-INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_expire_at, otp_request_status) VALUES
-('0978195419', '123456', now() + interval '10 minutes', 'verified'),
-('0982703398', '654321', now() + interval '10 minutes', 'pending');
+-- INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_expire_at, otp_request_status) VALUES
+-- ('0978195419', '123456', now() + interval '10 minutes', 'verified'),
+-- ('0982703398', '654321', now() + interval '10 minutes', 'pending');
 
 -- ============================================================
 -- RESET SEQUENCES
@@ -932,10 +937,10 @@ INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
 SELECT setval('admins_admin_id_seq', (SELECT COALESCE(MAX(admin_id), 1) FROM admins));
 SELECT setval('roles_role_id_seq', (SELECT COALESCE(MAX(role_id), 1) FROM roles));
-SELECT setval('otp_requests_otp_request_id_seq', (SELECT COALESCE(MAX(otp_request_id), 1) FROM otp_requests));
+-- SELECT setval('otp_requests_otp_request_id_seq', (SELECT COALESCE(MAX(otp_request_id), 1) FROM otp_requests));
 SELECT setval('categories_category_id_seq', (SELECT COALESCE(MAX(category_id), 1) FROM categories));
 SELECT setval('attributes_attribute_id_seq', (SELECT COALESCE(MAX(attribute_id), 1) FROM attributes));
-SELECT setval('shops_shop_id_seq', (SELECT COALESCE(MAX(shop_id), 1) FROM shops));
+-- SELECT setval('shops_shop_id_seq', (SELECT COALESCE(MAX(shop_id), 1) FROM shops));
 SELECT setval('posts_post_id_seq', (SELECT COALESCE(MAX(post_id), 1) FROM posts));
 SELECT setval('post_images_image_id_seq', (SELECT COALESCE(MAX(image_id), 1) FROM post_images));
 SELECT setval('post_videos_post_video_id_seq', (SELECT COALESCE(MAX(post_video_id), 1) FROM post_videos));

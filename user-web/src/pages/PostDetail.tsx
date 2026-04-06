@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getPostDetail, recordContactClick, submitReport } from '../services/api';
-import { 
+import { getPostDetail, recordContactClick, submitReport, checkIsSaved, toggleFavoritePost } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import {
   Phone, Calendar, ChevronLeft, ChevronRight, 
   Store, ShieldCheck, Share2, Heart, MessageCircle, Info,
   Play, Maximize2, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn
@@ -11,7 +12,9 @@ import ImageModal from '../components/ImageModal';
 const PostDetail: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [post, setPost] = useState<any>(null);
+    const [isSaved, setIsSaved] = useState(false);
     const [loading, setLoading] = useState(true);
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [contactRevealed, setContactRevealed] = useState(false);
@@ -41,12 +44,38 @@ const PostDetail: React.FC = () => {
         }
     };
 
+    const handleToggleSave = async () => {
+        if (!user) {
+            alert('Vui lòng đăng nhập để lưu bài.');
+            navigate('/auth');
+            return;
+        }
+        if (!post?.postId) return;
+        try {
+            const res = await toggleFavoritePost(post.postId);
+            setIsSaved(res.data.isSaved);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     useEffect(() => {
         const fetchDetail = async () => {
             if (!slug) return;
             try {
                 const response = await getPostDetail(slug);
                 setPost(response.data);
+                
+                // Fetch save status if user is logged in
+                if (response.data?.postId) {
+                    try {
+                        // Assuming auth token is implicitly attached if logged in
+                        const savedRes = await checkIsSaved(response.data.postId);
+                        setIsSaved(savedRes.data.isSaved);
+                    } catch (e) {
+                        console.error('Failed to check save status:', e);
+                    }
+                }
             } catch (error) {
                 console.error("Failed to fetch post detail:", error);
             } finally {
@@ -102,8 +131,12 @@ const PostDetail: React.FC = () => {
                         <button className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all">
                             <Share2 className="w-5 h-5" />
                         </button>
-                        <button className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-500 transition-all">
-                            <Heart className="w-5 h-5" />
+                        <button 
+                            onClick={handleToggleSave}
+                            className={`p-2.5 rounded-xl transition-all ${isSaved ? 'bg-rose-500/10 text-rose-500' : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-500'}`}
+                            title={isSaved ? "Bỏ lưu bài" : "Lưu bài"}
+                        >
+                            <Heart className={`w-5 h-5 ${isSaved ? 'fill-rose-500' : ''}`} />
                         </button>
                         <button
                             onClick={handleReport}

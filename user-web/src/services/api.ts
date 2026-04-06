@@ -49,7 +49,7 @@ export const getMyShop = () => api.get('/shops/my-shop');
 
 export const updateShop = (shopId: number, data: {
   shopName?: string;
-  shopPhone?: string;
+  shopEmail?: string;
   shopLocation?: string;
   shopDescription?: string;
   shopLogoUrl?: string;
@@ -57,7 +57,15 @@ export const updateShop = (shopId: number, data: {
   shopGalleryImages?: string[];
   shopLat?: number;
   shopLng?: number;
+  shopFacebook?: string;
+  shopInstagram?: string;
+  shopYoutube?: string;
 }) => api.patch(`/shops/${shopId}`, data);
+
+export const requestShopVerificationOTP = (data: { target: string; type: 'email' | 'phone' }) => api.post('/shops/verify/request', data);
+export const verifyShopEmailOTP = (data: { email: string; otp: string }) => api.post('/shops/verify/email', data);
+export const addShopPhoneOTP = (data: { phone: string; otp: string }) => api.post('/shops/phones', data);
+export const deleteShopPhone = (data: { phone: string }) => api.delete('/shops/phones', { data });
 
 // Report API
 export const submitReport = (data: { postId: number; reportReason: string; reporterId?: number }) =>
@@ -101,5 +109,9 @@ export const uploadImages = (files: File[]) => {
     headers: { "Content-Type": "multipart/form-data" }
   });
 };
+
+export const checkIsSaved = (postId: number | string) => api.get(`/posts/${postId}/favorite`);
+export const toggleFavoritePost = (postId: number | string) => api.post(`/posts/${postId}/favorite`);
+export const getFavoritePosts = () => api.get('/profile/favorites');
 
 export default api;

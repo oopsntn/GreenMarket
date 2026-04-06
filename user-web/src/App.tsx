@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 import ShopDetail from './pages/ShopDetail';
 import ShopList from './pages/ShopList';
 import PaymentResult from './pages/PaymentResult';
+import SavedPosts from './pages/SavedPosts';
 import ScrollToTop from './components/ScrollToTop';
 
 function App() {
@@ -48,6 +49,11 @@ function App() {
             <Route path="/create-post" element={
               <ProtectedRoute>
                 <CreatePost />
+              </ProtectedRoute>
+            } />
+            <Route path="/saved-posts" element={
+              <ProtectedRoute>
+                <SavedPosts />
               </ProtectedRoute>
             } />
             <Route path="/posts/detail/:slug" element={<PostDetail />} />

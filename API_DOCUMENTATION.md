@@ -34,6 +34,7 @@ It is intended for `mobile` and `admin-web` teams.
 |---|---|---|---|---|
 | GET | `/api/profile` | User token | Get current user profile | none |
 | PATCH | `/api/profile` | User token | Update current user profile | `userDisplayName`, `userAvatarUrl`, `userEmail`, `userLocation`, `userBio` |
+| GET | `/api/profile/favorites` | User token | Get list of favorite posts for the current user | none |
 
 ### Upload
 
@@ -58,6 +59,8 @@ It is intended for `mobile` and `admin-web` teams.
 | POST | `/api/posts/:id/contact-click` | No | Record buyer contact click (analytics counter) | path `id` |
 | POST | `/api/posts` | User token | Create user post | required: `categoryId`, `postTitle` |
 | GET | `/api/posts/my-posts` | User token | Get current user posts | none |
+| GET | `/api/posts/:id/favorite` | User token | Check if a post is favorited by the current user | path `id` |
+| POST | `/api/posts/:id/favorite` | User token | Toggle (add/remove) post from favorites | path `id` |
 | PATCH | `/api/posts/:id` | User token | Update user post | path `id` (post owner only) |
 | DELETE | `/api/posts/:id` | User token | Soft delete user post | path `id` (post owner only) |
 
