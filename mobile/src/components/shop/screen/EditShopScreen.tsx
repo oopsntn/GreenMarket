@@ -82,27 +82,47 @@ const EditShopScreen = ({ route, navigation }: any) => {
     };
 
     const handleUpdate = async () => {
-        if (!formData.shopName) return CustomAlert('Error', 'Shop name is required');
+        const phoneRegex = /^(0|84)(3|5|7|8|9)([0-9]{8})$/
+        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+
+        if (!formData.shopName.trim()) return CustomAlert('Error', 'Shop name is required');
         if (!formData.shopLat || !formData.shopLng) return CustomAlert('Error', 'Please update the shop location');
-        if (formData.shopEmail && !/\S+@\S+\.\S+/.test(formData.shopEmail)) {
-            return CustomAlert('Error', 'Please enter a valid email address');
+
+        if (formData.shopPhone.trim() && !phoneRegex.test(formData.shopPhone.trim())) {
+            return CustomAlert('Error', 'Invalid Vietnamese phone number format');
+        }
+
+        if (formData.shopEmail.trim() && !emailRegex.test(formData.shopEmail.trim())) {
+            return CustomAlert('Error', 'Invalid email address format');
+        }
+
+        const validateSocial = (url: string) => {
+            if (url && !url.startsWith('http')) {
+                return `https://${url}`;
+            }
+            return url;
+        };
+
+        if (uploadingImage) {
+            return CustomAlert('Notice', 'Please wait until image upload is complete');
         }
 
         setLoading(true);
         try {
             const dataToSubmit = {
-                shopName: formData.shopName,
+                shopName: formData.shopName.trim(),
                 shopEmail: formData.shopEmail.trim() || undefined,
-                shopLocation: formData.shopLocation,
-                shopDescription: formData.shopDescription,
+                shopPhone: formData.shopPhone.trim(),
+                shopLocation: formData.shopLocation.trim(),
+                shopDescription: formData.shopDescription.trim(),
                 shopLat: formData.shopLat,
                 shopLng: formData.shopLng,
                 shopLogoUrl: formData.shopLogoUrl || undefined,
                 shopCoverUrl: formData.shopCoverUrl || undefined,
                 shopGalleryImages: formData.shopGalleryImages,
-                shopFacebook: formData.shopFacebook.trim() || undefined,
-                shopInstagram: formData.shopInstagram.trim() || undefined,
-                shopYoutube: formData.shopYoutube.trim() || undefined,
+                shopFacebook: validateSocial(formData.shopFacebook).trim() || undefined,
+                shopInstagram: validateSocial(formData.shopInstagram).trim() || undefined,
+                shopYoutube: validateSocial(formData.shopYoutube).trim() || undefined,
             };
 
             const res = await ShopService.updateShop(shop.shopId, dataToSubmit);
@@ -176,6 +196,21 @@ const EditShopScreen = ({ route, navigation }: any) => {
                 />
 
                 <Input
+                    label="Shop Email"
+                    value={formData.shopEmail}
+                    onChangeText={(txt) => setFormData({ ...formData, shopEmail: txt })}
+                    type="email-address"
+                    placeholder="Example: contact@greenmarket.com"
+                />
+
+                <Input
+                    label="Shop phone"
+                    value={formData.shopPhone}
+                    onChangeText={(txt) => setFormData({ ...formData, shopPhone: txt })}
+                    type="phone-pad"
+                />
+
+                <Input
                     label="Shop description"
                     value={formData.shopDescription}
                     multiline
@@ -215,7 +250,8 @@ const EditShopScreen = ({ route, navigation }: any) => {
 
                 <Button
                     onPress={handleUpdate}
-                    loading={loading}
+                    loading={loading || uploadingImage}
+                    disabled={loading || uploadingImage}
                     style={styles.saveBtn}
                 >
                     Save changes

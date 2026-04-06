@@ -90,13 +90,21 @@ const RegisterShopScreen = ({ navigation }: any) => {
     }
 
     const validateForm = () => {
+        const phoneRegex = /^(0|84)(3|5|7|8|9)([0-9]{8})$/
+        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+
         if (!formData.shopName.trim()) {
             CustomAlert('Error', 'Please enter the shop name')
             return false
         }
 
-        if (formData.shopPhone.trim() && !/^\d{9,11}$/.test(formData.shopPhone.trim())) {
-            CustomAlert('Error', 'The shop phone number must contain 9 to 11 digits')
+        if (formData.shopPhone.trim() && !phoneRegex.test(formData.shopPhone.trim())) {
+            CustomAlert('Error', 'Invalid Vietnamese phone number format')
+            return false
+        }
+
+        if (formData.shopEmail.trim() && !emailRegex.test(formData.shopEmail.trim())) {
+            CustomAlert('Error', 'Invalid email address format')
             return false
         }
 
@@ -309,6 +317,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
                     <Text style={styles.helperText}>
                         {uploadingImage ? 'Uploading image...' : 'Logo and cover image are optional, but recommended to make your shop look more professional.'}
                     </Text>
+
+                    <Input
+                        label="Shop Email"
+                        type="email-address"
+                        value={formData.shopEmail}
+                        onChangeText={(txt) => setFormData({ ...formData, shopEmail: txt })}
+                        placeholder="Example: contact@greenmarket.com"
+                    />
 
                     <Input
                         label="Shop Phone Number"
