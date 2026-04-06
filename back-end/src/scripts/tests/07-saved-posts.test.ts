@@ -105,7 +105,7 @@ async function runSavedPostsTests() {
         // Cleanup Phase
         console.log("Cleaning up Test 07 data...");
         if (testUserId && testPostId) {
-             await db.delete(favoritePosts).where(eq(favoritePosts.postId, testPostId));
+             await db.delete(favoritePosts).where(eq(favoritePosts.favoritePostPostId, testPostId));
         }
         if (testPostId) await db.delete(posts).where(eq(posts.postId, testPostId));
         if (testUserId) await db.delete(users).where(eq(users.userId, testUserId));

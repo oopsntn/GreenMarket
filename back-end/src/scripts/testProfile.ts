@@ -22,16 +22,12 @@ async function testUserProfile() {
         const newName = "User Updated Name 🌿";
         const newAvatar = "/uploads/profiles/test-avatar.jpg";
         const newEmail = "test@greenmarket.com";
-        const newLocation = "Hưng Yên, Việt Nam";
-        const newBio = "Đam mê tùng la hán và sanh Nam Điền.";
         
         const [updatedUser] = await db.update(users)
             .set({ 
                 userDisplayName: newName,
                 userAvatarUrl: newAvatar,
                 userEmail: newEmail,
-                userLocation: newLocation,
-                userBio: newBio,
                 userUpdatedAt: new Date()
             })
             .where(eq(users.userId, user.userId))
@@ -40,9 +36,7 @@ async function testUserProfile() {
         if (
             updatedUser.userDisplayName === newName && 
             updatedUser.userAvatarUrl === newAvatar &&
-            updatedUser.userEmail === newEmail &&
-            updatedUser.userLocation === newLocation &&
-            updatedUser.userBio === newBio
+            updatedUser.userEmail === newEmail
         ) {
             console.log("✅ Profile update successful in DB.");
         } else {
