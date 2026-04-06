@@ -157,15 +157,26 @@ const useCreatePost = () => {
 
         setSubmitting(true)
         try {
-            const uploadedMedia = await postService.uploadMedia(media.map((item) => item.uri))
+            //1. Upload toan bo media len server
+            const mediaUris = media.map((m) => m.uri)
+            const uploadedMedia = await postService.uploadMedia(mediaUris)
             const uploadedUrls = Array.isArray(uploadedMedia?.urls) ? uploadedMedia.urls : []
 
-            if (uploadedUrls.length !== media.length) {
-                throw new Error('Uploaded media count mismatch')
-            }
+            //2. Logic phan loai URL thanh Image va Video
+            const images: string[] = []
+            const videos: string[] = []
 
-            const images = uploadedUrls.filter((_: string, index: number) => media[index]?.type === 'image')
-            const videos = uploadedUrls.filter((_: string, index: number) => media[index]?.type === 'video')
+            uploadedUrls.forEach((url: any) => {
+                const extension = url.split('.').pop()?.toLowerCase()
+                if (extension && ['jpg', 'jpeg', 'png', 'webp'].includes(extension)) {
+                    images.push(url)
+                }
+                if (extension && ['mp4', 'mov', 'm4x', 'avi'].includes(extension)) {
+                    videos.push(url)
+                }
+            })
+
+            //3. Chuan bi Attribute Payload
             const attributePayload = Object.entries(formData.attributes)
                 .filter(([, value]) => value.trim())
                 .map(([attributeId, value]) => ({
@@ -173,6 +184,7 @@ const useCreatePost = () => {
                     value: value.trim(),
                 }))
 
+            //4. Goi API tao Post
             await postService.createPost({
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),

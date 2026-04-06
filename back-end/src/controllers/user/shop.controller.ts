@@ -55,8 +55,8 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        const { 
-            shopName, shopEmail, shopPhone, shopLocation, shopDescription, 
+        const {
+            shopName, shopEmail, shopPhone, shopLocation, shopDescription,
             shopLat, shopLng, shopLogoUrl, shopCoverUrl, shopGalleryImages,
             shopFacebook, shopInstagram, shopYoutube
         } = req.body;
@@ -211,8 +211,8 @@ export const updateShop = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const { 
-            shopName, shopEmail, shopLocation, shopDescription, 
+        const {
+            shopName, shopEmail, shopLocation, shopDescription,
             shopLat, shopLng, shopLogoUrl, shopCoverUrl, shopGalleryImages,
             shopFacebook, shopInstagram, shopYoutube
         } = req.body;
@@ -326,7 +326,7 @@ export const requestVerificationOTP = async (req: AuthRequest, res: Response): P
 
         const expiresIn = type === "email" ? 15 : 5;
         const result = await verificationService.requestOTP(target, type as "email" | "phone", expiresIn);
-        
+
         if (!result.success) {
             res.status(500).json({ error: result.message });
             return;

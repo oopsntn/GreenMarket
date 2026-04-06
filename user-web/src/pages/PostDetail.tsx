@@ -3,9 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getPostDetail, recordContactClick, submitReport, checkIsSaved, toggleFavoritePost } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
-  Phone, Calendar, ChevronLeft, ChevronRight, 
-  Store, ShieldCheck, Share2, Heart, MessageCircle, Info,
-  Play, Maximize2, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn
+    Phone, Calendar, ChevronLeft, ChevronRight,
+    Store, ShieldCheck, Share2, Heart, MessageCircle, Info,
+    Play, Maximize2, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn
 } from 'lucide-react';
 import ImageModal from '../components/ImageModal';
 
@@ -65,7 +65,7 @@ const PostDetail: React.FC = () => {
             try {
                 const response = await getPostDetail(slug);
                 setPost(response.data);
-                
+
                 // Fetch save status if user is logged in
                 if (response.data?.postId) {
                     try {
@@ -131,7 +131,7 @@ const PostDetail: React.FC = () => {
                         <button className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all">
                             <Share2 className="w-5 h-5" />
                         </button>
-                        <button 
+                        <button
                             onClick={handleToggleSave}
                             className={`p-2.5 rounded-xl transition-all ${isSaved ? 'bg-rose-500/10 text-rose-500' : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-500'}`}
                             title={isSaved ? "Bỏ lưu bài" : "Lưu bài"}
@@ -158,8 +158,8 @@ const PostDetail: React.FC = () => {
                             {mediaList.length > 0 ? (
                                 <>
                                     {currentMedia.type === 'image' ? (
-                                        <div 
-                                            className="relative w-full h-full cursor-zoom-in group/main" 
+                                        <div
+                                            className="relative w-full h-full cursor-zoom-in group/main"
                                             onClick={() => {
                                                 const imageIndex = mediaList
                                                     .filter(m => m.type === 'image')
@@ -390,14 +390,14 @@ const PostDetail: React.FC = () => {
                 </div>
             </div>
 
-            <ImageModal 
-                isOpen={previewImageIndex !== null} 
+            <ImageModal
+                isOpen={previewImageIndex !== null}
                 images={mediaList
                     .filter(m => m.type === 'image')
                     .map(m => m.url.startsWith('http') ? m.url : `http://localhost:5000${m.url}`)
                 }
                 initialIndex={previewImageIndex || 0}
-                onClose={() => setPreviewImageIndex(null)} 
+                onClose={() => setPreviewImageIndex(null)}
                 alt={post.postTitle}
             />
         </div>

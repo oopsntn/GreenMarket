@@ -17,8 +17,8 @@ export interface ShopDetail {
     shopDescription?: string;
     shopLogoUrl?: string;
     shopCoverUrl?: string;
-    shopLat?: number | string | null;
-    shopLng?: number | string | null;
+    shopLat?: number;
+    shopLng?: number;
     posts?: ShopPost[];
 }
 
@@ -26,11 +26,18 @@ export interface ShopPayload {
     shopName?: string;
     shopPhone?: string;
     shopLocation?: string;
+    shopEmail?: string;
     shopDescription?: string;
-    shopLat?: string | number | null;
-    shopLng?: string | number | null;
+    shopLat?: number;
+    shopLng?: number;
     shopLogoUrl?: string;
     shopCoverUrl?: string;
+    //Gallery
+    shopGalleryImages?: string[];
+    //Social Media
+    shopFacebook?: string;
+    shopInstagram?: string;
+    shopYoutube?: string;
 }
 
 const normalizeShopCoordinates = (shop: ShopDetail | null) => {
@@ -91,7 +98,12 @@ export const ShopService = {
 
     createShop: async (data: ShopPayload) => {
         try {
-            const res = await api.post('/shops/register', data)
+            const payload = {
+                ...data,
+                shopLat: data.shopLat ? Number(data.shopLat) : undefined,
+                shopLng: data.shopLng ? Number(data.shopLng) : undefined,
+            }
+            const res = await api.post('/shops/register', payload)
             return res.data
         } catch (e) {
             console.error('Error register shop:', e)
@@ -101,11 +113,17 @@ export const ShopService = {
 
     updateShop: async (id: number, data: ShopPayload) => {
         try {
-            const res = await api.patch(`/shops/${id}`, data)
+            const payload = {
+                ...data,
+                shopLat: data.shopLat ? Number(data.shopLat) : undefined,
+                shopLng: data.shopLng ? Number(data.shopLng) : undefined,
+            }
+            const res = await api.patch(`/shops/${id}`, payload)
             return res.data
         } catch (e) {
             console.error('Error updating shop:', e)
             throw e
         }
-    }
+    },
+    
 }
