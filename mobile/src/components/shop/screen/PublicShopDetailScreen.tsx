@@ -46,7 +46,7 @@ const PublicShopDetailScreen = ({ route }: any) => {
                 </View>
             ) : (
                 <FlatList
-                    data={Array.isArray(shop.posts) ? shop.posts : []}
+                    data={Array.isArray(shop.posts) ? shop.posts.filter((p: any) => p.postStatus === 'approved') : []}
                     keyExtractor={(item) => item.postId.toString()}
                     refreshing={loading}
                     onRefresh={fetchShop}
