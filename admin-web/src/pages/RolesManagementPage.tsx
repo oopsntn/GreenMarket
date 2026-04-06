@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
@@ -39,9 +39,9 @@ const capabilityRows = [
 ];
 
 function RolesManagementPage() {
-  const [roles, setRoles] = useState<RoleManagementItem[]>(
-    roleManagementService.getRoles(),
-  );
+  const [roles, setRoles] = useState<RoleManagementItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedRole, setSelectedRole] = useState<RoleManagementItem | null>(
     null,
@@ -61,6 +61,33 @@ function RolesManagementPage() {
   const removeToast = (id: number) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
+
+  const loadRoles = async (showSuccessToast = false) => {
+    try {
+      setIsLoading(true);
+      setError("");
+
+      const data = await roleManagementService.fetchRoles();
+      setRoles(data);
+
+      if (showSuccessToast) {
+        showToast("Marketplace role catalog refreshed successfully.");
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Unable to load marketplace role catalog.";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadRoles();
+  }, []);
 
   const filteredRoles = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -93,7 +120,9 @@ function RolesManagementPage() {
   };
 
   const handleFormChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = event.target;
 
@@ -107,25 +136,49 @@ function RolesManagementPage() {
     );
   };
 
-  const handleSaveRole = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveRole = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!selectedRole || !formData) return;
 
-    const nextRoles = roleManagementService.updateRole(
-      roles,
-      selectedRole.id,
-      formData,
-    );
-    setRoles(nextRoles);
-    closeModal();
-    showToast(`Role definition for ${selectedRole.title} was updated.`);
+    try {
+      const updatedRole = await roleManagementService.updateRole(
+        selectedRole.id,
+        selectedRole,
+        formData,
+      );
+
+      setRoles((prev) =>
+        prev.map((role) => (role.id === updatedRole.id ? updatedRole : role)),
+      );
+
+      closeModal();
+      showToast(`Role definition for ${updatedRole.title} was updated.`);
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Unable to update role.",
+        "error",
+      );
+    }
   };
 
-  const handleResetCatalog = () => {
-    const defaultRoles = roleManagementService.resetRoles();
-    setRoles(defaultRoles);
-    showToast("Marketplace role catalog was restored to the report-aligned defaults.", "info");
+  const handleResetCatalog = async () => {
+    try {
+      setIsLoading(true);
+      const syncedRoles = await roleManagementService.syncDefaultRoles();
+      setRoles(syncedRoles);
+      showToast(
+        "Marketplace role catalog was synced to the report-aligned defaults.",
+        "info",
+      );
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Unable to sync default roles.",
+        "error",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -133,8 +186,8 @@ function RolesManagementPage() {
       <PageHeader
         title="Roles Management"
         description="Admin maintains the official marketplace role catalog used across the GreenMarket system. This screen is about business roles, not admin login accounts."
-        actionLabel="Restore Default Roles"
-        onActionClick={handleResetCatalog}
+        actionLabel="Sync Default Roles"
+        onActionClick={() => void handleResetCatalog()}
       />
 
       <div className="roles-management-summary-grid">
@@ -149,9 +202,9 @@ function RolesManagementPage() {
           subtitle="User-facing roles in the buying and selling flow"
         />
         <StatCard
-          title="Admin Oversight"
-          value="1"
-          subtitle={`Single admin account governs ${operationsRoleCount} internal staff roles`}
+          title="Operations Roles"
+          value={String(operationsRoleCount)}
+          subtitle="Internal execution and oversight roles"
         />
       </div>
 
@@ -161,7 +214,7 @@ function RolesManagementPage() {
         onSearchChange={setSearchKeyword}
         filterSummaryItems={[
           `${filteredRoles.length} roles shown`,
-          "1 admin account",
+          `${roles.filter((role) => role.status === "Active").length} active`,
         ]}
       />
 
@@ -185,7 +238,13 @@ function RolesManagementPage() {
         title="Role Catalog"
         description="Review the business meaning, access scope, and key responsibilities of each system role described in the project report."
       >
-        {filteredRoles.length === 0 ? (
+        {isLoading ? (
+          <div className="roles-management-empty-state">
+            Loading marketplace role catalog...
+          </div>
+        ) : error ? (
+          <EmptyState title="Unable to load roles" description={error} />
+        ) : filteredRoles.length === 0 ? (
           <EmptyState
             title="No roles found"
             description="No role matches the current search keyword."
@@ -207,8 +266,14 @@ function RolesManagementPage() {
 
                 <div className="roles-management-card__meta">
                   <StatusBadge label={role.code} variant="type" />
-                  <StatusBadge label={role.audienceGroup} variant="processing" />
-                  <StatusBadge label={role.status} variant="active" />
+                  <StatusBadge
+                    label={role.audienceGroup}
+                    variant="processing"
+                  />
+                  <StatusBadge
+                    label={role.status}
+                    variant={role.status === "Active" ? "active" : "locked"}
+                  />
                 </div>
 
                 <div className="roles-management-card__details">
@@ -335,9 +400,7 @@ function RolesManagementPage() {
 
             <div className="roles-management-form__grid">
               <div className="roles-management-form__field">
-                <label htmlFor="role-responsibilities">
-                  Responsibilities
-                </label>
+                <label htmlFor="role-responsibilities">Responsibilities</label>
                 <textarea
                   id="role-responsibilities"
                   name="responsibilitiesText"

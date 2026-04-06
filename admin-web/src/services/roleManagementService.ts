@@ -1,15 +1,25 @@
-import { readStoredJson, writeStoredJson } from "../utils/browserStorage";
-import type { RoleFormState, RoleManagementItem } from "../types/roleManagement";
+import { apiClient } from "../lib/apiClient";
+import type {
+  ApiBusinessRoleResponse,
+  RoleFormState,
+  RoleManagementItem,
+} from "../types/roleManagement";
 
-const ROLE_CATALOG_STORAGE_KEY = "adminBusinessRoleCatalog";
-
-const defaultRoles: RoleManagementItem[] = [
+const defaultRoleCatalog: Array<{
+  code: string;
+  title: string;
+  audienceGroup: "Marketplace" | "Operations";
+  accessScope: string;
+  summary: string;
+  responsibilities: string[];
+  capabilities: string[];
+}> = [
   {
-    id: 1,
     code: "USER",
     title: "User",
     audienceGroup: "Marketplace",
-    accessScope: "Browse listings, save favorites, contact sellers, and submit abuse reports.",
+    accessScope:
+      "Browse listings, save favorites, contact sellers, and submit abuse reports.",
     summary:
       "Marketplace customer role used by buyers and visitors who explore ornamental plant listings.",
     responsibilities: [
@@ -22,15 +32,13 @@ const defaultRoles: RoleManagementItem[] = [
       "Report listings",
       "Track personal purchase and contact history",
     ],
-    createdAt: "2026-03-29",
-    status: "Core",
   },
   {
-    id: 2,
     code: "HOST",
     title: "Host",
     audienceGroup: "Marketplace",
-    accessScope: "Operate a plant shop, publish listings, manage profile, and purchase promotion packages.",
+    accessScope:
+      "Operate a plant shop, publish listings, manage profile, and purchase promotion packages.",
     summary:
       "Seller-side business role for shop owners who list ornamental plants and manage promotion packages.",
     responsibilities: [
@@ -43,15 +51,13 @@ const defaultRoles: RoleManagementItem[] = [
       "Purchase promotions",
       "Track shop analytics",
     ],
-    createdAt: "2026-03-29",
-    status: "Core",
   },
   {
-    id: 3,
     code: "COLLABORATOR",
     title: "Collaborator",
     audienceGroup: "Marketplace",
-    accessScope: "Support a host with content preparation, listing updates, and media management.",
+    accessScope:
+      "Support a host with content preparation, listing updates, and media management.",
     summary:
       "Operational support role delegated by a host to help maintain listing quality and shop content.",
     responsibilities: [
@@ -64,15 +70,13 @@ const defaultRoles: RoleManagementItem[] = [
       "Upload media",
       "Review moderation feedback",
     ],
-    createdAt: "2026-03-29",
-    status: "Core",
   },
   {
-    id: 4,
     code: "MANAGER",
     title: "Manager",
     audienceGroup: "Operations",
-    accessScope: "Oversee moderation, promotion follow-up, policy execution, and high-level business review.",
+    accessScope:
+      "Oversee moderation, promotion follow-up, policy execution, and high-level business review.",
     summary:
       "Supervisory role that tracks operational quality, campaign handling, and staff coordination.",
     responsibilities: [
@@ -85,15 +89,13 @@ const defaultRoles: RoleManagementItem[] = [
       "Supervise promotion handling",
       "Access management dashboards",
     ],
-    createdAt: "2026-03-29",
-    status: "Core",
   },
   {
-    id: 5,
     code: "OPERATION_STAFF",
     title: "Operation Staff",
     audienceGroup: "Operations",
-    accessScope: "Execute daily moderation, support promotion reopening, export reports, and handle admin workflows.",
+    accessScope:
+      "Execute daily moderation, support promotion reopening, export reports, and handle admin workflows.",
     summary:
       "Execution-focused staff role that carries out the day-to-day actions delegated by manager or admin.",
     responsibilities: [
@@ -106,10 +108,16 @@ const defaultRoles: RoleManagementItem[] = [
       "Support campaign handling",
       "Generate exports and logs",
     ],
-    createdAt: "2026-03-29",
-    status: "Core",
   },
 ];
+
+const ensureStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
 
 const toMultilineText = (values: string[]) => values.join("\n");
 
@@ -119,20 +127,56 @@ const parseMultilineText = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-export const roleManagementService = {
-  getRoles(): RoleManagementItem[] {
-    return readStoredJson<RoleManagementItem[]>(
-      ROLE_CATALOG_STORAGE_KEY,
-      defaultRoles,
-    );
-  },
+const mapApiStatusToUi = (value: string | null | undefined) =>
+  value?.toLowerCase() === "disabled" ? "Disabled" : "Active";
 
-  getDefaultRoles(): RoleManagementItem[] {
-    return defaultRoles.map((role) => ({
-      ...role,
-      responsibilities: [...role.responsibilities],
-      capabilities: [...role.capabilities],
-    }));
+const mapApiAudienceGroup = (
+  value: string | null | undefined,
+): "Marketplace" | "Operations" => {
+  return value?.toLowerCase() === "operations" ? "Operations" : "Marketplace";
+};
+
+const mapApiRoleToUi = (item: ApiBusinessRoleResponse): RoleManagementItem => ({
+  id: item.businessRoleId,
+  code: item.businessRoleCode,
+  title: item.businessRoleTitle,
+  audienceGroup: mapApiAudienceGroup(item.businessRoleAudienceGroup),
+  accessScope: item.businessRoleAccessScope ?? "",
+  summary: item.businessRoleSummary ?? "",
+  responsibilities: ensureStringArray(item.businessRoleResponsibilities),
+  capabilities: ensureStringArray(item.businessRoleCapabilities),
+  createdAt: item.businessRoleCreatedAt?.slice(0, 10) ?? "",
+  updatedAt: item.businessRoleUpdatedAt?.slice(0, 10) ?? "",
+  status: mapApiStatusToUi(item.businessRoleStatus),
+});
+
+const mapFormToApiPayload = (
+  existingRole: RoleManagementItem,
+  formData: RoleFormState,
+) => ({
+  businessRoleCode: existingRole.code,
+  businessRoleTitle: formData.title.trim(),
+  businessRoleAudienceGroup: formData.audienceGroup,
+  businessRoleAccessScope: formData.accessScope.trim(),
+  businessRoleSummary: formData.summary.trim(),
+  businessRoleResponsibilities: parseMultilineText(
+    formData.responsibilitiesText,
+  ),
+  businessRoleCapabilities: parseMultilineText(formData.capabilitiesText),
+  businessRoleStatus:
+    existingRole.status === "Disabled" ? "disabled" : "active",
+});
+
+export const roleManagementService = {
+  async fetchRoles(): Promise<RoleManagementItem[]> {
+    const data = await apiClient.request<ApiBusinessRoleResponse[]>(
+      "/api/admin/business-roles",
+      {
+        defaultErrorMessage: "Unable to load marketplace role catalog.",
+      },
+    );
+
+    return data.map(mapApiRoleToUi);
   },
 
   mapRoleToForm(role: RoleManagementItem): RoleFormState {
@@ -146,32 +190,96 @@ export const roleManagementService = {
     };
   },
 
-  updateRole(
-    roles: RoleManagementItem[],
+  async updateRole(
     roleId: number,
+    existingRole: RoleManagementItem,
     formData: RoleFormState,
-  ): RoleManagementItem[] {
-    const updatedRoles = roles.map((role) =>
-      role.id === roleId
-        ? {
-            ...role,
-            title: formData.title.trim(),
-            audienceGroup: formData.audienceGroup,
-            accessScope: formData.accessScope.trim(),
-            summary: formData.summary.trim(),
-            responsibilities: parseMultilineText(formData.responsibilitiesText),
-            capabilities: parseMultilineText(formData.capabilitiesText),
-          }
-        : role,
+  ): Promise<RoleManagementItem> {
+    const data = await apiClient.request<ApiBusinessRoleResponse>(
+      `/api/admin/business-roles/${roleId}`,
+      {
+        method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update marketplace role.",
+        body: JSON.stringify(mapFormToApiPayload(existingRole, formData)),
+      },
     );
 
-    writeStoredJson(ROLE_CATALOG_STORAGE_KEY, updatedRoles);
-    return updatedRoles;
+    return mapApiRoleToUi(data);
   },
 
-  resetRoles(): RoleManagementItem[] {
-    const resetRoles = this.getDefaultRoles();
-    writeStoredJson(ROLE_CATALOG_STORAGE_KEY, resetRoles);
-    return resetRoles;
+  async syncDefaultRoles(): Promise<RoleManagementItem[]> {
+    const existingRoles = await this.fetchRoles();
+    const existingByCode = new Map(
+      existingRoles.map((role) => [role.code, role]),
+    );
+
+    await Promise.all(
+      defaultRoleCatalog.map(async (defaultRole) => {
+        const matched = existingByCode.get(defaultRole.code);
+
+        if (matched) {
+          await apiClient.request<ApiBusinessRoleResponse>(
+            `/api/admin/business-roles/${matched.id}`,
+            {
+              method: "PUT",
+              includeJsonContentType: true,
+              defaultErrorMessage: `Unable to sync ${defaultRole.title}.`,
+              body: JSON.stringify({
+                businessRoleCode: defaultRole.code,
+                businessRoleTitle: defaultRole.title,
+                businessRoleAudienceGroup: defaultRole.audienceGroup,
+                businessRoleAccessScope: defaultRole.accessScope,
+                businessRoleSummary: defaultRole.summary,
+                businessRoleResponsibilities: defaultRole.responsibilities,
+                businessRoleCapabilities: defaultRole.capabilities,
+                businessRoleStatus: "active",
+              }),
+            },
+          );
+          return;
+        }
+
+        await apiClient.request<ApiBusinessRoleResponse>(
+          "/api/admin/business-roles",
+          {
+            method: "POST",
+            includeJsonContentType: true,
+            defaultErrorMessage: `Unable to create ${defaultRole.title}.`,
+            body: JSON.stringify({
+              businessRoleCode: defaultRole.code,
+              businessRoleTitle: defaultRole.title,
+              businessRoleAudienceGroup: defaultRole.audienceGroup,
+              businessRoleAccessScope: defaultRole.accessScope,
+              businessRoleSummary: defaultRole.summary,
+              businessRoleResponsibilities: defaultRole.responsibilities,
+              businessRoleCapabilities: defaultRole.capabilities,
+              businessRoleStatus: "active",
+            }),
+          },
+        );
+      }),
+    );
+
+    return this.fetchRoles();
+  },
+
+  async updateRoleStatus(
+    roleId: number,
+    status: RoleManagementItem["status"],
+  ): Promise<RoleManagementItem> {
+    const data = await apiClient.request<ApiBusinessRoleResponse>(
+      `/api/admin/business-roles/${roleId}/status`,
+      {
+        method: "PATCH",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update role status.",
+        body: JSON.stringify({
+          businessRoleStatus: status === "Disabled" ? "disabled" : "active",
+        }),
+      },
+    );
+
+    return mapApiRoleToUi(data);
   },
 };

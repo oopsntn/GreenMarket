@@ -18,7 +18,11 @@ import type {
 } from "../types/user";
 import "./UsersPage.css";
 
-const statusFilterOptions: Array<UserStatus | "All"> = ["All", "Active", "Locked"];
+const statusFilterOptions: Array<UserStatus | "All"> = [
+  "All",
+  "Active",
+  "Locked",
+];
 const profileFilterOptions = [
   "All",
   "Has Email",
@@ -44,10 +48,15 @@ function UsersPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState<AssignableUserRole>("User");
+  const [assignableRoles, setAssignableRoles] = useState<AssignableUserRole[]>([
+    "User",
+  ]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [isRoleSaving, setIsRoleSaving] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [selectedStatusFilter, setSelectedStatusFilter] =
-    useState<UserStatus | "All">("All");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+    UserStatus | "All"
+  >("All");
   const [selectedProfileFilter, setSelectedProfileFilter] =
     useState<ProfileFilterOption>("All");
   const [showFilters, setShowFilters] = useState(false);
@@ -60,8 +69,9 @@ function UsersPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards: UserSummaryCard[] = userService.getSummaryCards(users);
-  const assignableRoles = userService.getAssignableRoles();
-  const usersWithEmailCount = users.filter((user) => user.email !== "No email").length;
+  const usersWithEmailCount = users.filter(
+    (user) => user.email !== "No email",
+  ).length;
   const usersMissingLocationCount = users.filter(
     (user) => user.location === "No location",
   ).length;
@@ -95,8 +105,13 @@ function UsersPage() {
       setIsLoading(true);
       setError("");
 
-      const nextUsers = await userService.fetchUsers();
+      const [nextUsers, nextAssignableRoles] = await Promise.all([
+        userService.fetchUsers(),
+        userService.getAssignableRoles(),
+      ]);
+
       setUsers(nextUsers);
+      setAssignableRoles(nextAssignableRoles);
 
       if (showSuccessToast) {
         showToast("User directory refreshed successfully.");
@@ -141,19 +156,35 @@ function UsersPage() {
     setIsModalOpen(false);
   };
 
-  const handleSaveRoleAssignment = () => {
+  const handleSaveRoleAssignment = async () => {
     if (!selectedUser || selectedUser.role === selectedRole) {
       showToast("This user already has the selected marketplace role.", "info");
       return;
     }
 
-    const updatedUser = userService.assignUserRole(selectedUser, selectedRole);
+    try {
+      setIsRoleSaving(true);
 
-    setUsers((prev) =>
-      prev.map((user) => (user.id === updatedUser.id ? updatedUser : user)),
-    );
-    setSelectedUser(updatedUser);
-    showToast(`${updatedUser.fullName} is now assigned as ${selectedRole}.`);
+      const updatedUser = await userService.assignUserRoleById(
+        selectedUser.id,
+        selectedRole,
+      );
+
+      setUsers((prev) =>
+        prev.map((user) => (user.id === updatedUser.id ? updatedUser : user)),
+      );
+      setSelectedUser(updatedUser);
+      showToast(`${updatedUser.fullName} is now assigned as ${selectedRole}.`);
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Unable to save marketplace role assignment.",
+        "error",
+      );
+    } finally {
+      setIsRoleSaving(false);
+    }
   };
 
   const openConfirmDialog = (userId: number, action: "lock" | "unlock") => {
@@ -223,7 +254,8 @@ function UsersPage() {
       const matchesProfile =
         selectedProfileFilter === "All" ||
         (selectedProfileFilter === "Has Email" && user.email !== "No email") ||
-        (selectedProfileFilter === "Missing Email" && user.email === "No email") ||
+        (selectedProfileFilter === "Missing Email" &&
+          user.email === "No email") ||
         (selectedProfileFilter === "Has Location" &&
           user.location !== "No location") ||
         (selectedProfileFilter === "Missing Location" &&
@@ -359,10 +391,7 @@ function UsersPage() {
         {isLoading ? (
           <div className="users-empty-state">Loading user directory...</div>
         ) : error ? (
-          <EmptyState
-            title="Unable to load users"
-            description={error}
-          />
+          <EmptyState title="Unable to load users" description={error} />
         ) : filteredUsers.length === 0 ? (
           <EmptyState
             title="No users found"
@@ -604,8 +633,9 @@ function UsersPage() {
               <div className="users-modal__section-header">
                 <h4>Role Assignment</h4>
                 <p>
-                  Role catalog is maintained in Roles Management, while user-level
-                  role assignment is handled here in the Users directory.
+                  Role catalog is maintained in Roles Management, while
+                  user-level role assignment is handled here in the Users
+                  directory.
                 </p>
               </div>
 
@@ -621,9 +651,10 @@ function UsersPage() {
                 <button
                   type="button"
                   className="users-role-assignment__submit"
-                  onClick={handleSaveRoleAssignment}
+                  onClick={() => void handleSaveRoleAssignment()}
+                  disabled={isRoleSaving}
                 >
-                  Save Role Assignment
+                  {isRoleSaving ? "Saving..." : "Save Role Assignment"}
                 </button>
               </div>
 
@@ -640,7 +671,9 @@ function UsersPage() {
                   <tbody>
                     {selectedUser.roleAssignments.length === 0 ? (
                       <tr>
-                        <td colSpan={4}>No role assignment history available.</td>
+                        <td colSpan={4}>
+                          No role assignment history available.
+                        </td>
                       </tr>
                     ) : (
                       selectedUser.roleAssignments.map((item) => (

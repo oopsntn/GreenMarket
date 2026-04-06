@@ -1,4 +1,5 @@
 export type RoleAudienceGroup = "Marketplace" | "Operations";
+export type RoleCatalogStatus = "Active" | "Disabled";
 
 export type RoleManagementItem = {
   id: number;
@@ -10,7 +11,8 @@ export type RoleManagementItem = {
   responsibilities: string[];
   capabilities: string[];
   createdAt: string;
-  status: "Core";
+  updatedAt: string;
+  status: RoleCatalogStatus;
 };
 
 export type RoleFormState = {
@@ -20,4 +22,18 @@ export type RoleFormState = {
   summary: string;
   responsibilitiesText: string;
   capabilitiesText: string;
+};
+
+export type ApiBusinessRoleResponse = {
+  businessRoleId: number;
+  businessRoleCode: string;
+  businessRoleTitle: string;
+  businessRoleAudienceGroup: string | null;
+  businessRoleAccessScope: string | null;
+  businessRoleSummary: string | null;
+  businessRoleResponsibilities: unknown;
+  businessRoleCapabilities: unknown;
+  businessRoleStatus: string | null;
+  businessRoleCreatedAt: string | null;
+  businessRoleUpdatedAt: string | null;
 };

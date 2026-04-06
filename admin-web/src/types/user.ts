@@ -7,12 +7,7 @@ export type UserRole =
   | "Collaborator"
   | "Operation Staff";
 
-export type AssignableUserRole =
-  | "User"
-  | "Manager"
-  | "Host"
-  | "Collaborator"
-  | "Operation Staff";
+export type AssignableUserRole = UserRole;
 
 export type RoleAssignmentHistoryItem = {
   id: number;
@@ -42,6 +37,9 @@ export type User = {
   lastLoginAt: string;
   roleAssignments: RoleAssignmentHistoryItem[];
   activityLogs: UserActivityLogItem[];
+  businessRoleId: number | null;
+  businessRoleCode: string | null;
+  businessRoleTitle: string | null;
 };
 
 export type ApiUserResponse = {
@@ -53,10 +51,17 @@ export type ApiUserResponse = {
   userLocation: string | null;
   userBio: string | null;
   userStatus: string | null;
+  userBusinessRoleId: number | null;
   userRegisteredAt: string | null;
   userLastLoginAt: string | null;
   userCreatedAt: string | null;
   userUpdatedAt: string | null;
+  businessRoleId: number | null;
+  businessRoleCode: string | null;
+  businessRoleTitle: string | null;
+  businessRoleAudienceGroup: string | null;
+  businessRoleAccessScope: string | null;
+  businessRoleStatus: string | null;
 };
 
 export type UserFormState = {
