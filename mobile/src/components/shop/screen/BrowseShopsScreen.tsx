@@ -35,6 +35,15 @@ const BrowseShopsScreen = () => {
         fetchShops()
     }, [])
 
+    const handlePress = () => {
+        // Kiểm tra xem có shop nào không và shop đó có posts không
+        if (shops.length > 0 && shops[0].posts && shops[0].posts.length > 0) {
+            navigation.navigate('PostDetail', { slug: shops[0].posts[0].postSlug });
+        } else {
+            console.warn("No posts found!");
+        }
+    }
+
     return (
         <MobileLayout title="Explore Shops" backButton={() => navigation.goBack()}>
             {loading ? (
@@ -48,7 +57,7 @@ const BrowseShopsScreen = () => {
                     onRefresh={() => fetchShops(true)}
                     renderItem={({ item }) => (
                         <TouchableOpacity onPress={() => navigation.navigate('PublicShopDetail', { shopId: item.shopId })}>
-                            <Card style={styles.card}>
+                            <Card onClick={handlePress} style={styles.card}>
                                 <View style={styles.cardRow}>
                                     <View style={styles.logoWrap}>
                                         {item.shopLogoUrl ? (
