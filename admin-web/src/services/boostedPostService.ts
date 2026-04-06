@@ -1,6 +1,7 @@
-import { initialBoostedPosts } from "../mock-data/boostedPosts";
+import { apiClient } from "../lib/apiClient";
 import type {
   BoostedPost,
+  BoostedPostApiResponse,
   BoostedPostDeliveryHealth,
   BoostedPostStatus,
   BoostedPostSummaryCard,
@@ -27,8 +28,10 @@ const countByDeliveryHealth = (
 ) => posts.filter((item) => item.deliveryHealth === health).length;
 
 export const boostedPostService = {
-  getBoostedPosts(): BoostedPost[] {
-    return initialBoostedPosts;
+  async getBoostedPosts(): Promise<BoostedPost[]> {
+    return apiClient.request<BoostedPostApiResponse[]>("/api/admin/boosted-posts", {
+      defaultErrorMessage: "Unable to load boosted posts.",
+    });
   },
 
   getSummaryCards(posts: BoostedPost[]): BoostedPostSummaryCard[] {
@@ -75,13 +78,21 @@ export const boostedPostService = {
     ];
   },
 
-  updateBoostedPostStatus(
+  async updateBoostedPostStatus(
     posts: BoostedPost[],
     postId: number,
     status: BoostedPostStatus,
-  ): BoostedPost[] {
-    return posts.map((item) =>
-      item.id === postId ? { ...item, status } : item,
+  ): Promise<BoostedPost[]> {
+    const updatedPost = await apiClient.request<BoostedPostApiResponse>(
+      `/api/admin/boosted-posts/${postId}/status`,
+      {
+        method: "PATCH",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update boosted campaign status.",
+        body: JSON.stringify({ status }),
+      },
     );
+
+    return posts.map((item) => (item.id === postId ? updatedPost : item));
   },
 };

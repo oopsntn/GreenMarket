@@ -12,3 +12,8 @@ export type RevenueRow = {
   revenue: string;
   growth: string;
 };
+
+export type RevenueApiResponse = {
+  summaryCards: RevenueCard[];
+  rows: RevenueRow[];
+};

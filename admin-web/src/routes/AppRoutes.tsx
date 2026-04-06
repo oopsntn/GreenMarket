@@ -18,9 +18,12 @@ import DashboardPage from "../pages/DashboardPage";
 import ExportPage from "../pages/ExportPage";
 import LoginPage from "../pages/LoginPage";
 import PlacementSlotsPage from "../pages/PlacementSlotsPage";
+import PostsModerationPage from "../pages/PostsModerationPage";
 import PromotionPackagesPage from "../pages/PromotionPackagesPage";
 import PromotionsPage from "../pages/PromotionsPage";
+import ReportsModerationPage from "../pages/ReportsModerationPage";
 import RevenuePage from "../pages/RevenuePage";
+import RolesManagementPage from "../pages/RolesManagementPage";
 import SettingsPage from "../pages/SettingsPage";
 import ShopsPage from "../pages/ShopsPage";
 import TemplateBuilderPage from "../pages/TemplateBuilderPage";
@@ -91,6 +94,33 @@ function AppRoutes() {
 
             <Route element={<ProtectedModuleRoute moduleKey="activityLog" />}>
               <Route path="activity-log" element={<ActivityLogPage />} />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="postsModeration" />}
+            >
+              <Route
+                path="posts-moderation"
+                element={<PostsModerationPage />}
+              />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="reportsModeration" />}
+            >
+              <Route
+                path="reports-moderation"
+                element={<ReportsModerationPage />}
+              />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="rolesManagement" />}
+            >
+              <Route
+                path="roles-management"
+                element={<RolesManagementPage />}
+              />
             </Route>
 
             <Route element={<ProtectedModuleRoute moduleKey="shops" />}>

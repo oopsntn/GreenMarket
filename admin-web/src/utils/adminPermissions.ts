@@ -12,6 +12,9 @@ export type AdminModuleKey =
   | "dashboard"
   | "users"
   | "activityLog"
+  | "postsModeration"
+  | "reportsModeration"
+  | "rolesManagement"
   | "shops"
   | "categories"
   | "attributes"
@@ -39,6 +42,9 @@ const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
   dashboard: ADMIN_PORTAL_ROLE_CODES,
   users: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"],
   activityLog: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"],
+  postsModeration: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"],
+  reportsModeration: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"],
+  rolesManagement: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
   shops: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"],
   categories: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
   attributes: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
@@ -61,6 +67,21 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
   { label: "Dashboard", path: "/dashboard", moduleKey: "dashboard" },
   { label: "Users", path: "/users", moduleKey: "users" },
   { label: "Activity Log", path: "/activity-log", moduleKey: "activityLog" },
+  {
+    label: "Posts Moderation",
+    path: "/posts-moderation",
+    moduleKey: "postsModeration",
+  },
+  {
+    label: "Reports Moderation",
+    path: "/reports-moderation",
+    moduleKey: "reportsModeration",
+  },
+  {
+    label: "Roles Management",
+    path: "/roles-management",
+    moduleKey: "rolesManagement",
+  },
   { label: "Shops", path: "/shops", moduleKey: "shops" },
   { label: "Categories", path: "/categories", moduleKey: "categories" },
   { label: "Attributes", path: "/attributes", moduleKey: "attributes" },

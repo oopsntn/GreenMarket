@@ -7,6 +7,8 @@ import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
+import { attributeService } from "../services/attributeService";
+import { categoryService } from "../services/categoryService";
 import {
   categoryMappingService,
   emptyCategoryMappingForm,
@@ -33,6 +35,10 @@ function CategoryAttributeMappingPage() {
   const [mappings, setMappings] = useState<CategoryMapping[]>(
     categoryMappingService.getMappings(),
   );
+  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [availableAttributes, setAvailableAttributes] = useState<Attribute[]>([]);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
@@ -52,10 +58,41 @@ function CategoryAttributeMappingPage() {
   const [formError, setFormError] = useState("");
   const [previewCategoryId, setPreviewCategoryId] = useState<string>("1");
 
-  const availableCategories: Category[] =
-    categoryMappingService.getAvailableCategories();
-  const availableAttributes: Attribute[] =
-    categoryMappingService.getAvailableAttributes();
+  useEffect(() => {
+    const loadCatalogs = async () => {
+      try {
+        setIsCatalogLoading(true);
+        setPageError("");
+
+        const [categories, attributes] = await Promise.all([
+          categoryService.getCategories(),
+          attributeService.getAttributes(),
+        ]);
+
+        setAvailableCategories(
+          categoryMappingService.getAvailableCategories(categories),
+        );
+        setAvailableAttributes(
+          categoryMappingService.getAvailableAttributes(attributes),
+        );
+        setPreviewCategoryId(
+          String(
+            categoryMappingService.getAvailableCategories(categories)[0]?.id ?? "",
+          ),
+        );
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load category and attribute catalogs.",
+        );
+      } finally {
+        setIsCatalogLoading(false);
+      }
+    };
+
+    void loadCatalogs();
+  }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -148,7 +185,12 @@ function CategoryAttributeMappingPage() {
     try {
       if (modalMode === "add") {
         setMappings((prev) =>
-          categoryMappingService.createMapping(prev, formData),
+          categoryMappingService.createMapping(
+            prev,
+            availableCategories,
+            availableAttributes,
+            formData,
+          ),
         );
         showToast("Mapping added successfully.");
       }
@@ -157,6 +199,8 @@ function CategoryAttributeMappingPage() {
         setMappings((prev) =>
           categoryMappingService.updateMapping(
             prev,
+            availableCategories,
+            availableAttributes,
             selectedMappingId,
             formData,
           ),
@@ -360,7 +404,14 @@ function CategoryAttributeMappingPage() {
         title="Mapping Directory"
         description="Review category-attribute relationships, requirement settings, display order, and status."
       >
-        {filteredMappings.length === 0 ? (
+        {isCatalogLoading ? (
+          <EmptyState
+            title="Loading mapping catalogs"
+            description="Fetching categories and attributes from the admin API."
+          />
+        ) : pageError ? (
+          <EmptyState title="Unable to load mapping catalogs" description={pageError} />
+        ) : filteredMappings.length === 0 ? (
           <EmptyState
             title="No mappings found"
             description="No category-attribute mappings match your current search. Try another keyword or add a new mapping."
@@ -501,7 +552,14 @@ function CategoryAttributeMappingPage() {
             </div>
           </div>
 
-          {previewMappings.length === 0 ? (
+          {isCatalogLoading ? (
+            <EmptyState
+              title="Loading preview catalogs"
+              description="Fetching categories and attributes used by the preview form."
+            />
+          ) : pageError ? (
+            <EmptyState title="Preview unavailable" description={pageError} />
+          ) : previewMappings.length === 0 ? (
             <EmptyState
               title="No active form fields"
               description="This category does not have any active attribute mappings yet. Add or enable a mapping to preview the posting form."
@@ -553,6 +611,7 @@ function CategoryAttributeMappingPage() {
               name="categoryId"
               value={formData.categoryId}
               onChange={handleChange}
+              disabled={isCatalogLoading}
             >
               <option value="">Select category</option>
               {availableCategories.map((category) => (
@@ -570,6 +629,7 @@ function CategoryAttributeMappingPage() {
               name="attributeId"
               value={formData.attributeId}
               onChange={handleChange}
+              disabled={isCatalogLoading}
             >
               <option value="">Select attribute</option>
               {availableAttributes.map((attribute) => (

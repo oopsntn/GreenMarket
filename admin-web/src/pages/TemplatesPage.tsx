@@ -33,6 +33,7 @@ function TemplatesPage() {
   );
   const [formData, setFormData] =
     useState<TemplateFormState>(emptyTemplateForm);
+  const [formError, setFormError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
@@ -70,6 +71,7 @@ function TemplatesPage() {
       ...emptyTemplateForm,
       status: "Active",
     });
+    setFormError("");
     setIsModalOpen(true);
   };
 
@@ -82,6 +84,7 @@ function TemplatesPage() {
       content: template.content,
       status: template.status,
     });
+    setFormError("");
     setIsModalOpen(true);
   };
 
@@ -94,11 +97,13 @@ function TemplatesPage() {
       content: template.content,
       status: template.status,
     });
+    setFormError("");
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setSelectedTemplateId(null);
+    setFormError("");
     setIsModalOpen(false);
   };
 
@@ -129,10 +134,28 @@ function TemplatesPage() {
       ...prev,
       [name]: value,
     }));
+
+    if (formError) {
+      setFormError("");
+    }
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    try {
+      templateService.validateTemplateForm(
+        templates,
+        formData,
+        selectedTemplateId,
+      );
+      setFormError("");
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Failed to validate template.",
+      );
+      return;
+    }
 
     if (modalMode === "add") {
       setTemplates((prev) =>
@@ -449,6 +472,12 @@ function TemplatesPage() {
               rows={5}
             />
           </div>
+
+          {formError ? (
+            <div className="templates-state templates-state--error">
+              {formError}
+            </div>
+          ) : null}
 
           {modalMode === "view" && (
             <div className="templates-modal__field">

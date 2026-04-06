@@ -15,6 +15,15 @@ const formatDate = (value: string | null) => {
   return date.toISOString().slice(0, 10);
 };
 
+const normalizeText = (value: string) => value.trim().toLowerCase();
+
+const normalizeCode = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
 const mapApiTypeToUiType = (value: string | null): AttributeType => {
   switch ((value || "").toLowerCase()) {
     case "number":
@@ -40,10 +49,14 @@ const normalizeOptions = (value: unknown): string[] => {
 };
 
 const parseOptionsText = (value: string): string[] => {
-  return value
+  return Array.from(
+    new Set(
+      value
     .split(",")
     .map((item) => item.trim())
-    .filter((item) => item.length > 0);
+        .filter((item) => item.length > 0),
+    ),
+  );
 };
 
 const mapApiAttributeToUi = (item: AttributeApiResponse): Attribute => {
@@ -69,6 +82,54 @@ export const attributeService = {
     };
   },
 
+  buildCode(name: string, code: string) {
+    return normalizeCode(code || name);
+  },
+
+  validateAttributeForm(
+    attributes: Attribute[],
+    formData: AttributeFormState,
+    selectedAttributeId?: number | null,
+  ) {
+    if (!formData.name.trim()) {
+      throw new Error("Attribute name is required.");
+    }
+
+    const nextCode = this.buildCode(formData.name, formData.code);
+
+    if (!nextCode) {
+      throw new Error("Attribute code could not be generated.");
+    }
+
+    if (formData.type === "Select" && parseOptionsText(formData.optionsText).length === 0) {
+      throw new Error("Options are required for Select type.");
+    }
+
+    const duplicateName = attributes.some((attribute) => {
+      if (selectedAttributeId && attribute.id === selectedAttributeId) {
+        return false;
+      }
+
+      return normalizeText(attribute.name) === normalizeText(formData.name);
+    });
+
+    if (duplicateName) {
+      throw new Error("Another attribute already uses this name.");
+    }
+
+    const duplicateCode = attributes.some((attribute) => {
+      if (selectedAttributeId && attribute.id === selectedAttributeId) {
+        return false;
+      }
+
+      return normalizeText(attribute.code) === normalizeText(nextCode);
+    });
+
+    if (duplicateCode) {
+      throw new Error("Another attribute already uses this code.");
+    }
+  },
+
   async getAttributes(): Promise<Attribute[]> {
     const data = await apiClient.request<AttributeApiResponse[]>(
       "/api/admin/attributes",
@@ -82,10 +143,11 @@ export const attributeService = {
   async createAttribute(formData: AttributeFormState): Promise<Attribute> {
     const options =
       formData.type === "Select" ? parseOptionsText(formData.optionsText) : [];
+    const code = this.buildCode(formData.name, formData.code);
 
     const payload = {
       attributeTitle: formData.name.trim(),
-      attributeCode: formData.code.trim() || undefined,
+      attributeCode: code || undefined,
       attributeDataType: mapUiTypeToApiType(formData.type),
       attributeOptions: formData.type === "Select" ? options : null,
       attributePublished: true,
@@ -111,10 +173,11 @@ export const attributeService = {
   ): Promise<Attribute> {
     const options =
       formData.type === "Select" ? parseOptionsText(formData.optionsText) : [];
+    const code = this.buildCode(formData.name, formData.code);
 
     const payload = {
       attributeTitle: formData.name.trim(),
-      attributeCode: formData.code.trim() || undefined,
+      attributeCode: code || undefined,
       attributeDataType: mapUiTypeToApiType(formData.type),
       attributeOptions: formData.type === "Select" ? options : null,
       attributePublished: currentStatus === "Active",

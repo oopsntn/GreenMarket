@@ -36,6 +36,8 @@ export type Promotion = {
   reopenBlockedReason?: string;
 };
 
+export type PromotionApiResponse = Promotion;
+
 export type PromotionSummaryCard = {
   title: string;
   value: string;

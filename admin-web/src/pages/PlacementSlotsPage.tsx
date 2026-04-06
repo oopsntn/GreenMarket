@@ -39,9 +39,11 @@ const statusFilterOptions: Array<PlacementSlotStatus | "All"> = [
 const PAGE_SIZE = 5;
 
 function PlacementSlotsPage() {
-  const [slots, setSlots] = useState<PlacementSlot[]>(
-    placementSlotService.getPlacementSlots(),
-  );
+  const [slots, setSlots] = useState<PlacementSlot[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedScopeFilter, setSelectedScopeFilter] = useState<
     PlacementSlotScope | "All"
@@ -69,6 +71,27 @@ function PlacementSlotsPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards = placementSlotService.getSummaryCards(slots);
+
+  useEffect(() => {
+    const loadPlacementSlots = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+        const nextSlots = await placementSlotService.getPlacementSlots();
+        setSlots(nextSlots);
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load placement slots.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadPlacementSlots();
+  }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -179,25 +202,27 @@ function PlacementSlotsPage() {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     try {
+      setIsSubmitting(true);
       if (modalMode === "add") {
-        setSlots((prev) =>
-          placementSlotService.createPlacementSlot(prev, formData),
+        const nextSlots = await placementSlotService.createPlacementSlot(
+          slots,
+          formData,
         );
+        setSlots(nextSlots);
         showToast("Placement slot added successfully.");
       }
 
       if (modalMode === "edit" && selectedSlot) {
-        setSlots((prev) =>
-          placementSlotService.updatePlacementSlot(
-            prev,
-            selectedSlot.id,
-            formData,
-          ),
+        const nextSlots = await placementSlotService.updatePlacementSlot(
+          slots,
+          selectedSlot.id,
+          formData,
         );
+        setSlots(nextSlots);
         showToast("Placement slot updated successfully.");
       }
 
@@ -208,6 +233,8 @@ function PlacementSlotsPage() {
           ? error.message
           : "Failed to save placement slot.",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -232,7 +259,7 @@ function PlacementSlotsPage() {
       ? (slots.find((slot) => slot.id === confirmState.slotId) ?? null)
       : null;
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (confirmState.slotId === null || confirmState.action === null) return;
 
     const slotId = confirmState.slotId;
@@ -246,28 +273,38 @@ function PlacementSlotsPage() {
     const nextStatus: PlacementSlotStatus =
       confirmState.action === "disable" ? "Disabled" : "Active";
 
-    setSlots((prev) =>
-      placementSlotService.updatePlacementSlotStatus(prev, slotId, nextStatus),
-    );
-
-    if (selectedSlot?.id === slotId) {
-      setSelectedSlot((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: nextStatus,
-            }
-          : null,
+    try {
+      setIsStatusUpdating(slotId);
+      const nextSlots = await placementSlotService.updatePlacementSlotStatus(
+        slots,
+        slotId,
+        nextStatus,
       );
-    }
+      setSlots(nextSlots);
 
-    if (confirmState.action === "disable") {
-      showToast(`${targetSlot.name} has been disabled successfully.`, "info");
-    } else {
-      showToast(`${targetSlot.name} has been enabled successfully.`);
-    }
+      if (selectedSlot?.id === slotId) {
+        setSelectedSlot(
+          nextSlots.find((item) => item.id === slotId) ?? selectedSlot,
+        );
+      }
 
-    closeConfirmDialog();
+      if (confirmState.action === "disable") {
+        showToast(`${targetSlot.name} has been disabled successfully.`, "info");
+      } else {
+        showToast(`${targetSlot.name} has been enabled successfully.`);
+      }
+
+      closeConfirmDialog();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to update placement slot status.",
+        "error",
+      );
+    } finally {
+      setIsStatusUpdating(null);
+    }
   };
 
   const confirmTitle =
@@ -369,7 +406,14 @@ function PlacementSlotsPage() {
         title="Placement Slot Directory"
         description="Review slot scope, capacity, display rule, priority, and current status."
       >
-        {filteredSlots.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading placement slots"
+            description="Fetching placement slot records from the admin API."
+          />
+        ) : pageError ? (
+          <EmptyState title="Unable to load placement slots" description={pageError} />
+        ) : filteredSlots.length === 0 ? (
           <EmptyState
             title="No placement slots found"
             description="No placement slots match the current search or filter settings."
@@ -435,6 +479,7 @@ function PlacementSlotsPage() {
                               onClick={() =>
                                 openConfirmDialog(slot.id, "disable")
                               }
+                              disabled={isStatusUpdating === slot.id}
                             >
                               Disable
                             </button>
@@ -443,6 +488,7 @@ function PlacementSlotsPage() {
                               type="button"
                               className="placement-slots-actions__enable"
                               onClick={() => openConfirmDialog(slot.id, "enable")}
+                              disabled={isStatusUpdating === slot.id}
                             >
                               Enable
                             </button>
@@ -576,6 +622,7 @@ function PlacementSlotsPage() {
                 type="text"
                 value={formData.name}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 placeholder="Enter slot name"
               />
             </div>
@@ -587,6 +634,7 @@ function PlacementSlotsPage() {
                 name="scope"
                 value={formData.scope}
                 onChange={handleChange}
+                disabled={isSubmitting}
               >
                 <option>Homepage</option>
                 <option>Category</option>
@@ -602,6 +650,7 @@ function PlacementSlotsPage() {
                 type="text"
                 value={formData.positionCode}
                 onChange={handleChange}
+                disabled={isSubmitting}
                 placeholder="Enter unique position code"
               />
             </div>
@@ -615,6 +664,7 @@ function PlacementSlotsPage() {
                 min={1}
                 value={formData.capacity}
                 onChange={handleChange}
+                disabled={isSubmitting}
               />
             </div>
 
@@ -625,6 +675,7 @@ function PlacementSlotsPage() {
                 name="displayRule"
                 value={formData.displayRule}
                 onChange={handleChange}
+                disabled={isSubmitting}
               >
                 <option>Round Robin</option>
                 <option>First Purchased First Served</option>
@@ -642,6 +693,7 @@ function PlacementSlotsPage() {
                 min={1}
                 value={formData.priority}
                 onChange={handleChange}
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -654,6 +706,7 @@ function PlacementSlotsPage() {
               rows={4}
               value={formData.notes}
               onChange={handleChange}
+              disabled={isSubmitting}
               placeholder="Enter operational notes for this slot"
             />
           </div>
@@ -667,12 +720,21 @@ function PlacementSlotsPage() {
               type="button"
               className="placement-slots-modal__close"
               onClick={closeFormModal}
+              disabled={isSubmitting}
             >
               Cancel
             </button>
 
-            <button type="submit" className="placement-slots-modal__submit">
-              {modalMode === "add" ? "Add Slot" : "Save Changes"}
+            <button
+              type="submit"
+              className="placement-slots-modal__submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "Saving..."
+                : modalMode === "add"
+                  ? "Add Slot"
+                  : "Save Changes"}
             </button>
           </div>
         </form>

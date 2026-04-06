@@ -176,6 +176,9 @@ function AttributesPage() {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+      ...(name === "name" && !prev.code.trim()
+        ? { code: attributeService.buildCode(value, "") }
+        : {}),
     }));
 
     if (formError) {
@@ -186,24 +189,14 @@ function AttributesPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!formData.name.trim()) {
-      setFormError("Attribute name is required.");
-      return;
-    }
-
-    if (!formData.type) {
-      setFormError("Attribute type is required.");
-      return;
-    }
-
-    if (formData.type === "Select" && !formData.optionsText.trim()) {
-      setFormError("Options are required for Select type.");
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       setFormError("");
+      attributeService.validateAttributeForm(
+        attributes,
+        formData,
+        selectedAttributeId,
+      );
 
       if (modalMode === "add") {
         const newAttribute = await attributeService.createAttribute(formData);
