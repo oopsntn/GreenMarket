@@ -263,44 +263,40 @@ const MyPosts: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <span className="bg-amber-500/10 text-amber-500 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-amber-500/20"><Clock className="w-3 h-3" /> Chờ duyệt</span>;
+        return <span className="bg-amber-50 text-amber-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-amber-100 shadow-sm"><Clock className="w-3 h-3" /> Chờ duyệt</span>;
       case 'approved':
-        return <span className="bg-emerald-500/10 text-emerald-500 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-emerald-500/20"><CheckCircle2 className="w-3 h-3" /> Đã duyệt</span>;
+        return <span className="bg-emerald-50 text-emerald-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-emerald-100 shadow-sm"><CheckCircle2 className="w-3 h-3" /> Đã duyệt</span>;
       case 'rejected':
-        return <span className="bg-rose-500/10 text-rose-500 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-rose-500/20"><XCircle className="w-3 h-3" /> Bị từ chối</span>;
+        return <span className="bg-rose-50 text-rose-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-rose-100 shadow-sm"><XCircle className="w-3 h-3" /> Bị từ chối</span>;
       default:
-        return <span className="bg-slate-500/10 text-slate-500 text-[10px] px-2 py-1 rounded-full font-bold uppercase border border-slate-500/20">{status}</span>;
+        return <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase border border-slate-200 shadow-sm">{status}</span>;
     }
   };
 
   const filteredPosts = posts.filter(post => {
-    // If shop owner, show ALL posts in the 'shop' view (since old ones are retroactively assigned)
     if (shop) return true;
-
-    // Otherwise follow tab logic
     if (activeTab === 'shop') return post.postShopId !== null;
     return post.postShopId === null;
   });
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse flex flex-col items-center gap-4">
-        <div className="w-12 h-12 bg-emerald-500/20 rounded-full"></div>
-        <div className="text-slate-500 font-medium">Đang tải dữ liệu...</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-12 h-12 text-emerald-600 animate-spin" />
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
-          <h1 className="text-4xl font-black tracking-tight mb-2">Trung tâm quản lý</h1>
-          <p className="text-slate-400">Theo dõi và tối ưu hiệu quả bài đăng của bạn trên GreenMarket.</p>
+          <h1 className="text-4xl font-extrabold tracking-tight mb-2 text-slate-900">Trung tâm quản lý</h1>
+          <p className="text-slate-500 font-medium">Theo dõi và tối ưu hiệu quả bài đăng của bạn trên GreenMarket.</p>
         </div>
         <button
           onClick={() => navigate('/create-post')}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-emerald-900/40"
+          className="bg-emerald-700 hover:bg-emerald-600 text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-2 transition-all active:scale-95 shadow-xl shadow-emerald-200/50"
         >
           <Plus className="w-5 h-5" /> Đăng tin mới
         </button>
@@ -308,19 +304,19 @@ const MyPosts: React.FC = () => {
 
       {/* Tabs Control: Only show if user does NOT have a shop */}
       {!shop && (
-        <div className="flex gap-2 p-1.5 bg-surface/50 rounded-2xl border border-white/5 mb-12 w-fit">
+        <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 mb-12 w-fit shadow-sm">
           <button
             onClick={() => setActiveTab('personal')}
-            className={`px-8 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'personal' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+            className={`px-8 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'personal' ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-200/50' : 'text-slate-500 hover:text-slate-900'}`}
           >
             🏠 Tin Cá Nhân
           </button>
           <button
             onClick={() => setActiveTab('shop')}
-            className={`px-8 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeTab === 'shop' ? 'bg-emerald-500 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+            className={`px-8 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeTab === 'shop' ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-200/50' : 'text-slate-500 hover:text-slate-900'}`}
           >
             🪴 Mở Nhà Vườn
-            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div>
           </button>
         </div>
       )}
@@ -329,10 +325,10 @@ const MyPosts: React.FC = () => {
         {activeTab === 'shop' && (
           <>
             {shop ? (
-              <div className="glass p-8 rounded-4xl border-emerald-500/20 shadow-2xl shadow-emerald-500/5 flex flex-col md:flex-row gap-8 items-center bg-linear-to-br from-surface to-background relative overflow-hidden">
+              <div className="bg-white p-8 rounded-4xl border border-emerald-100 shadow-2xl shadow-emerald-500/5 flex flex-col md:flex-row gap-8 items-center bg-linear-to-br from-white to-slate-50 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-3xl -mr-32 -mt-32"></div>
                 {(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl) ? (
-                  <div className="w-24 h-24 rounded-3xl overflow-hidden border border-emerald-500/20 shrink-0">
+                  <div className="w-24 h-24 rounded-3xl overflow-hidden border border-emerald-100 shrink-0 shadow-sm transition-transform group-hover:scale-105">
                     <img
                       src={toMediaUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl || '')}
                       alt={shop.shopName}
@@ -340,7 +336,7 @@ const MyPosts: React.FC = () => {
                     />
                   </div>
                 ) : (
-                  <div className="w-24 h-24 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500 shrink-0">
+                  <div className="w-24 h-24 bg-emerald-50 rounded-3xl flex items-center justify-center text-emerald-600 shrink-0 border border-emerald-100 shadow-sm">
                     <Store className="w-12 h-12" />
                   </div>
                 )}
@@ -349,32 +345,32 @@ const MyPosts: React.FC = () => {
                   className="flex-1 text-center md:text-left group/shopLink cursor-pointer"
                 >
                   <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                    <h2 className="text-3xl font-black group-hover/shopLink:text-emerald-400 transition-colors">{shop.shopName}</h2>
-                    <span className={shop.shopStatus === 'active' ? "bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-full font-bold uppercase transition-all group-hover/shopLink:bg-emerald-500/30" : "bg-amber-500/20 text-amber-400 text-[10px] px-2 py-1 rounded-full font-bold uppercase"}>
+                    <h2 className="text-3xl font-black text-slate-900 group-hover/shopLink:text-emerald-700 transition-colors uppercase tracking-tight">{shop.shopName}</h2>
+                    <span className={shop.shopStatus === 'active' ? "bg-emerald-50 text-emerald-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border border-emerald-100 shadow-sm transition-all" : "bg-amber-50 text-amber-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase border border-amber-100 shadow-sm"}>
                       {shop.shopStatus === 'active' ? 'Nhà vườn đã xác minh' : 'Đang chờ xác minh'}
                     </span>
                   </div>
-                  <p className="text-slate-400 max-w-xl line-clamp-2 group-hover/shopLink:text-slate-300 transition-colors">{shop.shopDescription || 'Chưa có mô tả nhà vườn.'}</p>
+                  <p className="text-slate-500 font-medium max-w-xl line-clamp-2 transition-colors group-hover/shopLink:text-slate-700">{shop.shopDescription || 'Chưa có mô tả nhà vườn.'}</p>
                 </Link>
                 <div className="flex gap-8">
                   <div className="text-center">
-                    <div className="text-3xl font-black text-emerald-500">0</div>
-                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Lượt xem</div>
+                    <div className="text-3xl font-black text-emerald-600">0</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Lượt xem</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-black text-white">{filteredPosts.length}</div>
-                    <div className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Tin rao</div>
+                    <div className="text-3xl font-black text-slate-900">{filteredPosts.length}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Tin rao</div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="glass p-12 rounded-4xl border-amber-500/20 bg-amber-500/5 text-center">
-                <Store className="w-16 h-16 text-amber-500/30 mx-auto mb-6" />
-                <h2 className="text-2xl font-black mb-4 uppercase">Chưa có Nhà Vườn</h2>
-                <p className="text-slate-400 mb-8 max-w-md mx-auto">Bạn chưa đăng ký hồ sơ Nhà Vườn. Hãy đăng ký ngay để xây dựng thương hiệu cây cảnh chuyên nghiệp!</p>
+              <div className="bg-amber-50/50 p-12 rounded-4xl border border-amber-100 text-center shadow-xl shadow-amber-500/5">
+                <Store className="w-16 h-16 text-amber-400 mx-auto mb-6 opacity-40" />
+                <h2 className="text-2xl font-black mb-4 uppercase text-amber-900 tracking-tight">Chưa có Nhà Vườn</h2>
+                <p className="text-amber-700/70 mb-8 max-w-md mx-auto font-medium">Bạn chưa đăng ký hồ sơ Nhà Vườn. Hãy đăng ký ngay để xây dựng thương hiệu cây cảnh chuyên nghiệp!</p>
                 <button
                   onClick={() => navigate('/register-shop')}
-                  className="bg-amber-500 text-black px-10 py-4 rounded-2xl font-black uppercase text-sm hover:bg-amber-400 transition-all shadow-xl shadow-amber-950/20"
+                  className="bg-amber-600 text-white px-10 py-4 rounded-2xl font-black uppercase text-sm hover:bg-amber-500 transition-all shadow-xl shadow-amber-200/50"
                 >
                   Mở Nhà Vườn Ngay
                 </button>
@@ -385,16 +381,16 @@ const MyPosts: React.FC = () => {
 
         {/* Posts List */}
         <div>
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+          <h2 className="text-2xl font-black mb-6 flex items-center gap-3 text-slate-900 tracking-tight uppercase">
             {activeTab === 'shop' ? 'Sản phẩm tại vườn' : 'Danh sách tin cá nhân'}
-            <span className="text-sm font-normal text-slate-500 bg-white/5 px-3 py-1 rounded-full">{filteredPosts.length} bài</span>
+            <span className="text-sm font-bold text-slate-400 bg-slate-50 border border-slate-100 px-3 py-1 rounded-full shadow-sm">{filteredPosts.length} bài</span>
           </h2>
 
           {filteredPosts.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
               {filteredPosts.map((post) => (
-                <div key={post.postId} className="glass p-4 rounded-3xl border-white/5 hover:border-emerald-500/30 transition-all flex flex-col sm:flex-row items-center gap-6 group">
-                  <div className="w-full sm:w-32 h-32 bg-white/5 rounded-2xl overflow-hidden shrink-0 relative">
+                <div key={post.postId} className="bg-white p-4 rounded-3xl border border-slate-200 hover:border-emerald-500/30 transition-all shadow-sm hover:shadow-xl flex flex-col sm:flex-row items-center gap-6 group">
+                  <div className="w-full sm:w-32 h-32 bg-slate-50 rounded-2xl overflow-hidden shrink-0 relative border border-slate-100">
                     {toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl) ? (
                       <img
                         src={toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl)}
@@ -402,7 +398,7 @@ const MyPosts: React.FC = () => {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-700">
+                      <div className="w-full h-full flex items-center justify-center text-slate-300">
                         <PackageOpen className="w-10 h-10 group-hover:scale-110 transition-transform" />
                       </div>
                     )}
@@ -414,38 +410,38 @@ const MyPosts: React.FC = () => {
                         <img
                           src={getSellerAvatar(post)}
                           alt={getSellerName(post)}
-                          className="w-7 h-7 rounded-full object-cover border border-white/10"
+                          className="w-7 h-7 rounded-full object-cover border border-slate-200"
                         />
                       ) : (
-                        <div className="w-7 h-7 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                          <User className="w-4 h-4 text-slate-500" />
+                        <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
+                          <User className="w-4 h-4 text-slate-400" />
                         </div>
                       )}
-                      <span className="text-xs text-slate-400 font-medium truncate">{getSellerName(post)}</span>
+                      <span className="text-xs text-slate-500 font-bold truncate">{getSellerName(post)}</span>
                     </div>
 
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                      <h3 className="text-base font-bold line-clamp-2 group-hover:text-emerald-400 transition-colors uppercase">{post.postTitle}</h3>
+                      <h3 className="text-base font-black text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors uppercase tracking-tight leading-tight">{post.postTitle}</h3>
                       <div className="flex justify-center sm:justify-start">
                         {getStatusBadge(post.postStatus)}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4 text-xs text-slate-400">
-                      <div className="flex items-center gap-1.5 font-black text-lg text-emerald-500">
+                    <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4 text-xs text-slate-500">
+                      <div className="flex items-center gap-1.5 font-black text-xl text-emerald-600">
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(post.postPrice)}
                       </div>
-                      <div className="flex items-center gap-1.5 text-[10px]">
-                        <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
                         {post.postLocation || 'Chưa cập nhật vị trí'}
                       </div>
-                      <div className="text-[10px] text-slate-600 font-medium">
+                      <div className="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-1 rounded-md border border-slate-200">
                         🕒 {new Date(post.postUpdatedAt).toLocaleDateString('vi-VN')}
                       </div>
                     </div>
 
                     {post.postStatus === 'rejected' && post.postRejectedReason && (activeTab === 'shop' || activeTab === 'personal') && (
-                      <div className="mt-2 p-2 rounded-lg bg-rose-500/5 border border-rose-500/10 text-rose-400 text-xs text-left">
+                      <div className="mt-2 p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-xs text-left font-medium">
                         <strong>Lý do từ chối:</strong> {post.postRejectedReason}
                       </div>
                     )}
@@ -455,21 +451,21 @@ const MyPosts: React.FC = () => {
                     <button
                       title="Xem chi tiết"
                       onClick={() => navigate(`/posts/detail/${post.postSlug}`)}
-                      className="p-3 bg-white/5 rounded-xl text-slate-400 hover:text-white hover:bg-blue-500 transition-all group-hover:translate-x-1"
+                      className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-blue-600 transition-all hover:scale-105 active:scale-95"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </button>
                     <button
                       title="Chỉnh sửa"
                       onClick={() => openEditModal(post)}
-                      className="p-3 bg-white/5 rounded-xl text-slate-400 hover:text-white hover:bg-amber-500 transition-all group-hover:translate-x-1"
+                      className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-amber-500 transition-all hover:scale-105 active:scale-95"
                     >
                       <Edit className="w-5 h-5" />
                     </button>
                     <button
                       title="Xóa bài"
                       onClick={() => handleDelete(post.postId)}
-                      className="p-3 bg-white/5 rounded-xl text-slate-400 hover:text-white hover:bg-rose-500 transition-all group-hover:translate-x-1"
+                      className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-rose-500 transition-all hover:scale-105 active:scale-95"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -477,9 +473,9 @@ const MyPosts: React.FC = () => {
                       <button
                         title="Quảng bá bài viết"
                         onClick={() => openBoostModal(post)}
-                        className="p-3 bg-emerald-500/10 rounded-xl text-emerald-500 hover:text-white hover:bg-emerald-600 transition-all group-hover:translate-x-1 border border-emerald-500/20"
+                        className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 hover:text-white hover:bg-emerald-600 transition-all hover:scale-110 active:scale-95 shadow-sm"
                       >
-                        <Zap className="w-5 h-5 fill-emerald-500 group-hover:fill-white" />
+                        <Zap className="w-5 h-5 fill-emerald-600 group-hover:fill-white" />
                       </button>
                     )}
                   </div>
@@ -487,13 +483,13 @@ const MyPosts: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-24 glass rounded-4xl border-dashed border-white/10">
-              <PackageOpen className="w-16 h-16 text-slate-700 mx-auto mb-6" />
-              <h3 className="text-xl font-bold mb-2">Không tìm thấy bài viết nào</h3>
-              <p className="text-slate-500 mb-8 max-w-xs mx-auto">Hãy bắt đầu rao bán những mẫu cây cảnh tuyệt vời của bạn ngay bây giờ!</p>
+            <div className="text-center py-24 bg-white border border-slate-200 rounded-4xl shadow-sm border-dashed">
+              <PackageOpen className="w-16 h-16 text-slate-200 mx-auto mb-6" />
+              <h3 className="text-xl font-bold mb-2 text-slate-900 tracking-tight uppercase">Không tìm thấy bài viết nào</h3>
+              <p className="text-slate-500 mb-8 max-w-xs mx-auto font-medium">Hãy bắt đầu rao bán những mẫu cây cảnh tuyệt vời của bạn ngay bây giờ!</p>
               <button
                 onClick={() => navigate('/create-post')}
-                className="bg-emerald-600/10 text-emerald-500 px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 hover:text-white transition-all underline decoration-emerald-500/30 underline-offset-8"
+                className="bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200/50"
               >
                 Tạo bài đăng đầu tiên
               </button>
@@ -503,62 +499,62 @@ const MyPosts: React.FC = () => {
       </div>
 
       {boostingPost && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm shadow-2xl flex items-center justify-center z-50 p-4">
-          <div className="bg-surface border border-white/10 p-8 rounded-3xl w-full max-w-3xl shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl -mr-16 -mt-16"></div>
-            <div className="relative z-10 flex items-center justify-between mb-6 gap-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm shadow-2xl flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-slate-200 p-8 rounded-3xl w-full max-w-3xl shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16"></div>
+            <div className="relative z-10 flex items-center justify-between mb-6 gap-4 border-b border-slate-100 pb-4">
               <div>
-                <h2 className="text-2xl font-black tracking-tight text-white">Chọn gói ưu tiên hiển thị</h2>
-                <p className="text-slate-400 text-sm mt-1 line-clamp-1">Bài đăng: {boostingPost.postTitle}</p>
+                <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">Chọn gói ưu tiên hiển thị</h2>
+                <p className="text-slate-500 text-sm mt-1 line-clamp-1 font-bold">Bài đăng: <span className="text-emerald-700">{boostingPost.postTitle}</span></p>
               </div>
               <button
                 onClick={() => setBoostingPost(null)}
-                className="px-4 py-2 rounded-xl font-bold text-slate-400 bg-white/5 hover:bg-white/10 hover:text-white transition-all"
+                className="px-4 py-2 rounded-xl font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-all border border-slate-200"
               >
                 Đóng
               </button>
             </div>
 
             {boostLoading ? (
-              <div className="min-h-[220px] flex flex-col items-center justify-center gap-3 text-slate-400">
-                <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
-                <p>Đang tải gói ưu tiên...</p>
+              <div className="min-h-[220px] flex flex-col items-center justify-center gap-3 text-slate-500">
+                <Loader2 className="w-8 h-8 text-emerald-700 animate-spin" />
+                <p className="font-bold uppercase tracking-widest text-xs">Đang tải gói ưu tiên...</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-bold text-slate-700">
                 {boostPackages.map((pkg) => {
                   const plan = getPlanType(Number(pkg.promotionPackageDurationDays || 0));
                   return (
-                    <div key={pkg.promotionPackageId} className="glass p-5 rounded-2xl border border-white/10 hover:border-emerald-500/30 transition-all flex flex-col">
+                    <div key={pkg.promotionPackageId} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 hover:border-emerald-500/30 transition-all flex flex-col shadow-sm hover:shadow-lg">
                       <div className="mb-4">
-                        <h3 className="text-lg font-black uppercase tracking-tight text-white">{plan.label}</h3>
-                        <p className="text-xs text-slate-400 mt-1">{plan.subtitle}</p>
+                        <h3 className="text-lg font-black uppercase tracking-tight text-emerald-700">{plan.label}</h3>
+                        <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">{plan.subtitle}</p>
                       </div>
 
                       <div className="mb-4">
-                        <div className="text-2xl font-black text-white">
-                          {Number(pkg.promotionPackagePrice).toLocaleString()} <span className="text-sm text-slate-500">VND</span>
+                        <div className="text-2xl font-black text-slate-900">
+                          {Number(pkg.promotionPackagePrice).toLocaleString()} <span className="text-xs text-slate-400">VND</span>
                         </div>
                         <div className="text-xs text-slate-400 mt-1">Thời hạn: {pkg.promotionPackageDurationDays} ngày</div>
                       </div>
 
                       <ul className="space-y-2 mb-5 flex-1">
-                        <li className="flex items-start gap-2 text-xs text-slate-300">
-                          <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <li className="flex items-start gap-2 text-xs text-slate-500">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                           <span>Ưu tiên hiển thị trong {pkg.promotionPackageDurationDays} ngày</span>
                         </li>
-                        <li className="flex items-start gap-2 text-xs text-slate-300">
-                          <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                          <span>Cùng một cơ chế ưu tiên cho mỗi gói</span>
+                        <li className="flex items-start gap-2 text-xs text-slate-500">
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Cơ chế đẩy tin tự động ưu tiên</span>
                         </li>
                       </ul>
 
                       <button
                         disabled={boostBuyingId !== null}
                         onClick={() => handleBuyBoost(pkg.promotionPackageId)}
-                        className="w-full py-3 rounded-xl border font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-all bg-emerald-600 border-emerald-500 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full py-3 rounded-xl border font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all bg-emerald-700 border-emerald-600 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-200/50 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-slate-200 disabled:shadow-none"
                       >
-                        {boostBuyingId === pkg.promotionPackageId ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Mua gói'}
+                        {boostBuyingId === pkg.promotionPackageId ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Mua gói ngay'}
                       </button>
                     </div>
                   );
@@ -571,18 +567,18 @@ const MyPosts: React.FC = () => {
 
       {/* Edit Modal */}
       {editingPost && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm shadow-2xl flex items-center justify-center z-50 p-4">
-          <div className="bg-surface border border-white/10 p-8 rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl relative overflow-x-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl -mr-16 -mt-16"></div>
-            <h2 className="text-2xl font-black mb-6 flex items-center gap-2 tracking-tight text-white">
-              <Store className="w-6 h-6 text-emerald-500" /> Sửa bài đăng
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm shadow-2xl flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-slate-200 p-8 rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl relative overflow-x-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16"></div>
+            <h2 className="text-2xl font-black mb-6 flex items-center gap-2 tracking-tight text-slate-900 uppercase">
+              <Store className="w-6 h-6 text-emerald-700" /> Sửa bài đăng
             </h2>
 
             <form onSubmit={handleEditSubmit} className="relative z-10 space-y-5">
               <div>
-                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Danh mục</label>
+                <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Danh mục</label>
                 <select
-                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
                   value={editCategoryId}
                   onChange={(e) => handleEditCategoryChange(e.target.value)}
                   required
@@ -595,10 +591,10 @@ const MyPosts: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Tiêu đề bài viết</label>
+                <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Tiêu đề bài viết</label>
                 <input
                   type="text"
-                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   required
@@ -607,12 +603,12 @@ const MyPosts: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Giá bán (VND)</label>
+                  <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Giá bán (VND)</label>
                   <input
                     required
                     type="text"
                     placeholder="0"
-                    className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white focus:shadow-sm outline-none transition-all text-slate-900 font-black text-lg"
                     ref={editPriceInput.inputRef}
                     value={editPriceInput.displayValue}
                     onChange={editPriceInput.handleChange}
@@ -620,10 +616,10 @@ const MyPosts: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Khu vực</label>
+                  <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Khu vực</label>
                   <input
                     type="text"
-                    className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
                     value={editLocation}
                     onChange={(e) => setEditLocation(e.target.value)}
                     placeholder="Ví dụ: Thạch Thất, Hà Nội"
@@ -632,10 +628,10 @@ const MyPosts: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Số điện thoại liên hệ</label>
+                <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Số điện thoại liên hệ</label>
                 <input
                   type="text"
-                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
                   value={editContactPhone}
                   onChange={(e) => setEditContactPhone(e.target.value)}
                   placeholder="Nhập SĐT để người mua liên hệ"
@@ -643,10 +639,10 @@ const MyPosts: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Mô tả chi tiết</label>
+                <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Mô tả chi tiết</label>
                 <textarea
                   rows={5}
-                  className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-medium focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
                   placeholder="Mô tả chi tiết về cây, kích thước, tuổi, cách chăm sóc..."
@@ -655,17 +651,17 @@ const MyPosts: React.FC = () => {
 
               {editCategoryAttributes.length > 0 && (
                 <div className="space-y-4">
-                  <label className="block text-slate-400 text-xs font-bold uppercase tracking-wider">Thuộc tính chi tiết</label>
+                  <label className="block text-slate-500 text-xs font-black uppercase tracking-wider border-b border-slate-100 pb-2">Thuộc tính chi tiết</label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {editCategoryAttributes.map((attr) => (
                       <div key={attr.attributeId} className="space-y-2">
-                        <label className="text-xs text-slate-400">
+                        <label className="text-xs text-slate-500 font-bold">
                           {attr.attributeTitle} {attr.required && '*'}
                         </label>
                         {attr.attributeDataType === 'enum' && attr.attributeOptions ? (
                           <select
                             required={attr.required}
-                            className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-sm"
                             value={editAttributes[attr.attributeId] || ''}
                             onChange={(e) => handleEditAttributeChange(attr.attributeId, e.target.value)}
                           >
@@ -678,7 +674,7 @@ const MyPosts: React.FC = () => {
                           <input
                             required={attr.required}
                             type={attr.attributeDataType === 'number' ? 'number' : 'text'}
-                            className="w-full bg-surface border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white transition-all shadow-sm"
                             value={editAttributes[attr.attributeId] || ''}
                             onChange={(e) => handleEditAttributeChange(attr.attributeId, e.target.value)}
                             placeholder={`Nhập ${attr.attributeTitle}`}
@@ -690,17 +686,17 @@ const MyPosts: React.FC = () => {
                 </div>
               )}
 
-              <div className="flex items-center gap-4 pt-2">
+              <div className="flex items-center gap-4 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setEditingPost(null)}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-slate-400 bg-surface hover:bg-white/10 hover:text-white transition-all"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-all border border-slate-200"
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg shadow-emerald-900/20"
+                  className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-xl shadow-emerald-200/50"
                 >
                   Lưu thay đổi
                 </button>

@@ -131,17 +131,17 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="glass p-8 sm:p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl relative overflow-hidden">
+      <div className="bg-white border border-slate-200 p-8 sm:p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl relative overflow-hidden">
         {/* Decoration */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl -z-10" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -z-10" />
         
         {/* Tabs */}
-        <div className="flex bg-surface rounded-2xl p-1 mb-8">
+        <div className="flex bg-slate-100 rounded-2xl p-1 mb-8 border border-slate-200">
             <button
                 onClick={() => setLoginMethod('qr')}
                 className={clsx(
-                    "flex-1 py-3 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-all",
-                    loginMethod === 'qr' ? "bg-emerald-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                    "flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all",
+                    loginMethod === 'qr' ? "bg-emerald-700 text-white shadow-lg" : "text-slate-500 hover:text-slate-900"
                 )}
             >
                 <QrCode className="w-4 h-4" /> Mã QR
@@ -149,8 +149,8 @@ const Login: React.FC = () => {
             <button
                 onClick={() => setLoginMethod('mobile')}
                 className={clsx(
-                    "flex-1 py-3 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-all",
-                    loginMethod === 'mobile' ? "bg-emerald-600 text-white shadow-lg" : "text-slate-400 hover:text-white"
+                    "flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all",
+                    loginMethod === 'mobile' ? "bg-emerald-700 text-white shadow-lg" : "text-slate-500 hover:text-slate-900"
                 )}
             >
                 <Phone className="w-4 h-4" /> Số điện thoại
@@ -160,15 +160,15 @@ const Login: React.FC = () => {
         {loginMethod === 'qr' ? (
             // QR LOGIN VIEW
             <div className="text-center animate-in fade-in zoom-in duration-300">
-                <h1 className="text-2xl font-black mb-2">Đăng nhập bằng QR</h1>
-                <p className="text-slate-400 text-sm mb-8">
-                    Sử dụng ứng dụng <span className="text-emerald-500 font-semibold">GreenMarket Mobile</span> để quét mã
+                <h1 className="text-2xl font-black mb-2 text-slate-900">Đăng nhập bằng QR</h1>
+                <p className="text-slate-500 text-sm mb-8">
+                    Sử dụng ứng dụng <span className="text-emerald-700 font-bold">GreenMarket Mobile</span> để quét mã
                 </p>
 
-                <div className="bg-white p-4 rounded-3xl inline-block mx-auto mb-6 shadow-xl relative">
+                <div className="bg-white p-4 rounded-3xl inline-block mx-auto mb-6 shadow-2xl relative border border-slate-100">
                     {loading ? (
                         <div className="w-48 h-48 flex items-center justify-center">
-                            <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+                            <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
                         </div>
                     ) : (
                         <div className="relative">
@@ -181,11 +181,11 @@ const Login: React.FC = () => {
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                                     <button 
                                         onClick={initQr}
-                                        className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-full p-4 shadow-lg transition-transform hover:scale-110 active:scale-95 flex flex-col items-center gap-2"
+                                        className="bg-emerald-700 hover:bg-emerald-600 text-white rounded-full p-4 shadow-lg transition-transform hover:scale-110 active:scale-95 flex flex-col items-center gap-2 shadow-emerald-200/50"
                                     >
                                         <RefreshCw className="w-6 h-6" />
                                     </button>
-                                    <span className="text-slate-800 font-bold mt-2">Tải lại mã</span>
+                                    <span className="text-slate-900 font-bold mt-2">Tải lại mã</span>
                                 </div>
                             )}
                             {qrStatus === 'scanned' && (
@@ -202,11 +202,11 @@ const Login: React.FC = () => {
                 </div>
                 
                 {qrStatus === 'expired' ? (
-                     <p className="text-amber-500 font-medium text-sm">Mã QR đã hết hạn. Vui lòng tải lại.</p>
+                     <p className="text-amber-600 font-bold text-sm">Mã QR đã hết hạn. Vui lòng tải lại.</p>
                 ) : (
-                    <p className="text-slate-400 text-sm flex items-center justify-center gap-2">
+                    <p className="text-slate-500 text-sm flex items-center justify-center gap-2 font-medium">
                         {qrStatus === 'scanned' ? (
-                            <><Loader2 className="w-4 h-4 animate-spin text-emerald-500" /> Đang chờ xác nhận...</>
+                            <><Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> Đang chờ xác nhận...</>
                         ) : (
                             "Mã sẽ tự động làm mới sau 5 phút"
                         )}
@@ -217,13 +217,13 @@ const Login: React.FC = () => {
             // MOBILE OTP VIEW
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="text-center mb-10">
-                    <div className="bg-emerald-500/10 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                        {step === 'mobile' ? <Phone className="w-8 h-8 text-emerald-500" /> : <Lock className="w-8 h-8 text-emerald-500" />}
+                    <div className="bg-emerald-50 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm">
+                        {step === 'mobile' ? <Phone className="w-8 h-8 text-emerald-600" /> : <Lock className="w-8 h-8 text-emerald-600" />}
                     </div>
-                    <h1 className="text-2xl font-black mb-2">
+                    <h1 className="text-2xl font-black mb-2 text-slate-900">
                         {step === 'mobile' ? 'Chào mừng bạn' : 'Xác thực OTP'}
                     </h1>
-                    <p className="text-slate-400 text-sm">
+                    <p className="text-slate-500 text-sm font-medium">
                         {step === 'mobile' ? 'Nhập số điện thoại để tiếp tục' : `Chúng tôi đã gửi mã tới ${mobile}`}
                     </p>
                 </div>
@@ -231,11 +231,11 @@ const Login: React.FC = () => {
                 {step === 'mobile' ? (
                 <form onSubmit={handleRequestOtp} className="space-y-6">
                     <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input 
                         required
                         type="tel"
-                        className="w-full bg-surface border border-white/10 pl-12 pr-4 py-4 rounded-2xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600"
+                        className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
                         placeholder="09xx xxx xxx"
                         value={mobile}
                         onChange={(e) => setMobile(e.target.value)}
@@ -244,7 +244,7 @@ const Login: React.FC = () => {
                     <button 
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-700"
+                    className="w-full bg-emerald-700 hover:bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 text-white shadow-xl shadow-emerald-200/50"
                     >
                     {loading ? <Loader2 className="animate-spin" /> : <>Tiếp tục <ArrowRight className="w-5 h-5" /></>}
                     </button>
@@ -259,7 +259,7 @@ const Login: React.FC = () => {
                         type="text"
                         inputMode="numeric"
                         maxLength={1}
-                        className="w-12 h-14 bg-surface border border-white/10 rounded-xl text-center text-2xl font-bold text-emerald-500 focus:border-emerald-500 outline-none transition-all shadow-lg"
+                        className="w-12 h-14 bg-slate-50 border border-slate-200 rounded-xl text-center text-2xl font-bold text-emerald-600 focus:border-emerald-500 focus:bg-white outline-none transition-all shadow-md"
                         value={digit}
                         onChange={(e) => handleOtpChange(idx, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(idx, e)}
@@ -269,7 +269,7 @@ const Login: React.FC = () => {
                     <button 
                     type="submit"
                     disabled={loading || otp.some(d => d === '')}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-emerald-700 hover:bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-100 disabled:text-slate-400 text-white shadow-xl shadow-emerald-200/50"
                     >
                     {loading ? <Loader2 className="animate-spin" /> : 'Xác nhận Đăng nhập'}
                     </button>
@@ -279,7 +279,7 @@ const Login: React.FC = () => {
                         setStep('mobile');
                         setOtp(['', '', '', '', '', '']);
                     }}
-                    className="w-full text-slate-500 text-sm font-medium hover:text-slate-300 transition-colors"
+                    className="w-full text-slate-500 text-sm font-bold hover:text-emerald-600 transition-colors"
                     >
                     Đổi số điện thoại
                     </button>
@@ -288,8 +288,8 @@ const Login: React.FC = () => {
             </div>
         )}
 
-        <div className="mt-10 text-center text-xs text-slate-500 leading-relaxed">
-          Bằng cách tiếp tục, bạn đồng ý với <span className="text-slate-400 underline hover:text-slate-300 cursor-pointer transition-colors">Điều khoản dịch vụ</span> và <span className="text-slate-400 underline hover:text-slate-300 cursor-pointer transition-colors">Chính sách bảo mật</span> của GreenMarket.
+        <div className="mt-10 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+          Bằng cách tiếp tục, bạn đồng ý với <span className="text-emerald-600 underline hover:text-emerald-700 cursor-pointer transition-colors">Điều khoản dịch vụ</span> và <span className="text-emerald-600 underline hover:text-emerald-700 cursor-pointer transition-colors">Chính sách bảo mật</span> của GreenMarket.
         </div>
       </div>
     </div>
