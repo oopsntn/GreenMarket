@@ -32,9 +32,24 @@ export const postService = {
         return response.data
     },
 
-    getPostDetail: async (slug: string) => {
+    getPostDetail: async (slug: any) => {
         const response = await api.get(`/posts/detail/${slug}`)
         return response.data
+    },
+
+    toggleFavorite: async (postId: number) => {
+        const res = await api.get(`/posts/favorite-toggle`, { params: { postId } })
+        return res.data
+    },
+
+    checkIsSaved: async (postId: number) => {
+        const res = await api.get(`/posts/check-saved/${postId}`)
+        return res.data
+    },
+
+    getFavoritePosts: async () => {
+        const res = await api.get(`/profile/favorites`)
+        return res.data
     },
 
     recordContactClick: async (postId: number) => {

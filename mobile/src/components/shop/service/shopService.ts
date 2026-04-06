@@ -124,5 +124,6 @@ export const ShopService = {
             console.error('Error updating shop:', e)
             throw e
         }
-    }
+    },
+    
 }
