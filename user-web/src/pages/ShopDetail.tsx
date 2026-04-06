@@ -60,15 +60,15 @@ const ShopDetail: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
       <header className="mb-5">
-        <div className="glass p-8 md:p-12 rounded-[3.5rem] relative overflow-hidden">
+        <div className="bg-white p-8 md:p-12 rounded-[3.5rem] relative overflow-hidden border border-slate-200 shadow-xl">
           {heroImage ? (
             <div className="absolute inset-0 -z-10">
-              <img src={toMediaUrl(heroImage)} alt="Cover" className="w-full h-full object-cover opacity-30" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+              <img src={toMediaUrl(heroImage)} alt="Cover" className="w-full h-full object-cover opacity-10" />
+              <div className="absolute inset-0 bg-linear-to-t from-white to-transparent" />
             </div>
           ) : (
             <>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 blur-[100px] -z-10" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] -z-10" />
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/5 blur-[50px] -z-10" />
             </>
           )}
@@ -76,31 +76,31 @@ const ShopDetail: React.FC = () => {
           <div className="z-10 relative grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
             <div className="lg:col-span-2">
               <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 text-center md:text-left">
-                <h1 className="text-3xl md:text-5xl font-black tracking-tight">{shop.shopName}</h1>
-                <span className="inline-flex px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-widest w-fit mx-auto md:mx-0">
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900">{shop.shopName}</h1>
+                <span className="inline-flex px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest w-fit mx-auto md:mx-0">
                   Đã xác minh
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 text-slate-400">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 text-slate-500">
                 <div className="flex items-center gap-3 justify-center md:justify-start">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                    <MapPin className="w-5 h-5 text-emerald-500" />
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Địa chỉ</p>
-                    <p className="text-sm font-medium text-slate-200 line-clamp-1">{shop.shopLocation || 'Chưa cập nhật'}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Địa chỉ</p>
+                    <p className="text-sm font-bold text-slate-700 line-clamp-1">{shop.shopLocation || 'Chưa cập nhật'}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4 justify-center md:justify-start">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
-                      <Phone className="w-5 h-5 text-emerald-500" />
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                      <Phone className="w-5 h-5 text-emerald-600" />
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Điện thoại</p>
-                      <p className="text-sm font-medium text-slate-200">{shop.shopPhone || 'Chưa cập nhật'}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Điện thoại</p>
+                      <p className="text-sm font-bold text-slate-700">{shop.shopPhone || 'Chưa cập nhật'}</p>
                     </div>
                   </div>
                   {shop.shopPhone && (
@@ -108,7 +108,7 @@ const ShopDetail: React.FC = () => {
                       href={`https://zalo.me/${shop.shopPhone}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400 hover:bg-blue-600 hover:text-white transition-all text-xs font-bold uppercase tracking-wider"
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0068FF]/5 border border-[#0068FF]/10 text-[#0068FF] hover:bg-[#0068FF] hover:text-white transition-all text-xs font-bold uppercase tracking-wider"
                     >
                       <MessageCircle className="w-4 h-4" /> Zalo
                     </a>
@@ -116,8 +116,8 @@ const ShopDetail: React.FC = () => {
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/5 mb-8">
-                <p className="text-sm text-slate-400 leading-relaxed italic">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 mb-8">
+                <p className="text-sm text-slate-500 leading-relaxed italic">
                   "{shop.shopDescription || 'Nhà vườn chưa có mô tả chi tiết.'}"
                 </p>
               </div>
@@ -125,14 +125,14 @@ const ShopDetail: React.FC = () => {
               {shopGalleryImages.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-emerald-400">Ảnh nhà vườn</h3>
-                    <span className="text-xs text-slate-400">{shopGalleryImages.length} ảnh</span>
+                    <h3 className="text-sm font-black uppercase tracking-widest text-emerald-600">Ảnh nhà vườn</h3>
+                    <span className="text-xs text-slate-500 font-medium">{shopGalleryImages.length} ảnh</span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {shopGalleryImages.map((imageUrl, index) => (
                       <div
                         key={`${imageUrl}-${index}`}
-                        className="aspect-square rounded-2xl overflow-hidden border border-white/10 bg-surface cursor-pointer group/image relative"
+                        className="aspect-square rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 cursor-pointer group/image relative shadow-md"
                         onClick={() => setPreviewImageIndex(index)}
                       >
                         <img
@@ -152,15 +152,15 @@ const ShopDetail: React.FC = () => {
 
             {/* Map Column */}
             <div className="lg:col-span-1 space-y-6">
-              <div className="glass p-5 rounded-3xl border-white/5 space-y-5 bg-black/20">
+              <div className="bg-slate-50 p-5 rounded-3xl border border-slate-200 space-y-5">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                    <MapIcon className="w-4 h-4 text-emerald-500" />
+                  <div className="p-2 bg-white rounded-lg border border-slate-200">
+                    <MapIcon className="w-4 h-4 text-emerald-600" />
                   </div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-white">Vị trí nhà vườn</h3>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Vị trí nhà vườn</h3>
                 </div>
 
-                <div className="relative aspect-4/3 rounded-2xl border border-white/5 overflow-hidden shadow-xl bg-slate-900">
+                <div className="relative aspect-4/3 rounded-2xl border border-slate-200 overflow-hidden shadow-xl bg-slate-100">
                   <iframe
                     title="Google Maps"
                     width="100%"
@@ -181,16 +181,16 @@ const ShopDetail: React.FC = () => {
                       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.shopLocation || 'Ha Noi')}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold flex items-center justify-center gap-3 transition-all group shadow-lg shadow-emerald-900/20"
+                    className="w-full py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold flex items-center justify-center gap-3 transition-all group shadow-lg shadow-emerald-200/50"
                   >
                     <ExternalLink className="w-4 h-4 group-hover:rotate-12 transition-transform" />
                     Nhận chỉ đường
                   </a>
                   
                   <div className="flex justify-center">
-                    <div className="flex items-center gap-2 text-[10px] text-slate-500 italic px-3 py-1 rounded-full bg-white/5 border border-white/10">
-                      <ShieldCheck className="w-3 h-3 text-emerald-500/50" />
-                      <span>Vi tri xac minh qua Google Maps</span>
+                    <div className="flex items-center gap-2 text-[10px] text-slate-400 italic px-3 py-1 rounded-full bg-white border border-slate-100">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600/50" />
+                      <span>Vị trí xác minh qua Google Maps</span>
                     </div>
                   </div>
                 </div>
@@ -203,7 +203,7 @@ const ShopDetail: React.FC = () => {
       <div className="w-full">
         <section className="w-full">
           <div className="flex items-baseline gap-4 mb-8">
-            <h2 className="text-3xl font-black tracking-tight uppercase">Sản phẩm của vườn</h2>
+            <h2 className="text-3xl font-black tracking-tight uppercase text-slate-900">Sản phẩm của vườn</h2>
             <span className="text-slate-500 font-bold">{shop.posts?.length || 0} tin</span>
           </div>
 
@@ -213,7 +213,7 @@ const ShopDetail: React.FC = () => {
                 <Link
                   key={post.postId}
                   to={`/posts/detail/${post.postSlug}`}
-                  className="group glass rounded-4xl overflow-hidden hover:shadow-2xl hover:shadow-emerald-500/10 transition-all duration-500 border border-white/5 hover:border-emerald-500/30 block"
+                  className="group bg-white rounded-4xl overflow-hidden hover:shadow-2xl hover:shadow-emerald-200/20 transition-all duration-500 border border-slate-200 hover:border-emerald-500/30 block"
                 >
                   <div className="aspect-square bg-slate-900 overflow-hidden relative">
                     {post.images && post.images.length > 0 ? (
@@ -233,15 +233,15 @@ const ShopDetail: React.FC = () => {
                   </div>
                   <div className="p-5">
                     <div className="mb-2">
-                       <h3 className="text-sm font-bold group-hover:text-emerald-400 transition-colors line-clamp-2 uppercase tracking-tight leading-tight">
+                       <h3 className="text-sm font-bold group-hover:text-emerald-600 transition-colors line-clamp-2 uppercase tracking-tight leading-tight text-slate-800">
                         {post.postTitle}
                       </h3>
                     </div>
                     <div className="flex justify-between items-center">
-                      <p className="text-emerald-500 font-black text-xl">
-                        {Number(post.postPrice).toLocaleString()} <span className="text-[10px] font-medium text-slate-500 ml-0.5">đ</span>
+                      <p className="text-emerald-600 font-black text-xl">
+                        {Number(post.postPrice).toLocaleString()} <span className="text-[10px] font-medium text-slate-400 ml-0.5">đ</span>
                       </p>
-                      <div className="text-[10px] text-slate-500 font-bold px-2 py-1 bg-white/5 rounded-lg border border-white/5">
+                      <div className="text-[10px] text-slate-500 font-bold px-2 py-1 bg-slate-50 rounded-lg border border-slate-100">
                         {post.postLocation || 'VN'}
                       </div>
                     </div>
@@ -249,7 +249,7 @@ const ShopDetail: React.FC = () => {
                 </Link>
               ))
             ) : (
-              <div className="col-span-full text-center py-24 bg-surface rounded-[3rem] border border-dashed border-white/10 text-slate-500">
+              <div className="col-span-full text-center py-24 bg-white rounded-[3rem] border border-dashed border-slate-200 text-slate-400 font-medium">
                 Nhà vườn chưa có bài đăng nào.
               </div>
             )}

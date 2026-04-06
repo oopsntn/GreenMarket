@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and, ne, sql, inArray } from "drizzle-orm";
-import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users } from "../../models/schema/index.ts";
+import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
@@ -462,6 +462,58 @@ export const recordContactClick = async (req: Request<{ id: string }>, res: Resp
         }
 
         res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+
+export const checkIsSaved = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        const postId = parseId(req.params.id as string);
+        if (!userId || !postId) { res.status(400).json({ isSaved: false }); return; }
+        
+        const [existingFavorite] = await db.select().from(favoritePosts)
+            .where(and(eq(favoritePosts.favoritePostUserId, userId), eq(favoritePosts.favoritePostPostId, postId)))
+            .limit(1);
+            
+        res.json({ isSaved: !!existingFavorite });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ isSaved: false });
+    }
+};
+
+export const toggleFavoritePost = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        const postId = parseId(req.params.id as string);
+
+        if (!userId || !postId) {
+            res.status(400).json({ error: "Invalid user or post ID" });
+            return;
+        }
+
+        const [existingFavorite] = await db.select().from(favoritePosts)
+            .where(and(eq(favoritePosts.favoritePostUserId, userId), eq(favoritePosts.favoritePostPostId, postId)))
+            .limit(1);
+
+        if (existingFavorite) {
+            // Remove from favorites
+            await db.delete(favoritePosts)
+                .where(and(eq(favoritePosts.favoritePostUserId, userId), eq(favoritePosts.favoritePostPostId, postId)));
+            res.json({ message: "Post removed from favorites", isSaved: false });
+        } else {
+            // Add to favorites
+            await db.insert(favoritePosts)
+                .values({
+                    favoritePostUserId: userId,
+                    favoritePostPostId: postId
+                });
+            res.json({ message: "Post added to favorites", isSaved: true });
+        }
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

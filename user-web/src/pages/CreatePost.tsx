@@ -152,24 +152,24 @@ const CreatePost: React.FC = () => {
     if (submitted) {
         return (
             <div className="min-h-[80vh] flex items-center justify-center px-4">
-                <div className="glass p-12 rounded-3xl text-center max-w-md">
-                    <div className="bg-emerald-500/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <CheckCircle className="w-10 h-10 text-emerald-500" />
+                <div className="bg-white p-12 rounded-3xl text-center max-w-md border border-slate-200 shadow-2xl">
+                    <div className="bg-emerald-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100">
+                        <CheckCircle className="w-10 h-10 text-emerald-600" />
                     </div>
-                    <h2 className="text-3xl font-bold mb-4">Đăng tin thành công!</h2>
-                    <p className="text-slate-400 mb-8 leading-relaxed">
+                    <h2 className="text-3xl font-bold mb-4 text-slate-900">Đăng tin thành công!</h2>
+                    <p className="text-slate-500 mb-8 leading-relaxed">
                         Bài đăng của bạn đã được gửi và đang chờ Admin phê duyệt. Bạn có thể theo dõi trạng thái tại mục "Tin của tôi".
                     </p>
                     <div className="space-y-4">
                         <button
                             onClick={() => navigate('/my-posts')}
-                            className="w-full bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-500 transition-all"
+                            className="w-full bg-emerald-700 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-200/50"
                         >
                             Xem tin của tôi <ArrowRight className="w-5 h-5" />
                         </button>
                         <button
                             onClick={() => window.location.reload()}
-                            className="w-full bg-slate-800 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-700 transition-all"
+                            className="w-full bg-slate-100 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 text-slate-700 transition-all border border-slate-200"
                         >
                             Đăng thêm tin mới
                         </button>
@@ -182,26 +182,26 @@ const CreatePost: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto px-6 py-12">
             <div className="mb-10">
-                <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-                    <PlusCircle className="text-emerald-500" /> Đăng tin rao vặt
+                <h1 className="text-4xl font-bold mb-2 flex items-center gap-3 text-slate-900">
+                    <PlusCircle className="text-emerald-600" /> Đăng tin rao vặt
                 </h1>
-                <p className="text-slate-400">Chia sẻ tác phẩm nghệ thuật xanh của bạn tới hàng nghìn người yêu cây.</p>
+                <p className="text-slate-500 font-medium">Chia sẻ tác phẩm nghệ thuật xanh của bạn tới hàng nghìn người yêu cây.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-10">
                 {/* Basic Info */}
-                <section className="glass p-8 rounded-3xl space-y-6">
-                    <h2 className="text-xl font-semibold border-b border-white/5 pb-4">Thông tin cơ bản</h2>
+                <section className="bg-white p-8 rounded-3xl space-y-6 border border-slate-200 shadow-xl">
+                    <h2 className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900 uppercase tracking-tight">Thông tin cơ bản</h2>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                            <Tag className="w-4 h-4 text-emerald-500" /> Tiêu đề tin *
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                            <Tag className="w-4 h-4 text-emerald-600" /> Tiêu đề tin *
                         </label>
                         <input
                             required
                             type="text"
                             placeholder="Ví dụ: Tùng la hán dáng văn nhân cốt chậu 10 năm"
-                            className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
                             value={formData.postTitle}
                             onChange={(e) => setFormData({ ...formData, postTitle: e.target.value })}
                         />
@@ -209,10 +209,10 @@ const CreatePost: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-400">Danh mục *</label>
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] ml-1">Danh mục *</label>
                             <select
                                 required
-                                className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all appearance-none"
+                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all appearance-none text-slate-900 text-sm font-medium"
                                 value={formData.categoryId}
                                 onChange={(e) => handleCategoryChange(e.target.value)}
                             >
@@ -223,14 +223,14 @@ const CreatePost: React.FC = () => {
                             </select>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                                <CircleDollarSign className="w-4 h-4 text-emerald-500" /> Giá bán (đ) *
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                                <CircleDollarSign className="w-4 h-4 text-emerald-600" /> Giá bán (đ) *
                             </label>
                             <input
                                 required
                                 type="text"
                                 placeholder="0"
-                                className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
                                 ref={postPriceInput.inputRef}
                                 value={postPriceInput.displayValue}
                                 onChange={postPriceInput.handleChange}
@@ -240,13 +240,13 @@ const CreatePost: React.FC = () => {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-emerald-500" /> Khu vực giao dịch
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                            <MapPin className="w-4 h-4 text-emerald-600" /> Khu vực giao dịch
                         </label>
                         <input
                             type="text"
                             placeholder="Ví dụ: Thạch Thất, Hà Nội"
-                            className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
                             value={formData.postLocation}
                             onChange={(e) => setFormData({ ...formData, postLocation: e.target.value })}
                         />
@@ -255,18 +255,18 @@ const CreatePost: React.FC = () => {
 
                 {/* Dynamic Attributes */}
                 {attributes.length > 0 && (
-                    <section className="glass p-8 rounded-3xl space-y-6">
-                        <h2 className="text-xl font-semibold border-b border-white/5 pb-4">Thông số chi tiết</h2>
+                    <section className="bg-white p-8 rounded-3xl space-y-6 border border-slate-200 shadow-xl">
+                        <h2 className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900 uppercase tracking-tight">Thông số chi tiết</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {attributes.map(attr => (
                                 <div key={attr.attributeId} className="space-y-2">
-                                    <label className="text-sm font-medium text-slate-400">
+                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] ml-1">
                                         {attr.attributeTitle} {attr.required && '*'}
                                     </label>
                                     {attr.attributeDataType === 'enum' && attr.attributeOptions ? (
                                         <select
                                             required={attr.required}
-                                            className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                                            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
                                             value={formData.attributes[attr.attributeId] || ''}
                                             onChange={(e) => handleAttributeChange(attr.attributeId, e.target.value)}
                                         >
@@ -280,7 +280,7 @@ const CreatePost: React.FC = () => {
                                             required={attr.required}
                                             type={attr.attributeDataType === 'number' ? 'number' : 'text'}
                                             placeholder={`Nhập ${attr.attributeTitle}`}
-                                            className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                                            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
                                             value={formData.attributes[attr.attributeId] || ''}
                                             onChange={(e) => handleAttributeChange(attr.attributeId, e.target.value)}
                                         />
@@ -292,22 +292,22 @@ const CreatePost: React.FC = () => {
                 )}
 
                 {/* Content */}
-                <section className="glass p-8 rounded-3xl space-y-6">
-                    <h2 className="text-xl font-semibold border-b border-white/5 pb-4">Mô tả chi tiết</h2>
+                <section className="bg-white p-8 rounded-3xl space-y-6 border border-slate-200 shadow-xl">
+                    <h2 className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900 uppercase tracking-tight">Mô tả chi tiết</h2>
                     <textarea
                         rows={6}
                         placeholder="Mô tả chi tiết về cây: tuổi thọ, kích thước, nguồn gốc, chế độ chăm sóc..."
-                        className="w-full bg-surface border border-white/10 p-4 rounded-2xl focus:border-emerald-500 outline-none transition-all"
+                        className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium leading-relaxed resize-none"
                         value={formData.postContent}
                         onChange={(e) => setFormData({ ...formData, postContent: e.target.value })}
                     />
                 </section>
 
                 {/* Images & Videos */}
-                <section className="glass p-8 rounded-3xl space-y-6">
-                    <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                        <h2 className="text-xl font-semibold flex items-center gap-2">
-                            <ImageIcon className="w-5 h-5 text-emerald-500" /> Hình ảnh & Video sản phẩm
+                <section className="bg-white p-8 rounded-3xl space-y-6 border border-slate-200 shadow-xl">
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                        <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900 uppercase tracking-tight">
+                            <ImageIcon className="w-5 h-5 text-emerald-600" /> Hình ảnh & Video sản phẩm
                         </h2>
                     </div>
 
@@ -323,22 +323,22 @@ const CreatePost: React.FC = () => {
                                     <button
                                         type="button"
                                         onClick={() => removePreview(index)}
-                                        className="bg-rose-500 p-2 rounded-full text-white hover:scale-110 transition-transform"
+                                        className="bg-rose-500 p-2 rounded-full text-white hover:scale-110 transition-transform shadow-xl"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
                                 </div>
                                 {preview.type === 'video' && (
-                                    <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">
+                                    <div className="absolute top-2 left-2 bg-slate-900/80 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-white">
                                         Video
                                     </div>
                                 )}
                             </div>
                         ))}
 
-                        <label className="border-2 border-dashed border-white/10 rounded-2xl aspect-square flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group">
-                            <UploadCloud className="w-8 h-8 text-slate-500 group-hover:text-emerald-500 transition-colors" />
-                            <span className="text-xs font-medium text-slate-500 group-hover:text-emerald-400">Tải tệp lên</span>
+                        <label className="border-2 border-dashed border-slate-200 rounded-2xl aspect-square flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-50 transition-all group">
+                            <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                            <span className="text-xs font-bold text-slate-400 group-hover:text-emerald-600 uppercase tracking-tight">Tải tệp lên</span>
                             <input
                                 type="file"
                                 multiple
@@ -349,8 +349,8 @@ const CreatePost: React.FC = () => {
                         </label>
                     </div>
 
-                    <div className="bg-emerald-500/5 p-4 rounded-2xl">
-                        <ul className="text-xs text-slate-400 space-y-1">
+                    <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl">
+                        <ul className="text-xs text-slate-500 space-y-1 font-medium">
                             <li>• Nên chọn ảnh rõ nét, ánh sáng tốt.</li>
                             <li>• Bạn có thể chọn nhiều ảnh cùng lúc.</li>
                             <li>• Video giúp bài đăng tin cậy hơn (tối đa 50MB).</li>
@@ -363,7 +363,7 @@ const CreatePost: React.FC = () => {
                     <button
                         type="submit"
                         disabled={submitting}
-                        className="w-full bg-emerald-600 py-6 rounded-3xl font-bold text-xl hover:bg-emerald-500 disabled:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20"
+                        className="w-full bg-emerald-700 py-6 rounded-3xl font-bold text-xl hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-emerald-200/50"
                     >
                         {submitting ? "Đang xử lý..." : "Đăng Tin Ngay"}
                     </button>

@@ -1,7 +1,13 @@
 import { Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq } from "drizzle-orm";
-import { users, businessRoles } from "../../models/schema/index.ts";
+import { eq, desc, inArray } from "drizzle-orm";
+import {
+  users,
+  businessRoles,
+  favoritePosts,
+  posts,
+  postImages,
+} from "../../models/schema/index.ts";
 import { AuthRequest } from "../../dtos/auth";
 
 const buildProfileQuery = () =>
@@ -96,6 +102,50 @@ export const updateProfile = async (
     }
 
     res.json(updatedUser);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getFavoritePosts = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const favorites = await db
+      .select({
+        post: posts,
+        savedAt: favoritePosts.favoritePostCreatedAt,
+      })
+      .from(favoritePosts)
+      .innerJoin(posts, eq(favoritePosts.favoritePostPostId, posts.postId))
+      .where(eq(favoritePosts.favoritePostUserId, userId))
+      .orderBy(desc(favoritePosts.favoritePostCreatedAt));
+
+    const postIds = favorites.map((f) => f.post.postId);
+    let imagesData: any[] = [];
+
+    if (postIds.length > 0) {
+      imagesData = await db
+        .select()
+        .from(postImages)
+        .where(inArray(postImages.postId, postIds));
+    }
+
+    const formattedPosts = favorites.map((f) => ({
+      ...f.post,
+      savedAt: f.savedAt,
+      images: imagesData.filter((img) => img.postId === f.post.postId),
+    }));
+
+    res.json({ posts: formattedPosts });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });

@@ -26,7 +26,7 @@ const MyPostLayout = () => {
         };
         const config = configs[status] || configs.pending
         return (
-            <View style={[styles.statusBadge, { borderColor: config.color }]}> 
+            <View style={[styles.statusBadge, { borderColor: config.color }]}>
                 {config.icon}
                 <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
             </View>

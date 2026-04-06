@@ -9,25 +9,38 @@ import { useAuth } from '../../../context/AuthContext';
 import AddressPicker from '../components/AddressPicker';
 import { ProfileService } from '../../profile/service/ProfileService';
 import * as ImagePicker from 'expo-image-picker'
-import { Camera, ImageIcon } from 'lucide-react-native';
+import { Camera, ImageIcon, Play, Plus, User, X } from 'lucide-react-native';
 
 const EditShopScreen = ({ route, navigation }: any) => {
     const { shop } = route.params;
     const { refreshShop } = useAuth();
     const [loading, setLoading] = useState(false);
-
+    const [uploadingImage, setUpLoadingImage] = useState(false);
     const [formData, setFormData] = useState({
         shopName: shop?.shopName || '',
         shopPhone: shop?.shopPhone || '',
+        shopEmail: shop?.shopEmail || '',
         shopLocation: shop?.shopLocation || '',
         shopDescription: shop?.shopDescription || '',
         shopLogoUrl: shop?.shopLogoUrl || '',
         shopCoverUrl: shop?.shopCoverUrl || '',
         shopLat: shop?.shopLat,
         shopLng: shop?.shopLng,
+        shopGalleryImages: typeof shop?.shopGalleryImages === 'string'
+            ? shop.shopGalleryImages.split('|')
+            : (shop?.shopGalleryImages || []),
+        shopFacebook: shop?.shopFacebook || '',
+        shopInstagram: shop?.shopInstagram || '',
+        shopYoutube: shop?.shopYoutube || '',
     });
 
-    const pickImage = async (field: 'shopLogoUrl' | 'shopCoverUrl') => {
+    const removeGalleryImage = (index: number) => {
+        const newGallery = [...formData.shopGalleryImages];
+        newGallery.splice(index, 1);
+        setFormData({ ...formData, shopGalleryImages: newGallery });
+    };
+
+    const pickImage = async (field: 'shopLogoUrl' | 'shopCoverUrl' | 'shopGalleryImages') => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
             CustomAlert('Notice', 'Please grant photo library access');
@@ -35,36 +48,81 @@ const EditShopScreen = ({ route, navigation }: any) => {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            allowsEditing: true,
+            allowsEditing: field !== 'shopGalleryImages', // Gallery không cần crop
             aspect: field === 'shopLogoUrl' ? [1, 1] : [16, 9],
+            selectionLimit: 4, // Chỉ cho phép chọn tối đa 4 ảnh cho gallery
             quality: 0.7,
         });
 
         if (!result.canceled) {
             try {
-                setLoading(true);
+                setUpLoadingImage(true);
                 const uploadRes = await ProfileService.uploadAvatar(result.assets[0].uri);
                 if (uploadRes?.urls?.[0]) {
-                    setFormData(prev => ({ ...prev, [field]: uploadRes.urls[0] }));
+                    const newUrl = uploadRes.urls[0];
+                    // Xử lý riêng cho Gallery (Push vào mảng)
+                    if (field === 'shopGalleryImages') {
+                        setFormData((prev) => ({
+                            ...prev,
+                            shopGalleryImages: [...prev.shopGalleryImages, newUrl].slice(0, 4) // Giới hạn 4 ảnh
+                        }));
+                    } else {
+                        // Xử lý cho Logo/Cover (Ghi đè string)
+                        setFormData((prev) => ({ ...prev, [field]: newUrl }));
+                    }
+                    return;
                 }
+
             } catch (e) {
                 CustomAlert('Error', 'Unable to upload the image');
             } finally {
-                setLoading(false);
+                setUpLoadingImage(false);
             }
         }
     };
 
     const handleUpdate = async () => {
-        if (!formData.shopName) return CustomAlert('Error', 'Shop name is required');
+        const phoneRegex = /^(0|84)(3|5|7|8|9)([0-9]{8})$/
+        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+
+        if (!formData.shopName.trim()) return CustomAlert('Error', 'Shop name is required');
         if (!formData.shopLat || !formData.shopLng) return CustomAlert('Error', 'Please update the shop location');
+
+        if (formData.shopPhone.trim() && !phoneRegex.test(formData.shopPhone.trim())) {
+            return CustomAlert('Error', 'Invalid Vietnamese phone number format');
+        }
+
+        if (formData.shopEmail.trim() && !emailRegex.test(formData.shopEmail.trim())) {
+            return CustomAlert('Error', 'Invalid email address format');
+        }
+
+        const validateSocial = (url: string) => {
+            if (url && !url.startsWith('http')) {
+                return `https://${url}`;
+            }
+            return url;
+        };
+
+        if (uploadingImage) {
+            return CustomAlert('Notice', 'Please wait until image upload is complete');
+        }
 
         setLoading(true);
         try {
             const dataToSubmit = {
-                ...formData,
-                shopLat: formData.shopLat ? String(formData.shopLat) : '0',
-                shopLng: formData.shopLng ? String(formData.shopLng) : '0',
+                shopName: formData.shopName.trim(),
+                shopEmail: formData.shopEmail.trim() || undefined,
+                shopPhone: formData.shopPhone.trim(),
+                shopLocation: formData.shopLocation.trim(),
+                shopDescription: formData.shopDescription.trim(),
+                shopLat: formData.shopLat,
+                shopLng: formData.shopLng,
+                shopLogoUrl: formData.shopLogoUrl || undefined,
+                shopCoverUrl: formData.shopCoverUrl || undefined,
+                shopGalleryImages: formData.shopGalleryImages,
+                shopFacebook: validateSocial(formData.shopFacebook).trim() || undefined,
+                shopInstagram: validateSocial(formData.shopInstagram).trim() || undefined,
+                shopYoutube: validateSocial(formData.shopYoutube).trim() || undefined,
             };
 
             const res = await ShopService.updateShop(shop.shopId, dataToSubmit);
@@ -84,6 +142,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
     return (
         <MobileLayout title="Edit Shop" backButton={() => navigation.goBack()}>
             <ScrollView style={styles.container}>
+
                 <Text style={styles.label}>Shop images</Text>
                 <View style={styles.imagePickerRow}>
                     <TouchableOpacity onPress={() => pickImage('shopLogoUrl')} style={styles.pickerBox}>
@@ -108,7 +167,28 @@ const EditShopScreen = ({ route, navigation }: any) => {
                         )}
                     </TouchableOpacity>
                 </View>
-
+                <Text style={styles.label}>Shop Gallery (Max 4)</Text>
+                <View style={styles.galleryContainer}>
+                    {formData.shopGalleryImages.map((url: string, index: number) => (
+                        <View key={index} style={styles.galleryItem}>
+                            <Image source={{ uri: url }} style={styles.galleryImage} />
+                            <TouchableOpacity
+                                style={styles.removeBadge}
+                                onPress={() => removeGalleryImage(index)}
+                            >
+                                <X size={12} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    ))}
+                    {formData.shopGalleryImages.length < 4 && (
+                        <TouchableOpacity
+                            style={styles.addGalleryBtn}
+                            onPress={() => pickImage('shopGalleryImages')}
+                        >
+                            <Plus size={24} color="#94a3b8" />
+                        </TouchableOpacity>
+                    )}
+                </View>
                 <Input
                     label="Shop name"
                     value={formData.shopName}
@@ -116,10 +196,18 @@ const EditShopScreen = ({ route, navigation }: any) => {
                 />
 
                 <Input
-                    label="Phone number"
+                    label="Shop Email"
+                    value={formData.shopEmail}
+                    onChangeText={(txt) => setFormData({ ...formData, shopEmail: txt })}
+                    type="email-address"
+                    placeholder="Example: contact@greenmarket.com"
+                />
+
+                <Input
+                    label="Shop phone"
                     value={formData.shopPhone}
-                    type="phone-pad"
                     onChangeText={(txt) => setFormData({ ...formData, shopPhone: txt })}
+                    type="phone-pad"
                 />
 
                 <Input
@@ -140,9 +228,30 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     }}
                 />
 
+                <Text style={styles.label}>Social Media</Text>
+                <Input
+                    placeholder="Facebook URL"
+                    value={formData.shopFacebook}
+                    onChangeText={(t) => setFormData({ ...formData, shopFacebook: t })}
+                    icon={<User size={18} color="#1877F2" />}
+                />
+                <Input
+                    placeholder="Instagram URL"
+                    value={formData.shopInstagram}
+                    onChangeText={(t) => setFormData({ ...formData, shopInstagram: t })}
+                    icon={<Camera size={18} color="#E4405F" />}
+                />
+                <Input
+                    placeholder="Youtube URL"
+                    value={formData.shopYoutube}
+                    onChangeText={(t) => setFormData({ ...formData, shopYoutube: t })}
+                    icon={<Play size={18} color="#FF0000" />}
+                />
+
                 <Button
                     onPress={handleUpdate}
-                    loading={loading}
+                    loading={loading || uploadingImage}
+                    disabled={loading || uploadingImage}
                     style={styles.saveBtn}
                 >
                     Save changes
@@ -162,7 +271,12 @@ const styles = StyleSheet.create({
     pickerText: { fontSize: 11, color: '#94a3b8', marginTop: 4 },
     previewLogo: { width: '100%', height: '100%' },
     previewCover: { width: '100%', height: '100%', resizeMode: 'cover' },
-    saveBtn: { marginTop: 30, backgroundColor: '#10b981', marginBottom: 50 }
+    saveBtn: { marginTop: 30, backgroundColor: '#10b981', marginBottom: 50 },
+    galleryContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
+    galleryItem: { width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' },
+    galleryImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+    removeBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, padding: 2 },
+    addGalleryBtn: { width: '48%', aspectRatio: 1, borderRadius: 12, borderWidth: 2, borderColor: '#cbd5e1', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
 });
 
 export default EditShopScreen;

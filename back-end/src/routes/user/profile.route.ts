@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getProfile, updateProfile } from "../../controllers/user/profile.controller.ts";
+import { getProfile, updateProfile, getFavoritePosts } from "../../controllers/user/profile.controller.ts";
 import { verifyToken } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
@@ -9,5 +9,7 @@ router.use(verifyToken);
 
 router.get("/", getProfile);
 router.patch("/", updateProfile);
+
+router.get("/favorites", getFavoritePosts);
 
 export default router;

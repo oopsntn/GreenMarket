@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, XCircle, Receipt, ArrowRight } from 'lucide-react';
+import { CheckCircle2, XCircle, Receipt, ArrowRight, Home } from 'lucide-react';
 
 const PaymentResult: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -11,45 +11,56 @@ const PaymentResult: React.FC = () => {
 
   const isSuccess = status === 'success';
 
-  const title = isSuccess ? 'Thanh toan thanh cong' : 'Thanh toan chua thanh cong';
+  const title = isSuccess ? 'Thanh toán thành công' : 'Thanh toán chưa hoàn tất';
   const subtitle = isSuccess
-    ? 'Goi uu tien hien thi da duoc kich hoat cho bai dang cua ban.'
-    : 'Giao dich khong thanh cong hoac da bi huy. Ban co the thu lai bat cu luc nao.';
+    ? 'Cảm ơn bạn! Gói ưu tiên hiển thị đã được kích hoạt thành công cho bài đăng của bạn.'
+    : 'Rất tiếc, giao dịch không thành công hoặc đã bị hủy. Bạn có thể thử lại bất cứ lúc nào.';
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-20">
-      <div className="glass rounded-4xl p-8 sm:p-10 border border-white/10 shadow-2xl">
-        <div className="flex flex-col items-center text-center">
-          <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${isSuccess ? 'bg-emerald-500/15 text-emerald-500' : 'bg-rose-500/15 text-rose-400'}`}>
-            {isSuccess ? <CheckCircle2 className="w-10 h-10" /> : <XCircle className="w-10 h-10" />}
+    <div className="min-h-[80vh] flex items-center justify-center bg-background px-4 py-20">
+      <div className="bg-white rounded-4xl p-8 sm:p-12 border border-slate-200 shadow-2xl shadow-emerald-500/5 max-w-xl w-full relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16"></div>
+        
+        <div className="flex flex-col items-center text-center relative z-10">
+          <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mb-8 border shadow-sm transition-transform hover:scale-105 active:scale-95 ${isSuccess ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+            {isSuccess ? <CheckCircle2 className="w-12 h-12" /> : <XCircle className="w-12 h-12" />}
           </div>
 
-          <h1 className="text-3xl font-black tracking-tight mb-2">{title}</h1>
-          <p className="text-slate-400 mb-8">{subtitle}</p>
+          <h1 className="text-3xl font-black tracking-tight mb-3 text-slate-900 uppercase leading-tight">{title}</h1>
+          <p className="text-slate-500 font-medium mb-10 text-lg leading-relaxed">{subtitle}</p>
         </div>
 
-        <div className="rounded-2xl bg-white/5 border border-white/10 p-4 sm:p-5 space-y-2 mb-8">
-          <div className="flex items-center gap-2 text-slate-300 text-sm">
-            <Receipt className="w-4 h-4 text-emerald-500" />
-            <span>Thong tin giao dich</span>
+        <div className="rounded-3xl bg-slate-50 border border-slate-200 p-6 space-y-4 mb-10 relative z-10 transition-colors hover:bg-slate-100/50">
+          <div className="flex items-center gap-3 text-slate-900 font-black uppercase tracking-widest text-xs mb-2 pb-2 border-b border-slate-200/50">
+            <Receipt className="w-4 h-4 text-emerald-600" />
+            <span>Chi tiết giao dịch</span>
           </div>
-          <div className="text-xs text-slate-400">Ma VNPay: <span className="text-slate-200">{code || '-'}</span></div>
-          <div className="text-xs text-slate-400">Ma don hang: <span className="text-slate-200">{txnRef || '-'}</span></div>
-          <div className="text-xs text-slate-400">Trang thai he thong: <span className="text-slate-200">{message || '-'}</span></div>
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-slate-400 font-bold uppercase tracking-wider">Mã VNPay:</span>
+            <span className="text-slate-900 font-mono font-bold bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm">{code || '-'}</span>
+          </div>
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-slate-400 font-bold uppercase tracking-wider">Mã đơn hàng:</span>
+            <span className="text-slate-900 font-mono font-bold bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm">{txnRef || '-'}</span>
+          </div>
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-slate-400 font-bold uppercase tracking-wider">Trạng thái:</span>
+            <span className="text-slate-900 font-bold truncate max-w-[180px] text-right">{message || (isSuccess ? 'Thành công' : 'Thất bại')}</span>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
           <Link
             to="/my-posts"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl py-3 font-bold flex items-center justify-center gap-2 transition-all"
+            className="bg-emerald-700 hover:bg-emerald-600 text-white rounded-2xl py-4 font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all shadow-xl shadow-emerald-200/50 active:scale-95"
           >
-            Quan ly bai dang <ArrowRight className="w-4 h-4" />
+            Quản lý bài đăng <ArrowRight className="w-5 h-5" />
           </Link>
           <Link
             to="/"
-            className="bg-white/5 hover:bg-white/10 text-slate-300 rounded-xl py-3 font-bold text-center transition-all"
+            className="bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl py-4 font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2 transition-all border border-slate-200 active:scale-95"
           >
-            Ve trang chu
+            <Home className="w-5 h-5" /> Về trang chủ
           </Link>
         </div>
       </div>

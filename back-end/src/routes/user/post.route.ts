@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createPost, getMyPosts, updatePost, softDeletePost, getPublicPosts, getPublicPostBySlug, recordContactClick } from "../../controllers/user/post.controller.ts";
+import { createPost, getMyPosts, updatePost, softDeletePost, getPublicPosts, getPublicPostBySlug, recordContactClick, toggleFavoritePost, checkIsSaved } from "../../controllers/user/post.controller.ts";
 import { verifyToken } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
@@ -14,5 +14,8 @@ router.post("/", verifyToken, createPost);
 router.get("/my-posts", verifyToken, getMyPosts);
 router.patch("/:id", verifyToken, updatePost);
 router.delete("/:id", verifyToken, softDeletePost);
+
+router.get("/:id/favorite", verifyToken, checkIsSaved);
+router.post("/:id/favorite", verifyToken, toggleFavoritePost);
 
 export default router;

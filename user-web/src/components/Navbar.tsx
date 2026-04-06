@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Leaf, ShoppingBag, Store, User, LogOut, PlusCircle } from 'lucide-react';
+import { Leaf, ShoppingBag, Store, User, LogOut, PlusCircle, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -17,14 +17,15 @@ const Navbar: React.FC = () => {
   const isGardenOwner = shop?.shopStatus === 'active';
 
   const guestNavItems = [
-    { label: 'Trang chủ', path: '/', icon: ShoppingBag },
+    { label: 'Trang chủ', path: '/home', icon: ShoppingBag },
     { label: 'Danh sách nhà vườn', path: '/shops', icon: Store },
   ];
 
   const baseNavItems = [
-    { label: 'Chợ bonsai', path: '/', icon: ShoppingBag },
+    { label: 'Chợ bonsai', path: '/home', icon: ShoppingBag },
     { label: 'Danh sách nhà vườn', path: '/shops', icon: Store },
     { label: 'Đăng tin', path: '/create-post', icon: PlusCircle },
+    { label: 'Bài đã lưu', path: '/saved-posts', icon: Heart },
   ];
 
   const navItems = !isAuthenticated
@@ -41,9 +42,9 @@ const Navbar: React.FC = () => {
       ];
 
   return (
-    <nav className="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4">
+    <nav className="sticky top-0 z-50 glass border-b border-slate-200/50 px-6 py-4">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <Link to="/" className="flex items-center gap-2 group">
+        <Link to="/home" className="flex items-center gap-2 group">
           <Leaf className="text-emerald-500 group-hover:rotate-12 transition-transform" />
           <span className="text-xl font-bold tracking-tighter">GreenMarket</span>
         </Link>
@@ -54,9 +55,9 @@ const Navbar: React.FC = () => {
               key={item.label}
               to={item.path}
               className={cn(
-                'flex items-center gap-2 text-sm font-medium transition-colors hover:text-emerald-400',
-                location.pathname === item.path ? 'text-emerald-500' : 'text-slate-400',
-                isGardenOwner && item.label === shop?.shopName ? 'text-emerald-400' : ''
+                'flex items-center gap-2 text-sm font-medium transition-colors hover:text-emerald-600',
+                location.pathname === item.path ? 'text-emerald-600' : 'text-slate-500',
+                isGardenOwner && item.label === shop?.shopName ? 'text-emerald-600' : ''
               )}
             >
               <item.icon className="w-4 h-4" />
@@ -72,18 +73,18 @@ const Navbar: React.FC = () => {
                 {isGardenOwner ? (
                   <>
                     <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Chủ vườn</div>
-                    <div className="text-sm font-medium text-slate-300">{displayIdentity}</div>
+                    <div className="text-sm font-medium text-slate-700">{displayIdentity}</div>
                   </>
                 ) : (
                   <>
-                    <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Nghệ nhân</div>
-                    <div className="text-sm font-medium text-slate-300">{displayIdentity}</div>
+                    <div className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Nghệ nhân</div>
+                    <div className="text-sm font-medium text-slate-700">{displayIdentity}</div>
                   </>
                 )}
               </Link>
               <button
                 onClick={logout}
-                className="glass p-2 rounded-xl text-slate-400 hover:text-red-400 transition-all"
+                className="bg-white border border-slate-200 p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
                 title="Đăng xuất"
               >
                 <LogOut className="w-5 h-5" />
