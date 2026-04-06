@@ -70,6 +70,16 @@ const BrowseShopsScreen = () => {
 
                                     <ChevronRight color="#94a3b8" size={18} />
                                 </View>
+                                <View style={styles.info}>
+                                    <Text style={styles.shopName}>{item.shopName}</Text>
+                                    <Text style={styles.shopLocation} numberOfLines={1}>
+                                        {item.shopLocation || 'Address not updated'}
+                                    </Text>
+                                    {/* Thêm dòng này */}
+                                    <Text style={styles.postCountText}>
+                                        📦 {item.posts?.length || 0} sản phẩm
+                                    </Text>
+                                </View>
                             </Card>
                         </TouchableOpacity>
                     )}
@@ -147,6 +157,16 @@ const styles = StyleSheet.create({
         color: '#64748b',
         lineHeight: 20,
     },
+    postCountText: {
+        fontSize: 12,
+        color: '#64748b',
+        marginTop: 4,
+        marginBottom: 4,
+        textAlign: 'right',
+        textDecorationLine: 'underline',
+        textDecorationColor: '#10b981',
+        textDecorationStyle: 'solid',
+    }
 })
 
 export default BrowseShopsScreen

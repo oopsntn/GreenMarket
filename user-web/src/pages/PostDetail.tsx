@@ -158,8 +158,8 @@ const PostDetail: React.FC = () => {
                     </button>
                     <div className="flex items-center gap-4">
                         {isOwner ? (
-                            <Link 
-                                to={`/my-posts`} 
+                            <Link
+                                to={`/my-posts`}
                                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95 font-black uppercase text-[10px] tracking-widest"
                             >
                                 <Settings className="w-4 h-4" /> Quản lý bài đăng
@@ -182,7 +182,7 @@ const PostDetail: React.FC = () => {
                                 </button>
                             </>
                         )}
-                        <button 
+                        <button
                             onClick={handleShare}
                             className={`p-2.5 rounded-xl border transition-all ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-md scale-105' : 'bg-white border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200'}`}
                             title="Sao chép liên kết"
@@ -312,7 +312,7 @@ const PostDetail: React.FC = () => {
                         {/* Summary Card */}
                         <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-xl shadow-slate-200/50 space-y-8 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16"></div>
-                            
+
                             <div className="space-y-6 relative z-10">
                                 <div className="space-y-4">
                                     <h1 className="text-4xl font-black text-slate-900 leading-tight uppercase tracking-tight group-hover:text-emerald-700 transition-colors">{post.postTitle}</h1>
@@ -384,7 +384,7 @@ const PostDetail: React.FC = () => {
                                     allowFullScreen
                                 />
                             </div>
-                            
+
                             <div className="space-y-6 pt-2">
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2">Địa chỉ chi tiết</p>

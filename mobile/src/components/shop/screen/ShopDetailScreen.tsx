@@ -34,7 +34,7 @@ const ShoDetailScreen = () => {
             title="My Shop"
             backButton={handleBack}
             rightAction={
-                shop ? (
+                shop && shop.shopStatus !== 'blocked' ? (
                     <View style={styles.headerActions}>
                         <TouchableOpacity onPress={() => navigation.navigate('CreatePost')}>
                             <Plus color="#10b981" size={24} />
@@ -44,7 +44,7 @@ const ShoDetailScreen = () => {
                             <Settings2 color="#10b981" size={24} />
                         </TouchableOpacity>
                     </View>
-                ) : undefined
+                ) : null
             }
         >
             {!shop ? (

@@ -1,6 +1,6 @@
-import React from 'react'
-import { Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { ExternalLink, MapPin, MessageCircle, Phone, Store } from 'lucide-react-native'
+import React, { useMemo } from 'react'
+import { FlatList, Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Camera, ExternalLink, MapPin, MessageCircle, Phone, Play, Store, User } from 'lucide-react-native'
 
 interface ShopHeaderProps {
     shop: any;
@@ -9,6 +9,13 @@ interface ShopHeaderProps {
 }
 
 const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
+    const gallery = useMemo(() => {
+        if (!shop.shopGalleryImages) return [];
+        return typeof shop.shopGalleryImages === 'string'
+            ? shop.shopGalleryImages.split('|')
+            : shop.shopGalleryImages;
+    }, [shop.shopGalleryImages]);
+
     if (!shop) return null
 
     const openMap = () => {
@@ -46,6 +53,22 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
     return (
         <View style={styles.headerCard}>
             {shop.shopCoverUrl ? (
+                <Image source={{ uri: shop.shopCoverUrl }} style={styles.coverImage} />
+            ) : null}
+
+            {/* 2. Thay vì 1 ảnh bìa, hãy hiện Slider nếu có Gallery */}
+            {gallery.length > 0 ? (
+                <FlatList
+                    data={gallery}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={(item, index) => index.toString()}
+                    renderItem={({ item }) => (
+                        <Image source={{ uri: item }} style={styles.coverImage} />
+                    )}
+                />
+            ) : shop.shopCoverUrl ? (
                 <Image source={{ uri: shop.shopCoverUrl }} style={styles.coverImage} />
             ) : null}
 
@@ -96,6 +119,26 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
                     <Text style={styles.mapLinkText}>Open location in maps</Text>
                 </TouchableOpacity>
             ) : null}
+
+            {/* 3. Social Media Icons (Bổ sung nếu có link FB/Insta) */}
+            <View style={styles.socialMediaRow}>
+                {shop.shopFacebook && (
+                    <TouchableOpacity onPress={() => Linking.openURL(shop.shopFacebook)}>
+                        <User size={20} color="#1877F2" />
+                    </TouchableOpacity>
+                )}
+                {shop.shopInstagram && (
+                    <TouchableOpacity onPress={() => Linking.openURL(shop.shopInstagram)}>
+                        <Camera size={20} color="#E1306C" />
+                    </TouchableOpacity>
+                )}
+                {shop.shopYoutube && (
+                    <TouchableOpacity onPress={() => Linking.openURL(shop.shopYoutube)}>
+                        <Play size={20} color="#FF0000" />
+                    </TouchableOpacity>
+                )}
+                {/* Tương tự cho Instagram, Youtube */}
+            </View>
 
             {!isOwner ? (
                 <View style={styles.contactRow}>
@@ -268,6 +311,13 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#64748b',
     },
+    socialMediaRow: {
+        flexDirection: 'row',
+        paddingHorizontal: 18,
+        gap: 15,
+        marginBottom: 10,
+    },
+
 })
 
 export default ShopHeader

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Alert } from 'react-native'
 import { useAuth } from '../../../context/AuthContext'
 import { postService } from './postService'
+import CustomAlert from '../../../utils/AlertHelper'
 
 type PostTab = 'personal' | 'shop' | 'trash'
 
@@ -40,7 +41,7 @@ const useMyPost = () => {
     }, [shop?.shopId])
 
     const handleDelete = (postId: number) => {
-        Alert.alert(
+        CustomAlert(
             'Confirm deletion',
             'Are you sure you want to delete this post?',
             [
@@ -55,10 +56,10 @@ const useMyPost = () => {
                             if (editingPost?.postId === postId) {
                                 setEditingPost(null)
                             }
-                            Alert.alert('Success', 'Post deleted successfully.')
+                            CustomAlert('Success', 'Post deleted successfully.')
                         } catch (e) {
                             console.error('Error deleting post:', e)
-                            Alert.alert('Error', 'Failed to delete the post.')
+                            CustomAlert('Error', 'Failed to delete the post.')
                         }
                     }
                 }
