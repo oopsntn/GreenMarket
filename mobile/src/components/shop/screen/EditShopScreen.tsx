@@ -133,7 +133,11 @@ const EditShopScreen = ({ route, navigation }: any) => {
             }
         } catch (error: any) {
             console.error(error);
-            CustomAlert('Error', error.response?.data?.error || 'Update failed');
+            if (error.response?.status === 403) {
+                CustomAlert('Yêu cầu xác thực', 'Cập nhật email thành công nhưng bạn cần xác thực lại email (Email change resets verification). Vui lòng xác thực Email của shop!');
+            } else {
+                CustomAlert('Error', error.response?.data?.error || 'Update failed');
+            }
         } finally {
             setLoading(false);
         }
