@@ -25,18 +25,20 @@ type ConfirmAction = "disable" | "enable" | "remove";
 
 type ConfirmState = {
   isOpen: boolean;
-  mappingId: number | null;
+  mappingId: string | null;
   action: ConfirmAction | null;
 };
 
 const PAGE_SIZE = 5;
 
 function CategoryAttributeMappingPage() {
-  const [mappings, setMappings] = useState<CategoryMapping[]>(
-    categoryMappingService.getMappings(),
+  const [mappings, setMappings] = useState<CategoryMapping[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<Category[]>(
+    [],
   );
-  const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
-  const [availableAttributes, setAvailableAttributes] = useState<Attribute[]>([]);
+  const [availableAttributes, setAvailableAttributes] = useState<Attribute[]>(
+    [],
+  );
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const [pageError, setPageError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -49,14 +51,15 @@ function CategoryAttributeMappingPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-  const [selectedMappingId, setSelectedMappingId] = useState<number | null>(
+  const [selectedMappingId, setSelectedMappingId] = useState<string | null>(
     null,
   );
   const [formData, setFormData] = useState<CategoryMappingFormState>(
     emptyCategoryMappingForm,
   );
   const [formError, setFormError] = useState("");
-  const [previewCategoryId, setPreviewCategoryId] = useState<string>("1");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previewCategoryId, setPreviewCategoryId] = useState<string>("");
 
   useEffect(() => {
     const loadCatalogs = async () => {
@@ -64,20 +67,24 @@ function CategoryAttributeMappingPage() {
         setIsCatalogLoading(true);
         setPageError("");
 
-        const [categories, attributes] = await Promise.all([
+        const [categories, attributes, mappingData] = await Promise.all([
           categoryService.getCategories(),
           attributeService.getAttributes(),
+          categoryMappingService.fetchMappings(),
         ]);
 
-        setAvailableCategories(
-          categoryMappingService.getAvailableCategories(categories),
-        );
-        setAvailableAttributes(
-          categoryMappingService.getAvailableAttributes(attributes),
-        );
+        const nextCategories =
+          categoryMappingService.getAvailableCategories(categories);
+        const nextAttributes =
+          categoryMappingService.getAvailableAttributes(attributes);
+
+        setAvailableCategories(nextCategories);
+        setAvailableAttributes(nextAttributes);
+        setMappings(mappingData);
         setPreviewCategoryId(
-          String(
-            categoryMappingService.getAvailableCategories(categories)[0]?.id ?? "",
+          categoryMappingService.getDefaultPreviewCategoryId(
+            mappingData,
+            nextCategories,
           ),
         );
       } catch (error) {
@@ -115,6 +122,11 @@ function CategoryAttributeMappingPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
+  const selectedMapping =
+    selectedMappingId !== null
+      ? (mappings.find((mapping) => mapping.id === selectedMappingId) ?? null)
+      : null;
+
   const openAddModal = () => {
     setModalMode("add");
     setSelectedMappingId(null);
@@ -139,10 +151,11 @@ function CategoryAttributeMappingPage() {
   const closeModal = () => {
     setSelectedMappingId(null);
     setFormError("");
+    setIsSubmitting(false);
     setIsModalOpen(false);
   };
 
-  const openConfirmDialog = (mappingId: number, action: ConfirmAction) => {
+  const openConfirmDialog = (mappingId: string, action: ConfirmAction) => {
     setConfirmState({
       isOpen: true,
       mappingId,
@@ -179,62 +192,118 @@ function CategoryAttributeMappingPage() {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     try {
+      setIsSubmitting(true);
+      setFormError("");
+
       if (modalMode === "add") {
-        setMappings((prev) =>
-          categoryMappingService.createMapping(
-            prev,
-            availableCategories,
-            availableAttributes,
-            formData,
-          ),
+        const createdMapping = await categoryMappingService.createMapping(
+          mappings,
+          availableCategories,
+          availableAttributes,
+          formData,
+        );
+
+        setMappings((prev) => [...prev, createdMapping]);
+        setPreviewCategoryId(
+          (prev) => prev || String(createdMapping.categoryId),
         );
         showToast("Mapping added successfully.");
+        closeModal();
+        return;
       }
 
-      if (modalMode === "edit" && selectedMappingId !== null) {
+      if (modalMode === "edit" && selectedMapping) {
+        const updatedMapping = await categoryMappingService.updateMapping(
+          mappings,
+          availableCategories,
+          availableAttributes,
+          selectedMapping,
+          formData,
+        );
+
         setMappings((prev) =>
-          categoryMappingService.updateMapping(
-            prev,
-            availableCategories,
-            availableAttributes,
-            selectedMappingId,
-            formData,
+          prev.map((mapping) =>
+            mapping.id === selectedMapping.id ? updatedMapping : mapping,
           ),
         );
-        showToast("Mapping updated successfully.");
-      }
 
-      closeModal();
+        setPreviewCategoryId((prev) =>
+          prev === String(selectedMapping.categoryId)
+            ? String(updatedMapping.categoryId)
+            : prev,
+        );
+
+        showToast("Mapping updated successfully.");
+        closeModal();
+      }
     } catch (error) {
       setFormError(
         error instanceof Error ? error.message : "Failed to save mapping.",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleToggleStatus = (mapping: CategoryMapping) => {
+  const handleToggleStatus = async (mapping: CategoryMapping) => {
     const nextStatus = mapping.status === "Active" ? "Disabled" : "Active";
-    setMappings((prev) =>
-      categoryMappingService.updateMappingStatus(prev, mapping.id, nextStatus),
-    );
+
+    try {
+      const updatedMapping = await categoryMappingService.updateMappingStatus(
+        mapping,
+        nextStatus,
+      );
+
+      setMappings((prev) =>
+        prev.map((item) => (item.id === mapping.id ? updatedMapping : item)),
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to update mapping status.",
+        "error",
+      );
+    }
   };
 
-  const handleRemove = (mappingId: number) => {
-    setMappings((prev) =>
-      categoryMappingService.removeMapping(prev, mappingId),
-    );
+  const handleRemove = async (mapping: CategoryMapping) => {
+    try {
+      await categoryMappingService.removeMapping(mapping);
+
+      setMappings((prev) => prev.filter((item) => item.id !== mapping.id));
+
+      setPreviewCategoryId((prev) => {
+        if (prev !== String(mapping.categoryId)) {
+          return prev;
+        }
+
+        const remainingMappings = mappings.filter(
+          (item) => item.id !== mapping.id && item.status === "Active",
+        );
+
+        return categoryMappingService.getDefaultPreviewCategoryId(
+          remainingMappings,
+          availableCategories,
+        );
+      });
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Failed to remove mapping.",
+        "error",
+      );
+    }
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (confirmState.mappingId === null || confirmState.action === null) return;
 
-    const targetMapping = mappings.find(
-      (item) => item.id === confirmState.mappingId,
-    );
+    const targetMapping =
+      mappings.find((item) => item.id === confirmState.mappingId) ?? null;
 
     if (!targetMapping) {
       closeConfirmDialog();
@@ -244,10 +313,10 @@ function CategoryAttributeMappingPage() {
     const mappingLabel = `${targetMapping.categoryName} - ${targetMapping.attributeName}`;
 
     if (confirmState.action === "remove") {
-      handleRemove(confirmState.mappingId);
+      await handleRemove(targetMapping);
       showToast(`${mappingLabel} has been removed successfully.`, "info");
     } else {
-      handleToggleStatus(targetMapping);
+      await handleToggleStatus(targetMapping);
 
       if (confirmState.action === "disable") {
         showToast(`${mappingLabel} has been disabled successfully.`, "info");
@@ -260,20 +329,13 @@ function CategoryAttributeMappingPage() {
   };
 
   const filteredMappings = useMemo(() => {
-    const keyword = searchKeyword.trim().toLowerCase();
-
-    if (!keyword) return mappings;
-
-    return mappings.filter((item) => {
-      return (
-        item.categoryName.toLowerCase().includes(keyword) ||
-        item.attributeName.toLowerCase().includes(keyword) ||
-        item.attributeCode.toLowerCase().includes(keyword)
-      );
-    });
+    return categoryMappingService.filterMappings(mappings, searchKeyword);
   }, [mappings, searchKeyword]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredMappings.length / PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredMappings.length / PAGE_SIZE),
+  );
 
   const paginatedMappings = useMemo(() => {
     const startIndex = (page - 1) * PAGE_SIZE;
@@ -308,7 +370,7 @@ function CategoryAttributeMappingPage() {
   const confirmMessageMap: Record<ConfirmAction, string> = {
     disable: `Are you sure you want to disable ${mappingLabel}? This mapping will no longer be applied in the category configuration.`,
     enable: `Are you sure you want to enable ${mappingLabel}? This mapping will be active again in the category configuration.`,
-    remove: `Are you sure you want to remove ${mappingLabel}? This action will delete the relationship between category and attribute from the current UI data.`,
+    remove: `Are you sure you want to remove ${mappingLabel}? This action will delete the relationship between category and attribute from the current configuration.`,
   };
 
   const confirmButtonMap: Record<ConfirmAction, string> = {
@@ -370,9 +432,19 @@ function CategoryAttributeMappingPage() {
           <option value="" disabled>
             Select {mapping.attributeName.toLowerCase()}
           </option>
-          <option>Option 1</option>
-          <option>Option 2</option>
-          <option>Option 3</option>
+          {mapping.attributeOptions.length > 0 ? (
+            mapping.attributeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))
+          ) : (
+            <>
+              <option>Option 1</option>
+              <option>Option 2</option>
+              <option>Option 3</option>
+            </>
+          )}
         </select>
       );
     }
@@ -407,10 +479,13 @@ function CategoryAttributeMappingPage() {
         {isCatalogLoading ? (
           <EmptyState
             title="Loading mapping catalogs"
-            description="Fetching categories and attributes from the admin API."
+            description="Fetching categories, attributes, and mappings from the admin API."
           />
         ) : pageError ? (
-          <EmptyState title="Unable to load mapping catalogs" description={pageError} />
+          <EmptyState
+            title="Unable to load mapping catalogs"
+            description={pageError}
+          />
         ) : filteredMappings.length === 0 ? (
           <EmptyState
             title="No mappings found"
@@ -422,7 +497,7 @@ function CategoryAttributeMappingPage() {
               <table className="mapping-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
+                    <th>Key</th>
                     <th>Category</th>
                     <th>Attribute</th>
                     <th>Code</th>
@@ -437,12 +512,15 @@ function CategoryAttributeMappingPage() {
                 <tbody>
                   {paginatedMappings.map((item) => (
                     <tr key={item.id}>
-                      <td>#{item.id}</td>
+                      <td>{item.id}</td>
                       <td>{item.categoryName}</td>
                       <td>{item.attributeName}</td>
                       <td>{item.attributeCode}</td>
                       <td>
-                        <StatusBadge label={item.attributeType} variant="type" />
+                        <StatusBadge
+                          label={item.attributeType}
+                          variant="type"
+                        />
                       </td>
                       <td>
                         <StatusBadge
@@ -483,7 +561,9 @@ function CategoryAttributeMappingPage() {
                             <button
                               type="button"
                               className="mapping-actions__enable"
-                              onClick={() => openConfirmDialog(item.id, "enable")}
+                              onClick={() =>
+                                openConfirmDialog(item.id, "enable")
+                              }
                             >
                               Enable
                             </button>
@@ -519,7 +599,9 @@ function CategoryAttributeMappingPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={page === totalPages}
                 >
                   Next
@@ -611,7 +693,7 @@ function CategoryAttributeMappingPage() {
               name="categoryId"
               value={formData.categoryId}
               onChange={handleChange}
-              disabled={isCatalogLoading}
+              disabled={isCatalogLoading || isSubmitting}
             >
               <option value="">Select category</option>
               {availableCategories.map((category) => (
@@ -629,7 +711,7 @@ function CategoryAttributeMappingPage() {
               name="attributeId"
               value={formData.attributeId}
               onChange={handleChange}
-              disabled={isCatalogLoading}
+              disabled={isCatalogLoading || isSubmitting}
             >
               <option value="">Select attribute</option>
               {availableAttributes.map((attribute) => (
@@ -650,6 +732,7 @@ function CategoryAttributeMappingPage() {
               value={formData.displayOrder}
               onChange={handleChange}
               placeholder="Enter display order"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -659,6 +742,7 @@ function CategoryAttributeMappingPage() {
               type="checkbox"
               checked={formData.required}
               onChange={handleChange}
+              disabled={isSubmitting}
             />
             <span>Required field in posting form</span>
           </label>
@@ -672,11 +756,20 @@ function CategoryAttributeMappingPage() {
               type="button"
               className="mapping-modal__cancel"
               onClick={closeModal}
+              disabled={isSubmitting}
             >
               Cancel
             </button>
-            <button type="submit" className="mapping-modal__submit">
-              {modalMode === "add" ? "Add Mapping" : "Save Changes"}
+            <button
+              type="submit"
+              className="mapping-modal__submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "Saving..."
+                : modalMode === "add"
+                  ? "Add Mapping"
+                  : "Save Changes"}
             </button>
           </div>
         </form>
@@ -701,7 +794,9 @@ function CategoryAttributeMappingPage() {
         tone={
           confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
         }
-        onConfirm={handleConfirmAction}
+        onConfirm={() => {
+          void handleConfirmAction();
+        }}
         onCancel={closeConfirmDialog}
       />
 
