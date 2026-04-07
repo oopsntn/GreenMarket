@@ -12,7 +12,6 @@ export type ApiModerationPostResponse = {
   categoryId: number | null;
   postTitle: string;
   postSlug: string;
-  postContent: string | null;
   postPrice: string | number | null;
   postLocation: string | null;
   postStatus: string;
@@ -61,7 +60,6 @@ export type PostModerationItem = {
   views: number;
   contacts: number;
   rejectedReason: string;
-  content: string;
   images: string[];
   attributes: PostModerationAttribute[];
 };

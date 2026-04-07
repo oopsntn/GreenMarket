@@ -72,7 +72,6 @@ const mapPostToUi = (
     views: item.postViewCount ?? 0,
     contacts: item.postContactCount ?? 0,
     rejectedReason: item.postRejectedReason?.trim() || "No rejection reason",
-    content: item.postContent?.trim() || "No content provided.",
     images:
       "images" in item
         ? (item.images ?? [])

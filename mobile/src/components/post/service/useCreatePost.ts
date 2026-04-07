@@ -23,7 +23,6 @@ interface SelectedMedia {
 interface CreatePostFormData {
     categoryId: string;
     postTitle: string;
-    postContent: string;
     postPrice: string;
     postLocation: string;
     postContactPhone: string;
@@ -33,7 +32,6 @@ interface CreatePostFormData {
 const initialFormData: CreatePostFormData = {
     categoryId: '',
     postTitle: '',
-    postContent: '',
     postPrice: '',
     postLocation: '',
     postContactPhone: '',
@@ -188,7 +186,6 @@ const useCreatePost = () => {
             await postService.createPost({
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
-                postContent: formData.postContent.trim() || undefined,
                 postPrice: formData.postPrice.trim(),
                 postLocation: formData.postLocation.trim() || undefined,
                 postContactPhone: formData.postContactPhone.trim() || undefined,

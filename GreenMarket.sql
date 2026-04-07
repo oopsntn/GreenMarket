@@ -258,7 +258,7 @@ CREATE TABLE posts (
     category_id INTEGER REFERENCES categories(category_id) ON DELETE CASCADE,
     post_title VARCHAR(255) NOT NULL,
     post_slug VARCHAR(255) NOT NULL UNIQUE,
-    post_content TEXT,
+
     post_price NUMERIC(12,2),
     post_location VARCHAR(255),
     post_status VARCHAR(20) NOT NULL DEFAULT 'pending',
@@ -556,7 +556,7 @@ CREATE TABLE admin_templates (
 -- ============================================================
 
 -- Posts
-CREATE INDEX post_search_idx ON posts USING gin (to_tsvector('simple', post_title || ' ' || COALESCE(post_content, '')));
+CREATE INDEX post_search_idx ON posts USING gin (to_tsvector('simple', post_title));
 CREATE INDEX post_category_idx ON posts USING btree (category_id);
 CREATE INDEX post_status_idx ON posts USING btree (post_status);
 CREATE INDEX post_price_idx ON posts USING btree (post_price);
