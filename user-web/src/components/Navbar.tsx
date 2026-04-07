@@ -13,8 +13,10 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const { user, shop, isAuthenticated, logout } = useAuth();
 
-  const displayIdentity = user?.userDisplayName?.trim() || user?.userMobile || 'Người dùng';
   const isGardenOwner = shop?.shopStatus === 'active';
+  const displayIdentity = (isGardenOwner && shop?.shopName)
+    ? shop.shopName
+    : (user?.userDisplayName?.trim() || user?.userMobile || 'Người dùng');
 
   const guestNavItems = [
     { label: 'Trang chủ', path: '/home', icon: ShoppingBag },

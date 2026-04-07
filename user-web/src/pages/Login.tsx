@@ -8,14 +8,14 @@ import clsx from 'clsx';
 
 const Login: React.FC = () => {
   const [loginMethod, setLoginMethod] = useState<'qr' | 'mobile'>('qr');
-  
+
   // Mobile/OTP State
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [step, setStep] = useState<'mobile' | 'otp'>('mobile');
   const [loading, setLoading] = useState(false);
-  
+
   // QR State
   const [qrSessionId, setQrSessionId] = useState<string | null>(null);
   const [qrStatus, setQrStatus] = useState<'pending' | 'scanned' | 'authorized' | 'expired'>('pending');
@@ -58,16 +58,16 @@ const Login: React.FC = () => {
         const res = await checkQrStatus(qrSessionId);
         setQrStatus(res.data.status);
         if (res.data.status === 'authorized') {
-            clearInterval(pollInterval.current);
-            login(res.data.token, res.data.user);
-            navigate('/');
+          clearInterval(pollInterval.current);
+          login(res.data.token, res.data.user);
+          navigate('/home');
         } else if (res.data.status === 'expired') {
-            clearInterval(pollInterval.current);
+          clearInterval(pollInterval.current);
         }
       } catch (error: any) {
         if (error.response?.data?.status === 'expired') {
-            setQrStatus('expired');
-            clearInterval(pollInterval.current);
+          setQrStatus('expired');
+          clearInterval(pollInterval.current);
         }
       }
     }, 2500); // Poll every 2.5s
@@ -120,7 +120,7 @@ const Login: React.FC = () => {
     try {
       const response = await verifyOtp(mobile, finalOtp);
       login(response.data.token, response.data.user);
-      navigate('/');
+      navigate('/home');
     } catch (error) {
       console.error("OTP Verification failed:", error);
       alert("Mã OTP không đúng hoặc đã hết hạn.");
@@ -134,158 +134,158 @@ const Login: React.FC = () => {
       <div className="bg-white border border-slate-200 p-8 sm:p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl relative overflow-hidden">
         {/* Decoration */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -z-10" />
-        
+
         {/* Tabs */}
         <div className="flex bg-slate-100 rounded-2xl p-1 mb-8 border border-slate-200">
-            <button
-                onClick={() => setLoginMethod('qr')}
-                className={clsx(
-                    "flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all",
-                    loginMethod === 'qr' ? "bg-emerald-700 text-white shadow-lg" : "text-slate-500 hover:text-slate-900"
-                )}
-            >
-                <QrCode className="w-4 h-4" /> Mã QR
-            </button>
-            <button
-                onClick={() => setLoginMethod('mobile')}
-                className={clsx(
-                    "flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all",
-                    loginMethod === 'mobile' ? "bg-emerald-700 text-white shadow-lg" : "text-slate-500 hover:text-slate-900"
-                )}
-            >
-                <Phone className="w-4 h-4" /> Số điện thoại
-            </button>
+          <button
+            onClick={() => setLoginMethod('qr')}
+            className={clsx(
+              "flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all",
+              loginMethod === 'qr' ? "bg-emerald-700 text-white shadow-lg" : "text-slate-500 hover:text-slate-900"
+            )}
+          >
+            <QrCode className="w-4 h-4" /> Mã QR
+          </button>
+          <button
+            onClick={() => setLoginMethod('mobile')}
+            className={clsx(
+              "flex-1 py-3 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all",
+              loginMethod === 'mobile' ? "bg-emerald-700 text-white shadow-lg" : "text-slate-500 hover:text-slate-900"
+            )}
+          >
+            <Phone className="w-4 h-4" /> Số điện thoại
+          </button>
         </div>
 
         {loginMethod === 'qr' ? (
-            // QR LOGIN VIEW
-            <div className="text-center animate-in fade-in zoom-in duration-300">
-                <h1 className="text-2xl font-black mb-2 text-slate-900">Đăng nhập bằng QR</h1>
-                <p className="text-slate-500 text-sm mb-8">
-                    Sử dụng ứng dụng <span className="text-emerald-700 font-bold">GreenMarket Mobile</span> để quét mã
-                </p>
+          // QR LOGIN VIEW
+          <div className="text-center animate-in fade-in zoom-in duration-300">
+            <h1 className="text-2xl font-black mb-2 text-slate-900">Đăng nhập bằng QR</h1>
+            <p className="text-slate-500 text-sm mb-8">
+              Sử dụng ứng dụng <span className="text-emerald-700 font-bold">GreenMarket Mobile</span> để quét mã
+            </p>
 
-                <div className="bg-white p-4 rounded-3xl inline-block mx-auto mb-6 shadow-2xl relative border border-slate-100">
-                    {loading ? (
-                        <div className="w-48 h-48 flex items-center justify-center">
-                            <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-                        </div>
-                    ) : (
-                        <div className="relative">
-                            <QRCode 
-                                value={qrSessionId || "loading..."} 
-                                size={192} 
-                                className={clsx("transition-opacity duration-300", qrStatus === 'expired' && "opacity-20")}
-                            />
-                            {qrStatus === 'expired' && (
-                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <button 
-                                        onClick={initQr}
-                                        className="bg-emerald-700 hover:bg-emerald-600 text-white rounded-full p-4 shadow-lg transition-transform hover:scale-110 active:scale-95 flex flex-col items-center gap-2 shadow-emerald-200/50"
-                                    >
-                                        <RefreshCw className="w-6 h-6" />
-                                    </button>
-                                    <span className="text-slate-900 font-bold mt-2">Tải lại mã</span>
-                                </div>
-                            )}
-                            {qrStatus === 'scanned' && (
-                                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl">
-                                    <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-2">
-                                        <QrCode className="w-6 h-6 text-emerald-600" />
-                                    </div>
-                                    <span className="text-emerald-700 font-bold">Đã quét thành công</span>
-                                    <span className="text-emerald-600 outline-none text-xs text-center mt-1 px-4">Vui lòng xác nhận trên ứng dụng</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
+            <div className="bg-white p-4 rounded-3xl inline-block mx-auto mb-6 shadow-2xl relative border border-slate-100">
+              {loading ? (
+                <div className="w-48 h-48 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
                 </div>
-                
-                {qrStatus === 'expired' ? (
-                     <p className="text-amber-600 font-bold text-sm">Mã QR đã hết hạn. Vui lòng tải lại.</p>
-                ) : (
-                    <p className="text-slate-500 text-sm flex items-center justify-center gap-2 font-medium">
-                        {qrStatus === 'scanned' ? (
-                            <><Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> Đang chờ xác nhận...</>
-                        ) : (
-                            "Mã sẽ tự động làm mới sau 5 phút"
-                        )}
-                    </p>
-                )}
+              ) : (
+                <div className="relative">
+                  <QRCode
+                    value={qrSessionId || "loading..."}
+                    size={192}
+                    className={clsx("transition-opacity duration-300", qrStatus === 'expired' && "opacity-20")}
+                  />
+                  {qrStatus === 'expired' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <button
+                        onClick={initQr}
+                        className="bg-emerald-700 hover:bg-emerald-600 text-white rounded-full p-4 shadow-lg transition-transform hover:scale-110 active:scale-95 flex flex-col items-center gap-2 shadow-emerald-200/50"
+                      >
+                        <RefreshCw className="w-6 h-6" />
+                      </button>
+                      <span className="text-slate-900 font-bold mt-2">Tải lại mã</span>
+                    </div>
+                  )}
+                  {qrStatus === 'scanned' && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center rounded-2xl">
+                      <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-2">
+                        <QrCode className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <span className="text-emerald-700 font-bold">Đã quét thành công</span>
+                      <span className="text-emerald-600 outline-none text-xs text-center mt-1 px-4">Vui lòng xác nhận trên ứng dụng</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
+            {qrStatus === 'expired' ? (
+              <p className="text-amber-600 font-bold text-sm">Mã QR đã hết hạn. Vui lòng tải lại.</p>
+            ) : (
+              <p className="text-slate-500 text-sm flex items-center justify-center gap-2 font-medium">
+                {qrStatus === 'scanned' ? (
+                  <><Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> Đang chờ xác nhận...</>
+                ) : (
+                  "Mã sẽ tự động làm mới sau 5 phút"
+                )}
+              </p>
+            )}
+          </div>
         ) : (
-            // MOBILE OTP VIEW
-            <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="text-center mb-10">
-                    <div className="bg-emerald-50 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm">
-                        {step === 'mobile' ? <Phone className="w-8 h-8 text-emerald-600" /> : <Lock className="w-8 h-8 text-emerald-600" />}
-                    </div>
-                    <h1 className="text-2xl font-black mb-2 text-slate-900">
-                        {step === 'mobile' ? 'Chào mừng bạn' : 'Xác thực OTP'}
-                    </h1>
-                    <p className="text-slate-500 text-sm font-medium">
-                        {step === 'mobile' ? 'Nhập số điện thoại để tiếp tục' : `Chúng tôi đã gửi mã tới ${mobile}`}
-                    </p>
-                </div>
-
-                {step === 'mobile' ? (
-                <form onSubmit={handleRequestOtp} className="space-y-6">
-                    <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input 
-                        required
-                        type="tel"
-                        className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
-                        placeholder="09xx xxx xxx"
-                        value={mobile}
-                        onChange={(e) => setMobile(e.target.value)}
-                    />
-                    </div>
-                    <button 
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-emerald-700 hover:bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 text-white shadow-xl shadow-emerald-200/50"
-                    >
-                    {loading ? <Loader2 className="animate-spin" /> : <>Tiếp tục <ArrowRight className="w-5 h-5" /></>}
-                    </button>
-                </form>
-                ) : (
-                <form onSubmit={(e) => handleVerifyOtp(e)} className="space-y-6">
-                    <div className="flex justify-between gap-2">
-                    {otp.map((digit, idx) => (
-                        <input
-                        key={idx}
-                        ref={el => { otpRefs.current[idx] = el; }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        className="w-12 h-14 bg-slate-50 border border-slate-200 rounded-xl text-center text-2xl font-bold text-emerald-600 focus:border-emerald-500 focus:bg-white outline-none transition-all shadow-md"
-                        value={digit}
-                        onChange={(e) => handleOtpChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(idx, e)}
-                        />
-                    ))}
-                    </div>
-                    <button 
-                    type="submit"
-                    disabled={loading || otp.some(d => d === '')}
-                    className="w-full bg-emerald-700 hover:bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-100 disabled:text-slate-400 text-white shadow-xl shadow-emerald-200/50"
-                    >
-                    {loading ? <Loader2 className="animate-spin" /> : 'Xác nhận Đăng nhập'}
-                    </button>
-                    <button 
-                    type="button"
-                    onClick={() => {
-                        setStep('mobile');
-                        setOtp(['', '', '', '', '', '']);
-                    }}
-                    className="w-full text-slate-500 text-sm font-bold hover:text-emerald-600 transition-colors"
-                    >
-                    Đổi số điện thoại
-                    </button>
-                </form>
-                )}
+          // MOBILE OTP VIEW
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="text-center mb-10">
+              <div className="bg-emerald-50 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm">
+                {step === 'mobile' ? <Phone className="w-8 h-8 text-emerald-600" /> : <Lock className="w-8 h-8 text-emerald-600" />}
+              </div>
+              <h1 className="text-2xl font-black mb-2 text-slate-900">
+                {step === 'mobile' ? 'Chào mừng bạn' : 'Xác thực OTP'}
+              </h1>
+              <p className="text-slate-500 text-sm font-medium">
+                {step === 'mobile' ? 'Nhập số điện thoại để tiếp tục' : `Chúng tôi đã gửi mã tới ${mobile}`}
+              </p>
             </div>
+
+            {step === 'mobile' ? (
+              <form onSubmit={handleRequestOtp} className="space-y-6">
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    required
+                    type="tel"
+                    className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
+                    placeholder="09xx xxx xxx"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-emerald-700 hover:bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 text-white shadow-xl shadow-emerald-200/50"
+                >
+                  {loading ? <Loader2 className="animate-spin" /> : <>Tiếp tục <ArrowRight className="w-5 h-5" /></>}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={(e) => handleVerifyOtp(e)} className="space-y-6">
+                <div className="flex justify-between gap-2">
+                  {otp.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      ref={el => { otpRefs.current[idx] = el; }}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      className="w-12 h-14 bg-slate-50 border border-slate-200 rounded-xl text-center text-2xl font-bold text-emerald-600 focus:border-emerald-500 focus:bg-white outline-none transition-all shadow-md"
+                      value={digit}
+                      onChange={(e) => handleOtpChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(idx, e)}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading || otp.some(d => d === '')}
+                  className="w-full bg-emerald-700 hover:bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-100 disabled:text-slate-400 text-white shadow-xl shadow-emerald-200/50"
+                >
+                  {loading ? <Loader2 className="animate-spin" /> : 'Xác nhận Đăng nhập'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('mobile');
+                    setOtp(['', '', '', '', '', '']);
+                  }}
+                  className="w-full text-slate-500 text-sm font-bold hover:text-emerald-600 transition-colors"
+                >
+                  Đổi số điện thoại
+                </button>
+              </form>
+            )}
+          </div>
         )}
 
         <div className="mt-10 text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">

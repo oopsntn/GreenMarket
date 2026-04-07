@@ -7,6 +7,7 @@ dotenv.config();
 import authRoutes from "./routes/auth.route.ts";
 import categoryRoutes from "./routes/admin/category.route.ts";
 import attributeRoutes from "./routes/admin/attribute.route";
+import categoryMappingRoutes from "./routes/admin/category-mapping.route.ts";
 import postRoutes from "./routes/admin/post.route";
 import shopRoutes from "./routes/admin/shop.route";
 import reportRoutes from "./routes/admin/report.route";
@@ -42,6 +43,12 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/admin/categories", verifyToken, isAdmin, categoryRoutes);
 app.use("/api/admin/attributes", verifyToken, isAdmin, attributeRoutes);
+app.use(
+  "/api/admin/category-mappings",
+  verifyToken,
+  isAdmin,
+  categoryMappingRoutes,
+);
 app.use("/api/admin/posts", verifyToken, isAdmin, postRoutes);
 app.use("/api/admin/shops", verifyToken, isAdmin, shopRoutes);
 app.use("/api/admin/reports", verifyToken, isAdmin, reportRoutes);
