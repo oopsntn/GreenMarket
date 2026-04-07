@@ -14,9 +14,6 @@ export const shops = pgTable("shops", {
   shopId: integer("shop_id")
     .primaryKey()
     .references(() => users.userId, { onDelete: "cascade" }),
-  shopOwnerId: integer("shop_owner_id").references(() => users.userId, {
-    onDelete: "set null",
-  }),
   shopName: varchar("shop_name", { length: 150 }).notNull(),
   shopPhone: varchar("shop_phone", { length: 50 }),
   shopEmail: varchar("shop_email", { length: 255 }).unique(),

@@ -151,22 +151,6 @@ CREATE TABLE admin_roles (
     PRIMARY KEY (admin_role_admin_id, admin_role_role_id)
 );
 
--- Business Roles
-CREATE TABLE business_roles (
-    business_role_id SERIAL PRIMARY KEY,
-    business_role_code VARCHAR(50) NOT NULL UNIQUE,
-    business_role_title VARCHAR(100) NOT NULL,
-    business_role_audience_group VARCHAR(50),
-    business_role_access_scope VARCHAR(100),
-    business_role_summary TEXT,
-    business_role_responsibilities JSONB DEFAULT '[]'::jsonb,
-    business_role_capabilities JSONB DEFAULT '[]'::jsonb,
-    business_role_status VARCHAR(20) NOT NULL DEFAULT 'active',
-    business_role_created_at TIMESTAMP DEFAULT now(),
-    business_role_updated_at TIMESTAMP DEFAULT now()
-);
-
-
 -- QR Sessions
 CREATE TABLE qr_sessions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -174,6 +158,16 @@ CREATE TABLE qr_sessions (
     user_id INTEGER REFERENCES users(user_id),
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     expires_at TIMESTAMP NOT NULL
+);
+
+-- OTP Requests
+CREATE TABLE otp_requests (
+    otp_request_id SERIAL PRIMARY KEY,
+    otp_request_mobile VARCHAR(20),
+    otp_request_otp_code VARCHAR(20),
+    otp_request_expire_at TIMESTAMP,
+    otp_request_status VARCHAR(30),
+    otp_request_created_at TIMESTAMP DEFAULT now()
 );
 
 -- Banned Keywords
@@ -525,6 +519,38 @@ CREATE TABLE event_logs (
     event_log_meta JSONB
 );
 
+-- Admin System Settings
+CREATE TABLE admin_system_settings (
+    setting_id SERIAL PRIMARY KEY,
+    otp_sandbox_enabled BOOLEAN,
+    max_images_per_post INTEGER,
+    post_rate_limit_per_hour INTEGER,
+    banned_keywords JSONB,
+    auto_moderation_enabled BOOLEAN,
+    keyword_filter_enabled BOOLEAN,
+    report_rate_limit INTEGER,
+    post_expiry_days INTEGER,
+    restore_window_days INTEGER,
+    auto_expire_enabled BOOLEAN,
+    max_file_size_mb INTEGER,
+    image_compression_enabled BOOLEAN,
+    updated_by INTEGER REFERENCES admins(admin_id) ON DELETE SET NULL,
+    updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Admin Templates
+CREATE TABLE admin_templates (
+    template_id SERIAL PRIMARY KEY,
+    template_name VARCHAR(150) NOT NULL,
+    template_type VARCHAR(50) NOT NULL,
+    template_content TEXT NOT NULL,
+    template_status VARCHAR(30),
+    template_created_by INTEGER REFERENCES admins(admin_id) ON DELETE SET NULL,
+    template_created_at TIMESTAMP DEFAULT now(),
+    template_updated_by INTEGER REFERENCES admins(admin_id) ON DELETE SET NULL,
+    template_updated_at TIMESTAMP DEFAULT now()
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -566,7 +592,6 @@ CREATE INDEX idx_admins_username ON admins(admin_username);
 CREATE INDEX idx_admins_status ON admins(admin_status);
 
 -- Shops
-CREATE INDEX idx_shops_owner ON shops(shop_owner_id);
 CREATE INDEX idx_shops_status ON shops(shop_status);
 
 -- Categories
@@ -728,6 +753,31 @@ INSERT INTO business_roles (
     'active'
 );
 
+-- ============================================================
+-- TRIGGERS
+-- ============================================================
+
+-- Function to sync shop_email to users.user_email
+CREATE OR REPLACE FUNCTION sync_shop_to_user_email()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Sync email if changed
+    IF (NEW.shop_email IS DISTINCT FROM OLD.shop_email) THEN
+        UPDATE users 
+        SET user_email = NEW.shop_email 
+        WHERE user_id = NEW.shop_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for shops table
+CREATE TRIGGER trg_sync_shop_to_user_email
+AFTER UPDATE OF shop_email ON shops
+FOR EACH ROW
+EXECUTE FUNCTION sync_shop_to_user_email();
+
 -- Users
 INSERT INTO users (
     user_id,
@@ -739,26 +789,26 @@ INSERT INTO users (
     user_status,
     user_business_role_id
 ) VALUES
-(1, '0978195419', 'Nguyễn Thành Nam', 'nam.nguyen@gmail.com', 'Yên Phong, Bắc Ninh', 'Marketplace account used for general buyer and seller demo flows.', 'active', 1),
+(1, '0978195419', 'Nguyễn Thành Nam', 'nguyenthanhnamidol@gmail.com', 'Yên Phong, Bắc Ninh', 'Marketplace account used for general buyer and seller demo flows.', 'active', 2),
 (2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'Hoàng Mai, Hà Nội', 'Shop owner account used to demonstrate host storefront behaviour.', 'active', 2),
 (3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'Nam Trực, Nam Định', 'Marketplace user account with host permissions for additional shop demo content.', 'active', 2),
-(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Collaborator demo account for mobile job and earnings scenarios.', 'active', 3),
+(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Collaborator demo account for mobile job and earnings scenarios.', 'active', 2),
 (5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
-(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 5),
+(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 2),
 (7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1);
 
 -- Shops
-INSERT INTO shops (shop_id, shop_name, shop_phone, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
-(1, 'Vườn Bonsai Phố Huyện', '0978195419', '14 Nghiêm Ích Khiêm, Thị Trấn Chờ, Yên Phong, Bắc Ninh',
+INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
+(1, 'Vườn Bonsai Phố Huyện', '0978195419', 'nguyenthanhnamidol@gmail.com', TRUE, '14 Nghiêm Ích Khiêm, Thị trấn Chờ, Yên Phong, Bắc Ninh',
     'Chuyên bonsai mini và tầm trung. Nhận thiết kế, chăm sóc và phối thế bonsai theo yêu cầu. Ship toàn quốc qua Viettel Post.',
-    'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', 21.1863, 106.0734),
-(3, 'Nam Định Art Garden', '0123456789', 'Nam Trực, Nam Định',
+    'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', 21.201262, 105.950174),
+(3, 'Nam Định Art Garden', '0123456789', 'hoainam.le@gmail.com', TRUE, 'Nam Trực, Nam Định',
     'Nghệ nhân cây cảnh cổ truyền Nam Điền. Chuyên sanh, si, tùng la hán cốt cách truyền thống. Hơn 20 năm kinh nghiệm.',
     'http://localhost:5000/uploads/shop/nam-dinh-art-garden.jpg', 'active', 20.2506, 106.2355),
-(4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'Chợ Lách, Bến Tre',
+(4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
     'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', 10.2350, 106.1511),
-(6, 'Dụng Cụ Bonsai Pro', '0935112233', 'Đông Anh, Hà Nội',
+(6, 'Dụng Cụ Bonsai Pro', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
     'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
     'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', 21.1395, 105.8544);
 
@@ -867,7 +917,7 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'Cây Sanh Nam Điền già, u nần, cốt cách thanh thoát. Lá đã thu nhỏ hoàn thiện. Phôi gốc 15 năm, tạo tác 5 năm. Phù hợp để bàn làm việc hoặc bàn trà.',
     2500000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 234, 12, true, now() - interval '30 days', now() - interval '29 days'),
 
-(2,  3, 2, 12, 'Tùng La Hán Dáng Trực Cổ Thụ',
+(2,  3, 3, 12, 'Tùng La Hán Dáng Trực Cổ Thụ',
     'tung-la-han-dang-truc-co-thu',
     'Siêu phẩm Tùng La Hán cốt cách Nam Định, tay cành hoàn thiện 4 tầng tán. Gốc hoành 85cm, thân xù xì cổ kính. Đã đạt giải nhì triển lãm SVC 2025.',
     150000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 1520, 45, true, now() - interval '25 days', now() - interval '24 days'),
@@ -877,7 +927,7 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'Cây Linh Sam lũa tự nhiên cực đẹp, hoa tím thơm quanh năm. Gốc từ Sông Hinh, Phú Yên. Lũa trắng, thân cứng như thép. Nuôi chậu 8 năm, tán đã ổn định.',
     8500000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 876, 28, true, now() - interval '20 days', now() - interval '19 days'),
 
-(4,  3, 2, 13, 'Sanh Quê Dáng Làng Đại Thụ',
+(4,  3, 3, 13, 'Sanh Quê Dáng Làng Đại Thụ',
     'sanh-que-dang-lang-dai-thu',
     'Cây sanh quê bóng mát rộng 3m, thích hợp sân vườn biệt thự hoặc quán cà phê. Phôi 30 năm, dáng cây làng quê Bắc Bộ. Giao cây tận nơi bằng xe tải.',
     45000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 432, 15, true, now() - interval '18 days', now() - interval '17 days'),
@@ -902,7 +952,7 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'Mai vàng 5 cánh Bến Tre, phôi 12 năm, dáng hoành ấn tượng. Nở hoa vàng rực mỗi dịp Tết. Đã xử lý cho ra hoa đúng mùa. Giao hàng cẩn thận, bảo hành sống.',
     12000000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 723, 31, true, now() - interval '8 days', now() - interval '7 days'),
 
-(9,  3, 2, 11, 'Tùng Bách Tán Lùn Nhật Mini',
+(9,  3, 3, 11, 'Tùng Bách Tán Lùn Nhật Mini',
     'tung-bach-tan-lun-nhat-mini',
     'Tùng Bách Tán lùn (Pinus parviflora) nhập giống Nhật. Lá ngắn xanh bạc, dáng xiên gió thổi. Chậu men xanh ngọc Tokoname. Kích thước 20cm, rất dễ chăm.',
     6800000, 'Nam Trực, Nam Định', 'approved', '0123456789', 298, 11, true, now() - interval '5 days', now() - interval '4 days'),
@@ -1085,7 +1135,7 @@ INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_
 -- ============================================================
 INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_reason_code, report_reason, report_note, report_status, admin_note, report_created_at, report_updated_at) VALUES
 (1, 5, 1, 1, 'MISLEADING_INFO', 'Post title and product details are not consistent with the attached listing photos.', 'The seller describes a different bonsai shape in the text than in the gallery.', 'pending', NULL, '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
-(2, 5, 2, 2, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
+(2, 5, 2, 3, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
 (3, 5, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00');
 
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
@@ -1095,7 +1145,6 @@ SELECT setval('business_roles_business_role_id_seq', (SELECT COALESCE(MAX(busine
 SELECT setval('otp_requests_otp_request_id_seq', (SELECT COALESCE(MAX(otp_request_id), 1) FROM otp_requests));
 SELECT setval('categories_category_id_seq', (SELECT COALESCE(MAX(category_id), 1) FROM categories));
 SELECT setval('attributes_attribute_id_seq', (SELECT COALESCE(MAX(attribute_id), 1) FROM attributes));
-SELECT setval('shops_shop_id_seq', (SELECT COALESCE(MAX(shop_id), 1) FROM shops));
 SELECT setval('posts_post_id_seq', (SELECT COALESCE(MAX(post_id), 1) FROM posts));
 SELECT setval('post_images_image_id_seq', (SELECT COALESCE(MAX(image_id), 1) FROM post_images));
 SELECT setval('post_videos_post_video_id_seq', (SELECT COALESCE(MAX(post_video_id), 1) FROM post_videos));
