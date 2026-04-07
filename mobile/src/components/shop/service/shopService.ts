@@ -19,6 +19,7 @@ export interface ShopDetail {
     shopCoverUrl?: string;
     shopLat?: number;
     shopLng?: number;
+    phones?: string[];
     posts?: ShopPost[];
 }
 
@@ -125,5 +126,24 @@ export const ShopService = {
             throw e
         }
     },
-    
+
+    requestVerifyOTP: async (target: string, type: 'email' | 'phone') => {
+        const response = await api.post('/shops/verify/request', { target, type })
+        return response.data
+    },
+
+    verifyEmail: async (email: string, otp: string) => {
+        const response = await api.post('/shops/verify/email', { email, otp })
+        return response.data
+    },
+
+    addPhone: async (phone: string, otp: string) => {
+        const response = await api.post('/shops/phones', { phone, otp })
+        return response.data
+    },
+
+    removePhone: async (phone: string) => {
+        const response = await api.delete('/shops/phones', { data: { phone } })
+        return response.data
+    }
 }

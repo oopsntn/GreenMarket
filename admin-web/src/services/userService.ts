@@ -1,10 +1,10 @@
 import { apiClient } from "../lib/apiClient";
-import { initialUsers } from "../mock-data/users";
+import { roleManagementService } from "./roleManagementService";
 import type {
   ApiUserResponse,
+  AssignableUserRole,
   FlattenedUserActivityItem,
   User,
-  UserFormState,
   UserRole,
   UserRoleCountItem,
   UserStatus,
@@ -35,40 +35,79 @@ const getCurrentDateTime = () => {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 };
 
-const getNextUserId = (users: User[]) => {
-  if (users.length === 0) return 1;
-  return Math.max(...users.map((user) => user.id)) + 1;
-};
-
-const getNextNestedId = (
-  items: Array<{
-    id: number;
-  }>,
-) => {
-  if (items.length === 0) return 1;
-  return Math.max(...items.map((item) => item.id)) + 1;
-};
-
 const formatDate = (value: string | null) => {
   if (!value) return "";
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-
   return date.toISOString().slice(0, 10);
 };
 
 const formatDateTime = (value: string | null) => {
   if (!value) return "";
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-
-  return `${date.toISOString().slice(0, 10)} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return `${date.toISOString().slice(0, 10)} ${String(date.getHours()).padStart(
+    2,
+    "0",
+  )}:${String(date.getMinutes()).padStart(2, "0")}`;
 };
 
 const mapApiStatusToUiStatus = (value: string | null): UserStatus => {
   return value?.toLowerCase() === "blocked" ? "Locked" : "Active";
+};
+
+const mapBusinessRoleCodeToUiRole = (
+  code: string | null | undefined,
+): AssignableUserRole => {
+  switch (code) {
+    case "HOST":
+      return "Host";
+    case "COLLABORATOR":
+      return "Collaborator";
+    case "MANAGER":
+      return "Manager";
+    case "OPERATION_STAFF":
+      return "Operation Staff";
+    case "USER":
+    default:
+      return "User";
+  }
+};
+
+const mapUiRoleToBusinessRoleCode = (role: AssignableUserRole): string => {
+  switch (role) {
+    case "Host":
+      return "HOST";
+    case "Collaborator":
+      return "COLLABORATOR";
+    case "Manager":
+      return "MANAGER";
+    case "Operation Staff":
+      return "OPERATION_STAFF";
+    case "User":
+    default:
+      return "USER";
+  }
+};
+
+const buildRoleAssignmentHistory = (
+  user: ApiUserResponse,
+  role: AssignableUserRole,
+): User["roleAssignments"] => {
+  const assignedAt =
+    formatDate(user.userUpdatedAt || user.userCreatedAt) || getCurrentDate();
+
+  return [
+    {
+      id: 1,
+      role,
+      assignedBy: DEFAULT_ADMIN_NAME,
+      assignedAt,
+      note: user.businessRoleTitle
+        ? `Current marketplace role is ${user.businessRoleTitle}.`
+        : "No marketplace role assigned yet.",
+    },
+  ];
 };
 
 const buildDerivedActivityLogs = (
@@ -100,6 +139,16 @@ const buildDerivedActivityLogs = (
       detail: "Latest successful user sign-in captured by the system.",
       performedBy: displayName,
       performedAt: lastLoginDateTime,
+    });
+  }
+
+  if (user.businessRoleTitle && updatedDateTime) {
+    logs.push({
+      id: logs.length + 1,
+      action: "Role Assigned",
+      detail: `Assigned marketplace role: ${user.businessRoleTitle}.`,
+      performedBy: DEFAULT_ADMIN_NAME,
+      performedAt: updatedDateTime,
     });
   }
 
@@ -136,26 +185,34 @@ const mapApiUserToUi = (item: ApiUserResponse): User => {
     item.userMobile?.trim() ||
     `User #${item.userId}`;
 
+  const role = mapBusinessRoleCodeToUiRole(item.businessRoleCode);
+
   return {
     id: item.userId,
     fullName,
     phone: item.userMobile?.trim() || "N/A",
     email: item.userEmail?.trim() || "No email",
-    role: "Customer",
+    role,
     status: mapApiStatusToUiStatus(item.userStatus),
     joinedAt: formatDate(item.userRegisteredAt || item.userCreatedAt),
     location: item.userLocation?.trim() || "No location",
     lastLoginAt: formatDateTime(item.userLastLoginAt) || "No login yet",
-    roleAssignments: [],
+    roleAssignments: buildRoleAssignmentHistory(item, role),
     activityLogs: buildDerivedActivityLogs(item, fullName),
+    businessRoleId: item.businessRoleId ?? item.userBusinessRoleId ?? null,
+    businessRoleCode: item.businessRoleCode ?? null,
+    businessRoleTitle: item.businessRoleTitle ?? null,
   };
 };
 
 export const userService = {
   async fetchUsers(): Promise<User[]> {
-    const data = await apiClient.request<ApiUserResponse[]>("/api/admin/users", {
-      defaultErrorMessage: "Unable to load users.",
-    });
+    const data = await apiClient.request<ApiUserResponse[]>(
+      "/api/admin/users",
+      {
+        defaultErrorMessage: "Unable to load users.",
+      },
+    );
 
     return data.map(mapApiUserToUi);
   },
@@ -190,155 +247,53 @@ export const userService = {
     return mapApiUserToUi(data);
   },
 
-  getUsers(): User[] {
-    return initialUsers;
+  async getAssignableRoles(): Promise<AssignableUserRole[]> {
+    const roles = await roleManagementService.fetchRoles();
+
+    return roles
+      .filter((role) => role.status === "Active")
+      .map((role) => mapBusinessRoleCodeToUiRole(role.code));
   },
 
-  createUser(users: User[], formData: UserFormState): User[] {
-    const currentDate = getCurrentDate();
-    const currentDateTime = getCurrentDateTime();
+  async assignUserRoleById(
+    userId: number,
+    nextRole: AssignableUserRole,
+  ): Promise<User> {
+    const businessRoleCode = mapUiRoleToBusinessRoleCode(nextRole);
+    const roles = await roleManagementService.fetchRoles();
+    const matchedRole = roles.find((role) => role.code === businessRoleCode);
 
-    const newUser: User = {
-      id: getNextUserId(users),
-      fullName: formData.fullName.trim(),
-      phone: "Pending",
-      email: formData.email.trim(),
-      role: formData.role,
-      status: "Active",
-      joinedAt: currentDate,
-      location: "Not set",
-      lastLoginAt: "No login yet",
-      roleAssignments: [
-        {
-          id: 1,
-          role: formData.role,
-          assignedBy: DEFAULT_ADMIN_NAME,
-          assignedAt: currentDate,
-          note: "Initial role assignment during account creation.",
-        },
-      ],
-      activityLogs: [
-        {
-          id: 1,
-          action: "Account Created",
-          detail: "User account was created in the admin panel.",
-          performedBy: DEFAULT_ADMIN_NAME,
-          performedAt: currentDateTime,
-        },
-        {
-          id: 2,
-          action: "Role Assigned",
-          detail: `Assigned role: ${formData.role}.`,
-          performedBy: DEFAULT_ADMIN_NAME,
-          performedAt: currentDateTime,
-        },
-      ],
-    };
+    if (!matchedRole) {
+      throw new Error(`Marketplace role ${nextRole} is not available.`);
+    }
 
-    return [newUser, ...users];
-  },
+    const data = await apiClient.request<ApiUserResponse>(
+      `/api/admin/users/${userId}/business-role`,
+      {
+        method: "PATCH",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to assign marketplace role.",
+        body: JSON.stringify({
+          businessRoleId: matchedRole.id,
+        }),
+      },
+    );
 
-  updateUser(
-    users: User[],
-    selectedUserId: number,
-    formData: UserFormState,
-  ): User[] {
-    const currentDate = getCurrentDate();
-    const currentDateTime = getCurrentDateTime();
-
-    return users.map((user) => {
-      if (user.id !== selectedUserId) return user;
-
-      const nextRole = formData.role;
-      const didRoleChange = user.role !== nextRole;
-
-      const updatedRoleAssignments = didRoleChange
-        ? [
-            ...user.roleAssignments,
-            {
-              id: getNextNestedId(user.roleAssignments),
-              role: nextRole,
-              assignedBy: DEFAULT_ADMIN_NAME,
-              assignedAt: currentDate,
-              note: `Role changed from ${user.role} to ${nextRole}.`,
-            },
-          ]
-        : user.roleAssignments;
-
-      const updatedActivityLogs = [
-        ...user.activityLogs,
-        {
-          id: getNextNestedId(user.activityLogs),
-          action: "Profile Updated",
-          detail: "User profile information was updated.",
-          performedBy: DEFAULT_ADMIN_NAME,
-          performedAt: currentDateTime,
-        },
-        ...(didRoleChange
-          ? [
-              {
-                id: getNextNestedId(user.activityLogs) + 1,
-                action: "Role Changed",
-                detail: `Changed role from ${user.role} to ${nextRole}.`,
-                performedBy: DEFAULT_ADMIN_NAME,
-                performedAt: currentDateTime,
-              },
-            ]
-          : []),
-      ];
-
-      return {
-        ...user,
-        fullName: formData.fullName.trim(),
-        email: formData.email.trim(),
-        role: nextRole,
-        roleAssignments: updatedRoleAssignments,
-        activityLogs: updatedActivityLogs,
-      };
-    });
-  },
-
-  updateUserStatus(users: User[], userId: number, status: UserStatus): User[] {
-    const currentDateTime = getCurrentDateTime();
-
-    return users.map((user) => {
-      if (user.id !== userId) return user;
-
-      const nextLogId = getNextNestedId(user.activityLogs);
-      const action =
-        status === "Locked" ? "Account Locked" : "Account Unlocked";
-      const detail =
-        status === "Locked"
-          ? "Account access was restricted by admin action."
-          : "Account access was restored by admin action.";
-
-      return {
-        ...user,
-        status,
-        activityLogs: [
-          ...user.activityLogs,
-          {
-            id: nextLogId,
-            action,
-            detail,
-            performedBy: DEFAULT_ADMIN_NAME,
-            performedAt: currentDateTime,
-          },
-        ],
-      };
-    });
+    return mapApiUserToUi(data);
   },
 
   getSummaryCards(users: User[]): UserSummaryCard[] {
     const activeCount = users.filter((user) => user.status === "Active").length;
     const lockedCount = users.filter((user) => user.status === "Locked").length;
-    const protectedCount = users.filter((user) => user.role === "Admin").length;
+    const roleAssignedCount = users.filter((user) =>
+      Boolean(user.businessRoleId),
+    ).length;
 
     return [
       {
         title: "Total Accounts",
         value: String(users.length),
-        subtitle: "All internal accounts",
+        subtitle: "All marketplace accounts",
       },
       {
         title: "Active Accounts",
@@ -351,21 +306,20 @@ export const userService = {
         subtitle: "Restricted by admin action",
       },
       {
-        title: "Protected Admins",
-        value: String(protectedCount),
-        subtitle: "Role and status protected",
+        title: "Assigned Roles",
+        value: String(roleAssignedCount),
+        subtitle: "Marketplace roles linked from backend",
       },
     ];
   },
 
   getRoleCounts(users: User[]): UserRoleCountItem[] {
     const roles: UserRole[] = [
-      "Admin",
-      "Customer",
+      "User",
       "Manager",
       "Host",
       "Collaborator",
-      "Operations Staff",
+      "Operation Staff",
     ];
 
     return roles.map((role) => ({

@@ -10,10 +10,19 @@ import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { userService } from "../services/userService";
-import type { User, UserSummaryCard, UserStatus } from "../types/user";
+import type {
+  AssignableUserRole,
+  User,
+  UserSummaryCard,
+  UserStatus,
+} from "../types/user";
 import "./UsersPage.css";
 
-const statusFilterOptions: Array<UserStatus | "All"> = ["All", "Active", "Locked"];
+const statusFilterOptions: Array<UserStatus | "All"> = [
+  "All",
+  "Active",
+  "Locked",
+];
 const profileFilterOptions = [
   "All",
   "Has Email",
@@ -38,10 +47,16 @@ function UsersPage() {
   const [error, setError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AssignableUserRole>("User");
+  const [assignableRoles, setAssignableRoles] = useState<AssignableUserRole[]>([
+    "User",
+  ]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [isRoleSaving, setIsRoleSaving] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [selectedStatusFilter, setSelectedStatusFilter] =
-    useState<UserStatus | "All">("All");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+    UserStatus | "All"
+  >("All");
   const [selectedProfileFilter, setSelectedProfileFilter] =
     useState<ProfileFilterOption>("All");
   const [showFilters, setShowFilters] = useState(false);
@@ -54,7 +69,9 @@ function UsersPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards: UserSummaryCard[] = userService.getSummaryCards(users);
-  const usersWithEmailCount = users.filter((user) => user.email !== "No email").length;
+  const usersWithEmailCount = users.filter(
+    (user) => user.email !== "No email",
+  ).length;
   const usersMissingLocationCount = users.filter(
     (user) => user.location === "No location",
   ).length;
@@ -88,8 +105,13 @@ function UsersPage() {
       setIsLoading(true);
       setError("");
 
-      const nextUsers = await userService.fetchUsers();
+      const [nextUsers, nextAssignableRoles] = await Promise.all([
+        userService.fetchUsers(),
+        userService.getAssignableRoles(),
+      ]);
+
       setUsers(nextUsers);
+      setAssignableRoles(nextAssignableRoles);
 
       if (showSuccessToast) {
         showToast("User directory refreshed successfully.");
@@ -110,12 +132,14 @@ function UsersPage() {
 
   const openViewModal = async (user: User) => {
     setSelectedUser(user);
+    setSelectedRole(user.role as AssignableUserRole);
     setIsModalOpen(true);
     setIsDetailLoading(true);
 
     try {
       const detail = await userService.fetchUserById(user.id);
       setSelectedUser(detail);
+      setSelectedRole(detail.role as AssignableUserRole);
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : "Unable to load user details.",
@@ -128,7 +152,39 @@ function UsersPage() {
 
   const closeModal = () => {
     setSelectedUser(null);
+    setSelectedRole("User");
     setIsModalOpen(false);
+  };
+
+  const handleSaveRoleAssignment = async () => {
+    if (!selectedUser || selectedUser.role === selectedRole) {
+      showToast("This user already has the selected marketplace role.", "info");
+      return;
+    }
+
+    try {
+      setIsRoleSaving(true);
+
+      const updatedUser = await userService.assignUserRoleById(
+        selectedUser.id,
+        selectedRole,
+      );
+
+      setUsers((prev) =>
+        prev.map((user) => (user.id === updatedUser.id ? updatedUser : user)),
+      );
+      setSelectedUser(updatedUser);
+      showToast(`${updatedUser.fullName} is now assigned as ${selectedRole}.`);
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Unable to save marketplace role assignment.",
+        "error",
+      );
+    } finally {
+      setIsRoleSaving(false);
+    }
   };
 
   const openConfirmDialog = (userId: number, action: "lock" | "unlock") => {
@@ -198,7 +254,8 @@ function UsersPage() {
       const matchesProfile =
         selectedProfileFilter === "All" ||
         (selectedProfileFilter === "Has Email" && user.email !== "No email") ||
-        (selectedProfileFilter === "Missing Email" && user.email === "No email") ||
+        (selectedProfileFilter === "Missing Email" &&
+          user.email === "No email") ||
         (selectedProfileFilter === "Has Location" &&
           user.location !== "No location") ||
         (selectedProfileFilter === "Missing Location" &&
@@ -334,10 +391,7 @@ function UsersPage() {
         {isLoading ? (
           <div className="users-empty-state">Loading user directory...</div>
         ) : error ? (
-          <EmptyState
-            title="Unable to load users"
-            description={error}
-          />
+          <EmptyState title="Unable to load users" description={error} />
         ) : filteredUsers.length === 0 ? (
           <EmptyState
             title="No users found"
@@ -351,6 +405,7 @@ function UsersPage() {
                   <tr>
                     <th>User</th>
                     <th>Contact</th>
+                    <th>Role</th>
                     <th>Status</th>
                     <th>Joined Date</th>
                     <th>Last Login</th>
@@ -372,6 +427,9 @@ function UsersPage() {
                           <strong>{user.phone}</strong>
                           <span>{user.email}</span>
                         </div>
+                      </td>
+                      <td>
+                        <StatusBadge label={user.role} variant="type" />
                       </td>
                       <td>
                         <StatusBadge
@@ -546,12 +604,89 @@ function UsersPage() {
                 <input type="text" value={selectedUser.status} disabled />
               </div>
               <div className="users-modal__field">
+                <label htmlFor="user-role-assignment">Marketplace Role</label>
+                <select
+                  id="user-role-assignment"
+                  value={selectedRole}
+                  onChange={(event) =>
+                    setSelectedRole(event.target.value as AssignableUserRole)
+                  }
+                >
+                  {assignableRoles.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="users-modal__field">
                 <label>Location</label>
                 <input type="text" value={selectedUser.location} disabled />
               </div>
               <div className="users-modal__field">
                 <label>Last Login</label>
                 <input type="text" value={selectedUser.lastLoginAt} disabled />
+              </div>
+            </div>
+
+            <div className="users-modal__section">
+              <div className="users-modal__section-header">
+                <h4>Role Assignment</h4>
+                <p>
+                  Role catalog is maintained in Roles Management, while
+                  user-level role assignment is handled here in the Users
+                  directory.
+                </p>
+              </div>
+
+              <div className="users-role-assignment">
+                <div className="users-role-assignment__summary">
+                  <strong>Current role: {selectedUser.role}</strong>
+                  <span>
+                    Use this control to assign the selected marketplace role to
+                    the user account.
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  className="users-role-assignment__submit"
+                  onClick={() => void handleSaveRoleAssignment()}
+                  disabled={isRoleSaving}
+                >
+                  {isRoleSaving ? "Saving..." : "Save Role Assignment"}
+                </button>
+              </div>
+
+              <div className="users-modal__history-table-wrapper">
+                <table className="users-modal__history-table">
+                  <thead>
+                    <tr>
+                      <th>Role</th>
+                      <th>Assigned By</th>
+                      <th>Assigned At</th>
+                      <th>Note</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedUser.roleAssignments.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>
+                          No role assignment history available.
+                        </td>
+                      </tr>
+                    ) : (
+                      selectedUser.roleAssignments.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.role}</td>
+                          <td>{item.assignedBy}</td>
+                          <td>{item.assignedAt}</td>
+                          <td>{item.note}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 

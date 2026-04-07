@@ -38,12 +38,12 @@ export const postService = {
     },
 
     toggleFavorite: async (postId: number) => {
-        const res = await api.get(`/posts/favorite-toggle`, { params: { postId } })
+        const res = await api.post(`/posts/${postId}/favorite`)
         return res.data
     },
 
     checkIsSaved: async (postId: number) => {
-        const res = await api.get(`/posts/check-saved/${postId}`)
+        const res = await api.get(`/posts/${postId}/favorite`)
         return res.data
     },
 

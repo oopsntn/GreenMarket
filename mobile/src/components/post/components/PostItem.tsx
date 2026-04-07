@@ -14,7 +14,7 @@ interface PostItemProps {
 const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProps) => {
     const navigation = useNavigation<any>()
     const handlePress = () => {
-        navigation.navigate('PostDetail', { slug: item.postId })
+        navigation.navigate('PostDetail', { slug: item.postSlug })
     }
     return (
         <Card onClick={handlePress} style={styles.postCard}>

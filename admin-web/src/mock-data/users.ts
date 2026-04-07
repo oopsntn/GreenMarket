@@ -6,7 +6,7 @@ export const initialUsers: User[] = [
     fullName: "System Administrator",
     phone: "0900000000",
     email: "admin@greenmarket.vn",
-    role: "Admin",
+    role: "Manager",
     status: "Active",
     joinedAt: "2026-03-01",
     location: "Ho Chi Minh City",
@@ -14,10 +14,10 @@ export const initialUsers: User[] = [
     roleAssignments: [
       {
         id: 1,
-        role: "Admin",
+        role: "Manager",
         assignedBy: "System Setup",
         assignedAt: "2026-03-01",
-        note: "Initial protected administrator account.",
+        note: "Initial manager-aligned seed role.",
       },
     ],
     activityLogs: [
@@ -31,7 +31,7 @@ export const initialUsers: User[] = [
       {
         id: 2,
         action: "Role Assigned",
-        detail: "Assigned role: Admin.",
+        detail: "Assigned role: Manager.",
         performedBy: "System Setup",
         performedAt: "2026-03-01 08:01",
       },
@@ -42,7 +42,7 @@ export const initialUsers: User[] = [
     fullName: "Nguyen Van A",
     phone: "0912345678",
     email: "vana@greenmarket.vn",
-    role: "Customer",
+    role: "User",
     status: "Active",
     joinedAt: "2026-03-10",
     location: "Da Nang",
@@ -50,7 +50,7 @@ export const initialUsers: User[] = [
     roleAssignments: [
       {
         id: 1,
-        role: "Customer",
+        role: "User",
         assignedBy: "System Administrator",
         assignedAt: "2026-03-10",
         note: "Initial account setup.",
@@ -67,7 +67,7 @@ export const initialUsers: User[] = [
       {
         id: 2,
         action: "Role Assigned",
-        detail: "Assigned role: Customer.",
+        detail: "Assigned role: User.",
         performedBy: "System Administrator",
         performedAt: "2026-03-10 09:01",
       },
@@ -193,7 +193,7 @@ export const initialUsers: User[] = [
     fullName: "Hoang Van E",
     phone: "0944112233",
     email: "vane@greenmarket.vn",
-    role: "Operations Staff",
+    role: "Operation Staff",
     status: "Active",
     joinedAt: "2026-03-14",
     location: "Hai Phong",
@@ -201,7 +201,7 @@ export const initialUsers: User[] = [
     roleAssignments: [
       {
         id: 1,
-        role: "Operations Staff",
+        role: "Operation Staff",
         assignedBy: "System Administrator",
         assignedAt: "2026-03-14",
         note: "Assigned operations support responsibilities.",
@@ -218,7 +218,7 @@ export const initialUsers: User[] = [
       {
         id: 2,
         action: "Role Assigned",
-        detail: "Assigned role: Operations Staff.",
+        detail: "Assigned role: Operation Staff.",
         performedBy: "System Administrator",
         performedAt: "2026-03-14 14:02",
       },
@@ -229,5 +229,5 @@ export const initialUsers: User[] = [
 export const emptyUserForm: UserFormState = {
   fullName: "",
   email: "",
-  role: "Customer",
+  role: "User",
 };
