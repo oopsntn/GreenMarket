@@ -308,14 +308,16 @@ function ReportsModerationPage() {
                         <div className="reports-moderation-cell">
                           <strong>#{report.id}</strong>
                           <span>{report.reporterLabel}</span>
-                          <small>{report.postLabel}</small>
+                          <small>{report.reporterSecondaryLabel}</small>
                         </div>
                       </td>
                       <td>
                         <div className="reports-moderation-cell">
                           <strong>{report.reasonCode}</strong>
                           <span>{report.reason}</span>
-                          <small>{report.shopLabel}</small>
+                          <small>
+                            {report.postLabel} • {report.shopLabel}
+                          </small>
                         </div>
                       </td>
                       <td>

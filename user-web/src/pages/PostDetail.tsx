@@ -4,8 +4,8 @@ import { getPostDetail, recordContactClick, submitReport, checkIsSaved, toggleFa
 import { useAuth } from '../context/AuthContext';
 import {
     Phone, Calendar, ChevronLeft, ChevronRight,
-    Store, ShieldCheck, Share2, Heart, MessageCircle, Info,
-    Play, Maximize2, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn
+    Store, ShieldCheck, Share2, Heart, MessageCircle,
+    Play, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn, Settings, Check
 } from 'lucide-react';
 import ImageModal from '../components/ImageModal';
 
@@ -19,6 +19,9 @@ const PostDetail: React.FC = () => {
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [contactRevealed, setContactRevealed] = useState(false);
     const [previewImageIndex, setPreviewImageIndex] = useState<number | null>(null);
+    const [copied, setCopied] = useState(false);
+
+    const isOwner = Boolean(user && post && (user.id === post.postAuthorId || user.id === post.postShopId));
 
     const handleRevealContact = async () => {
         setContactRevealed(true);
@@ -47,7 +50,7 @@ const PostDetail: React.FC = () => {
     const handleToggleSave = async () => {
         if (!user) {
             alert('Vui lòng đăng nhập để lưu bài.');
-            navigate('/auth');
+            navigate('/login');
             return;
         }
         if (!post?.postId) return;
@@ -59,6 +62,12 @@ const PostDetail: React.FC = () => {
         }
     };
 
+    const handleShare = () => {
+        navigator.clipboard.writeText(window.location.href);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     useEffect(() => {
         const fetchDetail = async () => {
             if (!slug) return;
@@ -66,10 +75,8 @@ const PostDetail: React.FC = () => {
                 const response = await getPostDetail(slug);
                 setPost(response.data);
 
-                // Fetch save status if user is logged in
-                if (response.data?.postId) {
+                if (response.data?.postId && user) {
                     try {
-                        // Assuming auth token is implicitly attached if logged in
                         const savedRes = await checkIsSaved(response.data.postId);
                         setIsSaved(savedRes.data.isSaved);
                     } catch (e) {
@@ -83,18 +90,40 @@ const PostDetail: React.FC = () => {
             }
         };
         fetchDetail();
-    }, [slug]);
+    }, [slug, user]);
+
+    const formatRelativeTime = (dateString: string) => {
+        const now = new Date();
+        const past = new Date(dateString);
+        const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+
+        if (diffInSeconds < 60) return 'vừa xong';
+        const diffInMinutes = Math.floor(diffInSeconds / 60);
+        if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+        const diffInHours = Math.floor(diffInMinutes / 60);
+        if (diffInHours < 24) return `${diffInHours} giờ trước`;
+        const diffInDays = Math.floor(diffInHours / 24);
+        if (diffInDays < 30) return `${diffInDays} ngày trước`;
+        const diffInMonths = Math.floor(diffInDays / 30);
+        if (diffInMonths < 12) return `${diffInMonths} tháng trước`;
+        const diffInYears = Math.floor(diffInMonths / 12);
+        return `${diffInYears} năm trước`;
+    };
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center">
-            <div className="animate-spin w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full"></div>
+        <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="flex flex-col items-center gap-4">
+                <div className="animate-spin w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full shadow-lg"></div>
+                <div className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Đang tải chi tiết...</div>
+            </div>
         </div>
     );
 
     if (!post) return (
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-            <div className="text-slate-500">Không tìm thấy bài đăng</div>
-            <button onClick={() => navigate('/')} className="text-emerald-500 hover:outline underline underline-offset-4 font-bold">Quay lại trang chủ</button>
+        <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-background">
+            <ShoppingBag className="w-16 h-16 text-slate-200" />
+            <div className="text-slate-400 font-bold uppercase tracking-tight">Không tìm thấy bài đăng</div>
+            <button onClick={() => navigate('/home')} className="px-8 py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-200">Quay lại trang chủ</button>
         </div>
     );
 
@@ -110,7 +139,7 @@ const PostDetail: React.FC = () => {
     };
 
     const hasExactCoordinates = Boolean(post?.shop?.shopLat && post?.shop?.shopLng);
-    const locationLabel = post?.shop?.shopLocation || post?.postLocation || 'Ha Noi';
+    const locationLabel = post?.shop?.shopLocation || post?.postLocation || 'Chưa cập nhật địa chỉ';
     const mapEmbedUrl = hasExactCoordinates
         ? `https://maps.google.com/maps?q=${post.shop.shopLat},${post.shop.shopLng}&t=&z=14&ie=UTF8&iwloc=&output=embed`
         : `https://maps.google.com/maps?q=${encodeURIComponent(locationLabel)}&t=&z=14&ie=UTF8&iwloc=&output=embed`;
@@ -119,42 +148,56 @@ const PostDetail: React.FC = () => {
         : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationLabel)}`;
 
     return (
-        <div className="min-h-screen pb-24">
+        <div className="min-h-screen pb-24 bg-background">
             {/* Top Navigation Bar */}
-            <div className="sticky top-16 z-30 bg-background/80 backdrop-blur-xl border-b border-white/5 px-4 py-4">
+            <div className="sticky top-16 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200 px-4 py-4 mb-8">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group">
+                    <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-emerald-700 transition-colors group font-black uppercase text-[10px] tracking-widest">
                         <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                         Quay lại
                     </button>
                     <div className="flex items-center gap-4">
-                        <button className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all">
-                            <Share2 className="w-5 h-5" />
-                        </button>
+                        {isOwner ? (
+                            <Link
+                                to={`/my-posts`}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95 font-black uppercase text-[10px] tracking-widest"
+                            >
+                                <Settings className="w-4 h-4" /> Quản lý bài đăng
+                            </Link>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={handleToggleSave}
+                                    className={`p-2.5 rounded-xl border transition-all ${isSaved ? 'bg-rose-50 border-rose-200 text-rose-500 shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200'}`}
+                                    title={isSaved ? "Bỏ lưu bài" : "Lưu bài"}
+                                >
+                                    <Heart className={`w-5 h-5 ${isSaved ? 'fill-rose-500' : ''}`} />
+                                </button>
+                                <button
+                                    onClick={handleReport}
+                                    className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-amber-600 hover:border-amber-200 transition-all"
+                                    title="Báo cáo bài đăng"
+                                >
+                                    <AlertCircle className="w-5 h-5" />
+                                </button>
+                            </>
+                        )}
                         <button
-                            onClick={handleToggleSave}
-                            className={`p-2.5 rounded-xl transition-all ${isSaved ? 'bg-rose-500/10 text-rose-500' : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-rose-500'}`}
-                            title={isSaved ? "Bỏ lưu bài" : "Lưu bài"}
+                            onClick={handleShare}
+                            className={`p-2.5 rounded-xl border transition-all ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-md scale-105' : 'bg-white border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200'}`}
+                            title="Sao chép liên kết"
                         >
-                            <Heart className={`w-5 h-5 ${isSaved ? 'fill-rose-500' : ''}`} />
-                        </button>
-                        <button
-                            onClick={handleReport}
-                            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-amber-500 transition-all"
-                            title="Báo cáo bài đăng"
-                        >
-                            <AlertCircle className="w-5 h-5" />
+                            {copied ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-
                     {/* Left Column: Media Gallery */}
-                    <div className="lg:col-span-7 space-y-4">
-                        <div className="relative aspect-3/2 max-h-[520px] rounded-4xl overflow-hidden glass border-white/5 bg-surface group">
+                    <div className="lg:col-span-7 space-y-6">
+                        <div className="relative aspect-3/2 max-h-[520px] rounded-4xl overflow-hidden bg-slate-50 border border-slate-200 group shadow-2xl shadow-slate-200/50">
                             {mediaList.length > 0 ? (
                                 <>
                                     {currentMedia.type === 'image' ? (
@@ -170,11 +213,11 @@ const PostDetail: React.FC = () => {
                                             <img
                                                 src={currentMedia.url.startsWith('http') ? currentMedia.url : `http://localhost:5000${currentMedia.url}`}
                                                 alt={post.postTitle}
-                                                className="w-full h-full object-cover transition-transform duration-500 group-hover/main:scale-105"
+                                                className="w-full h-full object-cover transition-transform duration-700 group-hover/main:scale-105"
                                             />
-                                            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover/main:opacity-100 transition-opacity flex items-center justify-center">
-                                                <div className="p-4 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
-                                                    <ZoomIn className="w-8 h-8 text-white" />
+                                            <div className="absolute inset-0 bg-emerald-900/5 opacity-0 group-hover/main:opacity-100 transition-all flex items-center justify-center">
+                                                <div className="p-4 rounded-3xl bg-white/90 backdrop-blur-md border border-white shadow-2xl">
+                                                    <ZoomIn className="w-8 h-8 text-emerald-600" />
                                                 </div>
                                             </div>
                                         </div>
@@ -191,13 +234,13 @@ const PostDetail: React.FC = () => {
                                         <>
                                             <button
                                                 onClick={() => setActiveMediaIndex(prev => prev === 0 ? mediaList.length - 1 : prev - 1)}
-                                                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-black/40 backdrop-blur-md text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-600"
+                                                className="absolute left-6 top-1/2 -translate-y-1/2 p-4 rounded-3xl bg-white/90 backdrop-blur-md text-slate-900 border border-white opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-600 hover:text-white shadow-xl"
                                             >
                                                 <ChevronLeft className="w-6 h-6" />
                                             </button>
                                             <button
                                                 onClick={() => setActiveMediaIndex(prev => prev === mediaList.length - 1 ? 0 : prev + 1)}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-2xl bg-black/40 backdrop-blur-md text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-600"
+                                                className="absolute right-6 top-1/2 -translate-y-1/2 p-4 rounded-3xl bg-white/90 backdrop-blur-md text-slate-900 border border-white opacity-0 group-hover:opacity-100 transition-all hover:bg-emerald-600 hover:text-white shadow-xl"
                                             >
                                                 <ChevronRight className="w-6 h-6" />
                                             </button>
@@ -205,128 +248,132 @@ const PostDetail: React.FC = () => {
                                     )}
                                 </>
                             ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-700">
-                                    <ShoppingBag className="w-16 h-16 mb-4" />
-                                    <span>Chưa có hình ảnh/video</span>
+                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
+                                    <ShoppingBag className="w-16 h-16 mb-4 opacity-20" />
+                                    <span className="font-black uppercase text-[10px] tracking-widest">Chưa có hình ảnh</span>
                                 </div>
                             )}
                         </div>
 
                         {/* Thumbnails */}
-                        <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+                        <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                             {mediaList.map((media, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => setActiveMediaIndex(idx)}
-                                    className={`relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 border-2 transition-all ${activeMediaIndex === idx ? 'border-emerald-500 scale-105 shadow-lg shadow-emerald-500/20' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                                    className={`relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 border-2 transition-all ${activeMediaIndex === idx ? 'border-emerald-500 scale-105 shadow-xl' : 'border-slate-100 opacity-60 hover:opacity-100'}`}
                                 >
                                     {media.type === 'image' ? (
                                         <img src={media.url.startsWith('http') ? media.url : `http://localhost:5000${media.url}`} className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                                        <div className="w-full h-full bg-slate-900 flex items-center justify-center">
                                             <Play className="w-6 h-6 text-white" />
                                         </div>
                                     )}
                                 </button>
                             ))}
                         </div>
-                        {/* Content Section */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-6">
-                            <div className="lg:col-span-8 space-y-6">
-                                {/* Description */}
-                                <div className="space-y-6">
-                                    <h2 className="text-2xl font-black flex items-center gap-3">
-                                        <Info className="w-8 h-8 text-emerald-500" /> Chi tiết sản phẩm
-                                    </h2>
-                                    <div className="glass p-6 rounded-3xl border-white/5 prose prose-invert max-w-none text-slate-300 leading-relaxed text-sm">
-                                        {post.postContent || 'Không có mô tả chi tiết cho sản phẩm này.'}
-                                    </div>
-                                </div>
 
-                                {/* Specifications/Attributes */}
-                                {post.attributes && post.attributes.length > 0 && (
-                                    <div className="space-y-6">
-                                        <h2 className="text-2xl font-black flex items-center gap-3">
-                                            <Maximize2 className="w-8 h-8 text-emerald-500" /> Thông số kỹ thuật
-                                        </h2>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {post.attributes.map((attr: any, idx: number) => (
-                                                <div key={idx} className="glass p-4 rounded-2xl border-white/5 flex items-center justify-between">
-                                                    <span className="text-slate-400 text-sm">{attr.name || `Thông số ${idx + 1}`}</span>
-                                                    <span className="text-white font-bold text-sm uppercase">{attr.value}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="text-xs text-slate-600 italic mt-2">* Thông số hiển thị dựa trên mã định danh thuộc tính hệ thống.</div>
-                                    </div>
-                                )}
+                        {/* Description Section */}
+                        <div className="space-y-8 pt-6">
+                            <div className="space-y-6">
+                                <h2 className="text-2xl font-black flex items-center gap-4 text-slate-900 uppercase tracking-tight leading-none group">
+                                    <div className="w-1.5 h-8 bg-emerald-500 rounded-full group-hover:scale-y-125 transition-transform"></div>
+                                    Chi tiết cây
+                                </h2>
+                                <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm text-slate-600 leading-relaxed text-lg whitespace-pre-wrap font-medium">
+                                    {post.postContent || 'Nhà vườn chưa cập nhật đầy đủ mô tả chi tiết sản phẩm.'}
+                                </div>
                             </div>
+
+                            {/* Specifications/Attributes */}
+                            {post.attributes && post.attributes.length > 0 && (
+                                <div className="space-y-6">
+                                    <h2 className="text-2xl font-black flex items-center gap-4 text-slate-900 uppercase tracking-tight leading-none group">
+                                        <div className="w-1.5 h-8 bg-emerald-500 rounded-full group-hover:scale-y-125 transition-transform"></div>
+                                        Thông số kỹ thuật
+                                    </h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {post.attributes.map((attr: any, idx: number) => (
+                                            <div key={idx} className="bg-slate-50 p-5 rounded-3xl border border-slate-200 flex items-center justify-between hover:bg-white transition-colors">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{attr.name || `Thông số ${idx + 1}`}</span>
+                                                <span className="text-slate-900 font-black uppercase text-sm">{attr.value}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 italic font-medium">* Tất cả kích thước mang tính chất tương đối và được chủ vườn đo đạc trực tiếp.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Right Column: Information */}
+                    {/* Right Column: Information Card */}
                     <div className="lg:col-span-5 space-y-8">
                         {/* Summary Card */}
-                        <div className="glass p-8 rounded-4xl border-white/5 space-y-6">
-                            <div className="space-y-4">
-                                <h1 className="text-4xl font-black text-white leading-tight uppercase tracking-tight">{post.postTitle}</h1>
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <div className="px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-sm font-bold flex items-center gap-2">
-                                        <ShieldCheck className="w-4 h-4" /> Đã xác minh
-                                    </div>
-                                    <div className="text-slate-500 text-sm flex items-center gap-2">
-                                        <Calendar className="w-4 h-4" /> Đăng ngày {new Date(post.postCreatedAt).toLocaleDateString('vi-VN')}
-                                    </div>
-                                    <div className="text-slate-500 text-sm flex items-center gap-2">
-                                        <Eye className="w-4 h-4" /> {post.postViewCount || 1} lượt xem
+                        <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-xl shadow-slate-200/50 space-y-8 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16"></div>
+
+                            <div className="space-y-6 relative z-10">
+                                <div className="space-y-4">
+                                    <h1 className="text-4xl font-black text-slate-900 leading-tight uppercase tracking-tight group-hover:text-emerald-700 transition-colors">{post.postTitle}</h1>
+                                    <div className="flex flex-wrap items-center gap-4">
+                                        <div className="px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                            <ShieldCheck className="w-3.5 h-3.5" /> Xác minh
+                                        </div>
+                                        <div className="text-slate-400 text-xs font-bold flex items-center gap-2 uppercase tracking-wider">
+                                            <Calendar className="w-3.5 h-3.5 text-emerald-600" /> {formatRelativeTime(post.postCreatedAt)}
+                                        </div>
+                                        <div className="text-slate-400 text-xs font-bold flex items-center gap-2 uppercase tracking-wider">
+                                            <Eye className="w-3.5 h-3.5 text-emerald-600" /> {post.postViewCount || 1} khách xem
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-5xl font-black text-emerald-500">{formatPrice(post.postPrice)}</span>
-                                <span className="text-slate-500 font-medium">/ cây/gốc</span>
-                            </div>
+                                <div className="flex items-baseline gap-2 border-b border-slate-100 pb-8">
+                                    <span className="text-5xl font-black text-emerald-700">{formatPrice(post.postPrice)}</span>
+                                    <span className="text-slate-400 text-sm font-black uppercase tracking-widest">/ góc</span>
+                                </div>
 
-                            <div className="space-y-4 pb-2">
-                                {!contactRevealed ? (
-                                    <button
-                                        onClick={handleRevealContact}
-                                        className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/40"
-                                    >
-                                        <Phone className="w-6 h-6" /> Bấm để xem SĐT & Zalo
-                                    </button>
-                                ) : (
-                                    <>
-                                        <a
-                                            href={`tel:${post.shop?.shopPhone || post.postContactPhone}`}
-                                            className="w-full py-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-900/40"
+                                <div className="space-y-4 pt-2">
+                                    {!contactRevealed ? (
+                                        <button
+                                            onClick={handleRevealContact}
+                                            className="w-full py-5 rounded-3xl bg-emerald-700 hover:bg-emerald-600 text-white font-black uppercase text-sm tracking-widest flex items-center justify-center gap-4 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-200"
                                         >
-                                            <Phone className="w-6 h-6" /> {post.shop?.shopPhone || post.postContactPhone || 'Không có số'}
-                                        </a>
-                                        <a
-                                            href={`https://zalo.me/${post.shop?.shopPhone || post.postContactPhone}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="w-full py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xl flex items-center justify-center gap-3 transition-all"
-                                        >
-                                            <MessageCircle className="w-6 h-6 text-emerald-500" /> Chat qua Zalo
-                                        </a>
-                                    </>
-                                )}
+                                            <Phone className="w-6 h-6" /> Hiện số điện thoại & Zalo
+                                        </button>
+                                    ) : (
+                                        <div className="grid grid-cols-1 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                                            <a
+                                                href={`tel:${post.shop?.shopPhone || post.postContactPhone}`}
+                                                className="w-full py-5 rounded-3xl bg-emerald-700 hover:bg-emerald-600 text-white font-black uppercase text-sm tracking-widest flex items-center justify-center gap-4 transition-all active:scale-[0.98] shadow-2xl shadow-emerald-200"
+                                            >
+                                                <Phone className="w-6 h-6" /> {post.shop?.shopPhone || post.postContactPhone || 'Liên hệ ngay'}
+                                            </a>
+                                            <a
+                                                href={`https://zalo.me/${post.shop?.shopPhone || post.postContactPhone}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="w-full py-5 rounded-3xl bg-white border border-slate-200 text-emerald-700 font-black uppercase text-sm tracking-widest flex items-center justify-center gap-4 transition-all hover:bg-emerald-50 active:scale-[0.98]"
+                                            >
+                                                <MessageCircle className="w-6 h-6" /> Chat qua Zalo
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Shop Profile Card */}
-                        <div className="glass p-6 rounded-4xl border-white/5 space-y-5">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                                    <MapIcon className="w-5 h-5 text-emerald-500" />
+                        {/* Location Details */}
+                        <div className="bg-white p-6 rounded-4xl border border-slate-200 shadow-sm space-y-6">
+                            <div className="flex items-center gap-4 border-b border-slate-100 pb-4">
+                                <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                    <MapIcon className="w-6 h-6 text-emerald-600" />
                                 </div>
-                                <h2 className="text-xl font-black tracking-tight uppercase">Bản đồ vị trí</h2>
+                                <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Vị trí nhà vườn</h2>
                             </div>
 
-                            <div className="relative aspect-square rounded-3xl border border-white/5 overflow-hidden shadow-2xl bg-slate-900">
+                            <div className="relative aspect-square rounded-3xl border border-slate-200 overflow-hidden shadow-inner bg-slate-100">
                                 <iframe
                                     title="Google Maps Post Location"
                                     width="100%"
@@ -338,25 +385,25 @@ const PostDetail: React.FC = () => {
                                 />
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-6 pt-2">
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500">Địa chỉ</p>
-                                    <p className="text-sm font-bold text-slate-200">{locationLabel}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2">Địa chỉ chi tiết</p>
+                                    <p className="text-base font-bold text-slate-900 leading-relaxed">{locationLabel}</p>
                                 </div>
-
                                 <a
                                     href={directionsUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-3 transition-all group shadow-xl shadow-emerald-900/40"
+                                    className="w-full py-4 rounded-2xl bg-white border border-slate-200 text-slate-700 font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 transition-all hover:bg-slate-50 shadow-sm active:scale-95"
                                 >
-                                    <ExternalLink className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                                    Nhận chỉ đường
+                                    <ExternalLink className="w-4 h-4" />
+                                    Chỉ đường tới vườn
                                 </a>
-
-                                <div className="flex items-center gap-3 text-[10px] text-slate-500 italic bg-white/5 p-3 rounded-xl border border-white/5">
-                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500/50" />
-                                    <span>{hasExactCoordinates ? 'Vị trí theo tọa độ của nhà vườn.' : 'Vị trí ước tính theo địa chỉ bài đăng.'}</span>
+                                <div className="flex items-start gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100 group transition-colors hover:bg-emerald-50 hover:border-emerald-100">
+                                    <ShieldCheck className="w-5 h-5 text-emerald-600/30 group-hover:text-emerald-500 transition-colors" />
+                                    <span className="text-[10px] text-slate-400 font-medium leading-relaxed group-hover:text-emerald-700">
+                                        {hasExactCoordinates ? 'Vị trí này được cung cấp bởi hệ thống định vị GPS của nhà vườn.' : 'Vị trí này được ước lượng dựa trên thông tin địa chỉ đăng tải.'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -364,25 +411,25 @@ const PostDetail: React.FC = () => {
                         {post.shop && (
                             <Link
                                 to={`/shop/${post.postShopId}`}
-                                className="glass p-8 rounded-4xl border-emerald-500/20 bg-linear-to-br from-emerald-500/5 to-transparent space-y-6 group cursor-pointer overflow-hidden relative block"
+                                className="group bg-white p-8 rounded-4xl border border-slate-200 shadow-xl hover:shadow-2xl hover:shadow-emerald-500/5 transition-all duration-500 relative overflow-hidden block"
                             >
-                                <div className="absolute top-0 right-0 p-8 text-emerald-500/10 -rotate-12 group-hover:rotate-0 transition-transform duration-700">
-                                    <Store className="w-24 h-24" />
-                                </div>
-                                <div className="flex items-center gap-6 relative z-10">
-                                    <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-500 shrink-0">
-                                        <Store className="w-8 h-8" />
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
+                                <div className="flex items-center gap-6 relative z-10 mb-6">
+                                    <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-3xl flex items-center justify-center text-emerald-600 group-hover:scale-110 group-hover:bg-emerald-50 transition-all duration-500">
+                                        <Store className="w-10 h-10" />
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-black text-white">{post.shop.shopName}</h3>
-                                        <div className="flex items-center gap-2 text-emerald-400 text-sm font-bold">
-                                            <ShieldCheck className="w-4 h-4" /> Nhà vườn đã xác minh
+                                        <h3 className="text-2xl font-black text-slate-900 leading-none mb-2 uppercase group-hover:text-emerald-700 transition-colors">{post.shop.shopName}</h3>
+                                        <div className="flex items-center gap-2 text-emerald-600 text-xs font-black uppercase tracking-widest">
+                                            <ShieldCheck className="w-4 h-4" /> Nhà vườn uy tín
                                         </div>
                                     </div>
                                 </div>
-                                <p className="text-slate-400 text-sm leading-relaxed relative z-10 line-clamp-2">{post.shop.shopDescription || 'Cung cấp các mẫu bonsai tuyệt đẹp cho mọi không gian kiến trúc.'}</p>
-                                <div className="w-full py-3 rounded-xl border border-emerald-500/30 text-emerald-400 font-bold hover:bg-emerald-500 hover:text-white transition-all text-center">
-                                    Xem trang Nhà Vườn
+                                <p className="text-slate-500 text-sm leading-relaxed mb-6 font-medium line-clamp-3 italic">
+                                    {post.shop.shopDescription || 'Đang cập nhật giới thiệu chi tiết về không gian và phong cách của nhà vườn.'}
+                                </p>
+                                <div className="w-full py-4 rounded-2xl bg-slate-50 text-slate-900 border border-slate-200 font-black uppercase text-[10px] tracking-widest text-center transition-all group-hover:bg-emerald-700 group-hover:text-white group-hover:border-emerald-700">
+                                    Xem đầy đủ nhà vườn
                                 </div>
                             </Link>
                         )}

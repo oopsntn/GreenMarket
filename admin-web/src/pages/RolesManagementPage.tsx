@@ -1,44 +1,53 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import BaseModal from "../components/BaseModal";
-import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
+import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { roleManagementService } from "../services/roleManagementService";
 import type {
   RoleFormState,
   RoleManagementItem,
 } from "../types/roleManagement";
-import { getAdminProfile } from "../utils/adminSession";
 import "./RolesManagementPage.css";
 
-type ModalMode = "add" | "edit";
+const capabilityRows = [
+  {
+    capability: "Browse and buy listings",
+    roles: ["USER"],
+  },
+  {
+    capability: "Manage shop profile and plant posts",
+    roles: ["HOST", "COLLABORATOR"],
+  },
+  {
+    capability: "Purchase and track promotion packages",
+    roles: ["HOST", "MANAGER"],
+  },
+  {
+    capability: "Handle moderation and report actions",
+    roles: ["MANAGER", "OPERATION_STAFF"],
+  },
+  {
+    capability: "Review analytics and exports",
+    roles: ["MANAGER", "OPERATION_STAFF"],
+  },
+];
 
 function RolesManagementPage() {
   const [roles, setRoles] = useState<RoleManagementItem[]>([]);
-  const [assignedRoles, setAssignedRoles] = useState<RoleManagementItem[]>([]);
-  const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<ModalMode>("add");
   const [selectedRole, setSelectedRole] = useState<RoleManagementItem | null>(
     null,
   );
-  const [formData, setFormData] = useState<RoleFormState>(
-    roleManagementService.getEmptyForm(),
-  );
-  const [deleteTarget, setDeleteTarget] = useState<RoleManagementItem | null>(
-    null,
-  );
-  const [isSavingAssignments, setIsSavingAssignments] = useState(false);
+  const [formData, setFormData] = useState<RoleFormState | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-
-  const adminProfile = getAdminProfile();
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -53,26 +62,22 @@ function RolesManagementPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const loadRoleData = async (showSuccessToast = false) => {
+  const loadRoles = async (showSuccessToast = false) => {
     try {
       setIsLoading(true);
       setError("");
 
-      const [nextRoles, nextAssignments] = await Promise.all([
-        roleManagementService.fetchRoles(),
-        roleManagementService.fetchCurrentAdminAssignments(),
-      ]);
-
-      setRoles(nextRoles);
-      setAssignedRoles(nextAssignments);
-      setSelectedRoleIds(nextAssignments.map((role) => role.id));
+      const data = await roleManagementService.fetchRoles();
+      setRoles(data);
 
       if (showSuccessToast) {
-        showToast("Role management data refreshed.");
+        showToast("Marketplace role catalog refreshed successfully.");
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Unable to load roles.";
+        err instanceof Error
+          ? err.message
+          : "Unable to load marketplace role catalog.";
       setError(message);
       showToast(message, "error");
     } finally {
@@ -81,7 +86,7 @@ function RolesManagementPage() {
   };
 
   useEffect(() => {
-    void loadRoleData();
+    void loadRoles();
   }, []);
 
   const filteredRoles = useMemo(() => {
@@ -91,126 +96,88 @@ function RolesManagementPage() {
       return (
         !keyword ||
         role.code.toLowerCase().includes(keyword) ||
-        role.title.toLowerCase().includes(keyword)
+        role.title.toLowerCase().includes(keyword) ||
+        role.summary.toLowerCase().includes(keyword)
       );
     });
   }, [roles, searchKeyword]);
 
-  const openAddModal = () => {
-    setModalMode("add");
-    setSelectedRole(null);
-    setFormData(roleManagementService.getEmptyForm());
-    setIsModalOpen(true);
-  };
+  const marketplaceRoleCount = roles.filter(
+    (role) => role.audienceGroup === "Marketplace",
+  ).length;
+  const operationsRoleCount = roles.filter(
+    (role) => role.audienceGroup === "Operations",
+  ).length;
 
   const openEditModal = (role: RoleManagementItem) => {
-    setModalMode("edit");
     setSelectedRole(role);
-    setFormData({
-      code: role.code,
-      title: role.title,
-    });
-    setIsModalOpen(true);
+    setFormData(roleManagementService.mapRoleToForm(role));
   };
 
   const closeModal = () => {
-    setIsModalOpen(false);
     setSelectedRole(null);
-    setFormData(roleManagementService.getEmptyForm());
+    setFormData(null);
   };
 
   const handleFormChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    try {
-      if (modalMode === "add") {
-        const createdRole = await roleManagementService.createRole(formData);
-        setRoles((prev) => [...prev, createdRole]);
-        showToast(`Role "${createdRole.title}" was created.`);
-      } else if (selectedRole) {
-        const updatedRole = await roleManagementService.updateRole(
-          selectedRole.id,
-          formData,
-        );
-
-        setRoles((prev) =>
-          prev.map((role) => (role.id === updatedRole.id ? updatedRole : role)),
-        );
-        setAssignedRoles((prev) =>
-          prev.map((role) => (role.id === updatedRole.id ? updatedRole : role)),
-        );
-        showToast(`Role "${updatedRole.title}" was updated.`);
-      }
-
-      closeModal();
-    } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Unable to save role.",
-        "error",
-      );
-    }
-  };
-
-  const handleDeleteRole = async () => {
-    if (!deleteTarget) return;
-
-    try {
-      await roleManagementService.deleteRole(deleteTarget.id);
-      setRoles((prev) => prev.filter((role) => role.id !== deleteTarget.id));
-      setAssignedRoles((prev) =>
-        prev.filter((role) => role.id !== deleteTarget.id),
-      );
-      setSelectedRoleIds((prev) => prev.filter((id) => id !== deleteTarget.id));
-      showToast(`Role "${deleteTarget.title}" was deleted.`);
-      setDeleteTarget(null);
-    } catch (err) {
-      showToast(
-        err instanceof Error ? err.message : "Unable to delete role.",
-        "error",
-      );
-    }
-  };
-
-  const handleToggleAssignment = (roleId: number) => {
-    setSelectedRoleIds((prev) =>
-      prev.includes(roleId)
-        ? prev.filter((id) => id !== roleId)
-        : [...prev, roleId],
+    setFormData((prev) =>
+      prev
+        ? {
+            ...prev,
+            [name]: value,
+          }
+        : prev,
     );
   };
 
-  const handleSaveAssignments = async () => {
+  const handleSaveRole = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!selectedRole || !formData) return;
+
     try {
-      setIsSavingAssignments(true);
+      const updatedRole = await roleManagementService.updateRole(
+        selectedRole.id,
+        selectedRole,
+        formData,
+      );
 
-      const nextAssignments =
-        await roleManagementService.replaceCurrentAdminAssignments(
-          selectedRoleIds,
-        );
+      setRoles((prev) =>
+        prev.map((role) => (role.id === updatedRole.id ? updatedRole : role)),
+      );
 
-      setAssignedRoles(nextAssignments);
-      setSelectedRoleIds(nextAssignments.map((role) => role.id));
-      showToast("Current admin role assignments were updated.");
+      closeModal();
+      showToast(`Role definition for ${updatedRole.title} was updated.`);
     } catch (err) {
       showToast(
-        err instanceof Error
-          ? err.message
-          : "Unable to update current admin assignments.",
+        err instanceof Error ? err.message : "Unable to update role.",
+        "error",
+      );
+    }
+  };
+
+  const handleResetCatalog = async () => {
+    try {
+      setIsLoading(true);
+      const syncedRoles = await roleManagementService.syncDefaultRoles();
+      setRoles(syncedRoles);
+      showToast(
+        "Marketplace role catalog was synced to the report-aligned defaults.",
+        "info",
+      );
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Unable to sync default roles.",
         "error",
       );
     } finally {
-      setIsSavingAssignments(false);
+      setIsLoading(false);
     }
   };
 
@@ -218,189 +185,252 @@ function RolesManagementPage() {
     <div className="roles-management-page">
       <PageHeader
         title="Roles Management"
-        description="Manage admin role definitions and review the roles assigned to the current signed-in admin."
-        actionLabel="+ Add Role"
-        onActionClick={openAddModal}
+        description="Admin maintains the official marketplace role catalog used across the GreenMarket system. This screen is about business roles, not admin login accounts."
+        actionLabel="Sync Default Roles"
+        onActionClick={() => void handleResetCatalog()}
       />
 
       <div className="roles-management-summary-grid">
         <StatCard
-          title="Total Roles"
+          title="Total Managed Roles"
           value={String(roles.length)}
-          subtitle="Role definitions available to the admin system"
+          subtitle="Core role definitions maintained by admin"
         />
         <StatCard
-          title="Assigned To Me"
-          value={String(assignedRoles.length)}
-          subtitle="Roles currently attached to this admin account"
+          title="Marketplace Roles"
+          value={String(marketplaceRoleCount)}
+          subtitle="User-facing roles in the buying and selling flow"
         />
         <StatCard
-          title="Current Admin"
-          value={adminProfile?.name || "Admin"}
-          subtitle={adminProfile?.email || "No email"}
+          title="Operations Roles"
+          value={String(operationsRoleCount)}
+          subtitle="Internal execution and oversight roles"
         />
       </div>
 
       <SearchToolbar
-        placeholder="Search by role code or title"
+        placeholder="Search by role name, code, or responsibility"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
-        filterSummaryItems={[`${filteredRoles.length} roles shown`]}
+        filterSummaryItems={[
+          `${filteredRoles.length} roles shown`,
+          `${roles.filter((role) => role.status === "Active").length} active`,
+        ]}
       />
 
-      <div className="roles-management-grid">
-        <SectionCard
-          title="Role Catalog"
-          description="Create, update, and remove admin roles."
-        >
-          {isLoading ? (
-            <EmptyState
-              title="Loading roles"
-              description="Fetching role definitions from the admin API."
-            />
-          ) : error ? (
-            <EmptyState title="Unable to load roles" description={error} />
-          ) : filteredRoles.length === 0 ? (
-            <EmptyState
-              title="No roles found"
-              description="No roles match your current search."
-            />
-          ) : (
-            <div className="roles-management-list">
-              {filteredRoles.map((role) => (
-                <div key={role.id} className="roles-management-card">
-                  <div className="roles-management-card__content">
+      <SectionCard
+        title="Where Role Assignment Happens"
+        description="This screen defines the role catalog only. User-by-user role assignment is handled in the Users Management screen."
+        actions={
+          <Link className="roles-management-link" to="/users">
+            Open Users Management
+          </Link>
+        }
+      >
+        <p className="roles-management-note">
+          Use this page to maintain the meaning of each business role. Open the
+          Users screen when you need to assign one of these roles to a specific
+          marketplace account.
+        </p>
+      </SectionCard>
+
+      <SectionCard
+        title="Role Catalog"
+        description="Review the business meaning, access scope, and key responsibilities of each system role described in the project report."
+      >
+        {isLoading ? (
+          <div className="roles-management-empty-state">
+            Loading marketplace role catalog...
+          </div>
+        ) : error ? (
+          <EmptyState title="Unable to load roles" description={error} />
+        ) : filteredRoles.length === 0 ? (
+          <EmptyState
+            title="No roles found"
+            description="No role matches the current search keyword."
+          />
+        ) : (
+          <div className="roles-management-list">
+            {filteredRoles.map((role) => (
+              <div key={role.id} className="roles-management-card">
+                <div className="roles-management-card__header">
+                  <div>
                     <strong>{role.title}</strong>
-                    <span>{role.code}</span>
-                    <small>Created {role.createdAt}</small>
+                    <p>{role.summary}</p>
                   </div>
-                  <div className="roles-management-card__actions">
-                    <button type="button" onClick={() => openEditModal(role)}>
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      className="roles-management-card__delete"
-                      onClick={() => setDeleteTarget(role)}
-                    >
-                      Delete
-                    </button>
+
+                  <button type="button" onClick={() => openEditModal(role)}>
+                    Edit Definition
+                  </button>
+                </div>
+
+                <div className="roles-management-card__meta">
+                  <StatusBadge label={role.code} variant="type" />
+                  <StatusBadge
+                    label={role.audienceGroup}
+                    variant="processing"
+                  />
+                  <StatusBadge
+                    label={role.status}
+                    variant={role.status === "Active" ? "active" : "locked"}
+                  />
+                </div>
+
+                <div className="roles-management-card__details">
+                  <div>
+                    <label>Access Scope</label>
+                    <p>{role.accessScope}</p>
+                  </div>
+
+                  <div>
+                    <label>Main Responsibilities</label>
+                    <ul>
+                      {role.responsibilities.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <label>Typical Capabilities</label>
+                    <ul>
+                      {role.capabilities.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </SectionCard>
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
 
-        <SectionCard
-          title="Current Admin Assignments"
-          description="Review and replace the roles attached to the currently signed-in admin account."
-        >
-          {isLoading ? (
-            <EmptyState
-              title="Loading assignments"
-              description="Fetching current admin assignments from the role API."
-            />
-          ) : error ? (
-            <EmptyState title="Unable to load assignments" description={error} />
-          ) : roles.length === 0 ? (
-            <EmptyState
-              title="No roles available"
-              description="Create roles first before assigning them."
-            />
-          ) : (
-            <div className="roles-assignment-panel">
-              <div className="roles-assignment-panel__list">
+      <SectionCard
+        title="Role Capability Matrix"
+        description="Use this matrix to verify which business role should handle each core function in the system."
+      >
+        <div className="roles-capability-table-wrapper">
+          <table className="roles-capability-table">
+            <thead>
+              <tr>
+                <th>Capability</th>
                 {roles.map((role) => (
-                  <label
-                    key={role.id}
-                    className="roles-assignment-panel__item"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedRoleIds.includes(role.id)}
-                      onChange={() => handleToggleAssignment(role.id)}
-                    />
-                    <div>
-                      <strong>{role.title}</strong>
-                      <span>{role.code}</span>
-                    </div>
-                  </label>
+                  <th key={role.code}>{role.title}</th>
                 ))}
-              </div>
-
-              <div className="roles-assignment-panel__footer">
-                <p>
-                  Assigned role count: <strong>{selectedRoleIds.length}</strong>
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void handleSaveAssignments()}
-                  disabled={isSavingAssignments}
-                >
-                  {isSavingAssignments ? "Saving..." : "Save My Assignments"}
-                </button>
-              </div>
-            </div>
-          )}
-        </SectionCard>
-      </div>
+              </tr>
+            </thead>
+            <tbody>
+              {capabilityRows.map((row) => (
+                <tr key={row.capability}>
+                  <td>{row.capability}</td>
+                  {roles.map((role) => (
+                    <td key={`${row.capability}-${role.code}`}>
+                      {row.roles.includes(role.code) ? "Yes" : "-"}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
 
       <BaseModal
-        isOpen={isModalOpen}
-        title={modalMode === "add" ? "Add Role" : "Edit Role"}
-        description="Maintain role code and role title used by admin RBAC."
+        isOpen={selectedRole !== null && formData !== null}
+        title={selectedRole ? `Edit ${selectedRole.title}` : "Edit Role"}
+        description="Update the role description used by the admin-maintained marketplace role catalog."
         onClose={closeModal}
-        maxWidth="520px"
+        maxWidth="720px"
       >
-        <form className="roles-management-form" onSubmit={handleSubmit}>
-          <div className="roles-management-form__field">
-            <label htmlFor="role-code">Role Code</label>
-            <input
-              id="role-code"
-              name="code"
-              type="text"
-              value={formData.code}
-              onChange={handleFormChange}
-              placeholder="ROLE_ADMIN"
-            />
-          </div>
+        {selectedRole && formData ? (
+          <form className="roles-management-form" onSubmit={handleSaveRole}>
+            <div className="roles-management-form__field">
+              <label>Role Code</label>
+              <input type="text" value={selectedRole.code} disabled />
+            </div>
 
-          <div className="roles-management-form__field">
-            <label htmlFor="role-title">Role Title</label>
-            <input
-              id="role-title"
-              name="title"
-              type="text"
-              value={formData.title}
-              onChange={handleFormChange}
-              placeholder="Administrator"
-            />
-          </div>
+            <div className="roles-management-form__grid">
+              <div className="roles-management-form__field">
+                <label htmlFor="role-title">Role Title</label>
+                <input
+                  id="role-title"
+                  name="title"
+                  type="text"
+                  value={formData.title}
+                  onChange={handleFormChange}
+                />
+              </div>
 
-          <div className="roles-management-form__actions">
-            <button type="button" onClick={closeModal}>
-              Cancel
-            </button>
-            <button type="submit">
-              {modalMode === "add" ? "Create Role" : "Save Changes"}
-            </button>
-          </div>
-        </form>
+              <div className="roles-management-form__field">
+                <label htmlFor="role-audience-group">Audience Group</label>
+                <select
+                  id="role-audience-group"
+                  name="audienceGroup"
+                  value={formData.audienceGroup}
+                  onChange={handleFormChange}
+                >
+                  <option value="Marketplace">Marketplace</option>
+                  <option value="Operations">Operations</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="roles-management-form__field">
+              <label htmlFor="role-scope">Access Scope</label>
+              <textarea
+                id="role-scope"
+                name="accessScope"
+                rows={3}
+                value={formData.accessScope}
+                onChange={handleFormChange}
+              />
+            </div>
+
+            <div className="roles-management-form__field">
+              <label htmlFor="role-summary">Role Summary</label>
+              <textarea
+                id="role-summary"
+                name="summary"
+                rows={3}
+                value={formData.summary}
+                onChange={handleFormChange}
+              />
+            </div>
+
+            <div className="roles-management-form__grid">
+              <div className="roles-management-form__field">
+                <label htmlFor="role-responsibilities">Responsibilities</label>
+                <textarea
+                  id="role-responsibilities"
+                  name="responsibilitiesText"
+                  rows={6}
+                  value={formData.responsibilitiesText}
+                  onChange={handleFormChange}
+                />
+              </div>
+
+              <div className="roles-management-form__field">
+                <label htmlFor="role-capabilities">Capabilities</label>
+                <textarea
+                  id="role-capabilities"
+                  name="capabilitiesText"
+                  rows={6}
+                  value={formData.capabilitiesText}
+                  onChange={handleFormChange}
+                />
+              </div>
+            </div>
+
+            <div className="roles-management-form__actions">
+              <button type="button" onClick={closeModal}>
+                Cancel
+              </button>
+              <button type="submit">Save Role Definition</button>
+            </div>
+          </form>
+        ) : null}
       </BaseModal>
-
-      <ConfirmDialog
-        isOpen={deleteTarget !== null}
-        title="Delete Role"
-        message={`Are you sure you want to delete ${
-          deleteTarget?.title ?? "this role"
-        }?`}
-        confirmText="Delete Role"
-        cancelText="Cancel"
-        tone="danger"
-        onConfirm={() => void handleDeleteRole()}
-        onCancel={() => setDeleteTarget(null)}
-      />
 
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>

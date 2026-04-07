@@ -254,19 +254,19 @@ const Profile: React.FC = () => {
 
         {/* Left Column: Avatar & Summary */}
         <div className="md:col-span-1 space-y-6">
-          <div className="glass p-8 rounded-[2.5rem] text-center relative overflow-hidden group h-full">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-xl text-center relative overflow-hidden group h-full">
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl -z-10" />
 
             <div className="relative inline-block mb-6">
               {shop ? (
-                <div className="w-32 h-32 rounded-3xl border-4 border-white/10 overflow-hidden bg-surface transition-all shadow-2xl flex items-center justify-center">
-                  <Store className="w-12 h-12 text-emerald-500" />
+                <div className="w-32 h-32 rounded-3xl border-4 border-slate-100 overflow-hidden bg-slate-50 transition-all shadow-2xl flex items-center justify-center">
+                  <Store className="w-12 h-12 text-emerald-600" />
                 </div>
               ) : (
                 <>
                   <div
                     onClick={handleAvatarClick}
-                    className="w-32 h-32 rounded-full border-4 border-white/10 overflow-hidden bg-surface cursor-pointer group-hover:border-emerald-500/50 transition-all shadow-2xl"
+                    className="w-32 h-32 rounded-full border-4 border-slate-100 overflow-hidden bg-slate-50 cursor-pointer group-hover:border-emerald-500/50 transition-all shadow-2xl"
                   >
                     {avatarUrl ? (
                       <img
@@ -295,26 +295,26 @@ const Profile: React.FC = () => {
               )}
             </div>
 
-            <h2 className="text-xl font-bold mb-1 line-clamp-1 uppercase tracking-tight">
+            <h2 className="text-xl font-bold mb-1 line-clamp-1 uppercase tracking-tight text-slate-900">
               {shop ? shopName : (displayName || 'Nghệ nhân')}
             </h2>
-            <p className="text-slate-400 text-sm mb-6">{shop ? (shopPhones[0] || 'Chưa cập nhật SĐT') : mobile}</p>
+            <p className="text-slate-500 text-sm mb-6">{shop ? (shopPhones[0] || 'Chưa cập nhật SĐT') : mobile}</p>
 
-            <div className="pt-6 border-t border-white/5 space-y-4">
+            <div className="pt-6 border-t border-slate-100 space-y-4">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 uppercase tracking-widest font-bold">Thành viên từ</span>
-                <span className="text-slate-300">{(user as any)?.userRegisteredAt ? new Date((user as any).userRegisteredAt).toLocaleDateString('vi-VN') : 'Mới'}</span>
+                <span className="text-slate-400 uppercase tracking-widest font-bold">Thành viên từ</span>
+                <span className="text-slate-600">{(user as any)?.userRegisteredAt ? new Date((user as any).userRegisteredAt).toLocaleDateString('vi-VN') : 'Mới'}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 uppercase tracking-widest font-bold">Trạng thái</span>
-                <span className="text-emerald-500 font-bold px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">Hoạt động</span>
+                <span className="text-slate-400 uppercase tracking-widest font-bold">Trạng thái</span>
+                <span className="text-emerald-600 font-bold px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-100">Hoạt động</span>
               </div>
             </div>
 
             {(shop ? shopDescription : bio) && (
-              <div className="mt-8 pt-8 border-t border-white/5 text-left">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Giới thiệu</span>
-                <p className="text-xs text-slate-400 italic line-clamp-4 leading-relaxed">"{shop ? shopDescription : bio}"</p>
+              <div className="mt-8 pt-8 border-t border-slate-100 text-left">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Giới thiệu</span>
+                <p className="text-xs text-slate-500 italic line-clamp-4 leading-relaxed">"{shop ? shopDescription : bio}"</p>
               </div>
             )}
           </div>
@@ -322,12 +322,12 @@ const Profile: React.FC = () => {
 
         {/* Right Column: Edit Form */}
         <div className="md:col-span-2">
-          <div className="glass p-8 sm:p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl -z-10" />
+          <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] border border-slate-200 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -z-10" />
 
             <div className="mb-10">
-              <h1 className="text-2xl font-black mb-2">{shop ? 'Hồ sơ Nhà Vườn' : 'Hồ sơ cá nhân'}</h1>
-              <p className="text-slate-400 text-sm">
+              <h1 className="text-2xl font-black mb-2 text-slate-900">{shop ? 'Hồ sơ Nhà Vườn' : 'Hồ sơ cá nhân'}</h1>
+              <p className="text-slate-500 text-sm">
                 {shop ? 'Quản lý thông tin vườn cây để tăng sự chuyên nghiệp' : 'Cập nhật thông tin chi tiết để tăng độ uy tín với khách hàng'}
               </p>
             </div>
@@ -335,7 +335,7 @@ const Profile: React.FC = () => {
             {message && (
               <div className={clsx(
                 "mb-8 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2",
-                message.type === 'success' ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"
+                message.type === 'success' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
               )}>
                 {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
                 <span className="text-sm font-medium">{message.text}</span>
@@ -346,9 +346,9 @@ const Profile: React.FC = () => {
               {/* Basic Section */}
               <div className="space-y-6">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="h-0.5 flex-1 bg-white/5" />
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.2em] whitespace-nowrap">Thông tin cơ bản</span>
-                  <div className="h-0.5 flex-1 bg-white/5" />
+                  <div className="h-0.5 flex-1 bg-slate-100" />
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-[0.2em] whitespace-nowrap">Thông tin cơ bản</span>
+                  <div className="h-0.5 flex-1 bg-slate-100" />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -357,11 +357,11 @@ const Profile: React.FC = () => {
                       {shop ? 'Điện thoại chính' : 'Số điện thoại'}
                     </label>
                     <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         disabled
                         type="text"
-                        className="w-full bg-white/5 border border-white/5 pl-12 pr-4 py-3.5 rounded-2xl text-slate-500 cursor-not-allowed opacity-60 text-sm font-medium"
+                        className="w-full bg-slate-50 border border-slate-100 pl-12 pr-4 py-3.5 rounded-2xl text-slate-400 cursor-not-allowed opacity-60 text-sm font-medium"
                         value={shop ? (shopPhones[0] || mobile) : mobile}
                       />
                     </div>
@@ -380,7 +380,7 @@ const Profile: React.FC = () => {
                       <input
                         required
                         type="text"
-                        className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 text-sm font-medium"
+                        className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
                         placeholder={shop ? 'Nhập tên nhà vườn...' : 'Nhập họ và tên...'}
                         value={shop ? shopName : displayName}
                         onChange={(e) => shop ? setShopName(e.target.value) : setDisplayName(e.target.value)}
@@ -402,22 +402,22 @@ const Profile: React.FC = () => {
                     }}
                   />
                   {shop && (shopLat || shopLocation) && (
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between transition-all">
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between transition-all">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
                           {shopLat && shopLng ? 'Toạ độ chính xác' : 'Khu vực hiển thị'}
                         </span>
                         {shopLat && shopLng ? (
-                          <span className="text-xs font-mono text-emerald-500">{Number(shopLat).toFixed(6)}, {Number(shopLng).toFixed(6)}</span>
+                          <span className="text-xs font-mono text-emerald-600">{Number(shopLat).toFixed(6)}, {Number(shopLng).toFixed(6)}</span>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Dựa trên địa chỉ</span>
+                          <span className="text-xs text-slate-500 italic">Dựa trên địa chỉ</span>
                         )}
                       </div>
                       <a
                         href={`https://www.google.com/maps?q=${shopLat && shopLng ? `${shopLat},${shopLng}` : encodeURIComponent(shopLocation)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20"
+                        className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
                         title="Xem trên Google Maps"
                       >
                         <ExternalLink className="w-4 h-4" />
@@ -436,7 +436,7 @@ const Profile: React.FC = () => {
                   {shopGalleryImages.length > 0 ? (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {shopGalleryImages.map((imageUrl, index) => (
-                        <div key={`${imageUrl}-${index}`} className="relative rounded-2xl overflow-hidden border border-white/10 bg-surface aspect-square">
+                        <div key={`${imageUrl}-${index}`} className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 aspect-square">
                           <img
                             src={toMediaUrl(imageUrl)}
                             alt={`Ảnh nhà vườn ${index + 1}`}
@@ -459,7 +459,7 @@ const Profile: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="relative border border-dashed border-white/10 rounded-2xl p-4 bg-surface hover:border-emerald-500/40 transition-all">
+                  <div className="relative border border-dashed border-slate-200 rounded-2xl p-4 bg-slate-50 hover:border-emerald-500/40 transition-all">
                     <input
                       ref={shopGalleryInputRef}
                       type="file"
@@ -469,8 +469,8 @@ const Profile: React.FC = () => {
                       onChange={handleShopGalleryUpload}
                       className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
                     />
-                    <div className="flex items-center gap-3 text-sm text-slate-300">
-                      <UploadCloud className="w-5 h-5 text-emerald-500" />
+                    <div className="flex items-center gap-3 text-sm text-slate-500">
+                      <UploadCloud className="w-5 h-5 text-emerald-600" />
                       <span>{uploadingGallery ? 'Đang tải ảnh...' : (shopGalleryImages.length >= 4 ? 'Đã đạt giới hạn 4 ảnh' : 'Bấm để tải thêm ảnh nhà vườn')}</span>
                     </div>
                   </div>
@@ -480,9 +480,9 @@ const Profile: React.FC = () => {
               {/* Expansion Section */}
               <div className="space-y-6">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="h-0.5 flex-1 bg-white/5" />
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.2em] whitespace-nowrap">Liên hệ & Giới thiệu</span>
-                  <div className="h-0.5 flex-1 bg-white/5" />
+                  <div className="h-0.5 flex-1 bg-slate-100" />
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-[0.2em] whitespace-nowrap">Liên hệ & Giới thiệu</span>
+                  <div className="h-0.5 flex-1 bg-slate-100" />
                 </div>
 
                 <div className="space-y-2">
@@ -492,7 +492,7 @@ const Profile: React.FC = () => {
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
                       <input
                         type="email"
-                        className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 text-sm font-medium"
+                        className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
                         placeholder="email@example.com"
                         value={shop ? shopEmail : email}
                         onChange={(e) => shop ? setShopEmail(e.target.value) : setEmail(e.target.value)}
@@ -505,14 +505,14 @@ const Profile: React.FC = () => {
                           <span className="text-sm font-bold">Đã xác minh</span>
                         </div>
                       ) : (
-                        <button type="button" onClick={() => handleRequestOTP('email', shopEmail)} disabled={otpLoading || !shopEmail} className="px-4 py-3.5 rounded-2xl bg-surface border border-white/10 hover:border-emerald-500 text-sm font-bold flex justify-center items-center gap-2 transition-all">
+                        <button type="button" onClick={() => handleRequestOTP('email', shopEmail)} disabled={otpLoading || !shopEmail} className="px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-emerald-500 text-slate-700 text-sm font-bold flex justify-center items-center gap-2 transition-all">
                           {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác thực ngay'}
                         </button>
                       )
                     )}
                   </div>
                   {shop && !shopEmailVerified && shopEmail && (
-                    <p className="text-xs text-amber-500 italic mt-1 ml-1 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl inline-block">Email chưa xác thực. OTP sẽ được gửi về email mới.</p>
+                    <p className="text-xs text-amber-600 italic mt-1 ml-1 px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl inline-block">Email chưa xác thực. OTP sẽ được gửi về email mới.</p>
                   )}
                 </div>
 
@@ -523,8 +523,8 @@ const Profile: React.FC = () => {
                       {shopPhones.map((phone, idx) => (
                         <div key={phone + idx} className="flex items-center gap-3">
                           <div className="relative flex-1">
-                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
-                            <input disabled type="text" className="w-full bg-white/5 border border-white/5 pl-12 pr-4 py-3.5 rounded-2xl text-slate-300 opacity-80 text-sm font-medium" value={phone} />
+                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+                            <input disabled type="text" className="w-full bg-slate-50 border border-slate-100 pl-12 pr-4 py-3.5 rounded-2xl text-slate-500 opacity-80 text-sm font-medium" value={phone} />
                           </div>
                           {shopPhones.length > 1 && (
                             <button type="button" onClick={() => handleDeletePhone(phone)} className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
@@ -535,7 +535,7 @@ const Profile: React.FC = () => {
                       ))}
                     </div>
                     {shopPhones.length < 3 && (
-                      <button type="button" onClick={() => setOtpModalType('phone')} className="flex w-fit items-center gap-2 px-4 py-2 mt-2 text-sm text-emerald-500 font-bold hover:bg-emerald-500/10 rounded-xl transition-all">
+                      <button type="button" onClick={() => setOtpModalType('phone')} className="flex w-fit items-center gap-2 px-4 py-2 mt-2 text-sm text-emerald-600 font-bold hover:bg-emerald-50 rounded-xl transition-all">
                         <Plus className="w-4 h-4" /> Thêm số điện thoại mới
                       </button>
                     )}
@@ -547,16 +547,16 @@ const Profile: React.FC = () => {
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Kênh mạng xã hội (Tùy chọn)</label>
 
                     <div className="relative group">
-                      <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 focus-within:text-[#1877F2]" />
-                      <input type="url" placeholder="Link Facebook" className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl text-sm" value={shopFacebook} onChange={e => setShopFacebook(e.target.value)} />
+                      <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 focus-within:text-[#1877F2]" />
+                      <input type="url" placeholder="Link Facebook" className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl text-slate-900 text-sm focus:bg-white focus:border-emerald-500 outline-none transition-all" value={shopFacebook} onChange={e => setShopFacebook(e.target.value)} />
                     </div>
                     <div className="relative group">
-                      <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 focus-within:text-[#E4405F]" />
-                      <input type="url" placeholder="Link Instagram" className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl text-sm" value={shopInstagram} onChange={e => setShopInstagram(e.target.value)} />
+                      <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 focus-within:text-[#E4405F]" />
+                      <input type="url" placeholder="Link Instagram" className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl text-slate-900 text-sm focus:bg-white focus:border-emerald-500 outline-none transition-all" value={shopInstagram} onChange={e => setShopInstagram(e.target.value)} />
                     </div>
                     <div className="relative group">
-                      <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 focus-within:text-[#FF0000]" />
-                      <input type="url" placeholder="Link Youtube" className="w-full bg-surface border border-white/10 pl-12 pr-4 py-3.5 rounded-2xl text-sm" value={shopYoutube} onChange={e => setShopYoutube(e.target.value)} />
+                      <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 focus-within:text-[#FF0000]" />
+                      <input type="url" placeholder="Link Youtube" className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl text-slate-900 text-sm focus:bg-white focus:border-emerald-500 outline-none transition-all" value={shopYoutube} onChange={e => setShopYoutube(e.target.value)} />
                     </div>
                   </div>
                 )}
@@ -567,7 +567,7 @@ const Profile: React.FC = () => {
                   </label>
                   <textarea
                     rows={4}
-                    className="w-full bg-surface border border-white/10 px-6 py-4 rounded-3xl focus:border-emerald-500 outline-none transition-all placeholder:text-slate-600 text-sm font-medium leading-relaxed resize-none"
+                    className="w-full bg-slate-50 border border-slate-200 px-6 py-4 rounded-3xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium leading-relaxed resize-none"
                     placeholder={shop ? 'Giới thiệu về kinh nghiệm, các loại cây thế mạnh của vườn...' : 'Mô tả kỹ năng chăm sóc cây, kinh nghiệm làm vườn của bạn...'}
                     value={shop ? shopDescription : bio}
                     onChange={(e) => shop ? setShopDescription(e.target.value) : setBio(e.target.value)}
@@ -579,7 +579,7 @@ const Profile: React.FC = () => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full sm:w-auto px-12 bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-700 shadow-xl shadow-emerald-900/40 text-white"
+                  className="w-full sm:w-auto px-12 bg-emerald-700 hover:bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 shadow-xl shadow-emerald-200/50 text-white"
                 >
                   {saving ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -598,24 +598,24 @@ const Profile: React.FC = () => {
 
       {/* OTP Modal */}
       {otpModalType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-[#111] border border-white/10 p-8 rounded-[2rem] w-full max-w-sm relative shadow-2xl slide-in-from-bottom-4">
-            <button onClick={() => setOtpModalType(null)} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-full p-1.5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white border border-slate-200 p-8 rounded-[2rem] w-full max-w-sm relative shadow-2xl slide-in-from-bottom-4">
+            <button onClick={() => setOtpModalType(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors bg-slate-50 rounded-full p-1.5 border border-slate-200">
               <X className="w-5 h-5" />
             </button>
             <div className="mb-6">
-              <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-4 border border-emerald-500/20">
-                <Shield className="w-6 h-6 text-emerald-500" />
+              <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 border border-emerald-100">
+                <Shield className="w-6 h-6 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-black">{otpModalType === 'email' ? 'Xác thực Email' : 'Thêm số điện thoại'}</h3>
-              <p className="text-sm text-slate-400 mt-1">Mã xác thực 6 số bảo mật</p>
+              <h3 className="text-xl font-black text-slate-900">{otpModalType === 'email' ? 'Xác thực Email' : 'Thêm số điện thoại'}</h3>
+              <p className="text-sm text-slate-500 mt-1">Mã xác thực 6 số bảo mật</p>
             </div>
 
             {otpModalType === 'phone' && (
-              <div className="mb-5 bg-white/5 p-4 rounded-2xl border border-white/10">
-                <label className="text-[10px] uppercase font-bold text-slate-500 tracking-widest block mb-2">Số điện thoại mới</label>
-                <input type="text" className="w-full bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-sm focus:border-emerald-500 outline-none transition-colors" placeholder="09xxxx..." value={newPhoneValue} onChange={e => setNewPhoneValue(e.target.value)} />
-                <button type="button" onClick={() => handleRequestOTP('phone', newPhoneValue)} disabled={!newPhoneValue || otpLoading} className="mt-3 w-full py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-bold hover:bg-white/10 transition-colors flex justify-center items-center gap-2">
+              <div className="mb-5 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-2">Số điện thoại mới</label>
+                <input type="text" className="w-full bg-white border border-slate-200 px-4 py-3 rounded-xl text-sm focus:border-emerald-500 outline-none transition-colors text-slate-900" placeholder="09xxxx..." value={newPhoneValue} onChange={e => setNewPhoneValue(e.target.value)} />
+                <button type="button" onClick={() => handleRequestOTP('phone', newPhoneValue)} disabled={!newPhoneValue || otpLoading} className="mt-3 w-full py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-50 text-slate-700 transition-colors flex justify-center items-center gap-2">
                   {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Gửi mã OTP'}
                 </button>
               </div>
@@ -623,11 +623,11 @@ const Profile: React.FC = () => {
 
             <form onSubmit={handleVerifyOTP}>
               <div className="mb-6">
-                <label className="text-[10px] uppercase font-bold text-slate-500 tracking-widest block mb-2">Mã xác thực (OTP)</label>
-                <input required type="text" className="w-full bg-black/40 border border-emerald-500/30 px-4 py-4 rounded-2xl text-center text-3xl font-mono tracking-[0.3em] focus:border-emerald-500 outline-none transition-all placeholder:text-slate-700" placeholder="------" maxLength={6} value={otpValue} onChange={e => setOtpValue(e.target.value.replace(/\D/g, ''))} />
+                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-2">Mã xác thực (OTP)</label>
+                <input required type="text" className="w-full bg-slate-50 border border-emerald-600/30 px-4 py-4 rounded-2xl text-center text-3xl font-mono tracking-[0.3em] focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300 text-slate-900" placeholder="------" maxLength={6} value={otpValue} onChange={e => setOtpValue(e.target.value.replace(/\D/g, ''))} />
               </div>
 
-              <button type="submit" disabled={otpValue.length < 6 || otpLoading} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 rounded-2xl font-bold flex justify-center items-center gap-2 transition-all active:scale-95 text-white shadow-xl shadow-emerald-900/20">
+              <button type="submit" disabled={otpValue.length < 6 || otpLoading} className="w-full py-4 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-100 disabled:text-slate-400 rounded-2xl font-bold flex justify-center items-center gap-2 transition-all active:scale-95 text-white shadow-xl shadow-emerald-200/20">
                 {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Xác nhận ngay'}
               </button>
             </form>

@@ -43,6 +43,16 @@ type TopPlacement = {
     revenue: string;
 };
 
+type AnalyticsDailyTrafficSlot = {
+    slot: string;
+    impressions: number;
+};
+
+type AnalyticsDailyTrafficPoint = {
+    date: string;
+    slots: AnalyticsDailyTrafficSlot[];
+};
+
 type RevenueCard = {
     title: string;
     value: string;
@@ -179,6 +189,18 @@ const formatNumber = (value: number) => value.toLocaleString("en-US");
 const formatCurrency = (value: number) => `${value.toLocaleString("en-US")} VND`;
 
 const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+
+const enumerateDateRange = (from: Date, to: Date) => {
+    const days: Date[] = [];
+    const cursor = new Date(from);
+
+    while (cursor.getTime() <= to.getTime()) {
+        days.push(new Date(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return days;
+};
 
 const escapeDelimitedValue = (value: unknown, delimiter: "," | "\t") => {
     const text = String(value ?? "");
@@ -392,6 +414,100 @@ export const adminReportingService = {
             }),
         );
 
+        const fallbackFrom = range.from
+            ?? new Date(`${filteredBoostedPosts[0]?.startDate ?? formatDate(new Date())}T00:00:00`);
+        const fallbackTo = range.to
+            ?? new Date(`${filteredBoostedPosts[filteredBoostedPosts.length - 1]?.endDate ?? formatDate(new Date())}T23:59:59.999`);
+
+        const dailyTrafficMap = new Map<
+            string,
+            {
+                slot: string;
+                impressions: number;
+            }
+        >();
+
+        filteredBoostedPosts.forEach((item) => {
+            const campaignStart = new Date(`${item.startDate}T00:00:00`);
+            const campaignEnd = new Date(`${item.endDate}T23:59:59.999`);
+            const overlapStart = new Date(
+                Math.max(campaignStart.getTime(), fallbackFrom.getTime()),
+            );
+            const overlapEnd = new Date(
+                Math.min(campaignEnd.getTime(), fallbackTo.getTime()),
+            );
+
+            if (Number.isNaN(overlapStart.getTime()) || Number.isNaN(overlapEnd.getTime())) {
+                return;
+            }
+
+            if (overlapStart.getTime() > overlapEnd.getTime()) {
+                return;
+            }
+
+            const activeDays = enumerateDateRange(
+                new Date(
+                    overlapStart.getFullYear(),
+                    overlapStart.getMonth(),
+                    overlapStart.getDate(),
+                ),
+                new Date(
+                    overlapEnd.getFullYear(),
+                    overlapEnd.getMonth(),
+                    overlapEnd.getDate(),
+                ),
+            );
+
+            if (activeDays.length === 0) {
+                return;
+            }
+
+            let remainingImpressions = item.impressions;
+
+            activeDays.forEach((day, index) => {
+                const daysLeft = activeDays.length - index;
+                const allocation = Math.max(
+                    0,
+                    Math.round(remainingImpressions / Math.max(daysLeft, 1)),
+                );
+                remainingImpressions -= allocation;
+
+                const dayKey = formatDate(day);
+                const slotKey = `${dayKey}::${item.slot}`;
+                const current = dailyTrafficMap.get(slotKey) ?? {
+                    slot: item.slot,
+                    impressions: 0,
+                };
+
+                current.impressions += allocation;
+                dailyTrafficMap.set(slotKey, current);
+            });
+        });
+
+        const dailyTraffic: AnalyticsDailyTrafficPoint[] = enumerateDateRange(
+            new Date(
+                fallbackFrom.getFullYear(),
+                fallbackFrom.getMonth(),
+                fallbackFrom.getDate(),
+            ),
+            new Date(
+                fallbackTo.getFullYear(),
+                fallbackTo.getMonth(),
+                fallbackTo.getDate(),
+            ),
+        ).map((day) => {
+            const dayKey = formatDate(day);
+            const slots = Array.from(placementMap.keys()).map((slot) => ({
+                slot,
+                impressions: dailyTrafficMap.get(`${dayKey}::${slot}`)?.impressions ?? 0,
+            }));
+
+            return {
+                date: dayKey,
+                slots,
+            };
+        });
+
         const kpiCards: AnalyticsKpiCard[] = [
             { title: "Total Views", value: formatNumber(totalViews), change: "Live delivery reach" },
             { title: "CTR", value: formatPercent(ctr), change: "Across boosted campaigns" },
@@ -399,7 +515,7 @@ export const adminReportingService = {
             { title: "Revenue", value: formatCurrency(revenue), change: "Paid promotion revenue" },
         ];
 
-        return { kpiCards, topPlacements };
+        return { kpiCards, topPlacements, dailyTraffic };
     },
 
     async getRevenueSummary(fromDate?: string, toDate?: string) {

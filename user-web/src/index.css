@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #064e3b; /* Deep Emerald */
-  --color-secondary: #065f46;
-  --color-accent: #10b981;
-  --color-background: #0a0a0a;
-  --color-surface: #171717;
-  --color-surface-hover: rgba(255, 255, 255, 0.1);
-  --color-text: #f8fafc;
-  --color-text-muted: #94a3b8;
+  --color-primary: #065f46; /* Emerald 800 (Darker for light-mode contrast) */
+  --color-secondary: #10b981;
+  --color-accent: #059669;    /* Emerald 600 */
+  --color-background: #f8fafc; /* Slate 50 (Off-white) */
+  --color-surface: #ffffff;   /* Pure White */
+  --color-surface-hover: rgba(0, 0, 0, 0.04);
+  --color-text: #0f172a;       /* Slate 900 */
+  --color-text-muted: #64748b; /* Slate 500 */
 }
 
 @layer base {
@@ -22,7 +22,7 @@
 
 /* Custom Utilities */
 .glass {
-  @apply bg-surface/50 backdrop-blur-md border border-white/10;
+  @apply bg-white/70 backdrop-blur-md border border-slate-200/50 shadow-sm shadow-slate-200/50;
 }
 
 .text-gradient {
