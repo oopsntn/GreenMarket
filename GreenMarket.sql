@@ -5,8 +5,6 @@
 -- Categories: Cây Cảnh Bonsai, Dụng Cụ Làm Vườn
 -- ============================================================
 
-SET client_encoding = 'UTF8';
-
 -- ============================================================
 -- EXTENSIONS
 -- ============================================================
@@ -153,6 +151,20 @@ CREATE TABLE admin_roles (
     PRIMARY KEY (admin_role_admin_id, admin_role_role_id)
 );
 
+-- Business Roles
+CREATE TABLE business_roles (
+    business_role_id SERIAL PRIMARY KEY,
+    business_role_code VARCHAR(50) NOT NULL UNIQUE,
+    business_role_title VARCHAR(100) NOT NULL,
+    business_role_audience_group VARCHAR(50),
+    business_role_access_scope VARCHAR(100),
+    business_role_summary TEXT,
+    business_role_responsibilities JSONB DEFAULT '[]'::jsonb,
+    business_role_capabilities JSONB DEFAULT '[]'::jsonb,
+    business_role_status VARCHAR(20) NOT NULL DEFAULT 'active',
+    business_role_created_at TIMESTAMP DEFAULT now(),
+    business_role_updated_at TIMESTAMP DEFAULT now()
+);
 
 
 -- QR Sessions
@@ -199,6 +211,8 @@ CREATE TABLE category_attributes (
     category_attribute_category_id INTEGER NOT NULL REFERENCES categories(category_id) ON DELETE CASCADE,
     category_attribute_attribute_id INTEGER NOT NULL REFERENCES attributes(attribute_id) ON DELETE CASCADE,
     category_attribute_required BOOLEAN DEFAULT false,
+    category_attribute_display_order INTEGER DEFAULT 1,
+    category_attribute_status VARCHAR(20) DEFAULT 'Active',
     PRIMARY KEY (category_attribute_category_id, category_attribute_attribute_id)
 );
 
@@ -544,6 +558,7 @@ CREATE INDEX idx_favorite_posts_post ON favorite_posts(favorite_post_post_id);
 -- Users
 CREATE INDEX idx_users_mobile ON users(user_mobile);
 CREATE INDEX idx_users_status ON users(user_status);
+CREATE INDEX idx_users_business_role ON users(user_business_role_id);
 
 -- Admins
 CREATE INDEX idx_admins_email ON admins(admin_email);
@@ -551,12 +566,17 @@ CREATE INDEX idx_admins_username ON admins(admin_username);
 CREATE INDEX idx_admins_status ON admins(admin_status);
 
 -- Shops
-CREATE INDEX idx_shops_owner ON shops(shop_id);
+CREATE INDEX idx_shops_owner ON shops(shop_owner_id);
 CREATE INDEX idx_shops_status ON shops(shop_status);
 
 -- Categories
 CREATE INDEX idx_categories_parent ON categories(category_parent_id);
 CREATE INDEX idx_categories_slug ON categories(category_slug);
+
+-- Category Attributes
+CREATE INDEX idx_category_attributes_category ON category_attributes(category_attribute_category_id);
+CREATE INDEX idx_category_attributes_attribute ON category_attributes(category_attribute_attribute_id);
+CREATE INDEX idx_category_attributes_status ON category_attributes(category_attribute_status);
 
 -- Reports
 CREATE INDEX idx_reports_reporter ON reports(reporter_id);
@@ -626,8 +646,9 @@ CREATE TRIGGER trg_audit_promotion_prices
 
 -- Roles
 INSERT INTO roles (role_id, role_code, role_title) VALUES
-(1, 'ROLE_ADMIN', 'Super Administrator'),
-(2, 'ROLE_MODERATOR', 'Content Moderator');
+(1, 'ROLE_SUPER_ADMIN', 'Super Administrator'),
+(2, 'ROLE_ADMIN', 'Administrator'),
+(3, 'ROLE_SUPPORT', 'Support Staff');
 
 -- Admins (Password hash cho '123456' - demo only)
 INSERT INTO admins (admin_id, admin_email, admin_username, admin_password_hash, admin_full_name, admin_status) VALUES
@@ -639,15 +660,92 @@ INSERT INTO admin_roles (admin_role_admin_id, admin_role_role_id) VALUES
 (1, 1),
 (2, 2);
 
+-- Business Roles
+INSERT INTO business_roles (
+    business_role_id,
+    business_role_code,
+    business_role_title,
+    business_role_audience_group,
+    business_role_access_scope,
+    business_role_summary,
+    business_role_responsibilities,
+    business_role_capabilities,
+    business_role_status
+) VALUES
+(
+    1,
+    'USER',
+    'User',
+    'Marketplace',
+    'User Web + User App',
+    'Marketplace customer role used by buyers and visitors who explore ornamental plant listings.',
+    '["Browse listings", "Save favorites", "Contact sellers", "Submit reports"]'::jsonb,
+    '["View approved posts", "Report listings", "Track personal purchase and contact history"]'::jsonb,
+    'active'
+),
+(
+    2,
+    'HOST',
+    'Host',
+    'Marketplace',
+    'Mobile App',
+    'Seller-side business role for shop owners who list ornamental plants and manage promotion packages.',
+    '["Manage storefront profile", "Publish and update listings", "Review promotion package options"]'::jsonb,
+    '["Create and maintain listings", "Manage shop content", "Request payout for host earnings"]'::jsonb,
+    'active'
+),
+(
+    3,
+    'COLLABORATOR',
+    'Collaborator',
+    'Marketplace',
+    'Mobile App',
+    'Freelance collaborator role for plant care or support jobs available inside the marketplace ecosystem.',
+    '["Browse available jobs", "Accept or decline assignments", "Submit work results"]'::jsonb,
+    '["Track assigned jobs", "Upload deliverables", "Request payout for completed work"]'::jsonb,
+    'active'
+),
+(
+    4,
+    'MANAGER',
+    'Manager',
+    'Marketplace',
+    'Mobile App',
+    'Operational manager role for moderation-oriented tasks and report resolution flows.',
+    '["Review moderation queue", "Resolve reports", "Track moderation quality"]'::jsonb,
+    '["Inspect report evidence", "Approve or reject pending actions", "Monitor marketplace quality"]'::jsonb,
+    'active'
+),
+(
+    5,
+    'OPERATION_STAFF',
+    'Operation Staff',
+    'Marketplace',
+    'Mobile App',
+    'Internal operations support role for task handling and day-to-day support workload.',
+    '["Handle support requests", "Track assigned internal tasks", "Coordinate operational follow-up"]'::jsonb,
+    '["Update task status", "Review support workload", "Escalate issues to managers"]'::jsonb,
+    'active'
+);
+
 -- Users
-INSERT INTO users (user_id, user_mobile, user_display_name, user_email, user_status) VALUES
-(1, '0978195419', 'Nguyễn Thành Nam', 'nam.nguyen@gmail.com', 'active'),
-(2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'active'),
-(3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'active'),
-(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'active'),
-(5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'active'),
-(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'active'),
-(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'active');
+INSERT INTO users (
+    user_id,
+    user_mobile,
+    user_display_name,
+    user_email,
+    user_location,
+    user_bio,
+    user_status,
+    user_business_role_id
+) VALUES
+(1, '0978195419', 'Nguyễn Thành Nam', 'nam.nguyen@gmail.com', 'Yên Phong, Bắc Ninh', 'Marketplace account used for general buyer and seller demo flows.', 'active', 1),
+(2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'Hoàng Mai, Hà Nội', 'Shop owner account used to demonstrate host storefront behaviour.', 'active', 2),
+(3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'Nam Trực, Nam Định', 'Marketplace user account with host permissions for additional shop demo content.', 'active', 2),
+(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Collaborator demo account for mobile job and earnings scenarios.', 'active', 3),
+(5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
+(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 5),
+(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1);
 
 -- Shops
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
@@ -660,9 +758,6 @@ INSERT INTO shops (shop_id, shop_name, shop_phone, shop_location, shop_descripti
 (4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
     'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', 10.2350, 106.1511),
-(2, 'Bonsai Trần Gia', '0982703398', 'Nam Trực, Nam Định',
-    'Vườn lan và bonsai nghệ thuật. Chuyên dòng tùng la hán và sanh cổ. Hỗ trợ kỹ thuật chăm sóc trọn đời.',
-    'http://localhost:5000/uploads/shop/tran-gia-bonsai.jpg', 'active', 20.2506, 106.2355),
 (6, 'Dụng Cụ Bonsai Pro', '0935112233', 'Đông Anh, Hà Nội',
     'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
     'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', 21.1395, 105.8544);
@@ -704,31 +799,63 @@ INSERT INTO attributes (attribute_id, attribute_code, attribute_title, attribute
 (8, 'xuat_xu',    'Xuất xứ',          'enum',   '["Nhật Bản","Trung Quốc","Việt Nam","Đài Loan","Hàn Quốc"]', true);
 
 -- Category-Attribute Mapping
-INSERT INTO category_attributes (category_attribute_category_id, category_attribute_attribute_id, category_attribute_required) VALUES
+INSERT INTO category_attributes (
+    category_attribute_category_id,
+    category_attribute_attribute_id,
+    category_attribute_required,
+    category_attribute_display_order,
+    category_attribute_status
+) VALUES
 -- Cây Cảnh Bonsai (gốc) → kế thừa cho tất cả sub
-(1,  1, true),  (1,  2, true),  (1,  3, false), (1,  4, false), (1,  5, false),
+(1,  1, true,  1, 'Active'),
+(1,  2, true,  2, 'Active'),
+(1,  3, false, 3, 'Active'),
+(1,  4, false, 4, 'Active'),
+(1,  5, false, 5, 'Active'),
 -- Bonsai Mini
-(11, 1, true),  (11, 2, true),  (11, 3, true),
+(11, 1, true,  1, 'Active'),
+(11, 2, true,  2, 'Active'),
+(11, 3, true,  3, 'Active'),
 -- Bonsai Tầm Trung
-(12, 1, true),  (12, 2, true),  (12, 3, true),  (12, 4, false),
+(12, 1, true,  1, 'Active'),
+(12, 2, true,  2, 'Active'),
+(12, 3, true,  3, 'Active'),
+(12, 4, false, 4, 'Active'),
 -- Bonsai Đại
-(13, 1, true),  (13, 2, true),  (13, 3, true),  (13, 4, true),  (13, 5, false),
+(13, 1, true,  1, 'Active'),
+(13, 2, true,  2, 'Active'),
+(13, 3, true,  3, 'Active'),
+(13, 4, true,  4, 'Active'),
+(13, 5, false, 5, 'Active'),
 -- Bonsai Phong Thủy
-(14, 1, true),  (14, 2, true),
+(14, 1, true,  1, 'Active'),
+(14, 2, true,  2, 'Active'),
 -- Bonsai Hoa & Quả
-(15, 1, true),  (15, 2, true),  (15, 5, false),
+(15, 1, true,  1, 'Active'),
+(15, 2, true,  2, 'Active'),
+(15, 5, false, 3, 'Active'),
 -- Dụng Cụ Làm Vườn (gốc)
-(2,  6, true),  (2,  7, false), (2,  8, false),
+(2,  6, true,  1, 'Active'),
+(2,  7, false, 2, 'Active'),
+(2,  8, false, 3, 'Active'),
 -- Kéo Tỉa & Kìm Cạp
-(21, 6, true),  (21, 7, true),  (21, 8, true),
+(21, 6, true,  1, 'Active'),
+(21, 7, true,  2, 'Active'),
+(21, 8, true,  3, 'Active'),
 -- Đất & Giá Thể
-(22, 7, false), (22, 8, true),
+(22, 7, false, 1, 'Active'),
+(22, 8, true,  2, 'Active'),
 -- Chậu & Khay Bonsai
-(23, 6, true),  (23, 7, false), (23, 8, true),
+(23, 6, true,  1, 'Active'),
+(23, 7, false, 2, 'Active'),
+(23, 8, true,  3, 'Active'),
 -- Dây Buộc & Phụ Kiện Uốn
-(24, 6, true),  (24, 8, false),
+(24, 6, true,  1, 'Active'),
+(24, 8, false, 2, 'Active'),
 -- Bình Tưới & Phun Sương
-(25, 6, true),  (25, 7, false), (25, 8, false);
+(25, 6, true,  1, 'Active'),
+(25, 7, false, 2, 'Active'),
+(25, 8, false, 3, 'Active');
 
 -- ============================================================
 -- POSTS (15 bài đăng: 9 bonsai + 6 dụng cụ)
@@ -949,9 +1076,9 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('contact_phone', '1900-xxxx', 1);
 
 -- OTP Requests (Sample)
--- INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_expire_at, otp_request_status) VALUES
--- ('0978195419', '123456', now() + interval '10 minutes', 'verified'),
--- ('0982703398', '654321', now() + interval '10 minutes', 'pending');
+INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_expire_at, otp_request_status) VALUES
+('0978195419', '123456', now() + interval '10 minutes', 'verified'),
+('0982703398', '654321', now() + interval '10 minutes', 'pending');
 
 -- ============================================================
 -- RESET SEQUENCES
@@ -964,10 +1091,11 @@ INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_rea
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
 SELECT setval('admins_admin_id_seq', (SELECT COALESCE(MAX(admin_id), 1) FROM admins));
 SELECT setval('roles_role_id_seq', (SELECT COALESCE(MAX(role_id), 1) FROM roles));
--- SELECT setval('otp_requests_otp_request_id_seq', (SELECT COALESCE(MAX(otp_request_id), 1) FROM otp_requests));
+SELECT setval('business_roles_business_role_id_seq', (SELECT COALESCE(MAX(business_role_id), 1) FROM business_roles));
+SELECT setval('otp_requests_otp_request_id_seq', (SELECT COALESCE(MAX(otp_request_id), 1) FROM otp_requests));
 SELECT setval('categories_category_id_seq', (SELECT COALESCE(MAX(category_id), 1) FROM categories));
 SELECT setval('attributes_attribute_id_seq', (SELECT COALESCE(MAX(attribute_id), 1) FROM attributes));
--- SELECT setval('shops_shop_id_seq', (SELECT COALESCE(MAX(shop_id), 1) FROM shops));
+SELECT setval('shops_shop_id_seq', (SELECT COALESCE(MAX(shop_id), 1) FROM shops));
 SELECT setval('posts_post_id_seq', (SELECT COALESCE(MAX(post_id), 1) FROM posts));
 SELECT setval('post_images_image_id_seq', (SELECT COALESCE(MAX(image_id), 1) FROM post_images));
 SELECT setval('post_videos_post_video_id_seq', (SELECT COALESCE(MAX(post_video_id), 1) FROM post_videos));
