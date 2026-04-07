@@ -19,6 +19,7 @@ export interface ShopDetail {
     shopCoverUrl?: string;
     shopLat?: number;
     shopLng?: number;
+    phones?: string[];
     posts?: ShopPost[];
 }
 
