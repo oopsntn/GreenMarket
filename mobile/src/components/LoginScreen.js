@@ -115,7 +115,7 @@ export default function LoginScreen({ onLoginSuccess }) {
 
             <TextInput
               style={styles.input}
-              placeholder="••••••"
+              placeholder="ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"
               keyboardType="number-pad"
               maxLength={6}
               value={otp}
