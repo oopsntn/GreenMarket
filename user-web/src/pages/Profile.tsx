@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube } from 'lucide-react';
+import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings } from 'lucide-react';
 import { updateProfile, updateShop, getProfile, uploadImages, requestShopVerificationOTP, verifyShopEmailOTP, addShopPhoneOTP, deleteShopPhone } from '../services/api';
 import clsx from 'clsx';
 import AddressPicker from '../components/AddressPicker';
@@ -41,6 +41,7 @@ const Profile: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const shopGalleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -177,6 +178,7 @@ const Profile: React.FC = () => {
       }
 
       setMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
+      setIsEditModalOpen(false);
     } catch (error) {
       console.error("Failed to update:", error);
       setMessage({ type: 'error', text: 'Có lỗi xảy ra khi cập nhật.' });
@@ -240,120 +242,174 @@ const Profile: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+  const renderView = () => (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {message && (
+        <div className={clsx(
+          "mb-8 p-6 rounded-[2rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-2",
+          message.type === 'success' ? "bg-emerald-50 text-emerald-600 border border-emerald-100/50 shadow-sm" : "bg-red-50 text-red-600 border border-red-100/50 shadow-sm"
+        )}>
+          <div className={clsx(
+            "p-2 rounded-xl",
+            message.type === 'success' ? "bg-emerald-500/10" : "bg-red-500/10"
+          )}>
+            {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
+          </div>
+          <span className="text-sm font-black uppercase tracking-tight leading-none">{message.text}</span>
+        </div>
+      )}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-slate-900 group">
+            <span className="bg-emerald-500 w-1.5 h-6 inline-block mr-3 rounded-full align-middle group-hover:scale-y-125 transition-transform" />
+            {shop ? 'Thông tin Nhà Vườn' : 'Hồ sơ cá nhân'}
+          </h1>
+          <p className="text-sm text-slate-500 mt-1 uppercase tracking-widest font-bold">Trạng thái: <span className="text-emerald-600">Đã xác minh</span></p>
+        </div>
+        <button 
+          onClick={() => setIsEditModalOpen(true)}
+          className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-900 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 transition-all font-black uppercase text-[10px] tracking-widest shadow-xl shadow-slate-200/50 active:scale-95"
+        >
+          <Pencil className="w-4 h-4" /> Chỉnh sửa hồ sơ
+        </button>
       </div>
-    );
-  }
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-        {/* Left Column: Avatar & Summary */}
-        <div className="md:col-span-1 space-y-6">
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-xl text-center relative overflow-hidden group h-full">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-3xl -z-10" />
-
-            <div className="relative inline-block mb-6">
-              {shop ? (
-                <div className="w-32 h-32 rounded-3xl border-4 border-slate-100 overflow-hidden bg-slate-50 transition-all shadow-2xl flex items-center justify-center">
-                  <Store className="w-12 h-12 text-emerald-600" />
-                </div>
-              ) : (
-                <>
-                  <div
-                    onClick={handleAvatarClick}
-                    className="w-32 h-32 rounded-full border-4 border-slate-100 overflow-hidden bg-slate-50 cursor-pointer group-hover:border-emerald-500/50 transition-all shadow-2xl"
-                  >
-                    {avatarUrl ? (
-                      <img
-                        src={toMediaUrl(avatarUrl)}
-                        alt="Avatar"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-emerald-500/10">
-                        <User className="w-12 h-12 text-emerald-500" />
-                      </div>
-                    )}
-
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                  />
-                </>
-              )}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Basic Info Block */}
+        <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+             <div className="p-2.5 bg-emerald-50 rounded-xl">
+               <User className="w-5 h-5 text-emerald-600" />
+             </div>
+             <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Thông tin cơ bản</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Họ & Tên</span>
+              <p className="text-base font-black text-slate-900">{shop ? shopName : displayName}</p>
             </div>
-
-            <h2 className="text-xl font-bold mb-1 line-clamp-1 uppercase tracking-tight text-slate-900">
-              {shop ? shopName : (displayName || 'Nghệ nhân')}
-            </h2>
-            <p className="text-slate-500 text-sm mb-6">{shop ? (shopPhones[0] || 'Chưa cập nhật SĐT') : mobile}</p>
-
-            <div className="pt-6 border-t border-slate-100 space-y-4">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400 uppercase tracking-widest font-bold">Thành viên từ</span>
-                <span className="text-slate-600">{(user as any)?.userRegisteredAt ? new Date((user as any).userRegisteredAt).toLocaleDateString('vi-VN') : 'Mới'}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400 uppercase tracking-widest font-bold">Trạng thái</span>
-                <span className="text-emerald-600 font-bold px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-100">Hoạt động</span>
-              </div>
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email liên hệ</span>
+              <p className="text-base font-black text-slate-900 flex items-center gap-2">
+                {shop ? shopEmail : email}
+                {shop && shopEmailVerified && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+              </p>
             </div>
-
-            {(shop ? shopDescription : bio) && (
-              <div className="mt-8 pt-8 border-t border-slate-100 text-left">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Giới thiệu</span>
-                <p className="text-xs text-slate-500 italic line-clamp-4 leading-relaxed">"{shop ? shopDescription : bio}"</p>
-              </div>
-            )}
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Địa chỉ</span>
+              <p className="text-base font-black text-slate-900 leading-tight">{shop ? shopLocation : location}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Số điện thoại</span>
+              <p className="text-base font-black text-slate-900">
+                {shop ? (shopPhones.join(', ') || 'Chưa cập nhật') : (mobile || 'Chưa cập nhật')}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Right Column: Edit Form */}
-        <div className="md:col-span-2">
-          <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] border border-slate-200 shadow-xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -z-10" />
-
-            <div className="mb-10">
-              <h1 className="text-2xl font-black mb-2 text-slate-900">{shop ? 'Hồ sơ Nhà Vườn' : 'Hồ sơ cá nhân'}</h1>
-              <p className="text-slate-500 text-sm">
-                {shop ? 'Quản lý thông tin vườn cây để tăng sự chuyên nghiệp' : 'Cập nhật thông tin chi tiết để tăng độ uy tín với khách hàng'}
-              </p>
+        {/* Gallery Preview */}
+        {shop && (
+          <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+               <div className="p-2.5 bg-emerald-50 rounded-xl">
+                 <Camera className="w-5 h-5 text-emerald-600" />
+               </div>
+               <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Ảnh nhà vườn</h3>
             </div>
-
-            {message && (
-              <div className={clsx(
-                "mb-8 p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2",
-                message.type === 'success' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-red-50 text-red-600 border border-red-100"
-              )}>
-                {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
-                <span className="text-sm font-medium">{message.text}</span>
+            {shopGalleryImages.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {shopGalleryImages.map((url, i) => (
+                  <div key={i} className="aspect-square rounded-2xl overflow-hidden border border-slate-100 shadow-sm group">
+                    <img src={toMediaUrl(url)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 border-2 border-dashed border-slate-100 rounded-3xl text-center">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Chưa có ảnh mô tả vườn</p>
               </div>
             )}
+          </div>
+        )}
 
-            <form onSubmit={handleSave} className="space-y-10">
-              {/* Basic Section */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="h-0.5 flex-1 bg-slate-100" />
-                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-[0.2em] whitespace-nowrap">Thông tin cơ bản</span>
-                  <div className="h-0.5 flex-1 bg-slate-100" />
+        {/* Social Links */}
+        {shop && (shopFacebook || shopInstagram || shopYoutube) && (
+          <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm space-y-6">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+               <div className="p-2.5 bg-emerald-50 rounded-xl">
+                 <ExternalLink className="w-5 h-5 text-emerald-600" />
+               </div>
+               <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Mạng xã hội</h3>
+            </div>
+            <div className="flex flex-wrap gap-4">
+              {shopFacebook && (
+                <a href={shopFacebook} target="_blank" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1877F2]/5 text-[#1877F2] border border-[#1877F2]/10 font-bold text-xs uppercase tracking-wider hover:bg-[#1877F2] hover:text-white transition-all">
+                  <Facebook className="w-4 h-4" /> Facebook
+                </a>
+              )}
+              {shopInstagram && (
+                <a href={shopInstagram} target="_blank" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#E4405F]/5 text-[#E4405F] border border-[#E4405F]/10 font-bold text-xs uppercase tracking-wider hover:bg-[#E4405F] hover:text-white transition-all">
+                  <Instagram className="w-4 h-4" /> Instagram
+                </a>
+              )}
+              {shopYoutube && (
+                <a href={shopYoutube} target="_blank" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF0000]/5 text-[#FF0000] border border-[#FF0000]/10 font-bold text-xs uppercase tracking-wider hover:bg-[#FF0000] hover:text-white transition-all">
+                  <Youtube className="w-4 h-4" /> Youtube
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderEditModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[3rem] shadow-2xl relative animate-in slide-in-from-bottom-4 duration-500 custom-scrollbar">
+        {/* Modal Header */}
+        <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-slate-100 p-8 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-50 rounded-2xl">
+              <Settings className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{shop ? 'Chỉnh sửa hồ sơ vườn' : 'Chỉnh sửa cá nhân'}</h2>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Cập nhật thông tin để hiển thị trên hệ thống</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setIsEditModalOpen(false)}
+            className="p-3 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-all border border-slate-100 shadow-sm"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-8 sm:p-12">
+            {message && (
+              <div className={clsx(
+                "mb-8 p-6 rounded-[2rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-2",
+                message.type === 'success' ? "bg-emerald-50 text-emerald-600 border border-emerald-100/50 shadow-sm" : "bg-red-50 text-red-600 border border-red-100/50 shadow-sm"
+              )}>
+                <div className={clsx(
+                  "p-2 rounded-xl",
+                  message.type === 'success' ? "bg-emerald-500/10" : "bg-red-500/10"
+                )}>
+                  {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <span className="text-sm font-black uppercase tracking-tight leading-none">{message.text}</span>
+              </div>
+            )}
+            <form onSubmit={handleSave} className="space-y-12">
+              {/* Basic Section */}
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                       {shop ? 'Điện thoại chính' : 'Số điện thoại'}
                     </label>
                     <div className="relative">
@@ -361,27 +417,27 @@ const Profile: React.FC = () => {
                       <input
                         disabled
                         type="text"
-                        className="w-full bg-slate-50 border border-slate-100 pl-12 pr-4 py-3.5 rounded-2xl text-slate-400 cursor-not-allowed opacity-60 text-sm font-medium"
+                        className="w-full bg-slate-50 border border-slate-100 pl-12 pr-4 py-4 rounded-2xl text-slate-400 cursor-not-allowed opacity-60 text-sm font-bold"
                         value={shop ? (shopPhones[0] || mobile) : mobile}
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                       {shop ? 'Tên Nhà Vườn' : 'Tên hiển thị'}
                     </label>
                     <div className="relative group">
                       {shop ? (
-                        <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+                        <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                       ) : (
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                       )}
                       <input
                         required
                         type="text"
-                        className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
-                        placeholder={shop ? 'Nhập tên nhà vườn...' : 'Nhập họ và tên...'}
+                        className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-bold"
+                        placeholder={shop ? 'Ví dụ: Nhà Vườn Bonsai An Nhiên' : 'Họ và tên của bạn...'}
                         value={shop ? shopName : displayName}
                         onChange={(e) => shop ? setShopName(e.target.value) : setDisplayName(e.target.value)}
                       />
@@ -391,7 +447,7 @@ const Profile: React.FC = () => {
 
                 <div className="space-y-4">
                   <AddressPicker
-                    label={shop ? 'Vị trí nhà vườn' : 'Khu vực / Tỉnh thành'}
+                    label={shop ? 'Vị trí nhà vườn' : 'Khu vực hoạt động'}
                     initialValue={shop ? shopLocation : location}
                     onAddressChange={(val) => shop ? setShopLocation(val) : setLocation(val)}
                     onLocationSelect={(lat, lng) => {
@@ -401,234 +457,329 @@ const Profile: React.FC = () => {
                       }
                     }}
                   />
-                  {shop && (shopLat || shopLocation) && (
-                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between transition-all">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-widest">
-                          {shopLat && shopLng ? 'Toạ độ chính xác' : 'Khu vực hiển thị'}
-                        </span>
-                        {shopLat && shopLng ? (
-                          <span className="text-xs font-mono text-emerald-600">{Number(shopLat).toFixed(6)}, {Number(shopLng).toFixed(6)}</span>
-                        ) : (
-                          <span className="text-xs text-slate-500 italic">Dựa trên địa chỉ</span>
-                        )}
-                      </div>
-                      <a
-                        href={`https://www.google.com/maps?q=${shopLat && shopLng ? `${shopLat},${shopLng}` : encodeURIComponent(shopLocation)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
-                        title="Xem trên Google Maps"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </div>
-                  )}
                 </div>
               </div>
 
               {shop && (
                 <div className="space-y-4">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
-                    Ảnh nhà vườn (tối đa 4 ảnh)
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                    Thư viện ảnh nhà vườn ({shopGalleryImages.length}/4)
                   </label>
 
-                  {shopGalleryImages.length > 0 ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {shopGalleryImages.map((imageUrl, index) => (
-                        <div key={`${imageUrl}-${index}`} className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 aspect-square">
-                          <img
-                            src={toMediaUrl(imageUrl)}
-                            alt={`Ảnh nhà vườn ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeShopGalleryImage(index)}
-                            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 border border-white/20 text-white flex items-center justify-center hover:bg-rose-600 transition-colors"
-                            title="Xóa ảnh"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl border border-dashed border-white/10 p-4 text-xs text-slate-500">
-                      Chưa có ảnh nhà vườn. Tải ảnh để tăng độ tin cậy khi khách vào trang shop.
-                    </div>
-                  )}
-
-                  <div className="relative border border-dashed border-slate-200 rounded-2xl p-4 bg-slate-50 hover:border-emerald-500/40 transition-all">
-                    <input
-                      ref={shopGalleryInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      disabled={uploadingGallery || shopGalleryImages.length >= 4}
-                      onChange={handleShopGalleryUpload}
-                      className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                    />
-                    <div className="flex items-center gap-3 text-sm text-slate-500">
-                      <UploadCloud className="w-5 h-5 text-emerald-600" />
-                      <span>{uploadingGallery ? 'Đang tải ảnh...' : (shopGalleryImages.length >= 4 ? 'Đã đạt giới hạn 4 ảnh' : 'Bấm để tải thêm ảnh nhà vườn')}</span>
-                    </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {shopGalleryImages.map((imageUrl, index) => (
+                      <div key={`${imageUrl}-${index}`} className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 aspect-square group">
+                        <img
+                          src={toMediaUrl(imageUrl)}
+                          alt={`Anh vuon ${index + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeShopGalleryImage(index)}
+                          className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 text-rose-600 shadow-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all opacity-0 group-hover:opacity-100 border border-slate-100 active:scale-90"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    {shopGalleryImages.length < 4 && (
+                      <div className="relative border-2 border-dashed border-slate-200 rounded-2xl aspect-square flex flex-col items-center justify-center gap-2 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-500/50 transition-all cursor-pointer group">
+                        <input
+                          ref={shopGalleryInputRef}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          disabled={uploadingGallery}
+                          onChange={handleShopGalleryUpload}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        {uploadingGallery ? (
+                          <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+                        ) : (
+                          <>
+                            <UploadCloud className="w-8 h-8 text-slate-300 group-hover:text-emerald-500 group-hover:scale-110 transition-all" />
+                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-tighter">Thêm ảnh</span>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Expansion Section */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="h-0.5 flex-1 bg-slate-100" />
-                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-[0.2em] whitespace-nowrap">Liên hệ & Giới thiệu</span>
-                  <div className="h-0.5 flex-1 bg-slate-100" />
+              <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="h-px flex-1 bg-slate-100" />
+                  <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Liên hệ & Mạng xã hội</span>
+                  <div className="h-px flex-1 bg-slate-100" />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Email liên hệ</label>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <div className="relative group flex-1">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+                <div className="space-y-6">
+                  {shop && (
+                    <div className="space-y-6">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Số điện thoại liên hệ ({shopPhones.length}/3)</label>
+                      <div className="space-y-4">
+                        {shopPhones.map((phone, idx) => (
+                          <div key={phone + idx} className="flex items-center gap-3 animate-in fade-in duration-300">
+                            <div className="relative flex-1">
+                              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+                              <input disabled type="text" className="w-full bg-slate-50 border border-slate-100 pl-12 pr-4 py-4 rounded-2xl text-slate-500 opacity-80 text-sm font-bold" value={phone} />
+                            </div>
+                            {shopPhones.length > 1 && (
+                              <button type="button" onClick={() => handleDeletePhone(phone)} className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-500 hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {shopPhones.length < 3 && (
+                        <button type="button" onClick={() => setOtpModalType('phone')} className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-emerald-600 font-black uppercase text-[10px] tracking-widest hover:bg-emerald-50 hover:border-emerald-200 rounded-2xl transition-all active:scale-95 shadow-sm">
+                          <Plus className="w-4 h-4" /> Thêm số điện thoại mới
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                    <div className="relative flex-1">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         type="email"
-                        className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
-                        placeholder="email@example.com"
+                        className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl focus:border-emerald-500 outline-none transition-all text-sm font-bold"
+                        placeholder="Địa chỉ Email..."
                         value={shop ? shopEmail : email}
                         onChange={(e) => shop ? setShopEmail(e.target.value) : setEmail(e.target.value)}
                       />
                     </div>
                     {shop && (
                       shopEmailVerified ? (
-                        <div className="px-4 py-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center gap-2">
-                          <Shield className="w-4 h-4" />
-                          <span className="text-sm font-bold">Đã xác minh</span>
+                        <div className="px-6 py-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest">
+                          <CheckCircle2 className="w-4 h-4" /> Email đã thông qua
                         </div>
                       ) : (
-                        <button type="button" onClick={() => handleRequestOTP('email', shopEmail)} disabled={otpLoading || !shopEmail} className="px-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-emerald-500 text-slate-700 text-sm font-bold flex justify-center items-center gap-2 transition-all">
+                        <button type="button" onClick={() => handleRequestOTP('email', shopEmail)} disabled={otpLoading || !shopEmail} className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200">
                           {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác thực ngay'}
                         </button>
                       )
                     )}
                   </div>
-                  {shop && !shopEmailVerified && shopEmail && (
-                    <p className="text-xs text-amber-600 italic mt-1 ml-1 px-4 py-2 bg-amber-50 border border-amber-100 rounded-xl inline-block">Email chưa xác thực. OTP sẽ được gửi về email mới.</p>
-                  )}
                 </div>
 
                 {shop && (
-                  <div className="space-y-4">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Số điện thoại liên hệ ({shopPhones.length}/3)</label>
-                    <div className="space-y-2">
-                      {shopPhones.map((phone, idx) => (
-                        <div key={phone + idx} className="flex items-center gap-3">
-                          <div className="relative flex-1">
-                            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
-                            <input disabled type="text" className="w-full bg-slate-50 border border-slate-100 pl-12 pr-4 py-3.5 rounded-2xl text-slate-500 opacity-80 text-sm font-medium" value={phone} />
-                          </div>
-                          {shopPhones.length > 1 && (
-                            <button type="button" onClick={() => handleDeletePhone(phone)} className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="relative">
+                      <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input type="url" placeholder="Facebook URL" className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl text-slate-900 text-xs font-bold focus:border-[#1877F2] outline-none transition-all" value={shopFacebook} onChange={e => setShopFacebook(e.target.value)} />
                     </div>
-                    {shopPhones.length < 3 && (
-                      <button type="button" onClick={() => setOtpModalType('phone')} className="flex w-fit items-center gap-2 px-4 py-2 mt-2 text-sm text-emerald-600 font-bold hover:bg-emerald-50 rounded-xl transition-all">
-                        <Plus className="w-4 h-4" /> Thêm số điện thoại mới
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {shop && (
-                  <div className="space-y-4 pt-4 border-t border-white/5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Kênh mạng xã hội (Tùy chọn)</label>
-
-                    <div className="relative group">
-                      <Facebook className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 focus-within:text-[#1877F2]" />
-                      <input type="url" placeholder="Link Facebook" className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl text-slate-900 text-sm focus:bg-white focus:border-emerald-500 outline-none transition-all" value={shopFacebook} onChange={e => setShopFacebook(e.target.value)} />
+                    <div className="relative">
+                      <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input type="url" placeholder="Instagram URL" className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl text-slate-900 text-xs font-bold focus:border-[#E4405F] outline-none transition-all" value={shopInstagram} onChange={e => setShopInstagram(e.target.value)} />
                     </div>
-                    <div className="relative group">
-                      <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 focus-within:text-[#E4405F]" />
-                      <input type="url" placeholder="Link Instagram" className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl text-slate-900 text-sm focus:bg-white focus:border-emerald-500 outline-none transition-all" value={shopInstagram} onChange={e => setShopInstagram(e.target.value)} />
-                    </div>
-                    <div className="relative group">
-                      <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 focus-within:text-[#FF0000]" />
-                      <input type="url" placeholder="Link Youtube" className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-3.5 rounded-2xl text-slate-900 text-sm focus:bg-white focus:border-emerald-500 outline-none transition-all" value={shopYoutube} onChange={e => setShopYoutube(e.target.value)} />
+                    <div className="relative">
+                      <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input type="url" placeholder="Youtube URL" className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl text-slate-900 text-xs font-bold focus:border-[#FF0000] outline-none transition-all" value={shopYoutube} onChange={e => setShopYoutube(e.target.value)} />
                     </div>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">
-                    {shop ? 'Mô tả Nhà Vườn' : 'Lời giới thiệu'}
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Lời giới thiệu / Tiểu sử</label>
                   <textarea
                     rows={4}
-                    className="w-full bg-slate-50 border border-slate-200 px-6 py-4 rounded-3xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium leading-relaxed resize-none"
-                    placeholder={shop ? 'Giới thiệu về kinh nghiệm, các loại cây thế mạnh của vườn...' : 'Mô tả kỹ năng chăm sóc cây, kinh nghiệm làm vườn của bạn...'}
+                    className="w-full bg-slate-50 border border-slate-200 px-6 py-5 rounded-3xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-800 text-sm font-medium leading-relaxed resize-none"
+                    placeholder="Mô tả ngắn gọn về kinh nghiệm, vườn cây hoặc phong cách nghệ thuật của bạn..."
                     value={shop ? shopDescription : bio}
                     onChange={(e) => shop ? setShopDescription(e.target.value) : setBio(e.target.value)}
                   />
                 </div>
               </div>
 
-              <div className="pt-6 border-t border-white/5">
+              {/* Modal Footer */}
+              <div className="pt-8 flex flex-col-reverse sm:flex-row items-center justify-end gap-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="w-full sm:w-auto px-8 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-slate-500 hover:bg-slate-50 transition-all active:scale-95"
+                >
+                  Hủy bỏ
+                </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full sm:w-auto px-12 bg-emerald-700 hover:bg-emerald-600 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 shadow-xl shadow-emerald-200/50 text-white"
+                  className="w-full sm:w-auto px-12 bg-emerald-700 hover:bg-emerald-600 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest text-white transition-all active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 shadow-2xl shadow-emerald-200/50 flex items-center justify-center gap-3"
                 >
-                  {saving ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Lưu hồ sơ
-                    </>
-                  )}
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Cập nhật hồ sơ</>}
                 </button>
               </div>
             </form>
-          </div>
         </div>
       </div>
+    </div>
+  );
 
-      {/* OTP Modal */}
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-emerald-500 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 min-h-screen">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+
+        {/* Left Column: Avatar & Summary */}
+        <aside className="lg:col-span-4 lg:sticky lg:top-24 space-y-6">
+          <div className="bg-white p-8 rounded-[3.5rem] border border-slate-200 shadow-2xl shadow-slate-200/50 text-center relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -z-10" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/5 blur-3xl -z-10" />
+
+            <div className="relative inline-block mb-8">
+              {shop ? (
+                <div className="w-40 h-40 rounded-[2.5rem] border-8 border-slate-50 overflow-hidden bg-white transition-all shadow-2xl flex items-center justify-center relative">
+                  {shopGalleryImages[0] ? (
+                    <img 
+                      src={toMediaUrl(shopGalleryImages[0])} 
+                      alt="Shop" 
+                      className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700" 
+                    />
+                  ) : (
+                    <Store className="w-16 h-16 text-emerald-600" />
+                  )}
+                  <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[2.5rem]" />
+                </div>
+              ) : (
+                <div className="relative group/avatar">
+                  <div
+                    onClick={handleAvatarClick}
+                    className="w-40 h-40 rounded-full border-8 border-slate-50 overflow-hidden bg-emerald-50 cursor-pointer transition-all shadow-2xl relative"
+                  >
+                    {avatarUrl ? (
+                      <img
+                        src={toMediaUrl(avatarUrl)}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <User className="w-16 h-16 text-emerald-200" />
+                      </div>
+                    )}
+
+                    <div className="absolute inset-0 bg-emerald-900/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity backdrop-blur-[2px]">
+                      <Camera className="w-10 h-10 text-white" />
+                    </div>
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                </div>
+              )}
+              
+              <div className="absolute -bottom-2 -right-2 bg-white p-2.5 rounded-2xl shadow-xl border border-slate-100">
+                <div className="bg-emerald-500 p-1.5 rounded-lg">
+                  <Shield className="w-4 h-4 text-white" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase italic">
+                {shop ? shopName : (displayName || 'Nghệ nhân')}
+              </h2>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-50 border border-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                Thành viên chính thức
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-slate-100 grid grid-cols-2 gap-4">
+              <div className="text-left space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Gia nhập</span>
+                <p className="text-xs font-black text-slate-700 italic">
+                  {(user as any)?.userRegisteredAt ? new Date((user as any).userRegisteredAt).toLocaleDateString('vi-VN') : 'Dân cư mới'}
+                </p>
+              </div>
+              <div className="text-right space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Uy tín</span>
+                <p className="text-xs font-black text-emerald-600 italic">Tuyệt vời</p>
+              </div>
+            </div>
+
+            {(shop ? shopDescription : bio) && (
+              <div className="mt-8 pt-8 border-t border-slate-100 text-left relative">
+                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-white px-4 text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">Giới thiệu</div>
+                <p className="text-xs text-slate-500 italic leading-relaxed text-center px-2">
+                  "{shop ? shopDescription : bio}"
+                </p>
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* Right Column: View Section */}
+        <main className="lg:col-span-8">
+          <div className="bg-white/50 backdrop-blur-sm p-2 rounded-[3.5rem]">
+            {renderView()}
+          </div>
+        </main>
+      </div>
+
+      {/* Modals Layers */}
+      {isEditModalOpen && renderEditModal()}
+
+      {/* OTP Modal (Existing) */}
       {otpModalType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white border border-slate-200 p-8 rounded-[2rem] w-full max-w-sm relative shadow-2xl slide-in-from-bottom-4">
-            <button onClick={() => setOtpModalType(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors bg-slate-50 rounded-full p-1.5 border border-slate-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white border border-slate-200 p-10 rounded-[3rem] w-full max-w-md relative shadow-2xl animate-in zoom-in-95 duration-300">
+            <button onClick={() => setOtpModalType(null)} className="absolute top-8 right-8 text-slate-300 hover:text-slate-900 transition-colors bg-slate-50 rounded-full p-2 border border-slate-100">
               <X className="w-5 h-5" />
             </button>
-            <div className="mb-6">
-              <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-4 border border-emerald-100">
-                <Shield className="w-6 h-6 text-emerald-600" />
+            
+            <div className="mb-8">
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/20">
+                <Shield className="w-8 h-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-black text-slate-900">{otpModalType === 'email' ? 'Xác thực Email' : 'Thêm số điện thoại'}</h3>
-              <p className="text-sm text-slate-500 mt-1">Mã xác thực 6 số bảo mật</p>
+              <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
+                {otpModalType === 'email' ? 'Xác thực Email' : 'Thêm số điện thoại'}
+              </h3>
+              <p className="text-sm text-slate-500 mt-2 font-medium">Nhập mã xác thực 6 chữ số đã được gửi đến thiết bị của bạn.</p>
             </div>
 
             {otpModalType === 'phone' && (
-              <div className="mb-5 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-2">Số điện thoại mới</label>
-                <input type="text" className="w-full bg-white border border-slate-200 px-4 py-3 rounded-xl text-sm focus:border-emerald-500 outline-none transition-colors text-slate-900" placeholder="09xxxx..." value={newPhoneValue} onChange={e => setNewPhoneValue(e.target.value)} />
-                <button type="button" onClick={() => handleRequestOTP('phone', newPhoneValue)} disabled={!newPhoneValue || otpLoading} className="mt-3 w-full py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-50 text-slate-700 transition-colors flex justify-center items-center gap-2">
+              <div className="mb-8 p-6 rounded-3xl bg-slate-50 border border-slate-100 space-y-4">
+                <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest block">Số điện thoại mới</label>
+                <div className="relative group">
+                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                   <input type="text" className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-2xl text-sm font-bold focus:border-emerald-500 outline-none transition-all text-slate-900" placeholder="09xxxx..." value={newPhoneValue} onChange={e => setNewPhoneValue(e.target.value)} />
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => handleRequestOTP('phone', newPhoneValue)} 
+                  disabled={!newPhoneValue || otpLoading} 
+                  className="w-full py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 text-slate-700 transition-all flex justify-center items-center gap-3 active:scale-95 shadow-sm"
+                >
                   {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Gửi mã OTP'}
                 </button>
               </div>
             )}
 
             <form onSubmit={handleVerifyOTP}>
-              <div className="mb-6">
-                <label className="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-2">Mã xác thực (OTP)</label>
-                <input required type="text" className="w-full bg-slate-50 border border-emerald-600/30 px-4 py-4 rounded-2xl text-center text-3xl font-mono tracking-[0.3em] focus:border-emerald-500 outline-none transition-all placeholder:text-slate-300 text-slate-900" placeholder="------" maxLength={6} value={otpValue} onChange={e => setOtpValue(e.target.value.replace(/\D/g, ''))} />
+              <div className="mb-8">
+                <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest block mb-3 ml-2">Mã OTP bảo mật</label>
+                <input required type="text" className="w-full bg-slate-50 border-2 border-slate-100 px-4 py-6 rounded-3xl text-center text-4xl font-black tracking-[0.2em] focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-200 text-slate-900" placeholder="000000" maxLength={6} value={otpValue} onChange={e => setOtpValue(e.target.value.replace(/\D/g, ''))} />
               </div>
 
-              <button type="submit" disabled={otpValue.length < 6 || otpLoading} className="w-full py-4 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-100 disabled:text-slate-400 rounded-2xl font-bold flex justify-center items-center gap-2 transition-all active:scale-95 text-white shadow-xl shadow-emerald-200/20">
-                {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Xác nhận ngay'}
+              <button type="submit" disabled={otpValue.length < 6 || otpLoading} className="w-full py-5 bg-emerald-700 hover:bg-emerald-600 disabled:bg-slate-100 disabled:text-slate-400 rounded-2xl font-black uppercase text-xs tracking-[0.2em] text-white transition-all active:scale-95 shadow-2xl shadow-emerald-200/50 flex justify-center items-center gap-3">
+                {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Xác nhận mã'}
               </button>
             </form>
           </div>

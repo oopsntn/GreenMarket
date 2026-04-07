@@ -1,14 +1,18 @@
 import { Router } from "express";
-import { createPayment, vnpayReturn, vnpayIpn } from "../../controllers/user/payment.controller";
-import { verifyToken } from "../../middlewares/authMiddleware";
+import { createPayment, momoReturn, momoIpn, mockGate, mockGateProcess } from "../../controllers/user/payment.controller.ts";
+import { verifyToken } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
 
-// Create VNPay payment URL (Requires Auth)
+// Create Payment URL (Requires Auth)
 router.post("/buy-package", verifyToken, createPayment);
 
-// VNPay Callback Routes (Public, no auth since VNPay calls these directly or redirect happens)
-router.get("/vnpay-return", vnpayReturn);
-router.get("/vnpay-ipn", vnpayIpn);
+// MoMo Callback Routes (Public)
+router.get("/momo-return", momoReturn);
+router.post("/momo-ipn", momoIpn);
+
+// Mock Gateway Routes (Development only)
+router.get("/mock-gate", mockGate);
+router.post("/mock-gate-process", mockGateProcess);
 
 export default router;
