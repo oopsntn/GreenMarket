@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, lte, or, isNull, gt, desc } from "drizzle-orm";
 import { promotionPackages } from "../../models/schema/promotion-packages";
 import { placementSlots } from "../../models/schema/placement-slots";
+import { promotionPackagePrices } from "../../models/schema/promotion-package-prices";
 import { type PromotionPackageParams } from "../../dtos/promotion";
 import { parseId } from "../../utils/parseId";
 
@@ -11,12 +12,13 @@ export const getPublishedPackages = async (
     res: Response
 ): Promise<void> => {
     try {
+        const now = new Date();
         const packages = await db
             .select({
                 promotionPackageId: promotionPackages.promotionPackageId,
                 promotionPackageTitle: promotionPackages.promotionPackageTitle,
                 promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
-                promotionPackagePrice: promotionPackages.promotionPackagePrice,
+                promotionPackagePrice: promotionPackagePrices.price,
                 slotCode: placementSlots.placementSlotCode,
                 slotTitle: placementSlots.placementSlotTitle,
                 slotCapacity: placementSlots.placementSlotCapacity,
@@ -24,6 +26,17 @@ export const getPublishedPackages = async (
             })
             .from(promotionPackages)
             .innerJoin(placementSlots, eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId))
+            .leftJoin(
+                promotionPackagePrices,
+                and(
+                    eq(promotionPackagePrices.packageId, promotionPackages.promotionPackageId),
+                    lte(promotionPackagePrices.effectiveFrom, now),
+                    or(
+                        isNull(promotionPackagePrices.effectiveTo),
+                        gt(promotionPackagePrices.effectiveTo, now)
+                    )
+                )
+            )
             .where(
                 and(
                     eq(promotionPackages.promotionPackagePublished, true),
@@ -51,12 +64,13 @@ export const getPublishedPackageById = async (
             return;
         }
 
+        const now = new Date();
         const [pkg] = await db
             .select({
                 promotionPackageId: promotionPackages.promotionPackageId,
                 promotionPackageTitle: promotionPackages.promotionPackageTitle,
                 promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
-                promotionPackagePrice: promotionPackages.promotionPackagePrice,
+                promotionPackagePrice: promotionPackagePrices.price,
                 slotCode: placementSlots.placementSlotCode,
                 slotTitle: placementSlots.placementSlotTitle,
                 slotCapacity: placementSlots.placementSlotCapacity,
@@ -64,6 +78,17 @@ export const getPublishedPackageById = async (
             })
             .from(promotionPackages)
             .innerJoin(placementSlots, eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId))
+            .leftJoin(
+                promotionPackagePrices,
+                and(
+                    eq(promotionPackagePrices.packageId, promotionPackages.promotionPackageId),
+                    lte(promotionPackagePrices.effectiveFrom, now),
+                    or(
+                        isNull(promotionPackagePrices.effectiveTo),
+                        gt(promotionPackagePrices.effectiveTo, now)
+                    )
+                )
+            )
             .where(
                 and(
                     eq(promotionPackages.promotionPackageId, idNumber),

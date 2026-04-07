@@ -629,7 +629,7 @@ INSERT INTO users (user_id, user_mobile, user_display_name, user_email, user_sta
 
 -- Shops
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
-(1, 'Vườn Bonsai Phố Huyện', '0978195419', 'Yên Phong, Bắc Ninh',
+(1, 'Vườn Bonsai Phố Huyện', '0978195419', '14 Nghiêm Ích Khiêm, Thị Trấn Chờ, Yên Phong, Bắc Ninh',
     'Chuyên bonsai mini và tầm trung. Nhận thiết kế, chăm sóc và phối thế bonsai theo yêu cầu. Ship toàn quốc qua Viettel Post.',
     'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', 21.1863, 106.0734),
 (3, 'Nam Định Art Garden', '0123456789', 'Nam Trực, Nam Định',

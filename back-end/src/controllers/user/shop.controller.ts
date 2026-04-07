@@ -348,19 +348,27 @@ export const verifyShopEmail = async (req: AuthRequest, res: Response): Promise<
         if (!email || !otp) { res.status(400).json({ error: "Missing email or otp" }); return; }
 
         const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
-        if (!shop || shop.shopEmail !== email) {
-            res.status(400).json({ error: "Shop email does not match" });
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
             return;
         }
 
+        // Verify OTP for the provided email (could be a new one)
         const result = await verificationService.verifyOTP(email, otp, "email");
         if (!result.success) {
             res.status(400).json({ error: result.message });
             return;
         }
 
-        await db.update(shops).set({ shopEmailVerified: true }).where(eq(shops.shopId, userId));
-        res.json({ message: "Email successfully verified!" });
+        // Successfully verified. Update the shop's email to this verified one.
+        await db.update(shops)
+            .set({ 
+                shopEmail: email,
+                shopEmailVerified: true 
+            })
+            .where(eq(shops.shopId, userId));
+
+        res.json({ message: "Email successfully verified and updated!", shopEmail: email });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

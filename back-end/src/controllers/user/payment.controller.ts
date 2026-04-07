@@ -1,19 +1,22 @@
 import { Request, Response } from "express";
-import { db } from "../../config/db";
-import { eq, and } from "drizzle-orm";
-import { posts } from "../../models/schema/posts";
-import { promotionPackages } from "../../models/schema/promotion-packages";
-import { paymentTxn } from "../../models/schema/payment-txn";
-import { postPromotions } from "../../models/schema/post-promotions";
-import { placementSlots } from "../../models/schema/placement-slots";
-import { AuthRequest } from "../../dtos/auth";
-import { parseId } from "../../utils/parseId";
+import { db } from "../../config/db.ts";
+import { eq, and, lte, or, isNull, gt } from "drizzle-orm";
+import { posts } from "../../models/schema/posts.ts";
+import { promotionPackages } from "../../models/schema/promotion-packages.ts";
+import { promotionPackagePrices } from "../../models/schema/promotion-package-prices.ts";
+import { paymentTxn } from "../../models/schema/payment-txn.ts";
+import { postPromotions } from "../../models/schema/post-promotions.ts";
+import { placementSlots } from "../../models/schema/placement-slots.ts";
+import { AuthRequest } from "../../dtos/auth.ts";
+import { parseId } from "../../utils/parseId.ts";
 import {
-    createVNPayUrl,
-    verifyVNPayCallback,
-    validateVNPayConfig,
-    buildFrontendPaymentResultUrl
-} from "../../utils/vnpay";
+    createMoMoPaymentRequest,
+    validateMoMoConfig,
+    verifyMoMoSignature,
+    buildFrontendPaymentResultUrl,
+    getMoMoConfig,
+    createMoMoSignature
+} from "../../utils/momo.ts";
 import { v4 as uuidv4 } from "uuid";
 
 type CallbackStatus =
@@ -28,12 +31,6 @@ type CallbackResult = {
     status: CallbackStatus;
     txnRef?: string;
     responseCode?: string;
-};
-
-const normalizeIpAddress = (rawIp: string): string => {
-    if (!rawIp) return "127.0.0.1";
-    const firstIp = rawIp.split(",")[0]?.trim();
-    return firstIp || "127.0.0.1";
 };
 
 const updateTxnStatusIfPending = async (txnId: number, status: "success" | "failed") => {
@@ -77,9 +74,9 @@ const activatePromotionForTransaction = async (txn: typeof paymentTxn.$inferSele
     });
 };
 
-const processVNPayCallback = async (query: Record<string, unknown>): Promise<CallbackResult> => {
-    const txnRef = String(query["vnp_TxnRef"] || "");
-    const responseCode = String(query["vnp_ResponseCode"] || "");
+const processMoMoCallback = async (body: Record<string, any>): Promise<CallbackResult> => {
+    const txnRef = String(body.orderId || "");
+    const responseCode = String(body.resultCode); // 0 = Success
 
     const [txn] = await db
         .select()
@@ -99,14 +96,14 @@ const processVNPayCallback = async (query: Record<string, unknown>): Promise<Cal
         return { status: "already_failed", txnRef, responseCode };
     }
 
-    const vnpAmount = Number(query["vnp_Amount"]);
-    const requiredAmount = Math.round(Number(txn.paymentTxnAmount || 0) * 100);
-    if (Number.isFinite(vnpAmount) && requiredAmount > 0 && vnpAmount !== requiredAmount) {
+    const moMoAmount = Number(body.amount);
+    const requiredAmount = Number(txn.paymentTxnAmount || 0);
+    if (Number.isFinite(moMoAmount) && requiredAmount > 0 && moMoAmount !== requiredAmount) {
         await updateTxnStatusIfPending(txn.paymentTxnId, "failed");
         return { status: "invalid_amount", txnRef, responseCode };
     }
 
-    if (responseCode === "00") {
+    if (responseCode === "0") {
         const updated = await updateTxnStatusIfPending(txn.paymentTxnId, "success");
         if (updated) {
             await activatePromotionForTransaction(updated);
@@ -138,10 +135,10 @@ export const createPayment = async (req: AuthRequest, res: Response): Promise<vo
             return;
         }
 
-        const configCheck = validateVNPayConfig();
+        const configCheck = validateMoMoConfig();
         if (!configCheck.isValid) {
             res.status(500).json({
-                error: "VNPay configuration is missing",
+                error: "MoMo configuration is missing",
                 missing: configCheck.missingFields
             });
             return;
@@ -170,18 +167,31 @@ export const createPayment = async (req: AuthRequest, res: Response): Promise<vo
             return;
         }
 
+        const now = new Date();
         const [pkg] = await db
             .select({
-                packageId: promotionPackages.promotionPackageId,
-                price: promotionPackages.promotionPackagePrice,
-                isPublished: promotionPackages.promotionPackagePublished,
-                slotId: promotionPackages.promotionPackageSlotId,
+                promotionPackageId: promotionPackages.promotionPackageId,
+                promotionPackagePublished: promotionPackages.promotionPackagePublished,
+                promotionPackageSlotId: promotionPackages.promotionPackageSlotId,
+                promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+                promotionPackagePrice: promotionPackagePrices.price,
             })
             .from(promotionPackages)
+            .leftJoin(
+                promotionPackagePrices,
+                and(
+                    eq(promotionPackagePrices.packageId, promotionPackages.promotionPackageId),
+                    lte(promotionPackagePrices.effectiveFrom, now),
+                    or(
+                        isNull(promotionPackagePrices.effectiveTo),
+                        gt(promotionPackagePrices.effectiveTo, now)
+                    )
+                )
+            )
             .where(eq(promotionPackages.promotionPackageId, parsedPackageId))
             .limit(1);
 
-        if (!pkg || !pkg.isPublished) {
+        if (!pkg || !pkg.promotionPackagePublished) {
             res.status(404).json({ error: "Promotion package not found or not available" });
             return;
         }
@@ -189,7 +199,7 @@ export const createPayment = async (req: AuthRequest, res: Response): Promise<vo
         const [slot] = await db
             .select()
             .from(placementSlots)
-            .where(eq(placementSlots.placementSlotId, pkg.slotId))
+            .where(eq(placementSlots.placementSlotId, pkg.promotionPackageSlotId))
             .limit(1);
 
         if (!slot || !slot.placementSlotPublished) {
@@ -197,58 +207,63 @@ export const createPayment = async (req: AuthRequest, res: Response): Promise<vo
             return;
         }
 
-        const amount = Number(pkg.price);
+        const amount = Number(pkg.promotionPackagePrice);
         if (!Number.isFinite(amount) || amount <= 0) {
             res.status(400).json({ error: "Invalid package price" });
             return;
         }
 
-        const txnRef = `TXN-${uuidv4().substring(0, 8)}-${Date.now()}`;
+        const finalAmount = Math.round(amount);
+
+        const orderId = `GM${Date.now()}`; // Simplified orderId
+        const requestId = orderId; 
+        
+        // Strictly alphanumeric orderInfo for maximum reliability
+        const orderInfo = `PayPromotionPkg${pkg.promotionPackageId}Post${parsedPostId}`;
 
         await db.insert(paymentTxn).values({
             paymentTxnUserId: userId,
             paymentTxnPostId: parsedPostId,
             paymentTxnPackageId: parsedPackageId,
-            paymentTxnAmount: String(pkg.price),
-            paymentTxnProvider: "VNPAY",
-            paymentTxnProviderTxnId: txnRef,
+            paymentTxnAmount: String(finalAmount),
+            paymentTxnProvider: "MOMO",
+            paymentTxnProviderTxnId: orderId,
             paymentTxnStatus: "pending",
         });
 
-        const rawIp = String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "127.0.0.1");
-        const ipAddr = normalizeIpAddress(rawIp);
-        const orderInfo = `Thanh toan goi quang ba ${pkg.packageId} cho bai ${parsedPostId}`;
-
-        const paymentUrl = createVNPayUrl(ipAddr, amount, orderInfo, txnRef);
-        res.json({ paymentUrl });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        const { payUrl } = await createMoMoPaymentRequest(finalAmount, orderId, orderInfo, requestId);
+        res.json({ paymentUrl: payUrl });
+    } catch (error: any) {
+        console.error("Create Payment Error:", error.message);
+        res.status(500).json({ 
+            error: "MoMo Payment Initiation Failed", 
+            message: error.message 
+        });
     }
 };
 
-export const vnpayReturn = async (req: Request, res: Response): Promise<void> => {
+export const momoReturn = async (req: Request, res: Response): Promise<void> => {
     try {
-        const query = req.query as Record<string, unknown>;
-        const txnRef = String(query["vnp_TxnRef"] || "");
+        const body = req.query; // MoMo uses GET for return URL
+        const orderId = String(body.orderId || "");
 
-        if (!verifyVNPayCallback(query)) {
+        if (!verifyMoMoSignature(body)) {
             const redirectUrl = buildFrontendPaymentResultUrl({
                 status: "failed",
                 code: "97",
-                txnRef,
+                txnRef: orderId,
                 message: "invalid_signature"
             });
             res.redirect(302, redirectUrl);
             return;
         }
 
-        const result = await processVNPayCallback(query);
+        const result = await processMoMoCallback(body);
         const isSuccess = result.status === "success" || result.status === "already_success";
 
         const redirectUrl = buildFrontendPaymentResultUrl({
             status: isSuccess ? "success" : "failed",
-            code: result.responseCode || (isSuccess ? "00" : "99"),
+            code: result.responseCode || (isSuccess ? "0" : "99"),
             txnRef: result.txnRef,
             message: result.status
         });
@@ -264,35 +279,144 @@ export const vnpayReturn = async (req: Request, res: Response): Promise<void> =>
     }
 };
 
-export const vnpayIpn = async (req: Request, res: Response): Promise<void> => {
+export const momoIpn = async (req: Request, res: Response): Promise<void> => {
     try {
-        const query = req.query as Record<string, unknown>;
-
-        if (!verifyVNPayCallback(query)) {
-            res.status(200).json({ RspCode: "97", Message: "Invalid signature" });
+        const body = req.body; // MoMo uses POST for IPN
+        
+        if (!verifyMoMoSignature(body)) {
+            res.status(200).json({ resultCode: 97, message: "Invalid signature" });
             return;
         }
 
-        const result = await processVNPayCallback(query);
+        const result = await processMoMoCallback(body);
 
         if (result.status === "not_found") {
-            res.status(200).json({ RspCode: "01", Message: "Order not found" });
+            res.status(200).json({ resultCode: 11, message: "Order not found" });
             return;
         }
 
-        if (result.status === "already_success" || result.status === "already_failed") {
-            res.status(200).json({ RspCode: "02", Message: "Order already confirmed" });
-            return;
-        }
-
-        if (result.status === "invalid_amount") {
-            res.status(200).json({ RspCode: "04", Message: "Invalid amount" });
-            return;
-        }
-
-        res.status(200).json({ RspCode: "00", Message: "Confirm Success" });
+        // MoMo resultCode 0 is success
+        res.status(204).send(); // Standard IPN response
     } catch (error) {
         console.error("IPN Error:", error);
-        res.status(200).json({ RspCode: "99", Message: "Unknown error" });
+        res.status(500).send();
     }
+};
+
+export const mockGate = async (req: Request, res: Response): Promise<void> => {
+    const { orderId, amount, extraData, orderInfo, requestId } = req.query;
+
+    const html = `
+    <!DOCTYPE html>
+    <html lang="vi">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Thanh Toán MoMo (MOCK)</title>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f4; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+            .container { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+            .logo { width: 80px; height: 80px; background-color: #a50064; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+            .logo span { color: white; font-weight: bold; font-size: 24px; }
+            .amount { font-size: 28px; font-weight: bold; color: #a50064; margin-bottom: 10px; }
+            .info { color: #666; margin-bottom: 30px; font-size: 14px; line-height: 1.5; }
+            .btn { background-color: #a50064; color: white; border: none; padding: 14px 24px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; transition: background 0.2s; }
+            .btn:hover { background-color: #8c0054; }
+            .btn-cancel { background-color: #fce4ec; color: #a50064; }
+            .btn-cancel:hover { background-color: #f8bbd0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo"><span>MoMo</span></div>
+            <h2>Môi trường Thử nghiệm</h2>
+            <div class="amount">${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(amount))}</div>
+            <div class="info">Mã ĐH: <strong>${orderId}</strong><br/>${orderInfo}</div>
+            
+            <form action="/api/payment/mock-gate-process" method="POST">
+                <input type="hidden" name="orderId" value="${orderId}">
+                <input type="hidden" name="amount" value="${amount}">
+                <input type="hidden" name="extraData" value="${extraData || ''}">
+                <input type="hidden" name="orderInfo" value="${orderInfo}">
+                <input type="hidden" name="requestId" value="${requestId}">
+                <input type="hidden" name="action" value="success">
+                <button type="submit" class="btn">Thanh Toán Trực Tiếp (0đ)</button>
+            </form>
+
+            <form action="/api/payment/mock-gate-process" method="POST">
+                <input type="hidden" name="orderId" value="${orderId}">
+                <input type="hidden" name="amount" value="${amount}">
+                <input type="hidden" name="extraData" value="${extraData || ''}">
+                <input type="hidden" name="orderInfo" value="${orderInfo}">
+                <input type="hidden" name="requestId" value="${requestId}">
+                <input type="hidden" name="action" value="cancel">
+                <button type="submit" class="btn btn-cancel">Huỷ Thanh Toán</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    `;
+
+    res.send(html);
+};
+
+export const mockGateProcess = async (req: Request, res: Response): Promise<void> => {
+    const { orderId, amount, extraData, orderInfo, requestId, action } = req.body;
+    const config = getMoMoConfig();
+
+    const resultCode = action === "success" ? 0 : 1006;
+    const message = action === "success" ? "Successful." : "Transaction denied by user.";
+    const responseTime = Date.now().toString();
+    const transId = Math.floor(Math.random() * 10000000000).toString();
+
+    const rawSignature = 
+        `accessKey=${config.accessKey}&` +
+        `amount=${amount}&` +
+        `extraData=${extraData || ""}&` +
+        `message=${message}&` +
+        `orderId=${orderId}&` +
+        `orderInfo=${orderInfo}&` +
+        `partnerCode=${config.partnerCode}&` +
+        `requestId=${requestId}&` +
+        `responseTime=${responseTime}&` +
+        `resultCode=${resultCode}&` +
+        `transId=${transId}`;
+
+    const signature = createMoMoSignature(rawSignature, config.secretKey);
+
+    const payload = {
+        partnerCode: config.partnerCode,
+        orderId,
+        requestId,
+        amount,
+        orderInfo,
+        orderType: "momo_wallet",
+        transId,
+        resultCode,
+        message,
+        payType: "qr",
+        responseTime,
+        extraData: extraData || "",
+        signature
+    };
+
+    // MoMo calls IPN via POST in the background
+    try {
+        // We use localhost:5000 explicitly for the test environment
+        fetch(`http://localhost:5000/api/payment/momo-ipn`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        }).catch(e => console.error("Mock IPN Error: ", e));
+    } catch(err) {
+        console.log(err);
+    }
+   
+    // MoMo redirects User to ReturnUrl
+    const url = new URL(config.redirectUrl);
+    Object.entries(payload).forEach(([key, value]) => {
+        url.searchParams.append(key, String(value));
+    });
+
+    res.redirect(302, url.toString());
 };
