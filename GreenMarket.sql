@@ -1,7 +1,7 @@
 -- ============================================================
 -- GreenMarket Database Backup (Full Schema)
--- PostgreSQL 18.x | Generated: 2026-04-01
--- Tables: 31 | Synced from Drizzle ORM schema
+-- PostgreSQL 18.x | Generated: 2026-04-07
+-- Tables: 32 | Synced from Drizzle ORM schema
 -- Categories: Cây Cảnh Bonsai, Dụng Cụ Làm Vườn
 -- ============================================================
 
@@ -36,6 +36,9 @@ BEGIN NEW.system_setting_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$;
 
 CREATE OR REPLACE FUNCTION update_user_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN NEW.user_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$;
+
+CREATE OR REPLACE FUNCTION update_business_role_updated_at() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN NEW.business_role_updated_at = CURRENT_TIMESTAMP; RETURN NEW; END; $$;
 
 -- Trigger: Tự động ghi audit log khi thêm / sửa gói quảng cáo
 CREATE OR REPLACE FUNCTION log_promotion_package_changes() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -89,6 +92,21 @@ END; $$;
 -- TABLES
 -- ============================================================
 
+-- Business Roles
+CREATE TABLE business_roles (
+    business_role_id SERIAL PRIMARY KEY,
+    business_role_code VARCHAR(50) NOT NULL UNIQUE,
+    business_role_title VARCHAR(100) NOT NULL,
+    business_role_audience_group VARCHAR(50),
+    business_role_access_scope VARCHAR(100),
+    business_role_summary TEXT,
+    business_role_responsibilities JSONB DEFAULT '[]'::jsonb,
+    business_role_capabilities JSONB DEFAULT '[]'::jsonb,
+    business_role_status VARCHAR(20) NOT NULL DEFAULT 'active',
+    business_role_created_at TIMESTAMP DEFAULT now(),
+    business_role_updated_at TIMESTAMP DEFAULT now()
+);
+
 -- Users
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
@@ -96,7 +114,10 @@ CREATE TABLE users (
     user_display_name VARCHAR(80),
     user_avatar_url VARCHAR(255),
     user_email VARCHAR(255),
+    user_location VARCHAR(255),
+    user_bio TEXT,
     user_status VARCHAR(20) DEFAULT 'active',
+    user_business_role_id INTEGER REFERENCES business_roles(business_role_id) ON DELETE SET NULL,
     user_registered_at TIMESTAMP DEFAULT now(),
     user_last_login_at TIMESTAMP,
     user_created_at TIMESTAMP DEFAULT now(),
@@ -582,6 +603,7 @@ CREATE INDEX idx_pkg_audit_changed_at ON promotion_package_audit_log(changed_at 
 -- TRIGGERS
 -- ============================================================
 CREATE TRIGGER update_admins_updated_at BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION update_admin_updated_at();
+CREATE TRIGGER update_business_roles_updated_at BEFORE UPDATE ON business_roles FOR EACH ROW EXECUTE FUNCTION update_business_role_updated_at();
 CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_category_updated_at();
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_user_updated_at();
 CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops FOR EACH ROW EXECUTE FUNCTION update_shop_updated_at();
