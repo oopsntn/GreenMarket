@@ -45,13 +45,44 @@ const normalizeOptions = (value: unknown): string[] => {
 const buildMappingId = (categoryId: number, attributeId: number) =>
   `${categoryId}-${attributeId}`;
 
+const hydrateMappingFromCatalogs = (
+  mapping: CategoryMapping,
+  categories: Category[],
+  attributes: Attribute[],
+): CategoryMapping => {
+  const matchedCategory =
+    categories.find((item) => item.id === mapping.categoryId) ?? null;
+  const matchedAttribute =
+    attributes.find((item) => item.id === mapping.attributeId) ?? null;
+
+  return {
+    ...mapping,
+    categoryName:
+      matchedCategory?.name ||
+      mapping.categoryName ||
+      `Category #${mapping.categoryId}`,
+    categorySlug: matchedCategory?.slug || mapping.categorySlug || "",
+    attributeName:
+      matchedAttribute?.name ||
+      mapping.attributeName ||
+      `Attribute #${mapping.attributeId}`,
+    attributeCode: matchedAttribute?.code || mapping.attributeCode || "",
+    attributeType: matchedAttribute?.type || mapping.attributeType,
+    attributeOptions: matchedAttribute?.options?.length
+      ? matchedAttribute.options
+      : mapping.attributeOptions,
+  };
+};
+
 const mapApiMappingToUi = (
   item: CategoryMappingApiResponse,
+  categories: Category[] = [],
+  attributes: Attribute[] = [],
 ): CategoryMapping => {
   const categoryId = Number(item.categoryId);
   const attributeId = Number(item.attributeId);
 
-  return {
+  const baseMapping: CategoryMapping = {
     id: buildMappingId(categoryId, attributeId),
     categoryId,
     categoryName: item.categoryName?.trim() || `Category #${categoryId}`,
@@ -65,6 +96,8 @@ const mapApiMappingToUi = (
     displayOrder: item.displayOrder ?? 1,
     status: normalizeMappingStatus(item.status),
   };
+
+  return hydrateMappingFromCatalogs(baseMapping, categories, attributes);
 };
 
 const findCategoryById = (categories: Category[], categoryId: number) =>
@@ -153,7 +186,10 @@ export const categoryMappingService = {
     return attributes.filter((attribute) => attribute.status === "Active");
   },
 
-  async fetchMappings(): Promise<CategoryMapping[]> {
+  async fetchMappings(
+    categories: Category[] = [],
+    attributes: Attribute[] = [],
+  ): Promise<CategoryMapping[]> {
     const data = await apiClient.request<CategoryMappingApiResponse[]>(
       "/api/admin/category-mappings",
       {
@@ -161,7 +197,7 @@ export const categoryMappingService = {
       },
     );
 
-    return data.map(mapApiMappingToUi);
+    return data.map((item) => mapApiMappingToUi(item, categories, attributes));
   },
 
   async createMapping(
@@ -187,7 +223,7 @@ export const categoryMappingService = {
       },
     );
 
-    return mapApiMappingToUi(data);
+    return mapApiMappingToUi(data, categories, attributes);
   },
 
   async updateMapping(
@@ -215,12 +251,14 @@ export const categoryMappingService = {
       },
     );
 
-    return mapApiMappingToUi(data);
+    return mapApiMappingToUi(data, categories, attributes);
   },
 
   async updateMappingStatus(
     currentMapping: CategoryMapping,
     status: MappingStatus,
+    categories: Category[] = [],
+    attributes: Attribute[] = [],
   ): Promise<CategoryMapping> {
     const data = await apiClient.request<CategoryMappingApiResponse>(
       `/api/admin/category-mappings/${currentMapping.categoryId}/${currentMapping.attributeId}/status`,
@@ -234,7 +272,7 @@ export const categoryMappingService = {
       },
     );
 
-    return mapApiMappingToUi(data);
+    return mapApiMappingToUi(data, categories, attributes);
   },
 
   async removeMapping(currentMapping: CategoryMapping): Promise<void> {
