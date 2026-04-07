@@ -10,6 +10,7 @@ interface User {
     userEmail?: string | null;
     userLocation?: string | null;
     userBio?: string | null;
+    userRegisteredAt?: string | null;
 }
 
 interface Shop {

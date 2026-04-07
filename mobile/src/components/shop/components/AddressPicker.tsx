@@ -9,7 +9,7 @@ import CustomAlert from '../../../utils/AlertHelper';
 interface AddressPickerProps {
     address: string;
     onAddressChange: (addr: string) => void;
-    onLocationSelect: (lat: number, lng: number) => void;
+    onLocationSelect: (addr: string, lat: number, lng: number) => void;
     label: string;
 }
 
@@ -29,26 +29,31 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
                 accuracy: Location.Accuracy.High,
             });
 
+
             const { latitude, longitude } = location.coords;
-            onLocationSelect(latitude, longitude);
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'GreenMarketApp' // Nominatim yêu cầu User-Agent
+                    }
+                }
+            );
+            const data = await response.json();
 
-            const addressResult = await Location.reverseGeocodeAsync({
-                latitude,
-                longitude,
-            });
+            if (data && data.display_name) {
+                const formattedAddr = data.display_name; // Địa chỉ đầy đủ từ OSM
 
-            if (addressResult.length > 0) {
-                const addr = addressResult[0];
-                const formattedAddr = [
-                    addr.streetNumber,
-                    addr.street,
-                    addr.district,
-                    addr.subregion,
-                    addr.region
-                ].filter(Boolean).join(', ');
-
+                // Cập nhật state
+                onLocationSelect(formattedAddr, latitude, longitude);
                 onAddressChange(formattedAddr);
+            } else {
+                // Nếu không lấy được địa chỉ, ít nhất vẫn lấy được tọa độ
+                onLocationSelect("Custom Location", latitude, longitude);
             }
+
         } catch (error) {
             console.error(error);
             CustomAlert('Error', 'Unable to get the current location');

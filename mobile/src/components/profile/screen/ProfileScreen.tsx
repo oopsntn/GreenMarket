@@ -1,15 +1,37 @@
-import * as ImagePicker from 'expo-image-picker'
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-import { FileText, LogOut, Store } from 'lucide-react-native'
-import Button from '../../Reused/Button/Button'
-import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
-import { ProfileAvatar } from '../component/ProfileAvatar'
-import { ProfileForm } from '../component/ProfileForm'
-import { useProfile } from '../service/useProfile'
-import { useAuth } from '../../../context/AuthContext'
-import CustomAlert from '../../../utils/AlertHelper'
-import { ProfileService } from '../service/ProfileService'
+import * as ImagePicker from 'expo-image-picker';
+import React from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  StatusBar,
+  SafeAreaView,
+  Dimensions
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { 
+  FileText, 
+  LogOut, 
+  Store, 
+  Settings, 
+  ChevronRight, 
+  ShieldCheck, 
+  Calendar, 
+  Trophy,
+  LayoutDashboard
+} from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ProfileAvatar } from '../component/ProfileAvatar';
+import { ProfileForm } from '../component/ProfileForm';
+import { useProfile } from '../service/useProfile';
+import { useAuth } from '../../../context/AuthContext';
+import CustomAlert from '../../../utils/AlertHelper';
+import { ProfileService } from '../service/ProfileService';
+
+const { width } = Dimensions.get('window');
 
 const ProfileScreen = () => {
     const {
@@ -19,52 +41,52 @@ const ProfileScreen = () => {
         saving,
         handleSave,
         isShop,
-    } = useProfile()
-    const { logout, updateUser, refreshShop, shop } = useAuth()
-    const navigation = useNavigation<any>()
+    } = useProfile();
+    const { logout, user, updateUser, refreshShop, shop } = useAuth();
+    const navigation = useNavigation<any>();
 
     const handleUpdateAvatar = async (localUri: string) => {
         try {
-            const uploadRes = await ProfileService.uploadAvatar(localUri)
+            const uploadRes = await ProfileService.uploadAvatar(localUri);
             if (!uploadRes?.urls?.[0]) {
-                throw new Error('Invalid upload response')
+                throw new Error('Invalid upload response');
             }
 
-            const serverImageUrl = uploadRes.urls[0]
+            const serverImageUrl = uploadRes.urls[0];
 
             if (isShop && shop?.shopId) {
-                await ProfileService.updateShop(shop.shopId, { shopLogoUrl: serverImageUrl })
-                await refreshShop()
+                await ProfileService.updateShop(shop.shopId, { shopLogoUrl: serverImageUrl });
+                await refreshShop();
             } else {
-                await ProfileService.updateProfile({ userAvatarUrl: serverImageUrl })
-                await updateUser({ userAvatarUrl: serverImageUrl })
+                await ProfileService.updateProfile({ userAvatarUrl: serverImageUrl });
+                await updateUser({ userAvatarUrl: serverImageUrl });
             }
 
-            setFormData((prev) => ({ ...prev, avatarUrl: serverImageUrl }))
-            CustomAlert('Success', 'Profile photo updated successfully.')
+            setFormData((prev) => ({ ...prev, avatarUrl: serverImageUrl }));
+            CustomAlert('Success', 'Profile photo updated successfully.');
         } catch (e) {
-            console.error('Avatar update error: ', e)
-            CustomAlert('Error', 'Unable to save profile photo.')
+            console.error('Avatar update error: ', e);
+            CustomAlert('Error', 'Unable to save profile photo.');
         }
-    }
+    };
 
     const pickImage = async () => {
-        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
-            CustomAlert('Notice', 'Please grant photo library access')
-            return
+            CustomAlert('Notice', 'Please grant photo library access');
+            return;
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 1,
-        })
+            quality: 0.8,
+        });
 
         if (!result.canceled) {
-            await handleUpdateAvatar(result.assets[0].uri)
+            await handleUpdateAvatar(result.assets[0].uri);
         }
-    }
+    };
 
     const handleLogout = () => {
         CustomAlert(
@@ -74,215 +96,411 @@ const ProfileScreen = () => {
                 { text: 'Cancel' },
                 { text: 'Sign out', onPress: () => logout() }
             ]
-        )
-    }
-
-    const renderShopStatus = () => {
-        if (!isShop) {
-            return (
-                <Button
-                    variant="outline"
-                    onPress={() => navigation.navigate('RegisterShop')}
-                    style={styles.primaryOutline}
-                    textStyle={{ color: '#10b981' }}
-                >
-                    Open your shop now
-                </Button>
-            )
-        }
-
-        switch (shop?.shopStatus) {
-            case 'pending':
-                return (
-                    <View style={styles.statusBannerPending}>
-                        <Text style={styles.statusText}>Your shop profile is pending approval</Text>
-                        <Text style={styles.statusSubText}>You can still update the information before it is activated.</Text>
-                        <View style={styles.statusActions}>
-                            <Button
-                                variant="outline"
-                                onPress={() => navigation.navigate('EditShop', { shop })}
-                                style={styles.statusButton}
-                                textStyle={{ color: '#b45309' }}
-                            >
-                                Edit profile
-                            </Button>
-                        </View>
-                    </View>
-                )
-            case 'active':
-                return (
-                    <View style={styles.quickActions}>
-                        <Button
-                            variant="primary"
-                            onPress={() => navigation.navigate('MyShop')}
-                            icon={<Store size={18} color="#fff" />}
-                            style={styles.quickButtonPrimary}
-                        >
-                            Go to my shop
-                        </Button>
-                        <Button
-                            variant="outline"
-                            onPress={() => navigation.navigate('MyPost')}
-                            icon={<FileText size={18} color="#10b981" />}
-                            style={styles.quickButtonOutline}
-                            textStyle={{ color: '#10b981' }}
-                        >
-                            Manage posts
-                        </Button>
-                    </View>
-                )
-            case 'blocked':
-                return (
-                    <View style={styles.statusBannerBlocked}>
-                        <Text style={styles.blockedTitle}>This shop has been blocked</Text>
-                        <Text style={styles.blockedSubText}>Please contact support for more details.</Text>
-                    </View>
-                )
-            case 'closed':
-                return (
-                    <TouchableOpacity
-                        style={styles.statusBannerClosed}
-                        onPress={() => navigation.navigate('EditShop', { shop })}
-                    >
-                        <Text style={styles.closedTitle}>This shop is currently closed</Text>
-                        <Text style={styles.closedSubText}>Tap to update the information or prepare to reopen your shop.</Text>
-                    </TouchableOpacity>
-                )
-            default:
-                return (
-                    <TouchableOpacity
-                        style={styles.statusBannerBlocked}
-                        onPress={() => navigation.navigate('EditShop', { shop })}
-                    >
-                        <Text style={styles.blockedTitle}>Profile rejected</Text>
-                        <Text style={styles.blockedSubText}>Tap to review the information and resubmit your changes.</Text>
-                    </TouchableOpacity>
-                )
-        }
-    }
+        );
+    };
 
     if (loading) {
-        return <ActivityIndicator style={{ flex: 1 }} size="large" color="#10b981" />
+        return (
+            <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color="#10b981" />
+            </View>
+        );
     }
 
+    const joinedDate = (user as any)?.userRegisteredAt 
+        ? new Date((user as any).userRegisteredAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        : 'Nov 2023';
+
     return (
-        <MobileLayout title="My Profile">
-            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-                <ProfileAvatar uri={formData.avatarUrl} onPickImage={pickImage} />
-
-                <View style={styles.section}>
-                    {renderShopStatus()}
-                    <Button
-                        variant="outline"
-                        onPress={() => navigation.navigate('BrowseShops')}
-                        style={styles.browseButton}
-                        textStyle={{ color: '#10b981' }}
-                    >
-                        Explore shops
-                    </Button>
-                </View>
-
-                <View style={styles.formCard}>
-                    <Text style={styles.sectionTitle}>
-                        {isShop ? 'Shop information' : 'Personal information'}
-                    </Text>
-                    <ProfileForm formData={formData} setFormData={setFormData} isShop={isShop} />
-                </View>
-
-                <Button onPress={handleSave} loading={saving} style={styles.saveBtn}>
-                    Save all changes
-                </Button>
-
-                <Button
-                    onPress={handleLogout}
-                    variant="outline"
-                    style={styles.logoutBtn}
-                    icon={<LogOut size={18} color="#ef4444" />}
-                    textStyle={{ color: '#ef4444' }}
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="light-content" />
+            <ScrollView showsVerticalScrollIndicator={false}>
+                {/* 1. Header Gradient & Title */}
+                <LinearGradient
+                    colors={['#064e3b', '#10b981']}
+                    style={styles.headerGradient}
                 >
-                    Sign out
-                </Button>
+                    <View style={styles.headerRow}>
+                        <View>
+                            <Text style={styles.headerTitle}>Hồ sơ cá nhân</Text>
+                            <Text style={styles.headerSubtitle}>QUẢN LÝ TÀI KHOẢN</Text>
+                        </View>
+                        <TouchableOpacity 
+                            style={styles.settingsBtn}
+                            onPress={() => CustomAlert('Settings', 'Settings coming soon')}
+                        >
+                            <Settings color="white" size={20} />
+                        </TouchableOpacity>
+                    </View>
+                </LinearGradient>
+
+                {/* 2. Overlapping Avatar & Summary */}
+                <View style={styles.contentWrap}>
+                    <ProfileAvatar 
+                        uri={formData.avatarUrl} 
+                        onPickImage={pickImage} 
+                        isVerified={true}
+                    />
+
+                    <View style={styles.nameHeader}>
+                        <Text style={styles.displayName}>
+                            {isShop ? formData.shopName : formData.displayName}
+                        </Text>
+                        <View style={styles.verifiedRow}>
+                            <ShieldCheck size={14} color="#10b981" fill="#ecfdf5" />
+                            <Text style={styles.verifiedText}>ĐÃ XÁC MINH</Text>
+                        </View>
+                    </View>
+
+                    {/* 3. Micro Stats Bar */}
+                    <View style={styles.statsBar}>
+                        <View style={styles.statItem}>
+                            <Calendar size={18} color="#64748b" />
+                            <View>
+                                <Text style={styles.statLabel}>Gia nhập</Text>
+                                <Text style={styles.statValB}>{joinedDate}</Text>
+                            </View>
+                        </View>
+                        <View style={styles.dividerV} />
+                        <View style={styles.statItem}>
+                            <Trophy size={18} color="#f59e0b" />
+                            <View>
+                                <Text style={styles.statLabel}>Uy tín</Text>
+                                <Text style={styles.statValB}>Tuyệt vời</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* 4. Action Banner (Shop Related) */}
+                    <View style={styles.shopBannerArea}>
+                        {isShop ? (
+                            <View style={styles.shopActionsGrid}>
+                                <TouchableOpacity 
+                                    style={[styles.shopActionButton, { backgroundColor: '#10b981' }]}
+                                    onPress={() => navigation.navigate('MyShop')}
+                                >
+                                    <Store color="white" size={20} />
+                                    <Text style={styles.shopActionText}>Vào cửa hàng</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    style={[styles.shopActionButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#10b981' }]}
+                                    onPress={() => navigation.navigate('MyPost')}
+                                >
+                                    <FileText color="#10b981" size={20} />
+                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Quản lý tin</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <TouchableOpacity 
+                                style={styles.beShopBanner}
+                                onPress={() => navigation.navigate('RegisterShop')}
+                            >
+                                <LinearGradient
+                                    colors={['#fff', '#f0fdf4']}
+                                    style={styles.beShopGrad}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                >
+                                    <View style={styles.beShopIcon}>
+                                        <Store color="#10b981" size={24} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.beShopTitle}>Mở cửa hàng ngay!</Text>
+                                        <Text style={styles.beShopDesc}>Bắt đầu kinh doanh sản phẩm xanh của bạn</Text>
+                                    </View>
+                                    <ChevronRight color="#10b981" size={20} />
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    {/* 5. Main Form Card */}
+                    <View style={styles.formCardOuter}>
+                        <View style={styles.formHeaderRow}>
+                            <View style={styles.emeraldPoint} />
+                            <Text style={styles.formSectionTitle}>
+                                {isShop ? 'THÔNG TIN CỬA HÀNG' : 'THÔNG TIN CÁ NHÂN'}
+                            </Text>
+                        </View>
+                        <ProfileForm formData={formData} setFormData={setFormData} isShop={isShop} />
+                    </View>
+
+                    {/* 6. Interaction Area */}
+                    <TouchableOpacity 
+                        style={styles.primaryBtn} 
+                        onPress={handleSave}
+                        disabled={saving}
+                    >
+                        {saving ? (
+                            <ActivityIndicator color="white" size="small" />
+                        ) : (
+                            <Text style={styles.primaryBtnText}>LUU THAY DOI</Text>
+                        )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                        style={styles.logoutBtn} 
+                        onPress={handleLogout}
+                    >
+                        <LogOut color="#ef4444" size={20} />
+                        <Text style={styles.logoutBtnText}>DANG XUAT</Text>
+                    </TouchableOpacity>
+                </View>
             </ScrollView>
-        </MobileLayout>
-    )
-}
+        </SafeAreaView>
+    );
+};
 
 const styles = StyleSheet.create({
-    container: { padding: 20 },
-    section: { marginBottom: 18 },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#111827',
-        marginBottom: 16,
+    container: {
+        flex: 1,
+        backgroundColor: '#f8fafc',
     },
-    formCard: {
-        backgroundColor: '#fff',
-        borderRadius: 18,
-        padding: 18,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 3,
-    },
-    saveBtn: {
-        marginTop: 20,
-        backgroundColor: '#10b981',
-    },
-    logoutBtn: {
-        marginTop: 15,
-        marginBottom: 30,
-        borderColor: '#fee2e2',
-        borderWidth: 1,
-    },
-    primaryOutline: {
-        borderColor: '#10b981',
-        marginBottom: 0,
-    },
-    quickActions: {
-        gap: 12,
-    },
-    quickButtonPrimary: {
-        backgroundColor: '#10b981',
-    },
-    quickButtonOutline: {
-        borderColor: '#10b981',
-    },
-    browseButton: {
-        borderColor: '#10b981',
-        marginTop: 12,
-    },
-    statusBannerPending: {
-        backgroundColor: '#fffbeb',
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#fef3c7',
-    },
-    statusBannerBlocked: {
-        backgroundColor: '#fef2f2',
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#fee2e2',
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
     },
-    statusBannerClosed: {
-        backgroundColor: '#f3f4f6',
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
+    headerGradient: {
+        width: '100%',
+        height: 180,
+        paddingTop: 30,
+        paddingHorizontal: 24,
     },
-    statusText: { color: '#b45309', fontWeight: '700', fontSize: 14 },
-    statusSubText: { color: '#d97706', fontSize: 12, marginTop: 4 },
-    statusActions: { marginTop: 14 },
-    statusButton: { borderColor: '#f59e0b' },
-    blockedTitle: { color: '#ef4444', fontWeight: 'bold', fontSize: 14 },
-    blockedSubText: { color: '#7f1d1d', fontSize: 12, marginTop: 6, textAlign: 'center' },
-    closedTitle: { color: '#6b7280', fontWeight: 'bold', fontSize: 14 },
-    closedSubText: { color: '#374151', fontSize: 12, marginTop: 6 },
-})
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    headerTitle: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: 'white',
+        letterSpacing: -0.5,
+    },
+    headerSubtitle: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: 'rgba(255,255,255,0.7)',
+        letterSpacing: 2,
+        marginTop: 2,
+    },
+    settingsBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    contentWrap: {
+        paddingHorizontal: 20,
+    },
+    nameHeader: {
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    displayName: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#0f172a',
+        fontStyle: 'italic',
+        textTransform: 'uppercase',
+    },
+    verifiedRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 4,
+        backgroundColor: '#f0fdf4',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#dcfce7',
+    },
+    verifiedText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#10b981',
+        letterSpacing: 1,
+    },
+    statsBar: {
+        flexDirection: 'row',
+        backgroundColor: 'white',
+        marginTop: 24,
+        borderRadius: 24,
+        padding: 16,
+        alignItems: 'center',
+        shadowColor: '#64748b',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    statItem: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingHorizontal: 10,
+    },
+    statLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#94a3b8',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    statValB: {
+        fontSize: 13,
+        fontWeight: '900',
+        color: '#334155',
+        marginTop: 1,
+    },
+    dividerV: {
+        width: 1,
+        height: 30,
+        backgroundColor: '#f1f5f9',
+    },
+    shopBannerArea: {
+        marginVertical: 24,
+    },
+    shopActionsGrid: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    shopActionButton: {
+        flex: 1,
+        height: 56,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    shopActionText: {
+        color: 'white',
+        fontWeight: '800',
+        fontSize: 14,
+    },
+    beShopBanner: {
+        borderRadius: 24,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#dcfce7',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    beShopGrad: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        gap: 16,
+    },
+    beShopIcon: {
+        width: 50,
+        height: 50,
+        borderRadius: 16,
+        backgroundColor: 'white',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    beShopTitle: {
+        fontSize: 16,
+        fontWeight: '900',
+        color: '#064e3b',
+    },
+    beShopDesc: {
+        fontSize: 11,
+        color: '#059669',
+        fontWeight: '500',
+        marginTop: 2,
+    },
+    formCardOuter: {
+        backgroundColor: 'white',
+        borderRadius: 32,
+        paddingVertical: 24,
+        paddingHorizontal: 20,
+        shadowColor: '#64748b',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.06,
+        shadowRadius: 20,
+        elevation: 5,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
+    },
+    formHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 20,
+        paddingLeft: 4,
+    },
+    emeraldPoint: {
+        width: 4,
+        height: 16,
+        backgroundColor: '#10b981',
+        borderRadius: 2,
+    },
+    formSectionTitle: {
+        fontSize: 13,
+        fontWeight: '900',
+        color: '#0f172a',
+        letterSpacing: 1.5,
+    },
+    primaryBtn: {
+        marginTop: 32,
+        backgroundColor: '#064e3b',
+        height: 60,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 5,
+    },
+    primaryBtnText: {
+        color: 'white',
+        fontWeight: '900',
+        fontSize: 14,
+        letterSpacing: 2,
+    },
+    logoutBtn: {
+        marginTop: 16,
+        marginBottom: 40,
+        height: 56,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        borderWidth: 1,
+        borderColor: '#fee2e2',
+        backgroundColor: '#fffdfd',
+    },
+    logoutBtnText: {
+        color: '#ef4444',
+        fontWeight: '900',
+        fontSize: 12,
+        letterSpacing: 1,
+    },
+});
 
-export default ProfileScreen
+export default ProfileScreen;

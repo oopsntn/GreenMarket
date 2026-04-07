@@ -348,7 +348,15 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             label="Shop Location *"
                             address={formData.shopLocation}
                             onAddressChange={handleAddressChange}
-                            onLocationSelect={handleLocationSelect}
+                            onLocationSelect={(addr, lat, lng) => {
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    shopLocation: addr,
+                                    shopLat: lat,
+                                    shopLng: lng,
+                                }))
+                            }
+                            }
                         />
                         {formData.shopLat ? (
                             <Text style={styles.coordinateText}>
