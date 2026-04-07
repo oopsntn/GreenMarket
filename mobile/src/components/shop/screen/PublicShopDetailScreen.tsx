@@ -38,7 +38,7 @@ const PublicShopDetailScreen = ({ route }: any) => {
     }
 
     const navigatePostDetail = () => {
-        navigation.navigate('PostDetail', { slug: shop.posts[0].postId })
+        navigation.navigate('PostDetail', { slug: shop.posts[0].postSlug })
     }
 
     return (

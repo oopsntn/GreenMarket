@@ -9,13 +9,16 @@ import { useAuth } from '../../../context/AuthContext';
 import AddressPicker from '../components/AddressPicker';
 import { ProfileService } from '../../profile/service/ProfileService';
 import * as ImagePicker from 'expo-image-picker'
-import { Camera, ImageIcon, Play, Plus, User, X } from 'lucide-react-native';
+import { Camera, ImageIcon, Play, Plus, User, X, Phone as PhoneIcon } from 'lucide-react-native';
+import PhoneManagementModal from '../components/PhoneManagementModal';
 
 const EditShopScreen = ({ route, navigation }: any) => {
     const { shop } = route.params;
     const { refreshShop } = useAuth();
     const [loading, setLoading] = useState(false);
     const [uploadingImage, setUpLoadingImage] = useState(false);
+    const [showPhoneModal, setShowPhoneModal] = useState(false);
+    const [phones, setPhones] = useState<string[]>(shop?.phones || []);
     const [formData, setFormData] = useState({
         shopName: shop?.shopName || '',
         shopPhone: shop?.shopPhone || '',
@@ -133,7 +136,11 @@ const EditShopScreen = ({ route, navigation }: any) => {
             }
         } catch (error: any) {
             console.error(error);
-            CustomAlert('Error', error.response?.data?.error || 'Update failed');
+            if (error.response?.status === 403) {
+                CustomAlert('Yêu cầu xác thực', 'Cập nhật email thành công nhưng bạn cần xác thực lại email (Email change resets verification). Vui lòng xác thực Email của shop!');
+            } else {
+                CustomAlert('Error', error.response?.data?.error || 'Update failed');
+            }
         } finally {
             setLoading(false);
         }
@@ -204,11 +211,21 @@ const EditShopScreen = ({ route, navigation }: any) => {
                 />
 
                 <Input
-                    label="Shop phone"
+                    label="Shop phone (Primary)"
                     value={formData.shopPhone}
                     onChangeText={(txt) => setFormData({ ...formData, shopPhone: txt })}
                     type="phone-pad"
                 />
+
+                <TouchableOpacity 
+                    style={styles.managePhoneBtn}
+                    onPress={() => setShowPhoneModal(true)}
+                >
+                    <PhoneIcon size={16} color="#3b82f6" />
+                    <Text style={styles.managePhoneText}>
+                        Manage secondary phones ({phones.length}/3)
+                    </Text>
+                </TouchableOpacity>
 
                 <Input
                     label="Shop description"
@@ -257,6 +274,13 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     Save changes
                 </Button>
             </ScrollView>
+
+            <PhoneManagementModal 
+                visible={showPhoneModal}
+                onClose={() => setShowPhoneModal(false)}
+                phones={phones}
+                onPhonesChange={setPhones}
+            />
         </MobileLayout>
     );
 };
@@ -277,6 +301,21 @@ const styles = StyleSheet.create({
     galleryImage: { width: '100%', height: '100%', resizeMode: 'cover' },
     removeBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, padding: 2 },
     addGalleryBtn: { width: '48%', aspectRatio: 1, borderRadius: 12, borderWidth: 2, borderColor: '#cbd5e1', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
+    managePhoneBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#eff6ff',
+        padding: 12,
+        borderRadius: 8,
+        marginTop: -10,
+        marginBottom: 16,
+    },
+    managePhoneText: {
+        color: '#3b82f6',
+        fontWeight: '600',
+        marginLeft: 8,
+        fontSize: 14,
+    }
 });
 
 export default EditShopScreen;
