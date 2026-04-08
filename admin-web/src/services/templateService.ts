@@ -1,25 +1,73 @@
-import { initialTemplates } from "../mock-data/templates";
+import { apiClient } from "../lib/apiClient";
 import type {
   Template,
   TemplateFormState,
   TemplateStatus,
+  TemplateType,
 } from "../types/template";
-import { readStoredJson, writeStoredJson } from "../utils/browserStorage";
 
-const TEMPLATE_STORAGE_KEY = "adminTemplateLibrary";
-const TEMPLATE_UPDATED_AT = "2026-04-04";
-
-const getStoredTemplates = () =>
-  readStoredJson<Template[]>(TEMPLATE_STORAGE_KEY, initialTemplates);
-
-const saveTemplates = (templates: Template[]) => {
-  writeStoredJson(TEMPLATE_STORAGE_KEY, templates);
-  return templates;
+type TemplateApiResponse = {
+  templateId: number;
+  templateName: string | null;
+  templateType: string | null;
+  templateContent: string | null;
+  templateStatus: string | null;
+  templateUpdatedAt: string | null;
 };
 
-const normalizeTemplateName = (value: string) => value.trim().toLowerCase();
+const TEMPLATE_UPDATED_FALLBACK = "—";
+
+const normalizeText = (value: string) => value.trim().toLowerCase();
+
+const formatDate = (value: string | null) => {
+  if (!value) return TEMPLATE_UPDATED_FALLBACK;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return TEMPLATE_UPDATED_FALLBACK;
+
+  return date.toISOString().slice(0, 10);
+};
+
+const mapApiTypeToUiType = (value: string | null): TemplateType => {
+  switch ((value || "").toLowerCase()) {
+    case "report reason":
+      return "Report Reason";
+    case "notification":
+      return "Notification";
+    case "rejection reason":
+    default:
+      return "Rejection Reason";
+  }
+};
+
+const mapUiTypeToApiType = (value: TemplateType) => value;
+
+const mapApiStatusToUiStatus = (value: string | null): TemplateStatus =>
+  (value || "").toLowerCase() === "disabled" ? "Disabled" : "Active";
+
+const mapApiTemplateToUi = (item: TemplateApiResponse): Template => {
+  return {
+    id: item.templateId,
+    name: item.templateName?.trim() || "Untitled Template",
+    type: mapApiTypeToUiType(item.templateType),
+    content: item.templateContent?.trim() || "",
+    status: mapApiStatusToUiStatus(item.templateStatus),
+    updatedAt: formatDate(item.templateUpdatedAt),
+  };
+};
+
+export const emptyTemplateForm: TemplateFormState = {
+  name: "",
+  type: "Rejection Reason",
+  content: "",
+  status: "Active",
+};
 
 export const templateService = {
+  getEmptyForm(): TemplateFormState {
+    return { ...emptyTemplateForm };
+  },
+
   validateTemplateForm(
     templates: Template[],
     formData: TemplateFormState,
@@ -39,8 +87,8 @@ export const templateService = {
       }
 
       return (
-        normalizeTemplateName(template.name) ===
-          normalizeTemplateName(formData.name) && template.type === formData.type
+        normalizeText(template.name) === normalizeText(formData.name) &&
+        template.type === formData.type
       );
     });
 
@@ -49,56 +97,78 @@ export const templateService = {
     }
   },
 
-  getTemplates(): Template[] {
-    return getStoredTemplates();
+  async getTemplates(): Promise<Template[]> {
+    const data = await apiClient.request<TemplateApiResponse[]>(
+      "/api/admin/templates",
+      {
+        defaultErrorMessage: "Unable to load templates.",
+      },
+    );
+
+    return data.map(mapApiTemplateToUi);
   },
 
-  createTemplate(
-    templates: Template[],
-    formData: TemplateFormState,
-  ): Template[] {
-    const newTemplate: Template = {
-      id: templates.length + 1,
-      name: formData.name,
-      type: formData.type,
-      content: formData.content,
-      status: formData.status,
-      updatedAt: TEMPLATE_UPDATED_AT,
+  async createTemplate(formData: TemplateFormState): Promise<Template> {
+    const payload = {
+      templateName: formData.name.trim(),
+      templateType: mapUiTypeToApiType(formData.type),
+      templateContent: formData.content.trim(),
+      templateStatus: formData.status,
     };
 
-    return saveTemplates([newTemplate, ...templates]);
-  },
-
-  updateTemplate(
-    templates: Template[],
-    selectedTemplateId: number,
-    formData: TemplateFormState,
-  ): Template[] {
-    const updatedTemplates = templates.map((template) =>
-      template.id === selectedTemplateId
-        ? {
-            ...template,
-            name: formData.name,
-            type: formData.type,
-            content: formData.content,
-            status: formData.status,
-            updatedAt: TEMPLATE_UPDATED_AT,
-          }
-        : template,
+    const data = await apiClient.request<TemplateApiResponse>(
+      "/api/admin/templates",
+      {
+        method: "POST",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to create template.",
+        body: JSON.stringify(payload),
+      },
     );
 
-    return saveTemplates(updatedTemplates);
+    return mapApiTemplateToUi(data);
   },
 
-  updateTemplateStatus(
-    templates: Template[],
+  async updateTemplate(
+    templateId: number,
+    formData: TemplateFormState,
+  ): Promise<Template> {
+    const payload = {
+      templateName: formData.name.trim(),
+      templateType: mapUiTypeToApiType(formData.type),
+      templateContent: formData.content.trim(),
+      templateStatus: formData.status,
+    };
+
+    const data = await apiClient.request<TemplateApiResponse>(
+      `/api/admin/templates/${templateId}`,
+      {
+        method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update template.",
+        body: JSON.stringify(payload),
+      },
+    );
+
+    return mapApiTemplateToUi(data);
+  },
+
+  async updateTemplateStatus(
     templateId: number,
     status: TemplateStatus,
-  ): Template[] {
-    const updatedTemplates = templates.map((template) =>
-      template.id === templateId ? { ...template, status } : template,
+  ): Promise<Template> {
+    const data = await apiClient.request<TemplateApiResponse>(
+      `/api/admin/templates/${templateId}/status`,
+      {
+        method: "PATCH",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to update template status.",
+        body: JSON.stringify({
+          templateStatus: status,
+        }),
+      },
     );
 
-    return saveTemplates(updatedTemplates);
+    return mapApiTemplateToUi(data);
   },
 };

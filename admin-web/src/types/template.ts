@@ -25,10 +25,7 @@ export type TemplateBuilderChannel =
   | "In-App Notification"
   | "Moderation Note";
 
-export type TemplateBuilderAudience =
-  | "Seller"
-  | "Reporter"
-  | "Internal Admin";
+export type TemplateBuilderAudience = "Seller" | "Reporter" | "Internal Admin";
 
 export type TemplateBuilderTone = "Formal" | "Supportive" | "Direct";
 

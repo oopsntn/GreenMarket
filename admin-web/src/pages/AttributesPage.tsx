@@ -8,6 +8,7 @@ import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { attributeService } from "../services/attributeService";
+import { categoryMappingService } from "../services/categoryMappingService";
 import type {
   Attribute,
   AttributeFormState,
@@ -39,6 +40,42 @@ const typeFilterOptions: Array<AttributeType | "All"> = [
 ];
 
 const PAGE_SIZE = 5;
+
+const buildUsedInLabels = (
+  attributes: Attribute[],
+  mappings: Awaited<ReturnType<typeof categoryMappingService.fetchMappings>>,
+): Attribute[] => {
+  return attributes.map((attribute) => {
+    const usedIn = Array.from(
+      new Set(
+        mappings
+          .filter(
+            (mapping) =>
+              mapping.status === "Active" &&
+              mapping.attributeId === attribute.id &&
+              mapping.categoryName.trim().length > 0,
+          )
+          .map((mapping) => mapping.categoryName),
+      ),
+    );
+
+    return {
+      ...attribute,
+      usedIn,
+    };
+  });
+};
+
+const parsePreviewOptions = (value: string): string[] => {
+  return Array.from(
+    new Set(
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+    ),
+  );
+};
 
 function AttributesPage() {
   const [attributes, setAttributes] = useState<Attribute[]>([]);
@@ -73,22 +110,33 @@ function AttributesPage() {
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const loadAttributes = async () => {
+  const loadAttributes = async (showLoader = false) => {
     try {
+      if (showLoader) {
+        setIsInitialLoading(true);
+      }
+
       setPageError("");
-      const data = await attributeService.getAttributes();
-      setAttributes(data);
+
+      const [attributeData, mappingData] = await Promise.all([
+        attributeService.getAttributes(),
+        categoryMappingService.fetchMappings(),
+      ]);
+
+      setAttributes(buildUsedInLabels(attributeData, mappingData));
     } catch (error) {
       setPageError(
         error instanceof Error ? error.message : "Failed to load attributes.",
       );
     } finally {
-      setIsInitialLoading(false);
+      if (showLoader) {
+        setIsInitialLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    void loadAttributes();
+    void loadAttributes(true);
   }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
@@ -199,8 +247,8 @@ function AttributesPage() {
       );
 
       if (modalMode === "add") {
-        const newAttribute = await attributeService.createAttribute(formData);
-        setAttributes((prev) => [newAttribute, ...prev]);
+        await attributeService.createAttribute(formData);
+        await loadAttributes();
         showToast("Attribute added successfully.");
       }
 
@@ -214,17 +262,13 @@ function AttributesPage() {
           return;
         }
 
-        const updatedAttribute = await attributeService.updateAttribute(
+        await attributeService.updateAttribute(
           selectedAttributeId,
           formData,
           currentAttribute.status,
         );
 
-        setAttributes((prev) =>
-          prev.map((attribute) =>
-            attribute.id === selectedAttributeId ? updatedAttribute : attribute,
-          ),
-        );
+        await loadAttributes();
         showToast("Attribute updated successfully.");
       }
 
@@ -257,17 +301,13 @@ function AttributesPage() {
     try {
       setIsStatusUpdating(confirmState.attributeId);
 
-      const updatedAttribute = await attributeService.updateAttributeStatus(
+      await attributeService.updateAttributeStatus(
         confirmState.attributeId,
         nextStatus,
         targetAttribute,
       );
 
-      setAttributes((prev) =>
-        prev.map((item) =>
-          item.id === confirmState.attributeId ? updatedAttribute : item,
-        ),
-      );
+      await loadAttributes();
 
       if (confirmState.action === "disable") {
         showToast(
@@ -378,6 +418,11 @@ function AttributesPage() {
     disable: "danger",
     enable: "success",
   };
+
+  const selectOptionPreview = useMemo(
+    () => parsePreviewOptions(formData.optionsText),
+    [formData.optionsText],
+  );
 
   return (
     <div className="attributes-page">
@@ -494,7 +539,9 @@ function AttributesPage() {
                         <StatusBadge
                           label={attribute.status}
                           variant={
-                            attribute.status === "Active" ? "active" : "disabled"
+                            attribute.status === "Active"
+                              ? "active"
+                              : "disabled"
                           }
                         />
                       </td>
@@ -563,7 +610,9 @@ function AttributesPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={page === totalPages}
                 >
                   Next
@@ -625,7 +674,7 @@ function AttributesPage() {
 
           {formData.type === "Select" && (
             <div className="attributes-modal__field">
-              <label htmlFor="optionsText">Options</label>
+              <label htmlFor="optionsText">Options (comma-separated)</label>
               <input
                 id="optionsText"
                 name="optionsText"
@@ -633,8 +682,23 @@ function AttributesPage() {
                 value={formData.optionsText}
                 onChange={handleChange}
                 disabled={modalMode === "view" || isSubmitting}
-                placeholder="Enter options separated by commas"
+                placeholder="Ví dụ: Việt Nam, Nước ngoài, Nhập khẩu"
               />
+              <p className="attributes-modal__hint">
+                Mỗi lựa chọn cách nhau bằng dấu phẩy (,).
+              </p>
+              {selectOptionPreview.length > 0 ? (
+                <div className="attributes-modal__preview">
+                  {selectOptionPreview.map((option) => (
+                    <span
+                      key={option}
+                      className="attributes-modal__preview-chip"
+                    >
+                      {option}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
           )}
 
