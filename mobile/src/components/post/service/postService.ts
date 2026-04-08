@@ -77,41 +77,43 @@ export const postService = {
     },
 
     uploadMedia: async (mediaUris: string[]) => {
-        const formData = new FormData()
+        try {
+            const formData = new FormData()
 
-        for (const uri of mediaUris) {
-            const cleanUri = uri.split('?')[0]
-            const fileName = cleanUri.split('/').pop() || 'upload.jpg'
-            const extension = fileName.split('.').pop()?.toLowerCase()
+            for (const uri of mediaUris) {
+                const cleanUri = uri.split('?')[0]
+                const fileName = cleanUri.split('/').pop() || 'upload.jpg'
+                const extension = fileName.split('.').pop()?.toLowerCase()
 
-            let type = ''
-            if (['jpg', 'jpeg', 'png', 'webp'].includes(extension!)) {
-                type = `image/${extension === 'jpg' ? 'jpeg' : extension}`
-            } else if (['mp4', 'mov', 'm4x', 'avi'].includes(extension!)) {
-                type = `video/${extension === 'mov' ? 'quicktime' : extension}`
-            } else {
-                type = 'application/octet-stream'
+                let type = ''
+                if (['jpg', 'jpeg', 'png', 'webp'].includes(extension!)) {
+                    type = `image/${extension === 'jpg' ? 'jpeg' : extension}`
+                } else if (['mp4', 'mov', 'm4x', 'avi'].includes(extension!)) {
+                    type = `video/${extension === 'mov' ? 'quicktime' : extension}`
+                } else {
+                    type = 'application/octet-stream'
+                }
+
+                if (Platform.OS === 'web') {
+                    const response = await fetch(uri)
+                    const blob = await response.blob()
+                    const file = new File([blob], fileName, { type: blob.type || type })
+                    formData.append('media', file)
+                } else {
+                    formData.append('media', {
+                        uri,
+                        name: fileName,
+                        type,
+                    } as any)
+                }
             }
 
-            if (Platform.OS === 'web') {
-                const response = await fetch(uri)
-                const blob = await response.blob()
-                const file = new File([blob], fileName, { type: blob.type || type })
-                formData.append('media', file)
-            } else {
-                formData.append('media', {
-                    uri,
-                    name: fileName,
-                    type,
-                } as any)
-            }
+            const response = await api.post('/upload', formData)
+            return response.data
+        } catch (error: any) {
+            console.error('uploadMedia failed:', error?.response?.data || error?.message || error)
+            throw error
         }
-
-        const response = await api.post('/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        })
-
-        return response.data
     },
 
     getCategories: async () => {

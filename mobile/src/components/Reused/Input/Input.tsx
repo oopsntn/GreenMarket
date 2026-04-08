@@ -18,6 +18,7 @@ interface InputProps {
     multiline?: boolean;
     numberOfLines?: number;
     style?: StyleProp<ViewStyle>;
+    testID?: string;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -34,6 +35,7 @@ const Input: React.FC<InputProps> = ({
     multiline,
     numberOfLines,
     style,
+    testID,
 }) => {
     const [isFocused, setIsFocused] = useState(false);
     const keyboardType = (type === 'text' ? 'default' : type) as KeyboardTypeOptions
@@ -59,6 +61,7 @@ const Input: React.FC<InputProps> = ({
                 {icon && <View style={styles.inputIcon}>{icon}</View>}
 
                 <TextInput
+                    testID={testID}
                     style={[
                         styles.input,
                         icon ? styles.inputWithIcon : null,

@@ -43,25 +43,18 @@ const PromotePostScreen = ({ route }: any) => {
 
         try {
             setProcessing(true);
-            // 1. Call Backend to get VNPay URL
             const res = await paymentService.buyPackage(post.postId, selectedPackage.promotionPackageId);
             
             if (res.paymentUrl) {
-                // 2. Open VNPay in-app modal using Browser
-                const result = await WebBrowser.openBrowserAsync(res.paymentUrl);
+                await WebBrowser.openBrowserAsync(res.paymentUrl);
                 
-                // 3. Inform user to check status
                 CustomAlert(
                     'Payment Status',
-                    'If you have completed the payment, your post status will be updated shortly.',
+                    'If you have completed the payment, your post promotion will be updated shortly.',
                     [
                         { 
                             text: 'OK', 
                             onPress: () => navigation.goBack() 
-                        },
-                        {
-                            text: 'Refresh status',
-                            onPress: () => fetchPackages() // Dummy refresh
                         }
                     ]
                 );
@@ -124,7 +117,7 @@ const PromotePostScreen = ({ route }: any) => {
 
                         <View style={styles.guaranteeBox}>
                             <ShieldCheck size={16} color="#059669" />
-                            <Text style={styles.guaranteeText}>Secure payment processed via VNPay Gateway</Text>
+                            <Text style={styles.guaranteeText}>Secure payment handled by the configured payment gateway</Text>
                         </View>
                     </ScrollView>
                 )}
@@ -139,7 +132,7 @@ const PromotePostScreen = ({ route }: any) => {
                     onPress={handlePromote}
                     style={styles.payBtn}
                 >
-                    Checkout with VNPay
+                    Proceed to Payment
                 </Button>
             </View>
         </MobileLayout>

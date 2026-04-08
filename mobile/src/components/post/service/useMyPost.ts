@@ -102,7 +102,6 @@ const useMyPost = () => {
                 postTitle: data.postTitle.trim(),
                 postPrice: Number(data.postPrice.trim()),
                 categoryId: data.categoryId,
-                postContent: data.postContent.trim() || undefined,
                 postLocation: data.postLocation.trim() || undefined,
                 postContactPhone: data.postContactPhone.replace(/\s+/g, '') || undefined,
             })
@@ -124,10 +123,6 @@ const useMyPost = () => {
     }
 
     const filteredPosts = posts.filter((post) => {
-        if (activeTab === 'trash') {
-            return post.postStatus === 'hidden'
-        }
-
         if (activeTab === 'shop') {
             return post.postShopId !== null
         }

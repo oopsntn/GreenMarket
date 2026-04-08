@@ -18,6 +18,8 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
 
     if (!shop) return null
 
+    const primaryPhone = shop.shopPhone || shop.phones?.[0] || ''
+
     const openMap = () => {
         if (!shop.shopLocation && (!shop.shopLat || !shop.shopLng)) {
             return
@@ -56,24 +58,19 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
     }
 
     const makeCall = () => {
-        if (shop.shopPhone) {
-            Linking.openURL(`tel:${shop.shopPhone.replace(/\s+/g, '')}`)
+        if (primaryPhone) {
+            Linking.openURL(`tel:${primaryPhone.replace(/\s+/g, '')}`)
         }
     }
 
     const openZalo = () => {
-        if (shop.shopPhone) {
-            Linking.openURL(`https://zalo.me/${shop.shopPhone.replace(/\s+/g, '')}`)
+        if (primaryPhone) {
+            Linking.openURL(`https://zalo.me/${primaryPhone.replace(/\s+/g, '')}`)
         }
     }
 
     return (
         <View style={styles.headerCard}>
-            {shop.shopCoverUrl ? (
-                <Image source={{ uri: shop.shopCoverUrl }} style={styles.coverImage} />
-            ) : null}
-
-            {/* 2. Thay vì 1 ảnh bìa, hãy hiện Slider nếu có Gallery */}
             {gallery.length > 0 ? (
                 <FlatList
                     data={gallery}
@@ -119,7 +116,7 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
                 <View style={styles.infoItem}>
                     <Phone size={16} color="#10b981" />
                     <Text style={styles.infoText}>
-                        {shop.shopPhone || 'No phone number yet'}
+                        {primaryPhone || 'No phone number yet'}
                     </Text>
                 </View>
             </View>

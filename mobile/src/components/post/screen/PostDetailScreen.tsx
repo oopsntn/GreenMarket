@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Linking, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { postService } from '../service/postService'
-import { AlertCircle, ExternalLink, Eye, Heart, Info, MapPin, Maximize2, MessageCircle, Phone, Share2, ShieldCheck, Store } from 'lucide-react-native'
+import { AlertCircle, ExternalLink, Eye, Heart, MapPin, Maximize2, MessageCircle, Phone, Share2, ShieldCheck, Store } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Button from '../../Reused/Button/Button'
 import { MediaGallery } from '../components/MediaGallery'
@@ -26,10 +26,15 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     try {
       const res = await postService.getPostDetail(slug)
       if (res && res.postId) {
-        setPost(res);
+        setPost(res)
         // Chỉ gọi checkIsSaved nếu res tồn tại hợp lệ
-        const saved = await postService.checkIsSaved(res.postId);
-        setIsSaved(saved.isSaved);
+        try {
+          const saved = await postService.checkIsSaved(res.postId)
+          setIsSaved(!!saved?.isSaved)
+        } catch (savedError) {
+          console.error('PostDetail checkIsSaved error:', savedError)
+          setIsSaved(false)
+        }
       } else {
         setPost(null); // Trình render sẽ hiển thị "Không tìm thấy"
         console.error('PostDetail loadData: No post data returned for slug:', slug);
@@ -106,7 +111,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const media = [
     ...(post?.images || []).map((i: any) => ({ type: 'image', url: i.imageUrl })),
     ...(post?.videos || []).map((v: any) => ({ type: 'video', url: v.videoUrl }))
-  ];
+  ]
+  const contactPhone = post?.shop?.shopPhone || post?.shop?.phones?.[0] || post?.postContactPhone || ''
 
   // Nút Share và Heart trên Header
   const renderRightActions = () => (
@@ -136,7 +142,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
             style={{ flex: 1, borderColor: '#1890ff' }}
             textStyle={{ color: '#1890ff' }}
             icon={<MessageCircle size={20} color="#1890ff" />}
-            onPress={() => Linking.openURL(`https://zalo.me/${post?.shop?.shopPhone}`)}
+            disabled={!contactPhone}
+            onPress={() => Linking.openURL(`https://zalo.me/${contactPhone}`)}
           >
             Zalo
           </Button>
@@ -144,9 +151,10 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
             variant="primary"
             style={{ flex: 2 }}
             icon={<Phone size={20} color="#fff" />}
+            disabled={!contactPhone}
             onPress={() => {
               if (post?.postId) postService.recordContactClick(post.postId);
-              Linking.openURL(`tel:${post?.shop?.shopPhone || post?.postContactPhone}`);
+              Linking.openURL(`tel:${contactPhone}`);
             }}
           >
             Call now
@@ -203,7 +211,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
         <Card
           style={styles.shopCard}
           padding="medium"
-          onClick={() => { if (post?.postShopId) navigation.navigate('ShopDetail', { id: post?.postShopId }) }}
+          onClick={() => { if (post?.postShopId) navigation.navigate('PublicShopDetail', { shopId: post?.postShopId }) }}
         >
           <View style={styles.shopContent}>
             <View style={styles.shopAvatar}>

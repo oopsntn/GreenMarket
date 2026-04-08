@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigation } from '@react-navigation/native'
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { CheckCircle2, CircleDollarSign, ImagePlus, MapPin, Phone, Tag, TextCursorInput, Video, X } from 'lucide-react-native'
+import { CheckCircle2, CircleDollarSign, ImagePlus, MapPin, Phone, Tag, X } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Button from '../../Reused/Button/Button'
 import Card from '../../Reused/Card/Card'
@@ -43,26 +43,19 @@ const CreatePostLayout = () => {
         <MobileLayout title="Create New Post" backButton={() => navigation.goBack()}>
             <Card style={styles.card}>
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Images and videos</Text>
-                    <Text style={styles.sectionHint}>Up to 10 files</Text>
+                    <Text style={styles.sectionTitle}>Images</Text>
+                    <Text style={styles.sectionHint}>Up to 10 images</Text>
                 </View>
 
                 <View style={styles.mediaGrid}>
                     <TouchableOpacity style={styles.uploadBtn} onPress={actions.pickMedia} disabled={state.submitting}>
                         <ImagePlus size={24} color="#10b981" />
-                        <Text style={styles.uploadText}>Add media</Text>
+                        <Text style={styles.uploadText}>Add images</Text>
                     </TouchableOpacity>
 
                     {state.media.map((item, index) => (
                         <View key={`${item.uri}-${index}`} style={styles.mediaPreview}>
-                            {item.type === 'image' ? (
-                                <Image source={{ uri: item.uri }} style={styles.imageThumb} />
-                            ) : (
-                                <View style={styles.videoThumb}>
-                                    <Video size={24} color="#10b981" />
-                                    <Text style={styles.videoLabel}>Video</Text>
-                                </View>
-                            )}
+                            <Image source={{ uri: item.uri }} style={styles.imageThumb} />
 
                             <TouchableOpacity style={styles.removeBadge} onPress={() => actions.removeMedia(index)}>
                                 <X size={10} color="#fff" />
@@ -74,6 +67,7 @@ const CreatePostLayout = () => {
 
             <Card style={styles.card}>
                 <Input
+                    testID="create-post-title-input"
                     label="Post title"
                     value={state.formData.postTitle}
                     onChangeText={(txt) => actions.setFormData({ ...state.formData, postTitle: txt })}
@@ -88,6 +82,7 @@ const CreatePostLayout = () => {
                     <View style={styles.categoryWrap}>
                         {state.categories.map((cat) => (
                             <TouchableOpacity
+                                testID={`create-post-category-${cat.categoryId}`}
                                 key={cat.categoryId}
                                 style={[
                                     styles.catItem,
@@ -109,6 +104,7 @@ const CreatePostLayout = () => {
                 )}
 
                 <Input
+                    testID="create-post-price-input"
                     label="Price"
                     type="numeric"
                     value={state.formData.postPrice}
@@ -117,8 +113,30 @@ const CreatePostLayout = () => {
                     required
                 />
 
-                {!isShop && (
+                {!isShop && shop?.shopLocation ? (
+                    <View style={styles.locationBlock}>
+                        <Input
+                            label="Location"
+                            value={state.formData.postLocation}
+                            onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}
+                            icon={<MapPin size={16} color="#10b981" />}
+                            placeholder="Shop address will be used for this post"
+                        />
+                        <TouchableOpacity
+                            style={styles.useShopLocationBtn}
+                            onPress={() =>
+                                actions.setFormData({
+                                    ...state.formData,
+                                    postLocation: shop.shopLocation || '',
+                                })
+                            }
+                        >
+                            <Text style={styles.useShopLocationText}>Use shop address</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
                     <Input
+                        testID="create-post-location-input"
                         label="Location"
                         value={state.formData.postLocation}
                         onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}
@@ -128,6 +146,7 @@ const CreatePostLayout = () => {
                 )}
 
                 <Input
+                    testID="create-post-contact-phone-input"
                     label="Contact phone number"
                     type="phone-pad"
                     value={state.formData.postContactPhone}
@@ -158,7 +177,7 @@ const CreatePostLayout = () => {
                 </Card>
             ) : null}
 
-            <Button onPress={actions.submitForm} disabled={state.submitting} style={styles.submitBtn}>
+            <Button testID="create-post-submit-button" onPress={actions.submitForm} disabled={state.submitting} style={styles.submitBtn}>
                 {state.submitting ? 'Submitting...' : 'Submit post'}
             </Button>
         </MobileLayout>
@@ -218,22 +237,6 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 14,
-    },
-    videoThumb: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 14,
-        backgroundColor: '#ecfdf5',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#a7f3d0',
-        gap: 6,
-    },
-    videoLabel: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#047857',
     },
     removeBadge: {
         position: 'absolute',
@@ -308,6 +311,23 @@ const styles = StyleSheet.create({
         width: '100%',
         marginTop: 12,
     },
+    locationBlock: {
+        marginTop: 8,
+    },
+    useShopLocationBtn: {
+        alignSelf: 'flex-start',
+        marginTop: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 999,
+        backgroundColor: '#ecfdf5',
+    },
+    useShopLocationText: {
+        color: '#10b981',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+
 })
 
 export default CreatePostLayout

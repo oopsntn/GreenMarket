@@ -19,10 +19,10 @@ export const ProfileForm = ({ formData, setFormData, isShop }: ProfileFormProps)
         <View style={styles.container}>
             <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
-                    {isShop ? 'TÊN CỬA HÀNG' : 'HỌ VÀ TÊN'}
+                    {isShop ? 'SHOP NAME' : 'FULL NAME'}
                 </Text>
                 <Input
-                    placeholder={isShop ? "Nhập tên cửa hàng..." : "Nhập họ và tên..."}
+                    placeholder={isShop ? "Enter shop name..." : "Enter your full name..."}
                     value={isShop ? formData.shopName : formData.displayName}
                     onChangeText={(txt) => handleChange(isShop ? 'shopName' : 'displayName', txt)}
                     icon={isShop ? <Store size={18} color="#10b981" /> : <User size={18} color="#10b981" />}
@@ -32,21 +32,20 @@ export const ProfileForm = ({ formData, setFormData, isShop }: ProfileFormProps)
             </View>
 
             <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>SỐ ĐIỆN THOẠI</Text>
+                <Text style={styles.inputLabel}>PHONE NUMBER</Text>
                 <Input
-                    placeholder="Số điện thoại liên hệ..."
+                    placeholder="Contact phone number..."
                     value={isShop ? formData.shopPhone : formData.mobile}
-                    disabled={!isShop}
+                    disabled
                     onChangeText={(txt) => handleChange('shopPhone', txt)}
                     icon={<Phone size={18} color="#10b981" />}
                     type="phone-pad"
-                    required={isShop}
-                    style={[styles.customInput, !isShop && styles.disabledInput]}
+                    style={[styles.customInput, styles.disabledInput]}
                 />
             </View>
 
             <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>ĐỊA CHỈ EMAIL</Text>
+                <Text style={styles.inputLabel}>EMAIL ADDRESS</Text>
                 <Input
                     placeholder="example@gmail.com"
                     value={formData.email}
@@ -58,9 +57,9 @@ export const ProfileForm = ({ formData, setFormData, isShop }: ProfileFormProps)
             </View>
 
             <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>ĐỊA CHỈ THƯỜNG TRÚ</Text>
+                <Text style={styles.inputLabel}>RESIDENTIAL ADDRESS</Text>
                 <Input
-                    placeholder="Nhập địa chỉ của bạn..."
+                    placeholder="Enter your address..."
                     value={isShop ? formData.shopLocation : formData.location}
                     onChangeText={(txt) => handleChange(isShop ? 'shopLocation' : 'location', txt)}
                     icon={<MapPin size={18} color="#10b981" />}
@@ -71,10 +70,10 @@ export const ProfileForm = ({ formData, setFormData, isShop }: ProfileFormProps)
 
             <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>
-                    {isShop ? 'MÔ TẢ CỬA HÀNG' : 'GIỚI THIỆU BẢN THÂN'}
+                    {isShop ? 'SHOP DESCRIPTION' : 'ABOUT ME'}
                 </Text>
                 <Input
-                    placeholder={isShop ? "Mô tả về shop của bạn..." : "Viết vài dòng về bản thân..."}
+                    placeholder={isShop ? "Tell us about your shop..." : "Write a few lines about yourself..."}
                     value={isShop ? formData.shopDescription : formData.bio}
                     multiline
                     numberOfLines={4}

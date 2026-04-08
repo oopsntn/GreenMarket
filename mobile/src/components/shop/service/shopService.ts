@@ -13,10 +13,15 @@ export interface ShopDetail {
     shopName: string;
     shopStatus: string;
     shopPhone?: string;
+    shopEmail?: string;
     shopLocation?: string;
     shopDescription?: string;
     shopLogoUrl?: string;
     shopCoverUrl?: string;
+    shopGalleryImages?: string[] | string;
+    shopFacebook?: string;
+    shopInstagram?: string;
+    shopYoutube?: string;
     shopLat?: number;
     shopLng?: number;
     phones?: string[];
@@ -44,8 +49,14 @@ export interface ShopPayload {
 const normalizeShopCoordinates = (shop: ShopDetail | null) => {
     if (!shop) return null
 
+    const phoneList = typeof shop.shopPhone === 'string'
+        ? shop.shopPhone.split('|').map((item) => item.trim()).filter(Boolean)
+        : []
+
     return {
         ...shop,
+        shopPhone: phoneList[0] || shop.shopPhone,
+        phones: phoneList,
         shopLat: shop.shopLat !== null && shop.shopLat !== undefined ? Number(shop.shopLat) : undefined,
         shopLng: shop.shopLng !== null && shop.shopLng !== undefined ? Number(shop.shopLng) : undefined,
     }

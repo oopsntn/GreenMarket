@@ -29,26 +29,29 @@ export const ProfileService = {
             console.error('Error calling getProfile API: ', e);
         }
     },
-    updateProfile: async (data: any) => {
+    updateProfile: async (data: ProfilePayload) => {
         try {
             const res = await api.patch('/profile', data)
             return res.data
         } catch (e) {
             console.error('Error calling updateProfile API: ', e);
+            throw e
         }
     },
-    updateShop: async (shopId: number, data: any) => {
+    updateShop: async (shopId: number, data: ShopPayload) => {
         try {
             const res = await api.patch(`/shops/${shopId}`, data)
             return res.data
         } catch (e) {
             console.error('Error calling updateShop API: ', e);
+            throw e
         }
     },
     uploadAvatar: async (fileUri: string) => {
         try {
             const formData = new FormData()
-            const fileName = fileUri.split('/').pop() || 'avatar.jpg'
+            const cleanUri = fileUri.split('?')[0]
+            const fileName = cleanUri.split('/').pop() || 'avatar.jpg'
             const extension = fileName.split('.').pop()?.toLowerCase()
 
             let type = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg'
@@ -56,7 +59,7 @@ export const ProfileService = {
             if (Platform.OS === 'web') {
                 const response = await fetch(fileUri);
                 const blob = await response.blob();
-                const file = new File([blob], fileName, { type });
+                const file = new File([blob], fileName, { type: blob.type || type });
                 formData.append('media', file);
             } else {
                 formData.append('media', {
@@ -66,12 +69,11 @@ export const ProfileService = {
                 } as any)
             }
 
-            const res = await api.post('/upload', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            })
+            const res = await api.post('/upload', formData)
             return res.data
         } catch (e) {
             console.error('Error calling uploadAvatar API: ', e);
+            throw e
         }
     }
 }

@@ -65,7 +65,7 @@ const MyPostLayout = () => {
     return (
         <MobileLayout title='Manage My Posts' backButton={() => navigation.goBack()}
             rightAction={
-                <TouchableOpacity onPress={() => navigation.navigate('CreatePost')}>
+                <TouchableOpacity testID="my-post-create-button" onPress={() => navigation.navigate('CreatePost')}>
                     <Plus color='#10b981' size={24} />
                 </TouchableOpacity>
             }>
@@ -92,9 +92,7 @@ const MyPostLayout = () => {
                     ListEmptyComponent={
                         <View style={styles.empty}>
                             <Text style={styles.emptyText}>
-                                {state.activeTab === 'trash'
-                                    ? 'No posts in the trash.'
-                                    : state.activeTab === 'shop'
+                                {state.activeTab === 'shop'
                                         ? 'No shop posts yet.'
                                         : 'You haven\'t created any personal posts yet.'}
                             </Text>

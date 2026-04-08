@@ -17,7 +17,7 @@ interface CategoryAttribute {
 
 interface SelectedMedia {
     uri: string;
-    type: 'image' | 'video';
+    type: 'image';
 }
 
 interface CreatePostFormData {
@@ -89,7 +89,7 @@ const useCreatePost = () => {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images', 'videos'],
+            mediaTypes: ['images'],
             allowsMultipleSelection: true,
             quality: 1,
             selectionLimit: 10,
@@ -98,7 +98,7 @@ const useCreatePost = () => {
         if (!result.canceled) {
             const selectedMedia: SelectedMedia[] = result.assets.map((asset): SelectedMedia => ({
                 uri: asset.uri,
-                type: asset.type === 'video' ? 'video' : 'image',
+                type: 'image',
             }))
 
             setMedia((prev) => [...prev, ...selectedMedia].slice(0, 10))
@@ -136,11 +136,6 @@ const useCreatePost = () => {
             return false
         }
 
-        if (formData.postContent.length > 2000) {
-            CustomAlert('Value too long', 'The post description cannot exceed 2000 characters.')
-            return false
-        }
-
         if (formData.postLocation && formData.postLocation.length > 255) {
             CustomAlert('Value too long', 'The location cannot exceed 255 characters.')
             return false
@@ -152,7 +147,7 @@ const useCreatePost = () => {
         }
 
         if (media.length === 0) {
-            CustomAlert('Missing media', 'Please select at least one image or video.')
+            CustomAlert('Missing media', 'Please select at least one image.')
             return false
         }
 
@@ -180,19 +175,12 @@ const useCreatePost = () => {
             const uploadedMedia = await postService.uploadMedia(mediaUris)
             const uploadedUrls = Array.isArray(uploadedMedia?.urls) ? uploadedMedia.urls : []
 
-            //2. Logic phan loai URL thanh Image va Video
-            const images: string[] = []
-            const videos: string[] = []
+            if (uploadedUrls.length !== media.length) {
+                throw new Error('Uploaded media count mismatch')
+            }
 
-            uploadedUrls.forEach((url: any) => {
-                const extension = url.split('.').pop()?.toLowerCase()
-                if (extension && ['jpg', 'jpeg', 'png', 'webp'].includes(extension)) {
-                    images.push(url)
-                }
-                if (extension && ['mp4', 'mov', 'm4x', 'avi'].includes(extension)) {
-                    videos.push(url)
-                }
-            })
+            //2. Prepare image payload in the same order as the selected media
+            const images = uploadedUrls.filter((_: string, index: number) => media[index]?.type === 'image')
 
             //3. Chuan bi Attribute Payload
             const attributePayload = Object.entries(formData.attributes)
@@ -210,7 +198,6 @@ const useCreatePost = () => {
                 postLocation: formData.postLocation.trim() || undefined,
                 postContactPhone: formData.postContactPhone.replace(/\s+/g, '') || undefined,
                 images,
-                videos,
                 attributes: attributePayload,
             })
 

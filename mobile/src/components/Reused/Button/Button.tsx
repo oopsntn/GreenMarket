@@ -12,6 +12,7 @@ interface ButtonProps {
     icon?: React.ReactNode;
     style?: StyleProp<ViewStyle>;
     textStyle?: StyleProp<TextStyle>;
+    testID?: string;
 }
 const Button: React.FC<ButtonProps> = ({
     children,
@@ -24,10 +25,12 @@ const Button: React.FC<ButtonProps> = ({
     icon = null,
     style,
     textStyle,
+    testID,
 }) => {
     const isDisabled = disabled || loading;
     return (
         <TouchableOpacity
+            testID={testID}
             onPress={onPress}
             disabled={disabled}
             activeOpacity={0.7}

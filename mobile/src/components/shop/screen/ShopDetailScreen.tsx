@@ -67,6 +67,7 @@ const ShoDetailScreen = () => {
 
                             <View style={styles.headerButtons}>
                                 <Button
+                                    testID="my-shop-create-post-button"
                                     variant="outline"
                                     onPress={() => navigation.navigate('CreatePost')}
                                     style={styles.outlineButton}
@@ -75,6 +76,7 @@ const ShoDetailScreen = () => {
                                     Create new product post
                                 </Button>
                                 <Button
+                                    testID="my-shop-manage-posts-button"
                                     onPress={() => navigation.navigate('MyPost')}
                                     style={styles.primaryButton}
                                 >

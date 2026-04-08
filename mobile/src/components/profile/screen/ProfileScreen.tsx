@@ -1,27 +1,28 @@
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  StatusBar,
-  SafeAreaView,
-  Dimensions
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    StatusBar,
+    SafeAreaView,
+    Dimensions
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { 
-  FileText, 
-  LogOut, 
-  Store, 
-  Settings, 
-  ChevronRight, 
-  ShieldCheck, 
-  Calendar, 
-  Trophy,
-  LayoutDashboard
+import {
+    FileText,
+    LogOut,
+    Store,
+    Settings,
+    ChevronRight,
+    ShieldCheck,
+    Calendar,
+    Trophy,
+    LayoutDashboard,
+    Heart
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileAvatar } from '../component/ProfileAvatar';
@@ -107,8 +108,8 @@ const ProfileScreen = () => {
         );
     }
 
-    const joinedDate = (user as any)?.userRegisteredAt 
-        ? new Date((user as any).userRegisteredAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    const joinedDate = (user as any)?.userRegisteredAt
+        ? new Date((user as any).userRegisteredAt).toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' })
         : 'Nov 2023';
 
     return (
@@ -122,10 +123,10 @@ const ProfileScreen = () => {
                 >
                     <View style={styles.headerRow}>
                         <View>
-                            <Text style={styles.headerTitle}>Hồ sơ cá nhân</Text>
-                            <Text style={styles.headerSubtitle}>QUẢN LÝ TÀI KHOẢN</Text>
+                            <Text style={styles.headerTitle}>Profile</Text>
+                            <Text style={styles.headerSubtitle}>ACCOUNT MANAGEMENT</Text>
                         </View>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.settingsBtn}
                             onPress={() => CustomAlert('Settings', 'Settings coming soon')}
                         >
@@ -136,9 +137,9 @@ const ProfileScreen = () => {
 
                 {/* 2. Overlapping Avatar & Summary */}
                 <View style={styles.contentWrap}>
-                    <ProfileAvatar 
-                        uri={formData.avatarUrl} 
-                        onPickImage={pickImage} 
+                    <ProfileAvatar
+                        uri={formData.avatarUrl}
+                        onPickImage={pickImage}
                         isVerified={true}
                     />
 
@@ -148,7 +149,7 @@ const ProfileScreen = () => {
                         </Text>
                         <View style={styles.verifiedRow}>
                             <ShieldCheck size={14} color="#10b981" fill="#ecfdf5" />
-                            <Text style={styles.verifiedText}>ĐÃ XÁC MINH</Text>
+                            <Text style={styles.verifiedText}>VERIFIED</Text>
                         </View>
                     </View>
 
@@ -157,7 +158,7 @@ const ProfileScreen = () => {
                         <View style={styles.statItem}>
                             <Calendar size={18} color="#64748b" />
                             <View>
-                                <Text style={styles.statLabel}>Gia nhập</Text>
+                                <Text style={styles.statLabel}>Member since</Text>
                                 <Text style={styles.statValB}>{joinedDate}</Text>
                             </View>
                         </View>
@@ -165,34 +166,42 @@ const ProfileScreen = () => {
                         <View style={styles.statItem}>
                             <Trophy size={18} color="#f59e0b" />
                             <View>
-                                <Text style={styles.statLabel}>Uy tín</Text>
-                                <Text style={styles.statValB}>Tuyệt vời</Text>
+                                <Text style={styles.statLabel}>Reputation</Text>
+                                <Text style={styles.statValB}>Excellent</Text>
                             </View>
                         </View>
                     </View>
 
                     {/* 4. Action Banner (Shop Related) */}
                     <View style={styles.shopBannerArea}>
+                        <TouchableOpacity
+                            style={styles.savedPostsButton}
+                            onPress={() => navigation.navigate('SavedPosts')}
+                        >
+                            <Heart color="#dc2626" size={20} />
+                            <Text style={styles.savedPostsText}>Saved Posts</Text>
+                        </TouchableOpacity>
+
                         {isShop ? (
                             <View style={styles.shopActionsGrid}>
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={[styles.shopActionButton, { backgroundColor: '#10b981' }]}
                                     onPress={() => navigation.navigate('MyShop')}
                                 >
                                     <Store color="white" size={20} />
-                                    <Text style={styles.shopActionText}>Vào cửa hàng</Text>
+                                    <Text style={styles.shopActionText}>My Shop</Text>
                                 </TouchableOpacity>
 
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={[styles.shopActionButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#10b981' }]}
                                     onPress={() => navigation.navigate('MyPost')}
                                 >
                                     <FileText color="#10b981" size={20} />
-                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Quản lý tin</Text>
+                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Manage Ads</Text>
                                 </TouchableOpacity>
                             </View>
                         ) : (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.beShopBanner}
                                 onPress={() => navigation.navigate('RegisterShop')}
                             >
@@ -206,8 +215,8 @@ const ProfileScreen = () => {
                                         <Store color="#10b981" size={24} />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={styles.beShopTitle}>Mở cửa hàng ngay!</Text>
-                                        <Text style={styles.beShopDesc}>Bắt đầu kinh doanh sản phẩm xanh của bạn</Text>
+                                        <Text style={styles.beShopTitle}>Become a Seller!</Text>
+                                        <Text style={styles.beShopDesc}>Start business with your green products</Text>
                                     </View>
                                     <ChevronRight color="#10b981" size={20} />
                                 </LinearGradient>
@@ -220,31 +229,31 @@ const ProfileScreen = () => {
                         <View style={styles.formHeaderRow}>
                             <View style={styles.emeraldPoint} />
                             <Text style={styles.formSectionTitle}>
-                                {isShop ? 'THÔNG TIN CỬA HÀNG' : 'THÔNG TIN CÁ NHÂN'}
+                                {isShop ? 'SHOP INFORMATION' : 'PERSONAL INFORMATION'}
                             </Text>
                         </View>
                         <ProfileForm formData={formData} setFormData={setFormData} isShop={isShop} />
                     </View>
 
                     {/* 6. Interaction Area */}
-                    <TouchableOpacity 
-                        style={styles.primaryBtn} 
+                    <TouchableOpacity
+                        style={styles.primaryBtn}
                         onPress={handleSave}
                         disabled={saving}
                     >
                         {saving ? (
                             <ActivityIndicator color="white" size="small" />
                         ) : (
-                            <Text style={styles.primaryBtnText}>LUU THAY DOI</Text>
+                            <Text style={styles.primaryBtnText}>SAVE CHANGES</Text>
                         )}
                     </TouchableOpacity>
 
-                    <TouchableOpacity 
-                        style={styles.logoutBtn} 
+                    <TouchableOpacity
+                        style={styles.logoutBtn}
                         onPress={handleLogout}
                     >
                         <LogOut color="#ef4444" size={20} />
-                        <Text style={styles.logoutBtnText}>DANG XUAT</Text>
+                        <Text style={styles.logoutBtnText}>LOGOUT</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -366,6 +375,23 @@ const styles = StyleSheet.create({
     },
     shopBannerArea: {
         marginVertical: 24,
+        gap: 12,
+    },
+    savedPostsButton: {
+        height: 56,
+        borderRadius: 20,
+        backgroundColor: '#fff1f2',
+        borderWidth: 1,
+        borderColor: '#fecdd3',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+    },
+    savedPostsText: {
+        color: '#be123c',
+        fontWeight: '800',
+        fontSize: 14,
     },
     shopActionsGrid: {
         flexDirection: 'row',
