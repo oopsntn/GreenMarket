@@ -7,10 +7,13 @@ import Button from '../../Reused/Button/Button'
 import Card from '../../Reused/Card/Card'
 import Input from '../../Reused/Input/Input'
 import useCreatePost from '../service/useCreatePost'
+import { useAuth } from '../../../context/AuthContext'
 
 const CreatePostLayout = () => {
     const navigation = useNavigation<any>()
     const { state, actions } = useCreatePost()
+    const { shop } = useAuth()
+    const isShop = !!shop && shop.shopStatus === 'active'
 
     if (state.submitted) {
         return (
@@ -114,13 +117,15 @@ const CreatePostLayout = () => {
                     required
                 />
 
-                <Input
-                    label="Location"
-                    value={state.formData.postLocation}
-                    onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}
-                    icon={<MapPin size={16} color="#10b981" />}
-                    placeholder="Example: Cau Giay, Hanoi"
-                />
+                {!isShop && (
+                    <Input
+                        label="Location"
+                        value={state.formData.postLocation}
+                        onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}
+                        icon={<MapPin size={16} color="#10b981" />}
+                        placeholder="Example: Cau Giay, Hanoi"
+                    />
+                )}
 
                 <Input
                     label="Contact phone number"
@@ -131,15 +136,7 @@ const CreatePostLayout = () => {
                     placeholder="Leave blank to use the default number"
                 />
 
-                <Input
-                    label="Post description"
-                    value={state.formData.postContent}
-                    onChangeText={(txt) => actions.setFormData({ ...state.formData, postContent: txt })}
-                    icon={<TextCursorInput size={16} color="#10b981" />}
-                    multiline
-                    numberOfLines={5}
-                    placeholder="Describe the plant type, size, condition, delivery method..."
-                />
+
             </Card>
 
             {state.loadingAttributes ? (

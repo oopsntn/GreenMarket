@@ -11,7 +11,6 @@ export const posts = pgTable("posts", {
     categoryId: integer("category_id").references(() => categories.categoryId, { onDelete: "cascade" }),
     postTitle: varchar("post_title", { length: 255 }).notNull(),
     postSlug: varchar("post_slug", { length: 255 }).unique().notNull(),
-    postContent: text("post_content"),
     postPrice: numeric("post_price", { precision: 12, scale: 2 }),
     postLocation: varchar("post_location", { length: 255 }),
     postStatus: varchar("post_status", { length: 20 }).default("pending").notNull(), // pending, approved, rejected, hidden, draft
@@ -31,7 +30,7 @@ export const posts = pgTable("posts", {
         // PostgreSQL Full-Text Search Index wrapper over Title and Content
         searchIdx: index("post_search_idx").using(
             "gin", 
-            sql`to_tsvector('simple', ${table.postTitle} || ' ' || coalesce(${table.postContent}, ''))`
+            sql`to_tsvector('simple', ${table.postTitle})`
         ),
         // B-Tree indexes for high-cardinality filters
         categoryIdx: index("post_category_idx").on(table.categoryId),

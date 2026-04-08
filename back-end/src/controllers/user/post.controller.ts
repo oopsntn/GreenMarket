@@ -28,7 +28,6 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
         const {
             categoryId,
             postTitle,
-            postContent,
             postPrice,
             postLocation,
             postContactPhone,
@@ -57,7 +56,6 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             categoryId: Number(categoryId),
             postTitle,
             postSlug: finalSlug,
-            postContent,
             postPrice: postPrice?.toString(),
             postLocation,
             postContactPhone,
@@ -252,7 +250,6 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         const {
             categoryId,
             postTitle,
-            postContent,
             postPrice,
             postLocation,
             postContactPhone,
@@ -295,7 +292,7 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
 
         if (categoryId !== undefined) postUpdatePayload.categoryId = Number(categoryId);
         if (postTitle !== undefined) postUpdatePayload.postTitle = postTitle;
-        if (postContent !== undefined) postUpdatePayload.postContent = postContent;
+
         if (postPrice !== undefined) postUpdatePayload.postPrice = postPrice?.toString();
         if (postLocation !== undefined) postUpdatePayload.postLocation = postLocation;
         if (postContactPhone !== undefined) postUpdatePayload.postContactPhone = postContactPhone;

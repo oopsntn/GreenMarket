@@ -1,11 +1,11 @@
-import { pgTable, serial, integer, varchar, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 import { reports } from "./reports";
 
 export const reportEvidence = pgTable("report_evidence", {
     reportEvidenceId: serial("report_evidence_id").primaryKey(),
     reportEvidenceReportId: integer("report_evidence_report_id").references(() => reports.reportId, { onDelete: "cascade" }).notNull(),
-    reportEvidenceUrl: varchar("report_evidence_url", { length: 255 }),
+    reportEvidenceUrl: text("report_evidence_url"),
     reportEvidenceCreatedAt: timestamp("report_evidence_created_at").defaultNow(),
 });
 

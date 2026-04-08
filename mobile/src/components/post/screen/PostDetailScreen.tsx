@@ -179,15 +179,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           </Text>
         </View>
 
-        {/* 3. Card Mô tả nội dung */}
-        <Card style={styles.sectionCard} shadow padding="medium">
-          <View style={styles.sectionHeader}>
-            <Info
-              size={18} color="#52c41a" />
-            <Text style={styles.sectionTitle}>Description</Text>
-          </View>
-          <Text style={styles.descriptionText}>{post?.postContent}</Text>
-        </Card>
+
 
         {/* 4. Card Thông số kỹ thuật */}
         {post?.attributes && (
