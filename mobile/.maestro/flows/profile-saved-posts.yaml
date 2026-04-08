@@ -1,0 +1,12 @@
+appId: ${APP_ID}
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Sign in with phone number"
+    file: "login-by-otp.yaml"
+- assertVisible:
+    id: "profile-saved-posts-button"
+- tapOn:
+    id: "profile-saved-posts-button"
+- assertVisible: "Saved Posts"

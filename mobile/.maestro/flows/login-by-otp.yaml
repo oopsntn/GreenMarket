@@ -1,0 +1,18 @@
+appId: ${APP_ID}
+---
+- launchApp
+- assertVisible: "Sign in with phone number"
+- tapOn:
+    id: "login-mobile-input"
+- eraseText
+- inputText: ${MOBILE_NUMBER}
+- tapOn:
+    id: "login-send-otp-button"
+- assertVisible: "Verify OTP"
+- tapOn:
+    id: "login-otp-input"
+- eraseText
+- inputText: ${OTP_CODE}
+- tapOn:
+    id: "login-confirm-button"
+- assertVisible: "Profile"
