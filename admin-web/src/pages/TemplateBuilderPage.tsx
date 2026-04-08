@@ -28,22 +28,31 @@ const typeFilterOptions: Array<TemplateType | "All"> = [
 
 const builderSteps = [
   {
-    title: "Step 1",
+    title: "STEP 1",
     heading: "Choose one base template",
+    headingVi: "Chọn một template gốc",
     description:
       "Pick one Active template from the library. That template becomes the starting message for this builder.",
+    descriptionVi:
+      "Chọn một template đang Active trong thư viện. Template đó sẽ là nội dung gốc để màn builder mô phỏng.",
   },
   {
-    title: "Step 2",
-    heading: "Fill one demo case",
+    title: "STEP 2",
+    heading: "Fill one sample case",
+    headingVi: "Điền một tình huống mẫu",
     description:
       "Edit the channel, tone, shop, post, reason, and note so the screen simulates a realistic case.",
+    descriptionVi:
+      "Điền các trường như kênh gửi, giọng văn, shop, bài post, lý do và ghi chú để mô phỏng một tình huống thực tế.",
   },
   {
-    title: "Step 3",
+    title: "STEP 3",
     heading: "Apply draft and review preview",
+    headingVi: "Áp dụng bản nháp và xem trước",
     description:
       "Click Apply Draft To Preview to refresh the preview card and confirm the final wording before using the template.",
+    descriptionVi:
+      "Bấm Apply Draft To Preview để cập nhật phần xem trước và kiểm tra wording cuối cùng trước khi dùng thật.",
   },
 ];
 
@@ -63,7 +72,8 @@ const buildPreviewMessage = (
   if (!template) return "";
 
   const toneLead: Record<TemplateBuilderTone, string> = {
-    Formal: "Please review the following update from the GreenMarket admin team.",
+    Formal:
+      "Please review the following update from the GreenMarket admin team.",
     Supportive:
       "We wanted to share a quick update and the next recommended action for this case.",
     Direct: "Review the following action immediately.",
@@ -89,7 +99,10 @@ const buildPreviewMessage = (
 };
 
 function TemplateBuilderPage() {
-  const [templates] = useState<Template[]>(templateService.getTemplates());
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+
   const initialPreset = templateBuilderService.getPreset();
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -121,6 +134,30 @@ function TemplateBuilderPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const previewRef = useRef<HTMLDivElement | null>(null);
 
+  const loadTemplates = async (showLoader = false) => {
+    try {
+      if (showLoader) {
+        setIsInitialLoading(true);
+      }
+
+      setPageError("");
+      const data = await templateService.getTemplates();
+      setTemplates(data);
+    } catch (error) {
+      setPageError(
+        error instanceof Error ? error.message : "Failed to load templates.",
+      );
+    } finally {
+      if (showLoader) {
+        setIsInitialLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    void loadTemplates(true);
+  }, []);
+
   const activeTemplates = useMemo(
     () => templates.filter((template) => template.status === "Active"),
     [templates],
@@ -143,7 +180,10 @@ function TemplateBuilderPage() {
     });
   }, [activeTemplates, searchKeyword, selectedTypeFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredTemplates.length / PAGE_SIZE),
+  );
 
   const paginatedTemplates = useMemo(() => {
     const startIndex = (page - 1) * PAGE_SIZE;
@@ -236,7 +276,10 @@ function TemplateBuilderPage() {
 
   const applyWorkspaceToPreview = () => {
     if (!selectedTemplateId) {
-      showToast("Select one base template before applying the preview.", "error");
+      showToast(
+        "Select one base template before applying the preview.",
+        "error",
+      );
       return;
     }
 
@@ -289,7 +332,7 @@ function TemplateBuilderPage() {
   const handleSavePreset = () => {
     templateBuilderService.savePreset(draftPreset);
     showToast(
-      `${selectedTemplate?.name ?? "Current"} demo preset was saved to this browser.`,
+      `${selectedTemplate?.name ?? "Current"} sample setup was saved to this browser.`,
     );
   };
 
@@ -297,12 +340,36 @@ function TemplateBuilderPage() {
     <div className="template-builder-page">
       <PageHeader
         title="Template Builder"
-        description="Choose one template, fill one demo case, and review the exact preview before the template is used in moderation or notification workflows."
+        description="Preview how one existing template will look in a sample moderation or notification case. / Xem trước một template có sẵn sẽ hiển thị như thế nào trong một tình huống mẫu về moderation hoặc notification."
       />
 
       <SectionCard
-        title="Quick Start"
-        description="Follow these three steps from left to right. This screen is only for preview and review, not for sending messages."
+        title="What This Screen Is For / Màn này dùng để làm gì"
+        description="This page is only for preview and review. It does not create a new template and it does not send any real message. / Màn này chỉ dùng để xem trước và rà wording. Nó không tạo template mới và cũng không gửi thông báo thật."
+      >
+        <div className="template-builder-purpose">
+          <div className="template-builder-purpose__item">
+            <strong>Use this screen to preview wording</strong>
+            <span>Dùng màn này để xem trước wording cuối cùng.</span>
+          </div>
+          <div className="template-builder-purpose__item">
+            <strong>Choose one existing template first</strong>
+            <span>Trước hết hãy chọn một template đã có sẵn.</span>
+          </div>
+          <div className="template-builder-purpose__item">
+            <strong>Fill sample data only</strong>
+            <span>Chỉ điền dữ liệu mẫu để mô phỏng tình huống.</span>
+          </div>
+          <div className="template-builder-purpose__item">
+            <strong>Apply draft to refresh preview</strong>
+            <span>Bấm Apply Draft To Preview để cập nhật phần xem trước.</span>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="Quick Start / Cách dùng nhanh"
+        description="Follow the flow from left to right. / Làm theo luồng từ trái sang phải."
       >
         <div className="template-builder-steps">
           {builderSteps.map((step) => (
@@ -312,6 +379,9 @@ function TemplateBuilderPage() {
               </span>
               <strong>{step.heading}</strong>
               <p>{step.description}</p>
+              <p className="template-builder-step-card__vi">
+                {step.headingVi}. {step.descriptionVi}
+              </p>
             </div>
           ))}
         </div>
@@ -325,24 +395,28 @@ function TemplateBuilderPage() {
         filterLabel="Filter library"
         filterSummaryItems={[
           selectedTypeFilter,
-          selectedTemplate?.type ?? "No template selected",
+          selectedTemplate?.name ?? "No template selected",
           audience,
         ]}
       />
 
       {showFilters ? (
         <SectionCard
-          title="Template Library Filters"
-          description="Narrow the library before choosing a base template for the builder."
+          title="Template Library Filters / Bộ lọc thư viện template"
+          description="Narrow the library before choosing one template. / Lọc bớt danh sách trước khi chọn template."
         >
           <div className="template-builder-filters">
             <div className="template-builder-filters__field">
-              <label htmlFor="template-builder-type-filter">Template Type</label>
+              <label htmlFor="template-builder-type-filter">
+                Template Type / Loại template
+              </label>
               <select
                 id="template-builder-type-filter"
                 value={selectedTypeFilter}
                 onChange={(event) =>
-                  setSelectedTypeFilter(event.target.value as TemplateType | "All")
+                  setSelectedTypeFilter(
+                    event.target.value as TemplateType | "All",
+                  )
                 }
               >
                 {typeFilterOptions.map((option) => (
@@ -358,10 +432,20 @@ function TemplateBuilderPage() {
 
       <div className="template-builder-grid">
         <SectionCard
-          title="Step 1 • Template Library"
-          description="Choose one Active template. The selected card becomes the source message for the builder."
+          title="Step 1 • Template Library / Bước 1 • Chọn template"
+          description="Choose one Active template. The selected card becomes the source message for the builder. / Chọn một template đang Active. Template được chọn sẽ là nội dung gốc cho builder."
         >
-          {filteredTemplates.length === 0 ? (
+          {isInitialLoading ? (
+            <EmptyState
+              title="Loading template library"
+              description="Fetching active templates from the admin API."
+            />
+          ) : pageError ? (
+            <EmptyState
+              title="Unable to load template library"
+              description={pageError}
+            />
+          ) : filteredTemplates.length === 0 ? (
             <EmptyState
               title="No templates found"
               description="No templates match the current search or filter settings."
@@ -442,11 +526,24 @@ function TemplateBuilderPage() {
         </SectionCard>
 
         <SectionCard
-          title="Step 2 • Builder Workspace"
-          description="Fill one sample case, then apply the draft so the preview below shows the final message output."
+          title="Step 2 • Builder Workspace / Bước 2 • Khu vực mô phỏng"
+          description="Fill one sample case, then apply the draft so the preview below shows the final message output. / Điền một tình huống mẫu, sau đó áp dụng bản nháp để phần preview bên dưới hiển thị nội dung cuối cùng."
         >
           {selectedTemplate ? (
             <div className="template-builder-form">
+              <div className="template-builder-callout">
+                <strong>
+                  This is sample data only / Đây chỉ là dữ liệu mô phỏng
+                </strong>
+                <p>
+                  The fields below do not create a new template. They only help
+                  you preview how the selected template will look in one example
+                  case. / Các trường bên dưới không tạo template mới. Chúng chỉ
+                  giúp bạn xem trước template đã chọn sẽ hiển thị ra sao trong
+                  một tình huống ví dụ.
+                </p>
+              </div>
+
               <div className="template-builder-sync-panel">
                 <div>
                   <strong>
@@ -456,8 +553,8 @@ function TemplateBuilderPage() {
                   </strong>
                   <p>
                     {isPreviewOutdated
-                      ? "You edited the draft after the last apply. Click Apply Draft To Preview so the preview card matches the latest values."
-                      : "The preview card already reflects the currently selected template and all sample values below."}
+                      ? "You edited the draft after the last apply. Click Apply Draft To Preview so the preview card matches the latest values. / Bạn đã sửa dữ liệu sau lần apply trước. Hãy bấm Apply Draft To Preview để phần preview cập nhật đúng."
+                      : "The preview card already reflects the currently selected template and all sample values below. / Phần preview đã khớp với template đang chọn và toàn bộ dữ liệu mẫu hiện tại."}
                   </p>
                 </div>
                 <span
@@ -471,31 +568,53 @@ function TemplateBuilderPage() {
                 </span>
               </div>
 
-              <div className="template-builder-form__guide">
-                <strong>How this workspace works</strong>
-                <p>
-                  The fields below create one sample situation only. Nothing is
-                  sent from this screen. The preview becomes authoritative only
-                  after you click <strong>Apply Draft To Preview</strong>.
-                </p>
+              <div className="template-builder-field-guide">
+                <h4>Field meanings / Ý nghĩa các trường</h4>
+                <ul>
+                  <li>
+                    <strong>Selected Template</strong>: template gốc đang được
+                    dùng để preview.
+                  </li>
+                  <li>
+                    <strong>Channel</strong>: kênh hiển thị thông điệp, ví dụ
+                    Email hoặc In-App Notification.
+                  </li>
+                  <li>
+                    <strong>Audience</strong>: người nhận giả lập, ví dụ Seller,
+                    Reporter, hoặc Internal Admin.
+                  </li>
+                  <li>
+                    <strong>Tone</strong>: giọng văn của thông điệp.
+                  </li>
+                  <li>
+                    <strong>
+                      Shop Name / Post Title / Reason / Slot / Contact / Admin
+                      Note
+                    </strong>
+                    : dữ liệu mẫu để chèn vào preview.
+                  </li>
+                </ul>
               </div>
 
               <div className="template-builder-form__section">
                 <div className="template-builder-form__section-header">
-                  <strong>Message Setup</strong>
+                  <strong>Message Setup / Cấu hình thông điệp</strong>
                   <span>
-                    Choose where the message appears and what tone it should use.
+                    Choose how the selected template is presented. / Chọn cách
+                    template đã chọn sẽ được hiển thị.
                   </span>
                 </div>
 
                 <div className="template-builder-form__grid">
                   <div className="template-builder-form__field">
-                    <label>Selected Template</label>
+                    <label>Selected Template / Template đã chọn</label>
                     <input type="text" value={selectedTemplate.name} disabled />
                   </div>
 
                   <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-channel">Channel</label>
+                    <label htmlFor="template-builder-channel">
+                      Channel / Kênh hiển thị
+                    </label>
                     <select
                       id="template-builder-channel"
                       value={channel}
@@ -510,12 +629,16 @@ function TemplateBuilderPage() {
                   </div>
 
                   <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-audience">Audience</label>
+                    <label htmlFor="template-builder-audience">
+                      Audience / Đối tượng nhận
+                    </label>
                     <select
                       id="template-builder-audience"
                       value={audience}
                       onChange={(event) =>
-                        setAudience(event.target.value as TemplateBuilderAudience)
+                        setAudience(
+                          event.target.value as TemplateBuilderAudience,
+                        )
                       }
                     >
                       <option>Seller</option>
@@ -525,7 +648,9 @@ function TemplateBuilderPage() {
                   </div>
 
                   <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-tone">Tone</label>
+                    <label htmlFor="template-builder-tone">
+                      Tone / Giọng văn
+                    </label>
                     <select
                       id="template-builder-tone"
                       value={tone}
@@ -543,16 +668,18 @@ function TemplateBuilderPage() {
 
               <div className="template-builder-form__section">
                 <div className="template-builder-form__section-header">
-                  <strong>Sample Case Details</strong>
+                  <strong>Sample Case Details / Chi tiết tình huống mẫu</strong>
                   <span>
-                    Fill the sample shop, post, reason, slot, and contact fields
-                    used to build the preview below.
+                    Fill the sample values used in preview. / Điền dữ liệu mẫu
+                    sẽ được dùng trong preview.
                   </span>
                 </div>
 
                 <div className="template-builder-form__grid">
                   <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-shop-name">Shop Name</label>
+                    <label htmlFor="template-builder-shop-name">
+                      Shop Name / Tên shop mẫu
+                    </label>
                     <input
                       id="template-builder-shop-name"
                       type="text"
@@ -563,7 +690,7 @@ function TemplateBuilderPage() {
 
                   <div className="template-builder-form__field">
                     <label htmlFor="template-builder-post-title">
-                      Post Title
+                      Post Title / Tiêu đề bài post mẫu
                     </label>
                     <input
                       id="template-builder-post-title"
@@ -574,7 +701,9 @@ function TemplateBuilderPage() {
                   </div>
 
                   <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-reason">Reason</label>
+                    <label htmlFor="template-builder-reason">
+                      Reason / Lý do mẫu
+                    </label>
                     <input
                       id="template-builder-reason"
                       type="text"
@@ -584,7 +713,9 @@ function TemplateBuilderPage() {
                   </div>
 
                   <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-slot">Placement Slot</label>
+                    <label htmlFor="template-builder-slot">
+                      Placement Slot / Vị trí hiển thị mẫu
+                    </label>
                     <input
                       id="template-builder-slot"
                       type="text"
@@ -595,7 +726,7 @@ function TemplateBuilderPage() {
 
                   <div className="template-builder-form__field">
                     <label htmlFor="template-builder-contact">
-                      Contact Email
+                      Contact Email / Email liên hệ mẫu
                     </label>
                     <input
                       id="template-builder-contact"
@@ -607,7 +738,9 @@ function TemplateBuilderPage() {
                 </div>
 
                 <div className="template-builder-form__field">
-                  <label htmlFor="template-builder-note">Admin Note</label>
+                  <label htmlFor="template-builder-note">
+                    Admin Note / Ghi chú admin mẫu
+                  </label>
                   <textarea
                     id="template-builder-note"
                     rows={4}
@@ -625,9 +758,8 @@ function TemplateBuilderPage() {
                       : "Preview is already up to date"}
                   </strong>
                   <span>
-                    Apply first to review the exact final wording, then save the
-                    sample setup only if you want to reuse it later in this
-                    browser.
+                    Apply first to review the exact final wording. / Trước hết
+                    hãy bấm Apply để xem wording cuối cùng chính xác.
                   </span>
                 </div>
 
@@ -644,14 +776,14 @@ function TemplateBuilderPage() {
                     className="template-builder-form__action"
                     onClick={handleSavePreset}
                   >
-                    Save Demo Preset
+                    Save This Sample Setup
                   </button>
                   <button
                     type="button"
                     className="template-builder-form__action template-builder-form__action--secondary"
                     onClick={handleRestoreDefault}
                   >
-                    Restore Default Sample
+                    Reset Sample Data
                   </button>
                 </div>
               </div>
@@ -666,8 +798,8 @@ function TemplateBuilderPage() {
       </div>
 
       <SectionCard
-        title="Step 3 • Live Preview"
-        description="This preview always reflects the last applied draft. Review it here before you approve the wording for real admin use."
+        title="Step 3 • Live Preview / Bước 3 • Xem trước"
+        description="This preview always reflects the last applied draft. / Phần này luôn hiển thị đúng dữ liệu của lần Apply gần nhất."
       >
         {appliedTemplate ? (
           <div className="template-builder-preview">
@@ -679,8 +811,8 @@ function TemplateBuilderPage() {
               }`}
             >
               {isPreviewOutdated
-                ? "The draft was changed after the last apply. Click Apply Draft To Preview so this card matches the latest values."
-                : "Preview is in sync with the current draft and ready for review."}
+                ? "The draft was changed after the last apply. Click Apply Draft To Preview so this card matches the latest values. / Bạn đã sửa dữ liệu sau lần apply trước. Hãy bấm Apply Draft To Preview để preview khớp lại."
+                : "Preview is in sync with the current draft and ready for review. / Preview đang khớp với dữ liệu hiện tại và sẵn sàng để review."}
             </div>
 
             <div className="template-builder-preview__summary">
