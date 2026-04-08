@@ -61,44 +61,59 @@ function CategoryAttributeMappingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewCategoryId, setPreviewCategoryId] = useState<string>("");
 
-  useEffect(() => {
-    const loadCatalogs = async () => {
-      try {
+  const loadCatalogs = async (
+    showLoader = false,
+    preferredPreviewCategoryId?: string,
+  ) => {
+    try {
+      if (showLoader) {
         setIsCatalogLoading(true);
-        setPageError("");
+      }
 
-        const [categories, attributes, mappingData] = await Promise.all([
-          categoryService.getCategories(),
-          attributeService.getAttributes(),
-          categoryMappingService.fetchMappings(),
-        ]);
+      setPageError("");
 
-        const nextCategories =
-          categoryMappingService.getAvailableCategories(categories);
-        const nextAttributes =
-          categoryMappingService.getAvailableAttributes(attributes);
+      const [categories, attributes, mappingData] = await Promise.all([
+        categoryService.getCategories(),
+        attributeService.getAttributes(),
+        categoryMappingService.fetchMappings(),
+      ]);
 
-        setAvailableCategories(nextCategories);
-        setAvailableAttributes(nextAttributes);
-        setMappings(mappingData);
-        setPreviewCategoryId(
-          categoryMappingService.getDefaultPreviewCategoryId(
-            mappingData,
-            nextCategories,
-          ),
-        );
-      } catch (error) {
-        setPageError(
-          error instanceof Error
-            ? error.message
-            : "Failed to load category and attribute catalogs.",
-        );
-      } finally {
+      const nextCategories =
+        categoryMappingService.getAvailableCategories(categories);
+      const nextAttributes =
+        categoryMappingService.getAvailableAttributes(attributes);
+
+      setAvailableCategories(nextCategories);
+      setAvailableAttributes(nextAttributes);
+      setMappings(mappingData);
+
+      const nextPreviewCategoryId =
+        preferredPreviewCategoryId &&
+        nextCategories.some(
+          (category) => String(category.id) === preferredPreviewCategoryId,
+        )
+          ? preferredPreviewCategoryId
+          : categoryMappingService.getDefaultPreviewCategoryId(
+              mappingData,
+              nextCategories,
+            );
+
+      setPreviewCategoryId(nextPreviewCategoryId);
+    } catch (error) {
+      setPageError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load category and attribute catalogs.",
+      );
+    } finally {
+      if (showLoader) {
         setIsCatalogLoading(false);
       }
-    };
+    }
+  };
 
-    void loadCatalogs();
+  useEffect(() => {
+    void loadCatalogs(true);
   }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
@@ -200,24 +215,24 @@ function CategoryAttributeMappingPage() {
       setFormError("");
 
       if (modalMode === "add") {
-        const createdMapping = await categoryMappingService.createMapping(
+        await categoryMappingService.createMapping(
           mappings,
           availableCategories,
           availableAttributes,
           formData,
         );
 
-        setMappings((prev) => [...prev, createdMapping]);
-        setPreviewCategoryId(
-          (prev) => prev || String(createdMapping.categoryId),
-        );
+        const nextPreviewCategoryId =
+          previewCategoryId || formData.categoryId || "";
+
+        await loadCatalogs(false, nextPreviewCategoryId);
         showToast("Mapping added successfully.");
         closeModal();
         return;
       }
 
       if (modalMode === "edit" && selectedMapping) {
-        const updatedMapping = await categoryMappingService.updateMapping(
+        await categoryMappingService.updateMapping(
           mappings,
           availableCategories,
           availableAttributes,
@@ -225,18 +240,7 @@ function CategoryAttributeMappingPage() {
           formData,
         );
 
-        setMappings((prev) =>
-          prev.map((mapping) =>
-            mapping.id === selectedMapping.id ? updatedMapping : mapping,
-          ),
-        );
-
-        setPreviewCategoryId((prev) =>
-          prev === String(selectedMapping.categoryId)
-            ? String(updatedMapping.categoryId)
-            : prev,
-        );
-
+        await loadCatalogs(false, formData.categoryId || previewCategoryId);
         showToast("Mapping updated successfully.");
         closeModal();
       }
@@ -253,13 +257,10 @@ function CategoryAttributeMappingPage() {
     const nextStatus = mapping.status === "Active" ? "Disabled" : "Active";
 
     try {
-      const updatedMapping = await categoryMappingService.updateMappingStatus(
-        mapping,
-        nextStatus,
-      );
-
-      setMappings((prev) =>
-        prev.map((item) => (item.id === mapping.id ? updatedMapping : item)),
+      await categoryMappingService.updateMappingStatus(mapping, nextStatus);
+      await loadCatalogs(
+        false,
+        previewCategoryId || String(mapping.categoryId),
       );
     } catch (error) {
       showToast(
@@ -268,34 +269,23 @@ function CategoryAttributeMappingPage() {
           : "Failed to update mapping status.",
         "error",
       );
+      throw error;
     }
   };
 
   const handleRemove = async (mapping: CategoryMapping) => {
     try {
       await categoryMappingService.removeMapping(mapping);
-
-      setMappings((prev) => prev.filter((item) => item.id !== mapping.id));
-
-      setPreviewCategoryId((prev) => {
-        if (prev !== String(mapping.categoryId)) {
-          return prev;
-        }
-
-        const remainingMappings = mappings.filter(
-          (item) => item.id !== mapping.id && item.status === "Active",
-        );
-
-        return categoryMappingService.getDefaultPreviewCategoryId(
-          remainingMappings,
-          availableCategories,
-        );
-      });
+      await loadCatalogs(
+        false,
+        previewCategoryId || String(mapping.categoryId),
+      );
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "Failed to remove mapping.",
         "error",
       );
+      throw error;
     }
   };
 
@@ -312,20 +302,24 @@ function CategoryAttributeMappingPage() {
 
     const mappingLabel = `${targetMapping.categoryName} - ${targetMapping.attributeName}`;
 
-    if (confirmState.action === "remove") {
-      await handleRemove(targetMapping);
-      showToast(`${mappingLabel} has been removed successfully.`, "info");
-    } else {
-      await handleToggleStatus(targetMapping);
-
-      if (confirmState.action === "disable") {
-        showToast(`${mappingLabel} has been disabled successfully.`, "info");
+    try {
+      if (confirmState.action === "remove") {
+        await handleRemove(targetMapping);
+        showToast(`${mappingLabel} has been removed successfully.`, "info");
       } else {
-        showToast(`${mappingLabel} has been enabled successfully.`);
-      }
-    }
+        await handleToggleStatus(targetMapping);
 
-    closeConfirmDialog();
+        if (confirmState.action === "disable") {
+          showToast(`${mappingLabel} has been disabled successfully.`, "info");
+        } else {
+          showToast(`${mappingLabel} has been enabled successfully.`);
+        }
+      }
+
+      closeConfirmDialog();
+    } catch {
+      // toast already shown inside handlers
+    }
   };
 
   const filteredMappings = useMemo(() => {
