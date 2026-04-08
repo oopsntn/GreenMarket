@@ -8,6 +8,7 @@ import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { categoryService } from "../services/categoryService";
+import { categoryMappingService } from "../services/categoryMappingService";
 import type {
   Category,
   CategoryFormState,
@@ -61,22 +62,52 @@ function CategoriesPage() {
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const loadCategories = async () => {
+  const loadCategories = async (showLoader = false) => {
     try {
+      if (showLoader) {
+        setIsInitialLoading(true);
+      }
+
       setPageError("");
-      const data = await categoryService.getCategories();
-      setCategories(data);
+
+      const [categoryData, mappingData] = await Promise.all([
+        categoryService.getCategories(),
+        categoryMappingService.fetchMappings(),
+      ]);
+
+      const activeUniqueAttributeIdsByCategory = new Map<number, Set<number>>();
+
+      mappingData.forEach((mapping) => {
+        if (mapping.status !== "Active") return;
+
+        const existingSet =
+          activeUniqueAttributeIdsByCategory.get(mapping.categoryId) ??
+          new Set<number>();
+
+        existingSet.add(mapping.attributeId);
+        activeUniqueAttributeIdsByCategory.set(mapping.categoryId, existingSet);
+      });
+
+      const hydratedCategories = categoryData.map((category) => ({
+        ...category,
+        attributesCount:
+          activeUniqueAttributeIdsByCategory.get(category.id)?.size ?? 0,
+      }));
+
+      setCategories(hydratedCategories);
     } catch (error) {
       setPageError(
         error instanceof Error ? error.message : "Failed to load categories.",
       );
     } finally {
-      setIsInitialLoading(false);
+      if (showLoader) {
+        setIsInitialLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    void loadCategories();
+    void loadCategories(true);
   }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
@@ -183,8 +214,8 @@ function CategoriesPage() {
       );
 
       if (modalMode === "add") {
-        const newCategory = await categoryService.createCategory(formData);
-        setCategories((prev) => [newCategory, ...prev]);
+        await categoryService.createCategory(formData);
+        await loadCategories();
         showToast("Category added successfully.");
       }
 
@@ -198,17 +229,13 @@ function CategoriesPage() {
           return;
         }
 
-        const updatedCategory = await categoryService.updateCategory(
+        await categoryService.updateCategory(
           selectedCategoryId,
           formData,
           currentCategory.status,
         );
 
-        setCategories((prev) =>
-          prev.map((category) =>
-            category.id === selectedCategoryId ? updatedCategory : category,
-          ),
-        );
+        await loadCategories();
         showToast("Category updated successfully.");
       }
 
@@ -241,17 +268,13 @@ function CategoriesPage() {
     try {
       setIsStatusUpdating(confirmState.categoryId);
 
-      const updatedCategory = await categoryService.updateCategoryStatus(
+      await categoryService.updateCategoryStatus(
         confirmState.categoryId,
         nextStatus,
         targetCategory,
       );
 
-      setCategories((prev) =>
-        prev.map((item) =>
-          item.id === confirmState.categoryId ? updatedCategory : item,
-        ),
-      );
+      await loadCategories();
 
       if (confirmState.action === "disable") {
         showToast(
@@ -444,7 +467,7 @@ function CategoriesPage() {
                       <td>#{category.id}</td>
                       <td>{category.name}</td>
                       <td>{category.slug || "—"}</td>
-                      <td>{category.attributesCount ?? "—"}</td>
+                      <td>{category.attributesCount ?? 0}</td>
                       <td>
                         <StatusBadge
                           label={category.status}
@@ -518,7 +541,9 @@ function CategoriesPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={page === totalPages}
                 >
                   Next

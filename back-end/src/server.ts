@@ -6,11 +6,12 @@ dotenv.config();
 
 import authRoutes from "./routes/auth.route.ts";
 import categoryRoutes from "./routes/admin/category.route.ts";
-import attributeRoutes from "./routes/admin/attribute.route";
+import attributeRoutes from "./routes/admin/attribute.route.ts";
 import categoryMappingRoutes from "./routes/admin/category-mapping.route.ts";
-import postRoutes from "./routes/admin/post.route";
-import shopRoutes from "./routes/admin/shop.route";
-import reportRoutes from "./routes/admin/report.route";
+import templateRoutes from "./routes/admin/template.route.ts";
+import postRoutes from "./routes/admin/post.route.ts";
+import shopRoutes from "./routes/admin/shop.route.ts";
+import reportRoutes from "./routes/admin/report.route.ts";
 import adminUserRoutes from "./routes/admin/user.route.ts";
 import adminRoleRoutes from "./routes/admin/role.route.ts";
 import adminBusinessRoleRoutes from "./routes/admin/business-role.route.ts";
@@ -50,6 +51,7 @@ app.use(
   isAdmin,
   categoryMappingRoutes,
 );
+app.use("/api/admin/templates", verifyToken, isAdmin, templateRoutes);
 app.use("/api/admin/posts", verifyToken, isAdmin, postRoutes);
 app.use("/api/admin/shops", verifyToken, isAdmin, shopRoutes);
 app.use("/api/admin/reports", verifyToken, isAdmin, reportRoutes);
