@@ -110,7 +110,7 @@ CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     user_mobile VARCHAR(15) NOT NULL UNIQUE,
     user_display_name VARCHAR(80),
-    user_avatar_url VARCHAR(255),
+    user_avatar_url TEXT,
     user_email VARCHAR(255),
     user_location VARCHAR(255),
     user_bio TEXT,
@@ -129,7 +129,7 @@ CREATE TABLE admins (
     admin_username VARCHAR(50) UNIQUE,
     admin_password_hash VARCHAR(255) NOT NULL,
     admin_full_name VARCHAR(100),
-    admin_avatar_url VARCHAR(255),
+    admin_avatar_url TEXT,
     admin_status VARCHAR(20),
     admin_last_login_at TIMESTAMP,
     admin_created_at TIMESTAMP DEFAULT now(),
@@ -222,8 +222,8 @@ CREATE TABLE shops (
     shop_youtube VARCHAR(255),
     shop_location VARCHAR(255),
     shop_description TEXT,
-    shop_logo_url VARCHAR(255),
-    shop_cover_url VARCHAR(255),
+    shop_logo_url TEXT,
+    shop_cover_url TEXT,
     shop_status VARCHAR(20) DEFAULT 'pending',
     shop_lat DECIMAL(10, 8),
     shop_lng DECIMAL(11, 8),
@@ -279,7 +279,7 @@ CREATE TABLE posts (
 CREATE TABLE post_images (
     image_id SERIAL PRIMARY KEY,
     post_id INTEGER REFERENCES posts(post_id) ON DELETE CASCADE,
-    image_url VARCHAR(500) NOT NULL,
+    image_url TEXT NOT NULL,
     image_sort_order INTEGER DEFAULT 0,
     image_created_at TIMESTAMP DEFAULT now()
 );
@@ -288,7 +288,7 @@ CREATE TABLE post_images (
 CREATE TABLE post_videos (
     post_video_id SERIAL PRIMARY KEY,
     post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
-    video_url VARCHAR(255) NOT NULL,
+    video_url TEXT NOT NULL,
     video_position INTEGER DEFAULT 0,
     video_created_at TIMESTAMP DEFAULT now()
 );
@@ -345,7 +345,7 @@ CREATE TABLE reports (
 CREATE TABLE report_evidence (
     report_evidence_id SERIAL PRIMARY KEY,
     report_evidence_report_id INTEGER NOT NULL REFERENCES reports(report_id) ON DELETE CASCADE,
-    report_evidence_url VARCHAR(255),
+    report_evidence_url TEXT,
     report_evidence_created_at TIMESTAMP DEFAULT now()
 );
 
@@ -910,82 +910,67 @@ INSERT INTO category_attributes (
 -- ============================================================
 -- POSTS (15 bài đăng: 9 bonsai + 6 dụng cụ)
 -- ============================================================
-INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_title, post_slug, post_content, post_price, post_location, post_status, post_contact_phone, post_view_count, post_contact_count, post_published, post_submitted_at, post_published_at) VALUES
+INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_title, post_slug, post_price, post_location, post_status, post_contact_phone, post_view_count, post_contact_count, post_published, post_submitted_at, post_published_at) VALUES
 -- === CÂY CẢNH BONSAI ===
 (1,  1, 1, 11, 'Sanh Nam Điền Mini Dáng Văn Nhân',
     'sanh-nam-dien-mini-dang-van-nhan',
-    'Cây Sanh Nam Điền già, u nần, cốt cách thanh thoát. Lá đã thu nhỏ hoàn thiện. Phôi gốc 15 năm, tạo tác 5 năm. Phù hợp để bàn làm việc hoặc bàn trà.',
     2500000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 234, 12, true, now() - interval '30 days', now() - interval '29 days'),
 
 (2,  3, 3, 12, 'Tùng La Hán Dáng Trực Cổ Thụ',
     'tung-la-han-dang-truc-co-thu',
-    'Siêu phẩm Tùng La Hán cốt cách Nam Định, tay cành hoàn thiện 4 tầng tán. Gốc hoành 85cm, thân xù xì cổ kính. Đã đạt giải nhì triển lãm SVC 2025.',
     150000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 1520, 45, true, now() - interval '25 days', now() - interval '24 days'),
 
 (3,  4, 3, 12, 'Linh Sam Sông Hinh Lũa Thép',
     'linh-sam-song-hinh-lua-thep',
-    'Cây Linh Sam lũa tự nhiên cực đẹp, hoa tím thơm quanh năm. Gốc từ Sông Hinh, Phú Yên. Lũa trắng, thân cứng như thép. Nuôi chậu 8 năm, tán đã ổn định.',
     8500000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 876, 28, true, now() - interval '20 days', now() - interval '19 days'),
 
 (4,  3, 3, 13, 'Sanh Quê Dáng Làng Đại Thụ',
     'sanh-que-dang-lang-dai-thu',
-    'Cây sanh quê bóng mát rộng 3m, thích hợp sân vườn biệt thự hoặc quán cà phê. Phôi 30 năm, dáng cây làng quê Bắc Bộ. Giao cây tận nơi bằng xe tải.',
     45000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 432, 15, true, now() - interval '18 days', now() - interval '17 days'),
 
 (5,  4, 3, 11, 'Mai Chiếu Thủy Nu Gò Công Mini',
     'mai-chieu-thuy-nu-go-cong-mini',
-    'Cây MCT mini bỏ túi, nu mặt quỷ cực già, gốc từ Gò Công, Tiền Giang. Hoa trắng thơm ngát. Kích thước 15cm, phù hợp bàn làm việc.',
     3500000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 567, 19, true, now() - interval '15 days', now() - interval '14 days'),
 
 (6,  2, NULL, 12, 'Thông Đen Nhật Bản Thành Thẩm',
     'thong-den-nhat-ban-thanh-tham',
-    'Cây thông đen (Pinus thunbergii) nuôi 10 năm từ hạt nhập khẩu Nhật. Dáng trực quân tử, vỏ nứt đẹp. Lá kim dày, khỏe. Chậu Tokoname men nâu đi kèm.',
     25000000, 'Hoàng Mai, Hà Nội', 'approved', '0982703398', 345, 8, true, now() - interval '12 days', now() - interval '11 days'),
 
 (7,  1, 1, 14, 'Si Bonsai Phong Thủy Tài Lộc',
     'si-bonsai-phong-thuy-tai-loc',
-    'Cây Si bonsai dáng trực, rễ khí buông dày tượng trưng mưa thuận gió hòa, tài lộc. Phù hợp đặt phòng khách, quầy thu ngân. Kèm chậu sứ Bát Tràng.',
     4200000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 189, 7, true, now() - interval '10 days', now() - interval '9 days'),
 
 (8,  4, 3, 15, 'Mai Vàng Bonsai Nghệ Thuật',
     'mai-vang-bonsai-nghe-thuat',
-    'Mai vàng 5 cánh Bến Tre, phôi 12 năm, dáng hoành ấn tượng. Nở hoa vàng rực mỗi dịp Tết. Đã xử lý cho ra hoa đúng mùa. Giao hàng cẩn thận, bảo hành sống.',
     12000000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 723, 31, true, now() - interval '8 days', now() - interval '7 days'),
 
 (9,  3, 3, 11, 'Tùng Bách Tán Lùn Nhật Mini',
     'tung-bach-tan-lun-nhat-mini',
-    'Tùng Bách Tán lùn (Pinus parviflora) nhập giống Nhật. Lá ngắn xanh bạc, dáng xiên gió thổi. Chậu men xanh ngọc Tokoname. Kích thước 20cm, rất dễ chăm.',
     6800000, 'Nam Trực, Nam Định', 'approved', '0123456789', 298, 11, true, now() - interval '5 days', now() - interval '4 days'),
 
 -- === DỤNG CỤ LÀM VƯỜN ===
 (10, 1, 1, 21, 'Kìm Cạp Xéo Thép Đen Nhật Bản Kaneshin',
     'kim-cap-xeo-thep-den-kaneshin',
-    'Kìm cạp xéo (concave cutter) Kaneshin No.3, thép carbon rèn thủ công. Cắt sát gốc, vết cắt liền sẹo nhanh. Kèm bao da bảo quản. Hàng auth có tem.',
     1200000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 156, 22, true, now() - interval '28 days', now() - interval '27 days'),
 
 (11, 6, 4, 21, 'Bộ Kéo Tỉa Bonsai Cao Cấp 5 Món',
     'bo-keo-tia-bonsai-cao-cap-5-mon',
-    'Bộ 5 dụng cụ bonsai chuyên nghiệp: kéo lá, kéo cành, kìm cạp lõm, kìm bấm dây, cào rễ. Thép không gỉ, tay cầm cao su chống trượt. Hộp gỗ sang trọng.',
     2850000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 412, 35, true, now() - interval '22 days', now() - interval '21 days'),
 
 (12, 6, 4, 22, 'Đất Akadama Nhật Bản Túi 14L',
     'dat-akadama-nhat-ban-14l',
-    'Đất Akadama hạt trung (medium grain) nhập khẩu trực tiếp từ Ibaraki, Nhật Bản. Thoát nước tuyệt vời, giữ ẩm vừa phải. Chuyên dùng cho bonsai cao cấp. Còn hàng 50+ túi.',
     320000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 534, 48, true, now() - interval '26 days', now() - interval '25 days'),
 
 (13, 6, 4, 23, 'Chậu Tokoname Men Xanh Ngọc Nhật Bản',
     'chau-tokoname-men-xanh-ngoc',
-    'Chậu bonsai Tokoname chính hãng, men xanh ngọc bích. Kích thước 30x22x8cm, hình chữ nhật bo góc. Lỗ thoát nước đáy. Phù hợp bonsai tầm trung dáng hoành.',
     850000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 267, 16, true, now() - interval '16 days', now() - interval '15 days'),
 
 (14, 6, 4, 24, 'Bộ Dây Nhôm Uốn Cành 6 Size',
     'bo-day-nhom-uon-canh-6-size',
-    'Bộ 6 cuộn dây nhôm anodized chuyên uốn bonsai: 1mm, 1.5mm, 2mm, 2.5mm, 3mm, 4mm. Mỗi cuộn 100g. Màu nâu đồng, mềm dẻo, không gỉ, không gây thương cành.',
     280000, 'Đông Anh, Hà Nội', 'approved', '0935112233', 189, 27, true, now() - interval '14 days', now() - interval '13 days'),
 
 (15, 1, 1, 25, 'Bình Phun Sương Đồng Thau Kiểu Nhật',
     'binh-phun-suong-dong-thau-kieu-nhat',
-    'Bình phun sương đồng thau 300ml, thiết kế kiểu Nhật truyền thống. Phun sương mịn đều, không đọng giọt. Dùng tưới lá bonsai, rêu, cỏ phủ chậu. Tặng kèm đầu phun thay thế.',
     450000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days');
 
 -- Post Attribute Values

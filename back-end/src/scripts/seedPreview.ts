@@ -39,7 +39,6 @@ async function seedMarketplace() {
             categoryId: cat1.categoryId,
             postTitle: title1,
             postSlug: `${slugify(title1)}`,
-            postContent: "Cây tùng la hán dáng văn nhân cực kỳ thanh thoát. Hàng kỹ, đã hoàn thiện chi dăm. Thích hợp trưng bày phòng khách hoặc sân vườn nhỏ.",
             postPrice: "15000000",
             postLocation: "Nam Định",
             postStatus: "approved"
@@ -52,7 +51,6 @@ async function seedMarketplace() {
             categoryId: cat2.categoryId,
             postTitle: title2,
             postSlug: `${slugify(title2)}`,
-            postContent: "Sanh Nam Điền cổ thụ, gốc bệ vững chãi như bàn thạch. Tay cành phân bố hài hòa, mang đậm hơi thở thời gian.",
             postPrice: "45000000",
             postLocation: "Nam Định",
             postStatus: "approved"
