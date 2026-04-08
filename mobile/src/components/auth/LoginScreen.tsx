@@ -8,17 +8,23 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { API_BASE_URL } from "../config/api";
-import { useAuth } from "../context/AuthContext";
+import { API_BASE_URL } from "../../config/api";
+import { useAuth } from "../../context/AuthContext";
 
-export default function LoginScreen({ onLoginSuccess }) {
-  const [mobile, setMobile] = useState("");
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState("mobile");
-  const [loading, setLoading] = useState(false);
+interface LoginScreenProps {
+  onLoginSuccess: (token?: string) => void;
+}
+
+type LoginStep = "mobile" | "otp";
+
+const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
+  const [mobile, setMobile] = useState<string>("");
+  const [otp, setOtp] = useState<string>("");
+  const [step, setStep] = useState<LoginStep>("mobile");
+  const [loading, setLoading] = useState<boolean>(false);
   const { login } = useAuth();
 
-  const handleRequestOtp = async () => {
+  const handleRequestOtp = async (): Promise<void> => {
     if (!mobile.trim()) {
       Alert.alert("Error", "Please enter your phone number");
       return;
@@ -42,14 +48,15 @@ export default function LoginScreen({ onLoginSuccess }) {
       Alert.alert("Success", "The OTP code has been sent to your phone number.");
       setStep("otp");
     } catch (error) {
-      console.error("OTP request error:", error?.message || error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("OTP request error:", errorMessage);
       Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtp = async (): Promise<void> => {
     if (otp.length !== 6) {
       Alert.alert("Error", "Please enter the full 6-digit OTP");
       return;
@@ -73,7 +80,8 @@ export default function LoginScreen({ onLoginSuccess }) {
       login(data.token, data.user);
       onLoginSuccess(data.token);
     } catch (error) {
-      console.error("Verify OTP error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Verify OTP error:", errorMessage);
       Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -115,7 +123,7 @@ export default function LoginScreen({ onLoginSuccess }) {
 
             <TextInput
               style={styles.input}
-              placeholder="������"
+              placeholder="000000"
               keyboardType="number-pad"
               maxLength={6}
               value={otp}
@@ -148,7 +156,7 @@ export default function LoginScreen({ onLoginSuccess }) {
       </View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   card: {
@@ -206,3 +214,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+export default LoginScreen;
