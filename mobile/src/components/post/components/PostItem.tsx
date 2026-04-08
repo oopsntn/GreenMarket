@@ -15,6 +15,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
     const navigation = useNavigation<any>()
     const handlePress = () => {
         navigation.navigate('PostDetail', { slug: item.postSlug })
+        console.log('item.postSlug: ', item.postSlug)
     }
     return (
         <Card onClick={handlePress} style={styles.postCard}>

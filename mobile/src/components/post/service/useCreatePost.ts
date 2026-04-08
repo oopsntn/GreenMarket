@@ -133,6 +133,26 @@ const useCreatePost = () => {
             return false
         }
 
+        if (formData.postTitle.length > 200) {
+            CustomAlert('Value too long', 'The post title cannot exceed 200 characters.')
+            return false
+        }
+
+        if (formData.postContent.length > 2000) {
+            CustomAlert('Value too long', 'The post description cannot exceed 2000 characters.')
+            return false
+        }
+
+        if (formData.postLocation && formData.postLocation.length > 255) {
+            CustomAlert('Value too long', 'The location cannot exceed 255 characters.')
+            return false
+        }
+
+        if (formData.postContactPhone && (formData.postContactPhone.length > 20 || !/^\+?[0-9\s-]+$/.test(formData.postContactPhone))) {
+            CustomAlert('Invalid phone', 'Please enter a valid contact phone number.')
+            return false
+        }
+
         if (media.length === 0) {
             CustomAlert('Missing media', 'Please select at least one image or video.')
             return false
@@ -189,9 +209,9 @@ const useCreatePost = () => {
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
                 postContent: formData.postContent.trim() || undefined,
-                postPrice: formData.postPrice.trim(),
+                postPrice: formData.postPrice ? Number(formData.postPrice.trim()) : undefined,
                 postLocation: formData.postLocation.trim() || undefined,
-                postContactPhone: formData.postContactPhone.trim() || undefined,
+                postContactPhone: formData.postContactPhone.replace(/\s+/g, '') || undefined,
                 images,
                 videos,
                 attributes: attributePayload,

@@ -167,7 +167,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 setSubmitted(true)
             }
         } catch (error: any) {
-            const errorMsg = error.response?.data?.error || 'Unknown error'
+            const errorMsg = `Register shop error: ${error.response?.data?.error}` || 'Unknown error'
 
             if (error.response?.data?.error === 'User already has a shop registered') {
                 await refreshShop()

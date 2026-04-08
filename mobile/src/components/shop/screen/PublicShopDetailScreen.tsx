@@ -37,9 +37,6 @@ const PublicShopDetailScreen = ({ route }: any) => {
         )
     }
 
-    const navigatePostDetail = () => {
-        navigation.navigate('PostDetail', { slug: shop.posts[0].postSlug })
-    }
 
     return (
         <MobileLayout title="Shop Details" backButton={() => navigation.goBack()}>
@@ -57,7 +54,7 @@ const PublicShopDetailScreen = ({ route }: any) => {
                     ListHeaderComponent={<ShopHeader shop={shop} isOwner={false} />}
                     contentContainerStyle={{ paddingBottom: 100 }}
                     renderItem={({ item }) => (
-                        <Card onClick={navigatePostDetail} style={styles.postCard}>
+                        <Card onClick={() => navigation.navigate('PostDetail', { slug: item.postSlug })} style={styles.postCard}>
                             <Text style={styles.postTitle}>{item.postTitle}</Text>
                             <Text style={styles.postPrice}>
                                 {new Intl.NumberFormat('en-US').format(Number(item.postPrice || 0))} VND
