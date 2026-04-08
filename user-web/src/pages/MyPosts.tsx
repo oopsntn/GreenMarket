@@ -21,7 +21,6 @@ const MyPosts: React.FC = () => {
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editContactPhone, setEditContactPhone] = useState("");
-  const [editContent, setEditContent] = useState("");
   const [categories, setCategories] = useState<any[]>([]);
   const [editCategoryAttributes, setEditCategoryAttributes] = useState<any[]>([]);
   const [editAttributes, setEditAttributes] = useState<Record<number, string>>({});
@@ -154,7 +153,6 @@ const MyPosts: React.FC = () => {
     setEditCategoryId(post.categoryId ? String(post.categoryId) : "");
     setEditLocation(post.postLocation || "");
     setEditContactPhone(post.postContactPhone || "");
-    setEditContent(post.postContent || "");
     setEditAttributes(getPrefilledAttributes(post));
     await loadCategoryAttributes(post.categoryId ? String(post.categoryId) : "");
   };
@@ -177,7 +175,6 @@ const MyPosts: React.FC = () => {
         postPrice: editPriceInput.rawValue,
         postLocation: editLocation,
         postContactPhone: editContactPhone,
-        postContent: editContent,
         attributes: formattedAttributes,
       });
       if (shop?.shopStatus === 'active') {
@@ -615,16 +612,18 @@ const MyPosts: React.FC = () => {
                     inputMode="numeric"
                   />
                 </div>
-                <div>
-                  <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Khu vực</label>
-                  <input
-                    type="text"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
-                    value={editLocation}
-                    onChange={(e) => setEditLocation(e.target.value)}
-                    placeholder="Ví dụ: Thạch Thất, Hà Nội"
-                  />
-                </div>
+                {!shop && (
+                  <div>
+                    <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Khu vực</label>
+                    <input
+                      type="text"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      placeholder="Ví dụ: Thạch Thất, Hà Nội"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -638,16 +637,7 @@ const MyPosts: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Mô tả chi tiết</label>
-                <textarea
-                  rows={5}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-medium focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  placeholder="Mô tả chi tiết về cây, kích thước, tuổi, cách chăm sóc..."
-                />
-              </div>
+
 
               {editCategoryAttributes.length > 0 && (
                 <div className="space-y-4">

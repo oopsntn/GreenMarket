@@ -13,7 +13,7 @@ export const users = pgTable("users", {
   userId: serial("user_id").primaryKey(),
   userMobile: varchar("user_mobile", { length: 15 }).unique().notNull(),
   userDisplayName: varchar("user_display_name", { length: 80 }),
-  userAvatarUrl: varchar("user_avatar_url", { length: 255 }),
+  userAvatarUrl: text("user_avatar_url"),
   userEmail: varchar("user_email", { length: 255 }),
   userLocation: varchar("user_location", { length: 255 }),
   userBio: text("user_bio"),

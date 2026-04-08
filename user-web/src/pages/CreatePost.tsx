@@ -2,10 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Image as ImageIcon, MapPin, Tag, CircleDollarSign, CheckCircle, ArrowRight, X, UploadCloud } from 'lucide-react';
 import { getCategories, getCategoryAttributes, createPost, uploadMedia } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
 const CreatePost: React.FC = () => {
     const navigate = useNavigate();
+
+    const { shop } = useAuth();
+    const isGardenOwner = shop?.shopStatus === 'active';
 
     const [categories, setCategories] = useState<any[]>([]);
     const [attributes, setAttributes] = useState<any[]>([]);
@@ -20,10 +24,15 @@ const CreatePost: React.FC = () => {
     const [formData, setFormData] = useState({
         categoryId: '',
         postTitle: '',
-        postContent: '',
         postLocation: '',
         attributes: {} as Record<number, string>
     });
+
+    useEffect(() => {
+        if (isGardenOwner && shop?.shopLocation) {
+            setFormData(prev => ({ ...prev, postLocation: shop.shopLocation as string }));
+        }
+    }, [isGardenOwner, shop]);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -239,18 +248,20 @@ const CreatePost: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
-                            <MapPin className="w-4 h-4 text-emerald-600" /> Khu vực giao dịch
-                        </label>
-                        <input
-                            type="text"
-                            placeholder="Ví dụ: Thạch Thất, Hà Nội"
-                            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
-                            value={formData.postLocation}
-                            onChange={(e) => setFormData({ ...formData, postLocation: e.target.value })}
-                        />
-                    </div>
+                    {!isGardenOwner && (
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
+                                <MapPin className="w-4 h-4 text-emerald-600" /> Khu vực giao dịch
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Ví dụ: Thạch Thất, Hà Nội"
+                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
+                                value={formData.postLocation}
+                                onChange={(e) => setFormData({ ...formData, postLocation: e.target.value })}
+                            />
+                        </div>
+                    )}
                 </section>
 
                 {/* Dynamic Attributes */}
@@ -291,17 +302,7 @@ const CreatePost: React.FC = () => {
                     </section>
                 )}
 
-                {/* Content */}
-                <section className="bg-white p-8 rounded-3xl space-y-6 border border-slate-200 shadow-xl">
-                    <h2 className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900 uppercase tracking-tight">Mô tả chi tiết</h2>
-                    <textarea
-                        rows={6}
-                        placeholder="Mô tả chi tiết về cây: tuổi thọ, kích thước, nguồn gốc, chế độ chăm sóc..."
-                        className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium leading-relaxed resize-none"
-                        value={formData.postContent}
-                        onChange={(e) => setFormData({ ...formData, postContent: e.target.value })}
-                    />
-                </section>
+
 
                 {/* Images & Videos */}
                 <section className="bg-white p-8 rounded-3xl space-y-6 border border-slate-200 shadow-xl">

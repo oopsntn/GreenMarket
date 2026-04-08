@@ -14,7 +14,6 @@ export interface BrowsePostsParams {
 export interface PostPayload {
     categoryId: number;
     postTitle: string;
-    postContent?: string;
     postPrice?: string | number;
     postLocation?: string;
     postContactPhone?: string;

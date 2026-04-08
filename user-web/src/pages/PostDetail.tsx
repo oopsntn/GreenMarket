@@ -274,17 +274,7 @@ const PostDetail: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Description Section */}
-                        <div className="space-y-8 pt-6">
-                            <div className="space-y-6">
-                                <h2 className="text-2xl font-black flex items-center gap-4 text-slate-900 uppercase tracking-tight leading-none group">
-                                    <div className="w-1.5 h-8 bg-emerald-500 rounded-full group-hover:scale-y-125 transition-transform"></div>
-                                    Chi tiết cây
-                                </h2>
-                                <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm text-slate-600 leading-relaxed text-lg whitespace-pre-wrap font-medium">
-                                    {post.postContent || 'Nhà vườn chưa cập nhật đầy đủ mô tả chi tiết sản phẩm.'}
-                                </div>
-                            </div>
+
 
                             {/* Specifications/Attributes */}
                             {post.attributes && post.attributes.length > 0 && (
@@ -304,7 +294,6 @@ const PostDetail: React.FC = () => {
                                     <p className="text-[10px] text-slate-400 italic font-medium">* Tất cả kích thước mang tính chất tương đối và được chủ vườn đo đạc trực tiếp.</p>
                                 </div>
                             )}
-                        </div>
                     </div>
 
                     {/* Right Column: Information Card */}
