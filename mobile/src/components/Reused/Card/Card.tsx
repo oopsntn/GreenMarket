@@ -1,5 +1,5 @@
 import React from 'react'
-import { Platform, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { Platform, StyleSheet, TouchableOpacity, View, ViewStyle, StyleProp } from 'react-native';
 
 interface CardProps {
     children: React.ReactNode;
@@ -7,7 +7,7 @@ interface CardProps {
     hover?: boolean;
     padding?: 'small' | 'medium' | 'large';
     shadow?: boolean;
-    style?: ViewStyle;
+    style?: StyleProp<ViewStyle>;
 }
 const Card: React.FC<CardProps> = ({
     children,

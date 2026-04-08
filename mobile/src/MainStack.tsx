@@ -11,6 +11,7 @@ import CreateReportScreen from './components/report/screen/CreateReportService'
 import BrowseShopsScreen from './components/shop/screen/BrowseShopsScreen'
 import PublicShopDetailScreen from './components/shop/screen/PublicShopDetailScreen'
 import PostDetailScreen from './components/post/screen/PostDetailScreen'
+import PromotePostScreen from './components/payment/screen/PromotePostScreen'
 
 const Stack = createNativeStackNavigator()
 
@@ -32,6 +33,7 @@ const MainStack = () => {
             <Stack.Screen name="CreatePost" component={CreatePostLayout} />
             <Stack.Screen name="PostDetail" component={PostDetailScreen} />
             <Stack.Screen name="CreateReport" component={CreateReportScreen} />
+            <Stack.Screen name="PromotePost" component={PromotePostScreen} />
 
         </Stack.Navigator>
     )
