@@ -33,6 +33,7 @@ export const deleteUserPost = (postId: number) => api.delete(`/posts/${postId}`)
 // Shop APIs
 export const getAllShops = (params?: any) => api.get('/shops/browse', { params });
 export const getPublicShop = (id: number | string) => api.get(`/shops/${id}`);
+export const recordShopContactClick = (shopId: number | string) => api.post(`/shops/${shopId}/contact-click`);
 export const registerShop = (data: {
   shopName: string;
   shopPhone: string;
@@ -46,6 +47,61 @@ export const registerShop = (data: {
 }) => api.post('/shops/register', data);
 
 export const getMyShop = () => api.get('/shops/my-shop');
+
+export interface OwnerDashboardSummary {
+  totalPosts: number;
+  approvedPosts: number;
+  pendingPosts: number;
+  rejectedPosts: number;
+  totalViews: number;
+  totalContacts: number;
+  totalShopViews: number;
+  totalShopContactClicks: number;
+  contactRate: number;
+  postContactRate?: number;
+  totalPromotionSpend: number;
+  totalBoostPackageSpend?: number;
+  successfulPayments: number;
+  successfulBoostPurchases?: number;
+  activePromotions: number;
+  boostedPostsActive?: number;
+}
+
+export interface OwnerDashboardTopPost {
+  postId: number;
+  postTitle: string;
+  postSlug: string;
+  postStatus: string;
+  postViewCount: number;
+  postContactCount: number;
+  isPromoted: boolean;
+  postUpdatedAt: string | null;
+}
+
+export interface OwnerDashboardRecentPayment {
+  paymentTxnId: number;
+  paymentTxnProviderTxnId: string | null;
+  paymentTxnStatus: string | null;
+  paymentTxnAmount: number;
+  paymentTxnCreatedAt: string | null;
+  postId: number | null;
+  postTitle: string | null;
+  packageId: number | null;
+  packageTitle: string | null;
+}
+
+export interface OwnerDashboardResponse {
+  shop: {
+    shopId: number;
+    shopName: string | null;
+    shopStatus: string | null;
+  };
+  summary: OwnerDashboardSummary;
+  topPosts: OwnerDashboardTopPost[];
+  recentPayments: OwnerDashboardRecentPayment[];
+}
+
+export const getOwnerDashboard = () => api.get<OwnerDashboardResponse>('/shops/dashboard');
 
 export const updateShop = (shopId: number, data: {
   shopName?: string;

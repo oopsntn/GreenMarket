@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getPublicShop } from '../services/api';
+import { getPublicShop, recordShopContactClick } from '../services/api';
 import { ShoppingBag, MapPin, Phone, Info, Loader2, MessageCircle, Map as MapIcon, ExternalLink, ShieldCheck, ZoomIn } from 'lucide-react';
 import ImageModal from '../components/ImageModal';
 
@@ -45,8 +45,8 @@ const ShopDetail: React.FC = () => {
   if (!shop) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-2xl font-bold text-slate-500">Không tìm thấy nhà vườn này.</h2>
-        <Link to="/" className="mt-4 inline-block text-emerald-500 hover:underline">Quay lại trang chủ</Link>
+        <h2 className="text-2xl font-bold text-slate-500">Khong tim thay nha vuon nay.</h2>
+        <Link to="/" className="mt-4 inline-block text-emerald-500 hover:underline">Quay lai trang chu</Link>
       </div>
     );
   }
@@ -56,6 +56,16 @@ const ShopDetail: React.FC = () => {
     : (shop.shopCoverUrl ? [shop.shopCoverUrl] : []);
 
   const heroImage = shopGalleryImages[0] || null;
+  const shopPrimaryPhone = typeof shop.shopPhone === 'string'
+    ? shop.shopPhone.split('|').map((phone: string) => phone.trim()).filter(Boolean)[0] || ''
+    : '';
+
+  const handleShopContactClick = () => {
+    if (!shop?.shopId) return;
+    void recordShopContactClick(shop.shopId).catch((error) => {
+      console.error('Failed to record shop contact click:', error);
+    });
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
@@ -100,18 +110,21 @@ const ShopDetail: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Điện thoại</p>
-                      <p className="text-sm font-bold text-slate-700">{shop.shopPhone || 'Chưa cập nhật'}</p>
+                      <p className="text-sm font-bold text-slate-700">{shopPrimaryPhone || 'Chưa cập nhật'}</p>
                     </div>
                   </div>
-                  {shop.shopPhone && (
-                    <a
-                      href={`https://zalo.me/${shop.shopPhone}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0068FF]/5 border border-[#0068FF]/10 text-[#0068FF] hover:bg-[#0068FF] hover:text-white transition-all text-xs font-bold uppercase tracking-wider"
-                    >
-                      <MessageCircle className="w-4 h-4" /> Zalo
-                    </a>
+                  {shopPrimaryPhone && (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`https://zalo.me/${shopPrimaryPhone}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={handleShopContactClick}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0068FF]/5 border border-[#0068FF]/10 text-[#0068FF] hover:bg-[#0068FF] hover:text-white transition-all text-xs font-bold uppercase tracking-wider"
+                      >
+                        <MessageCircle className="w-4 h-4" /> Zalo
+                      </a>
+                    </div>
                   )}
                 </div>
               </div>
@@ -169,7 +182,7 @@ const ShopDetail: React.FC = () => {
                     style={{ border: 0 }}
                     src={shop.shopLat && shop.shopLng
                       ? `https://maps.google.com/maps?q=${shop.shopLat},${shop.shopLng}&t=&z=14&ie=UTF8&iwloc=&output=embed`
-                      : `https://maps.google.com/maps?q=${encodeURIComponent(shop.shopLocation || 'Ha Noi')}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
+                      : `https://maps.google.com/maps?q=${encodeURIComponent(shop.shopLocation || 'Hà Nội')}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
                     allowFullScreen
                   />
                 </div>
@@ -178,7 +191,7 @@ const ShopDetail: React.FC = () => {
                   <a
                     href={shop.shopLat && shop.shopLng
                       ? `https://www.google.com/maps/search/?api=1&query=${shop.shopLat},${shop.shopLng}`
-                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.shopLocation || 'Ha Noi')}`}
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shop.shopLocation || 'Hà Nội')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full py-3.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold flex items-center justify-center gap-3 transition-all group shadow-lg shadow-emerald-200/50"
@@ -186,7 +199,7 @@ const ShopDetail: React.FC = () => {
                     <ExternalLink className="w-4 h-4 group-hover:rotate-12 transition-transform" />
                     Nhận chỉ đường
                   </a>
-                  
+
                   <div className="flex justify-center">
                     <div className="flex items-center gap-2 text-[10px] text-slate-400 italic px-3 py-1 rounded-full bg-white border border-slate-100">
                       <ShieldCheck className="w-3 h-3 text-emerald-600/50" />
@@ -233,13 +246,13 @@ const ShopDetail: React.FC = () => {
                   </div>
                   <div className="p-5">
                     <div className="mb-2">
-                       <h3 className="text-sm font-bold group-hover:text-emerald-600 transition-colors line-clamp-2 uppercase tracking-tight leading-tight text-slate-800">
+                      <h3 className="text-sm font-bold group-hover:text-emerald-600 transition-colors line-clamp-2 uppercase tracking-tight leading-tight text-slate-800">
                         {post.postTitle}
                       </h3>
                     </div>
                     <div className="flex justify-between items-center">
                       <p className="text-emerald-600 font-black text-xl">
-                        {Number(post.postPrice).toLocaleString()} <span className="text-[10px] font-medium text-slate-400 ml-0.5">đ</span>
+                        {Number(post.postPrice).toLocaleString()} <span className="text-[10px] font-medium text-slate-400 ml-0.5">d</span>
                       </p>
                       <div className="text-[10px] text-slate-500 font-bold px-2 py-1 bg-slate-50 rounded-lg border border-slate-100">
                         {post.postLocation || 'VN'}
@@ -269,3 +282,4 @@ const ShopDetail: React.FC = () => {
 };
 
 export default ShopDetail;
+
