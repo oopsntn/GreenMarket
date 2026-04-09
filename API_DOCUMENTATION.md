@@ -236,8 +236,8 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | Method | Endpoint | Description | Main request fields |
 |---|---|---|---|
 | GET | `/api/admin/dashboard` | Get dashboard overview cards and summary | optional query `fromDate`, `toDate` |
-| GET | `/api/admin/analytics` | Get analytics KPI cards and top placement performance | optional query `fromDate`, `toDate` |
-| GET | `/api/admin/revenue` | Get revenue KPI cards and package revenue rows | optional query `fromDate`, `toDate` |
+| GET | `/api/admin/analytics` | Get analytics KPI cards, top placement performance, daily traffic, and configured slot catalog metadata | optional query `fromDate`, `toDate` |
+| GET | `/api/admin/revenue` | Get revenue KPI cards, package revenue rows, and configured slot catalog metadata | optional query `fromDate`, `toDate` |
 | GET | `/api/admin/customer-spending` | Get customer spending KPI cards and customer rows | optional query `fromDate`, `toDate` |
 
 ### Exports
