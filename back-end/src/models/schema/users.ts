@@ -17,6 +17,10 @@ export const users = pgTable("users", {
   userEmail: varchar("user_email", { length: 255 }),
   userLocation: varchar("user_location", { length: 255 }),
   userBio: text("user_bio"),
+  userAvailabilityStatus: varchar("user_availability_status", { length: 20 })
+    .notNull()
+    .default("available"),
+  userAvailabilityNote: text("user_availability_note"),
   userStatus: varchar("user_status", { length: 20 }).default("active"),
   userBusinessRoleId: integer("user_business_role_id").references(
     () => businessRoles.businessRoleId,

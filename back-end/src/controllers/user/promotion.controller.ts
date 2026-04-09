@@ -1,51 +1,99 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db";
-import { eq, and, lte, or, isNull, gt, desc } from "drizzle-orm";
+import { eq, and, lte, or, isNull, gt } from "drizzle-orm";
 import { promotionPackages } from "../../models/schema/promotion-packages";
 import { placementSlots } from "../../models/schema/placement-slots";
 import { promotionPackagePrices } from "../../models/schema/promotion-package-prices";
+import { shops } from "../../models/schema/shops";
 import { type PromotionPackageParams } from "../../dtos/promotion";
 import { parseId } from "../../utils/parseId";
+import { type AuthRequest } from "../../dtos/auth";
+
+const queryPublishedPackages = async () => {
+    const now = new Date();
+    return db
+        .select({
+            promotionPackageId: promotionPackages.promotionPackageId,
+            promotionPackageTitle: promotionPackages.promotionPackageTitle,
+            promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+            promotionPackagePrice: promotionPackagePrices.price,
+            promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
+            promotionPackageDisplayQuota: promotionPackages.promotionPackageDisplayQuota,
+            promotionPackageDescription: promotionPackages.promotionPackageDescription,
+            slotCode: placementSlots.placementSlotCode,
+            slotTitle: placementSlots.placementSlotTitle,
+            slotCapacity: placementSlots.placementSlotCapacity,
+            slotRules: placementSlots.placementSlotRules,
+        })
+        .from(promotionPackages)
+        .innerJoin(placementSlots, eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId))
+        .leftJoin(
+            promotionPackagePrices,
+            and(
+                eq(promotionPackagePrices.packageId, promotionPackages.promotionPackageId),
+                lte(promotionPackagePrices.effectiveFrom, now),
+                or(
+                    isNull(promotionPackagePrices.effectiveTo),
+                    gt(promotionPackagePrices.effectiveTo, now)
+                )
+            )
+        )
+        .where(
+            and(
+                eq(promotionPackages.promotionPackagePublished, true),
+                eq(placementSlots.placementSlotPublished, true)
+            )
+        )
+        .orderBy(promotionPackages.promotionPackageDurationDays);
+};
 
 export const getPublishedPackages = async (
     req: Request,
     res: Response
 ): Promise<void> => {
     try {
-        const now = new Date();
-        const packages = await db
-            .select({
-                promotionPackageId: promotionPackages.promotionPackageId,
-                promotionPackageTitle: promotionPackages.promotionPackageTitle,
-                promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
-                promotionPackagePrice: promotionPackagePrices.price,
-                slotCode: placementSlots.placementSlotCode,
-                slotTitle: placementSlots.placementSlotTitle,
-                slotCapacity: placementSlots.placementSlotCapacity,
-                slotRules: placementSlots.placementSlotRules,
-            })
-            .from(promotionPackages)
-            .innerJoin(placementSlots, eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId))
-            .leftJoin(
-                promotionPackagePrices,
-                and(
-                    eq(promotionPackagePrices.packageId, promotionPackages.promotionPackageId),
-                    lte(promotionPackagePrices.effectiveFrom, now),
-                    or(
-                        isNull(promotionPackagePrices.effectiveTo),
-                        gt(promotionPackagePrices.effectiveTo, now)
-                    )
-                )
-            )
-            .where(
-                and(
-                    eq(promotionPackages.promotionPackagePublished, true),
-                    eq(placementSlots.placementSlotPublished, true)
-                )
-            )
-            .orderBy(promotionPackages.promotionPackageDurationDays);
+        const packages = await queryPublishedPackages();
 
         res.json(packages);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const getEligiblePackages = async (
+    req: AuthRequest,
+    res: Response,
+): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const [activeShop] = await db
+            .select({
+                shopId: shops.shopId,
+            })
+            .from(shops)
+            .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
+            .limit(1);
+
+        if (!activeShop) {
+            res.json({
+                audience: "individual",
+                reason: "ACTIVE_SHOP_REQUIRED",
+                packages: [],
+            });
+            return;
+        }
+
+        const packages = await queryPublishedPackages();
+        res.json({
+            audience: "garden_owner",
+            packages,
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -71,6 +119,9 @@ export const getPublishedPackageById = async (
                 promotionPackageTitle: promotionPackages.promotionPackageTitle,
                 promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
                 promotionPackagePrice: promotionPackagePrices.price,
+                promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
+                promotionPackageDisplayQuota: promotionPackages.promotionPackageDisplayQuota,
+                promotionPackageDescription: promotionPackages.promotionPackageDescription,
                 slotCode: placementSlots.placementSlotCode,
                 slotTitle: placementSlots.placementSlotTitle,
                 slotCapacity: placementSlots.placementSlotCapacity,

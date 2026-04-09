@@ -19,6 +19,8 @@ export const posts = pgTable("posts", {
     postPublished: boolean("post_published").default(false),
     postViewCount: integer("post_view_count").default(0),
     postContactCount: integer("post_contact_count").default(0),
+    postEditCount: integer("post_edit_count").default(0),
+    postPaidEditCount: integer("post_paid_edit_count").default(0),
     postSubmittedAt: timestamp("post_submitted_at"),
     postPublishedAt: timestamp("post_published_at"),
     postDeletedAt: timestamp("post_deleted_at"),

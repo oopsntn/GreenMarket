@@ -1,7 +1,7 @@
 -- ============================================================
 -- GreenMarket Database Backup (Full Schema)
--- PostgreSQL 18.x | Generated: 2026-04-07
--- Tables: 32 | Synced from Drizzle ORM schema
+-- PostgreSQL 18.x | Generated: 2026-04-08
+-- Tables: 34 | Synced from Drizzle ORM schema
 -- Categories: Cây Cảnh Bonsai, Dụng Cụ Làm Vườn
 -- ============================================================
 
@@ -114,6 +114,8 @@ CREATE TABLE users (
     user_email VARCHAR(255),
     user_location VARCHAR(255),
     user_bio TEXT,
+    user_availability_status VARCHAR(20) NOT NULL DEFAULT 'available',
+    user_availability_note TEXT,
     user_status VARCHAR(20) DEFAULT 'active',
     user_business_role_id INTEGER REFERENCES business_roles(business_role_id) ON DELETE SET NULL,
     user_registered_at TIMESTAMP DEFAULT now(),
@@ -266,6 +268,8 @@ CREATE TABLE posts (
     post_contact_phone VARCHAR(20),
     post_view_count INTEGER DEFAULT 0,
     post_contact_count INTEGER DEFAULT 0,
+    post_edit_count INTEGER DEFAULT 0,
+    post_paid_edit_count INTEGER DEFAULT 0,
     post_published BOOLEAN DEFAULT FALSE,
     post_submitted_at TIMESTAMP,
     post_published_at TIMESTAMP,
@@ -376,7 +380,6 @@ CREATE TABLE promotion_packages (
     promotion_package_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
     promotion_package_title VARCHAR(150),
     promotion_package_duration_days INTEGER,
-    promotion_package_price DECIMAL(15, 2),
     promotion_package_max_posts INTEGER DEFAULT 1,
     promotion_package_display_quota INTEGER DEFAULT 0,
     promotion_package_description TEXT,
@@ -462,6 +465,40 @@ CREATE TABLE payment_txn (
     payment_txn_created_at TIMESTAMP DEFAULT now()
 );
 
+-- User Posting Plans
+CREATE TABLE user_posting_plans (
+    posting_plan_id SERIAL PRIMARY KEY,
+    posting_plan_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    posting_plan_code VARCHAR(50) NOT NULL,
+    posting_plan_title VARCHAR(120) NOT NULL,
+    posting_plan_cycle VARCHAR(20) NOT NULL DEFAULT 'monthly', -- monthly | lifetime
+    posting_plan_status VARCHAR(20) NOT NULL DEFAULT 'active', -- active | expired | cancelled
+    posting_plan_auto_approve BOOLEAN NOT NULL DEFAULT FALSE,
+    posting_plan_daily_post_limit INTEGER,
+    posting_plan_post_fee_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    posting_plan_free_edit_quota INTEGER NOT NULL DEFAULT 0,
+    posting_plan_edit_fee_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    posting_plan_started_at TIMESTAMP NOT NULL DEFAULT now(),
+    posting_plan_expires_at TIMESTAMP,
+    posting_plan_created_at TIMESTAMP DEFAULT now(),
+    posting_plan_updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Posting Fee Ledger
+CREATE TABLE posting_fee_ledger (
+    posting_fee_id SERIAL PRIMARY KEY,
+    posting_fee_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    posting_fee_post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
+    posting_fee_plan_id INTEGER REFERENCES user_posting_plans(posting_plan_id) ON DELETE SET NULL,
+    posting_fee_action_type VARCHAR(30) NOT NULL, -- POST_CREATE | POST_EDIT
+    posting_fee_quantity INTEGER NOT NULL DEFAULT 1,
+    posting_fee_unit_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    posting_fee_total_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    posting_fee_currency VARCHAR(10) NOT NULL DEFAULT 'VND',
+    posting_fee_note TEXT,
+    posting_fee_created_at TIMESTAMP DEFAULT now()
+);
+
 -- Daily Placement Metrics
 CREATE TABLE daily_placement_metrics (
     daily_placement_metric_id SERIAL PRIMARY KEY,
@@ -519,6 +556,69 @@ CREATE TABLE event_logs (
     event_log_meta JSONB
 );
 
+-- Collaborator Jobs
+CREATE TABLE jobs (
+    job_id SERIAL PRIMARY KEY,
+    job_customer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    job_collaborator_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    job_title VARCHAR(255) NOT NULL,
+    job_category VARCHAR(100),
+    job_location VARCHAR(255),
+    job_deadline TIMESTAMP,
+    job_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+    job_description TEXT,
+    job_requirements JSONB DEFAULT '[]'::jsonb,
+    job_status VARCHAR(20) NOT NULL DEFAULT 'open',
+    job_decline_reason TEXT,
+    job_completed_at TIMESTAMP,
+    job_created_at TIMESTAMP DEFAULT now(),
+    job_updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Collaborator Contact Requests (Mock ask-more flow)
+CREATE TABLE job_contact_requests (
+    contact_request_id SERIAL PRIMARY KEY,
+    contact_request_job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+    contact_request_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    contact_request_customer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    contact_request_message TEXT NOT NULL,
+    contact_request_status VARCHAR(20) NOT NULL DEFAULT 'sent',
+    contact_request_created_at TIMESTAMP DEFAULT now(),
+    contact_request_replied_at TIMESTAMP
+);
+
+-- Collaborator Deliverables
+CREATE TABLE job_deliverables (
+    deliverable_id SERIAL PRIMARY KEY,
+    deliverable_job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+    deliverable_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    deliverable_file_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+    deliverable_note TEXT,
+    deliverable_submitted_at TIMESTAMP DEFAULT now()
+);
+
+-- Collaborator Earnings
+CREATE TABLE earning_entries (
+    earning_entry_id SERIAL PRIMARY KEY,
+    earning_entry_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    earning_entry_job_id INTEGER REFERENCES jobs(job_id) ON DELETE SET NULL,
+    earning_entry_amount NUMERIC(15,2) NOT NULL DEFAULT 0,
+    earning_entry_type VARCHAR(30) NOT NULL DEFAULT 'job',
+    earning_entry_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Collaborator Payout Requests (Mock)
+CREATE TABLE payout_requests (
+    payout_request_id SERIAL PRIMARY KEY,
+    payout_request_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    payout_request_amount NUMERIC(15,2) NOT NULL,
+    payout_request_method VARCHAR(50) NOT NULL,
+    payout_request_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    payout_request_note TEXT,
+    payout_request_created_at TIMESTAMP DEFAULT now(),
+    payout_request_processed_at TIMESTAMP
+);
+
 -- Admin System Settings
 CREATE TABLE admin_system_settings (
     setting_id SERIAL PRIMARY KEY,
@@ -568,6 +668,15 @@ CREATE INDEX idx_posts_created ON posts(post_created_at);
 
 -- Post Attribute Values
 CREATE INDEX attribute_filter_idx ON post_attribute_values USING btree (post_id, attribute_id, attribute_value);
+
+-- Collaborator Services
+CREATE INDEX jobs_status_deadline_idx ON jobs(job_status, job_deadline);
+CREATE INDEX jobs_collaborator_status_idx ON jobs(job_collaborator_id, job_status);
+CREATE INDEX job_contact_requests_collaborator_created_idx ON job_contact_requests(contact_request_collaborator_id, contact_request_created_at);
+CREATE INDEX job_contact_requests_job_created_idx ON job_contact_requests(contact_request_job_id, contact_request_created_at);
+CREATE INDEX job_deliverables_job_submitted_idx ON job_deliverables(deliverable_job_id, deliverable_submitted_at);
+CREATE INDEX earning_entries_collaborator_created_idx ON earning_entries(earning_entry_collaborator_id, earning_entry_created_at);
+CREATE INDEX payout_requests_collaborator_created_idx ON payout_requests(payout_request_collaborator_id, payout_request_created_at);
 
 -- Post Meta
 CREATE INDEX idx_post_meta_post ON post_meta(post_meta_post_id);
@@ -625,6 +734,16 @@ CREATE INDEX idx_pkg_prices_open_ended   ON promotion_package_prices(package_id,
 CREATE INDEX idx_payment_txn_user        ON payment_txn(payment_txn_user_id);
 CREATE INDEX idx_payment_txn_status      ON payment_txn(payment_txn_status);
 CREATE INDEX idx_payment_txn_price       ON payment_txn(payment_txn_price_id);
+
+CREATE INDEX user_posting_plans_user_status_idx
+ON user_posting_plans(posting_plan_user_id, posting_plan_status);
+CREATE INDEX user_posting_plans_code_status_idx
+ON user_posting_plans(posting_plan_code, posting_plan_status);
+
+CREATE INDEX posting_fee_ledger_user_created_idx
+ON posting_fee_ledger(posting_fee_user_id, posting_fee_created_at);
+CREATE INDEX posting_fee_ledger_post_created_idx
+ON posting_fee_ledger(posting_fee_post_id, posting_fee_created_at);
 
 -- Analytics
 CREATE INDEX idx_daily_metrics_date ON daily_placement_metrics(daily_placement_metric_date);
@@ -796,6 +915,92 @@ INSERT INTO users (
 (5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
 (6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 2),
 (7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1);
+
+-- Align demo accounts to business roles used in collaborator APIs
+UPDATE users SET user_business_role_id = 3 WHERE user_id = 4;
+UPDATE users SET user_business_role_id = 5 WHERE user_id = 6;
+
+-- Collaborator availability profile (mock)
+UPDATE users
+SET
+    user_availability_status = 'available',
+    user_availability_note = 'Available 08:00-18:00, Monday to Saturday.'
+WHERE user_id = 4;
+UPDATE users
+SET
+    user_availability_status = 'busy',
+    user_availability_note = 'Focused on moderation incidents this week.'
+WHERE user_id = 5;
+UPDATE users
+SET
+    user_availability_status = 'busy'
+WHERE user_id = 6;
+
+-- Collaborator Jobs (Mock)
+INSERT INTO jobs (
+    job_id,
+    job_customer_id,
+    job_collaborator_id,
+    job_title,
+    job_category,
+    job_location,
+    job_deadline,
+    job_price,
+    job_description,
+    job_requirements,
+    job_status,
+    job_decline_reason,
+    job_completed_at,
+    job_created_at,
+    job_updated_at
+) VALUES
+(1, 7, NULL, 'Photo package for bonsai listing', 'Photo', 'Long Bien, Ha Noi', now() + interval '3 days', 650000, 'Need 12 listing photos for a bonsai package.', '["24MP camera","4:3 ratio","clean background"]'::jsonb, 'open', NULL, NULL, now() - interval '1 day', now() - interval '1 day'),
+(2, 2, 4, 'SEO content for Linh Sam posts', 'Content', 'Hoang Mai, Ha Noi', now() + interval '1 day', 800000, 'Write SEO-ready descriptions for 20 Linh Sam posts.', '["min 600 words","H2/H3 headings","persuasive tone"]'::jsonb, 'accepted', NULL, NULL, now() - interval '2 days', now() - interval '6 hours'),
+(3, 1, 4, 'Deliver final bonsai album', 'Photo', 'Yen Phong, Bac Ninh', now() - interval '2 days', 720000, 'Finalized photo album package for Tung La Han listing.', '["20 JPEG photos","3 cover images","source files + web files"]'::jsonb, 'completed', NULL, now() - interval '2 days', now() - interval '4 days', now() - interval '2 days');
+
+INSERT INTO job_contact_requests (
+    contact_request_id,
+    contact_request_job_id,
+    contact_request_collaborator_id,
+    contact_request_customer_id,
+    contact_request_message,
+    contact_request_status,
+    contact_request_created_at,
+    contact_request_replied_at
+) VALUES
+(1, 2, 4, 2, 'Can you clarify the exact keyword set and tone before delivery?', 'sent', now() - interval '8 hours', NULL);
+
+INSERT INTO job_deliverables (
+    deliverable_id,
+    deliverable_job_id,
+    deliverable_collaborator_id,
+    deliverable_file_urls,
+    deliverable_note,
+    deliverable_submitted_at
+) VALUES
+(1, 3, 4, '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'Uploaded full album and source zip.', now() - interval '2 days');
+
+INSERT INTO earning_entries (
+    earning_entry_id,
+    earning_entry_collaborator_id,
+    earning_entry_job_id,
+    earning_entry_amount,
+    earning_entry_type,
+    earning_entry_created_at
+) VALUES
+(1, 4, 3, 720000, 'job', now() - interval '2 days');
+
+INSERT INTO payout_requests (
+    payout_request_id,
+    payout_request_collaborator_id,
+    payout_request_amount,
+    payout_request_method,
+    payout_request_status,
+    payout_request_note,
+    payout_request_created_at,
+    payout_request_processed_at
+) VALUES
+(1, 4, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
 
 -- Shops
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
@@ -1055,18 +1260,17 @@ INSERT INTO promotion_packages (
     promotion_package_slot_id,
     promotion_package_title,
     promotion_package_duration_days,
-    promotion_package_price,
     promotion_package_max_posts,
     promotion_package_display_quota,
     promotion_package_description,
     promotion_package_published
 ) VALUES
-(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  180000, 1, 50000,  'Ưu tiên hiển thị trên trang chủ trong 7 ngày.', true),
-(2, 1, 'Banner Trang Chủ - 30 ngày',  30, 500000, 3, 200000, 'Ưu tiên hiển thị trên trang chủ trong 30 ngày.', true),
-(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  95000,  1, 30000,  'Nổi bật ở đầu danh mục trong 7 ngày.', true),
-(4, 2, 'Đầu Danh Mục - 30 ngày',      30, 250000, 3, 120000, 'Nổi bật ở đầu danh mục trong 30 ngày.', true),
-(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  50000,  1, 15000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 7 ngày.', true),
-(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, 150000, 3, 70000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 30 ngày.', true);
+(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  1, 50000,  'Ưu tiên hiển thị trên trang chủ trong 7 ngày.', true),
+(2, 1, 'Banner Trang Chủ - 30 ngày',  30, 3, 200000, 'Ưu tiên hiển thị trên trang chủ trong 30 ngày.', true),
+(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  1, 30000,  'Nổi bật ở đầu danh mục trong 7 ngày.', true),
+(4, 2, 'Đầu Danh Mục - 30 ngày',      30, 3, 120000, 'Nổi bật ở đầu danh mục trong 30 ngày.', true),
+(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  1, 15000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 7 ngày.', true),
+(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, 3, 70000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 30 ngày.', true);
 
 -- Promotion Package Prices (giá khởi tạo + ví dụ lên lịch tăng giá tương lai)
 INSERT INTO promotion_package_prices (package_id, price, effective_from, effective_to, note, created_by) VALUES
@@ -1084,6 +1288,49 @@ INSERT INTO promotion_package_prices (package_id, price, effective_from, effecti
 (5, 50000,  now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
 -- Gói 6: Nổi Bật Tìm Kiếm 30 ngày
 (6, 150000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1);
+
+-- ============================================================
+-- POSTING PLANS (OWNER / PERSONAL)
+-- ============================================================
+INSERT INTO user_posting_plans (
+    posting_plan_id,
+    posting_plan_user_id,
+    posting_plan_code,
+    posting_plan_title,
+    posting_plan_cycle,
+    posting_plan_status,
+    posting_plan_auto_approve,
+    posting_plan_daily_post_limit,
+    posting_plan_post_fee_amount,
+    posting_plan_free_edit_quota,
+    posting_plan_edit_fee_amount,
+    posting_plan_started_at,
+    posting_plan_expires_at,
+    posting_plan_created_at,
+    posting_plan_updated_at
+) VALUES
+(1, 1, 'GARDEN_OWNER_LIFETIME', 'Goi Chu Vuon Vinh Vien', 'lifetime', 'active', true, 20, 20000, 4, 5000, now() - interval '120 days', NULL, now() - interval '120 days', now() - interval '120 days'),
+(2, 2, 'PERSONAL_MONTHLY',      'Goi Ca Nhan Theo Thang', 'monthly',  'active', true, 20,     0, 4, 5000, now() - interval '12 days',  now() + interval '18 days', now() - interval '12 days', now() - interval '12 days'),
+(3, 7, 'PERSONAL_MONTHLY',      'Goi Ca Nhan Theo Thang', 'monthly',  'expired', true, 20,    0, 4, 5000, now() - interval '65 days', now() - interval '35 days', now() - interval '65 days', now() - interval '35 days');
+
+-- Fee ledger demo for posting-plan billing (tracking only)
+INSERT INTO posting_fee_ledger (
+    posting_fee_id,
+    posting_fee_user_id,
+    posting_fee_post_id,
+    posting_fee_plan_id,
+    posting_fee_action_type,
+    posting_fee_quantity,
+    posting_fee_unit_amount,
+    posting_fee_total_amount,
+    posting_fee_currency,
+    posting_fee_note,
+    posting_fee_created_at
+) VALUES
+(1, 1, 15, NULL, 'POST_CREATE', 1, 20000, 20000, 'VND', 'Owner plan create-post fee tracking.', now() - interval '7 days'),
+(2, 3, 9,  NULL, 'POST_CREATE', 1, 20000, 20000, 'VND', 'Owner plan create-post fee tracking.', now() - interval '5 days'),
+(3, 1, 7,  NULL, 'POST_EDIT',   1, 5000,  5000,  'VND', 'Charged after free edit quota was exhausted.', now() - interval '2 days'),
+(4, 2, 6,  2,    'POST_EDIT',   1, 5000,  5000,  'VND', 'Monthly personal plan paid edit beyond free quota.', now() - interval '1 day');
 
 -- ============================================================
 -- BANNED KEYWORDS
@@ -1137,10 +1384,17 @@ SELECT setval('posts_post_id_seq', (SELECT COALESCE(MAX(post_id), 1) FROM posts)
 SELECT setval('post_images_image_id_seq', (SELECT COALESCE(MAX(image_id), 1) FROM post_images));
 SELECT setval('post_videos_post_video_id_seq', (SELECT COALESCE(MAX(post_video_id), 1) FROM post_videos));
 SELECT setval('post_attribute_values_value_id_seq', (SELECT COALESCE(MAX(value_id), 1) FROM post_attribute_values));
+SELECT setval('jobs_job_id_seq', (SELECT COALESCE(MAX(job_id), 1) FROM jobs));
+SELECT setval('job_contact_requests_contact_request_id_seq', (SELECT COALESCE(MAX(contact_request_id), 1) FROM job_contact_requests));
+SELECT setval('job_deliverables_deliverable_id_seq', (SELECT COALESCE(MAX(deliverable_id), 1) FROM job_deliverables));
+SELECT setval('earning_entries_earning_entry_id_seq', (SELECT COALESCE(MAX(earning_entry_id), 1) FROM earning_entries));
+SELECT setval('payout_requests_payout_request_id_seq', (SELECT COALESCE(MAX(payout_request_id), 1) FROM payout_requests));
 SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM reports), false);
 SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
 SELECT setval('promotion_packages_promotion_package_id_seq', (SELECT COALESCE(MAX(promotion_package_id), 1) FROM promotion_packages));
 SELECT setval('promotion_package_prices_price_id_seq',          (SELECT COALESCE(MAX(price_id),              1) FROM promotion_package_prices));
 SELECT setval('promotion_package_audit_log_audit_id_seq',        (SELECT COALESCE(MAX(audit_id),              1) FROM promotion_package_audit_log));
+SELECT setval('user_posting_plans_posting_plan_id_seq',          (SELECT COALESCE(MAX(posting_plan_id),       1) FROM user_posting_plans));
+SELECT setval('posting_fee_ledger_posting_fee_id_seq',           (SELECT COALESCE(MAX(posting_fee_id),        1) FROM posting_fee_ledger));
 SELECT setval('banned_keywords_banned_keyword_id_seq', (SELECT COALESCE(MAX(banned_keyword_id), 1) FROM banned_keywords));
 SELECT setval('system_settings_system_setting_id_seq', (SELECT COALESCE(MAX(system_setting_id), 1) FROM system_settings));
