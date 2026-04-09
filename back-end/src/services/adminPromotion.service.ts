@@ -9,6 +9,7 @@ import {
     shops,
     users,
 } from "../models/schema/index.ts";
+import { mapPlacementSlotLabel } from "./adminPlacementSlotCatalog.service.ts";
 
 type RawPromotionRow = {
     promotionId: number;
@@ -144,23 +145,6 @@ const toNumber = (value: string | number | null | undefined) => {
 const formatCurrencyLabel = (value: string | number | null | undefined) => {
     const numeric = toNumber(value);
     return `${numeric.toLocaleString("en-US")} VND`;
-};
-
-const mapSlotLabel = (
-    slotCode: string | null,
-    slotTitle: string | null,
-): "Home Top" | "Category Top" | "Search Boost" => {
-    const normalized = `${slotCode ?? ""} ${slotTitle ?? ""}`.toLowerCase();
-
-    if (normalized.includes("search")) {
-        return "Search Boost";
-    }
-
-    if (normalized.includes("category")) {
-        return "Category Top";
-    }
-
-    return "Home Top";
 };
 
 const getOwnerName = (item: RawPromotionRow) => {
@@ -537,7 +521,7 @@ const getPromotionRecordById = async (promotionId: number) => {
 const mapRecordToPromotion = (
     item: RawPromotionRow & { latestPayment: LatestPaymentRecord | null },
 ): AdminPromotionResponse => {
-    const slot = mapSlotLabel(item.slotCode, item.slotTitle);
+    const slot = mapPlacementSlotLabel(item.slotCode, item.slotTitle);
     const paymentStatus = getPaymentStatus(item.latestPayment);
     const lifecycleStatus = getLifecycleStatus(item);
     const pauseBlockedReason = buildBlockedReason(
@@ -582,7 +566,7 @@ const mapRecordToPromotion = (
 const mapRecordToBoostedPost = (
     item: RawPromotionRow & { latestPayment: LatestPaymentRecord | null },
 ): AdminBoostedPostResponse => {
-    const slot = mapSlotLabel(item.slotCode, item.slotTitle);
+    const slot = mapPlacementSlotLabel(item.slotCode, item.slotTitle);
     const lifecycleStatus = getLifecycleStatus(item);
     const totalQuota = Math.max(
         1,
