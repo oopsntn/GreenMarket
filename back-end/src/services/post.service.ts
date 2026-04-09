@@ -8,7 +8,7 @@ export class PostService {
         const conditions: SQL[] = [eq(posts.postStatus, "approved")];
 
         if (query.search) {
-            conditions.push(sql`to_tsvector('simple', ${posts.postTitle} || ' ' || coalesce(${posts.postContent}, '')) @@ websearch_to_tsquery('simple', ${query.search})`);
+            conditions.push(sql`to_tsvector('simple', ${posts.postTitle}) @@ websearch_to_tsquery('simple', ${query.search})`);
         }
 
         if (query.categoryId) {

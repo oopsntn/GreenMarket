@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { getMyPosts, deleteUserPost, updateUserPost, getPromotionPackages, buyPromotionPackage, getCategories, getCategoryAttributes } from '../services/api';
+import { getMyPosts, deleteUserPost, updateUserPost, getPromotionPackages, buyPromotionPackage, getCategories, getCategoryAttributes, getOwnerDashboard } from '../services/api';
 import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
@@ -13,6 +13,7 @@ const MyPosts: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'personal' | 'shop'>(shop ? 'shop' : 'personal');
+  const [shopStats, setShopStats] = useState<{ totalShopViews: number } | null>(null);
 
   // Edit Modal State
   const [editingPost, setEditingPost] = useState<any | null>(null);
@@ -21,7 +22,6 @@ const MyPosts: React.FC = () => {
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editContactPhone, setEditContactPhone] = useState("");
-  const [editContent, setEditContent] = useState("");
   const [categories, setCategories] = useState<any[]>([]);
   const [editCategoryAttributes, setEditCategoryAttributes] = useState<any[]>([]);
   const [editAttributes, setEditAttributes] = useState<Record<number, string>>({});
@@ -49,6 +49,28 @@ const MyPosts: React.FC = () => {
     };
     fetchPosts();
   }, [user?.id]);
+
+  useEffect(() => {
+    const fetchShopStats = async () => {
+      if (!shop || shop.shopStatus !== 'active') {
+        setShopStats(null);
+        return;
+      }
+
+      try {
+        const response = await getOwnerDashboard();
+        const summary = response.data?.summary;
+        setShopStats({
+          totalShopViews: Number(summary?.totalShopViews || 0),
+        });
+      } catch (error) {
+        console.error('Failed to load shop stats for MyPosts:', error);
+        setShopStats(null);
+      }
+    };
+
+    void fetchShopStats();
+  }, [shop?.shopId, shop?.shopStatus]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -154,7 +176,6 @@ const MyPosts: React.FC = () => {
     setEditCategoryId(post.categoryId ? String(post.categoryId) : "");
     setEditLocation(post.postLocation || "");
     setEditContactPhone(post.postContactPhone || "");
-    setEditContent(post.postContent || "");
     setEditAttributes(getPrefilledAttributes(post));
     await loadCategoryAttributes(post.categoryId ? String(post.categoryId) : "");
   };
@@ -177,7 +198,6 @@ const MyPosts: React.FC = () => {
         postPrice: editPriceInput.rawValue,
         postLocation: editLocation,
         postContactPhone: editContactPhone,
-        postContent: editContent,
         attributes: formattedAttributes,
       });
       if (shop?.shopStatus === 'active') {
@@ -279,6 +299,15 @@ const MyPosts: React.FC = () => {
     return post.postShopId === null;
   });
 
+  const shopPosts = shop
+    ? posts.filter((post) => post.postShopId === shop.shopId)
+    : [];
+  const fallbackShopViews = shopPosts.reduce(
+    (sum, post) => sum + Number(post.postViewCount || 0),
+    0,
+  );
+  const displayShopViews = shopStats?.totalShopViews ?? fallbackShopViews;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -354,7 +383,7 @@ const MyPosts: React.FC = () => {
                 </Link>
                 <div className="flex gap-8">
                   <div className="text-center">
-                    <div className="text-3xl font-black text-emerald-600">0</div>
+                    <div className="text-3xl font-black text-emerald-600">{displayShopViews.toLocaleString('vi-VN')}</div>
                     <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Lượt xem</div>
                   </div>
                   <div className="text-center">
@@ -615,16 +644,18 @@ const MyPosts: React.FC = () => {
                     inputMode="numeric"
                   />
                 </div>
-                <div>
-                  <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Khu vực</label>
-                  <input
-                    type="text"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
-                    value={editLocation}
-                    onChange={(e) => setEditLocation(e.target.value)}
-                    placeholder="Ví dụ: Thạch Thất, Hà Nội"
-                  />
-                </div>
+                {!shop && (
+                  <div>
+                    <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Khu vực</label>
+                    <input
+                      type="text"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      placeholder="Ví dụ: Thạch Thất, Hà Nội"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -638,16 +669,7 @@ const MyPosts: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Mô tả chi tiết</label>
-                <textarea
-                  rows={5}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-medium focus:outline-none focus:border-emerald-500 focus:bg-white focus:shadow-sm transition-all"
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  placeholder="Mô tả chi tiết về cây, kích thước, tuổi, cách chăm sóc..."
-                />
-              </div>
+
 
               {editCategoryAttributes.length > 0 && (
                 <div className="space-y-4">

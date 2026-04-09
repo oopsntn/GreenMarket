@@ -468,7 +468,7 @@ function PostsModerationPage() {
         onClose={closeDetailModal}
         maxWidth="920px"
       >
-        {isDetailLoading && !selectedPost?.content ? (
+        {isDetailLoading ? (
           <div className="posts-moderation-empty-state">
             Loading post details...
           </div>
@@ -501,10 +501,7 @@ function PostsModerationPage() {
               </div>
             </div>
 
-            <div className="posts-moderation-detail__section">
-              <h4>Post Content</h4>
-              <p>{selectedPost.content}</p>
-            </div>
+
 
             <div className="posts-moderation-detail__section">
               <h4>Moderation Notes</h4>

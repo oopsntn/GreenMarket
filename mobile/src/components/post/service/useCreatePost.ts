@@ -17,13 +17,12 @@ interface CategoryAttribute {
 
 interface SelectedMedia {
     uri: string;
-    type: 'image' | 'video';
+    type: 'image';
 }
 
 interface CreatePostFormData {
     categoryId: string;
     postTitle: string;
-    postContent: string;
     postPrice: string;
     postLocation: string;
     postContactPhone: string;
@@ -33,7 +32,6 @@ interface CreatePostFormData {
 const initialFormData: CreatePostFormData = {
     categoryId: '',
     postTitle: '',
-    postContent: '',
     postPrice: '',
     postLocation: '',
     postContactPhone: '',
@@ -91,7 +89,7 @@ const useCreatePost = () => {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images', 'videos'],
+            mediaTypes: ['images'],
             allowsMultipleSelection: true,
             quality: 1,
             selectionLimit: 10,
@@ -100,7 +98,7 @@ const useCreatePost = () => {
         if (!result.canceled) {
             const selectedMedia: SelectedMedia[] = result.assets.map((asset): SelectedMedia => ({
                 uri: asset.uri,
-                type: asset.type === 'video' ? 'video' : 'image',
+                type: 'image',
             }))
 
             setMedia((prev) => [...prev, ...selectedMedia].slice(0, 10))
@@ -133,8 +131,23 @@ const useCreatePost = () => {
             return false
         }
 
+        if (formData.postTitle.length > 200) {
+            CustomAlert('Value too long', 'The post title cannot exceed 200 characters.')
+            return false
+        }
+
+        if (formData.postLocation && formData.postLocation.length > 255) {
+            CustomAlert('Value too long', 'The location cannot exceed 255 characters.')
+            return false
+        }
+
+        if (formData.postContactPhone && (formData.postContactPhone.length > 20 || !/^\+?[0-9\s-]+$/.test(formData.postContactPhone))) {
+            CustomAlert('Invalid phone', 'Please enter a valid contact phone number.')
+            return false
+        }
+
         if (media.length === 0) {
-            CustomAlert('Missing media', 'Please select at least one image or video.')
+            CustomAlert('Missing media', 'Please select at least one image.')
             return false
         }
 
@@ -162,19 +175,12 @@ const useCreatePost = () => {
             const uploadedMedia = await postService.uploadMedia(mediaUris)
             const uploadedUrls = Array.isArray(uploadedMedia?.urls) ? uploadedMedia.urls : []
 
-            //2. Logic phan loai URL thanh Image va Video
-            const images: string[] = []
-            const videos: string[] = []
+            if (uploadedUrls.length !== media.length) {
+                throw new Error('Uploaded media count mismatch')
+            }
 
-            uploadedUrls.forEach((url: any) => {
-                const extension = url.split('.').pop()?.toLowerCase()
-                if (extension && ['jpg', 'jpeg', 'png', 'webp'].includes(extension)) {
-                    images.push(url)
-                }
-                if (extension && ['mp4', 'mov', 'm4x', 'avi'].includes(extension)) {
-                    videos.push(url)
-                }
-            })
+            //2. Prepare image payload in the same order as the selected media
+            const images = uploadedUrls.filter((_: string, index: number) => media[index]?.type === 'image')
 
             //3. Chuan bi Attribute Payload
             const attributePayload = Object.entries(formData.attributes)
@@ -188,12 +194,10 @@ const useCreatePost = () => {
             await postService.createPost({
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
-                postContent: formData.postContent.trim() || undefined,
                 postPrice: formData.postPrice.trim(),
                 postLocation: formData.postLocation.trim() || undefined,
-                postContactPhone: formData.postContactPhone.trim() || undefined,
+                postContactPhone: formData.postContactPhone.replace(/\s+/g, '') || undefined,
                 images,
-                videos,
                 attributes: attributePayload,
             })
 

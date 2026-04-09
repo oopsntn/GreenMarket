@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Leaf, ShoppingBag, Store, User, LogOut, PlusCircle, Heart } from 'lucide-react';
+import { Leaf, ShoppingBag, Store, User, LogOut, PlusCircle, Heart, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -13,8 +13,10 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const { user, shop, isAuthenticated, logout } = useAuth();
 
-  const displayIdentity = user?.userDisplayName?.trim() || user?.userMobile || 'Người dùng';
   const isGardenOwner = shop?.shopStatus === 'active';
+  const displayIdentity = (isGardenOwner && shop?.shopName)
+    ? shop.shopName
+    : (user?.userDisplayName?.trim() || user?.userMobile || 'Người dùng');
 
   const guestNavItems = [
     { label: 'Trang chủ', path: '/home', icon: ShoppingBag },
@@ -33,6 +35,7 @@ const Navbar: React.FC = () => {
     : isGardenOwner
       ? [
         ...baseNavItems,
+        { label: 'Dashboard', path: '/owner-dashboard', icon: LayoutDashboard },
         { label: shop?.shopName || 'Nhà vườn', path: '/my-posts', icon: Store },
       ]
       : [

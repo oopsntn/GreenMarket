@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, KeyboardTypeOptions } from 'react-native';
+import {
+    View, Text, TextInput, StyleSheet, KeyboardTypeOptions, StyleProp,
+    ViewStyle
+} from 'react-native';
 
 interface InputProps {
     label?: string;
@@ -14,6 +17,8 @@ interface InputProps {
     secureTextEntry?: boolean; // Thêm cho trường hợp nhập password
     multiline?: boolean;
     numberOfLines?: number;
+    style?: StyleProp<ViewStyle>;
+    testID?: string;
 }
 
 const Input: React.FC<InputProps> = ({
@@ -29,11 +34,13 @@ const Input: React.FC<InputProps> = ({
     secureTextEntry = false, // Thêm cho trường hợp nhập password
     multiline,
     numberOfLines,
+    style,
+    testID,
 }) => {
     const [isFocused, setIsFocused] = useState(false);
     const keyboardType = (type === 'text' ? 'default' : type) as KeyboardTypeOptions
     return (
-        <View style={styles.inputGroup}>
+        <View style={[styles.inputGroup, style]}>
             {/* Label Section */}
             {label && (
                 <Text style={styles.inputLabel}>
@@ -54,6 +61,7 @@ const Input: React.FC<InputProps> = ({
                 {icon && <View style={styles.inputIcon}>{icon}</View>}
 
                 <TextInput
+                    testID={testID}
                     style={[
                         styles.input,
                         icon ? styles.inputWithIcon : null,

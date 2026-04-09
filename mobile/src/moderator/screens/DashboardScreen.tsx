@@ -1,0 +1,329 @@
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  SafeAreaView,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { 
+  ClipboardCheck, 
+  Store, 
+  AlertTriangle, 
+  Users,
+  ChevronRight,
+  TrendingUp,
+  Clock,
+  LayoutDashboard
+} from 'lucide-react-native';
+import ModeratorService from '../services/ModeratorService';
+
+const DashboardScreen = ({ navigation }: any) => {
+  const [stats, setStats] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const data = await ModeratorService.getDashboardOverview();
+      setStats(data.statCards);
+      setSummary(data.summary);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getIconForStat = (title: string) => {
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes('post')) return <ClipboardCheck color="#10B981" size={24} />;
+    if (lowerTitle.includes('shop')) return <Store color="#3B82F6" size={24} />;
+    if (lowerTitle.includes('report')) return <AlertTriangle color="#EF4444" size={24} />;
+    return <Users color="#8B5CF6" size={24} />;
+  };
+
+  if (loading && !stats.length) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#22C55E" />
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={fetchDashboardData} tintColor="#22C55E" />
+        }
+      >
+        <LinearGradient
+          colors={['#166534', '#22C55E']}
+          style={styles.header}
+        >
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.welcomeText}>Moderator Panel</Text>
+              <Text style={styles.dateText}>{new Date().toDateString()}</Text>
+            </View>
+            <TouchableOpacity style={styles.profileBtn}>
+              <LayoutDashboard color="white" size={20} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.mainStatsContainer}>
+            <Text style={styles.summaryTitle}>{summary?.title || "Overview"}</Text>
+            <Text style={styles.summaryDesc}>
+              {summary?.description || "Loading latest activities..."}
+            </Text>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.content}>
+          <View style={styles.statsGrid}>
+            {stats.map((stat, index) => (
+              <View key={index} style={styles.statCard}>
+                <View style={[styles.statIcon, { backgroundColor: '#F0F9FF' }]}>
+                  {getIconForStat(stat.title)}
+                </View>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.title}</Text>
+              </View>
+            ))}
+          </View>
+
+          <Text style={styles.sectionTitle}>Task Shortcuts</Text>
+          
+          <View style={styles.quickActions}>
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('Posts')}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#F0FDF4' }]}>
+                <ClipboardCheck color="#22C55E" size={24} />
+              </View>
+              <Text style={styles.actionLabel}>Review Posts</Text>
+              <ChevronRight color="#CBD5E1" size={18} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('Shops')}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#EFF6FF' }]}>
+                <Store color="#3B82F6" size={24} />
+              </View>
+              <Text style={styles.actionLabel}>Verify Shops</Text>
+              <ChevronRight color="#CBD5E1" size={18} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('Reports')}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#FEF2F2' }]}>
+                <AlertTriangle color="#EF4444" size={24} />
+              </View>
+              <Text style={styles.actionLabel}>Activity Reports</Text>
+              <ChevronRight color="#CBD5E1" size={18} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.activityCard}>
+            <View style={styles.activityHeader}>
+              <TrendingUp size={18} color="#166534" />
+              <Text style={styles.activityTitle}>Pending Summary</Text>
+            </View>
+            <View style={styles.activityRow}>
+              <Clock size={16} color="#64748B" />
+              <Text style={styles.activityText}>You have items awaiting your attention.</Text>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    paddingTop: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'white',
+  },
+  dateText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
+  },
+  profileBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainStatsContainer: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    padding: 20,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  summaryTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  summaryDesc: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  content: {
+    paddingHorizontal: 20,
+    marginTop: -20,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  statCard: {
+    width: '48%',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  statIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    marginBottom: 16,
+    marginLeft: 4,
+  },
+  quickActions: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  actionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  actionLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  activityCard: {
+    backgroundColor: '#F0FDF4',
+    padding: 20,
+    borderRadius: 24,
+    marginBottom: 30,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  activityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  activityTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#166534',
+  },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  activityText: {
+    fontSize: 14,
+    color: '#475569',
+  },
+});
+
+export default DashboardScreen;

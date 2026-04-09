@@ -2,13 +2,53 @@ import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { shops, type Shop } from "../../models/schema/shops.ts";
-import { posts, postImages } from "../../models/schema/index.ts";
+import { posts, postImages, eventLogs } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import { verificationService } from "../../services/verification.service.ts";
 import { users } from "../../models/schema/users.ts";
+import {
+    OwnerDashboardError,
+    ownerDashboardService,
+} from "../../services/owner-dashboard.service.ts";
 
 const SHOP_GALLERY_DELIMITER = "|";
+const SHOP_EVENT_VIEW = "shop_view";
+const SHOP_EVENT_CONTACT_CLICK = "shop_contact_click";
+const SHOP_VIEW_DEDUP_MS = 30_000;
+const recentShopViewCache = new Map<string, number>();
+
+const getViewerIp = (req: Request): string => {
+    const forwardedFor = req.headers["x-forwarded-for"];
+    if (typeof forwardedFor === "string" && forwardedFor.length > 0) {
+        return forwardedFor.split(",")[0].trim();
+    }
+    if (Array.isArray(forwardedFor) && forwardedFor.length > 0) {
+        return forwardedFor[0]?.trim() || "unknown_ip";
+    }
+    return req.ip || req.socket?.remoteAddress || "unknown_ip";
+};
+
+const shouldCountShopView = (shopId: number, viewerKey: string): boolean => {
+    const now = Date.now();
+    const dedupKey = `${shopId}:${viewerKey}`;
+    const lastTrackedAt = recentShopViewCache.get(dedupKey);
+    if (lastTrackedAt && now - lastTrackedAt < SHOP_VIEW_DEDUP_MS) {
+        return false;
+    }
+
+    recentShopViewCache.set(dedupKey, now);
+
+    if (recentShopViewCache.size > 5000) {
+        for (const [key, trackedAt] of recentShopViewCache.entries()) {
+            if (now - trackedAt >= SHOP_VIEW_DEDUP_MS) {
+                recentShopViewCache.delete(key);
+            }
+        }
+    }
+
+    return true;
+};
 
 const parseShopGalleryImages = (rawCover: string | null | undefined): string[] => {
     if (!rawCover) return [];
@@ -142,9 +182,37 @@ export const getMyShop = async (req: AuthRequest, res: Response): Promise<void> 
     }
 };
 
-export const getPublicShopById = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+export const getOwnerDashboard = async (
+    req: AuthRequest,
+    res: Response,
+): Promise<void> => {
     try {
-        const id = parseId(req.params.id);
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+            return;
+        }
+
+        const data = await ownerDashboardService.getByOwnerId(userId);
+        res.json(data);
+    } catch (error) {
+        if (error instanceof OwnerDashboardError) {
+            res.status(error.statusCode).json({
+                error: error.message,
+                code: error.code,
+                ...(error.details || {}),
+            });
+            return;
+        }
+
+        console.error(error);
+        res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR" });
+    }
+};
+
+export const getPublicShopById = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const id = parseId(req.params.id as string);
         if (!id) {
             res.status(400).json({ error: "Invalid Shop ID" });
             return;
@@ -154,6 +222,26 @@ export const getPublicShopById = async (req: Request<{ id: string }>, res: Respo
         if (!shop) {
             res.status(404).json({ error: "Shop not found" });
             return;
+        }
+
+        const viewerId = req.user?.id;
+        const isOwnerViewingOwnShop = viewerId === id;
+        if (!isOwnerViewingOwnShop) {
+            const viewerKey = viewerId
+                ? `user:${viewerId}`
+                : `ip:${getViewerIp(req)}`;
+
+            if (shouldCountShopView(id, viewerKey)) {
+                db.insert(eventLogs)
+                    .values({
+                        eventLogShopId: id,
+                        eventLogUserId: viewerId ?? null,
+                        eventLogEventType: SHOP_EVENT_VIEW,
+                        eventLogMeta: { source: "shop_detail_page" },
+                    })
+                    .execute()
+                    .catch((error) => console.error("Failed to track shop view:", error));
+            }
         }
 
         const shopPosts = await db.select()
@@ -180,6 +268,38 @@ export const getPublicShopById = async (req: Request<{ id: string }>, res: Respo
             ...decoratedShop,
             posts: postsWithImages
         });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const recordShopContactClick = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    try {
+        const shopId = parseId(req.params.id as string);
+        if (!shopId) {
+            res.status(400).json({ error: "Shop ID is required" });
+            return;
+        }
+
+        const [shop] = await db
+            .select({ shopId: shops.shopId })
+            .from(shops)
+            .where(eq(shops.shopId, shopId))
+            .limit(1);
+
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        await db.insert(eventLogs).values({
+            eventLogShopId: shopId,
+            eventLogEventType: SHOP_EVENT_CONTACT_CLICK,
+            eventLogMeta: { source: "shop_contact_action" },
+        });
+
+        res.json({ success: true });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

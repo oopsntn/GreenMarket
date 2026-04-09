@@ -1,0 +1,28 @@
+appId: ${APP_ID}
+env:
+  POST_TITLE: "Maestro smoke post"
+  POST_PRICE: "100000"
+---
+- launchApp
+- runFlow:
+    when:
+      visible: "Sign in with phone number"
+    file: "login-by-otp.yaml"
+- assertVisible:
+    id: "profile-my-shop-button"
+- tapOn:
+    id: "profile-my-shop-button"
+- assertVisible: "My Shop"
+- assertVisible:
+    id: "my-shop-create-post-button"
+- tapOn:
+    id: "my-shop-create-post-button"
+- assertVisible: "Create New Post"
+- tapOn:
+    id: "create-post-title-input"
+- inputText: ${POST_TITLE}
+- tapOn:
+    id: "create-post-price-input"
+- inputText: ${POST_PRICE}
+- assertVisible:
+    id: "create-post-submit-button"

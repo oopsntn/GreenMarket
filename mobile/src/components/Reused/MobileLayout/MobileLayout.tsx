@@ -11,7 +11,8 @@ import {
     ViewStyle,
     KeyboardAvoidingView
 } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { ChevronLeft, Home } from 'lucide-react-native';
 // Nếu dùng Expo: npx expo install expo-linear-gradient
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -39,6 +40,8 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     scrollEnabled = true,
 }) => {
 
+    const navigation = useNavigation<any>();
+
     // Tach phan noi dung ben trong Header ra de dung chung
     const renderHeaderContent = () => (
         <View style={styles.headerContent}>
@@ -61,7 +64,12 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
             </Text>
 
             <View style={styles.rightAction}>
-                {rightAction || <View style={{ width: 28 }} />}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    {rightAction}
+                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                        <Home size={24} color={headerStyle === 'default' ? '#fff' : '#333'} />
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
 

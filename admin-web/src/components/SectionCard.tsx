@@ -6,6 +6,7 @@ type SectionCardProps = Readonly<{
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
+  bodyClassName?: string;
 }>;
 
 function SectionCard({
@@ -13,6 +14,7 @@ function SectionCard({
   description,
   actions,
   children,
+  bodyClassName = "",
 }: SectionCardProps) {
   const hasHeader = Boolean(title || description || actions);
 
@@ -29,7 +31,9 @@ function SectionCard({
         </div>
       )}
 
-      <div className="section-card__body">{children}</div>
+      <div className={`section-card__body ${bodyClassName}`.trim()}>
+        {children}
+      </div>
     </section>
   );
 }

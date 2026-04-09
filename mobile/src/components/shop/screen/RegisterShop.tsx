@@ -167,7 +167,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 setSubmitted(true)
             }
         } catch (error: any) {
-            const errorMsg = error.response?.data?.error || 'Unknown error'
+            const errorMsg = `Register shop error: ${error.response?.data?.error}` || 'Unknown error'
 
             if (error.response?.data?.error === 'User already has a shop registered') {
                 await refreshShop()
@@ -348,7 +348,15 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             label="Shop Location *"
                             address={formData.shopLocation}
                             onAddressChange={handleAddressChange}
-                            onLocationSelect={handleLocationSelect}
+                            onLocationSelect={(addr, lat, lng) => {
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    shopLocation: addr,
+                                    shopLat: lat,
+                                    shopLng: lng,
+                                }))
+                            }
+                            }
                         />
                         {formData.shopLat ? (
                             <Text style={styles.coordinateText}>

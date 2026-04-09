@@ -30,15 +30,6 @@ const PostTabs = ({ activeTab, onTabChange, hasShop, styles }: PostTabsProps) =>
           </Text>
         </TouchableOpacity>
       ) : null}
-
-      <TouchableOpacity
-        style={[styles.tab, activeTab === 'trash' && styles.activeTab]}
-        onPress={() => onTabChange('trash')}
-      >
-        <Text style={[styles.tabText, activeTab === 'trash' && styles.activeTabText]}>
-          Trash
-        </Text>
-      </TouchableOpacity>
     </View>
   )
 }

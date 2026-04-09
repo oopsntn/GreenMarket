@@ -18,10 +18,12 @@ const EditShopScreen = ({ route, navigation }: any) => {
     const [loading, setLoading] = useState(false);
     const [uploadingImage, setUpLoadingImage] = useState(false);
     const [showPhoneModal, setShowPhoneModal] = useState(false);
-    const [phones, setPhones] = useState<string[]>(shop?.phones || []);
+    const [phones, setPhones] = useState<string[]>(
+        shop?.phones || (shop?.shopPhone ? String(shop.shopPhone).split('|').map((item: string) => item.trim()).filter(Boolean) : [])
+    );
     const [formData, setFormData] = useState({
         shopName: shop?.shopName || '',
-        shopPhone: shop?.shopPhone || '',
+        shopPhone: shop?.phones?.[0] || shop?.shopPhone || '',
         shopEmail: shop?.shopEmail || '',
         shopLocation: shop?.shopLocation || '',
         shopDescription: shop?.shopDescription || '',
@@ -91,10 +93,6 @@ const EditShopScreen = ({ route, navigation }: any) => {
         if (!formData.shopName.trim()) return CustomAlert('Error', 'Shop name is required');
         if (!formData.shopLat || !formData.shopLng) return CustomAlert('Error', 'Please update the shop location');
 
-        if (formData.shopPhone.trim() && !phoneRegex.test(formData.shopPhone.trim())) {
-            return CustomAlert('Error', 'Invalid Vietnamese phone number format');
-        }
-
         if (formData.shopEmail.trim() && !emailRegex.test(formData.shopEmail.trim())) {
             return CustomAlert('Error', 'Invalid email address format');
         }
@@ -115,7 +113,6 @@ const EditShopScreen = ({ route, navigation }: any) => {
             const dataToSubmit = {
                 shopName: formData.shopName.trim(),
                 shopEmail: formData.shopEmail.trim() || undefined,
-                shopPhone: formData.shopPhone.trim(),
                 shopLocation: formData.shopLocation.trim(),
                 shopDescription: formData.shopDescription.trim(),
                 shopLat: formData.shopLat,
@@ -215,6 +212,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     value={formData.shopPhone}
                     onChangeText={(txt) => setFormData({ ...formData, shopPhone: txt })}
                     type="phone-pad"
+                    disabled
                 />
 
                 <TouchableOpacity 
@@ -240,8 +238,8 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     label="Shop address"
                     address={formData.shopLocation}
                     onAddressChange={(addr) => setFormData({ ...formData, shopLocation: addr })}
-                    onLocationSelect={(lat, lng) => {
-                        setFormData({ ...formData, shopLat: lat, shopLng: lng })
+                    onLocationSelect={(addr, lat, lng) => {
+                        setFormData({ ...formData, shopLocation: addr, shopLat: lat, shopLng: lng })
                     }}
                 />
 

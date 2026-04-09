@@ -21,11 +21,13 @@ export const useCreateReport = (postId: number) => {
         if (!reportReason) {
             return Alert.alert('Notice', 'Please choose a report reason')
         }
+        if (!user?.id) {
+            return Alert.alert('Authentication required', 'Please sign in before sending a report.')
+        }
         setLoading(true)
         try {
             const finalReason = description ? `${reportReason} - Details: ${description}` : reportReason
             await ReportService.createReport({
-                reporterId: user?.id ?? null,
                 postId,
                 reportReason: finalReason,
             })

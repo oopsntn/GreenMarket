@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigation } from '@react-navigation/native'
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { Plus, Settings2 } from 'lucide-react-native'
+import { BarChart3, Plus, Settings2 } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import ShopHeader from '../components/ShopHeader'
 import PostItem from '../../post/components/PostItem'
@@ -36,6 +36,10 @@ const ShoDetailScreen = () => {
             rightAction={
                 shop && shop.shopStatus !== 'blocked' ? (
                     <View style={styles.headerActions}>
+                        <TouchableOpacity onPress={() => navigation.navigate('ShopDashboard')}>
+                            <BarChart3 color="#10b981" size={24} />
+                        </TouchableOpacity>
+
                         <TouchableOpacity onPress={() => navigation.navigate('CreatePost')}>
                             <Plus color="#10b981" size={24} />
                         </TouchableOpacity>
@@ -68,6 +72,15 @@ const ShoDetailScreen = () => {
                             <View style={styles.headerButtons}>
                                 <Button
                                     variant="outline"
+                                    onPress={() => navigation.navigate('ShopDashboard')}
+                                    style={styles.outlineButton}
+                                    textStyle={{ color: '#10b981' }}
+                                >
+                                    View dashboard
+                                </Button>
+                                <Button
+                                    testID="my-shop-create-post-button"
+                                    variant="outline"
                                     onPress={() => navigation.navigate('CreatePost')}
                                     style={styles.outlineButton}
                                     textStyle={{ color: '#10b981' }}
@@ -75,6 +88,7 @@ const ShoDetailScreen = () => {
                                     Create new product post
                                 </Button>
                                 <Button
+                                    testID="my-shop-manage-posts-button"
                                     onPress={() => navigation.navigate('MyPost')}
                                     style={styles.primaryButton}
                                 >

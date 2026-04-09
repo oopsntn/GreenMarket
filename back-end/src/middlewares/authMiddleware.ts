@@ -41,6 +41,31 @@ export const verifyToken: RequestHandler = (req, res: Response, next: NextFuncti
     }
 };
 
+export const optionalVerifyToken: RequestHandler = (
+    req,
+    _res: Response,
+    next: NextFunction,
+): void => {
+    const authReq = req as AuthRequest;
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        next();
+        return;
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET) as JWTUserPayload;
+        authReq.user = decoded;
+    } catch {
+        // Public endpoints should still work even if an invalid token is sent.
+    }
+
+    next();
+};
+
 export const isAdmin: RequestHandler = (req, res: Response, next: NextFunction): void => {
     const authReq = req as AuthRequest;
     if (!authReq.user) {

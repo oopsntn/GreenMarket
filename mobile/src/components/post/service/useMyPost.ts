@@ -26,7 +26,7 @@ const useMyPost = () => {
             setPosts(Array.isArray(res) ? res : [])
         } catch (e) {
             console.error('Error fetching posts:', e)
-            Alert.alert('Error', 'Unable to load the post list.')
+            CustomAlert('Error', 'Unable to load the post list.')
         } finally {
             setLoading(false)
         }
@@ -67,14 +67,32 @@ const useMyPost = () => {
         )
     }
 
-    const handleUpdate = async (postId: number, data: { postTitle: string; postPrice: string }) => {
+    const handleUpdate = async (postId: number, data: {
+        postTitle: string;
+        postPrice: string;
+        categoryId: number;
+        postContent: string;
+        postLocation: string;
+        postContactPhone: string;
+    }) => {
         if (!data.postTitle.trim()) {
-            Alert.alert('Missing information', 'Please enter the post title.')
+            CustomAlert('Missing information', 'Please enter the post title.')
+            return
+        }
+
+        if (!data.categoryId) {
+            CustomAlert('Missing information', 'Please select a category.')
             return
         }
 
         if (!data.postPrice.trim() || Number.isNaN(Number(data.postPrice)) || Number(data.postPrice) < 0) {
-            Alert.alert('Invalid price', 'The selling price must be a number greater than or equal to 0.')
+            CustomAlert('Invalid price', 'The price must be a number greater than or equal to 0.')
+            return
+        }
+
+        // Constraints mentioned in plan
+        if (data.postContent.length > 2000) {
+            CustomAlert('Value too long', 'The description cannot exceed 2000 characters.')
             return
         }
 
@@ -82,7 +100,10 @@ const useMyPost = () => {
             setSaving(true)
             const updatedPost = await postService.updatePost(postId, {
                 postTitle: data.postTitle.trim(),
-                postPrice: data.postPrice.trim(),
+                postPrice: Number(data.postPrice.trim()),
+                categoryId: data.categoryId,
+                postLocation: data.postLocation.trim() || undefined,
+                postContactPhone: data.postContactPhone.replace(/\s+/g, '') || undefined,
             })
 
             setPosts((prev) => prev.map((post) => (
@@ -91,20 +112,17 @@ const useMyPost = () => {
                     : post
             )))
             setEditingPost(null)
-            Alert.alert('Success', 'Post updated successfully.')
+            CustomAlert('Success', 'Post updated successfully.')
+            await fetchPosts() // Refresh to ensure data consistency
         } catch (e) {
             console.error('Error updating post:', e)
-            Alert.alert('Error', 'Update failed')
+            CustomAlert('Error', 'Update failed. Please try again.')
         } finally {
             setSaving(false)
         }
     }
 
     const filteredPosts = posts.filter((post) => {
-        if (activeTab === 'trash') {
-            return post.postStatus === 'hidden'
-        }
-
         if (activeTab === 'shop') {
             return post.postShopId !== null
         }

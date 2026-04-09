@@ -18,45 +18,59 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
 
     if (!shop) return null
 
+    const primaryPhone = shop.shopPhone || shop.phones?.[0] || ''
+
     const openMap = () => {
         if (!shop.shopLocation && (!shop.shopLat || !shop.shopLng)) {
             return
         }
 
-        const label = shop.shopName || 'Shop'
-        const lat = shop.shopLat
-        const lng = shop.shopLng
-        const location = shop.shopLocation || label
+        const label = encodeURIComponent(shop.shopName || 'Shop')
+        const lat = parseFloat(shop.shopLat)
+        const lng = parseFloat(shop.shopLng)
+        const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0
+        const location = encodeURIComponent(shop.shopLocation || label)
 
-        const url = Platform.select({
-            ios: lat && lng ? `maps:0,0?q=${label}@${lat},${lng}` : `maps:0,0?q=${location}`,
-            android: lat && lng ? `geo:${lat},${lng}?q=${lat},${lng}(${label})` : `geo:0,0?q=${location}`,
+        //1. Chay tren trinh duyet web thi mo Google Maps voi query la dia chi hoac lat/lng
+        if (Platform.OS === 'web') {
+            const url = 'https://www.google.com/maps/search/?api=1&query='
+            let webUrl = `${url}${location}`
+            if (hasCoords) {
+                webUrl = `${url}${lat},${lng}`
+            }
+            Linking.openURL(webUrl)
+            return;
+        }
+
+        //2. Chay tren Mobile thi mo app Maps mac dinh tren may voi query la dia chi hoac lat/lng
+        let mobileUrl = ''
+        if (Platform.OS === 'ios') {
+            mobileUrl = hasCoords ? `http://maps.apple.com/?ll=${lat},${lng}&q=${label}` : `http://maps.apple.com/?q=${location}`
+        } else if (Platform.OS === 'android') {
+            mobileUrl = hasCoords ? `geo:${lat},${lng}?q=${label}` : `geo:0,0?q=${location}`
+        }
+        //Neu may khong co app Maps mac dinh thi mo Google Maps tren trinh duyet
+        Linking.openURL(mobileUrl).catch(() => {
+            const fallbackUrl = hasCoords ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : `https://www.google.com/maps/search/?api=1&query=${location}`
+            Linking.openURL(fallbackUrl)
         })
 
-        if (url) {
-            Linking.openURL(url)
-        }
     }
 
     const makeCall = () => {
-        if (shop.shopPhone) {
-            Linking.openURL(`tel:${shop.shopPhone}`)
+        if (primaryPhone) {
+            Linking.openURL(`tel:${primaryPhone.replace(/\s+/g, '')}`)
         }
     }
 
     const openZalo = () => {
-        if (shop.shopPhone) {
-            Linking.openURL(`https://zalo.me/${shop.shopPhone}`)
+        if (primaryPhone) {
+            Linking.openURL(`https://zalo.me/${primaryPhone.replace(/\s+/g, '')}`)
         }
     }
 
     return (
         <View style={styles.headerCard}>
-            {shop.shopCoverUrl ? (
-                <Image source={{ uri: shop.shopCoverUrl }} style={styles.coverImage} />
-            ) : null}
-
-            {/* 2. Thay vì 1 ảnh bìa, hãy hiện Slider nếu có Gallery */}
             {gallery.length > 0 ? (
                 <FlatList
                     data={gallery}
@@ -102,7 +116,7 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
                 <View style={styles.infoItem}>
                     <Phone size={16} color="#10b981" />
                     <Text style={styles.infoText}>
-                        {shop.shopPhone || 'No phone number yet'}
+                        {primaryPhone || 'No phone number yet'}
                     </Text>
                 </View>
             </View>

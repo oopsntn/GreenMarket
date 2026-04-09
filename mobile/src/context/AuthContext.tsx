@@ -10,6 +10,7 @@ interface User {
     userEmail?: string | null;
     userLocation?: string | null;
     userBio?: string | null;
+    userRegisteredAt?: string | null;
 }
 
 interface Shop {
@@ -18,11 +19,17 @@ interface Shop {
     shopStatus: string;
     shopDescription?: string;
     shopPhone?: string;
+    shopEmail?: string;
     shopLocation?: string;
     shopLogoUrl?: string;
     shopCoverUrl?: string;
+    shopGalleryImages?: string | string[];
+    shopFacebook?: string;
+    shopInstagram?: string;
+    shopYoutube?: string;
     shopLat?: number;
     shopLng?: number;
+    phones?: string[];
     posts?: any[];
 }
 

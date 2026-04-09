@@ -14,9 +14,6 @@ export const shops = pgTable("shops", {
   shopId: integer("shop_id")
     .primaryKey()
     .references(() => users.userId, { onDelete: "cascade" }),
-  shopOwnerId: integer("shop_owner_id").references(() => users.userId, {
-    onDelete: "set null",
-  }),
   shopName: varchar("shop_name", { length: 150 }).notNull(),
   shopPhone: varchar("shop_phone", { length: 50 }),
   shopEmail: varchar("shop_email", { length: 255 }).unique(),
@@ -26,8 +23,8 @@ export const shops = pgTable("shops", {
   shopYoutube: varchar("shop_youtube", { length: 255 }),
   shopLocation: varchar("shop_location", { length: 255 }),
   shopDescription: text("shop_description"),
-  shopLogoUrl: varchar("shop_logo_url", { length: 255 }),
-  shopCoverUrl: varchar("shop_cover_url", { length: 255 }),
+  shopLogoUrl: text("shop_logo_url"),
+  shopCoverUrl: text("shop_cover_url"),
   shopStatus: varchar("shop_status", { length: 20 }).default("pending"),
   shopLat: decimal("shop_lat", { precision: 10, scale: 8 }),
   shopLng: decimal("shop_lng", { precision: 11, scale: 8 }),

@@ -97,6 +97,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
             <Text style={styles.subtitle}>Enter your phone number to receive an OTP code</Text>
 
             <TextInput
+              testID="login-mobile-input"
               style={styles.input}
               placeholder="09xx xxx xxx"
               keyboardType="phone-pad"
@@ -105,6 +106,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
             />
 
             <TouchableOpacity
+              testID="login-send-otp-button"
               style={styles.primaryButton}
               onPress={handleRequestOtp}
               disabled={loading}
@@ -122,6 +124,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
             <Text style={styles.subtitle}>Enter the 6-digit OTP sent to {mobile}</Text>
 
             <TextInput
+              testID="login-otp-input"
               style={styles.input}
               placeholder="000000"
               keyboardType="number-pad"
@@ -131,6 +134,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
             />
 
             <TouchableOpacity
+              testID="login-confirm-button"
               style={styles.primaryButton}
               onPress={handleVerifyOtp}
               disabled={loading}

@@ -7,8 +7,10 @@ import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
-import { emptyTemplateForm } from "../mock-data/templates";
-import { templateService } from "../services/templateService";
+import {
+  emptyTemplateForm,
+  templateService,
+} from "../services/templateService";
 import type { Template, TemplateFormState } from "../types/template";
 import "./TemplatesPage.css";
 
@@ -23,9 +25,12 @@ type ConfirmState = {
 const PAGE_SIZE = 5;
 
 function TemplatesPage() {
-  const [templates, setTemplates] = useState<Template[]>(
-    templateService.getTemplates(),
-  );
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "view">("add");
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
@@ -42,6 +47,30 @@ function TemplatesPage() {
     action: null,
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const loadTemplates = async (showLoader = false) => {
+    try {
+      if (showLoader) {
+        setIsInitialLoading(true);
+      }
+
+      setPageError("");
+      const data = await templateService.getTemplates();
+      setTemplates(data);
+    } catch (error) {
+      setPageError(
+        error instanceof Error ? error.message : "Failed to load templates.",
+      );
+    } finally {
+      if (showLoader) {
+        setIsInitialLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    void loadTemplates(true);
+  }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -140,81 +169,98 @@ function TemplatesPage() {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     try {
+      setIsSubmitting(true);
+
       templateService.validateTemplateForm(
         templates,
         formData,
         selectedTemplateId,
       );
       setFormError("");
-    } catch (error) {
-      setFormError(
-        error instanceof Error ? error.message : "Failed to validate template.",
-      );
-      return;
-    }
 
-    if (modalMode === "add") {
-      setTemplates((prev) =>
-        templateService.createTemplate(prev, {
+      if (modalMode === "add") {
+        await templateService.createTemplate({
           ...formData,
           status: "Active",
-        }),
-      );
-      showToast("Template added successfully.");
-    }
+        });
+        await loadTemplates();
+        showToast("Template added successfully.");
+      }
 
-    if (modalMode === "edit" && selectedTemplateId !== null) {
-      const currentTemplate = templates.find(
-        (template) => template.id === selectedTemplateId,
-      );
+      if (modalMode === "edit" && selectedTemplateId !== null) {
+        const currentTemplate = templates.find(
+          (template) => template.id === selectedTemplateId,
+        );
 
-      setTemplates((prev) =>
-        templateService.updateTemplate(prev, selectedTemplateId, {
+        await templateService.updateTemplate(selectedTemplateId, {
           ...formData,
           status: currentTemplate?.status ?? "Active",
-        }),
+        });
+
+        await loadTemplates();
+        showToast("Template updated successfully.");
+      }
+
+      closeModal();
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "Failed to save template.",
       );
-      showToast("Template updated successfully.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    closeModal();
   };
 
-  const handleToggleStatus = (template: Template) => {
-    const nextStatus = template.status === "Active" ? "Disabled" : "Active";
-    setTemplates((prev) =>
-      templateService.updateTemplateStatus(prev, template.id, nextStatus),
-    );
-  };
-
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (confirmState.templateId === null || confirmState.action === null)
       return;
 
     const targetTemplate = templates.find(
       (item) => item.id === confirmState.templateId,
     );
+
     if (!targetTemplate) {
       closeConfirmDialog();
       return;
     }
 
-    handleToggleStatus(targetTemplate);
+    const nextStatus =
+      confirmState.action === "disable" ? "Disabled" : "Active";
 
-    if (confirmState.action === "disable") {
-      showToast(
-        `${targetTemplate.name} has been disabled successfully.`,
-        "info",
+    try {
+      setIsStatusUpdating(confirmState.templateId);
+
+      await templateService.updateTemplateStatus(
+        confirmState.templateId,
+        nextStatus,
       );
-    } else {
-      showToast(`${targetTemplate.name} has been enabled successfully.`);
-    }
 
-    closeConfirmDialog();
+      await loadTemplates();
+
+      if (confirmState.action === "disable") {
+        showToast(
+          `${targetTemplate.name} has been disabled successfully.`,
+          "info",
+        );
+      } else {
+        showToast(`${targetTemplate.name} has been enabled successfully.`);
+      }
+
+      closeConfirmDialog();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Failed to update template status.",
+        "error",
+      );
+    } finally {
+      setIsStatusUpdating(null);
+    }
   };
 
   const filteredTemplates = useMemo(() => {
@@ -225,12 +271,16 @@ function TemplatesPage() {
     return templates.filter((template) => {
       return (
         template.name.toLowerCase().includes(keyword) ||
-        template.type.toLowerCase().includes(keyword)
+        template.type.toLowerCase().includes(keyword) ||
+        template.content.toLowerCase().includes(keyword)
       );
     });
   }, [templates, searchKeyword]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredTemplates.length / PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredTemplates.length / PAGE_SIZE),
+  );
 
   const paginatedTemplates = useMemo(() => {
     const startIndex = (page - 1) * PAGE_SIZE;
@@ -310,7 +360,17 @@ function TemplatesPage() {
         title="Template Directory"
         description="Review template information, content preview, and status."
       >
-        {filteredTemplates.length === 0 ? (
+        {isInitialLoading ? (
+          <EmptyState
+            title="Loading templates"
+            description="Fetching template records from the admin API."
+          />
+        ) : pageError ? (
+          <EmptyState
+            title="Unable to load templates"
+            description={pageError}
+          />
+        ) : filteredTemplates.length === 0 ? (
           <EmptyState
             title="No templates found"
             description="No templates match your current search. Try another keyword or create a new template."
@@ -376,6 +436,7 @@ function TemplatesPage() {
                               onClick={() =>
                                 openConfirmDialog(template.id, "disable")
                               }
+                              disabled={isStatusUpdating === template.id}
                             >
                               Disable
                             </button>
@@ -386,6 +447,7 @@ function TemplatesPage() {
                               onClick={() =>
                                 openConfirmDialog(template.id, "enable")
                               }
+                              disabled={isStatusUpdating === template.id}
                             >
                               Enable
                             </button>
@@ -413,7 +475,9 @@ function TemplatesPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={page === totalPages}
                 >
                   Next
@@ -440,7 +504,7 @@ function TemplatesPage() {
               type="text"
               value={formData.name}
               onChange={handleChange}
-              disabled={modalMode === "view"}
+              disabled={modalMode === "view" || isSubmitting}
               placeholder="Enter template name"
             />
           </div>
@@ -452,7 +516,7 @@ function TemplatesPage() {
               name="type"
               value={formData.type}
               onChange={handleChange}
-              disabled={modalMode === "view"}
+              disabled={modalMode === "view" || isSubmitting}
             >
               <option>Rejection Reason</option>
               <option>Report Reason</option>
@@ -467,7 +531,7 @@ function TemplatesPage() {
               name="content"
               value={formData.content}
               onChange={handleChange}
-              disabled={modalMode === "view"}
+              disabled={modalMode === "view" || isSubmitting}
               placeholder="Enter template content"
               rows={5}
             />
@@ -491,13 +555,22 @@ function TemplatesPage() {
               type="button"
               className="templates-modal__cancel"
               onClick={closeModal}
+              disabled={isSubmitting}
             >
               Close
             </button>
 
             {modalMode !== "view" && (
-              <button type="submit" className="templates-modal__submit">
-                {modalMode === "add" ? "Add Template" : "Save Changes"}
+              <button
+                type="submit"
+                className="templates-modal__submit"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? "Saving..."
+                  : modalMode === "add"
+                    ? "Add Template"
+                    : "Save Changes"}
               </button>
             )}
           </div>

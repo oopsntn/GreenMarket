@@ -14,6 +14,7 @@ import ShopList from './pages/ShopList';
 import PaymentResult from './pages/PaymentResult';
 import SavedPosts from './pages/SavedPosts';
 import Splash from './pages/Splash';
+import OwnerDashboard from './pages/OwnerDashboard';
 import ScrollToTop from './components/ScrollToTop';
 
 /**
@@ -50,6 +51,11 @@ const AppContent: React.FC = () => {
         <Route path="/my-posts" element={
           <ProtectedRoute>
             <MyPosts />
+          </ProtectedRoute>
+        } />
+        <Route path="/owner-dashboard" element={
+          <ProtectedRoute>
+            <OwnerDashboard />
           </ProtectedRoute>
         } />
         <Route path="/create-post" element={

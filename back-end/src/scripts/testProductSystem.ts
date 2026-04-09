@@ -40,7 +40,6 @@ async function testBonsaiSystem() {
             postAuthorId: user.userId,
             categoryId: category.categoryId,
             postTitle: "Tùng La Hán Bonsai Nhật Bản",
-            postContent: "Một tác phẩm nghệ thuật sống động với độ tuổi hơn 10 năm.",
             postPrice: 5500000,
             postStatus: "approved",
             images: [

@@ -35,15 +35,6 @@ const BrowseShopsScreen = () => {
         fetchShops()
     }, [])
 
-    const handlePress = () => {
-        // Kiểm tra xem có shop nào không và shop đó có posts không
-        if (shops.length > 0 && shops[0].posts && shops[0].posts.length > 0) {
-            navigation.navigate('PostDetail', { slug: shops[0].posts[0].postSlug });
-        } else {
-            console.warn("No posts found!");
-        }
-    }
-
     return (
         <MobileLayout title="Explore Shops" backButton={() => navigation.goBack()}>
             {loading ? (
@@ -57,7 +48,7 @@ const BrowseShopsScreen = () => {
                     onRefresh={() => fetchShops(true)}
                     renderItem={({ item }) => (
                         <TouchableOpacity onPress={() => navigation.navigate('PublicShopDetail', { shopId: item.shopId })}>
-                            <Card onClick={handlePress} style={styles.card}>
+                            <Card style={styles.card}>
                                 <View style={styles.cardRow}>
                                     <View style={styles.logoWrap}>
                                         {item.shopLogoUrl ? (
@@ -79,15 +70,9 @@ const BrowseShopsScreen = () => {
 
                                     <ChevronRight color="#94a3b8" size={18} />
                                 </View>
-                                <View style={styles.info}>
-                                    <Text style={styles.shopName}>{item.shopName}</Text>
-                                    <Text style={styles.shopLocation} numberOfLines={1}>
-                                        {item.shopLocation || 'Address not updated'}
-                                    </Text>
-                                    {/* Thêm dòng này */}
-                                    <Text style={styles.postCountText}>
-                                        📦 {item.posts?.length || 0} sản phẩm
-                                    </Text>
+
+                                <View style={styles.metaRow}>
+                                    <Text style={styles.postCountText}>{item.posts?.length || 0} products</Text>
                                 </View>
                             </Card>
                         </TouchableOpacity>
@@ -169,13 +154,12 @@ const styles = StyleSheet.create({
     postCountText: {
         fontSize: 12,
         color: '#64748b',
-        marginTop: 4,
-        marginBottom: 4,
-        textAlign: 'right',
-        textDecorationLine: 'underline',
-        textDecorationColor: '#10b981',
-        textDecorationStyle: 'solid',
-    }
+        fontWeight: '600',
+    },
+    metaRow: {
+        marginTop: 10,
+        alignItems: 'flex-end',
+    },
 })
 
 export default BrowseShopsScreen

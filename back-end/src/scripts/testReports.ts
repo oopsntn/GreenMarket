@@ -24,7 +24,6 @@ async function testReports() {
             categoryId: cat.categoryId,
             postTitle,
             postSlug: slugify(postTitle),
-            postContent: "Nội dung bài đăng vi phạm.",
             postStatus: "approved",
         }).returning();
 

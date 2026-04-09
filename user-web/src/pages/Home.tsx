@@ -138,9 +138,9 @@ const Home: React.FC = () => {
           <p className="text-emerald-600 font-black text-xl">
             {Number(post.postPrice).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 ml-1 uppercase">VND</span>
           </p>
-          <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-            <MapPin className="w-3 h-3 text-slate-400" /> {post.postLocation || 'Hà Nội'}
-          </div>
+        </div>
+        <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider bg-slate-50 py-1 rounded-md border border-slate-100">
+          <MapPin className="w-3 h-3 text-slate-400" /> {post.postLocation || 'Hà Nội'}
         </div>
       </div>
     </Link>
@@ -183,7 +183,7 @@ const Home: React.FC = () => {
         <aside className="w-full lg:w-80 shrink-0">
           <div className="bg-white p-8 rounded-4xl sticky top-24 border border-slate-200 shadow-sm overflow-hidden">
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 blur-2xl -mr-12 -mt-12"></div>
-            
+
             <h2 className="text-lg font-black mb-8 flex items-center gap-3 uppercase tracking-widest text-slate-900 border-b border-slate-100 pb-4">
               <ListFilter className="w-5 h-5 text-emerald-600" /> Bộ lọc tin
             </h2>
@@ -289,8 +289,8 @@ const Home: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="h-[420px] bg-white rounded-4xl border border-slate-200 flex flex-col items-center justify-center gap-4 shadow-sm animate-pulse">
-                   <div className="w-16 h-16 bg-slate-100 rounded-full"></div>
-                   <div className="w-32 h-4 bg-slate-100 rounded-full"></div>
+                  <div className="w-16 h-16 bg-slate-100 rounded-full"></div>
+                  <div className="w-32 h-4 bg-slate-100 rounded-full"></div>
                 </div>
               ))}
             </div>
@@ -307,7 +307,7 @@ const Home: React.FC = () => {
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              
+
               <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-sm">
                 <span className="px-8 py-3 bg-white text-emerald-700 rounded-xl shadow-sm border border-slate-100">
                   Trang {page} <span className="text-slate-300 font-medium">/</span> {totalPages}
