@@ -419,15 +419,25 @@ export const adminReportingService = {
         });
 
         revenueBySlot.forEach((slotRevenue, slot) => {
-            const current = placementMap.get(slot);
-            if (current) {
-                current.revenue = slotRevenue;
-            }
+            const current = placementMap.get(slot) ?? {
+                impressions: 0,
+                clicks: 0,
+                revenue: 0,
+            };
+            current.revenue = slotRevenue;
+            placementMap.set(slot, current);
         });
 
         const activeSlotLabels = slotCatalog
             .map((item) => item.label)
             .filter((label) => placementMap.has(label));
+        const activeTrafficSlotLabels = slotCatalog
+            .map((item) => item.label)
+            .filter((label) =>
+                filteredBoostedPosts.some(
+                    (item) => item.slot === label && item.impressions > 0,
+                ),
+            );
 
         const topPlacements: TopPlacement[] = activeSlotLabels.map((slot, index) => {
             const item = placementMap.get(slot) ?? { impressions: 0, clicks: 0, revenue: 0 };
@@ -525,7 +535,7 @@ export const adminReportingService = {
             ),
         ).map((day) => {
             const dayKey = formatDate(day);
-            const slots = activeSlotLabels.map((slot) => ({
+            const slots = activeTrafficSlotLabels.map((slot) => ({
                 slot,
                 impressions: dailyTrafficMap.get(`${dayKey}::${slot}`)?.impressions ?? 0,
             }));
@@ -555,6 +565,9 @@ export const adminReportingService = {
         const filteredPayments = payments.filter((item) => isDateInRange(item.createdAt, range));
 
         const grouped = new Map<string, { packageName: string; slot: string; orders: number; revenue: number }>();
+        const revenueBySlot = new Map<string, number>();
+        const packageNames = new Set<string>();
+
         filteredPayments.forEach((item) => {
             const key = `${item.packageName}::${item.slot}`;
             const current = grouped.get(key) ?? {
@@ -566,6 +579,8 @@ export const adminReportingService = {
             current.orders += 1;
             current.revenue += item.amount;
             grouped.set(key, current);
+            revenueBySlot.set(item.slot, (revenueBySlot.get(item.slot) ?? 0) + item.amount);
+            packageNames.add(item.packageName);
         });
 
         const rows: RevenueRow[] = Array.from(grouped.values())
@@ -576,12 +591,13 @@ export const adminReportingService = {
                 slot: item.slot,
                 orders: item.orders,
                 revenue: formatCurrency(item.revenue),
-                growth: item.orders >= 3 ? "+12.5%" : item.orders === 2 ? "+5.0%" : "0.0%",
+                growth: "0.0%",
             }));
 
         const totalRevenue = filteredPayments.reduce((sum, item) => sum + item.amount, 0);
         const avgOrderValue = filteredPayments.length > 0 ? totalRevenue / filteredPayments.length : 0;
-        const topRow = rows[0];
+        const topSlot = Array.from(revenueBySlot.entries())
+            .sort((left, right) => right[1] - left[1])[0];
 
         const summaryCards: RevenueCard[] = [
             {
@@ -591,7 +607,7 @@ export const adminReportingService = {
             },
             {
                 title: "Active Packages",
-                value: formatNumber(rows.length),
+                value: formatNumber(packageNames.size),
                 note: "Packages with paid orders in period",
             },
             {
@@ -601,8 +617,8 @@ export const adminReportingService = {
             },
             {
                 title: "Top Slot Revenue",
-                value: topRow?.slot ?? "No data",
-                note: topRow ? topRow.revenue : "No paid orders in period",
+                value: topSlot?.[0] ?? "No data",
+                note: topSlot ? formatCurrency(topSlot[1]) : "No paid orders in period",
             },
         ];
 
