@@ -10,6 +10,8 @@ import {
 } from "../../models/schema/index.ts";
 import { adminConfigStoreService } from "../../services/adminConfigStore.service.ts";
 import { adminReportingService } from "../../services/adminReporting.service.ts";
+import { adminPromotionService } from "../../services/adminPromotion.service.ts";
+import { geminiAIService } from "../../services/geminiAI.service.ts";
 
 const AI_INSIGHT_SETTINGS_KEY = "admin_ai_insight_settings";
 
@@ -34,6 +36,7 @@ type InsightMeta = {
   focus?: AIInsightFocus;
   status?: "Generated" | "Needs Review" | "Archived";
   generatedBy?: string;
+  model?: string;
 };
 
 const defaultSettings: AIInsightSettings = {
@@ -86,6 +89,77 @@ const getFallbackRequestedBy = async () => {
     .limit(1);
 
   return user?.userId ?? null;
+};
+
+const buildAdminInsightPrompt = async ({
+  focus,
+  tone,
+  generatedAt,
+}: {
+  focus: AIInsightFocus;
+  tone: string;
+  generatedAt: string;
+}) => {
+  const [analytics, revenue, customerSpending, boostedPosts] =
+    await Promise.all([
+      adminReportingService.getAnalyticsSummary(),
+      adminReportingService.getRevenueSummary(),
+      adminReportingService.getCustomerSpendingSummary(),
+      adminPromotionService.getBoostedPosts(),
+    ]);
+
+  const compactContext = {
+    requestedFocus: focus,
+    requestedTone: tone,
+    selectedWindow: generatedAt,
+    analytics: {
+      kpis: analytics.kpiCards,
+      topPlacements: analytics.topPlacements.slice(0, 5),
+      activeTrafficDays: analytics.dailyTraffic
+        .filter((item) => item.slots.some((slot) => slot.impressions > 0))
+        .slice(-10),
+    },
+    revenue: {
+      summaryCards: revenue.summaryCards,
+      topPackages: revenue.rows.slice(0, 5),
+    },
+    customerSpending: {
+      summaryCards: customerSpending.summaryCards,
+      topCustomers: customerSpending.rows.slice(0, 5),
+    },
+    boostedCampaigns: boostedPosts.slice(0, 8).map((item) => ({
+      code: item.campaignCode,
+      post: item.postTitle,
+      owner: item.ownerName,
+      slot: item.slot,
+      delivery: item.status,
+      deliveryHealth: item.deliveryHealth,
+      review: item.reviewStatus,
+      ctr:
+        item.impressions > 0
+          ? `${((item.clicks / item.impressions) * 100).toFixed(2)}%`
+          : "0.00%",
+      quotaUsed: item.usedQuota,
+      quotaLimit: item.totalQuota,
+      startDate: item.startDate,
+      endDate: item.endDate,
+    })),
+  };
+
+  return [
+    "You are the GreenMarket admin analytics assistant.",
+    "Use only the provided JSON context. Do not invent database facts.",
+    "Write for an admin dashboard operator. Keep it practical and concise.",
+    "Return plain text with 4 short sections:",
+    "1. Main finding",
+    "2. Risk or anomaly",
+    "3. Recommended admin action",
+    "4. Data points used",
+    `Tone: ${tone}.`,
+    `Focus: ${focus}.`,
+    "JSON context:",
+    JSON.stringify(compactContext, null, 2),
+  ].join("\n");
 };
 
 export const getAIInsightSettings = async (
@@ -265,6 +339,13 @@ export const generateAIInsight = async (
       return;
     }
 
+    const prompt = await buildAdminInsightPrompt({
+      focus,
+      tone,
+      generatedAt,
+    });
+    const generated = await geminiAIService.generateAdminInsight(prompt);
+
     const [createdInsight] = await db
       .insert(aiInsights)
       .values({
@@ -276,9 +357,10 @@ export const generateAIInsight = async (
           status: "Needs Review",
           generatedBy: getGeneratedBy(req),
           generatedAt,
+          model: generated.model,
         },
-        aiInsightOutputText: `Generated a ${tone.toLowerCase()} recommendation summary for ${focus.toLowerCase()} using the latest admin filters.`,
-        aiInsightProvider: "Admin Manual Trigger",
+        aiInsightOutputText: generated.text,
+        aiInsightProvider: `Gemini ${generated.model}`,
         aiInsightCreatedAt: new Date(),
       })
       .returning();
@@ -287,8 +369,8 @@ export const generateAIInsight = async (
       id: createdInsight.aiInsightId,
       title: `${focus} summary`,
       focus,
-      summary: createdInsight.aiInsightOutputText,
-      generatedBy: getGeneratedBy(req),
+      summary: createdInsight.aiInsightOutputText || generated.text,
+      generatedBy: `Gemini ${generated.model}`,
       generatedAt: formatDateTime(createdInsight.aiInsightCreatedAt),
       status: "Needs Review",
     });
