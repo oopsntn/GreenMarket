@@ -1,6 +1,3 @@
-import {
-  emptyPlacementSlotForm,
-} from "../mock-data/placementSlots";
 import { apiClient } from "../lib/apiClient";
 import type {
   PlacementSlot,
@@ -10,18 +7,34 @@ import type {
   PlacementSlotSummaryCard,
 } from "../types/placementSlot";
 
+const emptyPlacementSlotForm: PlacementSlotFormState = {
+  name: "",
+  scope: "Homepage",
+  positionCode: "",
+  capacity: 1,
+  displayRule: "Round Robin",
+  priority: 1,
+  notes: "",
+};
+
 const normalizeText = (value: string) => value.trim();
+
+const sortPlacementSlots = (slots: PlacementSlot[]) =>
+  [...slots].sort((left, right) => left.id - right.id);
 
 const validateSlotForm = (
   formData: PlacementSlotFormState,
   existingSlots: PlacementSlot[],
   excludeId?: number,
 ) => {
-  if (!normalizeText(formData.name)) {
+  const normalizedName = normalizeText(formData.name);
+  const normalizedCode = normalizeText(formData.positionCode).toLowerCase();
+
+  if (!normalizedName) {
     throw new Error("Slot name is required.");
   }
 
-  if (!normalizeText(formData.positionCode)) {
+  if (!normalizedCode) {
     throw new Error("Position code is required.");
   }
 
@@ -33,11 +46,18 @@ const validateSlotForm = (
     throw new Error("Priority must be at least 1.");
   }
 
-  const normalizedCode = normalizeText(formData.positionCode).toLowerCase();
+  const isDuplicatedName = existingSlots.some((slot) => {
+    if (excludeId !== undefined && slot.id === excludeId) return false;
+    return slot.name.trim().toLowerCase() === normalizedName.toLowerCase();
+  });
+
+  if (isDuplicatedName) {
+    throw new Error("Slot name already exists. Please use a unique slot name.");
+  }
 
   const isDuplicatedCode = existingSlots.some((slot) => {
     if (excludeId !== undefined && slot.id === excludeId) return false;
-    return slot.positionCode.toLowerCase() === normalizedCode;
+    return slot.positionCode.trim().toLowerCase() === normalizedCode;
   });
 
   if (isDuplicatedCode) {
@@ -45,7 +65,10 @@ const validateSlotForm = (
   }
 };
 
-const inferScopeFromSlot = (code: string, title: string): PlacementSlot["scope"] => {
+const inferScopeFromSlot = (
+  code: string,
+  title: string,
+): PlacementSlot["scope"] => {
   const normalized = `${code} ${title}`.toLowerCase();
 
   if (normalized.includes("search")) return "Search";
@@ -122,11 +145,11 @@ export const placementSlotService = {
       },
     );
 
-    return data.map(mapApiSlotToUi);
+    return sortPlacementSlots(data.map(mapApiSlotToUi));
   },
 
   getEmptyForm(): PlacementSlotFormState {
-    return emptyPlacementSlotForm;
+    return { ...emptyPlacementSlotForm };
   },
 
   getSummaryCards(slots: PlacementSlot[]): PlacementSlotSummaryCard[] {
@@ -165,6 +188,7 @@ export const placementSlotService = {
     formData: PlacementSlotFormState,
   ): Promise<PlacementSlot[]> {
     validateSlotForm(formData, slots);
+
     const data = await apiClient.request<PlacementSlotApiResponse>(
       "/api/admin/placement-slots",
       {
@@ -175,7 +199,7 @@ export const placementSlotService = {
       },
     );
 
-    return [mapApiSlotToUi(data), ...slots];
+    return sortPlacementSlots([...slots, mapApiSlotToUi(data)]);
   },
 
   async updatePlacementSlot(
@@ -184,6 +208,7 @@ export const placementSlotService = {
     formData: PlacementSlotFormState,
   ): Promise<PlacementSlot[]> {
     validateSlotForm(formData, slots, slotId);
+
     const currentSlot = slots.find((slot) => slot.id === slotId);
 
     const data = await apiClient.request<PlacementSlotApiResponse>(
@@ -198,8 +223,8 @@ export const placementSlotService = {
       },
     );
 
-    return slots.map((slot) =>
-      slot.id === slotId ? mapApiSlotToUi(data) : slot,
+    return sortPlacementSlots(
+      slots.map((slot) => (slot.id === slotId ? mapApiSlotToUi(data) : slot)),
     );
   },
 
@@ -237,8 +262,8 @@ export const placementSlotService = {
       },
     );
 
-    return slots.map((slot) =>
-      slot.id === slotId ? mapApiSlotToUi(data) : slot,
+    return sortPlacementSlots(
+      slots.map((slot) => (slot.id === slotId ? mapApiSlotToUi(data) : slot)),
     );
   },
 };
