@@ -1108,7 +1108,10 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('otp_expire_minutes', '10', 1),
 ('vnpay_sandbox', 'true', 1),
 ('contact_email', 'support@greenmarket.com', 1),
-('contact_phone', '1900-xxxx', 1);
+('contact_phone', '1900-xxxx', 1),
+('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"English"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true}}', 1),
+('admin_template_builder_preset', '{"selectedTemplateId":null,"selectedTypeFilter":"All","channel":"Email","audience":"Seller","tone":"Supportive","shopName":"Green Corner Garden","postTitle":"Rare Monstera Deliciosa for Sale","reason":"Listing is missing mandatory details.","slotName":"Home Top","contactEmail":"ops@greenmarket.com","adminNote":"Update the content and resubmit within 24 hours."}', 1),
+('admin_ai_insight_settings', '{"autoDailySummary":true,"anomalyAlerts":true,"operatorDigest":false,"recommendationTone":"Balanced","confidenceThreshold":78,"promptVersion":"gm-admin-v1.4","reviewMode":"Required"}', 1);
 
 -- OTP Requests (Sample)
 INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_expire_at, otp_request_status) VALUES

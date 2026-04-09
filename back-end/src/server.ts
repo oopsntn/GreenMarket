@@ -9,6 +9,7 @@ import categoryRoutes from "./routes/admin/category.route.ts";
 import attributeRoutes from "./routes/admin/attribute.route.ts";
 import categoryMappingRoutes from "./routes/admin/category-mapping.route.ts";
 import templateRoutes from "./routes/admin/template.route.ts";
+import templateBuilderRoutes from "./routes/admin/template-builder.route.ts";
 import postRoutes from "./routes/admin/post.route.ts";
 import shopRoutes from "./routes/admin/shop.route.ts";
 import reportRoutes from "./routes/admin/report.route.ts";
@@ -24,6 +25,9 @@ import adminAnalyticsRoutes from "./routes/admin/analytics.route.ts";
 import adminRevenueRoutes from "./routes/admin/revenue.route.ts";
 import adminCustomerSpendingRoutes from "./routes/admin/customer-spending.route.ts";
 import adminExportRoutes from "./routes/admin/export.route.ts";
+import adminSettingsRoutes from "./routes/admin/settings.route.ts";
+import adminAIInsightRoutes from "./routes/admin/ai-insight.route.ts";
+import adminActivityLogRoutes from "./routes/admin/activity-log.route.ts";
 import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
 import userReportRoutes from "./routes/user/report.route.ts";
@@ -52,6 +56,12 @@ app.use(
   categoryMappingRoutes,
 );
 app.use("/api/admin/templates", verifyToken, isAdmin, templateRoutes);
+app.use(
+  "/api/admin/template-builder",
+  verifyToken,
+  isAdmin,
+  templateBuilderRoutes,
+);
 app.use("/api/admin/posts", verifyToken, isAdmin, postRoutes);
 app.use("/api/admin/shops", verifyToken, isAdmin, shopRoutes);
 app.use("/api/admin/reports", verifyToken, isAdmin, reportRoutes);
@@ -92,6 +102,14 @@ app.use(
   adminCustomerSpendingRoutes,
 );
 app.use("/api/admin/exports", verifyToken, isAdmin, adminExportRoutes);
+app.use("/api/admin/settings", verifyToken, isAdmin, adminSettingsRoutes);
+app.use("/api/admin/ai-insights", verifyToken, isAdmin, adminAIInsightRoutes);
+app.use(
+  "/api/admin/activity-logs",
+  verifyToken,
+  isAdmin,
+  adminActivityLogRoutes,
+);
 
 // User Routes
 app.use("/api/shops", userShopRoutes);
