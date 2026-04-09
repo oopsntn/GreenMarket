@@ -24,17 +24,6 @@ const getCurrentDate = () => {
   return `${year}-${month}-${day}`;
 };
 
-const getCurrentDateTime = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = padNumber(now.getMonth() + 1);
-  const day = padNumber(now.getDate());
-  const hours = padNumber(now.getHours());
-  const minutes = padNumber(now.getMinutes());
-
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
-};
-
 const formatDate = (value: string | null) => {
   if (!value) return "";
   const date = new Date(value);
