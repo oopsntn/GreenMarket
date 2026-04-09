@@ -1,6 +1,6 @@
 # GreenMarket API Documentation
 
-Last updated: 2026-04-08
+Last updated: 2026-04-09
 
 This document lists APIs that are already implemented in `back-end/src/routes`.
 It is intended for `mobile`, `user-web`, and `admin-web` teams.
@@ -35,6 +35,30 @@ It is intended for `mobile`, `user-web`, and `admin-web` teams.
 | GET | `/api/profile` | User token | Get current user profile | none |
 | PATCH | `/api/profile` | User token | Update current user profile | `userDisplayName`, `userAvatarUrl`, `userEmail`, `userLocation`, `userBio` |
 | GET | `/api/profile/favorites` | User token | Get list of favorite posts for current user | none |
+
+### Collaborator (business role: `COLLABORATOR`)
+
+Auth rules for all endpoints below:
+- Requires valid **user token**
+- Requires active business role `COLLABORATOR` (`verifyToken + requireBusinessRole("COLLABORATOR")`)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/collaborator/profile` | User token + `COLLABORATOR` | Get collaborator profile with availability and summary stats | none |
+| PATCH | `/api/collaborator/profile` | User token + `COLLABORATOR` | Update collaborator availability | optional: `availabilityStatus` (`available`, `busy`, `offline`), `availabilityNote` |
+| GET | `/api/collaborator/jobs` | User token + `COLLABORATOR` | Get available jobs list (open + unassigned) | optional query: `keyword`, `category`, `location`, `page`, `limit` |
+| GET | `/api/collaborator/jobs/:id` | User token + `COLLABORATOR` | Get job detail (open jobs or assigned jobs) | path `id` |
+| POST | `/api/collaborator/jobs/:id/decision` | User token + `COLLABORATOR` | Accept or decline open job | `decision` (`accept`/`decline`), optional `reason` |
+| POST | `/api/collaborator/jobs/:id/contact` | User token + `COLLABORATOR` | Send ask-more request to customer (mock) | path `id`, required `message` |
+| GET | `/api/collaborator/my-jobs` | User token + `COLLABORATOR` | Get jobs assigned to current collaborator | optional query: `status`, `page`, `limit` |
+| POST | `/api/collaborator/jobs/:id/deliverables` | User token + `COLLABORATOR` | Submit job deliverables and mark job completed | path `id`, required `fileUrls` (string[]), optional `note` |
+| GET | `/api/collaborator/earnings` | User token + `COLLABORATOR` | Get earnings summary and history | optional query: `from`, `to` |
+| GET | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Get payout request history | optional query: `page`, `limit` |
+| POST | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Create payout request (mock) | required: `amount`, `method`; optional `note` |
+
+**Collaborator notes:**
+- `GET /api/collaborator/my-jobs` includes `progressPercent` derived from job status.
+- `POST /api/collaborator/payout-requests` enforces minimum payout amount `500000`.
 
 ### Upload
 
@@ -323,6 +347,7 @@ All admin APIs are mounted under `/api/admin/*` and require:
 
 - Public user endpoints include browse/detail APIs such as `/api/posts/browse`, `/api/posts/detail/:slug`, `/api/shops/browse`, `/api/shops/:id`.
 - Protected user endpoints require JWT, such as `/api/profile`, `/api/posts/my-posts`, `/api/shops/my-shop`, `/api/shops/dashboard`, `/api/payment/buy-package`.
+- Collaborator module is mounted at `/api/collaborator` and uses business-role guard (`COLLABORATOR`) for all collaborator routes.
 - `POST /api/posts/:id/contact-click` tracks buyer contact intent per post for analytics.
 - Payment callbacks are handled through `/api/payment/momo-return` and `/api/payment/momo-ipn`.
 - Static uploaded files are served at `/uploads/<filename>`.

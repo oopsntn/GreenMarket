@@ -1,0 +1,1095 @@
+import { Response } from "express";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  sql,
+  type SQL,
+} from "drizzle-orm";
+import { db } from "../../config/db.ts";
+import { AuthRequest } from "../../dtos/auth.ts";
+import {
+  earningEntries,
+  jobContactRequests,
+  jobDeliverables,
+  jobs,
+  payoutRequests,
+  users,
+} from "../../models/schema/index.ts";
+import { parseId } from "../../utils/parseId.ts";
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+const MIN_PAYOUT_AMOUNT = 500_000;
+const DEFAULT_AVAILABILITY_STATUS = "available";
+const VALID_AVAILABILITY_STATUSES = ["available", "busy", "offline"] as const;
+const VALID_JOB_STATUSES = ["open", "accepted", "declined", "completed", "cancelled"] as const;
+const JOB_STATE_CHANGED_ERROR = "JOB_STATE_CHANGED";
+const MAX_CONTACT_MESSAGE_LENGTH = 1000;
+
+const JOB_PROGRESS_BY_STATUS: Record<(typeof VALID_JOB_STATUSES)[number], number> = {
+  open: 0,
+  accepted: 50,
+  declined: 0,
+  completed: 100,
+  cancelled: 0,
+};
+
+const toPositiveInt = (value: unknown, fallback: number) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return Math.floor(parsed);
+};
+
+const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
+  const page = toPositiveInt(queryPage, DEFAULT_PAGE);
+  const limit = Math.min(toPositiveInt(queryLimit, DEFAULT_LIMIT), MAX_LIMIT);
+  const offset = (page - 1) * limit;
+
+  return { page, limit, offset };
+};
+
+const parseDateQuery = (value: unknown) => {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+
+  return parsed;
+};
+
+const toNumber = (value: string | number | null | undefined) => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getStringParam = (value: string | string[] | undefined) => {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value ?? "";
+};
+
+const normalizeAvailabilityStatus = (value: unknown) => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (
+    !VALID_AVAILABILITY_STATUSES.includes(
+      normalized as (typeof VALID_AVAILABILITY_STATUSES)[number],
+    )
+  ) {
+    return null;
+  }
+
+  return normalized as (typeof VALID_AVAILABILITY_STATUSES)[number];
+};
+
+const getProgressPercent = (status: string | null | undefined) => {
+  const normalized = (status ?? "").toLowerCase();
+  if (normalized in JOB_PROGRESS_BY_STATUS) {
+    return JOB_PROGRESS_BY_STATUS[normalized as keyof typeof JOB_PROGRESS_BY_STATUS];
+  }
+
+  return 0;
+};
+
+const calculateAvailableBalance = async (collaboratorId: number) => {
+  const [earningSummary] = await db
+    .select({
+      total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+    })
+    .from(earningEntries)
+    .where(eq(earningEntries.earningEntryCollaboratorId, collaboratorId));
+
+  const [payoutSummary] = await db
+    .select({
+      total: sql<string>`COALESCE(SUM(${payoutRequests.payoutRequestAmount}), 0)`,
+    })
+    .from(payoutRequests)
+    .where(
+      and(
+        eq(payoutRequests.payoutRequestCollaboratorId, collaboratorId),
+        inArray(payoutRequests.payoutRequestStatus, ["pending", "approved"]),
+      ),
+    );
+
+  return Math.max(
+    Number((toNumber(earningSummary?.total) - toNumber(payoutSummary?.total)).toFixed(2)),
+    0,
+  );
+};
+
+export const getCollaboratorProfile = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const [profile] = await db
+      .select({
+        userId: users.userId,
+        mobile: users.userMobile,
+        displayName: users.userDisplayName,
+        avatarUrl: users.userAvatarUrl,
+        email: users.userEmail,
+        location: users.userLocation,
+        bio: users.userBio,
+        status: users.userStatus,
+        availabilityStatus: users.userAvailabilityStatus,
+        availabilityNote: users.userAvailabilityNote,
+      })
+      .from(users)
+      .where(eq(users.userId, userId))
+      .limit(1);
+
+    if (!profile) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const [jobSummary] = await db
+      .select({
+        totalJobs: sql<number>`COUNT(*)`,
+        activeJobs: sql<number>`COALESCE(SUM(CASE WHEN ${jobs.jobStatus} = 'accepted' THEN 1 ELSE 0 END), 0)`,
+        completedJobs: sql<number>`COALESCE(SUM(CASE WHEN ${jobs.jobStatus} = 'completed' THEN 1 ELSE 0 END), 0)`,
+      })
+      .from(jobs)
+      .where(eq(jobs.jobCollaboratorId, userId));
+
+    const [earningSummary] = await db
+      .select({
+        total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+      })
+      .from(earningEntries)
+      .where(eq(earningEntries.earningEntryCollaboratorId, userId));
+
+    const availableBalance = await calculateAvailableBalance(userId);
+
+    res.json({
+      profile: {
+        ...profile,
+        availabilityStatus:
+          profile.availabilityStatus ?? DEFAULT_AVAILABILITY_STATUS,
+      },
+      stats: {
+        totalJobs: Number(jobSummary?.totalJobs ?? 0),
+        activeJobs: Number(jobSummary?.activeJobs ?? 0),
+        completedJobs: Number(jobSummary?.completedJobs ?? 0),
+        totalEarnings: toNumber(earningSummary?.total),
+        availableBalance,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const updateCollaboratorAvailability = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const availabilityStatus = normalizeAvailabilityStatus(
+      req.body?.availabilityStatus,
+    );
+    if (availabilityStatus === null) {
+      res.status(400).json({
+        error: `availabilityStatus must be one of: ${VALID_AVAILABILITY_STATUSES.join(", ")}`,
+      });
+      return;
+    }
+
+    const availabilityNoteInput = req.body?.availabilityNote;
+    if (
+      availabilityNoteInput !== undefined &&
+      availabilityNoteInput !== null &&
+      typeof availabilityNoteInput !== "string"
+    ) {
+      res
+        .status(400)
+        .json({ error: "availabilityNote must be a string when provided" });
+      return;
+    }
+
+    const availabilityNote =
+      typeof availabilityNoteInput === "string"
+        ? availabilityNoteInput.trim()
+        : undefined;
+
+    if (availabilityNote && availabilityNote.length > 500) {
+      res
+        .status(400)
+        .json({ error: "availabilityNote must not exceed 500 characters" });
+      return;
+    }
+
+    if (availabilityStatus === undefined && availabilityNote === undefined) {
+      res.status(400).json({
+        error: "At least one field is required: availabilityStatus, availabilityNote",
+      });
+      return;
+    }
+
+    const updatePayload: {
+      userAvailabilityStatus?: (typeof VALID_AVAILABILITY_STATUSES)[number];
+      userAvailabilityNote?: string | null;
+      userUpdatedAt: Date;
+    } = {
+      userUpdatedAt: new Date(),
+    };
+
+    if (availabilityStatus !== undefined) {
+      updatePayload.userAvailabilityStatus = availabilityStatus;
+    }
+
+    if (availabilityNote !== undefined) {
+      updatePayload.userAvailabilityNote = availabilityNote || null;
+    }
+
+    const [updatedProfile] = await db
+      .update(users)
+      .set(updatePayload)
+      .where(eq(users.userId, userId))
+      .returning({
+        userId: users.userId,
+        availabilityStatus: users.userAvailabilityStatus,
+        availabilityNote: users.userAvailabilityNote,
+        updatedAt: users.userUpdatedAt,
+      });
+
+    if (!updatedProfile) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json({
+      message: "Availability updated successfully",
+      profile: {
+        ...updatedProfile,
+        availabilityStatus:
+          updatedProfile.availabilityStatus ?? DEFAULT_AVAILABILITY_STATUS,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getAvailableJobs = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const keyword =
+      typeof req.query.keyword === "string" ? req.query.keyword.trim() : "";
+    const category =
+      typeof req.query.category === "string" ? req.query.category.trim() : "";
+    const location =
+      typeof req.query.location === "string" ? req.query.location.trim() : "";
+    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
+
+    const conditions: SQL[] = [eq(jobs.jobStatus, "open"), isNull(jobs.jobCollaboratorId)];
+
+    if (keyword) {
+      conditions.push(
+        sql`(${jobs.jobTitle} ILIKE ${`%${keyword}%`} OR ${jobs.jobDescription} ILIKE ${`%${keyword}%`})`,
+      );
+    }
+
+    if (category) {
+      conditions.push(ilike(jobs.jobCategory, `%${category}%`));
+    }
+
+    if (location) {
+      conditions.push(ilike(jobs.jobLocation, `%${location}%`));
+    }
+
+    const rows = await db
+      .select({
+        jobId: jobs.jobId,
+        title: jobs.jobTitle,
+        category: jobs.jobCategory,
+        location: jobs.jobLocation,
+        deadline: jobs.jobDeadline,
+        price: jobs.jobPrice,
+        status: jobs.jobStatus,
+        createdAt: jobs.jobCreatedAt,
+        customerId: users.userId,
+        customerName: users.userDisplayName,
+        customerLocation: users.userLocation,
+      })
+      .from(jobs)
+      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
+      .where(and(...conditions))
+      .orderBy(asc(jobs.jobDeadline), desc(jobs.jobCreatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(jobs)
+      .where(and(...conditions));
+
+    const totalItems = Number(countResult?.count ?? 0);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      data: rows.map((item) => ({
+        jobId: item.jobId,
+        title: item.title,
+        category: item.category,
+        location: item.location,
+        deadline: item.deadline,
+        price: item.price,
+        status: item.status,
+        createdAt: item.createdAt,
+        customer: {
+          userId: item.customerId,
+          displayName: item.customerName,
+          location: item.customerLocation,
+        },
+      })),
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getJobDetail = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const jobId = parseId(getStringParam(req.params.id));
+    const userId = req.user?.id;
+
+    if (!jobId || !userId) {
+      res.status(400).json({ error: "Invalid job id" });
+      return;
+    }
+
+    const [jobDetail] = await db
+      .select({
+        jobId: jobs.jobId,
+        customerId: jobs.jobCustomerId,
+        collaboratorId: jobs.jobCollaboratorId,
+        title: jobs.jobTitle,
+        category: jobs.jobCategory,
+        location: jobs.jobLocation,
+        deadline: jobs.jobDeadline,
+        price: jobs.jobPrice,
+        description: jobs.jobDescription,
+        requirements: jobs.jobRequirements,
+        status: jobs.jobStatus,
+        declineReason: jobs.jobDeclineReason,
+        createdAt: jobs.jobCreatedAt,
+        updatedAt: jobs.jobUpdatedAt,
+        customerName: users.userDisplayName,
+        customerLocation: users.userLocation,
+      })
+      .from(jobs)
+      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
+      .where(eq(jobs.jobId, jobId))
+      .limit(1);
+
+    if (!jobDetail) {
+      res.status(404).json({ error: "Job not found" });
+      return;
+    }
+
+    const canView =
+      jobDetail.status === "open" ||
+      jobDetail.collaboratorId === userId;
+
+    if (!canView) {
+      res.status(403).json({ error: "Access denied to this job detail" });
+      return;
+    }
+
+    res.json({
+      jobId: jobDetail.jobId,
+      title: jobDetail.title,
+      category: jobDetail.category,
+      location: jobDetail.location,
+      deadline: jobDetail.deadline,
+      price: jobDetail.price,
+      description: jobDetail.description,
+      requirements: jobDetail.requirements ?? [],
+      status: jobDetail.status,
+      declineReason: jobDetail.declineReason,
+      createdAt: jobDetail.createdAt,
+      updatedAt: jobDetail.updatedAt,
+      isAssignedToMe: jobDetail.collaboratorId === userId,
+      customer: {
+        userId: jobDetail.customerId,
+        displayName: jobDetail.customerName,
+        location: jobDetail.customerLocation,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const decideJob = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const jobId = parseId(getStringParam(req.params.id));
+    const userId = req.user?.id;
+    const decision =
+      typeof req.body?.decision === "string"
+        ? req.body.decision.trim().toLowerCase()
+        : "";
+    const reason =
+      typeof req.body?.reason === "string" ? req.body.reason.trim() : null;
+
+    if (!jobId || !userId) {
+      res.status(400).json({ error: "Invalid job id" });
+      return;
+    }
+
+    if (!["accept", "decline"].includes(decision)) {
+      res.status(400).json({ error: "decision must be accept or decline" });
+      return;
+    }
+
+    const now = new Date();
+
+    if (decision === "accept") {
+      const [updatedJob] = await db
+        .update(jobs)
+        .set({
+          jobStatus: "accepted",
+          jobCollaboratorId: userId,
+          jobDeclineReason: null,
+          jobUpdatedAt: now,
+        })
+        .where(
+          and(
+            eq(jobs.jobId, jobId),
+            eq(jobs.jobStatus, "open"),
+            isNull(jobs.jobCollaboratorId),
+          ),
+        )
+        .returning();
+
+      if (!updatedJob) {
+        const [existing] = await db
+          .select({
+            jobId: jobs.jobId,
+            status: jobs.jobStatus,
+            collaboratorId: jobs.jobCollaboratorId,
+          })
+          .from(jobs)
+          .where(eq(jobs.jobId, jobId))
+          .limit(1);
+
+        if (!existing) {
+          res.status(404).json({ error: "Job not found" });
+          return;
+        }
+
+        res
+          .status(409)
+          .json({ error: "Job is no longer open for acceptance", job: existing });
+        return;
+      }
+
+      res.json({
+        message: "Job accepted successfully",
+        job: updatedJob,
+      });
+      return;
+    }
+
+    const [updatedJob] = await db
+      .update(jobs)
+      .set({
+        jobStatus: "declined",
+        jobCollaboratorId: null,
+        jobDeclineReason: reason,
+        jobUpdatedAt: now,
+      })
+      .where(
+        and(
+          eq(jobs.jobId, jobId),
+          eq(jobs.jobStatus, "open"),
+          isNull(jobs.jobCollaboratorId),
+        ),
+      )
+      .returning();
+
+    if (!updatedJob) {
+      const [existing] = await db
+        .select({
+          jobId: jobs.jobId,
+          status: jobs.jobStatus,
+          collaboratorId: jobs.jobCollaboratorId,
+        })
+        .from(jobs)
+        .where(eq(jobs.jobId, jobId))
+        .limit(1);
+
+      if (!existing) {
+        res.status(404).json({ error: "Job not found" });
+        return;
+      }
+
+      res
+        .status(409)
+        .json({ error: "Job is no longer open for decision", job: existing });
+      return;
+    }
+
+    res.json({
+      message: "Job declined successfully",
+      job: updatedJob,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const contactJobCustomer = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const jobId = parseId(getStringParam(req.params.id));
+    const message =
+      typeof req.body?.message === "string" ? req.body.message.trim() : "";
+
+    if (!userId || !jobId) {
+      res.status(400).json({ error: "Invalid job id" });
+      return;
+    }
+
+    if (!message) {
+      res.status(400).json({ error: "message is required" });
+      return;
+    }
+
+    if (message.length > MAX_CONTACT_MESSAGE_LENGTH) {
+      res.status(400).json({
+        error: `message must not exceed ${MAX_CONTACT_MESSAGE_LENGTH} characters`,
+      });
+      return;
+    }
+
+    const [jobDetail] = await db
+      .select({
+        jobId: jobs.jobId,
+        customerId: jobs.jobCustomerId,
+        collaboratorId: jobs.jobCollaboratorId,
+        status: jobs.jobStatus,
+        customerName: users.userDisplayName,
+        customerMobile: users.userMobile,
+        customerEmail: users.userEmail,
+      })
+      .from(jobs)
+      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
+      .where(eq(jobs.jobId, jobId))
+      .limit(1);
+
+    if (!jobDetail) {
+      res.status(404).json({ error: "Job not found" });
+      return;
+    }
+
+    const canContact =
+      jobDetail.status === "open" || jobDetail.collaboratorId === userId;
+
+    if (!canContact) {
+      res.status(403).json({ error: "Access denied to contact this customer" });
+      return;
+    }
+
+    if (!jobDetail.customerId) {
+      res.status(409).json({ error: "Job does not have a valid customer" });
+      return;
+    }
+
+    const [contactRequest] = await db
+      .insert(jobContactRequests)
+      .values({
+        contactRequestJobId: jobId,
+        contactRequestCollaboratorId: userId,
+        contactRequestCustomerId: jobDetail.customerId,
+        contactRequestMessage: message,
+        contactRequestStatus: "sent",
+        contactRequestCreatedAt: new Date(),
+      })
+      .returning();
+
+    res.status(201).json({
+      message: "Contact request sent successfully (mock)",
+      contactRequest,
+      customer: {
+        userId: jobDetail.customerId,
+        displayName: jobDetail.customerName,
+        mobile: jobDetail.customerMobile,
+        email: jobDetail.customerEmail,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getMyJobs = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const statusFilter =
+      typeof req.query.status === "string" ? req.query.status.trim() : "";
+    if (
+      statusFilter &&
+      !VALID_JOB_STATUSES.includes(
+        statusFilter.toLowerCase() as (typeof VALID_JOB_STATUSES)[number],
+      )
+    ) {
+      res.status(400).json({
+        error: `status must be one of: ${VALID_JOB_STATUSES.join(", ")}`,
+      });
+      return;
+    }
+
+    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
+    const conditions: SQL[] = [eq(jobs.jobCollaboratorId, userId)];
+
+    if (statusFilter) {
+      conditions.push(eq(jobs.jobStatus, statusFilter.toLowerCase()));
+    }
+
+    const rows = await db
+      .select({
+        jobId: jobs.jobId,
+        title: jobs.jobTitle,
+        category: jobs.jobCategory,
+        location: jobs.jobLocation,
+        deadline: jobs.jobDeadline,
+        price: jobs.jobPrice,
+        status: jobs.jobStatus,
+        completedAt: jobs.jobCompletedAt,
+        createdAt: jobs.jobCreatedAt,
+        updatedAt: jobs.jobUpdatedAt,
+        customerId: users.userId,
+        customerName: users.userDisplayName,
+      })
+      .from(jobs)
+      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
+      .where(and(...conditions))
+      .orderBy(desc(jobs.jobUpdatedAt), desc(jobs.jobCreatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(jobs)
+      .where(and(...conditions));
+
+    const totalItems = Number(countResult?.count ?? 0);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      data: rows.map((item) => ({
+        ...item,
+        progressPercent: getProgressPercent(item.status),
+        customer: {
+          userId: item.customerId,
+          displayName: item.customerName,
+        },
+      })),
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const submitJobDeliverables = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const jobId = parseId(getStringParam(req.params.id));
+
+    if (!userId || !jobId) {
+      res.status(400).json({ error: "Invalid job id" });
+      return;
+    }
+
+    const fileUrls = Array.isArray(req.body?.fileUrls)
+      ? req.body.fileUrls.filter(
+          (item: unknown): item is string =>
+            typeof item === "string" && item.trim().length > 0,
+        )
+      : [];
+    const note = typeof req.body?.note === "string" ? req.body.note.trim() : null;
+
+    if (fileUrls.length === 0) {
+      res.status(400).json({ error: "fileUrls must contain at least one URL" });
+      return;
+    }
+
+    const [existingJob] = await db
+      .select({
+        jobId: jobs.jobId,
+        status: jobs.jobStatus,
+        collaboratorId: jobs.jobCollaboratorId,
+      })
+      .from(jobs)
+      .where(eq(jobs.jobId, jobId))
+      .limit(1);
+
+    if (!existingJob) {
+      res.status(404).json({ error: "Job not found" });
+      return;
+    }
+
+    if (existingJob.collaboratorId !== userId) {
+      res.status(403).json({ error: "This job is not assigned to you" });
+      return;
+    }
+
+    if (existingJob.status !== "accepted") {
+      res.status(409).json({
+        error: "Only accepted jobs can be submitted",
+        currentStatus: existingJob.status,
+      });
+      return;
+    }
+
+    const now = new Date();
+
+    const txResult = await db.transaction(async (tx) => {
+      const [completedJob] = await tx
+        .update(jobs)
+        .set({
+          jobStatus: "completed",
+          jobCompletedAt: now,
+          jobUpdatedAt: now,
+        })
+        .where(
+          and(
+            eq(jobs.jobId, jobId),
+            eq(jobs.jobStatus, "accepted"),
+            eq(jobs.jobCollaboratorId, userId),
+          ),
+        )
+        .returning();
+
+      if (!completedJob) {
+        throw new Error(JOB_STATE_CHANGED_ERROR);
+      }
+
+      const [deliverable] = await tx
+        .insert(jobDeliverables)
+        .values({
+          deliverableJobId: jobId,
+          deliverableCollaboratorId: userId,
+          deliverableFileUrls: fileUrls,
+          deliverableNote: note,
+          deliverableSubmittedAt: now,
+        })
+        .returning();
+
+      const [earningEntry] = await tx
+        .insert(earningEntries)
+        .values({
+          earningEntryCollaboratorId: userId,
+          earningEntryJobId: jobId,
+          earningEntryAmount: completedJob.jobPrice ?? "0",
+          earningEntryType: "job",
+          earningEntryCreatedAt: now,
+        })
+        .returning();
+
+      return {
+        job: completedJob,
+        deliverable,
+        earningEntry,
+      };
+    });
+
+    res.status(201).json({
+      message: "Job result submitted successfully",
+      ...txResult,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === JOB_STATE_CHANGED_ERROR) {
+      res.status(409).json({
+        error: "Job state changed while submitting deliverables. Please retry.",
+      });
+      return;
+    }
+
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getCollaboratorEarnings = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const from = parseDateQuery(req.query.from);
+    if (from === undefined) {
+      res.status(400).json({ error: "Invalid from date format" });
+      return;
+    }
+
+    const to = parseDateQuery(req.query.to);
+    if (to === undefined) {
+      res.status(400).json({ error: "Invalid to date format" });
+      return;
+    }
+
+    const conditions: SQL[] = [
+      eq(earningEntries.earningEntryCollaboratorId, userId),
+    ];
+    if (from) {
+      conditions.push(gte(earningEntries.earningEntryCreatedAt, from));
+    }
+    if (to) {
+      conditions.push(lte(earningEntries.earningEntryCreatedAt, to));
+    }
+
+    const [summary] = await db
+      .select({
+        total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+        txCount: sql<number>`COUNT(*)`,
+      })
+      .from(earningEntries)
+      .where(and(...conditions));
+
+    const byType = await db
+      .select({
+        type: earningEntries.earningEntryType,
+        total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(earningEntries)
+      .where(and(...conditions))
+      .groupBy(earningEntries.earningEntryType)
+      .orderBy(asc(earningEntries.earningEntryType));
+
+    const history = await db
+      .select({
+        earningEntryId: earningEntries.earningEntryId,
+        jobId: earningEntries.earningEntryJobId,
+        jobTitle: jobs.jobTitle,
+        amount: earningEntries.earningEntryAmount,
+        type: earningEntries.earningEntryType,
+        createdAt: earningEntries.earningEntryCreatedAt,
+      })
+      .from(earningEntries)
+      .leftJoin(jobs, eq(earningEntries.earningEntryJobId, jobs.jobId))
+      .where(and(...conditions))
+      .orderBy(desc(earningEntries.earningEntryCreatedAt));
+
+    const total = toNumber(summary?.total);
+    const txCount = Number(summary?.txCount ?? 0);
+    const avgPerTx = txCount > 0 ? Number((total / txCount).toFixed(2)) : 0;
+
+    res.json({
+      total,
+      txCount,
+      avgPerTx,
+      byType: byType.map((item) => ({
+        type: item.type,
+        total: toNumber(item.total),
+        count: Number(item.count ?? 0),
+      })),
+      history: history.map((item) => ({
+        ...item,
+        amount: toNumber(item.amount),
+      })),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getPayoutRequestHistory = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
+
+    const rows = await db
+      .select()
+      .from(payoutRequests)
+      .where(eq(payoutRequests.payoutRequestCollaboratorId, userId))
+      .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(payoutRequests)
+      .where(eq(payoutRequests.payoutRequestCollaboratorId, userId));
+
+    const totalItems = Number(countResult?.count ?? 0);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      data: rows.map((item) => ({
+        ...item,
+        payoutRequestAmount: toNumber(item.payoutRequestAmount),
+      })),
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const createPayoutRequest = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const amount = Number(req.body?.amount);
+    const method =
+      typeof req.body?.method === "string" ? req.body.method.trim() : "";
+    const note = typeof req.body?.note === "string" ? req.body.note.trim() : null;
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      res.status(400).json({ error: "amount must be a positive number" });
+      return;
+    }
+
+    if (amount < MIN_PAYOUT_AMOUNT) {
+      res.status(400).json({
+        error: `amount must be at least ${MIN_PAYOUT_AMOUNT}`,
+        minPayoutAmount: MIN_PAYOUT_AMOUNT,
+      });
+      return;
+    }
+
+    if (!method) {
+      res.status(400).json({ error: "method is required" });
+      return;
+    }
+
+    const availableBalance = await calculateAvailableBalance(userId);
+
+    if (amount > availableBalance) {
+      res.status(400).json({
+        error: "amount exceeds available balance",
+        availableBalance,
+      });
+      return;
+    }
+
+    const [createdRequest] = await db
+      .insert(payoutRequests)
+      .values({
+        payoutRequestCollaboratorId: userId,
+        payoutRequestAmount: amount.toFixed(2),
+        payoutRequestMethod: method,
+        payoutRequestStatus: "pending",
+        payoutRequestNote: note,
+        payoutRequestCreatedAt: new Date(),
+      })
+      .returning();
+
+    res.status(201).json({
+      message: "Payout request created successfully (mock)",
+      payoutRequest: {
+        ...createdRequest,
+        payoutRequestAmount: toNumber(createdRequest.payoutRequestAmount),
+      },
+      availableBalanceAfter: Number((availableBalance - amount).toFixed(2)),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

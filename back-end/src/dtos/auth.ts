@@ -6,6 +6,7 @@ export interface JWTUserPayload {
     mobile?: string;
     role: string;
     roleCodes?: string[];
+    businessRoleCode?: string | null;
 }
 
 export interface AuthRequest extends Request {

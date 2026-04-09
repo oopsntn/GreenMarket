@@ -114,6 +114,8 @@ CREATE TABLE users (
     user_email VARCHAR(255),
     user_location VARCHAR(255),
     user_bio TEXT,
+    user_availability_status VARCHAR(20) NOT NULL DEFAULT 'available',
+    user_availability_note TEXT,
     user_status VARCHAR(20) DEFAULT 'active',
     user_business_role_id INTEGER REFERENCES business_roles(business_role_id) ON DELETE SET NULL,
     user_registered_at TIMESTAMP DEFAULT now(),
@@ -554,6 +556,69 @@ CREATE TABLE event_logs (
     event_log_meta JSONB
 );
 
+-- Collaborator Jobs
+CREATE TABLE jobs (
+    job_id SERIAL PRIMARY KEY,
+    job_customer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    job_collaborator_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    job_title VARCHAR(255) NOT NULL,
+    job_category VARCHAR(100),
+    job_location VARCHAR(255),
+    job_deadline TIMESTAMP,
+    job_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+    job_description TEXT,
+    job_requirements JSONB DEFAULT '[]'::jsonb,
+    job_status VARCHAR(20) NOT NULL DEFAULT 'open',
+    job_decline_reason TEXT,
+    job_completed_at TIMESTAMP,
+    job_created_at TIMESTAMP DEFAULT now(),
+    job_updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Collaborator Contact Requests (Mock ask-more flow)
+CREATE TABLE job_contact_requests (
+    contact_request_id SERIAL PRIMARY KEY,
+    contact_request_job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+    contact_request_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    contact_request_customer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    contact_request_message TEXT NOT NULL,
+    contact_request_status VARCHAR(20) NOT NULL DEFAULT 'sent',
+    contact_request_created_at TIMESTAMP DEFAULT now(),
+    contact_request_replied_at TIMESTAMP
+);
+
+-- Collaborator Deliverables
+CREATE TABLE job_deliverables (
+    deliverable_id SERIAL PRIMARY KEY,
+    deliverable_job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+    deliverable_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    deliverable_file_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+    deliverable_note TEXT,
+    deliverable_submitted_at TIMESTAMP DEFAULT now()
+);
+
+-- Collaborator Earnings
+CREATE TABLE earning_entries (
+    earning_entry_id SERIAL PRIMARY KEY,
+    earning_entry_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    earning_entry_job_id INTEGER REFERENCES jobs(job_id) ON DELETE SET NULL,
+    earning_entry_amount NUMERIC(15,2) NOT NULL DEFAULT 0,
+    earning_entry_type VARCHAR(30) NOT NULL DEFAULT 'job',
+    earning_entry_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Collaborator Payout Requests (Mock)
+CREATE TABLE payout_requests (
+    payout_request_id SERIAL PRIMARY KEY,
+    payout_request_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    payout_request_amount NUMERIC(15,2) NOT NULL,
+    payout_request_method VARCHAR(50) NOT NULL,
+    payout_request_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    payout_request_note TEXT,
+    payout_request_created_at TIMESTAMP DEFAULT now(),
+    payout_request_processed_at TIMESTAMP
+);
+
 -- Admin System Settings
 CREATE TABLE admin_system_settings (
     setting_id SERIAL PRIMARY KEY,
@@ -603,6 +668,15 @@ CREATE INDEX idx_posts_created ON posts(post_created_at);
 
 -- Post Attribute Values
 CREATE INDEX attribute_filter_idx ON post_attribute_values USING btree (post_id, attribute_id, attribute_value);
+
+-- Collaborator Services
+CREATE INDEX jobs_status_deadline_idx ON jobs(job_status, job_deadline);
+CREATE INDEX jobs_collaborator_status_idx ON jobs(job_collaborator_id, job_status);
+CREATE INDEX job_contact_requests_collaborator_created_idx ON job_contact_requests(contact_request_collaborator_id, contact_request_created_at);
+CREATE INDEX job_contact_requests_job_created_idx ON job_contact_requests(contact_request_job_id, contact_request_created_at);
+CREATE INDEX job_deliverables_job_submitted_idx ON job_deliverables(deliverable_job_id, deliverable_submitted_at);
+CREATE INDEX earning_entries_collaborator_created_idx ON earning_entries(earning_entry_collaborator_id, earning_entry_created_at);
+CREATE INDEX payout_requests_collaborator_created_idx ON payout_requests(payout_request_collaborator_id, payout_request_created_at);
 
 -- Post Meta
 CREATE INDEX idx_post_meta_post ON post_meta(post_meta_post_id);
@@ -841,6 +915,92 @@ INSERT INTO users (
 (5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
 (6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 2),
 (7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1);
+
+-- Align demo accounts to business roles used in collaborator APIs
+UPDATE users SET user_business_role_id = 3 WHERE user_id = 4;
+UPDATE users SET user_business_role_id = 5 WHERE user_id = 6;
+
+-- Collaborator availability profile (mock)
+UPDATE users
+SET
+    user_availability_status = 'available',
+    user_availability_note = 'Available 08:00-18:00, Monday to Saturday.'
+WHERE user_id = 4;
+UPDATE users
+SET
+    user_availability_status = 'busy',
+    user_availability_note = 'Focused on moderation incidents this week.'
+WHERE user_id = 5;
+UPDATE users
+SET
+    user_availability_status = 'busy'
+WHERE user_id = 6;
+
+-- Collaborator Jobs (Mock)
+INSERT INTO jobs (
+    job_id,
+    job_customer_id,
+    job_collaborator_id,
+    job_title,
+    job_category,
+    job_location,
+    job_deadline,
+    job_price,
+    job_description,
+    job_requirements,
+    job_status,
+    job_decline_reason,
+    job_completed_at,
+    job_created_at,
+    job_updated_at
+) VALUES
+(1, 7, NULL, 'Photo package for bonsai listing', 'Photo', 'Long Bien, Ha Noi', now() + interval '3 days', 650000, 'Need 12 listing photos for a bonsai package.', '["24MP camera","4:3 ratio","clean background"]'::jsonb, 'open', NULL, NULL, now() - interval '1 day', now() - interval '1 day'),
+(2, 2, 4, 'SEO content for Linh Sam posts', 'Content', 'Hoang Mai, Ha Noi', now() + interval '1 day', 800000, 'Write SEO-ready descriptions for 20 Linh Sam posts.', '["min 600 words","H2/H3 headings","persuasive tone"]'::jsonb, 'accepted', NULL, NULL, now() - interval '2 days', now() - interval '6 hours'),
+(3, 1, 4, 'Deliver final bonsai album', 'Photo', 'Yen Phong, Bac Ninh', now() - interval '2 days', 720000, 'Finalized photo album package for Tung La Han listing.', '["20 JPEG photos","3 cover images","source files + web files"]'::jsonb, 'completed', NULL, now() - interval '2 days', now() - interval '4 days', now() - interval '2 days');
+
+INSERT INTO job_contact_requests (
+    contact_request_id,
+    contact_request_job_id,
+    contact_request_collaborator_id,
+    contact_request_customer_id,
+    contact_request_message,
+    contact_request_status,
+    contact_request_created_at,
+    contact_request_replied_at
+) VALUES
+(1, 2, 4, 2, 'Can you clarify the exact keyword set and tone before delivery?', 'sent', now() - interval '8 hours', NULL);
+
+INSERT INTO job_deliverables (
+    deliverable_id,
+    deliverable_job_id,
+    deliverable_collaborator_id,
+    deliverable_file_urls,
+    deliverable_note,
+    deliverable_submitted_at
+) VALUES
+(1, 3, 4, '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'Uploaded full album and source zip.', now() - interval '2 days');
+
+INSERT INTO earning_entries (
+    earning_entry_id,
+    earning_entry_collaborator_id,
+    earning_entry_job_id,
+    earning_entry_amount,
+    earning_entry_type,
+    earning_entry_created_at
+) VALUES
+(1, 4, 3, 720000, 'job', now() - interval '2 days');
+
+INSERT INTO payout_requests (
+    payout_request_id,
+    payout_request_collaborator_id,
+    payout_request_amount,
+    payout_request_method,
+    payout_request_status,
+    payout_request_note,
+    payout_request_created_at,
+    payout_request_processed_at
+) VALUES
+(1, 4, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
 
 -- Shops
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
@@ -1221,6 +1381,11 @@ SELECT setval('posts_post_id_seq', (SELECT COALESCE(MAX(post_id), 1) FROM posts)
 SELECT setval('post_images_image_id_seq', (SELECT COALESCE(MAX(image_id), 1) FROM post_images));
 SELECT setval('post_videos_post_video_id_seq', (SELECT COALESCE(MAX(post_video_id), 1) FROM post_videos));
 SELECT setval('post_attribute_values_value_id_seq', (SELECT COALESCE(MAX(value_id), 1) FROM post_attribute_values));
+SELECT setval('jobs_job_id_seq', (SELECT COALESCE(MAX(job_id), 1) FROM jobs));
+SELECT setval('job_contact_requests_contact_request_id_seq', (SELECT COALESCE(MAX(contact_request_id), 1) FROM job_contact_requests));
+SELECT setval('job_deliverables_deliverable_id_seq', (SELECT COALESCE(MAX(deliverable_id), 1) FROM job_deliverables));
+SELECT setval('earning_entries_earning_entry_id_seq', (SELECT COALESCE(MAX(earning_entry_id), 1) FROM earning_entries));
+SELECT setval('payout_requests_payout_request_id_seq', (SELECT COALESCE(MAX(payout_request_id), 1) FROM payout_requests));
 SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM reports), false);
 SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
 SELECT setval('promotion_packages_promotion_package_id_seq', (SELECT COALESCE(MAX(promotion_package_id), 1) FROM promotion_packages));
