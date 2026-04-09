@@ -1,10 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { settingsService } from "../services/settingsService";
 import type { SettingsState } from "../types/settings";
 import "./SettingsPage.css";
+
+const initialSettings: SettingsState = {
+  general: {
+    platformName: "GreenMarket",
+    supportEmail: "support@greenmarket.vn",
+    defaultLanguage: "English",
+  },
+  moderation: {
+    autoModeration: true,
+    bannedKeywordFilter: true,
+    reportLimit: 5,
+  },
+  postLifecycle: {
+    postExpiryDays: 30,
+    restoreWindowDays: 7,
+    allowAutoExpire: true,
+  },
+  media: {
+    maxImagesPerPost: 10,
+    maxFileSizeMb: 5,
+    enableImageCompression: true,
+  },
+};
 
 const validateSettings = (settings: SettingsState) => {
   if (!settings.general.platformName.trim()) {
@@ -44,11 +67,30 @@ const validateSettings = (settings: SettingsState) => {
 };
 
 function SettingsPage() {
-  const [settings, setSettings] = useState<SettingsState>(
-    settingsService.getSettings(),
-  );
+  const [settings, setSettings] = useState<SettingsState>(initialSettings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const loadSettings = async () => {
+    try {
+      setIsLoading(true);
+      setFormError("");
+      setSettings(await settingsService.getSettings());
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to load settings.";
+      setFormError(message);
+      showToast(message, "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadSettings();
+  }, []);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -89,12 +131,13 @@ function SettingsPage() {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
       validateSettings(settings);
       setFormError("");
+      setIsSaving(true);
 
-      const updated = settingsService.updateSettings(settings);
+      const updated = await settingsService.updateSettings(settings);
       setSettings(updated);
       showToast("Settings saved successfully.");
     } catch (error) {
@@ -102,14 +145,26 @@ function SettingsPage() {
         error instanceof Error ? error.message : "Unable to save settings.";
       setFormError(message);
       showToast(message, "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleReset = () => {
-    const defaultSettings = settingsService.getDefaultSettings();
-    setSettings(defaultSettings);
-    setFormError("");
-    showToast("Settings were reset to defaults.", "info");
+  const handleReset = async () => {
+    try {
+      setIsSaving(true);
+      const defaultSettings = await settingsService.resetSettings();
+      setSettings(defaultSettings);
+      setFormError("");
+      showToast("Settings were reset to defaults.", "info");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to reset settings.";
+      setFormError(message);
+      showToast(message, "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -117,21 +172,24 @@ function SettingsPage() {
       <PageHeader
         title="System Settings"
         description="Configure platform rules, moderation options, and lifecycle settings."
-        actionLabel="Save Changes"
-        onActionClick={handleSave}
+        actionLabel={isSaving ? "Saving..." : "Save Changes"}
+        onActionClick={() => void handleSave()}
       />
 
       <div className="settings-toolbar">
         <button
           type="button"
           className="settings-toolbar__reset"
-          onClick={handleReset}
+          onClick={() => void handleReset()}
+          disabled={isLoading || isSaving}
         >
           Reset To Defaults
         </button>
       </div>
 
       {formError ? <div className="settings-error-banner">{formError}</div> : null}
+
+      {isLoading ? <div className="settings-error-banner">Loading settings from admin API...</div> : null}
 
       <div className="settings-grid">
         <SectionCard

@@ -1,30 +1,28 @@
-import { defaultSettings } from "../mock-data/settings";
+import { apiClient } from "../lib/apiClient";
 import type { SettingsState } from "../types/settings";
-import { readStoredJson, writeStoredJson } from "../utils/browserStorage";
 
-const SETTINGS_STORAGE_KEY = "adminSystemSettings";
+const SETTINGS_API_PATH = "/api/admin/settings";
 
 export const settingsService = {
-  getSettings(): SettingsState {
-    return readStoredJson<SettingsState>(SETTINGS_STORAGE_KEY, defaultSettings);
+  getSettings(): Promise<SettingsState> {
+    return apiClient.request<SettingsState>(SETTINGS_API_PATH, {
+      defaultErrorMessage: "Unable to load settings.",
+    });
   },
 
-  updateSettings(currentSettings: SettingsState): SettingsState {
-    const nextSettings = {
-      ...currentSettings,
-    };
-
-    writeStoredJson(SETTINGS_STORAGE_KEY, nextSettings);
-    return nextSettings;
+  updateSettings(currentSettings: SettingsState): Promise<SettingsState> {
+    return apiClient.request<SettingsState>(SETTINGS_API_PATH, {
+      method: "PUT",
+      includeJsonContentType: true,
+      defaultErrorMessage: "Unable to save settings.",
+      body: JSON.stringify(currentSettings),
+    });
   },
 
-  getDefaultSettings(): SettingsState {
-    return {
-      ...defaultSettings,
-      general: { ...defaultSettings.general },
-      moderation: { ...defaultSettings.moderation },
-      postLifecycle: { ...defaultSettings.postLifecycle },
-      media: { ...defaultSettings.media },
-    };
+  resetSettings(): Promise<SettingsState> {
+    return apiClient.request<SettingsState>(`${SETTINGS_API_PATH}/reset`, {
+      method: "POST",
+      defaultErrorMessage: "Unable to reset settings.",
+    });
   },
 };

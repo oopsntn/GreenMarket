@@ -1,7 +1,7 @@
+import { apiClient } from "../lib/apiClient";
 import type { TemplateBuilderPreset } from "../types/template";
-import { readStoredJson, writeStoredJson } from "../utils/browserStorage";
 
-const TEMPLATE_BUILDER_PRESET_KEY = "adminTemplateBuilderPreset";
+const TEMPLATE_BUILDER_API_PATH = "/api/admin/template-builder/preset";
 
 const defaultPreset: TemplateBuilderPreset = {
   selectedTemplateId: null,
@@ -18,16 +18,29 @@ const defaultPreset: TemplateBuilderPreset = {
 };
 
 export const templateBuilderService = {
-  getPreset(): TemplateBuilderPreset {
-    return readStoredJson<TemplateBuilderPreset>(
-      TEMPLATE_BUILDER_PRESET_KEY,
-      defaultPreset,
-    );
+  getPreset(): Promise<TemplateBuilderPreset> {
+    return apiClient.request<TemplateBuilderPreset>(TEMPLATE_BUILDER_API_PATH, {
+      defaultErrorMessage: "Unable to load template builder preset.",
+    });
   },
 
-  savePreset(preset: TemplateBuilderPreset) {
-    writeStoredJson(TEMPLATE_BUILDER_PRESET_KEY, preset);
-    return preset;
+  savePreset(preset: TemplateBuilderPreset): Promise<TemplateBuilderPreset> {
+    return apiClient.request<TemplateBuilderPreset>(TEMPLATE_BUILDER_API_PATH, {
+      method: "PUT",
+      includeJsonContentType: true,
+      defaultErrorMessage: "Unable to save template builder preset.",
+      body: JSON.stringify(preset),
+    });
+  },
+
+  resetPreset(): Promise<TemplateBuilderPreset> {
+    return apiClient.request<TemplateBuilderPreset>(
+      `${TEMPLATE_BUILDER_API_PATH}/reset`,
+      {
+        method: "POST",
+        defaultErrorMessage: "Unable to reset template builder preset.",
+      },
+    );
   },
 
   getDefaultPreset() {

@@ -103,7 +103,7 @@ function TemplateBuilderPage() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [pageError, setPageError] = useState("");
 
-  const initialPreset = templateBuilderService.getPreset();
+  const initialPreset = templateBuilderService.getDefaultPreset();
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<
@@ -131,8 +131,24 @@ function TemplateBuilderPage() {
   });
   const [lastAppliedAt, setLastAppliedAt] = useState("Not applied yet");
   const [isPreviewHighlighted, setIsPreviewHighlighted] = useState(false);
+  const [isPresetSaving, setIsPresetSaving] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const previewRef = useRef<HTMLDivElement | null>(null);
+
+  const applyPresetToState = (preset: TemplateBuilderPreset) => {
+    setSelectedTypeFilter(preset.selectedTypeFilter);
+    setSelectedTemplateId(preset.selectedTemplateId);
+    setChannel(preset.channel);
+    setAudience(preset.audience);
+    setTone(preset.tone);
+    setShopName(preset.shopName);
+    setPostTitle(preset.postTitle);
+    setReason(preset.reason);
+    setSlotName(preset.slotName);
+    setContactEmail(preset.contactEmail);
+    setAdminNote(preset.adminNote);
+    setAppliedPreset({ ...preset });
+  };
 
   const loadTemplates = async (showLoader = false) => {
     try {
@@ -141,8 +157,12 @@ function TemplateBuilderPage() {
       }
 
       setPageError("");
-      const data = await templateService.getTemplates();
+      const [data, preset] = await Promise.all([
+        templateService.getTemplates(),
+        templateBuilderService.getPreset(),
+      ]);
       setTemplates(data);
+      applyPresetToState(preset);
     } catch (error) {
       setPageError(
         error instanceof Error ? error.message : "Failed to load templates.",
@@ -307,33 +327,45 @@ function TemplateBuilderPage() {
     );
   };
 
-  const handleRestoreDefault = () => {
-    const defaultPreset = templateBuilderService.getDefaultPreset();
-
-    setSelectedTypeFilter(defaultPreset.selectedTypeFilter);
-    setSelectedTemplateId(defaultPreset.selectedTemplateId);
-    setChannel(defaultPreset.channel);
-    setAudience(defaultPreset.audience);
-    setTone(defaultPreset.tone);
-    setShopName(defaultPreset.shopName);
-    setPostTitle(defaultPreset.postTitle);
-    setReason(defaultPreset.reason);
-    setSlotName(defaultPreset.slotName);
-    setContactEmail(defaultPreset.contactEmail);
-    setAdminNote(defaultPreset.adminNote);
-    setAppliedPreset({ ...defaultPreset });
-    setLastAppliedAt("Restored to default sample");
-    showToast(
-      "Template Builder was restored to the default sample scenario.",
-      "info",
-    );
+  const handleRestoreDefault = async () => {
+    try {
+      setIsPresetSaving(true);
+      const defaultPreset = await templateBuilderService.resetPreset();
+      applyPresetToState(defaultPreset);
+      setLastAppliedAt("Restored to default sample");
+      showToast(
+        "Template Builder was restored to the default sample scenario.",
+        "info",
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Unable to reset template builder preset.",
+        "error",
+      );
+    } finally {
+      setIsPresetSaving(false);
+    }
   };
 
-  const handleSavePreset = () => {
-    templateBuilderService.savePreset(draftPreset);
-    showToast(
-      `${selectedTemplate?.name ?? "Current"} sample setup was saved to this browser.`,
-    );
+  const handleSavePreset = async () => {
+    try {
+      setIsPresetSaving(true);
+      await templateBuilderService.savePreset(draftPreset);
+      showToast(
+        `${selectedTemplate?.name ?? "Current"} sample setup was saved to the admin API.`,
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Unable to save template builder preset.",
+        "error",
+      );
+    } finally {
+      setIsPresetSaving(false);
+    }
   };
 
   return (
@@ -774,14 +806,16 @@ function TemplateBuilderPage() {
                   <button
                     type="button"
                     className="template-builder-form__action"
-                    onClick={handleSavePreset}
+                    onClick={() => void handleSavePreset()}
+                    disabled={isPresetSaving}
                   >
-                    Save This Sample Setup
+                    {isPresetSaving ? "Saving..." : "Save This Sample Setup"}
                   </button>
                   <button
                     type="button"
                     className="template-builder-form__action template-builder-form__action--secondary"
-                    onClick={handleRestoreDefault}
+                    onClick={() => void handleRestoreDefault()}
+                    disabled={isPresetSaving}
                   >
                     Reset Sample Data
                   </button>
