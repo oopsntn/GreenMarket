@@ -10,10 +10,10 @@ import {
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import { 
-  Check, 
-  X, 
-  Clock, 
+import {
+  Check,
+  X,
+  Clock,
   ChevronRight,
   Filter,
   Search,
@@ -51,8 +51,8 @@ const PostModerationList = ({ navigation }: any) => {
   const handleApprove = (id: number) => {
     CustomAlert('Confirm Approval', 'Are you sure you want to approve this post?', [
       { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'Approve', 
+      {
+        text: 'Approve',
         onPress: async () => {
           try {
             await ModeratorService.updatePostStatus(id, 'approved');
@@ -84,15 +84,15 @@ const PostModerationList = ({ navigation }: any) => {
   };
 
   const renderItem = ({ item }: { item: PostModerationData }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.postCard}
       onPress={() => navigation.navigate('PostModerationDetail', { postId: item.postId })}
       activeOpacity={0.7}
     >
       <View style={styles.cardTop}>
-        <Image 
-          source={{ uri: item.images?.[0]?.imageUrl || 'https://via.placeholder.com/150' }} 
-          style={styles.postImage} 
+        <Image
+          source={{ uri: item.images?.[0]?.imageUrl || 'https://via.placeholder.com/150' }}
+          style={styles.postImage}
         />
         <View style={styles.postInfo}>
           <View style={styles.badgeContainer}>
@@ -100,7 +100,7 @@ const PostModerationList = ({ navigation }: any) => {
               <Clock size={12} color="#D97706" />
               <Text style={styles.pendingText}>Pending</Text>
             </View>
-            <Text style={styles.timeText}>{new Date(item.postCreatedAt).toLocaleDateString()}</Text>
+            <Text style={styles.timeText}>{new Date(item.postCreatedAt || '').toLocaleDateString()}</Text>
           </View>
           <Text style={styles.postTitle} numberOfLines={2}>{item.postTitle}</Text>
           <Text style={styles.shopName}>Shop ID: {item.postShopId}</Text>
@@ -110,15 +110,15 @@ const PostModerationList = ({ navigation }: any) => {
       </View>
 
       <View style={styles.cardActions}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.actionButton, styles.rejectBtn]}
           onPress={() => handleReject(item)}
         >
           <X size={18} color="#EF4444" />
           <Text style={[styles.actionText, styles.rejectText]}>Reject</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.actionButton, styles.approveBtn]}
           onPress={() => handleApprove(item.postId)}
         >

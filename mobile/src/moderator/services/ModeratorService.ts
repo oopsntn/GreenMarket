@@ -3,10 +3,13 @@ import { api } from '../../config/api';
 export interface PostModerationData {
     postId: number;
     postTitle: string;
-    postShopId: number;
-    postPrice: number;
+    postShopId?: number | null;
+    postPrice: number | string;
     postStatus: string;
-    postCreatedAt: string;
+    postCreatedAt?: string;
+    postUpdatedAt?: string;
+    postRejectedReason?: string | null;
+    postLocation?: string | null;
     images?: { imageUrl: string }[];
     attributes?: any[];
     [key: string]: any;
@@ -26,26 +29,50 @@ export interface ShopModerationData {
 
 export interface ReportModerationData {
     reportId: number;
-    reporterId: number;
-    reporterDisplayName: string;
-    targetTitle: string;
+    reporterId?: number | null;
+    reporterDisplayName?: string | null;
+    postId?: number | null;
+    reportShopId?: number | null;
     postTitle?: string;
     shopName?: string;
-    reportReason: string;
+    reportReason?: string | null;
+    reportNote?: string | null;
     reportStatus: string;
-    reportCreatedAt: string;
+    reportCreatedAt?: string;
+    adminNote?: string | null;
     [key: string]: any;
 }
+
+type DashboardOverview = {
+    statCards?: Array<{ title: string; value: string }>;
+    summary?: { title: string; description: string };
+}
+
+const normalizePost = (post: any): PostModerationData => ({
+    ...post,
+    postStatus: String(post?.postStatus || '').toLowerCase(),
+})
+
+const normalizeShop = (shop: any): ShopModerationData => ({
+    ...shop,
+    status: String(shop?.status || ''),
+})
+
+const normalizeReport = (report: any): ReportModerationData => ({
+    ...report,
+    reportStatus: String(report?.reportStatus || '').toLowerCase(),
+})
 
 const ModeratorService = {
     // Posts Moderation
     getPosts: async (): Promise<PostModerationData[]> => {
         const response = await api.get('/admin/posts');
-        return response.data;
+        const rows = Array.isArray(response.data) ? response.data : [];
+        return rows.map(normalizePost);
     },
     getPostById: async (id: number | string): Promise<PostModerationData> => {
         const response = await api.get(`/admin/posts/${id}`);
-        return response.data;
+        return normalizePost(response.data);
     },
     updatePostStatus: async (id: number | string, status: string, reason?: string) => {
         const response = await api.patch(`/admin/posts/${id}/status`, { status, reason });
@@ -59,11 +86,12 @@ const ModeratorService = {
     // Shops Moderation
     getShops: async (): Promise<ShopModerationData[]> => {
         const response = await api.get('/admin/shops');
-        return response.data;
+        const rows = Array.isArray(response.data) ? response.data : [];
+        return rows.map(normalizeShop);
     },
     getShopById: async (id: number | string): Promise<ShopModerationData> => {
         const response = await api.get(`/admin/shops/${id}`);
-        return response.data;
+        return normalizeShop(response.data);
     },
     updateShopStatus: async (id: number | string, status: string) => {
         const response = await api.patch(`/admin/shops/${id}/status`, { status });
@@ -75,19 +103,20 @@ const ModeratorService = {
     },
 
     // Dashboard
-    getDashboardOverview: async (fromDate?: string, toDate?: string): Promise<any> => {
+    getDashboardOverview: async (fromDate?: string, toDate?: string): Promise<DashboardOverview> => {
         const response = await api.get('/admin/dashboard', { params: { fromDate, toDate } });
-        return response.data;
+        return response.data || {};
     },
 
     // Reports Moderation
     getReports: async (): Promise<ReportModerationData[]> => {
         const response = await api.get('/admin/reports');
-        return response.data;
+        const rows = Array.isArray(response.data) ? response.data : [];
+        return rows.map(normalizeReport);
     },
     getReportById: async (id: number | string): Promise<ReportModerationData> => {
         const response = await api.get(`/admin/reports/${id}`);
-        return response.data;
+        return normalizeReport(response.data);
     },
     resolveReport: async (id: number | string, status: string, adminNote?: string) => {
         const response = await api.patch(`/admin/reports/${id}/resolve`, { status, adminNote });
