@@ -5,8 +5,8 @@ import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
-import { userService } from "../services/userService";
-import type { FlattenedUserActivityItem, User } from "../types/user";
+import { activityLogService } from "../services/activityLogService";
+import type { FlattenedUserActivityItem } from "../types/user";
 import "./ActivityLogPage.css";
 
 const PAGE_SIZE = 8;
@@ -20,7 +20,9 @@ const getActionVariant = (action: string) => {
 };
 
 function ActivityLogPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [activityLogs, setActivityLogs] = useState<FlattenedUserActivityItem[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -29,11 +31,11 @@ function ActivityLogPage() {
   const [selectedPerformerFilter, setSelectedPerformerFilter] = useState("All");
   const [page, setPage] = useState(1);
  
-  const loadUsers = async () => {
+  const loadActivityLogs = async () => {
     try {
       setIsLoading(true);
       setError("");
-      setUsers(await userService.fetchUsers());
+      setActivityLogs(await activityLogService.fetchActivityLogs());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load activity log.");
     } finally {
@@ -42,13 +44,8 @@ function ActivityLogPage() {
   };
 
   useEffect(() => {
-    void loadUsers();
+    void loadActivityLogs();
   }, []);
-
-  const activityLogs = useMemo(
-    () => userService.getRecentActivityLogs(users),
-    [users],
-  );
 
   const actionOptions = useMemo(() => {
     return [
@@ -123,9 +120,9 @@ function ActivityLogPage() {
     <div className="activity-log-page">
       <PageHeader
         title="Activity Log"
-        description="Review derived account lifecycle activity and admin-side status changes in one dedicated log screen."
+        description="Review backend event logs for account lifecycle activity, admin status changes, exports, and operational events."
         actionLabel="Refresh Log"
-        onActionClick={() => void loadUsers()}
+        onActionClick={() => void loadActivityLogs()}
       />
 
       <div className="activity-log-summary-grid">
@@ -203,7 +200,7 @@ function ActivityLogPage() {
 
       <SectionCard
         title="Account Activity Directory"
-        description="Follow registration, login, status updates, and other lifecycle actions derived from user account data."
+        description="Follow registration, login, status updates, exports, and other lifecycle actions recorded by the backend."
       >
         {isLoading ? (
           <EmptyState

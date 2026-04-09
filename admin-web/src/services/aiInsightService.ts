@@ -1,8 +1,4 @@
-import {
-  initialAIInsightHistory,
-  initialAIInsightSettings,
-  initialAITrendRows,
-} from "../mock-data/aiInsights";
+import { apiClient } from "../lib/apiClient";
 import type {
   AIInsightFocus,
   AIInsightFocusFilter,
@@ -13,10 +9,7 @@ import type {
   AITrendScoreRow,
 } from "../types/aiInsight";
 
-const getNextHistoryId = (items: AIInsightHistoryItem[]) => {
-  if (items.length === 0) return 1;
-  return Math.max(...items.map((item) => item.id)) + 1;
-};
+const AI_INSIGHTS_API_PATH = "/api/admin/ai-insights";
 
 const getFocusLabel = (focus: AIInsightFocusFilter): AIInsightFocus => {
   if (focus === "All Focus Areas") {
@@ -27,20 +20,48 @@ const getFocusLabel = (focus: AIInsightFocusFilter): AIInsightFocus => {
 };
 
 export const aiInsightService = {
-  getSettings(): AIInsightSettings {
-    return initialAIInsightSettings;
+  getSettings(): Promise<AIInsightSettings> {
+    return apiClient.request<AIInsightSettings>(
+      `${AI_INSIGHTS_API_PATH}/settings`,
+      {
+        defaultErrorMessage: "Unable to load AI insight settings.",
+      },
+    );
   },
 
-  updateSettings(settings: AIInsightSettings): AIInsightSettings {
-    return { ...settings };
+  updateSettings(settings: AIInsightSettings): Promise<AIInsightSettings> {
+    return apiClient.request<AIInsightSettings>(
+      `${AI_INSIGHTS_API_PATH}/settings`,
+      {
+        method: "PUT",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to save AI insight settings.",
+        body: JSON.stringify(settings),
+      },
+    );
   },
 
-  getTrendRows(): AITrendScoreRow[] {
-    return initialAITrendRows;
+  getTrendRows(fromDate?: string, toDate?: string): Promise<AITrendScoreRow[]> {
+    const params = new URLSearchParams();
+    if (fromDate) params.set("fromDate", fromDate);
+    if (toDate) params.set("toDate", toDate);
+    const query = params.toString();
+
+    return apiClient.request<AITrendScoreRow[]>(
+      `${AI_INSIGHTS_API_PATH}/trends${query ? `?${query}` : ""}`,
+      {
+        defaultErrorMessage: "Unable to load AI trend rows.",
+      },
+    );
   },
 
-  getHistory(): AIInsightHistoryItem[] {
-    return initialAIInsightHistory;
+  getHistory(): Promise<AIInsightHistoryItem[]> {
+    return apiClient.request<AIInsightHistoryItem[]>(
+      `${AI_INSIGHTS_API_PATH}/history`,
+      {
+        defaultErrorMessage: "Unable to load AI insight history.",
+      },
+    );
   },
 
   getSummaryCards(
@@ -77,22 +98,26 @@ export const aiInsightService = {
     ];
   },
 
-  createGeneratedInsight(
-    items: AIInsightHistoryItem[],
+  async createGeneratedInsight(
+    _items: AIInsightHistoryItem[],
     focus: AIInsightFocusFilter,
     tone: AIInsightTone,
     generatedAt: string,
-  ): AIInsightHistoryItem {
+  ): Promise<AIInsightHistoryItem> {
     const resolvedFocus = getFocusLabel(focus);
 
-    return {
-      id: getNextHistoryId(items),
-      title: `${resolvedFocus} summary`,
-      focus: resolvedFocus,
-      summary: `Generated a ${tone.toLowerCase()} recommendation summary for ${resolvedFocus.toLowerCase()} using the latest admin filters.`,
-      generatedBy: "Admin Manual Trigger",
-      generatedAt,
-      status: "Needs Review",
-    };
+    return apiClient.request<AIInsightHistoryItem>(
+      `${AI_INSIGHTS_API_PATH}/generate`,
+      {
+        method: "POST",
+        includeJsonContentType: true,
+        defaultErrorMessage: "Unable to generate AI insight.",
+        body: JSON.stringify({
+          focus: resolvedFocus,
+          tone,
+          generatedAt,
+        }),
+      },
+    );
   },
 };

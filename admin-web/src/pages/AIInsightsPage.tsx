@@ -40,6 +40,16 @@ const statusFilterOptions: AIInsightHistoryStatusFilter[] = [
   "Archived",
 ];
 
+const initialSettings: AIInsightSettings = {
+  autoDailySummary: true,
+  anomalyAlerts: true,
+  operatorDigest: false,
+  recommendationTone: "Balanced",
+  confidenceThreshold: 78,
+  promptVersion: "gm-admin-v1.4",
+  reviewMode: "Required",
+};
+
 const getMomentumVariant = (momentum: AITrendScoreRow["momentum"]) => {
   if (momentum === "Up") return "positive";
   if (momentum === "Stable") return "processing";
@@ -53,11 +63,11 @@ const getHistoryStatusVariant = (status: AIInsightHistoryItem["status"]) => {
 };
 
 function AIInsightsPage() {
-  const [settings, setSettings] = useState<AIInsightSettings>(
-    aiInsightService.getSettings(),
-  );
-  const [trendRows] = useState(aiInsightService.getTrendRows());
-  const [historyItems, setHistoryItems] = useState(aiInsightService.getHistory());
+  const [settings, setSettings] = useState<AIInsightSettings>(initialSettings);
+  const [trendRows, setTrendRows] = useState<AITrendScoreRow[]>([]);
+  const [historyItems, setHistoryItems] = useState<AIInsightHistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -71,6 +81,50 @@ function AIInsightsPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
+
+  const loadInsightData = async (showLoader = false) => {
+    try {
+      if (showLoader) {
+        setIsLoading(true);
+      }
+
+      setPageError("");
+      const [settingsData, trendData, historyData] = await Promise.all([
+        aiInsightService.getSettings(),
+        aiInsightService.getTrendRows(fromDate, toDate),
+        aiInsightService.getHistory(),
+      ]);
+
+      setSettings(settingsData);
+      setTrendRows(trendData);
+      setHistoryItems(historyData);
+    } catch (error) {
+      setPageError(
+        error instanceof Error ? error.message : "Unable to load AI insights.",
+      );
+    } finally {
+      if (showLoader) {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    void loadInsightData(true);
+  }, []);
+
+  useEffect(() => {
+    void aiInsightService
+      .getTrendRows(fromDate, toDate)
+      .then(setTrendRows)
+      .catch((error) =>
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load AI trend rows.",
+        ),
+      );
+  }, [fromDate, toDate]);
 
   const filteredTrendRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -172,29 +226,45 @@ function AIInsightsPage() {
     }));
   };
 
-  const handleSaveSettings = () => {
-    const nextSettings = aiInsightService.updateSettings(settings);
-    setSettings(nextSettings);
-    showToast(
-      `AI recommendation settings saved for ${settings.promptVersion}.`,
-    );
+  const handleSaveSettings = async () => {
+    try {
+      const nextSettings = await aiInsightService.updateSettings(settings);
+      setSettings(nextSettings);
+      showToast(
+        `AI recommendation settings saved for ${settings.promptVersion}.`,
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Unable to save AI recommendation settings.",
+        "error",
+      );
+    }
   };
 
-  const handleGenerateInsight = () => {
+  const handleGenerateInsight = async () => {
     const generatedAt = `${fromDate} to ${toDate}`;
-    const newInsight = aiInsightService.createGeneratedInsight(
-      historyItems,
-      focusFilter,
-      settings.recommendationTone,
-      generatedAt,
-    );
+    try {
+      const newInsight = await aiInsightService.createGeneratedInsight(
+        historyItems,
+        focusFilter,
+        settings.recommendationTone,
+        generatedAt,
+      );
 
-    setHistoryItems((prev) => [newInsight, ...prev]);
-    setHistoryPage(1);
-    showToast(
-      `Generated ${newInsight.focus.toLowerCase()} summary for ${dateRangeLabel}.`,
-      "info",
-    );
+      setHistoryItems((prev) => [newInsight, ...prev]);
+      setHistoryPage(1);
+      showToast(
+        `Generated ${newInsight.focus.toLowerCase()} summary for ${dateRangeLabel}.`,
+        "info",
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Unable to generate insight.",
+        "error",
+      );
+    }
   };
 
   return (
@@ -203,8 +273,12 @@ function AIInsightsPage() {
         title="AI Insights & Recommendation Settings"
         description="Manage AI recommendation controls, review trend scoring, and track generated admin insight summaries."
         actionLabel="Save AI Settings"
-        onActionClick={handleSaveSettings}
+        onActionClick={() => void handleSaveSettings()}
       />
+
+      {pageError ? (
+        <EmptyState title="Unable to load AI insights" description={pageError} />
+      ) : null}
 
       <div className="ai-insights-summary-grid">
         {summaryCards.map((card) => (
@@ -333,14 +407,14 @@ function AIInsightsPage() {
             <button
               type="button"
               className="ai-insights-settings__secondary"
-              onClick={handleGenerateInsight}
+              onClick={() => void handleGenerateInsight()}
             >
               Generate Insight Summary
             </button>
             <button
               type="button"
               className="ai-insights-settings__primary"
-              onClick={handleSaveSettings}
+              onClick={() => void handleSaveSettings()}
             >
               Save Controls
             </button>
@@ -405,7 +479,12 @@ function AIInsightsPage() {
         title="Trend Scoring Report"
         description={`${dateRangeLabel} • ${focusFilter}`}
       >
-        {filteredTrendRows.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading trend scores"
+            description="Fetching AI trend rows from the admin API."
+          />
+        ) : filteredTrendRows.length === 0 ? (
           <EmptyState
             title="No trend scores found"
             description="No trend-scoring rows match the current insight filters."
@@ -483,7 +562,12 @@ function AIInsightsPage() {
         title="Recent Insight History"
         description={`${dateRangeLabel} • ${statusFilter}`}
       >
-        {filteredHistory.length === 0 ? (
+        {isLoading ? (
+          <EmptyState
+            title="Loading insight history"
+            description="Fetching generated AI insight history from the admin API."
+          />
+        ) : filteredHistory.length === 0 ? (
           <EmptyState
             title="No insight history found"
             description="Generated insight summaries will appear here after they are created."
