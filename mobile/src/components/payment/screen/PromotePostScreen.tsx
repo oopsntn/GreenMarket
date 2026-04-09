@@ -6,16 +6,16 @@ import { CheckCircle2, CreditCard, Rocket, ShieldCheck } from 'lucide-react-nati
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import Card from '../../Reused/Card/Card';
 import Button from '../../Reused/Button/Button';
-import { paymentService } from '../service/paymentService';
+import { paymentService, PromotionPackage } from '../service/paymentService';
 import CustomAlert from '../../../utils/AlertHelper';
 
 const PromotePostScreen = ({ route }: any) => {
     const navigation = useNavigation<any>();
     const { post } = route.params;
 
-    const [packages, setPackages] = useState<any[]>([]);
+    const [packages, setPackages] = useState<PromotionPackage[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedPackage, setSelectedPackage] = useState<any>(null);
+    const [selectedPackage, setSelectedPackage] = useState<PromotionPackage | null>(null);
     const [processing, setProcessing] = useState(false);
 
     useEffect(() => {
@@ -50,20 +50,20 @@ const PromotePostScreen = ({ route }: any) => {
                 
                 CustomAlert(
                     'Payment Status',
-                    'If you have completed the payment, your post promotion will be updated shortly.',
+                    'Payment gateway has been opened. After you complete the payment, please review the latest payment and promotion status in your shop dashboard.',
                     [
                         { 
                             text: 'OK', 
-                            onPress: () => navigation.goBack() 
+                            onPress: () => navigation.replace('ShopDashboard') 
                         }
                     ]
                 );
             } else {
                 CustomAlert('Error', 'Could not generate payment link.');
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Promotion error:', error);
-            CustomAlert('Error', 'Something went wrong during the checkout process.');
+            CustomAlert('Error', error?.response?.data?.error || 'Something went wrong during the checkout process.');
         } finally {
             setProcessing(false);
         }
@@ -100,6 +100,10 @@ const PromotePostScreen = ({ route }: any) => {
                                         <View style={styles.pkgMain}>
                                             <Text style={styles.pkgTitle}>{pkg.promotionPackageTitle}</Text>
                                             <Text style={styles.pkgDuration}>{pkg.promotionPackageDurationDays} Days Duration</Text>
+                                            <Text style={styles.pkgMeta}>
+                                                {pkg.slotTitle || pkg.slotCode || 'Standard slot'}
+                                                {pkg.slotRules?.priority ? ` • Priority ${pkg.slotRules.priority}` : ''}
+                                            </Text>
                                         </View>
                                         <Text style={styles.pkgPrice}>
                                             {new Intl.NumberFormat('en-US').format(pkg.promotionPackagePrice)} VND
@@ -203,6 +207,11 @@ const styles = StyleSheet.create({
     pkgDuration: {
         fontSize: 12,
         color: '#6b7280',
+    },
+    pkgMeta: {
+        marginTop: 4,
+        fontSize: 11,
+        color: '#64748b',
     },
     pkgPrice: {
         fontSize: 16,
