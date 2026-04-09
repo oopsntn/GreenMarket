@@ -46,6 +46,52 @@ export interface ShopPayload {
     shopYoutube?: string;
 }
 
+export interface ShopDashboardSummary {
+    totalPosts?: number;
+    approvedPosts?: number;
+    pendingPosts?: number;
+    rejectedPosts?: number;
+    totalViews?: number;
+    totalContacts?: number;
+    totalShopViews?: number;
+    totalShopContactClicks?: number;
+    contactRate?: number;
+    totalPromotionSpend?: number;
+    successfulPayments?: number;
+    activePromotions?: number;
+}
+
+export interface ShopDashboardTopPost {
+    postId: number;
+    postSlug?: string;
+    postTitle?: string;
+    postStatus?: string;
+    postViewCount?: number;
+    postContactCount?: number;
+    isPromoted?: boolean;
+    postUpdatedAt?: string;
+}
+
+export interface ShopDashboardPayment {
+    paymentId?: number;
+    paymentStatus?: string;
+    amount?: number | string;
+    createdAt?: string;
+    updatedAt?: string;
+    packageTitle?: string;
+    promotionPackageTitle?: string;
+    postTitle?: string;
+    orderId?: string;
+    transactionId?: string;
+}
+
+export interface ShopDashboardResponse {
+    shop?: Pick<ShopDetail, 'shopId' | 'shopName' | 'shopStatus'>;
+    summary?: ShopDashboardSummary;
+    topPosts?: ShopDashboardTopPost[];
+    recentPayments?: ShopDashboardPayment[];
+}
+
 const normalizeShopCoordinates = (shop: ShopDetail | null) => {
     if (!shop) return null
 
@@ -106,6 +152,11 @@ export const ShopService = {
             console.error('Error fetching my shop:', e)
             throw e
         }
+    },
+
+    getDashboard: async (): Promise<ShopDashboardResponse> => {
+        const response = await api.get('/shops/dashboard')
+        return response.data
     },
 
     createShop: async (data: ShopPayload) => {
