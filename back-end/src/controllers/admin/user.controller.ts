@@ -1,8 +1,12 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, asc } from "drizzle-orm";
-import { users, businessRoles } from "../../models/schema/index.ts";
+import { users, businessRoles, eventLogs } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
+import { AuthRequest } from "../../dtos/auth.ts";
+
+const getPerformedBy = (req: AuthRequest) =>
+  req.user?.email || req.user?.mobile || "System Administrator";
 
 const buildUserBaseQuery = () =>
   db
@@ -48,7 +52,7 @@ export const getUserById = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const idNumber = parseId(req.params.id);
+    const idNumber = parseId(String(req.params.id));
     if (idNumber === null) {
       res.status(400).json({ error: "Invalid user id" });
       return;
@@ -71,17 +75,17 @@ export const getUserById = async (
 };
 
 export const updateUserStatus = async (
-  req: Request<{ id: string }, {}, { status: string }>,
+  req: AuthRequest,
   res: Response,
 ): Promise<void> => {
   try {
-    const idNumber = parseId(req.params.id);
+    const idNumber = parseId(String(req.params.id));
     if (idNumber === null) {
       res.status(400).json({ error: "Invalid user id" });
       return;
     }
 
-    const { status } = req.body;
+    const { status } = req.body as { status: string };
 
     if (!status?.trim()) {
       res.status(400).json({ error: "status is required" });
@@ -106,6 +110,19 @@ export const updateUserStatus = async (
       .where(eq(users.userId, idNumber))
       .limit(1);
 
+    await db.insert(eventLogs).values({
+      eventLogUserId: idNumber,
+      eventLogEventType:
+        status.toLowerCase() === "locked" ? "admin_user_locked" : "admin_user_unlocked",
+      eventLogEventTime: new Date(),
+      eventLogMeta: {
+        action:
+          status.toLowerCase() === "locked" ? "Account Locked" : "Account Unlocked",
+        detail: `User account status changed to ${status}.`,
+        performedBy: getPerformedBy(req),
+      },
+    });
+
     res.json(userWithRole ?? updatedUser);
   } catch (error) {
     console.error(error);
@@ -114,17 +131,17 @@ export const updateUserStatus = async (
 };
 
 export const assignUserBusinessRole = async (
-  req: Request<{ id: string }, {}, { businessRoleId?: number | null }>,
+  req: AuthRequest,
   res: Response,
 ): Promise<void> => {
   try {
-    const userId = parseId(req.params.id);
+    const userId = parseId(String(req.params.id));
     if (userId === null) {
       res.status(400).json({ error: "Invalid user id" });
       return;
     }
 
-    const { businessRoleId } = req.body;
+    const { businessRoleId } = req.body as { businessRoleId?: number | null };
 
     const [existingUser] = await db
       .select({ userId: users.userId })
@@ -176,6 +193,20 @@ export const assignUserBusinessRole = async (
     const [updatedUser] = await buildUserBaseQuery()
       .where(eq(users.userId, userId))
       .limit(1);
+
+    await db.insert(eventLogs).values({
+      eventLogUserId: userId,
+      eventLogEventType: "admin_user_role_assigned",
+      eventLogEventTime: new Date(),
+      eventLogMeta: {
+        action: "Role Assigned",
+        detail:
+          updatedUser?.businessRoleTitle
+            ? `Assigned business role: ${updatedUser.businessRoleTitle}.`
+            : "Removed business role assignment.",
+        performedBy: getPerformedBy(req),
+      },
+    });
 
     res.json(updatedUser);
   } catch (error) {
