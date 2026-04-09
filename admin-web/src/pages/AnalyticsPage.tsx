@@ -45,6 +45,15 @@ const formatChartDateLabel = (value: string) => {
     });
 };
 
+const formatChartMonthLabel = (value: string) => {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleDateString("en-GB", {
+        month: "short",
+      });
+};
+
 function AnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState(
     analyticsService.getEmptyAnalytics(),
@@ -215,18 +224,27 @@ function AnalyticsPage() {
     [chartSlots, visibleDailyTrafficPoints],
   );
 
+  const chartGridLines = [1, 0.75, 0.5, 0.25, 0];
+  const chartWidth = 1040;
+  const chartHeight = 360;
+  const chartMargin = {
+    top: 34,
+    right: 18,
+    bottom: 46,
+    left: 58,
+  };
+  const chartPlotWidth = chartWidth - chartMargin.left - chartMargin.right;
+  const chartPlotHeight = chartHeight - chartMargin.top - chartMargin.bottom;
   const maxDailyTraffic = Math.max(
     ...chartTrafficPoints.flatMap((point) =>
       point.slots.map((slot) => slot.impressions),
     ),
     1,
   );
-  const maxBarsPerDay = Math.max(
-    ...chartTrafficPoints.map((point) => point.slots.length),
+  const chartValueLabelStep = Math.max(
     1,
+    Math.ceil(chartTrafficPoints.length / 12),
   );
-  const chartDayMinWidth = maxBarsPerDay > 1 ? 72 : 46;
-  const chartMinWidth = chartTrafficPoints.length * chartDayMinWidth + 48;
 
   const totalRevenue = placementChartRows.reduce(
     (total, item) => total + item.revenue,
@@ -407,97 +425,146 @@ function AnalyticsPage() {
               </p>
 
               <div className="analytics-daily-chart-wrapper">
-                <div
-                  className="analytics-daily-chart"
-                  style={{ minWidth: `${chartMinWidth}px` }}
-                >
-                  <div className="analytics-daily-chart__scale">
-                    <span>{formatCompactMetric(maxDailyTraffic)}</span>
-                    <span>{formatCompactMetric(maxDailyTraffic / 2)}</span>
-                    <span>0</span>
-                  </div>
+                {chartTrafficPoints.length === 0 ? (
+                  <EmptyState
+                    title="No daily traffic"
+                    description="No placement slot generated impressions in this period."
+                  />
+                ) : (
+                  <svg
+                    className="analytics-daily-chart"
+                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                    role="img"
+                    aria-label="Daily placement impressions grouped by slot"
+                  >
+                    {chartGridLines.map((line) => {
+                      const y =
+                        chartMargin.top + chartPlotHeight * (1 - line);
+                      return (
+                        <g key={line}>
+                          <line
+                            className="analytics-daily-chart__grid-line"
+                            x1={chartMargin.left}
+                            x2={chartWidth - chartMargin.right}
+                            y1={y}
+                            y2={y}
+                          />
+                          <text
+                            className="analytics-daily-chart__axis-label"
+                            x={chartMargin.left - 12}
+                            y={y + 4}
+                            textAnchor="end"
+                          >
+                            {formatCompactMetric(maxDailyTraffic * line)}
+                          </text>
+                        </g>
+                      );
+                    })}
 
-                  <div className="analytics-daily-chart__canvas">
-                    <div className="analytics-daily-chart__grid">
-                      {[0, 1, 2, 3].map((index) => (
-                        <span
-                          key={index}
-                          className="analytics-daily-chart__grid-line"
-                        />
-                      ))}
-                    </div>
+                    <line
+                      className="analytics-daily-chart__axis"
+                      x1={chartMargin.left}
+                      x2={chartMargin.left}
+                      y1={chartMargin.top}
+                      y2={chartMargin.top + chartPlotHeight}
+                    />
+                    <line
+                      className="analytics-daily-chart__axis"
+                      x1={chartMargin.left}
+                      x2={chartWidth - chartMargin.right}
+                      y1={chartMargin.top + chartPlotHeight}
+                      y2={chartMargin.top + chartPlotHeight}
+                    />
 
-                    <div
-                      className="analytics-daily-chart__groups"
-                      style={{
-                        gridTemplateColumns: `repeat(${Math.max(chartTrafficPoints.length, 1)}, minmax(${chartDayMinWidth}px, 1fr))`,
-                      }}
-                    >
-                      {chartTrafficPoints.map((point) => (
-                        <div
-                          key={point.date}
-                          className="analytics-daily-chart__group"
-                        >
-                          {(() => {
-                            const maxImpressionInGroup = Math.max(
-                              ...point.slots.map((slot) => slot.impressions),
-                              0,
+                    {chartTrafficPoints.map((point, pointIndex) => {
+                      const groupWidth =
+                        chartPlotWidth / chartTrafficPoints.length;
+                      const groupStart =
+                        chartMargin.left + pointIndex * groupWidth;
+                      const groupCenter = groupStart + groupWidth / 2;
+                      const barGap = point.slots.length > 1 ? 4 : 0;
+                      const barWidth = Math.min(
+                        28,
+                        Math.max(
+                          10,
+                          (groupWidth - 8 - barGap * (point.slots.length - 1)) /
+                            point.slots.length,
+                        ),
+                      );
+                      const barGroupWidth =
+                        point.slots.length * barWidth +
+                        (point.slots.length - 1) * barGap;
+                      const firstBarX = groupCenter - barGroupWidth / 2;
+                      const showValueLabel =
+                        pointIndex % chartValueLabelStep === 0 ||
+                        point.slots.some(
+                          (slot) => slot.impressions === maxDailyTraffic,
+                        );
+
+                      return (
+                        <g key={point.date}>
+                          {point.slots.map((slot, slotIndex) => {
+                            const barHeight = Math.max(
+                              3,
+                              (slot.impressions / maxDailyTraffic) *
+                                chartPlotHeight,
                             );
-                            const maxImpressionIndex = point.slots.findIndex(
-                              (slot) => slot.impressions === maxImpressionInGroup,
-                            );
-                            const barGroupWidth =
-                              point.slots.length === 1 ? "28px" : "58px";
+                            const x =
+                              firstBarX + slotIndex * (barWidth + barGap);
+                            const y =
+                              chartMargin.top +
+                              chartPlotHeight -
+                              barHeight;
 
                             return (
-                          <div
-                            className="analytics-daily-chart__bars"
-                            style={{ width: barGroupWidth }}
-                          >
-                            {point.slots.map((slot, slotIndex) => {
-                              const barHeight = Math.max(
-                                28,
-                                (slot.impressions / maxDailyTraffic) * 100,
-                              );
-                              const showBarValue =
-                                slotIndex === maxImpressionIndex;
-
-                              return (
-                                <div
-                                  key={`${point.date}-${slot.slot}`}
-                                  className="analytics-daily-chart__bar-column"
+                              <g key={`${point.date}-${slot.slot}`}>
+                                <rect
+                                  className="analytics-daily-chart__bar"
+                                  x={x}
+                                  y={y}
+                                  width={barWidth}
+                                  height={barHeight}
+                                  rx="6"
+                                  fill={chartSlotColorMap[slot.slot]}
                                 >
-                                  {showBarValue ? (
-                                    <span className="analytics-daily-chart__value">
-                                      {formatCompactMetric(slot.impressions)}
-                                    </span>
-                                  ) : (
-                                    <span className="analytics-daily-chart__value analytics-daily-chart__value--spacer" />
-                                  )}
-                                  <div
-                                    className="analytics-daily-chart__bar"
-                                    style={{
-                                      height: `${barHeight}%`,
-                                      backgroundColor:
-                                        chartSlotColorMap[slot.slot],
-                                    }}
-                                    title={`${slot.slot}: ${slot.impressions.toLocaleString("en-US")} impressions on ${point.date}`}
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
+                                  <title>
+                                    {`${slot.slot}: ${slot.impressions.toLocaleString("en-US")} impressions on ${point.date}`}
+                                  </title>
+                                </rect>
+                                {showValueLabel ? (
+                                  <text
+                                    className="analytics-daily-chart__value"
+                                    x={x + barWidth / 2}
+                                    y={Math.max(chartMargin.top + 12, y - 8)}
+                                    textAnchor="middle"
+                                  >
+                                    {formatCompactMetric(slot.impressions)}
+                                  </text>
+                                ) : null}
+                              </g>
                             );
-                          })()}
-
-                          <span className="analytics-daily-chart__date">
+                          })}
+                          <text
+                            className="analytics-daily-chart__date"
+                            x={groupCenter}
+                            y={chartMargin.top + chartPlotHeight + 24}
+                            textAnchor="middle"
+                          >
                             {formatChartDateLabel(point.date)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                          </text>
+                          <text
+                            className="analytics-daily-chart__month"
+                            x={groupCenter}
+                            y={chartMargin.top + chartPlotHeight + 40}
+                            textAnchor="middle"
+                          >
+                            {formatChartMonthLabel(point.date)}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                )}
               </div>
             </div>
           </div>
