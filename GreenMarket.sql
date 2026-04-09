@@ -1,7 +1,7 @@
 -- ============================================================
 -- GreenMarket Database Backup (Full Schema)
--- PostgreSQL 18.x | Generated: 2026-04-07
--- Tables: 32 | Synced from Drizzle ORM schema
+-- PostgreSQL 18.x | Generated: 2026-04-08
+-- Tables: 34 | Synced from Drizzle ORM schema
 -- Categories: Cây Cảnh Bonsai, Dụng Cụ Làm Vườn
 -- ============================================================
 
@@ -266,6 +266,8 @@ CREATE TABLE posts (
     post_contact_phone VARCHAR(20),
     post_view_count INTEGER DEFAULT 0,
     post_contact_count INTEGER DEFAULT 0,
+    post_edit_count INTEGER DEFAULT 0,
+    post_paid_edit_count INTEGER DEFAULT 0,
     post_published BOOLEAN DEFAULT FALSE,
     post_submitted_at TIMESTAMP,
     post_published_at TIMESTAMP,
@@ -376,7 +378,6 @@ CREATE TABLE promotion_packages (
     promotion_package_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
     promotion_package_title VARCHAR(150),
     promotion_package_duration_days INTEGER,
-    promotion_package_price DECIMAL(15, 2),
     promotion_package_max_posts INTEGER DEFAULT 1,
     promotion_package_display_quota INTEGER DEFAULT 0,
     promotion_package_description TEXT,
@@ -460,6 +461,40 @@ CREATE TABLE payment_txn (
     payment_txn_provider_txn_id VARCHAR(100) UNIQUE,
     payment_txn_status   VARCHAR(20),
     payment_txn_created_at TIMESTAMP DEFAULT now()
+);
+
+-- User Posting Plans
+CREATE TABLE user_posting_plans (
+    posting_plan_id SERIAL PRIMARY KEY,
+    posting_plan_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    posting_plan_code VARCHAR(50) NOT NULL,
+    posting_plan_title VARCHAR(120) NOT NULL,
+    posting_plan_cycle VARCHAR(20) NOT NULL DEFAULT 'monthly', -- monthly | lifetime
+    posting_plan_status VARCHAR(20) NOT NULL DEFAULT 'active', -- active | expired | cancelled
+    posting_plan_auto_approve BOOLEAN NOT NULL DEFAULT FALSE,
+    posting_plan_daily_post_limit INTEGER,
+    posting_plan_post_fee_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    posting_plan_free_edit_quota INTEGER NOT NULL DEFAULT 0,
+    posting_plan_edit_fee_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    posting_plan_started_at TIMESTAMP NOT NULL DEFAULT now(),
+    posting_plan_expires_at TIMESTAMP,
+    posting_plan_created_at TIMESTAMP DEFAULT now(),
+    posting_plan_updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Posting Fee Ledger
+CREATE TABLE posting_fee_ledger (
+    posting_fee_id SERIAL PRIMARY KEY,
+    posting_fee_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    posting_fee_post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
+    posting_fee_plan_id INTEGER REFERENCES user_posting_plans(posting_plan_id) ON DELETE SET NULL,
+    posting_fee_action_type VARCHAR(30) NOT NULL, -- POST_CREATE | POST_EDIT
+    posting_fee_quantity INTEGER NOT NULL DEFAULT 1,
+    posting_fee_unit_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    posting_fee_total_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    posting_fee_currency VARCHAR(10) NOT NULL DEFAULT 'VND',
+    posting_fee_note TEXT,
+    posting_fee_created_at TIMESTAMP DEFAULT now()
 );
 
 -- Daily Placement Metrics
@@ -625,6 +660,16 @@ CREATE INDEX idx_pkg_prices_open_ended   ON promotion_package_prices(package_id,
 CREATE INDEX idx_payment_txn_user        ON payment_txn(payment_txn_user_id);
 CREATE INDEX idx_payment_txn_status      ON payment_txn(payment_txn_status);
 CREATE INDEX idx_payment_txn_price       ON payment_txn(payment_txn_price_id);
+
+CREATE INDEX user_posting_plans_user_status_idx
+ON user_posting_plans(posting_plan_user_id, posting_plan_status);
+CREATE INDEX user_posting_plans_code_status_idx
+ON user_posting_plans(posting_plan_code, posting_plan_status);
+
+CREATE INDEX posting_fee_ledger_user_created_idx
+ON posting_fee_ledger(posting_fee_user_id, posting_fee_created_at);
+CREATE INDEX posting_fee_ledger_post_created_idx
+ON posting_fee_ledger(posting_fee_post_id, posting_fee_created_at);
 
 -- Analytics
 CREATE INDEX idx_daily_metrics_date ON daily_placement_metrics(daily_placement_metric_date);
@@ -1055,18 +1100,17 @@ INSERT INTO promotion_packages (
     promotion_package_slot_id,
     promotion_package_title,
     promotion_package_duration_days,
-    promotion_package_price,
     promotion_package_max_posts,
     promotion_package_display_quota,
     promotion_package_description,
     promotion_package_published
 ) VALUES
-(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  180000, 1, 50000,  'Ưu tiên hiển thị trên trang chủ trong 7 ngày.', true),
-(2, 1, 'Banner Trang Chủ - 30 ngày',  30, 500000, 3, 200000, 'Ưu tiên hiển thị trên trang chủ trong 30 ngày.', true),
-(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  95000,  1, 30000,  'Nổi bật ở đầu danh mục trong 7 ngày.', true),
-(4, 2, 'Đầu Danh Mục - 30 ngày',      30, 250000, 3, 120000, 'Nổi bật ở đầu danh mục trong 30 ngày.', true),
-(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  50000,  1, 15000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 7 ngày.', true),
-(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, 150000, 3, 70000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 30 ngày.', true);
+(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  1, 50000,  'Ưu tiên hiển thị trên trang chủ trong 7 ngày.', true),
+(2, 1, 'Banner Trang Chủ - 30 ngày',  30, 3, 200000, 'Ưu tiên hiển thị trên trang chủ trong 30 ngày.', true),
+(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  1, 30000,  'Nổi bật ở đầu danh mục trong 7 ngày.', true),
+(4, 2, 'Đầu Danh Mục - 30 ngày',      30, 3, 120000, 'Nổi bật ở đầu danh mục trong 30 ngày.', true),
+(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  1, 15000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 7 ngày.', true),
+(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, 3, 70000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 30 ngày.', true);
 
 -- Promotion Package Prices (giá khởi tạo + ví dụ lên lịch tăng giá tương lai)
 INSERT INTO promotion_package_prices (package_id, price, effective_from, effective_to, note, created_by) VALUES
@@ -1084,6 +1128,49 @@ INSERT INTO promotion_package_prices (package_id, price, effective_from, effecti
 (5, 50000,  now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
 -- Gói 6: Nổi Bật Tìm Kiếm 30 ngày
 (6, 150000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1);
+
+-- ============================================================
+-- POSTING PLANS (OWNER / PERSONAL)
+-- ============================================================
+INSERT INTO user_posting_plans (
+    posting_plan_id,
+    posting_plan_user_id,
+    posting_plan_code,
+    posting_plan_title,
+    posting_plan_cycle,
+    posting_plan_status,
+    posting_plan_auto_approve,
+    posting_plan_daily_post_limit,
+    posting_plan_post_fee_amount,
+    posting_plan_free_edit_quota,
+    posting_plan_edit_fee_amount,
+    posting_plan_started_at,
+    posting_plan_expires_at,
+    posting_plan_created_at,
+    posting_plan_updated_at
+) VALUES
+(1, 1, 'GARDEN_OWNER_LIFETIME', 'Goi Chu Vuon Vinh Vien', 'lifetime', 'active', true, 20, 20000, 4, 5000, now() - interval '120 days', NULL, now() - interval '120 days', now() - interval '120 days'),
+(2, 2, 'PERSONAL_MONTHLY',      'Goi Ca Nhan Theo Thang', 'monthly',  'active', true, 20,     0, 4, 5000, now() - interval '12 days',  now() + interval '18 days', now() - interval '12 days', now() - interval '12 days'),
+(3, 7, 'PERSONAL_MONTHLY',      'Goi Ca Nhan Theo Thang', 'monthly',  'expired', true, 20,    0, 4, 5000, now() - interval '65 days', now() - interval '35 days', now() - interval '65 days', now() - interval '35 days');
+
+-- Fee ledger demo for posting-plan billing (tracking only)
+INSERT INTO posting_fee_ledger (
+    posting_fee_id,
+    posting_fee_user_id,
+    posting_fee_post_id,
+    posting_fee_plan_id,
+    posting_fee_action_type,
+    posting_fee_quantity,
+    posting_fee_unit_amount,
+    posting_fee_total_amount,
+    posting_fee_currency,
+    posting_fee_note,
+    posting_fee_created_at
+) VALUES
+(1, 1, 15, NULL, 'POST_CREATE', 1, 20000, 20000, 'VND', 'Owner plan create-post fee tracking.', now() - interval '7 days'),
+(2, 3, 9,  NULL, 'POST_CREATE', 1, 20000, 20000, 'VND', 'Owner plan create-post fee tracking.', now() - interval '5 days'),
+(3, 1, 7,  NULL, 'POST_EDIT',   1, 5000,  5000,  'VND', 'Charged after free edit quota was exhausted.', now() - interval '2 days'),
+(4, 2, 6,  2,    'POST_EDIT',   1, 5000,  5000,  'VND', 'Monthly personal plan paid edit beyond free quota.', now() - interval '1 day');
 
 -- ============================================================
 -- BANNED KEYWORDS
@@ -1139,5 +1226,7 @@ SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(plac
 SELECT setval('promotion_packages_promotion_package_id_seq', (SELECT COALESCE(MAX(promotion_package_id), 1) FROM promotion_packages));
 SELECT setval('promotion_package_prices_price_id_seq',          (SELECT COALESCE(MAX(price_id),              1) FROM promotion_package_prices));
 SELECT setval('promotion_package_audit_log_audit_id_seq',        (SELECT COALESCE(MAX(audit_id),              1) FROM promotion_package_audit_log));
+SELECT setval('user_posting_plans_posting_plan_id_seq',          (SELECT COALESCE(MAX(posting_plan_id),       1) FROM user_posting_plans));
+SELECT setval('posting_fee_ledger_posting_fee_id_seq',           (SELECT COALESCE(MAX(posting_fee_id),        1) FROM posting_fee_ledger));
 SELECT setval('banned_keywords_banned_keyword_id_seq', (SELECT COALESCE(MAX(banned_keyword_id), 1) FROM banned_keywords));
 SELECT setval('system_settings_system_setting_id_seq', (SELECT COALESCE(MAX(system_setting_id), 1) FROM system_settings));

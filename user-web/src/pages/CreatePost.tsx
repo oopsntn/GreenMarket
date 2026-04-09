@@ -15,6 +15,11 @@ const CreatePost: React.FC = () => {
     const [attributes, setAttributes] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [submissionMeta, setSubmissionMeta] = useState<{
+        autoApprove: boolean;
+        chargedAmount: number;
+        planTitle: string | null;
+    } | null>(null);
 
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [videoFiles, setVideoFiles] = useState<File[]>([]);
@@ -148,11 +153,17 @@ const CreatePost: React.FC = () => {
                 attributes: formattedAttributes
             };
 
-            await createPost(payload);
+            const createRes = await createPost(payload);
+            const createdData = createRes.data || {};
+            setSubmissionMeta({
+                autoApprove: Boolean(createdData?.postingPolicy?.autoApprove),
+                chargedAmount: Number(createdData?.billing?.chargedAmount || 0),
+                planTitle: createdData?.postingPolicy?.planTitle || null,
+            });
             setSubmitted(true);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to create post:", error);
-            alert("Đã có lỗi xảy ra khi tạo bài đăng. Vui lòng thử lại!");
+            alert(error?.response?.data?.error || "Đã có lỗi xảy ra khi tạo bài đăng. Vui lòng thử lại!");
         } finally {
             setSubmitting(false);
         }
@@ -167,7 +178,13 @@ const CreatePost: React.FC = () => {
                     </div>
                     <h2 className="text-3xl font-bold mb-4 text-slate-900">Đăng tin thành công!</h2>
                     <p className="text-slate-500 mb-8 leading-relaxed">
-                        Bài đăng của bạn đã được gửi và đang chờ Admin phê duyệt. Bạn có thể theo dõi trạng thái tại mục "Tin của tôi".
+                        {submissionMeta?.autoApprove
+                            ? "Bài đăng của bạn đã hiển thị ngay trên sàn. Bạn có thể theo dõi hiệu quả tại mục Tin của tôi."
+                            : "Bài đăng của bạn đã được gửi và đang chờ Admin phê duyệt. Bạn có thể theo dõi trạng thái tại mục Tin của tôi."}
+                        {submissionMeta?.planTitle ? ` (Gói áp dụng: ${submissionMeta.planTitle})` : ""}
+                        {submissionMeta?.chargedAmount
+                            ? ` Phí phát sinh: ${Number(submissionMeta.chargedAmount).toLocaleString("vi-VN")}đ.`
+                            : ""}
                     </p>
                     <div className="space-y-4">
                         <button

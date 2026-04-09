@@ -1,5 +1,17 @@
 import { Router } from "express";
-import { createPost, getMyPosts, updatePost, softDeletePost, getPublicPosts, getPublicPostBySlug, recordContactClick, toggleFavoritePost, checkIsSaved } from "../../controllers/user/post.controller.ts";
+import {
+  activatePersonalMonthlyPlanMock,
+  checkIsSaved,
+  createPost,
+  getMyPosts,
+  getPostingPolicy,
+  getPublicPostBySlug,
+  getPublicPosts,
+  recordContactClick,
+  softDeletePost,
+  toggleFavoritePost,
+  updatePost,
+} from "../../controllers/user/post.controller.ts";
 import { verifyToken } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
@@ -12,6 +24,8 @@ router.post("/:id/contact-click", recordContactClick);
 // Protected routes (Sellers — JWT required)
 router.post("/", verifyToken, createPost);
 router.get("/my-posts", verifyToken, getMyPosts);
+router.get("/posting-policy", verifyToken, getPostingPolicy);
+router.post("/personal-plan/mock-activate", verifyToken, activatePersonalMonthlyPlanMock);
 router.patch("/:id", verifyToken, updatePost);
 router.delete("/:id", verifyToken, softDeletePost);
 

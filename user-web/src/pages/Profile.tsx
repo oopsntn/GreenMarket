@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings } from 'lucide-react';
+import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings, Heart, Wallet, LayoutDashboard } from 'lucide-react';
 import { updateProfile, updateShop, getProfile, uploadImages, requestShopVerificationOTP, verifyShopEmailOTP, addShopPhoneOTP, deleteShopPhone } from '../services/api';
 import clsx from 'clsx';
 import AddressPicker from '../components/AddressPicker';
@@ -9,6 +10,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api
 
 const Profile: React.FC = () => {
   const { user, shop, updateUser, refreshShop } = useAuth();
+  const isGardenOwner = shop?.shopStatus === 'active';
 
   // User Fields
   const [displayName, setDisplayName] = useState('');
@@ -362,6 +364,81 @@ const Profile: React.FC = () => {
             </div>
           </div>
         )}
+
+        <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div className="p-2.5 bg-emerald-50 rounded-xl">
+              <Settings className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">
+                Lien ket tien ich
+              </h3>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Cac muc it truy cap duoc dua ve footer Profile de Navbar gon hon.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link
+              to="/packages"
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Goi dich vu</p>
+              </div>
+              <p className="text-xs text-slate-500">Xem bang gia va quyen loi cac goi.</p>
+            </Link>
+
+            <Link
+              to="/saved-posts"
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Heart className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Bai da luu</p>
+              </div>
+              <p className="text-xs text-slate-500">Mo lai nhanh cac bai ban da danh dau.</p>
+            </Link>
+
+            <Link
+              to="/my-posts"
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Store className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Trung tam quan ly</p>
+              </div>
+              <p className="text-xs text-slate-500">Quan ly bai dang va giao dich ca nhan.</p>
+            </Link>
+
+            {isGardenOwner ? (
+              <Link
+                to="/owner-dashboard"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <LayoutDashboard className="w-4 h-4 text-emerald-600" />
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Dashboard chu vuon</p>
+                </div>
+                <p className="text-xs text-slate-500">Theo doi KPI va hieu qua day bai.</p>
+              </Link>
+            ) : (
+              <Link
+                to="/register-shop"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Store className="w-4 h-4 text-emerald-600" />
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Len shop</p>
+                </div>
+                <p className="text-xs text-slate-500">Dang ky nha vuon de mo them quyen ban hang.</p>
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

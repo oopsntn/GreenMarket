@@ -1,10 +1,11 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
     paymentTxn,
     placementSlots,
     postPromotions,
     posts,
+    promotionPackagePrices,
     promotionPackages,
     shops,
     users,
@@ -445,6 +446,7 @@ const buildBoostedNotes = (
 };
 
 const selectPromotionRows = async (): Promise<RawPromotionRow[]> => {
+    const now = new Date();
     return db
         .select({
             promotionId: postPromotions.postPromotionId,
@@ -462,7 +464,7 @@ const selectPromotionRows = async (): Promise<RawPromotionRow[]> => {
             userDisplayName: users.userDisplayName,
             shopName: shops.shopName,
             packageTitle: promotionPackages.promotionPackageTitle,
-            packagePrice: promotionPackages.promotionPackagePrice,
+            packagePrice: promotionPackagePrices.price,
             packageQuota: promotionPackages.promotionPackageDisplayQuota,
             packageMaxPosts: promotionPackages.promotionPackageMaxPosts,
             slotCode: placementSlots.placementSlotCode,
@@ -476,6 +478,20 @@ const selectPromotionRows = async (): Promise<RawPromotionRow[]> => {
         .leftJoin(
             promotionPackages,
             eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId),
+        )
+        .leftJoin(
+            promotionPackagePrices,
+            and(
+                eq(
+                    promotionPackagePrices.packageId,
+                    postPromotions.postPromotionPackageId,
+                ),
+                lte(promotionPackagePrices.effectiveFrom, now),
+                or(
+                    isNull(promotionPackagePrices.effectiveTo),
+                    gt(promotionPackagePrices.effectiveTo, now),
+                ),
+            ),
         )
         .leftJoin(
             placementSlots,
@@ -643,6 +659,30 @@ const ensurePromotionPackage = async (packageId: number) => {
     return pkg ?? null;
 };
 
+const getCurrentPackagePrice = async (packageId: number) => {
+    const now = new Date();
+    const [price] = await db
+        .select({
+            priceId: promotionPackagePrices.priceId,
+            price: promotionPackagePrices.price,
+        })
+        .from(promotionPackagePrices)
+        .where(
+            and(
+                eq(promotionPackagePrices.packageId, packageId),
+                lte(promotionPackagePrices.effectiveFrom, now),
+                or(
+                    isNull(promotionPackagePrices.effectiveTo),
+                    gt(promotionPackagePrices.effectiveTo, now),
+                ),
+            ),
+        )
+        .orderBy(desc(promotionPackagePrices.effectiveFrom), desc(promotionPackagePrices.priceId))
+        .limit(1);
+
+    return price ?? null;
+};
+
 const getPersistedStatus = (
     startAt: Date,
     baseStatus: "active" | "paused" | "closed",
@@ -659,6 +699,9 @@ const upsertPromotionPaymentSnapshot = async (
     packageRecord: typeof promotionPackages.$inferSelect,
     paymentStatus: "Paid" | "Pending Verification",
 ) => {
+    const currentPrice = await getCurrentPackagePrice(
+        packageRecord.promotionPackageId,
+    );
     const [latestPayment] = await db
         .select()
         .from(paymentTxn)
@@ -667,15 +710,15 @@ const upsertPromotionPaymentSnapshot = async (
         .limit(1);
 
     const nextPaymentStatus = paymentStatus === "Paid" ? "success" : "pending";
-    const nextAmount = packageRecord.promotionPackagePrice
-        ? String(packageRecord.promotionPackagePrice)
-        : "0";
+    const nextAmount = currentPrice?.price ? String(currentPrice.price) : "0";
+    const nextPriceId = currentPrice?.priceId ?? null;
 
     if (latestPayment) {
         await db
             .update(paymentTxn)
             .set({
                 paymentTxnPackageId: packageRecord.promotionPackageId,
+                paymentTxnPriceId: nextPriceId,
                 paymentTxnAmount: nextAmount,
                 paymentTxnStatus: nextPaymentStatus,
                 paymentTxnProvider: latestPayment.paymentTxnProvider || "ADMIN_ADJUSTMENT",
@@ -689,6 +732,7 @@ const upsertPromotionPaymentSnapshot = async (
         paymentTxnUserId: item.buyerId,
         paymentTxnPostId: item.postId,
         paymentTxnPackageId: packageRecord.promotionPackageId,
+        paymentTxnPriceId: nextPriceId,
         paymentTxnAmount: nextAmount,
         paymentTxnProvider: "ADMIN_ADJUSTMENT",
         paymentTxnProviderTxnId: `ADMIN-${item.postId}-${Date.now()}`,

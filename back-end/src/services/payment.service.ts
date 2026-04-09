@@ -7,6 +7,7 @@ import {
   posts,
   promotionPackagePrices,
   promotionPackages,
+  shops,
 } from "../models/schema/index.ts";
 import { parseId } from "../utils/parseId.ts";
 import {
@@ -272,6 +273,40 @@ export const paymentService = {
         "POST_NOT_APPROVED",
         "Only approved posts can be promoted.",
       );
+    }
+
+    const [activeShop] = await db
+      .select({
+        shopId: shops.shopId,
+      })
+      .from(shops)
+      .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
+      .limit(1);
+
+    if (!activeShop) {
+      throw new PaymentServiceError(
+        403,
+        "BOOST_OWNER_REQUIRED",
+        "Boost packages are available only for active garden-owner accounts.",
+      );
+    }
+
+    if (post.postShopId !== activeShop.shopId) {
+      if (post.postShopId === null) {
+        await db
+          .update(posts)
+          .set({
+            postShopId: activeShop.shopId,
+            postUpdatedAt: new Date(),
+          })
+          .where(eq(posts.postId, parsedPostId));
+      } else {
+        throw new PaymentServiceError(
+          403,
+          "POST_NOT_LINKED_TO_OWNER_SHOP",
+          "This post is not linked to your active shop.",
+        );
+      }
     }
 
     const now = new Date();

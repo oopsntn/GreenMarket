@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Leaf, ShoppingBag, Store, User, LogOut, PlusCircle, Heart, LayoutDashboard } from 'lucide-react';
+import { Leaf, ShoppingBag, Store, User, LogOut, PlusCircle, LayoutDashboard, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -21,13 +21,13 @@ const Navbar: React.FC = () => {
   const guestNavItems = [
     { label: 'Trang chủ', path: '/home', icon: ShoppingBag },
     { label: 'Danh sách nhà vườn', path: '/shops', icon: Store },
+    { label: 'Gói dịch vụ', path: '/packages', icon: Wallet },
   ];
 
   const baseNavItems = [
     { label: 'Chợ bonsai', path: '/home', icon: ShoppingBag },
     { label: 'Danh sách nhà vườn', path: '/shops', icon: Store },
     { label: 'Đăng tin', path: '/create-post', icon: PlusCircle },
-    { label: 'Bài đã lưu', path: '/saved-posts', icon: Heart },
   ];
 
   const navItems = !isAuthenticated
@@ -40,7 +40,6 @@ const Navbar: React.FC = () => {
       ]
       : [
         ...baseNavItems,
-        { label: 'Lên shop', path: '/register-shop', icon: Store },
         { label: 'Cá nhân', path: '/my-posts', icon: User },
       ];
 

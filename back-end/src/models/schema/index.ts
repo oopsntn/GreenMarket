@@ -128,6 +128,16 @@ export {
   type PaymentTxn,
   type NewPaymentTxn,
 } from "./payment-txn.ts";
+export {
+  userPostingPlans,
+  type UserPostingPlan,
+  type NewUserPostingPlan,
+} from "./user-posting-plans.ts";
+export {
+  postingFeeLedger,
+  type PostingFeeLedger,
+  type NewPostingFeeLedger,
+} from "./posting-fee-ledger.ts";
 
 // Analytics
 export {
