@@ -25,6 +25,7 @@ export const revenueService = {
     return {
       summaryCards: [] as RevenueCard[],
       rows: [] as RevenueRow[],
+      slotCatalog: [],
     };
   },
 };

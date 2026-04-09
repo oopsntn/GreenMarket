@@ -33,6 +33,7 @@ function RevenuePage() {
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const summaryCards = revenueData.summaryCards;
   const rows = revenueData.rows;
+  const slotCatalog = revenueData.slotCatalog;
 
   useEffect(() => {
     const loadRevenue = async () => {
@@ -57,6 +58,21 @@ function RevenuePage() {
 
     void loadRevenue();
   }, [fromDate, toDate]);
+
+  const slotFilterOptions = useMemo(() => {
+    const slotLabels = [
+      ...slotCatalog.map((item) => item.label),
+      ...rows.map((item) => item.slot),
+    ];
+
+    return ["All Slots", ...new Set(slotLabels)];
+  }, [rows, slotCatalog]);
+
+  useEffect(() => {
+    if (!slotFilterOptions.includes(slotFilter)) {
+      setSlotFilter("All Slots");
+    }
+  }, [slotFilter, slotFilterOptions]);
 
   const filteredRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -144,12 +160,7 @@ function RevenuePage() {
               type: "select",
               value: slotFilter,
               onChange: setSlotFilter,
-              options: [
-                "All Slots",
-                "Home Top",
-                "Category Top",
-                "Search Boost",
-              ],
+              options: slotFilterOptions,
             },
           ]}
         />
@@ -159,7 +170,7 @@ function RevenuePage() {
         placeholder="Search by package name or slot"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
-        filterSummary={`Current slot filter: ${slotFilter} • ${dateRangeLabel}`}
+        filterSummary={`Current slot filter: ${slotFilter} • ${dateRangeLabel} • ${slotCatalog.length} configured slot(s)`}
       />
 
       {isLoading ? (

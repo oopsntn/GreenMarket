@@ -31,6 +31,7 @@ export const analyticsService = {
       kpiCards: [] as AnalyticsKpiCard[],
       topPlacements: [] as TopPlacement[],
       dailyTraffic: [] as AnalyticsDailyTrafficPoint[],
+      slotCatalog: [],
     };
   },
 };

@@ -62,6 +62,7 @@ function AnalyticsPage() {
   const kpiCards = analyticsData.kpiCards;
   const placementRows = analyticsData.topPlacements;
   const dailyTraffic = analyticsData.dailyTraffic;
+  const slotCatalog = analyticsData.slotCatalog;
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -86,6 +87,21 @@ function AnalyticsPage() {
 
     void loadAnalytics();
   }, [fromDate, toDate]);
+
+  const slotFilterOptions = useMemo(() => {
+    const slotLabels = [
+      ...slotCatalog.map((item) => item.label),
+      ...placementRows.map((item) => item.slot),
+    ];
+
+    return ["All Placements", ...new Set(slotLabels)];
+  }, [placementRows, slotCatalog]);
+
+  useEffect(() => {
+    if (!slotFilterOptions.includes(metricScope)) {
+      setMetricScope("All Placements");
+    }
+  }, [metricScope, slotFilterOptions]);
 
   const filteredRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -137,22 +153,24 @@ function AnalyticsPage() {
       return [metricScope];
     }
 
-    const slotOrder: string[] = [];
+    const activeSlots = new Set<string>();
 
     dailyTraffic.forEach((point) => {
       point.slots.forEach((slot) => {
-        if (!slotOrder.includes(slot.slot)) {
-          slotOrder.push(slot.slot);
-        }
+        activeSlots.add(slot.slot);
       });
     });
 
-    if (slotOrder.length > 0) {
-      return slotOrder;
+    const catalogOrderedSlots = slotCatalog
+      .map((item) => item.label)
+      .filter((slot) => activeSlots.has(slot));
+
+    if (catalogOrderedSlots.length > 0) {
+      return catalogOrderedSlots;
     }
 
     return placementChartRows.map((item) => item.slot);
-  }, [dailyTraffic, metricScope, placementChartRows]);
+  }, [dailyTraffic, metricScope, placementChartRows, slotCatalog]);
 
   const chartSlotColorMap = useMemo(
     () =>
@@ -314,12 +332,7 @@ function AnalyticsPage() {
               type: "select",
               value: metricScope,
               onChange: setMetricScope,
-              options: [
-                "All Placements",
-                "Home Top",
-                "Category Top",
-                "Search Boost",
-              ],
+              options: slotFilterOptions,
             },
           ]}
         />
@@ -329,7 +342,7 @@ function AnalyticsPage() {
         placeholder="Search by placement slot or row ID"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
-        filterSummary={`Current scope: ${metricScope} • ${dateRangeLabel}`}
+        filterSummary={`Current scope: ${metricScope} • ${dateRangeLabel} • ${slotCatalog.length} configured slot(s)`}
       />
 
       {isLoading ? (
