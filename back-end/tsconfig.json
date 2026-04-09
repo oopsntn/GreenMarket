@@ -3,7 +3,6 @@
     "target": "ES2022",
     "module": "commonjs",
     "moduleResolution": "node10",
-    "ignoreDeprecations": "6.0",
     "rootDir": "src",
     "outDir": "dist",
     "strict": true,
@@ -14,5 +13,7 @@
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

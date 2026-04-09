@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   getMyPosts,
@@ -396,7 +396,7 @@ const MyPosts: React.FC = () => {
             onClick={() => navigate('/packages')}
             className="bg-white border border-slate-200 text-slate-700 px-6 py-4 rounded-2xl font-bold flex items-center gap-2 transition-all hover:bg-slate-50 active:scale-95 shadow-sm"
           >
-            <Zap className="w-5 h-5 text-emerald-600" /> Xem goi dich vu
+            <Zap className="w-5 h-5 text-emerald-600" /> Xem gói dịch vụ
           </button>
           <button
             onClick={() => navigate('/create-post')}
@@ -626,7 +626,7 @@ const MyPosts: React.FC = () => {
                   to="/packages"
                   className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-emerald-700 hover:text-emerald-600 uppercase tracking-wider"
                 >
-                  Xem bang gia day du <ChevronRight className="w-3.5 h-3.5" />
+                  Xem bảng giá đầy đủ <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
               <button

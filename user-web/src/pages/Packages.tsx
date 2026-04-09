@@ -76,7 +76,7 @@ const Packages: React.FC = () => {
       } catch (err: any) {
         console.error('Failed to load package catalog:', err);
         setBoostPackages([]);
-        setError('Khong tai duoc danh sach goi. Vui long thu lai.');
+        setError('Không tải được danh sách gói. Vui lòng thử lại.');
       } finally {
         setLoading(false);
       }
@@ -120,57 +120,57 @@ const Packages: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <section className="bg-white border border-emerald-100 rounded-3xl p-7 shadow-sm">
           <p className="text-xs font-black uppercase tracking-widest text-emerald-600 mb-2">
-            Trung tam goi dich vu
+            Trung tâm gói dịch vụ
           </p>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            Bang gia va quyen loi
+            Bảng giá và quyền lợi
           </h1>
           <p className="text-slate-500 mt-2">
-            Xem tong quan cac goi nang cap tai khoan va goi day bai truoc khi ra quyet dinh.
+            Xem tổng quan các gói nâng cấp tài khoản và gói đẩy bài trước khi ra quyết định.
           </p>
         </section>
 
         <section className="bg-white rounded-3xl border border-slate-200 shadow-sm">
           <div className="px-5 py-4 border-b border-slate-100">
             <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-              Goi tai khoan
+              Gói tài khoản
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Dung cho nhu cau nang cap quyen dang bai va van hanh ban hang.
+              Dùng cho nhu cầu nâng cấp quyền đăng bài và vận hành bán hàng.
             </p>
           </div>
 
           <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
             <article className="rounded-2xl border border-emerald-200 bg-emerald-50/30 p-5">
               <div className="flex items-center justify-between gap-3 mb-3">
-                <h3 className="text-lg font-black text-slate-900">Chu vuon vinh vien</h3>
+                <h3 className="text-lg font-black text-slate-900">Chủ vườn vĩnh viễn</h3>
                 {isGardenOwner ? (
                   <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase font-black tracking-wider">
-                    Dang su dung
+                    Đang sử dụng
                   </span>
                 ) : null}
               </div>
 
               <p className="text-sm text-slate-600 mb-4">
-                Nang cap tai khoan len chu vuon, phu hop nguoi ban chuyen nghiep.
+                Nâng cấp tài khoản lên chủ vườn, phù hợp người bán chuyên nghiệp.
               </p>
 
               <ul className="space-y-2 text-sm text-slate-700 mb-5">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Dang bai ngay, khong qua cho duyet.
+                  Đăng bài ngay, không qua chờ duyệt.
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Dang tin le tinh phi 20,000 VND/tin.
+                  Đăng tin lẻ tính phí 20,000 VND/tin.
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Gioi han toi da 20 bai/ngay.
+                  Giới hạn tối đa 20 bài/ngày.
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  4 luot sua bai mien phi, sau do 5,000 VND/luot.
+                  4 lượt sửa bài miễn phí, sau đó 5,000 VND/lượt.
                 </li>
               </ul>
 
@@ -179,21 +179,21 @@ const Packages: React.FC = () => {
                   to="/owner-dashboard"
                   className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600"
                 >
-                  Vao dashboard chu vuon <ArrowRight className="w-4 h-4" />
+                  Vào dashboard chủ vườn <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : isAuthenticated ? (
                 <Link
                   to="/register-shop"
                   className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600"
                 >
-                  Dang ky mo shop <ArrowRight className="w-4 h-4" />
+                  Đăng ký mở shop <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
                 <Link
                   to="/login"
                   className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600"
                 >
-                  Dang nhap de nang cap <ArrowRight className="w-4 h-4" />
+                  Đăng nhập để nâng cấp <ArrowRight className="w-4 h-4" />
                 </Link>
               )}
             </article>
@@ -207,21 +207,21 @@ const Packages: React.FC = () => {
               </div>
 
               <p className="text-sm text-slate-600 mb-4">
-                Danh cho nguoi choi cay nho le nhung dang bai thuong xuyen.
+                Dành cho người chơi cây nhỏ lẻ nhưng đăng bài thường xuyên.
               </p>
 
               <ul className="space-y-2 text-sm text-slate-700 mb-5">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Dang bai ngay trong thoi gian goi con hieu luc.
+                  Đăng bài ngay trong thời gian gói còn hiệu lực.
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Toi da 20 bai/ngay.
+                  Tối đa 20 bài/ngày.
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  4 luot sua bai mien phi, sau do 5,000 VND/luot.
+                  4 lượt sửa bài miễn phí, sau đó 5,000 VND/lượt.
                 </li>
               </ul>
 
@@ -230,14 +230,14 @@ const Packages: React.FC = () => {
                   to="/my-posts"
                   className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600"
                 >
-                  Xem trong trung tam quan ly <ArrowRight className="w-4 h-4" />
+                  Xem trong trung tâm quản lý <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
                 <Link
                   to="/login"
                   className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600"
                 >
-                  Dang nhap de bat dau <ArrowRight className="w-4 h-4" />
+                  Đăng nhập để bắt đầu <ArrowRight className="w-4 h-4" />
                 </Link>
               )}
             </article>
@@ -248,10 +248,10 @@ const Packages: React.FC = () => {
           <div className="px-5 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-                Goi day bai (promotion)
+                Gói đẩy bài (promotion)
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Mua de tang muc do uu tien hien thi bai dang da duyet.
+                Mua để tăng mức độ ưu tiên hiển thị bài đăng đã duyệt.
               </p>
             </div>
             {audience === 'garden_owner' ? (
@@ -259,37 +259,37 @@ const Packages: React.FC = () => {
                 to="/my-posts"
                 className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600"
               >
-                Mua goi cho bai dang <ArrowRight className="w-4 h-4" />
+                Mua gói cho bài đăng <ArrowRight className="w-4 h-4" />
               </Link>
             ) : isAuthenticated ? (
               <Link
                 to="/register-shop"
                 className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600"
               >
-                Mo shop de mua goi day bai <ArrowRight className="w-4 h-4" />
+                Mở shop để mua gói đẩy bài <ArrowRight className="w-4 h-4" />
               </Link>
             ) : (
               <Link
                 to="/login"
                 className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600"
               >
-                Dang nhap de mo khoa goi phu hop <ArrowRight className="w-4 h-4" />
+                Đăng nhập để mở khóa gói phù hợp <ArrowRight className="w-4 h-4" />
               </Link>
             )}
           </div>
 
           <div className="p-5 space-y-5">
             {loading ? (
-              <div className="py-8 text-sm text-slate-500">Dang tai danh sach goi...</div>
+              <div className="py-8 text-sm text-slate-500">Đang tải danh sách gói...</div>
             ) : error ? (
               <div className="py-8 text-sm text-rose-600">{error}</div>
             ) : packageMetrics.length === 0 ? (
-              <div className="py-8 text-sm text-slate-500">Chua co goi duoc cong bo.</div>
+              <div className="py-8 text-sm text-slate-500">Chưa có gói được công bố.</div>
             ) : (
               <>
                 {audience !== 'garden_owner' ? (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                    Goi day bai chi mo khoa mua cho tai khoan chu vuon da active.
+                    Gói đẩy bài chỉ mở khóa mua cho tài khoản chủ vườn đã active.
                   </div>
                 ) : null}
 
@@ -300,11 +300,10 @@ const Packages: React.FC = () => {
                     return (
                       <article
                         key={pkg.promotionPackageId}
-                        className={`rounded-2xl border p-4 ${
-                          isRecommended
-                            ? 'border-emerald-500 ring-2 ring-emerald-100 bg-emerald-50/30'
-                            : 'border-slate-200 bg-slate-50'
-                        }`}
+                        className={`rounded-2xl border p-4 ${isRecommended
+                          ? 'border-emerald-500 ring-2 ring-emerald-100 bg-emerald-50/30'
+                          : 'border-slate-200 bg-slate-50'
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <h3 className="font-black text-slate-900">
@@ -312,7 +311,7 @@ const Packages: React.FC = () => {
                           </h3>
                           {isRecommended ? (
                             <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase font-black tracking-wider">
-                              De xuat
+                              Đề xuất
                             </span>
                           ) : null}
                         </div>
@@ -322,12 +321,12 @@ const Packages: React.FC = () => {
                         </p>
 
                         <div className="text-xs text-slate-500 space-y-1">
-                          <p>Thoi han: {pkg.durationDays} ngay</p>
-                          <p>Chi phi/ngay: {formatVnd(pkg.costPerDay)}</p>
-                          <p>So bai ap dung: {pkg.maxPosts > 0 ? `${pkg.maxPosts} bai` : '-'}</p>
+                          <p>Thời hạn: {pkg.durationDays} ngày</p>
+                          <p>Chi phí/ngày: {formatVnd(pkg.costPerDay)}</p>
+                          <p>Số bài áp dụng: {pkg.maxPosts > 0 ? `${pkg.maxPosts} bài` : '-'}</p>
                           <p>
-                            Quota hien thi:{' '}
-                            {pkg.displayQuota > 0 ? `${pkg.displayQuota.toLocaleString('vi-VN')} luot` : '-'}
+                            Quota hiển thị:{' '}
+                            {pkg.displayQuota > 0 ? `${pkg.displayQuota.toLocaleString('vi-VN')} lượt` : '-'}
                           </p>
                         </div>
                       </article>
@@ -343,28 +342,28 @@ const Packages: React.FC = () => {
           <article className="bg-white rounded-2xl border border-slate-200 p-4">
             <div className="flex items-center gap-2 text-emerald-700 mb-2">
               <Store className="w-4 h-4" />
-              <p className="text-xs font-black uppercase tracking-wider">Nang cap tai khoan</p>
+              <p className="text-xs font-black uppercase tracking-wider">Nâng cấp tài khoản</p>
             </div>
             <p className="text-sm text-slate-600">
-              Goi tai khoan phu hop neu ban muon mo rong quyen dang bai va van hanh lau dai.
+              Gói tài khoản phù hợp nếu bạn muốn mở rộng quyền đăng bài và vận hành lâu dài.
             </p>
           </article>
           <article className="bg-white rounded-2xl border border-slate-200 p-4">
             <div className="flex items-center gap-2 text-emerald-700 mb-2">
               <Sparkles className="w-4 h-4" />
-              <p className="text-xs font-black uppercase tracking-wider">Day bai theo muc tieu</p>
+              <p className="text-xs font-black uppercase tracking-wider">Đẩy bài theo mục tiêu</p>
             </div>
             <p className="text-sm text-slate-600">
-              Chon goi theo chi phi/ngay va thoi han de toi uu ngan sach.
+              Chọn gói theo chi phí/ngày và thời hạn để tối ưu ngân sách.
             </p>
           </article>
           <article className="bg-white rounded-2xl border border-slate-200 p-4">
             <div className="flex items-center gap-2 text-emerald-700 mb-2">
               <Wallet className="w-4 h-4" />
-              <p className="text-xs font-black uppercase tracking-wider">Ra quyet dinh de dang</p>
+              <p className="text-xs font-black uppercase tracking-wider">Ra quyết định dễ dàng</p>
             </div>
             <p className="text-sm text-slate-600">
-              Tat ca goi duoc gom ve mot cho de user moi cung nhin thay ngay.
+              Tất cả gói được gom về một chỗ để user mới cũng nhìn thấy ngay.
             </p>
           </article>
         </section>
@@ -374,10 +373,10 @@ const Packages: React.FC = () => {
             <ShieldCheck className="w-5 h-5 text-emerald-600 mt-0.5" />
             <div>
               <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                Lo trinh su dung de xuat
+                Lộ trình sử dụng đề xuất
               </h3>
               <p className="text-sm text-slate-600 mt-1">
-                1) Xem goi tai khoan, 2) Mo shop/hoan tat profile, 3) Dang bai, 4) Mua goi day bai khi can tang tiep can.
+                1) Xem gói tài khoản, 2) Mở shop/hoàn tất profile, 3) Đăng bài, 4) Mua gói đẩy bài khi cần tăng tiếp cận.
               </p>
             </div>
           </div>
@@ -385,7 +384,7 @@ const Packages: React.FC = () => {
             to={isAuthenticated ? '/my-posts' : '/login'}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-bold"
           >
-            Bat dau ngay <ArrowRight className="w-4 h-4" />
+            Bắt đầu ngay <ArrowRight className="w-4 h-4" />
           </Link>
         </section>
       </div>
