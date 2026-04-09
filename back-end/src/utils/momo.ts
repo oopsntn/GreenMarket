@@ -11,6 +11,14 @@ type MoMoConfig = {
     frontendPaymentResultPath: string;
 };
 
+const getBackendOrigin = (redirectUrl: string): string => {
+    try {
+        return new URL(redirectUrl).origin;
+    } catch {
+        return "http://localhost:5000";
+    }
+};
+
 const getEnv = (key: string, defaultValue = ""): string => {
     return (process.env[key] || defaultValue).trim();
 };
@@ -104,7 +112,8 @@ export const createMoMoPaymentRequest = async (
 
     if (process.env.MOMO_MOCK === "true") {
         console.log("--- MOMO_MOCK is TRUE: Bypassing real MoMo API ---");
-        const mockPayUrl = `http://localhost:5000/api/payment/mock-gate?orderId=${encodeURIComponent(orderId)}&amount=${finalAmount}&orderInfo=${encodeURIComponent(orderInfo)}&requestId=${encodeURIComponent(requestId)}&extraData=${encodeURIComponent(normalizedExtraData)}`;
+        const backendOrigin = getBackendOrigin(config.redirectUrl);
+        const mockPayUrl = `${backendOrigin}/api/payment/mock-gate?orderId=${encodeURIComponent(orderId)}&amount=${finalAmount}&orderInfo=${encodeURIComponent(orderInfo)}&requestId=${encodeURIComponent(requestId)}&extraData=${encodeURIComponent(normalizedExtraData)}`;
         return { payUrl: mockPayUrl };
     }
 

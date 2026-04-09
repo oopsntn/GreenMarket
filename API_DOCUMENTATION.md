@@ -1,9 +1,9 @@
 # GreenMarket API Documentation
 
-Last updated: 2026-03-31
+Last updated: 2026-04-08
 
 This document lists APIs that are already implemented in `back-end/src/routes`.
-It is intended for `mobile` and `admin-web` teams.
+It is intended for `mobile`, `user-web`, and `admin-web` teams.
 
 ## Base Information
 
@@ -34,7 +34,7 @@ It is intended for `mobile` and `admin-web` teams.
 |---|---|---|---|---|
 | GET | `/api/profile` | User token | Get current user profile | none |
 | PATCH | `/api/profile` | User token | Update current user profile | `userDisplayName`, `userAvatarUrl`, `userEmail`, `userLocation`, `userBio` |
-| GET | `/api/profile/favorites` | User token | Get list of favorite posts for the current user | none |
+| GET | `/api/profile/favorites` | User token | Get list of favorite posts for current user | none |
 
 ### Upload
 
@@ -59,24 +59,32 @@ It is intended for `mobile` and `admin-web` teams.
 | POST | `/api/posts/:id/contact-click` | No | Record buyer contact click (analytics counter) | path `id` |
 | POST | `/api/posts` | User token | Create user post | required: `categoryId`, `postTitle` |
 | GET | `/api/posts/my-posts` | User token | Get current user posts | none |
-| GET | `/api/posts/:id/favorite` | User token | Check if a post is favorited by the current user | path `id` |
-| POST | `/api/posts/:id/favorite` | User token | Toggle (add/remove) post from favorites | path `id` |
 | PATCH | `/api/posts/:id` | User token | Update user post | path `id` (post owner only) |
 | DELETE | `/api/posts/:id` | User token | Soft delete user post | path `id` (post owner only) |
+| GET | `/api/posts/:id/favorite` | User token | Check if a post is favorited by current user | path `id` |
+| POST | `/api/posts/:id/favorite` | User token | Toggle (add/remove) favorite post | path `id` |
 
 ### Shops
 
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
 | GET | `/api/shops/browse` | No | Browse active public shops (paginated) | optional query: `page`, `limit` |
-| POST | `/api/shops/register` | User token | Register shop | required: `shopName` |
+| POST | `/api/shops/register` | User token | Register shop | required: `shopName`; optional: `shopEmail`, `shopPhone`, `shopLocation`, `shopDescription`, `shopLogoUrl`, `shopCoverUrl`, `shopGalleryImages`, `shopLat`, `shopLng`, `shopFacebook`, `shopInstagram`, `shopYoutube` |
 | GET | `/api/shops/my-shop` | User token | Get current user's shop | none |
+| GET | `/api/shops/dashboard` | User token | Get owner dashboard metrics (requires active shop) | none |
+| PATCH | `/api/shops/:id` | User token | Update shop info (email change resets verification) | `shopName`, `shopEmail`, `shopLocation`, `shopDescription`, `shopLogoUrl`, `shopCoverUrl`, `shopGalleryImages`, `shopLat`, `shopLng`, `shopFacebook`, `shopInstagram`, `shopYoutube` |
+| POST | `/api/shops/verify/request` | User token | Request OTP for email/phone verification | `target`, `type` (`email` or `phone`) |
+| POST | `/api/shops/verify/email` | User token | Verify shop email with OTP | `email`, `otp` |
+| POST | `/api/shops/phones` | User token | Add secondary shop phone with OTP (max 3) | `phone`, `otp` |
+| DELETE | `/api/shops/phones` | User token | Remove secondary shop phone (min 1 required) | `phone` |
+| POST | `/api/shops/:id/contact-click` | No | Record click to contact shop (phone/Zalo) | path `id` |
 | GET | `/api/shops/:id` | No | Get public shop detail with approved posts | path `id` |
-| PATCH | `/api/shops/:id` | User token | Update shop info (Note: Email change resets verification) | `shopName`, `shopEmail`, `shopLocation`, `shopDescription`, `shopLat`, `shopLng` |
-| POST | `/api/shops/verify/request` | User token | Request OTP for Email or Phone | `target` (email/phone string), `type` ("email" | "phone") |
-| POST | `/api/shops/verify/email` | User token | Confirm OTP to verify Shop Email | `email`, `otp` |
-| POST | `/api/shops/phones` | User token | Add and verify a secondary phone number (max 3) | `phone`, `otp` |
-| DELETE | `/api/shops/phones` | User token | Remove a phone number (min 1 required) | `phone` |
+
+**`GET /api/shops/dashboard` response highlights:**
+- `shop`: `shopId`, `shopName`, `shopStatus`
+- `summary`: `totalPosts`, `approvedPosts`, `pendingPosts`, `rejectedPosts`, `totalViews`, `totalContacts`, `totalShopViews`, `totalShopContactClicks`, `contactRate`, `totalPromotionSpend`, `successfulPayments`, `activePromotions`
+- `topPosts`: top 5 posts by views with `postViewCount`, `postContactCount`, `postStatus`, `isPromoted`, `postUpdatedAt`
+- `recentPayments`: latest 10 owner payment records with package/post references
 
 ### Reports
 
@@ -94,18 +102,26 @@ It is intended for `mobile` and `admin-web` teams.
 **Response fields (highlights):**
 - `promotionPackageId`, `promotionPackageTitle`, `promotionPackageDurationDays`, `promotionPackagePrice`
 - `slotCode`, `slotTitle`, `slotCapacity`
-- `slotRules` (JSON): currently supports `priority` for feed ranking weight.
+- `slotRules` (JSON): currently supports `priority` for feed ranking weight
 
 **Promotion ranking behavior:**
-- `/api/posts/browse` prioritizes promoted posts by `slotRules.priority` (descending).
-- If slot priority is missing/invalid, fallback priority is `1`.
+- `/api/posts/browse` prioritizes promoted posts by `slotRules.priority` (descending)
+- If slot priority is missing/invalid, fallback priority is `1`
 
-### Payment (User)
+### Payment (User, MoMo)
 
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
-| POST | `/api/payment/buy-package` | User token | Create VNPay payment URL for package | `postId`, `packageId` |
-| GET | `/api/payment/vnpay-return` | No | VNPay redirect result (callback) | query params from VNPay |
+| POST | `/api/payment/buy-package` | User token | Create MoMo payment intent URL for promotion package | `postId`, `packageId` |
+| GET | `/api/payment/momo-return` | No | MoMo redirect callback, then backend redirects to frontend payment result | query params from MoMo |
+| POST | `/api/payment/momo-ipn` | No | MoMo IPN callback for server-to-server payment update | callback payload from MoMo |
+| GET | `/api/payment/mock-gate` | No | Development mock gateway screen (when `MOMO_MOCK=true`) | query: `orderId`, `amount`, `orderInfo`, `requestId`, `extraData` |
+| POST | `/api/payment/mock-gate-process` | No | Development mock approve/cancel action | form fields from mock gateway |
+
+**Payment behavior notes:**
+- `buy-package` validates post ownership, post approval status, package publish status, and slot availability before creating payment intent.
+- Callback handling (`momo-return` + `momo-ipn`) is idempotent by transaction state to avoid duplicate promotion activation.
+- Common error shape: `{ error, code, ...details }`.
 
 ## Admin APIs
 
@@ -121,11 +137,21 @@ All admin APIs are mounted under `/api/admin/*` and require:
 |---|---|
 | Categories | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
 | Attributes | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
+| Category mappings | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
+| Business roles | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
+| Placement slots | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
+| Promotion packages | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
+| Promotions | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
+| Boosted posts | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
 | Posts moderation | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN`, `ROLE_MODERATOR` |
 | Shops moderation | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN`, `ROLE_MODERATOR` |
 | Reports moderation | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN`, `ROLE_MODERATOR` |
 | Users management | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN`, `ROLE_SUPPORT` |
+| Assign user business role | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
 | Roles management | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN` |
+| Dashboard/Analytics | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN`, `ROLE_SUPPORT`, `ROLE_MODERATOR`, `ROLE_FINANCE` |
+| Revenue/Customer spending | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN`, `ROLE_FINANCE` |
+| Exports | `ROLE_SUPER_ADMIN`, `ROLE_ADMIN`, `ROLE_FINANCE` |
 
 ### Categories
 
@@ -145,45 +171,84 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | POST | `/api/admin/attributes` | Create attribute |
 | PUT | `/api/admin/attributes/:id` | Update attribute |
 | DELETE | `/api/admin/attributes/:id` | Delete attribute |
+
+### Category Mappings
+
+| Method | Endpoint | Description |
 |---|---|---|
-| **Placement Slots** | | |
+| GET | `/api/admin/category-mappings` | List category-attribute mappings |
+| POST | `/api/admin/category-mappings` | Create mapping |
+| PUT | `/api/admin/category-mappings/:categoryId/:attributeId` | Update mapping |
+| PATCH | `/api/admin/category-mappings/:categoryId/:attributeId/status` | Toggle mapping status |
+| DELETE | `/api/admin/category-mappings/:categoryId/:attributeId` | Delete mapping |
+
+### Business Roles
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/business-roles` | List business roles |
+| GET | `/api/admin/business-roles/:id` | Get business role detail |
+| POST | `/api/admin/business-roles` | Create business role |
+| PUT | `/api/admin/business-roles/:id` | Update business role |
+| PATCH | `/api/admin/business-roles/:id/status` | Update business role status |
+| DELETE | `/api/admin/business-roles/:id` | Delete business role |
+
+### Placement Slots
+
+| Method | Endpoint | Description |
+|---|---|---|
 | GET | `/api/admin/placement-slots` | List placement slots |
 | GET | `/api/admin/placement-slots/:id` | Get slot detail |
 | POST | `/api/admin/placement-slots` | Create slot |
 | PUT | `/api/admin/placement-slots/:id` | Update slot |
 | DELETE | `/api/admin/placement-slots/:id` | Delete slot |
+
+### Promotion Packages
+
+| Method | Endpoint | Description |
 |---|---|---|
-| **Promotion Packages** | | |
 | GET | `/api/admin/promotion-packages` | List packages |
 | GET | `/api/admin/promotion-packages/:id` | Get package detail |
 | POST | `/api/admin/promotion-packages` | Create package |
 | PUT | `/api/admin/promotion-packages/:id` | Update package |
 | DELETE | `/api/admin/promotion-packages/:id` | Delete package |
-|---|---|---|
-| **Promotions** | | |
-| GET | `/api/admin/promotions` | List purchased promotion records |
-| GET | `/api/admin/promotions/:id` | Get promotion detail |
-| PATCH | `/api/admin/promotions/:id/status` | Pause or resume a promotion | `status` (`Active`, `Paused`) |
+
+### Promotions
+
+| Method | Endpoint | Description | Main request fields |
+|---|---|---|---|
+| GET | `/api/admin/promotions` | List purchased promotion records | none |
+| GET | `/api/admin/promotions/:id` | Get promotion detail | path `id` |
+| PATCH | `/api/admin/promotions/:id/status` | Pause or resume promotion | `status` (`Active`, `Paused`) |
 | PATCH | `/api/admin/promotions/:id/package` | Change package, slot, and delivery window | `packageId`, `startDate`, `endDate`, `paymentStatus`, optional `adminNote` |
-| PATCH | `/api/admin/promotions/:id/reopen` | Reopen an expired promotion after payment confirmation | `packageId`, `startDate`, `endDate`, `paymentStatus`, optional `adminNote` |
-|---|---|---|
-| **Boosted Posts** | | |
-| GET | `/api/admin/boosted-posts` | List operational boosted campaign records |
-| GET | `/api/admin/boosted-posts/:id` | Get boosted campaign detail |
+| PATCH | `/api/admin/promotions/:id/reopen` | Reopen expired promotion after payment confirmation | `packageId`, `startDate`, `endDate`, `paymentStatus`, optional `adminNote` |
+
+### Boosted Posts
+
+| Method | Endpoint | Description | Main request fields |
+|---|---|---|---|
+| GET | `/api/admin/boosted-posts` | List boosted campaign records | none |
+| GET | `/api/admin/boosted-posts/:id` | Get boosted campaign detail | path `id` |
 | PATCH | `/api/admin/boosted-posts/:id/status` | Update campaign runtime state | `status` (`Active`, `Paused`, `Closed`) |
-|---|---|---|
-| **Dashboard & Analytics** | | |
+
+### Dashboard and Analytics
+
+| Method | Endpoint | Description | Main request fields |
+|---|---|---|---|
 | GET | `/api/admin/dashboard` | Get dashboard overview cards and summary | optional query `fromDate`, `toDate` |
 | GET | `/api/admin/analytics` | Get analytics KPI cards and top placement performance | optional query `fromDate`, `toDate` |
 | GET | `/api/admin/revenue` | Get revenue KPI cards and package revenue rows | optional query `fromDate`, `toDate` |
 | GET | `/api/admin/customer-spending` | Get customer spending KPI cards and customer rows | optional query `fromDate`, `toDate` |
-|---|---|---|
-| **Exports** | | |
-| GET | `/api/admin/exports/history` | List export history entries |
-| POST | `/api/admin/exports/general` | Generate a general report export | `module`, optional `fromDate`, `toDate`, `format` |
-| POST | `/api/admin/exports/financial` | Generate a financial report export | `reportType`, optional `fromDate`, `toDate`, `format` |
 
-### Posts moderation
+### Exports
+
+| Method | Endpoint | Description | Main request fields |
+|---|---|---|---|
+| GET | `/api/admin/exports/history` | List export history entries | none |
+| POST | `/api/admin/exports/general` | Generate general report export | `module`, optional `fromDate`, `toDate`, `format` |
+| POST | `/api/admin/exports/financial` | Generate financial report export | `reportType`, optional `fromDate`, `toDate`, `format` |
+
+### Posts Moderation
 
 | Method | Endpoint | Description | Main request fields |
 |---|---|---|---|
@@ -193,7 +258,7 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | PATCH | `/api/admin/posts/:id/status` | Update moderation status | `status`, optional `reason` |
 | DELETE | `/api/admin/posts/:id` | Soft hide post + moderation log | required `adminId`, optional `reason` |
 
-### Shops moderation
+### Shops Moderation
 
 | Method | Endpoint | Description | Main request fields |
 |---|---|---|---|
@@ -204,7 +269,7 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | PATCH | `/api/admin/shops/:id/verify` | Verify and activate shop | path `id` |
 | DELETE | `/api/admin/shops/:id` | Delete shop | path `id` |
 
-### Reports moderation
+### Reports Moderation
 
 | Method | Endpoint | Description | Main request fields |
 |---|---|---|---|
@@ -212,15 +277,16 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | GET | `/api/admin/reports/:id` | Get report detail | path `id` |
 | PATCH | `/api/admin/reports/:id/resolve` | Resolve/dismiss report | `status`, optional `adminNote` |
 
-### Users management
+### Users Management
 
 | Method | Endpoint | Description | Main request fields |
 |---|---|---|---|
 | GET | `/api/admin/users` | List users | none |
 | GET | `/api/admin/users/:id` | Get user detail | path `id` |
 | PATCH | `/api/admin/users/:id/status` | Update user status | `status` (`active`, `blocked`) |
+| PATCH | `/api/admin/users/:id/business-role` | Assign business role to user | `businessRoleId` |
 
-### Roles management
+### Roles Management
 
 | Method | Endpoint | Description | Main request fields |
 |---|---|---|---|
@@ -233,9 +299,8 @@ All admin APIs are mounted under `/api/admin/*` and require:
 
 ## Current Implementation Notes
 
-- User APIs are split into:
-  - Public endpoints: browse/detail APIs (`/api/posts/browse`, `/api/posts/detail/:slug`, `/api/shops/browse`, `/api/shops/:id`).
-  - Protected endpoints: user-owned resource APIs require JWT (`/api/profile`, `/api/posts`, `/api/posts/my-posts`, `/api/shops/register`, `/api/shops/my-shop`, etc.).
+- Public user endpoints include browse/detail APIs such as `/api/posts/browse`, `/api/posts/detail/:slug`, `/api/shops/browse`, `/api/shops/:id`.
+- Protected user endpoints require JWT, such as `/api/profile`, `/api/posts/my-posts`, `/api/shops/my-shop`, `/api/shops/dashboard`, `/api/payment/buy-package`.
 - `POST /api/posts/:id/contact-click` tracks buyer contact intent per post for analytics.
-- `admin` domain is now protected by JWT and role-based checks.
+- Payment callbacks are handled through `/api/payment/momo-return` and `/api/payment/momo-ipn`.
 - Static uploaded files are served at `/uploads/<filename>`.

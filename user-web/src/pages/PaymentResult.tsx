@@ -36,7 +36,7 @@ const PaymentResult: React.FC = () => {
             <span>Chi tiết giao dịch</span>
           </div>
           <div className="flex justify-between items-center text-xs">
-            <span className="text-slate-400 font-bold uppercase tracking-wider">Mã VNPay:</span>
+            <span className="text-slate-400 font-bold uppercase tracking-wider">Mã MoMo:</span>
             <span className="text-slate-900 font-mono font-bold bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm">{code || '-'}</span>
           </div>
           <div className="flex justify-between items-center text-xs">
