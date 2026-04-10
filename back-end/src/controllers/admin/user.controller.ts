@@ -6,7 +6,7 @@ import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 
 const getPerformedBy = (req: AuthRequest) =>
-  req.user?.email || req.user?.mobile || "System Administrator";
+  req.user?.email || req.user?.mobile || "Quản trị viên hệ thống";
 
 const buildUserBaseQuery = () =>
   db
@@ -43,7 +43,7 @@ export const getUsers = async (_req: Request, res: Response): Promise<void> => {
     res.json(allUsers);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };
 
@@ -54,7 +54,7 @@ export const getUserById = async (
   try {
     const idNumber = parseId(String(req.params.id));
     if (idNumber === null) {
-      res.status(400).json({ error: "Invalid user id" });
+      res.status(400).json({ error: "Mã người dùng không hợp lệ." });
       return;
     }
 
@@ -63,14 +63,14 @@ export const getUserById = async (
       .limit(1);
 
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "Không tìm thấy người dùng." });
       return;
     }
 
     res.json(user);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };
 
@@ -81,16 +81,19 @@ export const updateUserStatus = async (
   try {
     const idNumber = parseId(String(req.params.id));
     if (idNumber === null) {
-      res.status(400).json({ error: "Invalid user id" });
+      res.status(400).json({ error: "Mã người dùng không hợp lệ." });
       return;
     }
 
     const { status } = req.body as { status: string };
 
     if (!status?.trim()) {
-      res.status(400).json({ error: "status is required" });
+      res.status(400).json({ error: "Trạng thái người dùng là bắt buộc." });
       return;
     }
+
+    const normalizedStatus = status.trim().toLowerCase();
+    const isBlocked = normalizedStatus === "blocked";
 
     const [updatedUser] = await db
       .update(users)
@@ -102,7 +105,7 @@ export const updateUserStatus = async (
       .returning();
 
     if (!updatedUser) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "Không tìm thấy người dùng." });
       return;
     }
 
@@ -112,13 +115,15 @@ export const updateUserStatus = async (
 
     await db.insert(eventLogs).values({
       eventLogUserId: idNumber,
-      eventLogEventType:
-        status.toLowerCase() === "locked" ? "admin_user_locked" : "admin_user_unlocked",
+      eventLogEventType: isBlocked
+        ? "admin_user_locked"
+        : "admin_user_unlocked",
       eventLogEventTime: new Date(),
       eventLogMeta: {
-        action:
-          status.toLowerCase() === "locked" ? "Account Locked" : "Account Unlocked",
-        detail: `User account status changed to ${status}.`,
+        action: isBlocked ? "Khóa tài khoản" : "Mở khóa tài khoản",
+        detail: isBlocked
+          ? "Tài khoản người dùng đã bị khóa bởi quản trị viên."
+          : "Tài khoản người dùng đã được mở khóa bởi quản trị viên.",
         performedBy: getPerformedBy(req),
       },
     });
@@ -126,7 +131,7 @@ export const updateUserStatus = async (
     res.json(userWithRole ?? updatedUser);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };
 
@@ -137,7 +142,7 @@ export const assignUserBusinessRole = async (
   try {
     const userId = parseId(String(req.params.id));
     if (userId === null) {
-      res.status(400).json({ error: "Invalid user id" });
+      res.status(400).json({ error: "Mã người dùng không hợp lệ." });
       return;
     }
 
@@ -150,13 +155,13 @@ export const assignUserBusinessRole = async (
       .limit(1);
 
     if (!existingUser) {
-      res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "Không tìm thấy người dùng." });
       return;
     }
 
     if (businessRoleId !== null && businessRoleId !== undefined) {
       if (!Number.isInteger(businessRoleId) || businessRoleId <= 0) {
-        res.status(400).json({ error: "Invalid businessRoleId" });
+        res.status(400).json({ error: "Mã vai trò nghiệp vụ không hợp lệ." });
         return;
       }
 
@@ -170,14 +175,14 @@ export const assignUserBusinessRole = async (
         .limit(1);
 
       if (!role) {
-        res.status(404).json({ error: "Business role not found" });
+        res.status(404).json({ error: "Không tìm thấy vai trò nghiệp vụ." });
         return;
       }
 
       if (role.businessRoleStatus !== "active") {
-        res
-          .status(400)
-          .json({ error: "Only active business roles can be assigned" });
+        res.status(400).json({
+          error: "Chỉ có thể gán vai trò nghiệp vụ đang hoạt động.",
+        });
         return;
       }
     }
@@ -199,11 +204,10 @@ export const assignUserBusinessRole = async (
       eventLogEventType: "admin_user_role_assigned",
       eventLogEventTime: new Date(),
       eventLogMeta: {
-        action: "Role Assigned",
-        detail:
-          updatedUser?.businessRoleTitle
-            ? `Assigned business role: ${updatedUser.businessRoleTitle}.`
-            : "Removed business role assignment.",
+        action: "Gán vai trò nghiệp vụ",
+        detail: updatedUser?.businessRoleTitle
+          ? `Đã gán vai trò nghiệp vụ: ${updatedUser.businessRoleTitle}.`
+          : "Đã gỡ vai trò nghiệp vụ khỏi tài khoản người dùng.",
         performedBy: getPerformedBy(req),
       },
     });
@@ -211,6 +215,6 @@ export const assignUserBusinessRole = async (
     res.json(updatedUser);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };
