@@ -113,9 +113,10 @@ const CreatePostLayout = () => {
                     required
                 />
 
-                {!isShop && shop?.shopLocation ? (
+                {isShop && shop?.shopLocation ? (
                     <View style={styles.locationBlock}>
                         <Input
+                            testID="create-post-location-input"
                             label="Location"
                             value={state.formData.postLocation}
                             onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}

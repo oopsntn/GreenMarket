@@ -6,6 +6,7 @@ import ProfileScreen from './components/profile/screen/ProfileScreen'
 
 import RegisterShopScreen from './components/shop/screen/RegisterShop'
 import EditShopScreen from './components/shop/screen/EditShopScreen'
+import ShopDashboardScreen from './components/shop/screen/ShopDashboardScreen'
 import CreatePostLayout from './components/post/screen/CreatePostScreen'
 import CreateReportScreen from './components/report/screen/CreateReportService'
 import BrowseShopsScreen from './components/shop/screen/BrowseShopsScreen'
@@ -26,6 +27,7 @@ const MainStack = () => {
 
             <Stack.Screen name="RegisterShop" component={RegisterShopScreen} />
             <Stack.Screen name="MyShop" component={ShoDetailScreen} />
+            <Stack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
             <Stack.Screen name="EditShop" component={EditShopScreen} />
             <Stack.Screen name="BrowseShops" component={BrowseShopsScreen} />
             <Stack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} />
