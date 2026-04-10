@@ -11,10 +11,10 @@ import {
 } from "../models/schema/index.ts";
 import { parseId } from "../utils/parseId.ts";
 import {
-  createMoMoPaymentRequest,
-  validateMoMoConfig,
-  verifyMoMoSignature,
-} from "../utils/momo.ts";
+  createVNPayPaymentRequest,
+  validateVNPayConfig,
+  verifyVNPaySignature,
+} from "../utils/vnpay.ts";
 import {
   BOOST_POST_SLOT_CODE,
   SHOP_VIP_DURATION_DAYS,
@@ -40,7 +40,7 @@ export class PaymentServiceError extends Error {
   }
 }
 
-export type MoMoCallbackStatus =
+export type VNPayCallbackStatus =
   | "success"
   | "failed"
   | "already_success"
@@ -49,8 +49,8 @@ export type MoMoCallbackStatus =
   | "invalid_amount"
   | "invalid_signature";
 
-export type MoMoCallbackResult = {
-  status: MoMoCallbackStatus;
+export type VNPayCallbackResult = {
+  status: VNPayCallbackStatus;
   txnRef?: string;
   responseCode?: string;
 };
@@ -209,10 +209,10 @@ const activateShopVipForTransaction = async (
 
 const processVerifiedCallback = async (
   body: Record<string, unknown>,
-): Promise<MoMoCallbackResult> => {
-  const txnRef = String(body.orderId ?? "");
-  const responseCode = String(body.resultCode ?? "");
-  const callbackAmount = Number(body.amount);
+): Promise<VNPayCallbackResult> => {
+  const txnRef = String(body.vnp_TxnRef ?? "");
+  const responseCode = String(body.vnp_ResponseCode ?? "");
+  const callbackAmount = Number(body.vnp_Amount) / 100;
 
   if (!txnRef) {
     return { status: "not_found", txnRef: "", responseCode };
@@ -252,7 +252,7 @@ const processVerifiedCallback = async (
       return { status: "invalid_amount", txnRef, responseCode };
     }
 
-    if (responseCode === "0") {
+    if (responseCode === "00") {
       if (txn.paymentTxnStatus === "success") {
         return { status: "already_success", txnRef, responseCode };
       }
@@ -298,7 +298,7 @@ const processVerifiedCallback = async (
       } else if (updatedTxn.paymentTxnPackageId && !updatedTxn.paymentTxnPostId) {
         await activateShopVipForTransaction(tx, updatedTxn);
       } else if (!updatedTxn.paymentTxnPackageId && !updatedTxn.paymentTxnPostId) {
-        const orderInfo = String(body.orderInfo || "");
+        const orderInfo = String(body.vnp_OrderInfo || "");
         if (orderInfo.startsWith("PayPersonalPkg")) {
           await postingPolicyService.activatePersonalMonthlyPlan({
             userId: updatedTxn.paymentTxnUserId,
@@ -372,13 +372,13 @@ const findPublishedPackageBySlotCode = async (slotCode: string) => {
 };
 
 export const paymentService = {
-  async createShopPaymentIntent(userId: number): Promise<{ paymentUrl: string }> {
-    const configCheck = validateMoMoConfig();
+  async createShopPaymentIntent(userId: number, ipAddr: string): Promise<{ paymentUrl: string }> {
+    const configCheck = validateVNPayConfig();
     if (!configCheck.isValid) {
       throw new PaymentServiceError(
         500,
-        "MOMO_CONFIG_MISSING",
-        "MoMo configuration is missing.",
+        "VNPAY_CONFIG_MISSING",
+        "VNPay configuration is missing.",
         { missing: configCheck.missingFields },
       );
     }
@@ -390,12 +390,12 @@ export const paymentService = {
     const orderId = createOrderId();
     const orderInfo = `PayShopReg${userId}`;
 
-    const { payUrl } = await createMoMoPaymentRequest(finalAmount, orderId, orderInfo, orderId);
+    const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr);
 
     await db.insert(paymentTxn).values({
       paymentTxnUserId: userId,
       paymentTxnAmount: String(finalAmount),
-      paymentTxnProvider: "MOMO",
+      paymentTxnProvider: "VNPAY",
       paymentTxnProviderTxnId: orderId,
       paymentTxnStatus: "pending",
     });
@@ -403,13 +403,13 @@ export const paymentService = {
     return { paymentUrl: payUrl };
   },
 
-  async createPersonalPackagePaymentIntent(userId: number): Promise<{ paymentUrl: string }> {
-    const configCheck = validateMoMoConfig();
+  async createPersonalPackagePaymentIntent(userId: number, ipAddr: string): Promise<{ paymentUrl: string }> {
+    const configCheck = validateVNPayConfig();
     if (!configCheck.isValid) {
       throw new PaymentServiceError(
         500,
-        "MOMO_CONFIG_MISSING",
-        "MoMo configuration is missing.",
+        "VNPAY_CONFIG_MISSING",
+        "VNPay configuration is missing.",
         { missing: configCheck.missingFields },
       );
     }
@@ -422,12 +422,12 @@ export const paymentService = {
     const orderId = createOrderId();
     const orderInfo = `PayPersonalPkg${userId}`;
 
-    const { payUrl } = await createMoMoPaymentRequest(finalAmount, orderId, orderInfo, orderId);
+    const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr);
 
     await db.insert(paymentTxn).values({
       paymentTxnUserId: userId,
       paymentTxnAmount: String(finalAmount),
-      paymentTxnProvider: "MOMO",
+      paymentTxnProvider: "VNPAY",
       paymentTxnProviderTxnId: orderId,
       paymentTxnStatus: "pending",
     });
@@ -435,13 +435,13 @@ export const paymentService = {
     return { paymentUrl: payUrl };
   },
 
-  async createShopVipPaymentIntent(userId: number): Promise<{ paymentUrl: string }> {
-    const configCheck = validateMoMoConfig();
+  async createShopVipPaymentIntent(userId: number, ipAddr: string): Promise<{ paymentUrl: string }> {
+    const configCheck = validateVNPayConfig();
     if (!configCheck.isValid) {
       throw new PaymentServiceError(
         500,
-        "MOMO_CONFIG_MISSING",
-        "MoMo configuration is missing.",
+        "VNPAY_CONFIG_MISSING",
+        "VNPay configuration is missing.",
         { missing: configCheck.missingFields },
       );
     }
@@ -506,7 +506,7 @@ export const paymentService = {
     const orderId = createOrderId();
     const orderInfo = `PayShopVipPkg${vipPackage.promotionPackageId}Shop${userId}`;
 
-    const { payUrl } = await createMoMoPaymentRequest(
+    const { payUrl } = await createVNPayPaymentRequest(
       finalAmount,
       orderId,
       orderInfo,
@@ -518,7 +518,7 @@ export const paymentService = {
       paymentTxnPackageId: vipPackage.promotionPackageId,
       paymentTxnPriceId: vipPackage.promotionPackagePriceId ?? null,
       paymentTxnAmount: String(finalAmount),
-      paymentTxnProvider: "MOMO",
+      paymentTxnProvider: "VNPAY",
       paymentTxnProviderTxnId: orderId,
       paymentTxnStatus: "pending",
     });
@@ -530,15 +530,16 @@ export const paymentService = {
     userId: number;
     postIdRaw: unknown;
     packageIdRaw: unknown;
+    ipAddr: string;
   }): Promise<{ paymentUrl: string }> {
-    const { userId, postIdRaw, packageIdRaw } = params;
+    const { userId, postIdRaw, packageIdRaw, ipAddr } = params;
 
-    const configCheck = validateMoMoConfig();
+    const configCheck = validateVNPayConfig();
     if (!configCheck.isValid) {
       throw new PaymentServiceError(
         500,
-        "MOMO_CONFIG_MISSING",
-        "MoMo configuration is missing.",
+        "VNPAY_CONFIG_MISSING",
+        "VNPay configuration is missing.",
         { missing: configCheck.missingFields },
       );
     }
@@ -689,12 +690,7 @@ export const paymentService = {
     const requestId = orderId;
     const orderInfo = `PayPromotionPkg${pkg.promotionPackageId}Post${parsedPostId}`;
 
-    const { payUrl } = await createMoMoPaymentRequest(
-      finalAmount,
-      orderId,
-      orderInfo,
-      requestId,
-    );
+    const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr);
 
     await db.insert(paymentTxn).values({
       paymentTxnUserId: userId,
@@ -702,7 +698,7 @@ export const paymentService = {
       paymentTxnPackageId: parsedPackageId,
       paymentTxnPriceId: pkg.promotionPackagePriceId ?? null,
       paymentTxnAmount: String(finalAmount),
-      paymentTxnProvider: "MOMO",
+      paymentTxnProvider: "VNPAY",
       paymentTxnProviderTxnId: orderId,
       paymentTxnStatus: "pending",
     });
@@ -710,13 +706,13 @@ export const paymentService = {
     return { paymentUrl: payUrl };
   },
 
-  async processMoMoCallback(
+  async processVNPayCallback(
     body: Record<string, unknown>,
-  ): Promise<MoMoCallbackResult> {
-    if (!verifyMoMoSignature(body)) {
+  ): Promise<VNPayCallbackResult> {
+    if (!verifyVNPaySignature(body)) {
       return {
         status: "invalid_signature",
-        txnRef: String(body.orderId ?? ""),
+        txnRef: String(body.vnp_TxnRef ?? ""),
         responseCode: "97",
       };
     }

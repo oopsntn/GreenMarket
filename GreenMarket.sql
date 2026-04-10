@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- GreenMarket Database Backup (Full Schema)
 -- PostgreSQL 18.x | Generated: 2026-04-08
 -- Tables: 34 | Synced from Drizzle ORM schema
@@ -757,8 +757,6 @@ CREATE INDEX idx_event_logs_user ON event_logs(event_log_user_id);
 CREATE INDEX idx_event_logs_type ON event_logs(event_log_event_type);
 CREATE INDEX idx_event_logs_time ON event_logs(event_log_event_time);
 
-
-
 -- Promotion Package Audit Log
 CREATE INDEX idx_pkg_audit_package    ON promotion_package_audit_log(package_id);
 CREATE INDEX idx_pkg_audit_price      ON promotion_package_audit_log(price_id);
@@ -917,7 +915,8 @@ INSERT INTO users (
 (4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Collaborator demo account for mobile job and earnings scenarios.', 'active', 2),
 (5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
 (6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 2),
-(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1);
+(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1),
+(8, '0987654321', 'Người Dùng Test 0987654321', 'test.0987654321@gmail.com', 'Hà Nội', 'Test account for 0987654321', 'active', 1);
 
 -- Align demo accounts to business roles used in collaborator APIs
 UPDATE users SET user_business_role_id = 3 WHERE user_id = 4;
@@ -1179,7 +1178,11 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
 
 (15, 1, 1, 25, 'Bình Phun Sương Đồng Thau Kiểu Nhật',
     'binh-phun-suong-dong-thau-kieu-nhat',
-    450000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days');
+    450000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days'),
+
+(16, 8, NULL, 11, 'Cây Bonsai Test 0987654321',
+    'cay-bonsai-test-0987654321',
+    1500000, 'Hà Nội', 'approved', '0987654321', 10, 2, true, now() - interval '1 days', now() - interval '1 days');
 
 -- Post Attribute Values
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES

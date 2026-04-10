@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createPayment, createShopRegistrationPayment, createShopVipPayment, createPersonalPackagePayment, momoReturn, momoIpn, mockGate, mockGateProcess } from "../../controllers/user/payment.controller.ts";
+import { createPayment, createShopRegistrationPayment, createShopVipPayment, createPersonalPackagePayment, vnpayReturn, vnpayIpn } from "../../controllers/user/payment.controller.ts";
 import { verifyToken } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
@@ -11,12 +11,10 @@ router.post("/buy-shop-vip", verifyToken, createShopVipPayment);
 router.post("/buy-personal", verifyToken, createPersonalPackagePayment);
 
 
-// MoMo Callback Routes (Public)
-router.get("/momo-return", momoReturn);
-router.post("/momo-ipn", momoIpn);
+// VNPay Callback Routes (Public)
+router.get("/vnpay-return", vnpayReturn);
+router.post("/vnpay-ipn", vnpayIpn);
 
-// Mock Gateway Routes (Development only)
-router.get("/mock-gate", mockGate);
-router.post("/mock-gate-process", mockGateProcess);
+
 
 export default router;
