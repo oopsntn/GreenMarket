@@ -255,7 +255,7 @@ function RevenuePage() {
 
             <div className="revenue-pagination">
               <span className="revenue-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="revenue-pagination__actions">

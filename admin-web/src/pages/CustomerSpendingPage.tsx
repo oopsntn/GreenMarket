@@ -269,7 +269,7 @@ function CustomerSpendingPage() {
 
             <div className="customer-spending-pagination">
               <span className="customer-spending-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="customer-spending-pagination__actions">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import EmptyState from "../components/EmptyState";
 import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
@@ -17,6 +17,7 @@ import "./AnalyticsPage.css";
 const PAGE_SIZE = 4;
 
 const chartPalette = ["#216e2a", "#d48b15", "#207298", "#b54676", "#79c768"];
+const ALL_PLACEMENTS_LABEL = "Tất cả vị trí";
 
 const parseMetricNumber = (value: string) => {
   const normalized = value.replace(/[^0-9.]/g, "");
@@ -40,7 +41,7 @@ const formatChartDateLabel = (value: string) => {
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime())
     ? value
-    : date.toLocaleDateString("en-GB", {
+    : date.toLocaleDateString("vi-VN", {
       day: "2-digit",
     });
 };
@@ -49,7 +50,7 @@ const formatChartMonthLabel = (value: string) => {
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime())
     ? ""
-    : date.toLocaleDateString("en-GB", {
+    : date.toLocaleDateString("vi-VN", {
         month: "short",
       });
 };
@@ -63,7 +64,7 @@ function AnalyticsPage() {
 
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
-  const [metricScope, setMetricScope] = useState("All Placements");
+  const [metricScope, setMetricScope] = useState(ALL_PLACEMENTS_LABEL);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -87,7 +88,7 @@ function AnalyticsPage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Failed to load analytics summary.",
+            : "Không thể tải dữ liệu phân tích.",
         );
       } finally {
         setIsLoading(false);
@@ -103,12 +104,12 @@ function AnalyticsPage() {
       ...placementRows.map((item) => item.slot),
     ];
 
-    return ["All Placements", ...new Set(slotLabels)];
+    return [ALL_PLACEMENTS_LABEL, ...new Set(slotLabels)];
   }, [placementRows, slotCatalog]);
 
   useEffect(() => {
     if (!slotFilterOptions.includes(metricScope)) {
-      setMetricScope("All Placements");
+      setMetricScope(ALL_PLACEMENTS_LABEL);
     }
   }, [metricScope, slotFilterOptions]);
 
@@ -117,7 +118,7 @@ function AnalyticsPage() {
 
     return placementRows.filter((item) => {
       const matchesScope =
-        metricScope === "All Placements" || item.slot === metricScope;
+        metricScope === ALL_PLACEMENTS_LABEL || item.slot === metricScope;
       const matchesKeyword =
         !keyword ||
         item.slot.toLowerCase().includes(keyword) ||
@@ -158,7 +159,7 @@ function AnalyticsPage() {
   }, [placementRows]);
 
   const chartSlots = useMemo(() => {
-    if (metricScope !== "All Placements") {
+    if (metricScope !== ALL_PLACEMENTS_LABEL) {
       return [metricScope];
     }
 
@@ -194,7 +195,7 @@ function AnalyticsPage() {
     return dailyTraffic.map((point) => ({
       ...point,
       slots:
-        metricScope === "All Placements"
+        metricScope === ALL_PLACEMENTS_LABEL
           ? point.slots.filter((slot) => chartSlots.includes(slot.slot))
           : point.slots.filter((slot) => slot.slot === metricScope),
     }));
@@ -306,47 +307,47 @@ function AnalyticsPage() {
 
   const handleExportReport = () => {
     showToast(
-      `Analytics report export started for ${dateRangeLabel} • ${metricScope}.`,
+      `Đã bắt đầu xuất báo cáo phân tích cho ${dateRangeLabel} • ${metricScope}.`,
     );
   };
 
   const trafficOverviewTitle =
-    metricScope === "All Placements"
-      ? "Traffic Overview"
-      : `${metricScope} Traffic Overview`;
+    metricScope === ALL_PLACEMENTS_LABEL
+      ? "Tổng quan lưu lượng"
+      : `Lưu lượng của ${metricScope}`;
 
   return (
     <div className="analytics-page">
       <PageHeader
-        title="Analytics Dashboard"
-        description="Monitor placement performance, engagement, and revenue trends."
-        actionLabel="Export Report"
+        title="Bảng phân tích"
+        description="Theo dõi hiệu quả vị trí hiển thị, mức độ tương tác và xu hướng doanh thu."
+        actionLabel="Xuất báo cáo"
         onActionClick={handleExportReport}
       />
 
       <SectionCard
-        title="Analytics Filters"
-        description="Adjust the reporting period and analytics scope."
+        title="Bộ lọc phân tích"
+        description="Điều chỉnh khoảng thời gian báo cáo và phạm vi phân tích."
       >
         <FilterBar
           fields={[
             {
               id: "analytics-from-date",
-              label: "From Date",
+              label: "Từ ngày",
               type: "date",
               value: fromDate,
               onChange: setFromDate,
             },
             {
               id: "analytics-to-date",
-              label: "To Date",
+              label: "Đến ngày",
               type: "date",
               value: toDate,
               onChange: setToDate,
             },
             {
               id: "analytics-metric-scope",
-              label: "Placement Scope",
+              label: "Phạm vi vị trí",
               type: "select",
               value: metricScope,
               onChange: setMetricScope,
@@ -357,23 +358,23 @@ function AnalyticsPage() {
       </SectionCard>
 
       <SearchToolbar
-        placeholder="Search by placement slot or row ID"
+        placeholder="Tìm theo vị trí hiển thị hoặc mã dòng"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
-        filterSummary={`Current scope: ${metricScope} • ${dateRangeLabel} • ${slotCatalog.length} configured slot(s)`}
+        filterSummary={`Phạm vi hiện tại: ${metricScope} • ${dateRangeLabel} • ${slotCatalog.length} vị trí đã cấu hình`}
       />
 
       {isLoading ? (
         <SectionCard title="Analytics KPIs">
           <EmptyState
-            title="Loading analytics"
-            description="Fetching analytics metrics from the admin API."
+            title="Đang tải dữ liệu phân tích"
+            description="Đang lấy các chỉ số phân tích từ API admin."
           />
         </SectionCard>
       ) : pageError ? (
         <SectionCard title="Analytics KPIs">
           <EmptyState
-            title="Unable to load analytics"
+            title="Không thể tải dữ liệu phân tích"
             description={pageError}
           />
         </SectionCard>
@@ -400,10 +401,10 @@ function AnalyticsPage() {
             <div className="analytics-chart-placeholder analytics-chart-placeholder--bar">
               <div className="analytics-chart-caption">
                 <span className="analytics-chart-caption__badge">
-                  Impressions
+                  Lượt hiển thị
                 </span>
                 <span className="analytics-chart-caption__text">
-                  Compare daily impression volume across placement slots in the selected period.
+                  So sánh số lượt hiển thị theo ngày giữa các vị trí hiển thị trong khoảng thời gian đã chọn.
                 </span>
               </div>
 
@@ -420,22 +421,22 @@ function AnalyticsPage() {
               </div>
 
               <p className="analytics-daily-note">
-                Only slots with recorded traffic in the selected date range are plotted here. The Placement Slots
-                screen can still contain additional configured slots that have no traffic yet.
+                Chỉ những vị trí có phát sinh dữ liệu trong khoảng thời gian đã chọn mới được đưa vào biểu đồ này.
+                Màn Vị trí hiển thị vẫn có thể chứa thêm các vị trí đã cấu hình nhưng chưa phát sinh traffic.
               </p>
 
               <div className="analytics-daily-chart-wrapper">
                 {chartTrafficPoints.length === 0 ? (
                   <EmptyState
-                    title="No daily traffic"
-                    description="No placement slot generated impressions in this period."
+                    title="Không có lưu lượng theo ngày"
+                    description="Không có vị trí hiển thị nào phát sinh lượt hiển thị trong giai đoạn này."
                   />
                 ) : (
                   <svg
                     className="analytics-daily-chart"
                     viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                     role="img"
-                    aria-label="Daily placement impressions grouped by slot"
+                    aria-label="Biểu đồ lượt hiển thị theo ngày và theo vị trí"
                   >
                     {chartGridLines.map((line) => {
                       const y =
@@ -528,7 +529,7 @@ function AnalyticsPage() {
                                   fill={chartSlotColorMap[slot.slot]}
                                 >
                                   <title>
-                                    {`${slot.slot}: ${slot.impressions.toLocaleString("en-US")} impressions on ${point.date}`}
+                                    {`${slot.slot}: ${slot.impressions.toLocaleString("vi-VN")} lượt hiển thị ngày ${point.date}`}
                                   </title>
                                 </rect>
                                 {showValueLabel ? (
@@ -571,14 +572,14 @@ function AnalyticsPage() {
         </SectionCard>
 
         <SectionCard
-          title="Placement Mix"
-          description={`${dateRangeLabel} • Revenue share by placement`}
+          title="Cơ cấu vị trí"
+          description={`${dateRangeLabel} • Tỷ trọng doanh thu theo vị trí`}
         >
           <div className="analytics-panel__body">
             <div className="analytics-donut-placeholder">
               <div className="analytics-pie-summary">
                 <strong>{formatCompactMetric(totalRevenue)}</strong>
-                <span>Total revenue in the selected period</span>
+                <span>Tổng doanh thu trong giai đoạn đã chọn</span>
               </div>
 
               <div
@@ -607,20 +608,20 @@ function AnalyticsPage() {
       </div>
 
       <SectionCard
-        title="Top Placement Performance"
+        title="Hiệu suất vị trí nổi bật"
         description={`${dateRangeLabel} • ${metricScope}`}
       >
         {isLoading ? (
           <EmptyState
-            title="Loading analytics data"
-            description="Fetching placement performance rows."
+            title="Đang tải bảng phân tích"
+            description="Đang lấy các dòng dữ liệu hiệu suất vị trí."
           />
         ) : pageError ? (
-          <EmptyState title="Unable to load analytics data" description={pageError} />
+          <EmptyState title="Không thể tải bảng phân tích" description={pageError} />
         ) : filteredRows.length === 0 ? (
           <EmptyState
-            title="No analytics data found"
-            description="No placement performance matches the current filter settings."
+            title="Không có dữ liệu phân tích"
+            description="Không có vị trí nào khớp với bộ lọc hiện tại."
           />
         ) : (
           <div className="analytics-table-section">
@@ -629,11 +630,11 @@ function AnalyticsPage() {
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Placement Slot</th>
-                    <th>Impressions</th>
-                    <th>Clicks</th>
+                    <th>Vị trí hiển thị</th>
+                    <th>Lượt hiển thị</th>
+                    <th>Lượt nhấp</th>
                     <th>CTR</th>
-                    <th>Revenue</th>
+                    <th>Doanh thu</th>
                   </tr>
                 </thead>
 
@@ -654,7 +655,7 @@ function AnalyticsPage() {
 
             <div className="analytics-pagination">
               <span className="analytics-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="analytics-pagination__actions">
@@ -663,7 +664,7 @@ function AnalyticsPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -672,7 +673,7 @@ function AnalyticsPage() {
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Sau
                 </button>
               </div>
             </div>
@@ -686,3 +687,4 @@ function AnalyticsPage() {
 }
 
 export default AnalyticsPage;
+
