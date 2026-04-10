@@ -574,7 +574,7 @@ function BoostedPostsPage() {
 
             <div className="boosted-posts-pagination">
               <span className="boosted-posts-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="boosted-posts-pagination__actions">

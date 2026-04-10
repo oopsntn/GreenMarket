@@ -446,7 +446,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
 
             <div className="shops-pagination">
               <span className="shops-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="shops-pagination__actions">

@@ -531,7 +531,7 @@ function TemplateBuilderPage() {
 
               <div className="template-builder-pagination">
                 <span className="template-builder-pagination__info">
-                  Page {page} of {totalPages}
+                  Trang {page} / {totalPages}
                 </span>
 
                 <div className="template-builder-pagination__actions">

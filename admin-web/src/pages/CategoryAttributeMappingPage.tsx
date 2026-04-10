@@ -496,7 +496,7 @@ function CategoryAttributeMappingPage() {
                     <th>Attribute</th>
                     <th>Code</th>
                     <th>Type</th>
-                    <th>Required</th>
+                    <th>Bắt buộc</th>
                     <th>Display Order</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -518,7 +518,7 @@ function CategoryAttributeMappingPage() {
                       </td>
                       <td>
                         <StatusBadge
-                          label={item.required ? "Required" : "Optional"}
+                          label={item.required ? "Bắt buộc" : "Tùy chọn"}
                           variant={item.required ? "required" : "optional"}
                         />
                       </td>
@@ -580,7 +580,7 @@ function CategoryAttributeMappingPage() {
 
             <div className="mapping-pagination">
               <span className="mapping-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="mapping-pagination__actions">
@@ -654,7 +654,7 @@ function CategoryAttributeMappingPage() {
                       <label>{mapping.attributeName}</label>
                       <div className="mapping-preview__meta">
                         <StatusBadge
-                          label={mapping.required ? "Required" : "Optional"}
+                          label={mapping.required ? "Bắt buộc" : "Tùy chọn"}
                           variant={mapping.required ? "required" : "optional"}
                         />
                         <span className="mapping-preview__order">
@@ -738,7 +738,7 @@ function CategoryAttributeMappingPage() {
               onChange={handleChange}
               disabled={isSubmitting}
             />
-            <span>Required field in posting form</span>
+            <span>Trường bắt buộc trên form đăng bài</span>
           </label>
 
           {formError ? (

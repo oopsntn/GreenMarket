@@ -462,7 +462,7 @@ function TemplatesPage() {
 
             <div className="templates-pagination">
               <span className="templates-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="templates-pagination__actions">

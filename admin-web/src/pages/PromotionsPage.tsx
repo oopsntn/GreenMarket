@@ -837,7 +837,7 @@ function PromotionsPage() {
 
             <div className="promotions-pagination">
               <span className="promotions-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="promotions-pagination__actions">

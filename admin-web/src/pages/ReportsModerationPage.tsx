@@ -377,7 +377,7 @@ function ReportsModerationPage() {
 
             <div className="reports-moderation-pagination">
               <span className="reports-moderation-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
               <div className="reports-moderation-pagination__actions">
                 <button
@@ -471,7 +471,7 @@ function ReportsModerationPage() {
             rows={4}
             value={adminNote}
             onChange={(event) => setAdminNote(event.target.value)}
-            placeholder="Optional moderation note"
+            placeholder="Ghi chú kiểm duyệt (không bắt buộc)"
           />
 
           <div className="reports-moderation-form__actions">

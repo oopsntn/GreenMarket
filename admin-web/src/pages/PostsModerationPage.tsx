@@ -435,7 +435,7 @@ function PostsModerationPage() {
 
             <div className="posts-moderation-pagination">
               <span className="posts-moderation-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="posts-moderation-pagination__actions">
@@ -556,7 +556,7 @@ function PostsModerationPage() {
             id="posts-moderation-reason"
             value={moderationReason}
             onChange={(event) => setModerationReason(event.target.value)}
-            placeholder="Optional moderation note"
+            placeholder="Ghi chú kiểm duyệt (không bắt buộc)"
             rows={4}
           />
 

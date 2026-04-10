@@ -597,7 +597,7 @@ function AttributesPage() {
 
             <div className="attributes-pagination">
               <span className="attributes-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="attributes-pagination__actions">

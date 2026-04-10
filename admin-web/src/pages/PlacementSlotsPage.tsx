@@ -535,7 +535,7 @@ function PlacementSlotsPage() {
 
             <div className="placement-slots-pagination">
               <span className="placement-slots-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="placement-slots-pagination__actions">

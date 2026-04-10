@@ -528,7 +528,7 @@ function CategoriesPage() {
 
             <div className="categories-pagination">
               <span className="categories-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="categories-pagination__actions">
