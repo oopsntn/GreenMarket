@@ -17,23 +17,23 @@ import "./RolesManagementPage.css";
 
 const capabilityRows = [
   {
-    capability: "Browse and buy listings",
+    capability: "Duyệt và mua bài đăng cây cảnh",
     roles: ["USER"],
   },
   {
-    capability: "Manage shop profile and plant posts",
+    capability: "Quản lý hồ sơ shop và bài đăng cây cảnh",
     roles: ["HOST", "COLLABORATOR"],
   },
   {
-    capability: "Purchase and track promotion packages",
+    capability: "Mua và theo dõi gói quảng bá",
     roles: ["HOST", "MANAGER"],
   },
   {
-    capability: "Handle moderation and report actions",
+    capability: "Xử lý kiểm duyệt và báo cáo vi phạm",
     roles: ["MANAGER", "OPERATION_STAFF"],
   },
   {
-    capability: "Review analytics and exports",
+    capability: "Xem phân tích, doanh thu và xuất báo cáo",
     roles: ["MANAGER", "OPERATION_STAFF"],
   },
 ];
@@ -71,13 +71,13 @@ function RolesManagementPage() {
       setRoles(data);
 
       if (showSuccessToast) {
-        showToast("Marketplace role catalog refreshed successfully.");
+        showToast("Đã tải lại danh mục vai trò nghiệp vụ.");
       }
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Unable to load marketplace role catalog.";
+          : "Không thể tải danh mục vai trò nghiệp vụ.";
       setError(message);
       showToast(message, "error");
     } finally {
@@ -153,10 +153,10 @@ function RolesManagementPage() {
       );
 
       closeModal();
-      showToast(`Role definition for ${updatedRole.title} was updated.`);
+      showToast(`Đã cập nhật định nghĩa vai trò ${updatedRole.title}.`);
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Unable to update role.",
+        err instanceof Error ? err.message : "Không thể cập nhật vai trò.",
         "error",
       );
     }
@@ -168,12 +168,14 @@ function RolesManagementPage() {
       const syncedRoles = await roleManagementService.syncDefaultRoles();
       setRoles(syncedRoles);
       showToast(
-        "Marketplace role catalog was synced to the report-aligned defaults.",
+        "Đã đồng bộ danh mục vai trò theo nghiệp vụ chuẩn của GreenMarket.",
         "info",
       );
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Unable to sync default roles.",
+        err instanceof Error
+          ? err.message
+          : "Không thể đồng bộ vai trò mặc định.",
         "error",
       );
     } finally {
@@ -184,70 +186,70 @@ function RolesManagementPage() {
   return (
     <div className="roles-management-page">
       <PageHeader
-        title="Roles Management"
-        description="Admin maintains the official marketplace role catalog used across the GreenMarket system. This screen is about business roles, not admin login accounts."
-        actionLabel="Sync Default Roles"
+        title="Quản lý vai trò nghiệp vụ"
+        description="Admin quản lý danh mục vai trò nghiệp vụ dùng chung trong GreenMarket. Màn này chỉ mô tả vai trò nghiệp vụ, không quản lý quyền đăng nhập admin."
+        actionLabel="Đồng bộ vai trò chuẩn"
         onActionClick={() => void handleResetCatalog()}
       />
 
       <div className="roles-management-summary-grid">
         <StatCard
-          title="Total Managed Roles"
+          title="Tổng vai trò quản lý"
           value={String(roles.length)}
-          subtitle="Core role definitions maintained by admin"
+          subtitle="Danh mục vai trò nghiệp vụ do admin duy trì"
         />
         <StatCard
-          title="Marketplace Roles"
+          title="Vai trò marketplace"
           value={String(marketplaceRoleCount)}
-          subtitle="User-facing roles in the buying and selling flow"
+          subtitle="Vai trò tham gia luồng mua bán trên sàn"
         />
         <StatCard
-          title="Operations Roles"
+          title="Vai trò vận hành"
           value={String(operationsRoleCount)}
-          subtitle="Internal execution and oversight roles"
+          subtitle="Vai trò nội bộ phục vụ vận hành và giám sát"
         />
       </div>
 
       <SearchToolbar
-        placeholder="Search by role name, code, or responsibility"
+        placeholder="Tìm theo tên vai trò, mã vai trò hoặc phạm vi trách nhiệm"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         filterSummaryItems={[
-          `${filteredRoles.length} roles shown`,
-          `${roles.filter((role) => role.status === "Active").length} active`,
+          `Hiển thị ${filteredRoles.length} vai trò`,
+          `${roles.filter((role) => role.status === "Active").length} đang hoạt động`,
         ]}
       />
 
       <SectionCard
-        title="Where Role Assignment Happens"
-        description="This screen defines the role catalog only. User-by-user role assignment is handled in the Users Management screen."
+        title="Nơi gán vai trò thực tế"
+        description="Màn này chỉ định nghĩa danh mục vai trò. Việc gán vai trò cho từng tài khoản marketplace được thực hiện ở màn Người dùng."
         actions={
           <Link className="roles-management-link" to="/users">
-            Open Users Management
+            Mở màn Người dùng
           </Link>
         }
       >
         <p className="roles-management-note">
-          Use this page to maintain the meaning of each business role. Open the
-          Users screen when you need to assign one of these roles to a specific
-          marketplace account.
+          Dùng màn này để chuẩn hóa ý nghĩa, phạm vi và trách nhiệm của từng vai
+          trò nghiệp vụ. Khi cần gán một vai trò cho tài khoản cụ thể, hãy sang
+          màn Người dùng.
         </p>
       </SectionCard>
 
       <SectionCard
-        title="Role Catalog"
-        description="Review the business meaning, access scope, and key responsibilities of each system role described in the project report."
+        title="Danh mục vai trò"
+        description="Rà soát ý nghĩa nghiệp vụ, phạm vi truy cập và trách nhiệm chính của từng vai trò theo tài liệu báo cáo dự án."
       >
         {isLoading ? (
           <div className="roles-management-empty-state">
-            Loading marketplace role catalog...
+            Đang tải danh mục vai trò nghiệp vụ...
           </div>
         ) : error ? (
-          <EmptyState title="Unable to load roles" description={error} />
+          <EmptyState title="Không thể tải vai trò" description={error} />
         ) : filteredRoles.length === 0 ? (
           <EmptyState
-            title="No roles found"
-            description="No role matches the current search keyword."
+            title="Không tìm thấy vai trò"
+            description="Không có vai trò nào khớp với từ khóa tìm kiếm hiện tại."
           />
         ) : (
           <div className="roles-management-list">
@@ -260,30 +262,38 @@ function RolesManagementPage() {
                   </div>
 
                   <button type="button" onClick={() => openEditModal(role)}>
-                    Edit Definition
+                    Sửa định nghĩa
                   </button>
                 </div>
 
                 <div className="roles-management-card__meta">
                   <StatusBadge label={role.code} variant="type" />
                   <StatusBadge
-                    label={role.audienceGroup}
+                    label={
+                      role.audienceGroup === "Marketplace"
+                        ? "Marketplace"
+                        : "Vận hành"
+                    }
                     variant="processing"
                   />
                   <StatusBadge
-                    label={role.status}
+                    label={
+                      role.status === "Active"
+                        ? "Đang hoạt động"
+                        : "Ngừng hoạt động"
+                    }
                     variant={role.status === "Active" ? "active" : "locked"}
                   />
                 </div>
 
                 <div className="roles-management-card__details">
                   <div>
-                    <label>Access Scope</label>
+                    <label>Phạm vi truy cập</label>
                     <p>{role.accessScope}</p>
                   </div>
 
                   <div>
-                    <label>Main Responsibilities</label>
+                    <label>Trách nhiệm chính</label>
                     <ul>
                       {role.responsibilities.map((item) => (
                         <li key={item}>{item}</li>
@@ -292,7 +302,7 @@ function RolesManagementPage() {
                   </div>
 
                   <div>
-                    <label>Typical Capabilities</label>
+                    <label>Năng lực tiêu biểu</label>
                     <ul>
                       {role.capabilities.map((item) => (
                         <li key={item}>{item}</li>
@@ -307,14 +317,14 @@ function RolesManagementPage() {
       </SectionCard>
 
       <SectionCard
-        title="Role Capability Matrix"
-        description="Use this matrix to verify which business role should handle each core function in the system."
+        title="Ma trận năng lực vai trò"
+        description="Đối chiếu nhanh vai trò nào nên đảm nhiệm từng chức năng cốt lõi trong GreenMarket."
       >
         <div className="roles-capability-table-wrapper">
           <table className="roles-capability-table">
             <thead>
               <tr>
-                <th>Capability</th>
+                <th>Chức năng</th>
                 {roles.map((role) => (
                   <th key={role.code}>{role.title}</th>
                 ))}
@@ -326,7 +336,7 @@ function RolesManagementPage() {
                   <td>{row.capability}</td>
                   {roles.map((role) => (
                     <td key={`${row.capability}-${role.code}`}>
-                      {row.roles.includes(role.code) ? "Yes" : "-"}
+                      {row.roles.includes(role.code) ? "Có" : "-"}
                     </td>
                   ))}
                 </tr>
@@ -338,21 +348,25 @@ function RolesManagementPage() {
 
       <BaseModal
         isOpen={selectedRole !== null && formData !== null}
-        title={selectedRole ? `Edit ${selectedRole.title}` : "Edit Role"}
-        description="Update the role description used by the admin-maintained marketplace role catalog."
+        title={
+          selectedRole
+            ? `Chỉnh sửa vai trò ${selectedRole.title}`
+            : "Chỉnh sửa vai trò"
+        }
+        description="Cập nhật mô tả, phạm vi và trách nhiệm cho vai trò nghiệp vụ trong danh mục do admin quản lý."
         onClose={closeModal}
         maxWidth="720px"
       >
         {selectedRole && formData ? (
           <form className="roles-management-form" onSubmit={handleSaveRole}>
             <div className="roles-management-form__field">
-              <label>Role Code</label>
+              <label>Mã vai trò</label>
               <input type="text" value={selectedRole.code} disabled />
             </div>
 
             <div className="roles-management-form__grid">
               <div className="roles-management-form__field">
-                <label htmlFor="role-title">Role Title</label>
+                <label htmlFor="role-title">Tên vai trò</label>
                 <input
                   id="role-title"
                   name="title"
@@ -363,7 +377,7 @@ function RolesManagementPage() {
               </div>
 
               <div className="roles-management-form__field">
-                <label htmlFor="role-audience-group">Audience Group</label>
+                <label htmlFor="role-audience-group">Nhóm vai trò</label>
                 <select
                   id="role-audience-group"
                   name="audienceGroup"
@@ -371,13 +385,13 @@ function RolesManagementPage() {
                   onChange={handleFormChange}
                 >
                   <option value="Marketplace">Marketplace</option>
-                  <option value="Operations">Operations</option>
+                  <option value="Operations">Vận hành</option>
                 </select>
               </div>
             </div>
 
             <div className="roles-management-form__field">
-              <label htmlFor="role-scope">Access Scope</label>
+              <label htmlFor="role-scope">Phạm vi truy cập</label>
               <textarea
                 id="role-scope"
                 name="accessScope"
@@ -388,7 +402,7 @@ function RolesManagementPage() {
             </div>
 
             <div className="roles-management-form__field">
-              <label htmlFor="role-summary">Role Summary</label>
+              <label htmlFor="role-summary">Mô tả vai trò</label>
               <textarea
                 id="role-summary"
                 name="summary"
@@ -400,7 +414,7 @@ function RolesManagementPage() {
 
             <div className="roles-management-form__grid">
               <div className="roles-management-form__field">
-                <label htmlFor="role-responsibilities">Responsibilities</label>
+                <label htmlFor="role-responsibilities">Trách nhiệm</label>
                 <textarea
                   id="role-responsibilities"
                   name="responsibilitiesText"
@@ -411,7 +425,7 @@ function RolesManagementPage() {
               </div>
 
               <div className="roles-management-form__field">
-                <label htmlFor="role-capabilities">Capabilities</label>
+                <label htmlFor="role-capabilities">Năng lực</label>
                 <textarea
                   id="role-capabilities"
                   name="capabilitiesText"
@@ -424,9 +438,9 @@ function RolesManagementPage() {
 
             <div className="roles-management-form__actions">
               <button type="button" onClick={closeModal}>
-                Cancel
+                Hủy
               </button>
-              <button type="submit">Save Role Definition</button>
+              <button type="submit">Lưu định nghĩa vai trò</button>
             </div>
           </form>
         ) : null}
