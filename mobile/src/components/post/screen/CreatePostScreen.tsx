@@ -113,7 +113,7 @@ const CreatePostLayout = () => {
                     required
                 />
 
-                {!isShop && shop?.shopLocation ? (
+                {isShop && shop?.shopLocation ? (
                     <View style={styles.locationBlock}>
                         <Input
                             label="Location"

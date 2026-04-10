@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import LoginScreen from "../components/auth/LoginScreen";
-import MainStack from "../MainStack";
+import UserNavigator from "./UserNavigator";
 import ModeratorNavigator from "../moderator/navigation/ModeratorNavigator";
 import SuccessToast from "../components/SuccessToast";
 
@@ -10,7 +10,7 @@ import SuccessToast from "../components/SuccessToast";
 const ROLE_ROUTES = {
   "ROLE_MODERATOR": "ModeratorNavigator",
   "ROLE_SHOP_OWNER": "ShopOwnerNavigator", // For future shop owner panel
-  // Default/null role goes to MainStack
+  // Default/null role goes to UserNavigator
 };
 
 const AuthStack = () => {
@@ -55,7 +55,7 @@ const AuthStack = () => {
       case "ROLE_MODERATOR":
         return <ModeratorNavigator />;
       default:
-        return <MainStack />;
+        return <UserNavigator />;
     }
   };
 
