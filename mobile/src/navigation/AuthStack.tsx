@@ -3,10 +3,18 @@ import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import LoginScreen from "../components/auth/LoginScreen";
 import MainStack from "../MainStack";
+import ModeratorNavigator from "../moderator/navigation/ModeratorNavigator";
 import SuccessToast from "../components/SuccessToast";
 
+// Define role-based routes mapping
+const ROLE_ROUTES = {
+  "ROLE_MODERATOR": "ModeratorNavigator",
+  "ROLE_SHOP_OWNER": "ShopOwnerNavigator", // For future shop owner panel
+  // Default/null role goes to MainStack
+};
+
 const AuthStack = () => {
-  const { token, loading } = useAuth();
+  const { token, user, loading } = useAuth();
   const [showSuccess, setShowSuccess] = useState(false);
 
   const handleLoginSuccess = () => {
@@ -39,9 +47,21 @@ const AuthStack = () => {
     );
   }
 
+  // Determine which navigator to show based on user role
+  const renderStack = () => {
+    const businessRoleCode = user?.businessRoleCode;
+
+    switch (businessRoleCode) {
+      case "ROLE_MODERATOR":
+        return <ModeratorNavigator />;
+      default:
+        return <MainStack />;
+    }
+  };
+
   return (
     <>
-      <MainStack />
+      {renderStack()}
       {showSuccess && <SuccessToast onHide={handleToastHide} />}
     </>
   );
