@@ -110,7 +110,7 @@ const PhoneManagementModal: React.FC<PhoneManagementModalProps> = ({ visible, on
                         {phones.length === 0 ? (
                             <Text style={styles.emptyText}>No secondary phones added yet.</Text>
                         ) : (
-                            phones.map((p, idx) => (
+                            phones.map((p: string, idx: number) => (
                                 <View key={idx} style={styles.phoneItem}>
                                     <View style={styles.phoneInfo}>
                                         <ShieldCheck size={18} color="#10b981" style={{marginRight: 8}}/>

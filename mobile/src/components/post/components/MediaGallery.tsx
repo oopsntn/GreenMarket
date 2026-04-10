@@ -32,11 +32,11 @@ export const MediaGallery = ({ media }: { media: any[] }) => {
                 )}
             />
             {/* Pagination Dots */}
-            <div style={styles.pagination}>
+            <View style={styles.pagination}>
                 {media.map((_, i) => (
                     <View key={i} style={[styles.dot, activeIndex === i && styles.activeDot]} />
                 ))}
-            </div>
+            </View>
         </View>
     );
 };

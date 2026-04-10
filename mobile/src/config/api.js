@@ -1,6 +1,6 @@
 /**
  * API Configuration
- * 
+ *
  * ANDROID EMULATOR: http://10.0.2.2:5000/api
  * ANDROID DEVICE: http://<YOUR_MACHINE_IP>:5000/api (VD: http://192.168.1.100:5000/api)
  */
@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Lấy IP từ environment variable (.env.local)
 const getApiBaseUrl = () => {
-  const API_IP = process.env.EXPO_PUBLIC_API_IP || "172.24.240.1";
+  const API_IP = process.env.EXPO_PUBLIC_API_IP || "192.168.1.3";
   const API_PORT = process.env.EXPO_PUBLIC_API_PORT || "5000";
 
   const DEV_API_URL = `http://10.0.2.2:${API_PORT}/api`; // Android Emulator
@@ -18,13 +18,20 @@ const getApiBaseUrl = () => {
 
   // Thay đổi return tùy theo loại device kiểm tra:
   // return DEV_API_URL; // Dùng cho Android Emulator
-  return DEVICE_API_URL; // Dùng cho Physical Device 
+  return DEVICE_API_URL; // Dùng cho Physical Device
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 
+// Extract base server URL (without /api) for images and uploads
+export const getServerBaseUrl = () => {
+  // Extract base URL from API_BASE_URL (remove /api suffix)
+  return API_BASE_URL.replace(/\/api\s*$/, '');
+};
+
 // Debug log to verify the URL being used
 console.log("[API Config] Using API URL:", API_BASE_URL);
+console.log("[API Config] Server Base URL:", getServerBaseUrl());
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

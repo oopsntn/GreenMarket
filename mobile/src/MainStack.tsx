@@ -3,6 +3,7 @@ import React from 'react'
 import ShoDetailScreen from './components/shop/screen/ShopDetailScreen'
 import MyPostLayout from './components/post/screen/MyPostLayout'
 import ProfileScreen from './components/profile/screen/ProfileScreen'
+import HomeScreen from './components/Home/screen/HomeScreen'
 
 import RegisterShopScreen from './components/shop/screen/RegisterShop'
 import EditShopScreen from './components/shop/screen/EditShopScreen'
@@ -19,10 +20,11 @@ const Stack = createNativeStackNavigator()
 
 const MainStack = () => {
     return (
-        <Stack.Navigator initialRouteName='Profile'
+        <Stack.Navigator initialRouteName='Home'
             screenOptions={{
                 headerShown: false, // Vì bạn đã dùng MobileLayout có header riêng rồi
             }}>
+            <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
 
             <Stack.Screen name="RegisterShop" component={RegisterShopScreen} />
