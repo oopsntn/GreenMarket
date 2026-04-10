@@ -15,6 +15,7 @@ import PaymentResult from './pages/PaymentResult';
 import SavedPosts from './pages/SavedPosts';
 import Splash from './pages/Splash';
 import OwnerDashboard from './pages/OwnerDashboard';
+import Packages from './pages/Packages';
 import ScrollToTop from './components/ScrollToTop';
 
 /**
@@ -33,6 +34,7 @@ const AppContent: React.FC = () => {
         <Route path="/home" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/shops" element={<ShopList />} />
+        <Route path="/packages" element={<Packages />} />
         <Route path="/payment-result" element={<PaymentResult />} />
         <Route path="/detail/:slug" element={<PostDetail />} />
         <Route path="/shop/:id" element={<ShopDetail />} />

@@ -1,39 +1,98 @@
-import 'dotenv/config';
-import { and, eq, ne } from 'drizzle-orm';
-import { db } from '../config/db';
-import { placementSlots, promotionPackages } from '../models/schema';
+import "dotenv/config";
+import { and, desc, eq, gt, isNull, lte, ne, or } from "drizzle-orm";
+import { db } from "../config/db";
+import {
+  placementSlots,
+  promotionPackagePrices,
+  promotionPackages,
+} from "../models/schema";
 
-const SLOT_CODE = 'BOOST_PRIORITY';
+const SLOT_CODE = "BOOST_PRIORITY";
 
 const PACKAGES = [
   {
-    title: 'Goi Ngay',
+    title: "Goi Ngay",
     durationDays: 1,
-    price: '19000.00',
+    price: "19000.00",
     maxPosts: 1,
     displayQuota: 5000,
-    description: 'Gói ưu tiên hiển thị theo ngày.'
+    description: "Gói ưu tiên hiển thị theo ngày.",
   },
   {
-    title: 'Goi Tuan',
+    title: "Goi Tuan",
     durationDays: 7,
-    price: '99000.00',
+    price: "99000.00",
     maxPosts: 2,
     displayQuota: 35000,
-    description: 'Gói ưu tiên hiển thị theo tuần.'
+    description: "Gói ưu tiên hiển thị theo tuần.",
   },
   {
-    title: 'Goi Thang',
+    title: "Goi Thang",
     durationDays: 30,
-    price: '299000.00',
+    price: "299000.00",
     maxPosts: 5,
     displayQuota: 150000,
-    description: 'Gói ưu tiên hiển thị theo tháng.'
+    description: "Gói ưu tiên hiển thị theo tháng.",
   },
 ];
 
+const getCurrentPrice = async (packageId: number) => {
+  const now = new Date();
+  const [row] = await db
+    .select({
+      priceId: promotionPackagePrices.priceId,
+      price: promotionPackagePrices.price,
+    })
+    .from(promotionPackagePrices)
+    .where(
+      and(
+        eq(promotionPackagePrices.packageId, packageId),
+        lte(promotionPackagePrices.effectiveFrom, now),
+        or(
+          isNull(promotionPackagePrices.effectiveTo),
+          gt(promotionPackagePrices.effectiveTo, now),
+        ),
+      ),
+    )
+    .orderBy(
+      desc(promotionPackagePrices.effectiveFrom),
+      desc(promotionPackagePrices.priceId),
+    )
+    .limit(1);
+
+  return row ?? null;
+};
+
+const syncCurrentPrice = async (packageId: number, nextPrice: string) => {
+  const now = new Date();
+  const currentPrice = await getCurrentPrice(packageId);
+  if (currentPrice?.price === nextPrice) {
+    return;
+  }
+
+  await db
+    .update(promotionPackagePrices)
+    .set({ effectiveTo: now })
+    .where(
+      and(
+        eq(promotionPackagePrices.packageId, packageId),
+        isNull(promotionPackagePrices.effectiveTo),
+      ),
+    );
+
+  await db.insert(promotionPackagePrices).values({
+    packageId,
+    price: nextPrice,
+    effectiveFrom: now,
+    effectiveTo: null,
+    note: "Catalog sync update",
+    createdBy: null,
+    createdAt: now,
+  });
+};
+
 const run = async () => {
-  console.log('--- Syncing promotion catalog to Day/Week/Month model ---');
+  console.log("--- Syncing promotion catalog to Day/Week/Month model ---");
 
   const [existingSlot] = await db
     .select()
@@ -46,10 +105,10 @@ const run = async () => {
     const [updatedSlot] = await db
       .update(placementSlots)
       .set({
-        placementSlotTitle: 'Uu tien hien thi',
+        placementSlotTitle: "Uu tien hien thi",
         placementSlotCapacity: 100,
         placementSlotPublished: true,
-        placementSlotRules: { priority: 1, audience: 'all-seller' },
+        placementSlotRules: { priority: 1, audience: "all-seller" },
       })
       .where(eq(placementSlots.placementSlotId, existingSlot.placementSlotId))
       .returning();
@@ -61,10 +120,10 @@ const run = async () => {
       .insert(placementSlots)
       .values({
         placementSlotCode: SLOT_CODE,
-        placementSlotTitle: 'Uu tien hien thi',
+        placementSlotTitle: "Uu tien hien thi",
         placementSlotCapacity: 100,
         placementSlotPublished: true,
-        placementSlotRules: { priority: 1, audience: 'all-seller' },
+        placementSlotRules: { priority: 1, audience: "all-seller" },
       })
       .returning();
 
@@ -79,8 +138,8 @@ const run = async () => {
       .where(
         and(
           eq(promotionPackages.promotionPackageSlotId, slotId),
-          eq(promotionPackages.promotionPackageTitle, pkg.title)
-        )
+          eq(promotionPackages.promotionPackageTitle, pkg.title),
+        ),
       )
       .limit(1);
 
@@ -89,27 +148,35 @@ const run = async () => {
         .update(promotionPackages)
         .set({
           promotionPackageDurationDays: pkg.durationDays,
-          promotionPackagePrice: pkg.price,
           promotionPackageMaxPosts: pkg.maxPosts,
           promotionPackageDisplayQuota: pkg.displayQuota,
           promotionPackageDescription: pkg.description,
           promotionPackagePublished: true,
         })
-        .where(eq(promotionPackages.promotionPackageId, existingPackage.promotionPackageId));
+        .where(
+          eq(
+            promotionPackages.promotionPackageId,
+            existingPackage.promotionPackageId,
+          ),
+        );
 
+      await syncCurrentPrice(existingPackage.promotionPackageId, pkg.price);
       console.log(`Updated package: ${pkg.title}`);
     } else {
-      await db.insert(promotionPackages).values({
-        promotionPackageSlotId: slotId,
-        promotionPackageTitle: pkg.title,
-        promotionPackageDurationDays: pkg.durationDays,
-        promotionPackagePrice: pkg.price,
-        promotionPackageMaxPosts: pkg.maxPosts,
-        promotionPackageDisplayQuota: pkg.displayQuota,
-        promotionPackageDescription: pkg.description,
-        promotionPackagePublished: true,
-      });
+      const [createdPackage] = await db
+        .insert(promotionPackages)
+        .values({
+          promotionPackageSlotId: slotId,
+          promotionPackageTitle: pkg.title,
+          promotionPackageDurationDays: pkg.durationDays,
+          promotionPackageMaxPosts: pkg.maxPosts,
+          promotionPackageDisplayQuota: pkg.displayQuota,
+          promotionPackageDescription: pkg.description,
+          promotionPackagePublished: true,
+        })
+        .returning();
 
+      await syncCurrentPrice(createdPackage.promotionPackageId, pkg.price);
       console.log(`Created package: ${pkg.title}`);
     }
   }
@@ -123,17 +190,17 @@ const run = async () => {
     .update(placementSlots)
     .set({
       placementSlotPublished: false,
-      placementSlotRules: { priority: 1, audience: 'all-seller' },
-      placementSlotTitle: 'Uu tien hien thi',
+      placementSlotRules: { priority: 1, audience: "all-seller" },
+      placementSlotTitle: "Uu tien hien thi",
     })
     .where(ne(placementSlots.placementSlotId, slotId));
 
-  console.log('Catalog synced. Only Day/Week/Month packages remain published.');
+  console.log("Catalog synced. Only Day/Week/Month packages remain published.");
 };
 
 run()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error('Seed promotion catalog failed:', error);
+    console.error("Seed promotion catalog failed:", error);
     process.exit(1);
   });

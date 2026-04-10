@@ -29,6 +29,7 @@ import userPostRoutes from "./routes/user/post.route.ts";
 import userReportRoutes from "./routes/user/report.route.ts";
 import userCategoryRoutes from "./routes/user/category.route.ts";
 import userProfileRoutes from "./routes/user/profile.route.ts";
+import userCollaboratorRoutes from "./routes/user/collaborator.route.ts";
 import uploadRoutes from "./routes/upload.route.ts";
 import userPromotionRoutes from "./routes/user/promotion.route.ts";
 import userPaymentRoutes from "./routes/user/payment.route.ts";
@@ -102,6 +103,7 @@ app.use("/api/profile", userProfileRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/promotions", userPromotionRoutes);
 app.use("/api/payment", userPaymentRoutes);
+app.use("/api/collaborator", userCollaboratorRoutes);
 
 // Static files for uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));

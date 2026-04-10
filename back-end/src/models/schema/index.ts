@@ -128,6 +128,37 @@ export {
   type PaymentTxn,
   type NewPaymentTxn,
 } from "./payment-txn.ts";
+export {
+  userPostingPlans,
+  type UserPostingPlan,
+  type NewUserPostingPlan,
+} from "./user-posting-plans.ts";
+export {
+  postingFeeLedger,
+  type PostingFeeLedger,
+  type NewPostingFeeLedger,
+} from "./posting-fee-ledger.ts";
+export { jobs, type Job, type NewJob } from "./jobs.ts";
+export {
+  jobDeliverables,
+  type JobDeliverable,
+  type NewJobDeliverable,
+} from "./job-deliverables.ts";
+export {
+  jobContactRequests,
+  type JobContactRequest,
+  type NewJobContactRequest,
+} from "./job-contact-requests.ts";
+export {
+  earningEntries,
+  type EarningEntry,
+  type NewEarningEntry,
+} from "./earning-entries.ts";
+export {
+  payoutRequests,
+  type PayoutRequest,
+  type NewPayoutRequest,
+} from "./payout-requests.ts";
 
 // Analytics
 export {

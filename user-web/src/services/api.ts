@@ -27,6 +27,9 @@ export const getPublicPosts = (params?: any) => api.get('/posts/browse', { param
 export const getPostDetail = (slug: string) => api.get(`/posts/detail/${slug}`);
 export const recordContactClick = (postId: number | string) => api.post(`/posts/${postId}/contact-click`);
 export const getMyPosts = () => api.get('/posts/my-posts');
+export const getPostingPolicy = () => api.get('/posts/posting-policy');
+export const activatePersonalMonthlyPlanMock = (durationDays = 30) =>
+  api.post('/posts/personal-plan/mock-activate', { durationDays });
 export const updateUserPost = (postId: number, data: any) => api.patch(`/posts/${postId}`, data);
 export const deleteUserPost = (postId: number) => api.delete(`/posts/${postId}`);
 
@@ -132,7 +135,27 @@ export const getCategories = () => api.get('/categories');
 export const getCategoryAttributes = (categoryId: number) => api.get(`/categories/${categoryId}/attributes`);
 
 // --- Promotions & Payments ---
-export const getPromotionPackages = () => api.get('/promotions/packages');
+export interface PromotionPackageItem {
+  promotionPackageId: number;
+  promotionPackageTitle: string | null;
+  promotionPackageDurationDays: number | null;
+  promotionPackagePrice: string | number | null;
+  promotionPackageMaxPosts?: number | null;
+  promotionPackageDisplayQuota?: number | null;
+  promotionPackageDescription?: string | null;
+  slotCode?: string | null;
+  slotTitle?: string | null;
+}
+
+export interface EligiblePromotionPackagesResponse {
+  audience: 'garden_owner' | 'individual';
+  reason?: string;
+  packages: PromotionPackageItem[];
+}
+
+export const getPromotionPackages = () =>
+  api.get<EligiblePromotionPackagesResponse>('/promotions/packages/eligible');
+export const getPublicPromotionPackages = () => api.get('/promotions/packages');
 export const getPromotionPackageDetail = (id: number | string) => api.get(`/promotions/packages/${id}`);
 export const buyPromotionPackage = (postId: number | string, packageId: number | string) => 
   api.post('/payment/buy-package', { postId, packageId });
