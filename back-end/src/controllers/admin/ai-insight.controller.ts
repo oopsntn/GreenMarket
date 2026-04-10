@@ -16,9 +16,11 @@ import { geminiAIService } from "../../services/geminiAI.service.ts";
 const AI_INSIGHT_SETTINGS_KEY = "admin_ai_insight_settings";
 
 type AIInsightFocus =
+  | "Executive Summary"
   | "Placement Performance"
   | "Promotion Watchlist"
   | "Revenue Signals"
+  | "Customer Spending"
   | "Operator Load";
 
 type AIInsightSettings = {
@@ -39,6 +41,24 @@ type InsightMeta = {
   model?: string;
 };
 
+type AIInsightOverviewCard = {
+  title: string;
+  value: string;
+  subtitle: string;
+};
+
+type AIInsightOverviewBullet = {
+  title: string;
+  body: string;
+  tone: "neutral" | "positive" | "warning";
+};
+
+type AIInsightOverviewRow = {
+  label: string;
+  value: string;
+  detail: string;
+};
+
 const defaultSettings: AIInsightSettings = {
   autoDailySummary: true,
   anomalyAlerts: true,
@@ -49,11 +69,48 @@ const defaultSettings: AIInsightSettings = {
   reviewMode: "Required",
 };
 
+const isRecommendationTone = (
+  value: string,
+): value is AIInsightSettings["recommendationTone"] =>
+  ["Conservative", "Balanced", "Aggressive"].includes(value);
+
+const isReviewMode = (
+  value: string,
+): value is AIInsightSettings["reviewMode"] =>
+  ["Required", "Optional"].includes(value);
+
 const normalizeSettings = (
   payload: Partial<AIInsightSettings>,
 ): AIInsightSettings => ({
-  ...defaultSettings,
-  ...payload,
+  autoDailySummary:
+    typeof payload.autoDailySummary === "boolean"
+      ? payload.autoDailySummary
+      : defaultSettings.autoDailySummary,
+  anomalyAlerts:
+    typeof payload.anomalyAlerts === "boolean"
+      ? payload.anomalyAlerts
+      : defaultSettings.anomalyAlerts,
+  operatorDigest:
+    typeof payload.operatorDigest === "boolean"
+      ? payload.operatorDigest
+      : defaultSettings.operatorDigest,
+  recommendationTone:
+    typeof payload.recommendationTone === "string" &&
+    isRecommendationTone(payload.recommendationTone)
+      ? payload.recommendationTone
+      : defaultSettings.recommendationTone,
+  confidenceThreshold: clampThreshold(
+    parseNumber(payload.confidenceThreshold ?? defaultSettings.confidenceThreshold),
+  ),
+  promptVersion:
+    typeof payload.promptVersion === "string" &&
+    payload.promptVersion.trim().length > 0
+      ? payload.promptVersion.trim().slice(0, 60)
+      : defaultSettings.promptVersion,
+  reviewMode:
+    typeof payload.reviewMode === "string" && isReviewMode(payload.reviewMode)
+      ? payload.reviewMode
+      : defaultSettings.reviewMode,
 });
 
 const formatDateTime = (value: Date | string | null | undefined) => {
@@ -79,7 +136,197 @@ const resolveMomentum = (score: number) => {
 };
 
 const getGeneratedBy = (req: AuthRequest) =>
-  req.user?.email || req.user?.mobile || "System Administrator";
+  req.user?.email || req.user?.mobile || "Quản trị hệ thống";
+
+const clampThreshold = (value: number) =>
+  Math.min(100, Math.max(1, Math.round(value)));
+
+const formatCurrency = (value: number) => `${value.toLocaleString("en-US")} VND`;
+
+const getFocusLabelVi = (focus: AIInsightFocus) => {
+  switch (focus) {
+    case "Executive Summary":
+      return "Tổng quan điều hành";
+    case "Placement Performance":
+      return "Hiệu quả vị trí hiển thị";
+    case "Promotion Watchlist":
+      return "Danh sách khuyến mãi cần theo dõi";
+    case "Revenue Signals":
+      return "Tín hiệu doanh thu";
+    case "Customer Spending":
+      return "Chi tiêu khách hàng";
+    case "Operator Load":
+      return "Khối lượng vận hành";
+    default:
+      return focus;
+  }
+};
+
+const getStatusLabelVi = (status: InsightMeta["status"] | undefined) => {
+  switch (status) {
+    case "Generated":
+      return "Đã tạo";
+    case "Needs Review":
+      return "Cần duyệt";
+    case "Archived":
+      return "Lưu trữ";
+    default:
+      return "Đã tạo";
+  }
+};
+
+const buildInsightOverview = async (
+  fromDate?: string,
+  toDate?: string,
+  focus: AIInsightFocus = "Executive Summary",
+) => {
+  const [dashboard, analytics, revenue, customerSpending, boostedPosts] =
+    await Promise.all([
+      adminReportingService.getDashboardOverview(fromDate, toDate),
+      adminReportingService.getAnalyticsSummary(fromDate, toDate),
+      adminReportingService.getRevenueSummary(fromDate, toDate),
+      adminReportingService.getCustomerSpendingSummary(fromDate, toDate),
+      adminPromotionService.getBoostedPosts(),
+    ]);
+
+  const topPlacement = analytics.topPlacements[0];
+  const topRevenuePackage = revenue.rows[0];
+  const topCustomer = customerSpending.rows[0];
+  const riskyCampaign = boostedPosts.find(
+    (item) =>
+      item.deliveryHealth === "At Risk" || item.reviewStatus === "Escalated",
+  );
+  const pendingCampaigns = boostedPosts.filter(
+    (item) => item.status === "Scheduled" || item.reviewStatus === "Needs Update",
+  ).length;
+
+  const summaryCards: AIInsightOverviewCard[] = [
+    {
+      title: "Doanh thu kinh doanh",
+      value: revenue.summaryCards[0]?.value ?? "0 VND",
+      subtitle:
+        revenue.summaryCards[0]?.note ?? "Không có đơn thanh toán thành công trong kỳ",
+    },
+    {
+      title: "Đơn hàng hoàn tất",
+      value: revenue.summaryCards[1]?.value ?? "0",
+      subtitle:
+        revenue.summaryCards[1]?.note ??
+        "Không có gói khuyến mãi thanh toán thành công trong kỳ",
+    },
+    {
+      title: "CTR lưu lượng",
+      value: analytics.kpiCards[1]?.value ?? "0.0%",
+      subtitle:
+        analytics.kpiCards[1]?.change ??
+        "Không có lưu lượng boosted đáng kể trong kỳ",
+    },
+    {
+      title: "Khách chi tiêu cao nhất",
+      value: customerSpending.summaryCards[3]?.value ?? "0 VND",
+      subtitle:
+        customerSpending.summaryCards[3]?.note ??
+        "Không có khách phát sinh chi tiêu thành công trong kỳ đã chọn",
+    },
+  ];
+
+  const highlightCards: AIInsightOverviewBullet[] = [
+    {
+      title: "Tín hiệu chính",
+      body: topPlacement
+        ? `${topPlacement.slot} đang dẫn đầu với ${topPlacement.impressions} lượt hiển thị, ${topPlacement.ctr} CTR và ${topPlacement.revenue} doanh thu trong giai đoạn đã chọn.`
+        : "Chưa có placement slot nào tạo ra hiệu quả đo lường rõ rệt trong giai đoạn này.",
+      tone: topPlacement ? "positive" : "neutral",
+    },
+    {
+      title: "Rủi ro cần theo dõi",
+      body: riskyCampaign
+        ? `${riskyCampaign.campaignCode} đang bị gắn cờ ${riskyCampaign.deliveryHealth} với trạng thái duyệt ${riskyCampaign.reviewStatus}. Cần kiểm tra chất lượng phân phối, độ phù hợp của slot và việc theo dõi của đội vận hành trước khi hiệu quả tiếp tục giảm.`
+        : "Hiện chưa có boosted campaign nào bị đánh dấu rủi ro hoặc cần escalated.",
+      tone: riskyCampaign ? "warning" : "neutral",
+    },
+    {
+      title: "Cơ hội tăng trưởng",
+      body: topRevenuePackage
+        ? `${topRevenuePackage.packageName} trên slot ${topRevenuePackage.slot} hiện là gói tạo doanh thu tốt nhất. Nên dùng gói này làm mốc tham chiếu cho giá bán và chiến lược upsell ở chu kỳ tiếp theo.`
+        : "Chưa có dữ liệu thanh toán đủ để đánh giá hiệu quả kiếm tiền của các gói. Cần hoàn tất thêm các luồng mua gói để mở phân tích doanh thu.",
+      tone: topRevenuePackage ? "positive" : "neutral",
+    },
+  ];
+
+  const recommendations: AIInsightOverviewBullet[] = [
+    {
+      title: "Hành động ngay",
+      body:
+        focus === "Promotion Watchlist"
+          ? `Hãy rà soát ${pendingCampaigns} promotion đang chờ lịch hoặc cần follow-up để xác định rõ việc chậm khởi chạy đến từ khâu chuẩn bị phân phối, chất lượng nội dung hay xử lý của đội vận hành.`
+          : topPlacement
+            ? `Tiếp tục giữ ngân sách và ưu tiên vận hành cho ${topPlacement.slot}, đồng thời chọn thêm một slot hiệu quả thấp hơn để thử cải thiện ở vòng tiếp theo.`
+            : "Cần ổn định dữ liệu lõi trước để AI có thể so sánh hiệu quả placement một cách đáng tin cậy.",
+      tone: "warning",
+    },
+    {
+      title: "Thử nghiệm tiếp theo",
+      body: topRevenuePackage
+        ? `Nên tạo một thử nghiệm gói mới xoay quanh slot ${topRevenuePackage.slot}, dùng mức giá hiệu quả nhất của ${topRevenuePackage.packageName} làm mốc khởi đầu.`
+        : "Cần có ít nhất một giao dịch gói thành công trong kỳ để AI có thể benchmark và đề xuất giá bán hợp lý.",
+      tone: "positive",
+    },
+    {
+      title: "Góc nhìn điều hành",
+      body: topCustomer
+        ? `${topCustomer.customerName} hiện là khách có mức chi tiêu cao nhất. Cần theo dõi xem doanh thu có đang phụ thuộc quá nhiều vào một nhóm nhỏ khách hàng hay không.`
+        : "Hiện chưa thể đánh giá mức độ tập trung chi tiêu của khách hàng vì chưa có đủ giao dịch thành công trong kỳ.",
+      tone: "neutral",
+    },
+  ];
+
+  const topRows: AIInsightOverviewRow[] = [
+    {
+      label: "Placement slot nổi bật",
+      value: topPlacement?.slot ?? "Không có dữ liệu",
+      detail: topPlacement
+        ? `${topPlacement.impressions} lượt hiển thị / ${topPlacement.ctr} CTR`
+        : "Không có lưu lượng được ghi nhận trong kỳ",
+    },
+    {
+      label: "Gói doanh thu cao nhất",
+      value: topRevenuePackage?.packageName ?? "Không có dữ liệu",
+      detail: topRevenuePackage
+        ? `${topRevenuePackage.revenue} / ${topRevenuePackage.orders} đơn`
+        : "Không có gói nào phát sinh thanh toán trong kỳ",
+    },
+    {
+      label: "Khách hàng nổi bật",
+      value: topCustomer?.customerName ?? "Không có dữ liệu",
+      detail: topCustomer
+        ? `${topCustomer.totalSpent} / ${topCustomer.totalOrders} đơn`
+        : "Không có bản ghi chi tiêu khách hàng trong kỳ",
+    },
+    {
+      label: "Báo cáo chờ xử lý",
+      value:
+        dashboard.statCards.find((card) => card.title === "Pending Reports")
+          ?.value ?? "0",
+      detail: dashboard.summary.description,
+    },
+  ];
+
+  return {
+    summaryCards,
+    highlightCards,
+    recommendations,
+    topRows,
+    availableFocuses: [
+      "Executive Summary",
+      "Placement Performance",
+      "Promotion Watchlist",
+      "Revenue Signals",
+      "Customer Spending",
+      "Operator Load",
+    ] as AIInsightFocus[],
+  };
+};
 
 const getFallbackRequestedBy = async () => {
   const [user] = await db
@@ -92,25 +339,44 @@ const getFallbackRequestedBy = async () => {
 };
 
 const buildAdminInsightPrompt = async ({
+  fromDate,
+  toDate,
   focus,
   tone,
+  confidenceThreshold,
+  reviewMode,
+  autoDailySummary,
+  anomalyAlerts,
+  operatorDigest,
   generatedAt,
 }: {
+  fromDate?: string;
+  toDate?: string;
   focus: AIInsightFocus;
   tone: string;
+  confidenceThreshold: number;
+  reviewMode: string;
+  autoDailySummary: boolean;
+  anomalyAlerts: boolean;
+  operatorDigest: boolean;
   generatedAt: string;
 }) => {
   const [analytics, revenue, customerSpending, boostedPosts] =
     await Promise.all([
-      adminReportingService.getAnalyticsSummary(),
-      adminReportingService.getRevenueSummary(),
-      adminReportingService.getCustomerSpendingSummary(),
+      adminReportingService.getAnalyticsSummary(fromDate, toDate),
+      adminReportingService.getRevenueSummary(fromDate, toDate),
+      adminReportingService.getCustomerSpendingSummary(fromDate, toDate),
       adminPromotionService.getBoostedPosts(),
     ]);
 
   const compactContext = {
     requestedFocus: focus,
     requestedTone: tone,
+    confidenceThreshold,
+    reviewMode,
+    autoDailySummary,
+    anomalyAlerts,
+    operatorDigest,
     selectedWindow: generatedAt,
     analytics: {
       kpis: analytics.kpiCards,
@@ -147,19 +413,51 @@ const buildAdminInsightPrompt = async ({
   };
 
   return [
-    "You are the GreenMarket admin analytics assistant.",
-    "Use only the provided JSON context. Do not invent database facts.",
-    "Write for an admin dashboard operator. Keep it practical and concise.",
-    "Return plain text with 4 short sections:",
-    "1. Main finding",
-    "2. Risk or anomaly",
-    "3. Recommended admin action",
-    "4. Data points used",
-    `Tone: ${tone}.`,
-    `Focus: ${focus}.`,
+    "Bạn là trợ lý chiến lược dành cho admin GreenMarket.",
+    "Chỉ được sử dụng dữ liệu có trong JSON context. Không được tự bịa thêm số liệu hay nhận định không có căn cứ.",
+    "Viết cho admin đang cần một bản đánh giá kinh doanh ngắn gọn nhưng thực dụng cho GreenMarket.",
+    "Nội dung phải dễ quét, có tính vận hành và ưu tiên dùng đúng số liệu trong context.",
+    "Trả về plain text với 5 phần ngắn:",
+    "1. Tóm tắt điều hành",
+    "2. Tín hiệu doanh số và doanh thu",
+    "3. Rủi ro và điểm bất thường",
+    "4. Hành động tăng trưởng được đề xuất",
+    "5. Dữ liệu chính đã sử dụng",
+    `Giọng điệu: ${tone}.`,
+    `Trọng tâm: ${getFocusLabelVi(focus)}.`,
+    `Khoảng thời gian đã chọn: ${generatedAt}.`,
+    `Ngưỡng tin cậy: ${confidenceThreshold}/100. Chỉ đánh dấu là tín hiệu mạnh khi dữ liệu hỗ trợ thực sự vượt ngưỡng này.`,
+    `Chế độ duyệt: ${reviewMode}.`,
+    `Tự động tạo tóm tắt hằng ngày: ${autoDailySummary}.`,
+    `Cảnh báo bất thường: ${anomalyAlerts}.`,
+    `Tóm tắt cho vận hành: ${operatorDigest}.`,
     "JSON context:",
     JSON.stringify(compactContext, null, 2),
   ].join("\n");
+};
+
+export const getAIInsightOverview = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { fromDate, toDate, focus = "Executive Summary" } = req.query as {
+      fromDate?: string;
+      toDate?: string;
+      focus?: AIInsightFocus;
+    };
+
+    const overview = await buildInsightOverview(fromDate, toDate, focus);
+    res.json(overview);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Không thể tải tổng quan AI.",
+    });
+  }
 };
 
 export const getAIInsightSettings = async (
@@ -175,7 +473,12 @@ export const getAIInsightSettings = async (
     res.json(normalizeSettings(settings));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Không thể tải cấu hình AI Insights.",
+    });
   }
 };
 
@@ -194,7 +497,12 @@ export const updateAIInsightSettings = async (
     res.json(savedSettings);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Không thể lưu cấu hình AI Insights.",
+    });
   }
 };
 
@@ -236,9 +544,9 @@ export const getAITrendRows = async (
             momentum: resolveMomentum(score),
             recommendation:
               score >= 85
-                ? "Keep this placement prominent in the promotion mix."
-                : "Review delivery and revenue contribution before scaling.",
-            owner: "Analytics Service",
+                ? "Tiếp tục giữ placement này ở vị trí ưu tiên trong cơ cấu khuyến mãi."
+                : "Cần rà lại hiệu quả phân phối và đóng góp doanh thu trước khi mở rộng thêm.",
+            owner: "Dịch vụ Analytics",
             updatedAt: formatDateTime(item.updatedAt),
           };
         }),
@@ -270,16 +578,21 @@ export const getAITrendRows = async (
           score,
           momentum: resolveMomentum(score),
           recommendation: revenueRows.has(item.slot)
-            ? "Monitor paid performance and keep capacity aligned with demand."
-            : "This slot has traffic but no paid revenue in the selected range.",
-          owner: "Admin Reporting API",
+            ? "Tiếp tục theo dõi hiệu quả trả phí và giữ capacity phù hợp với nhu cầu."
+            : "Slot này có lưu lượng nhưng chưa tạo doanh thu trả phí trong giai đoạn đã chọn.",
+          owner: "API báo cáo admin",
           updatedAt: toDate || new Date().toISOString().slice(0, 10),
         };
       }),
     );
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Không thể tạo dữ liệu điểm xu hướng AI.",
+    });
   }
 };
 
@@ -303,10 +616,10 @@ export const getAIInsightHistory = async (
 
         return {
           id: row.aiInsightId,
-          title: meta?.title || `${focus} summary`,
+          title: meta?.title || `Tóm tắt ${getFocusLabelVi(focus)}`,
           focus,
-          summary: row.aiInsightOutputText || "No generated summary text.",
-          generatedBy: meta?.generatedBy || row.aiInsightProvider || "System",
+          summary: row.aiInsightOutputText || "Không có nội dung tóm tắt được tạo.",
+          generatedBy: meta?.generatedBy || row.aiInsightProvider || "Hệ thống",
           generatedAt: formatDateTime(row.aiInsightCreatedAt),
           status: meta?.status || "Generated",
         };
@@ -314,7 +627,12 @@ export const getAIInsightHistory = async (
     );
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Không thể tải lịch sử AI Insights.",
+    });
   }
 };
 
@@ -324,10 +642,24 @@ export const generateAIInsight = async (
 ): Promise<void> => {
   try {
     const {
+      fromDate,
+      toDate,
+      confidenceThreshold = 78,
+      reviewMode = "Required",
+      autoDailySummary = true,
+      anomalyAlerts = true,
+      operatorDigest = false,
       focus = "Placement Performance",
       tone = "Balanced",
       generatedAt = new Date().toISOString().slice(0, 10),
     } = req.body as {
+      fromDate?: string;
+      toDate?: string;
+      confidenceThreshold?: number;
+      reviewMode?: AIInsightSettings["reviewMode"];
+      autoDailySummary?: boolean;
+      anomalyAlerts?: boolean;
+      operatorDigest?: boolean;
       focus?: AIInsightFocus;
       tone?: string;
       generatedAt?: string;
@@ -335,13 +667,20 @@ export const generateAIInsight = async (
     const requestedBy = await getFallbackRequestedBy();
 
     if (!requestedBy) {
-      res.status(400).json({ error: "At least one user is required to store an insight." });
+      res.status(400).json({ error: "Cần có ít nhất một người dùng để lưu insight." });
       return;
     }
 
     const prompt = await buildAdminInsightPrompt({
+      fromDate,
+      toDate,
       focus,
       tone,
+      confidenceThreshold: clampThreshold(confidenceThreshold),
+      reviewMode,
+      autoDailySummary,
+      anomalyAlerts,
+      operatorDigest,
       generatedAt,
     });
     const generated = await geminiAIService.generateAdminInsight(prompt);
@@ -352,11 +691,18 @@ export const generateAIInsight = async (
         aiInsightRequestedBy: requestedBy,
         aiInsightScope: focus,
         aiInsightInputSnapshot: {
-          title: `${focus} summary`,
+          title: `Tóm tắt ${getFocusLabelVi(focus)}`,
           focus,
           status: "Needs Review",
           generatedBy: getGeneratedBy(req),
           generatedAt,
+          fromDate,
+          toDate,
+          confidenceThreshold: clampThreshold(confidenceThreshold),
+          reviewMode,
+          autoDailySummary,
+          anomalyAlerts,
+          operatorDigest,
           model: generated.model,
         },
         aiInsightOutputText: generated.text,
@@ -367,7 +713,7 @@ export const generateAIInsight = async (
 
     res.status(201).json({
       id: createdInsight.aiInsightId,
-      title: `${focus} summary`,
+      title: `Tóm tắt ${getFocusLabelVi(focus)}`,
       focus,
       summary: createdInsight.aiInsightOutputText || generated.text,
       generatedBy: `Gemini ${generated.model}`,
@@ -376,6 +722,11 @@ export const generateAIInsight = async (
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Không thể tạo bản phân tích AI.",
+    });
   }
 };

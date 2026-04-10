@@ -1,6 +1,7 @@
 const GEMINI_API_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_TIMEOUT_MS = 20000;
 
 type GeminiPart = {
   text?: string;
@@ -15,6 +16,21 @@ type GeminiGenerateContentResponse = {
   error?: {
     message?: string;
   };
+};
+
+const readGeminiError = async (response: Response) => {
+  const rawText = await response.text();
+
+  if (!rawText.trim()) {
+    return "Gemini returned an empty error response.";
+  }
+
+  try {
+    const payload = JSON.parse(rawText) as GeminiGenerateContentResponse;
+    return payload.error?.message || rawText;
+  } catch {
+    return rawText;
+  }
 };
 
 const getGeminiConfig = () => {
@@ -51,41 +67,60 @@ export const geminiAIService = {
     model: string;
   }> {
     const { apiKey, model } = getGeminiConfig();
-    const response = await fetch(
-      `${GEMINI_API_BASE_URL}/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.3,
-            topP: 0.9,
-            maxOutputTokens: 900,
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(
+        `${GEMINI_API_BASE_URL}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        }),
-      },
-    );
-
-    const payload = (await response.json()) as GeminiGenerateContentResponse;
-
-    if (!response.ok) {
-      throw new Error(
-        payload.error?.message || "Gemini insight generation failed.",
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.3,
+              topP: 0.9,
+              maxOutputTokens: 900,
+            },
+          }),
+          signal: controller.signal,
+        },
       );
-    }
 
-    return {
-      text: extractText(payload),
-      model,
-    };
+      if (!response.ok) {
+        const errorMessage = await readGeminiError(response);
+        throw new Error(errorMessage || "Gemini insight generation failed.");
+      }
+
+      const payload =
+        (await response.json()) as GeminiGenerateContentResponse;
+
+      return {
+        text: extractText(payload),
+        model,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new Error(
+          "Gemini request timed out. Check internet access or try again.",
+        );
+      }
+
+      if (error instanceof Error) {
+        throw new Error(`Gemini request failed: ${error.message}`);
+      }
+
+      throw new Error("Gemini request failed.");
+    } finally {
+      clearTimeout(timeout);
+    }
   },
 };

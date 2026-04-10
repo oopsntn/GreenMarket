@@ -3,6 +3,7 @@ import { requireRoles } from "../../middlewares/authMiddleware.ts";
 import {
   generateAIInsight,
   getAIInsightHistory,
+  getAIInsightOverview,
   getAIInsightSettings,
   getAITrendRows,
   updateAIInsightSettings,
@@ -19,6 +20,11 @@ router.put(
   "/settings",
   requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
   updateAIInsightSettings,
+);
+router.get(
+  "/overview",
+  requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
+  getAIInsightOverview,
 );
 router.get(
   "/trends",
