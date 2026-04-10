@@ -15,6 +15,7 @@ import PublicShopDetailScreen from './components/shop/screen/PublicShopDetailScr
 import PostDetailScreen from './components/post/screen/PostDetailScreen'
 import SavedPostsScreen from './components/post/screen/SavedPostsScreen'
 import PromotePostScreen from './components/payment/screen/PromotePostScreen'
+import CollaboratorNavigator from './collaborator/navigation/CollaboratorNavigator'
 
 const Stack = createNativeStackNavigator()
 
@@ -40,7 +41,7 @@ const MainStack = () => {
             <Stack.Screen name="SavedPosts" component={SavedPostsScreen} />
             <Stack.Screen name="CreateReport" component={CreateReportScreen} />
             <Stack.Screen name="PromotePost" component={PromotePostScreen} />
-
+            <Stack.Screen name="CollaboratorRoot" component={CollaboratorNavigator} />
         </Stack.Navigator>
     )
 }

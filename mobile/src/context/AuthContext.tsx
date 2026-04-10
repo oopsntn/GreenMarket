@@ -11,6 +11,8 @@ interface User {
     userLocation?: string | null;
     userBio?: string | null;
     userRegisteredAt?: string | null;
+    businessRoleCode?: string | null;
+    businessRoleTitle?: string | null;
 }
 
 interface Shop {

@@ -22,7 +22,8 @@ import {
     Calendar,
     Trophy,
     LayoutDashboard,
-    Heart
+    Heart,
+    Briefcase
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileAvatar } from '../component/ProfileAvatar';
@@ -45,6 +46,7 @@ const ProfileScreen = () => {
     } = useProfile();
     const { logout, user, updateUser, refreshShop, shop } = useAuth();
     const navigation = useNavigation<any>();
+    const isCollaborator = user?.businessRoleCode === 'COLLABORATOR';
 
     const handleUpdateAvatar = async (localUri: string) => {
         try {
@@ -181,6 +183,29 @@ const ProfileScreen = () => {
                             <Heart color="#dc2626" size={20} />
                             <Text style={styles.savedPostsText}>Saved Posts</Text>
                         </TouchableOpacity>
+
+                        {isCollaborator && (
+                            <TouchableOpacity
+                                style={[styles.beShopBanner, { marginBottom: 16, borderColor: '#dcfce7' }]}
+                                onPress={() => navigation.navigate('CollaboratorRoot')}
+                            >
+                                <LinearGradient
+                                    colors={['#fff', '#f0fdf4']}
+                                    style={styles.beShopGrad}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                >
+                                    <View style={[styles.beShopIcon, { backgroundColor: '#f0fdf4' }]}>
+                                        <Briefcase color="#16a34a" size={24} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[styles.beShopTitle, { color: '#166534' }]}>Collaborator Mode</Text>
+                                        <Text style={[styles.beShopDesc, { color: '#15803d' }]}>Manage tasks and track your earnings</Text>
+                                    </View>
+                                    <ChevronRight color="#16a34a" size={20} />
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        )}
 
                         {isShop ? (
                             <View style={styles.shopActionsGrid}>
