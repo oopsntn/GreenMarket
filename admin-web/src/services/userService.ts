@@ -11,7 +11,7 @@ import type {
   UserSummaryCard,
 } from "../types/user";
 
-const DEFAULT_ADMIN_NAME = "System Administrator";
+const DEFAULT_ADMIN_NAME = "Quản trị viên hệ thống";
 
 const padNumber = (value: number) => String(value).padStart(2, "0");
 
@@ -93,8 +93,8 @@ const buildRoleAssignmentHistory = (
       assignedBy: DEFAULT_ADMIN_NAME,
       assignedAt,
       note: user.businessRoleTitle
-        ? `Current marketplace role is ${user.businessRoleTitle}.`
-        : "No marketplace role assigned yet.",
+        ? `Vai trò nghiệp vụ hiện tại là ${user.businessRoleTitle}.`
+        : "Chưa có vai trò nghiệp vụ marketplace.",
     },
   ];
 };
@@ -114,9 +114,10 @@ const buildDerivedActivityLogs = (
   if (registrationDateTime) {
     logs.push({
       id: 1,
-      action: "Account Registered",
-      detail: "User account was registered in the marketplace.",
-      performedBy: "System",
+      action: "Tạo tài khoản",
+      detail:
+        "Tài khoản người dùng đã được tạo trong hệ thống marketplace.",
+      performedBy: "Hệ thống",
       performedAt: registrationDateTime,
     });
   }
@@ -124,8 +125,8 @@ const buildDerivedActivityLogs = (
   if (lastLoginDateTime) {
     logs.push({
       id: logs.length + 1,
-      action: "Last Login Recorded",
-      detail: "Latest successful user sign-in captured by the system.",
+      action: "Ghi nhận đăng nhập",
+      detail: "Hệ thống đã ghi nhận lần đăng nhập thành công gần nhất.",
       performedBy: displayName,
       performedAt: lastLoginDateTime,
     });
@@ -134,8 +135,8 @@ const buildDerivedActivityLogs = (
   if (user.businessRoleTitle && updatedDateTime) {
     logs.push({
       id: logs.length + 1,
-      action: "Role Assigned",
-      detail: `Assigned marketplace role: ${user.businessRoleTitle}.`,
+      action: "Gán vai trò",
+      detail: `Đã gán vai trò nghiệp vụ: ${user.businessRoleTitle}.`,
       performedBy: DEFAULT_ADMIN_NAME,
       performedAt: updatedDateTime,
     });
@@ -146,20 +147,15 @@ const buildDerivedActivityLogs = (
     updatedDateTime !== registrationDateTime &&
     updatedDateTime !== lastLoginDateTime
   ) {
+    const isLocked = mapApiStatusToUiStatus(user.userStatus) === "Locked";
+
     logs.push({
       id: logs.length + 1,
-      action:
-        mapApiStatusToUiStatus(user.userStatus) === "Locked"
-          ? "Account Locked"
-          : "Profile Updated",
-      detail:
-        mapApiStatusToUiStatus(user.userStatus) === "Locked"
-          ? "Account access is currently blocked by admin action."
-          : "User profile information was updated.",
-      performedBy:
-        mapApiStatusToUiStatus(user.userStatus) === "Locked"
-          ? DEFAULT_ADMIN_NAME
-          : "System Sync",
+      action: isLocked ? "Khóa tài khoản" : "Cập nhật hồ sơ",
+      detail: isLocked
+        ? "Tài khoản hiện đang bị khóa bởi thao tác của admin."
+        : "Thông tin hồ sơ người dùng đã được cập nhật.",
+      performedBy: isLocked ? DEFAULT_ADMIN_NAME : "Đồng bộ hệ thống",
       performedAt: updatedDateTime,
     });
   }
@@ -172,20 +168,20 @@ const mapApiUserToUi = (item: ApiUserResponse): User => {
     item.userDisplayName?.trim() ||
     item.userEmail?.trim() ||
     item.userMobile?.trim() ||
-    `User #${item.userId}`;
+    `Người dùng #${item.userId}`;
 
   const role = mapBusinessRoleCodeToUiRole(item.businessRoleCode);
 
   return {
     id: item.userId,
     fullName,
-    phone: item.userMobile?.trim() || "N/A",
-    email: item.userEmail?.trim() || "No email",
+    phone: item.userMobile?.trim() || "Không có số điện thoại",
+    email: item.userEmail?.trim() || "Chưa có email",
     role,
     status: mapApiStatusToUiStatus(item.userStatus),
     joinedAt: formatDate(item.userRegisteredAt || item.userCreatedAt),
-    location: item.userLocation?.trim() || "No location",
-    lastLoginAt: formatDateTime(item.userLastLoginAt) || "No login yet",
+    location: item.userLocation?.trim() || "Chưa có địa chỉ",
+    lastLoginAt: formatDateTime(item.userLastLoginAt) || "Chưa đăng nhập",
     roleAssignments: buildRoleAssignmentHistory(item, role),
     activityLogs: buildDerivedActivityLogs(item, fullName),
     businessRoleId: item.businessRoleId ?? item.userBusinessRoleId ?? null,
@@ -196,12 +192,9 @@ const mapApiUserToUi = (item: ApiUserResponse): User => {
 
 export const userService = {
   async fetchUsers(): Promise<User[]> {
-    const data = await apiClient.request<ApiUserResponse[]>(
-      "/api/admin/users",
-      {
-        defaultErrorMessage: "Unable to load users.",
-      },
-    );
+    const data = await apiClient.request<ApiUserResponse[]>("/api/admin/users", {
+      defaultErrorMessage: "Không thể tải danh sách người dùng.",
+    });
 
     return data.map(mapApiUserToUi);
   },
@@ -210,7 +203,7 @@ export const userService = {
     const data = await apiClient.request<ApiUserResponse>(
       `/api/admin/users/${userId}`,
       {
-        defaultErrorMessage: "Unable to load user details.",
+        defaultErrorMessage: "Không thể tải chi tiết người dùng.",
       },
     );
 
@@ -226,7 +219,7 @@ export const userService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update user status.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái người dùng.",
         body: JSON.stringify({
           status: status === "Locked" ? "blocked" : "active",
         }),
@@ -253,7 +246,7 @@ export const userService = {
     const matchedRole = roles.find((role) => role.code === businessRoleCode);
 
     if (!matchedRole) {
-      throw new Error(`Marketplace role ${nextRole} is not available.`);
+      throw new Error(`Vai trò ${nextRole} hiện không khả dụng để gán.`);
     }
 
     const data = await apiClient.request<ApiUserResponse>(
@@ -261,7 +254,8 @@ export const userService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to assign marketplace role.",
+        defaultErrorMessage:
+          "Không thể gán vai trò nghiệp vụ cho người dùng.",
         body: JSON.stringify({
           businessRoleId: matchedRole.id,
         }),
@@ -280,24 +274,24 @@ export const userService = {
 
     return [
       {
-        title: "Total Accounts",
+        title: "Tổng tài khoản",
         value: String(users.length),
-        subtitle: "All marketplace accounts",
+        subtitle: "Toàn bộ tài khoản marketplace",
       },
       {
-        title: "Active Accounts",
+        title: "Tài khoản hoạt động",
         value: String(activeCount),
-        subtitle: "Currently able to access",
+        subtitle: "Hiện đang có thể truy cập",
       },
       {
-        title: "Locked Accounts",
+        title: "Tài khoản bị khóa",
         value: String(lockedCount),
-        subtitle: "Restricted by admin action",
+        subtitle: "Đang bị hạn chế bởi admin",
       },
       {
-        title: "Assigned Roles",
+        title: "Đã gán vai trò",
         value: String(roleAssignedCount),
-        subtitle: "Marketplace roles linked from backend",
+        subtitle: "Vai trò nghiệp vụ đã đồng bộ từ backend",
       },
     ];
   },
