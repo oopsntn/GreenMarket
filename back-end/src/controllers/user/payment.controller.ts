@@ -106,6 +106,75 @@ export const createPayment = async (
   }
 };
 
+export const createShopRegistrationPayment = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      sendPaymentError(res, 401, "UNAUTHORIZED", "Unauthorized");
+      return;
+    }
+
+    const { paymentUrl } = await paymentService.createShopPaymentIntent(userId);
+    res.json({ paymentUrl });
+  } catch (error) {
+    if (error instanceof PaymentServiceError) {
+      sendPaymentError(res, error.statusCode, error.code, error.message, error.details);
+      return;
+    }
+    console.error("Create Shop Payment Error:", error);
+    sendPaymentError(res, 500, "PAYMENT_INTENT_FAILED", "MoMo payment initiation failed.");
+  }
+};
+
+export const createShopVipPayment = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      sendPaymentError(res, 401, "UNAUTHORIZED", "Unauthorized");
+      return;
+    }
+
+    const { paymentUrl } = await paymentService.createShopVipPaymentIntent(userId);
+    res.json({ paymentUrl });
+  } catch (error) {
+    if (error instanceof PaymentServiceError) {
+      sendPaymentError(res, error.statusCode, error.code, error.message, error.details);
+      return;
+    }
+    console.error("Create Shop VIP Payment Error:", error);
+    sendPaymentError(res, 500, "PAYMENT_INTENT_FAILED", "MoMo payment initiation failed.");
+  }
+};
+
+export const createPersonalPackagePayment = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      sendPaymentError(res, 401, "UNAUTHORIZED", "Unauthorized");
+      return;
+    }
+
+    const { paymentUrl } = await paymentService.createPersonalPackagePaymentIntent(userId);
+    res.json({ paymentUrl });
+  } catch (error) {
+    if (error instanceof PaymentServiceError) {
+      sendPaymentError(res, error.statusCode, error.code, error.message, error.details);
+      return;
+    }
+    console.error("Create Personal Package Payment Error:", error);
+    sendPaymentError(res, 500, "PAYMENT_INTENT_FAILED", "MoMo payment initiation failed.");
+  }
+};
+
 export const momoReturn = async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await paymentService.processMoMoCallback(

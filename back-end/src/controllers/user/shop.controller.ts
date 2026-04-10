@@ -69,12 +69,17 @@ const serializeShopGalleryImages = (images: unknown): string | null => {
     return normalized.join(SHOP_GALLERY_DELIMITER);
 };
 
-const withShopGallery = <T extends { shopCoverUrl?: string | null }>(shop: T) => {
+const isShopVipActive = (shop: { shopVipExpiresAt?: Date | null }): boolean => {
+    return shop.shopVipExpiresAt instanceof Date && shop.shopVipExpiresAt > new Date();
+};
+
+const withShopGallery = <T extends { shopCoverUrl?: string | null; shopVipExpiresAt?: Date | null }>(shop: T) => {
     const shopGalleryImages = parseShopGalleryImages(shop.shopCoverUrl);
     return {
         ...shop,
         shopGalleryImages,
         shopPreviewImageUrl: shopGalleryImages[0] || null,
+        shopIsVipActive: isShopVipActive(shop),
     };
 };
 
@@ -389,13 +394,17 @@ export const getAllShops = async (req: Request, res: Response): Promise<void> =>
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 20;
         const offset = (page - 1) * limit;
+        const now = new Date();
 
         const data = await db.select()
             .from(shops)
             .where(eq(shops.shopStatus, "active"))
             .limit(limit)
             .offset(offset)
-            .orderBy(sql`${shops.shopCreatedAt} DESC`);
+            .orderBy(
+                sql`CASE WHEN ${shops.shopVipExpiresAt} IS NOT NULL AND ${shops.shopVipExpiresAt} > ${now} THEN 0 ELSE 1 END`,
+                sql`${shops.shopCreatedAt} DESC`,
+            );
 
         const countResult = await db.select({ count: sql<number>`count(*)` })
             .from(shops)

@@ -7,34 +7,36 @@ import {
   promotionPackages,
 } from "../models/schema";
 
-const SLOT_CODE = "BOOST_PRIORITY";
+const BOOST_SLOT_CODE = "BOOST_POST";
+const SHOP_VIP_SLOT_CODE = "SHOP_VIP";
 
-const PACKAGES = [
+const BOOST_PACKAGES = [
   {
-    title: "Goi Ngay",
-    durationDays: 1,
-    price: "19000.00",
-    maxPosts: 1,
-    displayQuota: 5000,
-    description: "Gói ưu tiên hiển thị theo ngày.",
-  },
-  {
-    title: "Goi Tuan",
+    title: "Goi day bai theo tuan",
     durationDays: 7,
     price: "99000.00",
-    maxPosts: 2,
+    maxPosts: 1,
     displayQuota: 35000,
-    description: "Gói ưu tiên hiển thị theo tuần.",
+    description: "Uu tien hien thi bai dang trong 7 ngay cho nha vuon active.",
   },
   {
-    title: "Goi Thang",
+    title: "Goi day bai theo thang",
     durationDays: 30,
     price: "299000.00",
-    maxPosts: 5,
-    displayQuota: 150000,
-    description: "Gói ưu tiên hiển thị theo tháng.",
+    maxPosts: 1,
+    displayQuota: 180000,
+    description: "Uu tien hien thi bai dang trong 30 ngay cho nha vuon active.",
   },
 ];
+
+const SHOP_VIP_PACKAGE = {
+  title: "Nha vuon VIP (3 thang)",
+  durationDays: 90,
+  price: "499000.00",
+  maxPosts: 1,
+  displayQuota: 0,
+  description: "Uu tien shop len dau danh sach nha vuon va hien thi vien VIP trong 90 ngay.",
+};
 
 const getCurrentPrice = async (packageId: number) => {
   const now = new Date();
@@ -91,111 +93,177 @@ const syncCurrentPrice = async (packageId: number, nextPrice: string) => {
   });
 };
 
-const run = async () => {
-  console.log("--- Syncing promotion catalog to Day/Week/Month model ---");
-
+const upsertSlot = async (params: {
+  code: string;
+  title: string;
+  capacity: number;
+  rules: Record<string, unknown>;
+}) => {
   const [existingSlot] = await db
     .select()
     .from(placementSlots)
-    .where(eq(placementSlots.placementSlotCode, SLOT_CODE))
+    .where(eq(placementSlots.placementSlotCode, params.code))
     .limit(1);
 
-  let slotId: number;
   if (existingSlot) {
-    const [updatedSlot] = await db
+    const [updated] = await db
       .update(placementSlots)
       .set({
-        placementSlotTitle: "Uu tien hien thi",
-        placementSlotCapacity: 100,
+        placementSlotTitle: params.title,
+        placementSlotCapacity: params.capacity,
+        placementSlotRules: params.rules,
         placementSlotPublished: true,
-        placementSlotRules: { priority: 1, audience: "all-seller" },
       })
       .where(eq(placementSlots.placementSlotId, existingSlot.placementSlotId))
       .returning();
 
-    slotId = updatedSlot.placementSlotId;
-    console.log(`Updated slot ${SLOT_CODE} (id=${slotId})`);
-  } else {
-    const [newSlot] = await db
-      .insert(placementSlots)
-      .values({
-        placementSlotCode: SLOT_CODE,
-        placementSlotTitle: "Uu tien hien thi",
-        placementSlotCapacity: 100,
-        placementSlotPublished: true,
-        placementSlotRules: { priority: 1, audience: "all-seller" },
+    return updated.placementSlotId;
+  }
+
+  const [created] = await db
+    .insert(placementSlots)
+    .values({
+      placementSlotCode: params.code,
+      placementSlotTitle: params.title,
+      placementSlotCapacity: params.capacity,
+      placementSlotRules: params.rules,
+      placementSlotPublished: true,
+    })
+    .returning();
+
+  return created.placementSlotId;
+};
+
+const upsertPackage = async (params: {
+  slotId: number;
+  title: string;
+  durationDays: number;
+  maxPosts: number;
+  displayQuota: number;
+  description: string;
+  price: string;
+}) => {
+  const [existingPackage] = await db
+    .select()
+    .from(promotionPackages)
+    .where(
+      and(
+        eq(promotionPackages.promotionPackageSlotId, params.slotId),
+        eq(promotionPackages.promotionPackageTitle, params.title),
+      ),
+    )
+    .limit(1);
+
+  if (existingPackage) {
+    await db
+      .update(promotionPackages)
+      .set({
+        promotionPackageDurationDays: params.durationDays,
+        promotionPackageMaxPosts: params.maxPosts,
+        promotionPackageDisplayQuota: params.displayQuota,
+        promotionPackageDescription: params.description,
+        promotionPackagePublished: true,
       })
-      .returning();
-
-    slotId = newSlot.placementSlotId;
-    console.log(`Created slot ${SLOT_CODE} (id=${slotId})`);
-  }
-
-  for (const pkg of PACKAGES) {
-    const [existingPackage] = await db
-      .select()
-      .from(promotionPackages)
       .where(
-        and(
-          eq(promotionPackages.promotionPackageSlotId, slotId),
-          eq(promotionPackages.promotionPackageTitle, pkg.title),
+        eq(
+          promotionPackages.promotionPackageId,
+          existingPackage.promotionPackageId,
         ),
-      )
-      .limit(1);
+      );
 
-    if (existingPackage) {
-      await db
-        .update(promotionPackages)
-        .set({
-          promotionPackageDurationDays: pkg.durationDays,
-          promotionPackageMaxPosts: pkg.maxPosts,
-          promotionPackageDisplayQuota: pkg.displayQuota,
-          promotionPackageDescription: pkg.description,
-          promotionPackagePublished: true,
-        })
-        .where(
-          eq(
-            promotionPackages.promotionPackageId,
-            existingPackage.promotionPackageId,
-          ),
-        );
-
-      await syncCurrentPrice(existingPackage.promotionPackageId, pkg.price);
-      console.log(`Updated package: ${pkg.title}`);
-    } else {
-      const [createdPackage] = await db
-        .insert(promotionPackages)
-        .values({
-          promotionPackageSlotId: slotId,
-          promotionPackageTitle: pkg.title,
-          promotionPackageDurationDays: pkg.durationDays,
-          promotionPackageMaxPosts: pkg.maxPosts,
-          promotionPackageDisplayQuota: pkg.displayQuota,
-          promotionPackageDescription: pkg.description,
-          promotionPackagePublished: true,
-        })
-        .returning();
-
-      await syncCurrentPrice(createdPackage.promotionPackageId, pkg.price);
-      console.log(`Created package: ${pkg.title}`);
-    }
+    await syncCurrentPrice(existingPackage.promotionPackageId, params.price);
+    return existingPackage.promotionPackageId;
   }
+
+  const [createdPackage] = await db
+    .insert(promotionPackages)
+    .values({
+      promotionPackageSlotId: params.slotId,
+      promotionPackageTitle: params.title,
+      promotionPackageDurationDays: params.durationDays,
+      promotionPackageMaxPosts: params.maxPosts,
+      promotionPackageDisplayQuota: params.displayQuota,
+      promotionPackageDescription: params.description,
+      promotionPackagePublished: true,
+    })
+    .returning();
+
+  await syncCurrentPrice(createdPackage.promotionPackageId, params.price);
+  return createdPackage.promotionPackageId;
+};
+
+const run = async () => {
+  console.log("--- Syncing promotion catalog to boost-week/boost-month + shop-vip ---");
+
+  const boostSlotId = await upsertSlot({
+    code: BOOST_SLOT_CODE,
+    title: "Day bai nha vuon",
+    capacity: 200,
+    rules: { max_per_shop: 20, min_post_status: "approved", audience: "active-shop" },
+  });
+
+  const shopVipSlotId = await upsertSlot({
+    code: SHOP_VIP_SLOT_CODE,
+    title: "Nha vuon VIP",
+    capacity: 500,
+    rules: { max_per_shop: 1, display_priority: "top", audience: "active-shop" },
+  });
 
   await db
     .update(promotionPackages)
     .set({ promotionPackagePublished: false })
-    .where(ne(promotionPackages.promotionPackageSlotId, slotId));
+    .where(
+      or(
+        eq(promotionPackages.promotionPackageSlotId, boostSlotId),
+        eq(promotionPackages.promotionPackageSlotId, shopVipSlotId),
+      ),
+    );
+
+  for (const pkg of BOOST_PACKAGES) {
+    await upsertPackage({
+      slotId: boostSlotId,
+      title: pkg.title,
+      durationDays: pkg.durationDays,
+      maxPosts: pkg.maxPosts,
+      displayQuota: pkg.displayQuota,
+      description: pkg.description,
+      price: pkg.price,
+    });
+    console.log(`Upserted boost package: ${pkg.title}`);
+  }
+
+  await upsertPackage({
+    slotId: shopVipSlotId,
+    title: SHOP_VIP_PACKAGE.title,
+    durationDays: SHOP_VIP_PACKAGE.durationDays,
+    maxPosts: SHOP_VIP_PACKAGE.maxPosts,
+    displayQuota: SHOP_VIP_PACKAGE.displayQuota,
+    description: SHOP_VIP_PACKAGE.description,
+    price: SHOP_VIP_PACKAGE.price,
+  });
+  console.log(`Upserted VIP package: ${SHOP_VIP_PACKAGE.title}`);
+
+  await db
+    .update(promotionPackages)
+    .set({ promotionPackagePublished: false })
+    .where(
+      and(
+        ne(promotionPackages.promotionPackageSlotId, boostSlotId),
+        ne(promotionPackages.promotionPackageSlotId, shopVipSlotId),
+      ),
+    );
 
   await db
     .update(placementSlots)
-    .set({
-      placementSlotPublished: false,
-      placementSlotRules: { priority: 1, audience: "all-seller" },
-      placementSlotTitle: "Uu tien hien thi",
-    })
-    .where(ne(placementSlots.placementSlotId, slotId));
+    .set({ placementSlotPublished: false })
+    .where(
+      and(
+        ne(placementSlots.placementSlotId, boostSlotId),
+        ne(placementSlots.placementSlotId, shopVipSlotId),
+      ),
+    );
 
-  console.log("Catalog synced. Only Day/Week/Month packages remain published.");
+  console.log("Catalog synced. Published slots: BOOST_POST + SHOP_VIP.");
 };
 
 run()
@@ -204,3 +272,4 @@ run()
     console.error("Seed promotion catalog failed:", error);
     process.exit(1);
   });
+

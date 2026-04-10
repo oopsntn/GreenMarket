@@ -38,7 +38,7 @@ type RawPromotionRow = {
 type LatestPaymentRecord = {
     paymentTxnId: number;
     paymentTxnPostId: number | null;
-    paymentTxnPackageId: number;
+    paymentTxnPackageId: number | null;
     paymentTxnAmount: string | null;
     paymentTxnProvider: string | null;
     paymentTxnProviderTxnId: string | null;

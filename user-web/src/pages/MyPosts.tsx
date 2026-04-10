@@ -52,7 +52,7 @@ const MyPosts: React.FC = () => {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'personal' | 'shop'>(shop ? 'shop' : 'personal');
+  const [activeTab, setActiveTab] = useState<'personal' | 'shop'>(shop?.shopStatus === 'active' ? 'shop' : 'personal');
   const [shopStats, setShopStats] = useState<{ totalShopViews: number } | null>(null);
 
   // Edit Modal State
@@ -71,9 +71,9 @@ const MyPosts: React.FC = () => {
   const [boostBuyingId, setBoostBuyingId] = useState<number | null>(null);
 
   useEffect(() => {
-    // Default to shop tab if user has a shop
-    setActiveTab(shop ? 'shop' : 'personal');
-  }, [shop]);
+    // Default to shop tab if user has an ACTIVE shop
+    setActiveTab(shop?.shopStatus === 'active' ? 'shop' : 'personal');
+  }, [shop?.shopStatus]);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -362,8 +362,14 @@ const MyPosts: React.FC = () => {
   };
 
   const filteredPosts = posts.filter(post => {
-    if (shop) return true;
-    if (activeTab === 'shop') return post.postShopId !== null;
+    // If user doesn't have an active shop, only show personal posts
+    if (shop?.shopStatus !== 'active') {
+      return post.postShopId === null;
+    }
+    // If shop is active, filter based on active tab
+    if (activeTab === 'shop') {
+      return post.postShopId !== null;
+    }
     return post.postShopId === null;
   });
 
@@ -407,27 +413,8 @@ const MyPosts: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs Control: Only show if user does NOT have a shop */}
-      {!shop && (
-        <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 mb-12 w-fit shadow-sm">
-          <button
-            onClick={() => setActiveTab('personal')}
-            className={`px-8 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'personal' ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-200/50' : 'text-slate-500 hover:text-slate-900'}`}
-          >
-            Tin cá nhân
-          </button>
-          <button
-            onClick={() => setActiveTab('shop')}
-            className={`px-8 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${activeTab === 'shop' ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-200/50' : 'text-slate-500 hover:text-slate-900'}`}
-          >
-            Mở nhà vườn
-            <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></div>
-          </button>
-        </div>
-      )}
-
       <div className="space-y-12">
-        {activeTab === 'shop' && (
+        {activeTab === 'shop' && shop?.shopStatus === 'active' && (
           <>
             {shop ? (
               <div className="bg-white p-8 rounded-4xl border border-emerald-100 shadow-2xl shadow-emerald-500/5 flex flex-col md:flex-row gap-8 items-center bg-linear-to-br from-white to-slate-50 relative overflow-hidden">

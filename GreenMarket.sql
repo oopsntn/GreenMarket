@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- GreenMarket Database Backup (Full Schema)
 -- PostgreSQL 18.x | Generated: 2026-04-08
 -- Tables: 34 | Synced from Drizzle ORM schema
@@ -227,6 +227,8 @@ CREATE TABLE shops (
     shop_logo_url TEXT,
     shop_cover_url TEXT,
     shop_status VARCHAR(20) DEFAULT 'pending',
+    shop_vip_started_at TIMESTAMP,
+    shop_vip_expires_at TIMESTAMP,
     shop_lat DECIMAL(10, 8),
     shop_lng DECIMAL(11, 8),
     shop_created_at TIMESTAMP DEFAULT now(),
@@ -702,6 +704,7 @@ CREATE INDEX idx_admins_status ON admins(admin_status);
 
 -- Shops
 CREATE INDEX idx_shops_status ON shops(shop_status);
+CREATE INDEX idx_shops_vip_expires_at ON shops(shop_vip_expires_at);
 
 -- Categories
 CREATE INDEX idx_categories_parent ON categories(category_parent_id);
@@ -1003,19 +1006,19 @@ INSERT INTO payout_requests (
 (1, 4, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
 
 -- Shops
-INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
+INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_vip_started_at, shop_vip_expires_at, shop_lat, shop_lng) VALUES
 (1, 'Vườn Bonsai Phố Huyện', '0978195419', 'nguyenthanhnamidol@gmail.com', TRUE, '14 Nghiêm Ích Khiêm, Thị trấn Chờ, Yên Phong, Bắc Ninh',
     'Chuyên bonsai mini và tầm trung. Nhận thiết kế, chăm sóc và phối thế bonsai theo yêu cầu. Ship toàn quốc qua Viettel Post.',
-    'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', 21.201262, 105.950174),
+    'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', now() - interval '30 days', now() + interval '60 days', 21.201262, 105.950174),
 (3, 'Nam Định Art Garden', '0123456789', 'hoainam.le@gmail.com', TRUE, 'Nam Trực, Nam Định',
     'Nghệ nhân cây cảnh cổ truyền Nam Điền. Chuyên sanh, si, tùng la hán cốt cách truyền thống. Hơn 20 năm kinh nghiệm.',
-    'http://localhost:5000/uploads/shop/nam-dinh-art-garden.jpg', 'active', 20.2506, 106.2355),
+    'http://localhost:5000/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
 (4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
-    'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', 10.2350, 106.1511),
+    'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
 (6, 'Dụng Cụ Bonsai Pro', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
     'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
-    'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', 21.1395, 105.8544);
+    'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
 
 -- ============================================================
 -- CATEGORIES
@@ -1251,9 +1254,8 @@ INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favori
 -- PLACEMENT SLOTS & PROMOTION PACKAGES
 -- ============================================================
 INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_slot_title, placement_slot_capacity, placement_slot_rules, placement_slot_published) VALUES
-(1, 'HOMEPAGE_BANNER',  'Banner Trang Chủ',          5,  '{"max_per_shop": 1, "min_post_status": "approved"}', true),
-(2, 'CATEGORY_TOP',     'Đầu Trang Danh Mục',        10, '{"max_per_shop": 2, "min_post_status": "approved"}', true),
-(3, 'SEARCH_HIGHLIGHT', 'Nổi Bật Trong Tìm Kiếm',    20, '{"max_per_shop": 3, "min_post_status": "approved"}', true);
+(1, 'BOOST_POST', 'Day bai nha vuon', 200, '{"max_per_shop": 20, "min_post_status": "approved", "audience": "active-shop"}', true),
+(2, 'SHOP_VIP', 'Nha vuon VIP', 500, '{"max_per_shop": 1, "display_priority": "top", "audience": "active-shop"}', true);
 
 INSERT INTO promotion_packages (
     promotion_package_id,
@@ -1265,29 +1267,15 @@ INSERT INTO promotion_packages (
     promotion_package_description,
     promotion_package_published
 ) VALUES
-(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  1, 50000,  'Ưu tiên hiển thị trên trang chủ trong 7 ngày.', true),
-(2, 1, 'Banner Trang Chủ - 30 ngày',  30, 3, 200000, 'Ưu tiên hiển thị trên trang chủ trong 30 ngày.', true),
-(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  1, 30000,  'Nổi bật ở đầu danh mục trong 7 ngày.', true),
-(4, 2, 'Đầu Danh Mục - 30 ngày',      30, 3, 120000, 'Nổi bật ở đầu danh mục trong 30 ngày.', true),
-(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  1, 15000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 7 ngày.', true),
-(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, 3, 70000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 30 ngày.', true);
+(1, 1, 'Gói tuần', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày.', true),
+(2, 1, 'Gói tháng', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày.', true),
+(3, 2, 'Gói Nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên hiển thị shop trong danh sách nhà vườn và hiển thị huy hiệu VIP.', true);
 
--- Promotion Package Prices (giá khởi tạo + ví dụ lên lịch tăng giá tương lai)
+-- Promotion Package Prices (2 goi day bai + 1 goi Nha vuon VIP 3 thang)
 INSERT INTO promotion_package_prices (package_id, price, effective_from, effective_to, note, created_by) VALUES
--- Gói 1: Banner 7 ngày — giá gốc, sau đó tăng (effective_to đóng lại), rồi lên lịch giá mới
-(1, 150000, now() - interval '90 days', now() - interval '10 days', 'Giá khởi tạo ban đầu',          1),
-(1, 180000, now() - interval '10 days', NULL,                         'Điều chỉnh giá tháng 3/2026',   1),
--- Gói 2: Banner 30 ngày — giá ổn định
-(2, 500000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
--- Gói 3: Đầu Danh Mục 7 ngày — hiện tại + lên lịch tăng giá từ 15/4/2026
-(3, 80000,  now() - interval '90 days', '2026-04-15 00:00:00',        'Giá khởi tạo ban đầu',          1),
-(3, 95000,  '2026-04-15 00:00:00',     NULL,                          'Lên lịch tăng giá từ 15/4',     1),
--- Gói 4: Đầu Danh Mục 30 ngày
-(4, 250000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
--- Gói 5: Nổi Bật Tìm Kiếm 7 ngày
-(5, 50000,  now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
--- Gói 6: Nổi Bật Tìm Kiếm 30 ngày
-(6, 150000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1);
+(1, 99000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tuần', 1),
+(2, 299000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tháng', 1),
+(3, 499000, now() - interval '90 days', NULL, 'Giá gói Nhà vườn VIP 3 tháng', 1);
 
 -- ============================================================
 -- POSTING PLANS (OWNER / PERSONAL)

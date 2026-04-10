@@ -21,7 +21,6 @@ const Navbar: React.FC = () => {
   const guestNavItems = [
     { label: 'Trang chủ', path: '/home', icon: ShoppingBag },
     { label: 'Danh sách nhà vườn', path: '/shops', icon: Store },
-    { label: 'Gói dịch vụ', path: '/packages', icon: Wallet },
   ];
 
   const baseNavItems = [
@@ -40,6 +39,7 @@ const Navbar: React.FC = () => {
       ]
       : [
         ...baseNavItems,
+        ...(!shop ? [{ label: 'Mở nhà vườn', path: '/register-shop', icon: Store }] : []),
         { label: 'Cá nhân', path: '/my-posts', icon: User },
       ];
 

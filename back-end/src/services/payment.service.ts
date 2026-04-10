@@ -15,6 +15,12 @@ import {
   validateMoMoConfig,
   verifyMoMoSignature,
 } from "../utils/momo.ts";
+import {
+  BOOST_POST_SLOT_CODE,
+  SHOP_VIP_DURATION_DAYS,
+  SHOP_VIP_SLOT_CODE,
+} from "../constants/promotion.ts";
+import { postingPolicyService } from "./posting-policy.service.ts";
 
 export class PaymentServiceError extends Error {
   statusCode: number;
@@ -64,11 +70,11 @@ const activatePromotionForTransaction = async (
   tx: any,
   txn: typeof paymentTxn.$inferSelect,
 ) => {
-  if (!txn.paymentTxnPostId) {
+  if (!txn.paymentTxnPostId || !txn.paymentTxnPackageId) {
     throw new PaymentServiceError(
       500,
       "PAYMENT_TXN_POST_MISSING",
-      "Payment transaction does not include a post reference.",
+      "Payment transaction does not include a post or package reference.",
     );
   }
 
@@ -79,7 +85,7 @@ const activatePromotionForTransaction = async (
       promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
     })
     .from(promotionPackages)
-    .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId))
+    .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId!))
     .limit(1);
 
   if (!pkg) {
@@ -105,11 +111,107 @@ const activatePromotionForTransaction = async (
   });
 };
 
+const activateShopVipForTransaction = async (
+  tx: any,
+  txn: typeof paymentTxn.$inferSelect,
+) => {
+  if (!txn.paymentTxnPackageId || txn.paymentTxnPostId) {
+    throw new PaymentServiceError(
+      500,
+      "SHOP_VIP_TXN_INVALID",
+      "Shop VIP transaction payload is invalid.",
+    );
+  }
+
+  const [pkg] = await tx
+    .select({
+      promotionPackageId: promotionPackages.promotionPackageId,
+      promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+      slotCode: placementSlots.placementSlotCode,
+    })
+    .from(promotionPackages)
+    .innerJoin(
+      placementSlots,
+      eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
+    )
+    .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId))
+    .limit(1);
+
+  if (!pkg || pkg.slotCode !== SHOP_VIP_SLOT_CODE) {
+    throw new PaymentServiceError(
+      500,
+      "SHOP_VIP_PACKAGE_INVALID",
+      "Shop VIP package is missing or invalid.",
+    );
+  }
+
+  const durationDays = Number(pkg.promotionPackageDurationDays || 0);
+  if (!Number.isFinite(durationDays) || durationDays <= 0) {
+    throw new PaymentServiceError(
+      500,
+      "SHOP_VIP_DURATION_INVALID",
+      "Shop VIP package duration is invalid.",
+    );
+  }
+
+  if (durationDays !== SHOP_VIP_DURATION_DAYS) {
+    throw new PaymentServiceError(
+      500,
+      "SHOP_VIP_DURATION_UNSUPPORTED",
+      "Shop VIP package must use a fixed 90-day duration.",
+    );
+  }
+
+  const [shop] = await tx
+    .select({
+      shopId: shops.shopId,
+      shopStatus: shops.shopStatus,
+      shopVipStartedAt: shops.shopVipStartedAt,
+      shopVipExpiresAt: shops.shopVipExpiresAt,
+    })
+    .from(shops)
+    .where(eq(shops.shopId, txn.paymentTxnUserId))
+    .limit(1);
+
+  if (!shop) {
+    throw new PaymentServiceError(
+      404,
+      "SHOP_NOT_FOUND",
+      "Shop does not exist for Shop VIP activation.",
+    );
+  }
+
+  if (shop.shopStatus !== "active") {
+    throw new PaymentServiceError(
+      400,
+      "SHOP_NOT_ACTIVE",
+      "Only active shops can be upgraded to VIP.",
+    );
+  }
+
+  const now = new Date();
+  const hasActiveVip =
+    shop.shopVipExpiresAt instanceof Date && shop.shopVipExpiresAt > now;
+  const vipBaseAt = hasActiveVip ? shop.shopVipExpiresAt! : now;
+  const vipExpiresAt = new Date(
+    vipBaseAt.getTime() + durationDays * 24 * 60 * 60 * 1000,
+  );
+
+  await tx
+    .update(shops)
+    .set({
+      shopVipStartedAt: hasActiveVip ? shop.shopVipStartedAt ?? now : now,
+      shopVipExpiresAt: vipExpiresAt,
+      shopUpdatedAt: new Date(),
+    })
+    .where(eq(shops.shopId, txn.paymentTxnUserId));
+};
+
 const processVerifiedCallback = async (
   body: Record<string, unknown>,
 ): Promise<MoMoCallbackResult> => {
-  const txnRef = String(body.orderId || "");
-  const responseCode = String(body.resultCode || "");
+  const txnRef = String(body.orderId ?? "");
+  const responseCode = String(body.resultCode ?? "");
   const callbackAmount = Number(body.amount);
 
   if (!txnRef) {
@@ -191,7 +293,22 @@ const processVerifiedCallback = async (
         return { status: "failed", txnRef, responseCode };
       }
 
-      await activatePromotionForTransaction(tx, updatedTxn);
+      if (updatedTxn.paymentTxnPackageId && updatedTxn.paymentTxnPostId) {
+        await activatePromotionForTransaction(tx, updatedTxn);
+      } else if (updatedTxn.paymentTxnPackageId && !updatedTxn.paymentTxnPostId) {
+        await activateShopVipForTransaction(tx, updatedTxn);
+      } else if (!updatedTxn.paymentTxnPackageId && !updatedTxn.paymentTxnPostId) {
+        const orderInfo = String(body.orderInfo || "");
+        if (orderInfo.startsWith("PayPersonalPkg")) {
+          await postingPolicyService.activatePersonalMonthlyPlan({
+            userId: updatedTxn.paymentTxnUserId,
+            durationDays: 30,
+          });
+        } else {
+          // It's a shop registration activation
+          await tx.update(shops).set({ shopStatus: "active", shopUpdatedAt: new Date() }).where(eq(shops.shopId, updatedTxn.paymentTxnUserId));
+        }
+      }
       return { status: "success", txnRef, responseCode };
     }
 
@@ -220,7 +337,195 @@ const processVerifiedCallback = async (
   });
 };
 
+const findPublishedPackageBySlotCode = async (slotCode: string) => {
+  const now = new Date();
+  const [pkg] = await db
+    .select({
+      promotionPackageId: promotionPackages.promotionPackageId,
+      promotionPackagePublished: promotionPackages.promotionPackagePublished,
+      promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+      promotionPackagePriceId: promotionPackagePrices.priceId,
+      promotionPackagePrice: promotionPackagePrices.price,
+      placementSlotPublished: placementSlots.placementSlotPublished,
+      placementSlotCode: placementSlots.placementSlotCode,
+    })
+    .from(promotionPackages)
+    .innerJoin(
+      placementSlots,
+      eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
+    )
+    .leftJoin(
+      promotionPackagePrices,
+      and(
+        eq(promotionPackagePrices.packageId, promotionPackages.promotionPackageId),
+        lte(promotionPackagePrices.effectiveFrom, now),
+        or(
+          isNull(promotionPackagePrices.effectiveTo),
+          gt(promotionPackagePrices.effectiveTo, now),
+        ),
+      ),
+    )
+    .where(eq(placementSlots.placementSlotCode, slotCode))
+    .limit(1);
+
+  return pkg ?? null;
+};
+
 export const paymentService = {
+  async createShopPaymentIntent(userId: number): Promise<{ paymentUrl: string }> {
+    const configCheck = validateMoMoConfig();
+    if (!configCheck.isValid) {
+      throw new PaymentServiceError(
+        500,
+        "MOMO_CONFIG_MISSING",
+        "MoMo configuration is missing.",
+        { missing: configCheck.missingFields },
+      );
+    }
+    const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+    if (!shop) throw new PaymentServiceError(404, "SHOP_NOT_FOUND", "Thong tin shop khong ton tai.");
+    if (shop.shopStatus === "active") throw new PaymentServiceError(400, "SHOP_ALREADY_ACTIVE", "Shop da duoc kich hoat tien trinh dang ky.");
+
+    const finalAmount = 250000;
+    const orderId = createOrderId();
+    const orderInfo = `PayShopReg${userId}`;
+
+    const { payUrl } = await createMoMoPaymentRequest(finalAmount, orderId, orderInfo, orderId);
+
+    await db.insert(paymentTxn).values({
+      paymentTxnUserId: userId,
+      paymentTxnAmount: String(finalAmount),
+      paymentTxnProvider: "MOMO",
+      paymentTxnProviderTxnId: orderId,
+      paymentTxnStatus: "pending",
+    });
+
+    return { paymentUrl: payUrl };
+  },
+
+  async createPersonalPackagePaymentIntent(userId: number): Promise<{ paymentUrl: string }> {
+    const configCheck = validateMoMoConfig();
+    if (!configCheck.isValid) {
+      throw new PaymentServiceError(
+        500,
+        "MOMO_CONFIG_MISSING",
+        "MoMo configuration is missing.",
+        { missing: configCheck.missingFields },
+      );
+    }
+    const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+    if (shop?.shopStatus === "active") {
+      throw new PaymentServiceError(400, "ALREADY_GARDEN_OWNER", "Shop owner cannot buy personal plan.");
+    }
+
+    const finalAmount = 30000;
+    const orderId = createOrderId();
+    const orderInfo = `PayPersonalPkg${userId}`;
+
+    const { payUrl } = await createMoMoPaymentRequest(finalAmount, orderId, orderInfo, orderId);
+
+    await db.insert(paymentTxn).values({
+      paymentTxnUserId: userId,
+      paymentTxnAmount: String(finalAmount),
+      paymentTxnProvider: "MOMO",
+      paymentTxnProviderTxnId: orderId,
+      paymentTxnStatus: "pending",
+    });
+
+    return { paymentUrl: payUrl };
+  },
+
+  async createShopVipPaymentIntent(userId: number): Promise<{ paymentUrl: string }> {
+    const configCheck = validateMoMoConfig();
+    if (!configCheck.isValid) {
+      throw new PaymentServiceError(
+        500,
+        "MOMO_CONFIG_MISSING",
+        "MoMo configuration is missing.",
+        { missing: configCheck.missingFields },
+      );
+    }
+
+    const [shop] = await db
+      .select({
+        shopId: shops.shopId,
+        shopStatus: shops.shopStatus,
+      })
+      .from(shops)
+      .where(eq(shops.shopId, userId))
+      .limit(1);
+
+    if (!shop) {
+      throw new PaymentServiceError(
+        404,
+        "SHOP_NOT_FOUND",
+        "Thong tin shop khong ton tai.",
+      );
+    }
+
+    if (shop.shopStatus !== "active") {
+      throw new PaymentServiceError(
+        400,
+        "SHOP_NOT_ACTIVE",
+        "Chi shop dang active moi co the mua goi Nha Vuon VIP.",
+      );
+    }
+
+    const vipPackage = await findPublishedPackageBySlotCode(SHOP_VIP_SLOT_CODE);
+    if (
+      !vipPackage ||
+      !vipPackage.promotionPackagePublished ||
+      !vipPackage.placementSlotPublished ||
+      vipPackage.placementSlotCode !== SHOP_VIP_SLOT_CODE
+    ) {
+      throw new PaymentServiceError(
+        404,
+        "SHOP_VIP_PACKAGE_NOT_AVAILABLE",
+        "Goi Nha Vuon VIP hien khong kha dung.",
+      );
+    }
+
+    const vipDurationDays = Number(vipPackage.promotionPackageDurationDays || 0);
+    if (vipDurationDays !== SHOP_VIP_DURATION_DAYS) {
+      throw new PaymentServiceError(
+        500,
+        "SHOP_VIP_DURATION_UNSUPPORTED",
+        "Goi Nha Vuon VIP phai co chu ky 90 ngay.",
+      );
+    }
+
+    const finalAmount = toSafeIntegerAmount(vipPackage.promotionPackagePrice);
+    if (finalAmount <= 0) {
+      throw new PaymentServiceError(
+        400,
+        "INVALID_PACKAGE_PRICE",
+        "Invalid package price.",
+      );
+    }
+
+    const orderId = createOrderId();
+    const orderInfo = `PayShopVipPkg${vipPackage.promotionPackageId}Shop${userId}`;
+
+    const { payUrl } = await createMoMoPaymentRequest(
+      finalAmount,
+      orderId,
+      orderInfo,
+      orderId,
+    );
+
+    await db.insert(paymentTxn).values({
+      paymentTxnUserId: userId,
+      paymentTxnPackageId: vipPackage.promotionPackageId,
+      paymentTxnPriceId: vipPackage.promotionPackagePriceId ?? null,
+      paymentTxnAmount: String(finalAmount),
+      paymentTxnProvider: "MOMO",
+      paymentTxnProviderTxnId: orderId,
+      paymentTxnStatus: "pending",
+    });
+
+    return { paymentUrl: payUrl };
+  },
+
   async createPaymentIntent(params: {
     userId: number;
     postIdRaw: unknown;
@@ -349,6 +654,7 @@ export const paymentService = {
       .select({
         placementSlotId: placementSlots.placementSlotId,
         placementSlotPublished: placementSlots.placementSlotPublished,
+        placementSlotCode: placementSlots.placementSlotCode,
       })
       .from(placementSlots)
       .where(eq(placementSlots.placementSlotId, pkg.promotionPackageSlotId))
@@ -359,6 +665,14 @@ export const paymentService = {
         400,
         "PLACEMENT_SLOT_DISABLED",
         "The associated placement slot is currently disabled.",
+      );
+    }
+
+    if (slot.placementSlotCode !== BOOST_POST_SLOT_CODE) {
+      throw new PaymentServiceError(
+        400,
+        "BOOST_PACKAGE_TYPE_INVALID",
+        "This package is not available for post boost purchases.",
       );
     }
 
@@ -402,7 +716,7 @@ export const paymentService = {
     if (!verifyMoMoSignature(body)) {
       return {
         status: "invalid_signature",
-        txnRef: String(body.orderId || ""),
+        txnRef: String(body.orderId ?? ""),
         responseCode: "97",
       };
     }

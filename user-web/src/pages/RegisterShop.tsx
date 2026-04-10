@@ -1,35 +1,44 @@
-import React, { useState } from 'react';
-import { registerShop, uploadImages } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { registerShop, updateShop, uploadImages, payShopRegistration } from '../services/api';
 import { Store, CheckCircle, ArrowRight, UploadCloud, Image as ImageIcon, Loader2 } from 'lucide-react';
 import AddressPicker from '../components/AddressPicker';
+import { useAuth } from '../context/AuthContext';
 
 const RegisterShop: React.FC = () => {
+  const navigate = useNavigate();
+  const { shop } = useAuth();
+
+  useEffect(() => {
+    if (shop?.shopStatus === 'active') {
+      navigate('/home');
+    }
+  }, [shop, navigate]);
+
   const [formData, setFormData] = useState({
     shopName: '',
-    shopPhone: '',
     shopLocation: '',
     shopDescription: '',
     shopLogoUrl: '',
-    shopCoverUrl: '',
+    shopGalleryImages: [] as string[],
     shopLat: undefined as number | undefined,
     shopLng: undefined as number | undefined
   });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'shopLogoUrl' | 'shopCoverUrl') => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'shopLogoUrl' | 'shopGalleryImages') => {
     if (!e.target.files || e.target.files.length === 0) return;
-    setUploading(true);
-    try {
-      const resp = await uploadImages([e.target.files[0]]);
-      if (resp.data.urls && resp.data.urls.length > 0) {
-        setFormData(prev => ({ ...prev, [field]: resp.data.urls[0] }));
-      }
-    } catch (err) {
-      alert("Lỗi upload ảnh. Vui lòng thử lại.");
-    } finally {
-      setUploading(false);
+    
+    if (field === 'shopGalleryImages') {
+      const files = Array.from(e.target.files);
+      setGalleryFiles(prev => [...prev, ...files]);
+    } else {
+      setLogoFile(e.target.files[0]);
     }
   };
 
@@ -37,15 +46,116 @@ const RegisterShop: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await registerShop(formData);
-      setSubmitted(true);
+      const registerRes = await registerShop({
+        shopName: formData.shopName,
+        shopLocation: formData.shopLocation,
+        shopDescription: formData.shopDescription,
+        shopLat: formData.shopLat,
+        shopLng: formData.shopLng
+      });
+
+      const createdShopId = Number(registerRes.data?.shopId);
+      const hasImagesToUpload = Boolean(logoFile) || galleryFiles.length > 0;
+
+      if (hasImagesToUpload) {
+        if (!Number.isFinite(createdShopId) || createdShopId <= 0) {
+          alert("Shop đã tạo nhưng chưa lấy được mã shop để lưu ảnh. Bạn có thể cập nhật ảnh sau trong trang quản lý shop.");
+        } else {
+          setUploading(true);
+          try {
+            let finalLogoUrl: string | undefined;
+            let finalGalleryImages: string[] = [];
+
+            if (logoFile) {
+              const logoResp = await uploadImages([logoFile]);
+              if (logoResp.data.urls && logoResp.data.urls.length > 0) {
+                finalLogoUrl = logoResp.data.urls[0];
+              }
+            }
+
+            if (galleryFiles.length > 0) {
+              const galleryResp = await uploadImages(galleryFiles);
+              if (galleryResp.data.urls && galleryResp.data.urls.length > 0) {
+                finalGalleryImages = galleryResp.data.urls;
+              }
+            }
+
+            if (finalLogoUrl || finalGalleryImages.length > 0) {
+              await updateShop(createdShopId, {
+                shopLogoUrl: finalLogoUrl,
+                shopGalleryImages: finalGalleryImages.length > 0 ? finalGalleryImages : undefined
+              });
+            }
+          } catch (uploadSyncError) {
+            console.error("Shop created but image upload/update failed:", uploadSyncError);
+            alert("Shop đã tạo thành công nhưng lưu ảnh chưa hoàn tất. Bạn có thể cập nhật ảnh sau trong trang quản lý shop.");
+          } finally {
+            setUploading(false);
+          }
+        }
+      }
+
+      const payRes = await payShopRegistration();
+      if (payRes.data.paymentUrl) {
+        window.location.href = payRes.data.paymentUrl;
+      } else {
+        setSubmitted(true);
+      }
     } catch (error) {
       console.error("Failed to register shop:", error);
-      alert("Đăng ký không thành công. Bạn có thể đã đăng ký shop rồi!");
+      alert("Đăng ký không thành công. Bạn có thể đã đăng ký shop rồi hoặc có lỗi xảy ra!");
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   };
+
+  const handleContinuePayment = async () => {
+    setPaymentLoading(true);
+    try {
+      const payRes = await payShopRegistration();
+      if (payRes.data.paymentUrl) {
+        window.location.href = payRes.data.paymentUrl;
+        return;
+      }
+      alert("Không tạo được link thanh toán. Vui lòng thử lại.");
+    } catch (error) {
+      console.error("Failed to create shop payment:", error);
+      alert("Không tạo được link thanh toán. Vui lòng thử lại.");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const logoPreview = logoFile ? URL.createObjectURL(logoFile) : null;
+  const galleryPreviews = galleryFiles.map(f => URL.createObjectURL(f));
+
+  if (shop && shop.shopStatus !== 'active') {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4 bg-background">
+        <div className="bg-white p-10 rounded-4xl border border-slate-200 text-center max-w-md shadow-xl">
+          <div className="bg-amber-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-amber-100">
+            <Store className="w-10 h-10 text-amber-600" />
+          </div>
+          <h2 className="text-2xl font-black mb-3 text-slate-900 uppercase tracking-tight">Shop đang chờ kích hoạt</h2>
+          <p className="text-slate-600 mb-8 leading-relaxed font-medium">
+            Bạn đã tạo hồ sơ shop. Hoàn tất thanh toán để kích hoạt nhà vườn và bắt đầu sử dụng.
+          </p>
+          <button
+            onClick={handleContinuePayment}
+            disabled={paymentLoading}
+            className="w-full bg-emerald-700 py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 transition-all uppercase tracking-wider text-sm"
+          >
+            {paymentLoading ? (
+              <><Loader2 className="w-5 h-5 animate-spin" /> Đang tạo thanh toán...</>
+            ) : (
+              <>Tiếp tục thanh toán kích hoạt - 250.000đ</>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
@@ -96,7 +206,7 @@ const RegisterShop: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Logo Nhà Vườn</label>
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ảnh Đại Diện Nhà Vườn</label>
             <div className="relative border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-emerald-500/50 transition-all bg-slate-50 group">
               <input 
                 type="file" 
@@ -105,37 +215,45 @@ const RegisterShop: React.FC = () => {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 disabled={uploading}
               />
-              {formData.shopLogoUrl ? (
-                <img src={formData.shopLogoUrl.startsWith('http') ? formData.shopLogoUrl : `http://localhost:5000${formData.shopLogoUrl}`} alt="Logo" className="mx-auto h-24 w-24 object-cover rounded-3xl shadow-md border-2 border-white" />
+              {logoPreview ? (
+                <img src={logoPreview} alt="Avatar" className="mx-auto h-24 w-24 object-cover rounded-3xl shadow-md border-2 border-white" />
               ) : (
                 <div className="flex flex-col items-center">
                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform">
                     <ImageIcon className="w-6 h-6 text-slate-400" />
                   </div>
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tải lên Logo</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tải lên Ảnh đại diện</span>
                 </div>
               )}
             </div>
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ảnh bìa (Cover)</label>
-            <div className="relative border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-emerald-500/50 transition-all bg-slate-50 group h-[148px] flex items-center justify-center">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ảnh Nhà Vườn (Nhiều ảnh)</label>
+            <div className="relative border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-emerald-500/50 transition-all bg-slate-50 group min-h-[148px] flex items-center justify-center">
               <input 
                 type="file" 
-                accept="image/*" 
-                onChange={(e) => handleFileUpload(e, 'shopCoverUrl')} 
+                accept="image/*"
+                multiple
+                onChange={(e) => handleFileUpload(e, 'shopGalleryImages')} 
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 disabled={uploading}
               />
-              {formData.shopCoverUrl ? (
-                <img src={formData.shopCoverUrl.startsWith('http') ? formData.shopCoverUrl : `http://localhost:5000${formData.shopCoverUrl}`} alt="Cover" className="mx-auto h-full w-full object-cover rounded-xl shadow-md border-2 border-white" />
+              {galleryPreviews.length > 0 ? (
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {galleryPreviews.map((url, idx) => (
+                    <img key={idx} src={url} alt="Shop Gallery" className="h-16 w-16 object-cover rounded-lg shadow-sm border-2 border-white" />
+                  ))}
+                  <div className="h-16 w-16 flex items-center justify-center bg-white rounded-lg border border-slate-200">
+                    <UploadCloud className="w-4 h-4 text-slate-400" />
+                  </div>
+                </div>
               ) : (
                 <div className="flex flex-col items-center">
                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform">
                     <UploadCloud className="w-6 h-6 text-slate-400" />
                   </div>
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tải lên Ảnh bìa</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tải lên một hoặc nhiều ảnh</span>
                 </div>
               )}
             </div>
@@ -143,17 +261,7 @@ const RegisterShop: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Số Điện Thoại Shop</label>
-            <input
-              type="tel"
-              className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 font-bold"
-              placeholder="09xx xxx xxx"
-              value={formData.shopPhone}
-              onChange={(e) => setFormData({ ...formData, shopPhone: e.target.value })}
-            />
-          </div>
-          <div className="space-y-4">
+          <div className="space-y-4 md:col-span-2">
             <div className="pt-2">
               <AddressPicker
                 onAddressChange={(addr) => setFormData(prev => ({ ...prev, shopLocation: addr }))}
@@ -190,12 +298,12 @@ const RegisterShop: React.FC = () => {
             disabled={loading || uploading}
             className="w-full bg-emerald-700 py-5 rounded-2xl font-black text-white text-sm uppercase tracking-widest hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-emerald-200/50"
           >
-            {loading ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Đang gửi hồ sơ...</>
-            ) : uploading ? (
+            {uploading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Đang tải ảnh...</>
+            ) : loading ? (
+              <><Loader2 className="w-5 h-5 animate-spin" /> Đang gửi hồ sơ...</>
             ) : (
-              <>Gửi Đăng Ký Nhà Vườn</>
+              <>Gửi Đăng Ký Nhà Vườn - 250.000đ</>
             )}
           </button>
           <p className="mt-6 text-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
