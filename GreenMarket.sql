@@ -916,7 +916,9 @@ INSERT INTO users (
 (5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
 (6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 2),
 (7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1),
-(8, '0987654321', 'Người Dùng Test 0987654321', 'test.0987654321@gmail.com', 'Hà Nội', 'Test account for 0987654321', 'active', 1);
+(8, '0987654321', 'Người Dùng Test 0987654321', 'test.0987654321@gmail.com', 'Hà Nội', 'Test account for 0987654321', 'active', 1),
+(9, '0909000003', 'Seed Collaborator Account', 'seed.collaborator@greenmarket.local', 'Ha Noi', 'Seed account for collaborator-role API testing and mobile login.', 'active', 3),
+(10, '0909000004', 'Seed Manager Account', 'seed.manager@greenmarket.local', 'Ha Noi', 'Seed account for manager-role API testing and moderation workflows.', 'active', 4);
 
 -- Align demo accounts to business roles used in collaborator APIs
 UPDATE users SET user_business_role_id = 3 WHERE user_id = 4;
@@ -930,9 +932,19 @@ SET
 WHERE user_id = 4;
 UPDATE users
 SET
+    user_availability_status = 'available',
+    user_availability_note = 'Available for field support and content delivery tasks.'
+WHERE user_id = 9;
+UPDATE users
+SET
     user_availability_status = 'busy',
     user_availability_note = 'Focused on moderation incidents this week.'
 WHERE user_id = 5;
+UPDATE users
+SET
+    user_availability_status = 'busy',
+    user_availability_note = 'Handling moderation queue and escalation workflow.'
+WHERE user_id = 10;
 UPDATE users
 SET
     user_availability_status = 'busy'
