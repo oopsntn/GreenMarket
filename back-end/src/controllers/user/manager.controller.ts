@@ -11,7 +11,15 @@ import {
 } from "drizzle-orm";
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
-import { eventLogs, posts, reports, shops, users } from "../../models/schema/index.ts";
+import {
+  eventLogs,
+  posts,
+  reports,
+  shops,
+  users,
+  moderationFeedback,
+  escalations,
+} from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 
 const DEFAULT_PAGE = 1;
@@ -1130,39 +1138,42 @@ export const createModerationFeedback = async (
       return;
     }
 
-    const [logRow] = await db
-      .insert(eventLogs)
+    const [feedbackRow] = await db
+      .insert(moderationFeedback)
       .values({
-        eventLogUserId: managerId,
-        eventLogPostId: targetContext.eventLogPostId,
-        eventLogShopId: targetContext.eventLogShopId,
-        eventLogEventType: MANAGER_FEEDBACK_EVENT,
-        eventLogMeta: {
-          targetType,
-          targetId,
-          recipientUserId,
-          message,
-          templateId,
-        },
+        targetType,
+        targetId,
+        senderId: managerId,
+        recipientId: recipientUserId,
+        message,
       })
-      .returning({
-        eventLogId: eventLogs.eventLogId,
-        eventLogEventType: eventLogs.eventLogEventType,
-        eventLogEventTime: eventLogs.eventLogEventTime,
-        eventLogMeta: eventLogs.eventLogMeta,
-      });
+      .returning();
+
+    // Still keep event log for secondary tracking if needed, or just return success
+    await db.insert(eventLogs).values({
+      eventLogUserId: managerId,
+      eventLogPostId: targetContext.eventLogPostId,
+      eventLogShopId: targetContext.eventLogShopId,
+      eventLogEventType: MANAGER_FEEDBACK_EVENT,
+      eventLogMeta: {
+        feedbackId: feedbackRow.feedbackId,
+        targetType,
+        targetId,
+        recipientUserId,
+        templateId,
+      },
+    });
 
     res.status(201).json({
       feedback: {
-        feedbackId: logRow.eventLogId,
+        feedbackId: feedbackRow.feedbackId,
         targetType,
         targetId,
         recipientUserId,
         message,
         templateId,
-        createdAt: logRow.eventLogEventTime,
+        createdAt: feedbackRow.createdAt,
       },
-      actionLog: formatActionLog(logRow),
     });
   } catch (error) {
     console.error(error);
@@ -1525,42 +1536,44 @@ export const createManagerEscalation = async (
       return;
     }
 
-    const [logRow] = await db
-      .insert(eventLogs)
+    const [escalationRow] = await db
+      .insert(escalations)
       .values({
-        eventLogUserId: managerId,
-        eventLogPostId: targetContext.eventLogPostId,
-        eventLogShopId: targetContext.eventLogShopId,
-        eventLogEventType: MANAGER_ESCALATION_EVENT,
-        eventLogMeta: {
-          targetType,
-          targetId,
-          severity,
-          reason,
-          evidenceUrls,
-          status: "open",
-        },
+        targetType,
+        targetId,
+        createdBy: managerId,
+        severity: severity as any,
+        reason,
+        evidenceUrls,
+        status: "open",
       })
-      .returning({
-        eventLogId: eventLogs.eventLogId,
-        eventLogEventType: eventLogs.eventLogEventType,
-        eventLogEventTime: eventLogs.eventLogEventTime,
-        eventLogMeta: eventLogs.eventLogMeta,
-      });
+      .returning();
+
+    await db.insert(eventLogs).values({
+      eventLogUserId: managerId,
+      eventLogPostId: targetContext.eventLogPostId,
+      eventLogShopId: targetContext.eventLogShopId,
+      eventLogEventType: MANAGER_ESCALATION_EVENT,
+      eventLogMeta: {
+        escalationId: escalationRow.escalationId,
+        targetType,
+        targetId,
+        severity,
+      },
+    });
 
     res.status(201).json({
       escalationTicket: {
-        escalationId: logRow.eventLogId,
-        ticketCode: `ESC-${logRow.eventLogId}`,
-        status: "open",
+        escalationId: escalationRow.escalationId,
+        ticketCode: `ESC-${escalationRow.escalationId}`,
+        status: escalationRow.status,
         targetType,
         targetId,
         severity,
         reason,
         evidenceUrls,
-        createdAt: logRow.eventLogEventTime,
+        createdAt: escalationRow.createdAt,
       },
-      actionLog: formatActionLog(logRow),
     });
   } catch (error) {
     console.error(error);
