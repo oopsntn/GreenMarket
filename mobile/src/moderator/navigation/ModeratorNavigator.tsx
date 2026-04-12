@@ -1,11 +1,12 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { 
-  LayoutDashboard, 
-  ClipboardCheck, 
-  Store, 
-  AlertTriangle 
+import {
+  LayoutDashboard,
+  ClipboardCheck,
+  Store,
+  AlertTriangle,
+  Settings
 } from 'lucide-react-native';
 
 // Import Screens
@@ -16,6 +17,7 @@ import ShopModerationList from '../screens/ShopModerationList';
 import ShopModerationDetail from '../screens/ShopModerationDetail';
 import ReportModerationList from '../screens/ReportModerationList';
 import ReportModerationDetail from '../screens/ReportModerationDetail';
+import ModeratorSettingsScreen from '../screens/ModeratorSettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -43,6 +45,7 @@ const ModeratorTabs = () => {
           else if (route.name === 'Posts') icon = <ClipboardCheck color={color} size={size} />;
           else if (route.name === 'Shops') icon = <Store color={color} size={size} />;
           else if (route.name === 'Reports') icon = <AlertTriangle color={color} size={size} />;
+          else if (route.name === 'Settings') icon = <Settings color={color} size={size} />;
           return icon;
         },
       })}
@@ -51,6 +54,7 @@ const ModeratorTabs = () => {
       <Tab.Screen name="Posts" component={PostModerationList} options={{ tabBarLabel: 'Review Posts', tabBarBadge: 5 }} />
       <Tab.Screen name="Shops" component={ShopModerationList} options={{ tabBarLabel: 'Shops' }} />
       <Tab.Screen name="Reports" component={ReportModerationList} options={{ tabBarLabel: 'Reports', tabBarBadge: 3 }} />
+      <Tab.Screen name="Settings" component={ModeratorSettingsScreen} options={{ tabBarLabel: 'Settings' }} />
     </Tab.Navigator>
   );
 };
@@ -60,21 +64,21 @@ const ModeratorNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={ModeratorTabs} />
-      
+
       {/* Detail Screens (Not in tabs) */}
-      <Stack.Screen 
-        name="PostModerationDetail" 
-        component={PostModerationDetail} 
+      <Stack.Screen
+        name="PostModerationDetail"
+        component={PostModerationDetail}
         options={{ animation: 'slide_from_right' }}
       />
-      <Stack.Screen 
-        name="ShopModerationDetail" 
-        component={ShopModerationDetail} 
+      <Stack.Screen
+        name="ShopModerationDetail"
+        component={ShopModerationDetail}
         options={{ animation: 'slide_from_right' }}
       />
-      <Stack.Screen 
-        name="ReportModerationDetail" 
-        component={ReportModerationDetail} 
+      <Stack.Screen
+        name="ReportModerationDetail"
+        component={ReportModerationDetail}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>
