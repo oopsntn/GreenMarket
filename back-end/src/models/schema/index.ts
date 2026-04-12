@@ -178,33 +178,6 @@ export {
 } from "./ai-insights.ts";
 export { eventLogs, type EventLog, type NewEventLog } from "./event-logs.ts";
 
-// Manager & Operations
-export {
-  operationTasks,
-  type OperationTask,
-  type NewOperationTask,
-} from "./operation-tasks.ts";
-export {
-  taskReplies,
-  type TaskReply,
-  type NewTaskReply,
-} from "./task-replies.ts";
-export {
-  moderationFeedback,
-  type ModerationFeedback,
-  type NewModerationFeedback,
-} from "./moderation-feedback.ts";
-export {
-  escalations,
-  type Escalation,
-  type NewEscalation,
-} from "./escalations.ts";
-export {
-  systemNotifications,
-  type SystemNotification,
-  type NewSystemNotification,
-} from "./system-notifications.ts";
-
 // System
 export {
   systemSettings,

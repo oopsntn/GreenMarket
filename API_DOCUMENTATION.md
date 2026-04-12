@@ -83,27 +83,6 @@ Auth rules for all endpoints below:
 - `PATCH /api/manager/reports/:id/resolve` only accepts reports currently in `pending` state.
 - `POST /api/manager/escalations` currently creates internal mock ticket (`ticketCode`), no multi-step approval workflow yet.
 
-### Operations Staff (business role: `OPERATION_STAFF`)
-
-Auth rules for all endpoints below:
-- Requires valid **user token**
-- Requires active business role `OPERATION_STAFF` (`verifyToken + requireBusinessRole("OPERATION_STAFF")`)
-
-| Method | Endpoint | Auth | Description | Main request fields |
-|---|---|---|---|---|
-| GET | `/api/operations/tasks` | User token + `OPERATION_STAFF` | Get assigned operations task queue | optional query: `status`, `type`, `priority`, `page`, `limit` |
-| GET | `/api/operations/tasks/:id` | User token + `OPERATION_STAFF` | Get assigned task detail with timeline and actions | path `id` |
-| PATCH | `/api/operations/tasks/:id/status` | User token + `OPERATION_STAFF` | Update task status lifecycle | path `id`, required `status` (`open`/`in_progress`/`closed`), optional `note` |
-| POST | `/api/operations/tasks/:id/replies` | User token + `OPERATION_STAFF` | Add reply entry to task timeline | path `id`, required `message`, optional `attachments`, optional `visibility` (`internal`/`public`) |
-| POST | `/api/operations/tasks/:id/escalate` | User token + `OPERATION_STAFF` | Escalate task to higher role | path `id`, required `reason`, required `targetRole` (`MANAGER`/`ADMIN`), optional `priority` |
-| GET | `/api/operations/workload/daily` | User token + `OPERATION_STAFF` | Get daily workload KPI and hourly distribution | optional query: `date` |
-| GET | `/api/operations/notifications` | User token + `OPERATION_STAFF` | Get operation notifications feed | optional query: `unreadOnly`, `page`, `limit` |
-
-**Operations notes:**
-- Current task source for operations module is built from report records (`reports` table), with deterministic assignment across active `OPERATION_STAFF` users.
-- Timeline/replies/escalations are persisted in `event_logs` using `operations_*` event types.
-- Task status transition enforced in MVP: `open -> in_progress -> closed`.
-
 ### Upload
 
 | Method | Endpoint | Auth | Description | Main request fields |
@@ -393,7 +372,6 @@ All admin APIs are mounted under `/api/admin/*` and require:
 - Protected user endpoints require JWT, such as `/api/profile`, `/api/posts/my-posts`, `/api/shops/my-shop`, `/api/shops/dashboard`, `/api/payment/buy-package`.
 - Collaborator module is mounted at `/api/collaborator` and uses business-role guard (`COLLABORATOR`) for all collaborator routes.
 - Manager module is mounted at `/api/manager` and uses business-role guard (`MANAGER`) for all manager routes.
-- Operations module is mounted at `/api/operations` and uses business-role guard (`OPERATION_STAFF`) for all operations routes.
 - `POST /api/posts/:id/contact-click` tracks buyer contact intent per post for analytics.
 - Payment callbacks are handled through `/api/payment/momo-return` and `/api/payment/momo-ipn`.
 - Static uploaded files are served at `/uploads/<filename>`.

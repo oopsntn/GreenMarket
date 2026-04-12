@@ -22,8 +22,7 @@
     "test:sprint2": "tsx src/scripts/testSprint2.ts",
     "test:sprint3": "tsx src/scripts/testSprint3Promotion.ts",
     "test:collaborator": "tsx src/scripts/tests/08-collaborator.test.ts",
-    "test:manager": "tsx src/scripts/tests/09-manager.test.ts",
-    "test:operations": "tsx src/scripts/tests/10-operations.test.ts"
+    "test:manager": "tsx src/scripts/tests/09-manager.test.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
