@@ -42,9 +42,9 @@ const sortPromotionPackages = (packages: PromotionPackageItem[]) => {
 };
 
 const getDurationTierLabel = (durationDays: number): string => {
-  if (durationDays <= 3) return 'Ngan han';
-  if (durationDays <= 14) return 'Trung han';
-  return 'Dai han';
+  if (durationDays <= 3) return 'Ngắn hạn';
+  if (durationDays <= 14) return 'Trung hạn';
+  return 'Dài hạn';
 };
 
 const MyPosts: React.FC = () => {
