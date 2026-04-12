@@ -9,6 +9,8 @@ import {
   reports,
   shops,
   users,
+  moderationFeedback,
+  escalations,
 } from "../../models/schema/index";
 
 const BASE_URL = "http://localhost:5000/api";
@@ -39,9 +41,10 @@ const createClient = (token: string) =>
     validateStatus: () => true,
   });
 
-const assertStatus = (actual: number, expected: number, step: string) => {
-  if (actual !== expected) {
-    throw new Error(`${step} failed: expected HTTP ${expected}, got ${actual}`);
+const assertStatus = (response: any, expected: number, step: string) => {
+  if (response.status !== expected) {
+    console.error(`ERROR at ${step}:`, response.data);
+    throw new Error(`${step} failed: expected HTTP ${expected}, got ${response.status}`);
   }
 };
 
@@ -182,13 +185,13 @@ async function runManagerTests() {
 
     console.log("1) RBAC check...");
     const deniedRes = await plainClient.get("/history");
-    assertStatus(deniedRes.status, 403, "Non-manager access");
+    assertStatus(deniedRes, 403, "Non-manager access");
 
     console.log("2) Moderation queue...");
     const queueRes = await managerClient.get("/moderation/queue", {
       params: { status: "pending" },
     });
-    assertStatus(queueRes.status, 200, "GET /moderation/queue");
+    assertStatus(queueRes, 200, "GET /moderation/queue");
     if (!Array.isArray(queueRes.data?.data)) {
       throw new Error("Queue response has invalid data payload.");
     }
@@ -209,7 +212,7 @@ async function runManagerTests() {
         note: "Manager moderation test",
       },
     );
-    assertStatus(updatePostRes.status, 200, "PATCH /posts/:id/status");
+    assertStatus(updatePostRes, 200, "PATCH /posts/:id/status");
     const [postAfterUpdate] = await db
       .select({ status: posts.postStatus })
       .from(posts)
@@ -223,31 +226,31 @@ async function runManagerTests() {
       `/posts/${pendingPost.postId}/status`,
       { status: "approved" },
     );
-    assertStatus(duplicatePostRes.status, 409, "Duplicate post status update");
+    assertStatus(duplicatePostRes, 409, "Duplicate post status update");
 
     console.log("4) Update shop status...");
     const blockWithoutReasonRes = await managerClient.patch(`/shops/${shop.shopId}/status`, {
       status: "blocked",
     });
-    assertStatus(blockWithoutReasonRes.status, 400, "Block shop without reason");
+    assertStatus(blockWithoutReasonRes, 400, "Block shop without reason");
 
     const blockShopRes = await managerClient.patch(`/shops/${shop.shopId}/status`, {
       status: "blocked",
       reason: "Repeated policy violations",
     });
-    assertStatus(blockShopRes.status, 200, "PATCH /shops/:id/status to blocked");
+    assertStatus(blockShopRes, 200, "PATCH /shops/:id/status to blocked");
 
     const unblockShopRes = await managerClient.patch(`/shops/${shop.shopId}/status`, {
       status: "active",
       note: "Issue resolved",
     });
-    assertStatus(unblockShopRes.status, 200, "PATCH /shops/:id/status to active");
+    assertStatus(unblockShopRes, 200, "PATCH /shops/:id/status to active");
 
     console.log("5) Reports list and resolve...");
     const listReportsRes = await managerClient.get("/reports", {
       params: { status: "pending", severity: "high" },
     });
-    assertStatus(listReportsRes.status, 200, "GET /reports");
+    assertStatus(listReportsRes, 200, "GET /reports");
     if (!Array.isArray(listReportsRes.data?.data) || listReportsRes.data.data.length < 1) {
       throw new Error("Expected pending high severity report in list.");
     }
@@ -260,7 +263,7 @@ async function runManagerTests() {
         note: "Manager resolution note",
       },
     );
-    assertStatus(resolveReportRes.status, 200, "PATCH /reports/:id/resolve");
+    assertStatus(resolveReportRes, 200, "PATCH /reports/:id/resolve");
 
     const duplicateResolveRes = await managerClient.patch(
       `/reports/${pendingReport.reportId}/resolve`,
@@ -269,7 +272,7 @@ async function runManagerTests() {
         resolution: "Second resolution attempt",
       },
     );
-    assertStatus(duplicateResolveRes.status, 409, "Resolve closed report");
+    assertStatus(duplicateResolveRes, 409, "Resolve closed report");
 
     console.log("6) Moderation feedback...");
     const feedbackRes = await managerClient.post("/moderation-feedback", {
@@ -279,7 +282,7 @@ async function runManagerTests() {
       message: "Please update listing details to comply with policy.",
       templateId: "MOD-POST-WARN-01",
     });
-    assertStatus(feedbackRes.status, 201, "POST /moderation-feedback");
+    assertStatus(feedbackRes, 201, "POST /moderation-feedback");
     if (!feedbackRes.data?.feedback?.feedbackId) {
       throw new Error("Feedback response missing feedbackId.");
     }
@@ -292,7 +295,7 @@ async function runManagerTests() {
       reason: "Potential coordinated fraud pattern",
       evidenceUrls: ["https://evidence.local/manager-test-case-1"],
     });
-    assertStatus(escalationRes.status, 201, "POST /escalations");
+    assertStatus(escalationRes, 201, "POST /escalations");
     if (!escalationRes.data?.escalationTicket?.ticketCode) {
       throw new Error("Escalation response missing ticketCode.");
     }
@@ -301,13 +304,13 @@ async function runManagerTests() {
     const historyRes = await managerClient.get("/history", {
       params: { actionType: "post_status" },
     });
-    assertStatus(historyRes.status, 200, "GET /history");
+    assertStatus(historyRes, 200, "GET /history");
     if (!Array.isArray(historyRes.data?.data)) {
       throw new Error("History response has invalid payload.");
     }
 
     const statisticsRes = await managerClient.get("/statistics");
-    assertStatus(statisticsRes.status, 200, "GET /statistics");
+    assertStatus(statisticsRes, 200, "GET /statistics");
     if (Number(statisticsRes.data?.kpi?.totalActions ?? 0) < 1) {
       throw new Error("Statistics should include at least one manager action.");
     }
@@ -325,6 +328,15 @@ async function runManagerTests() {
         await db
           .delete(eventLogs)
           .where(inArray(eventLogs.eventLogUserId, createdUserIds));
+      }
+
+      if (createdUserIds.length > 0) {
+        await db
+          .delete(moderationFeedback)
+          .where(inArray(moderationFeedback.senderId, createdUserIds));
+        await db
+          .delete(escalations)
+          .where(inArray(escalations.createdBy, createdUserIds));
       }
 
       if (createdReportIds.length > 0) {

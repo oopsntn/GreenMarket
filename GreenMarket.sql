@@ -358,7 +358,7 @@ CREATE TABLE report_evidence (
 -- Moderation Actions
 CREATE TABLE moderation_actions (
     moderation_action_id SERIAL PRIMARY KEY,
-    moderation_action_action_by INTEGER NOT NULL REFERENCES admins(admin_id) ON DELETE CASCADE,
+    moderation_action_action_by INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     moderation_action_post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
     moderation_action_action VARCHAR(50),
     moderation_action_note TEXT,
@@ -653,6 +653,70 @@ CREATE TABLE admin_templates (
     template_updated_at TIMESTAMP DEFAULT now()
 );
 
+-- Operation Tasks
+CREATE TABLE operation_tasks (
+    task_id SERIAL PRIMARY KEY,
+    task_title VARCHAR(255) NOT NULL,
+    task_type VARCHAR(50) NOT NULL,
+    task_status VARCHAR(20) NOT NULL DEFAULT 'open',
+    task_priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+    assignee_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    customer_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    related_target_id INTEGER,
+    task_note TEXT,
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Task Replies
+CREATE TABLE task_replies (
+    reply_id SERIAL PRIMARY KEY,
+    task_id INTEGER NOT NULL REFERENCES operation_tasks(task_id) ON DELETE CASCADE,
+    sender_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    attachments JSONB DEFAULT '[]'::jsonb,
+    visibility VARCHAR(20) DEFAULT 'internal',
+    created_at TIMESTAMP DEFAULT now()
+);
+
+-- Moderation Feedback
+CREATE TABLE moderation_feedback (
+    feedback_id SERIAL PRIMARY KEY,
+    target_type VARCHAR(50) NOT NULL,
+    target_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    recipient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT now()
+);
+
+-- Escalations
+CREATE TABLE escalations (
+    escalation_id SERIAL PRIMARY KEY,
+    source_task_id INTEGER REFERENCES operation_tasks(task_id) ON DELETE SET NULL,
+    target_type VARCHAR(50) NOT NULL,
+    target_id INTEGER NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    severity VARCHAR(20) NOT NULL DEFAULT 'medium',
+    reason TEXT NOT NULL,
+    evidence_urls JSONB DEFAULT '[]'::jsonb,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    resolution_note TEXT,
+    created_at TIMESTAMP DEFAULT now(),
+    resolved_at TIMESTAMP
+);
+
+-- System Notifications
+CREATE TABLE system_notifications (
+    notification_id SERIAL PRIMARY KEY,
+    recipient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    read_status BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT now()
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -763,6 +827,14 @@ CREATE INDEX idx_pkg_audit_price      ON promotion_package_audit_log(price_id);
 CREATE INDEX idx_pkg_audit_action     ON promotion_package_audit_log(action_type);
 CREATE INDEX idx_pkg_audit_changed_by ON promotion_package_audit_log(changed_by);
 CREATE INDEX idx_pkg_audit_changed_at ON promotion_package_audit_log(changed_at DESC);
+
+-- Internal Ops Indexes
+CREATE INDEX idx_operation_tasks_assignee ON operation_tasks(assignee_id);
+CREATE INDEX idx_operation_tasks_status ON operation_tasks(task_status);
+CREATE INDEX idx_task_replies_task ON task_replies(task_id);
+CREATE INDEX idx_escalations_status ON escalations(status);
+CREATE INDEX idx_system_notifications_recipient ON system_notifications(recipient_id);
+CREATE INDEX idx_system_notifications_read ON system_notifications(read_status);
 
 -- ============================================================
 -- TRIGGERS
@@ -1373,6 +1445,39 @@ INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_rea
 (2, 5, 2, 3, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
 (3, 5, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00');
 
+-- ============================================================
+-- OPERATIONS & MANAGER DATA
+-- ============================================================
+
+-- Operation Tasks
+INSERT INTO operation_tasks (task_id, task_title, task_type, task_status, task_priority, assignee_id, customer_id, related_target_id, task_note, created_at, updated_at) VALUES
+(1, 'Hỗ trợ đổi email shop', 'support', 'in_progress', 'medium', 6, 2, NULL, 'Khách hàng gặp lỗi OTP khi đổi email.', now() - interval '2 days', now() - interval '1 day'),
+(2, 'Xác minh báo cáo spam', 'report_check', 'open', 'high', 6, 7, 2, 'Report #2 cần tra xét IP.', now() - interval '1 day', now() - interval '1 day'),
+(3, 'Cấp lại quyền đăng bài', 'support', 'closed', 'high', 6, 3, NULL, 'Đã mở khóa.', now() - interval '5 days', now() - interval '4 days');
+
+-- Task Replies
+INSERT INTO task_replies (reply_id, task_id, sender_id, message, visibility, created_at) VALUES
+(1, 1, 6, 'Tôi đang kiểm tra hệ thống SMS provider.', 'internal', now() - interval '1 day'),
+(2, 2, 6, 'Khách này có dấu hiệu spam thực sự. Sẽ báo cấp trên.', 'internal', now() - interval '12 hours');
+
+-- Moderation Actions
+INSERT INTO moderation_actions (moderation_action_id, moderation_action_action_by, moderation_action_post_id, moderation_action_action, moderation_action_note, moderation_action_created_at) VALUES
+(1, 5, 2, 'HIDDEN', 'Tạm ẩn do spam. Chờ shop sửa.', now() - interval '5 days'),
+(2, 5, 2, 'RESTORED', 'Shop đã sửa bài hợp lệ.', now() - interval '4 days');
+
+-- Moderation Feedback
+INSERT INTO moderation_feedback (feedback_id, target_type, target_id, sender_id, recipient_id, message, created_at) VALUES
+(1, 'post', 2, 5, 3, 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', now() - interval '5 days');
+
+-- Escalations
+INSERT INTO escalations (escalation_id, source_task_id, target_type, target_id, created_by, severity, reason, status, resolution_note, created_at) VALUES
+(1, 2, 'shop', 3, 6, 'high', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'open', NULL, now() - interval '12 hours');
+
+-- System Notifications
+INSERT INTO system_notifications (notification_id, recipient_id, title, content, type, read_status, created_at) VALUES
+(1, 6, 'Task mới: Xác minh báo cáo spam', 'Bạn được assign một task mới từ hệ thống phân bổ.', 'new_task', true, now() - interval '1 day'),
+(2, 5, 'Escalation mới: Cần xử lý shop vi phạm', 'Operation Staff (ID: 6) vừa đẩy một ticket lên mức quản lý.', 'escalation', false, now() - interval '12 hours');
+
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
 SELECT setval('admins_admin_id_seq', (SELECT COALESCE(MAX(admin_id), 1) FROM admins));
 SELECT setval('roles_role_id_seq', (SELECT COALESCE(MAX(role_id), 1) FROM roles));
@@ -1398,3 +1503,9 @@ SELECT setval('user_posting_plans_posting_plan_id_seq',          (SELECT COALESC
 SELECT setval('posting_fee_ledger_posting_fee_id_seq',           (SELECT COALESCE(MAX(posting_fee_id),        1) FROM posting_fee_ledger));
 SELECT setval('banned_keywords_banned_keyword_id_seq', (SELECT COALESCE(MAX(banned_keyword_id), 1) FROM banned_keywords));
 SELECT setval('system_settings_system_setting_id_seq', (SELECT COALESCE(MAX(system_setting_id), 1) FROM system_settings));
+SELECT setval('operation_tasks_task_id_seq', (SELECT COALESCE(MAX(task_id), 1) FROM operation_tasks));
+SELECT setval('task_replies_reply_id_seq', (SELECT COALESCE(MAX(reply_id), 1) FROM task_replies));
+SELECT setval('moderation_actions_moderation_action_id_seq', (SELECT COALESCE(MAX(moderation_action_id), 1) FROM moderation_actions));
+SELECT setval('moderation_feedback_feedback_id_seq', (SELECT COALESCE(MAX(feedback_id), 1) FROM moderation_feedback));
+SELECT setval('escalations_escalation_id_seq', (SELECT COALESCE(MAX(escalation_id), 1) FROM escalations));
+SELECT setval('system_notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM system_notifications));
