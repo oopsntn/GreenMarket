@@ -15,6 +15,9 @@ interface Shop {
   shopId: number;
   shopName: string;
   shopStatus: string;
+  shopIsVipActive?: boolean;
+  shopVipStartedAt?: string | null;
+  shopVipExpiresAt?: string | null;
   shopDescription?: string;
   shopPhone?: string;
   shopLocation?: string;

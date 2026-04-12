@@ -49,13 +49,6 @@ const getPaymentBadgeClass = (status: string | null) => {
   }
 };
 
-const getPostStatusBadgeClass = (status: string) => {
-  if (status === 'approved') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 'pending') return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (status === 'rejected') return 'bg-rose-50 text-rose-700 border-rose-200';
-  return 'bg-slate-100 text-slate-700 border-slate-200';
-};
-
 const OwnerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<OwnerDashboardResponse | null>(null);
@@ -121,7 +114,7 @@ const OwnerDashboard: React.FC = () => {
     void loadPackages();
   }, []);
 
-    const cards = useMemo(() => {
+  const cards = useMemo(() => {
     if (!data) return [];
     const summary = data.summary;
     const postContactRate = Number(
@@ -309,18 +302,6 @@ const OwnerDashboard: React.FC = () => {
               Quản lý bài đăng <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-
-          <div className="mt-6 flex flex-wrap gap-3 text-xs">
-            <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold uppercase tracking-wider">
-              Đã duyệt: {summary.approvedPosts}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-bold uppercase tracking-wider">
-              Chờ duyệt: {summary.pendingPosts}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 font-bold uppercase tracking-wider">
-              Từ chối: {summary.rejectedPosts}
-            </span>
-          </div>
         </section>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -344,28 +325,28 @@ const OwnerDashboard: React.FC = () => {
           <div className="px-5 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">
-                Goi day bai hien co
+                Gói hiện có
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                So sanh nhanh gia, thoi han va quota de chon goi phu hop.
+                So sánh nhanh giá, thời hạn và quota để chọn gói phù hợp.
               </p>
             </div>
             <Link
               to="/packages"
               className="inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:text-emerald-600"
             >
-              Xem bang gia chi tiet <ArrowRight className="w-4 h-4" />
+              Xem bảng giá chi tiết <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
           <div className="p-5 space-y-5">
             {packagesLoading ? (
               <div className="py-8 text-sm text-slate-500">
-                Dang tai danh sach goi...
+                Đang tải danh sách gói...
               </div>
             ) : packageMetrics.length === 0 ? (
               <div className="py-8 text-sm text-slate-500">
-                Chua co goi nao phu hop voi tai khoan hien tai.
+                Chưa có gói nào phù hợp với tài khoản hiện tại.
               </div>
             ) : (
               <>
@@ -377,19 +358,18 @@ const OwnerDashboard: React.FC = () => {
                     return (
                       <article
                         key={pkg.promotionPackageId}
-                        className={`rounded-2xl border p-4 ${
-                          isRecommended
-                            ? 'border-emerald-500 ring-2 ring-emerald-100 bg-emerald-50/30'
-                            : 'border-slate-200 bg-slate-50'
-                        }`}
+                        className={`rounded-2xl border p-4 ${isRecommended
+                          ? 'border-emerald-500 ring-2 ring-emerald-100 bg-emerald-50/30'
+                          : 'border-slate-200 bg-slate-50'
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <h3 className="font-black text-slate-900">
-                            {pkg.promotionPackageTitle || `Goi ${pkg.durationDays} ngay`}
+                            {pkg.promotionPackageTitle || `Gói ${pkg.durationDays} ngày`}
                           </h3>
                           {isRecommended && (
                             <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase font-black tracking-wider">
-                              De xuat
+                              Đề xuất
                             </span>
                           )}
                         </div>
@@ -397,13 +377,13 @@ const OwnerDashboard: React.FC = () => {
                           {formatVnd(pkg.packagePrice)}
                         </p>
                         <div className="text-xs text-slate-500 space-y-1">
-                          <p>Thoi han: {pkg.durationDays} ngay</p>
-                          <p>Chi phi/ngay: {formatVnd(pkg.costPerDay)}</p>
+                          <p>Thời hạn: {pkg.durationDays} ngày</p>
+                          <p>Chi phí/ngày: {formatVnd(pkg.costPerDay)}</p>
                           <p>
-                            So bai: {pkg.maxPosts > 0 ? `${pkg.maxPosts} bai` : '-'}
+                            Số bài: {pkg.maxPosts > 0 ? `${pkg.maxPosts} bài` : '-'}
                           </p>
                           <p>
-                            Quota: {pkg.displayQuota > 0 ? `${pkg.displayQuota.toLocaleString('vi-VN')} luot` : '-'}
+                            Lượt hiển thị: {pkg.displayQuota > 0 ? `${pkg.displayQuota.toLocaleString('vi-VN')} lượt` : '-'}
                           </p>
                         </div>
                       </article>

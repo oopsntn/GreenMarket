@@ -1,6 +1,6 @@
 # GreenMarket API Documentation
 
-Last updated: 2026-04-09
+Last updated: 2026-04-11
 
 This document lists APIs that are already implemented in `back-end/src/routes`.
 It is intended for `mobile`, `user-web`, and `admin-web` teams.
@@ -59,6 +59,50 @@ Auth rules for all endpoints below:
 **Collaborator notes:**
 - `GET /api/collaborator/my-jobs` includes `progressPercent` derived from job status.
 - `POST /api/collaborator/payout-requests` enforces minimum payout amount `500000`.
+
+### Manager (business role: `MANAGER`)
+
+Auth rules for all endpoints below:
+- Requires valid **user token**
+- Requires active business role `MANAGER` (`verifyToken + requireBusinessRole("MANAGER")`)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/manager/moderation/queue` | User token + `MANAGER` | Get unified moderation queue across posts/reports/shops | optional query: `status`, `priority`, `type`, `page`, `limit` |
+| PATCH | `/api/manager/posts/:id/status` | User token + `MANAGER` | Update post moderation status | path `id`, required `status` (`approved`/`rejected`/`hidden`), optional `reason`, `note` |
+| PATCH | `/api/manager/shops/:id/status` | User token + `MANAGER` | Block/unblock shop status | path `id`, required `status` (`blocked`/`active`), required `reason` when `blocked`, optional `note` |
+| GET | `/api/manager/reports` | User token + `MANAGER` | List reports for moderation flow | optional query: `status`, `severity`, `page`, `limit` |
+| PATCH | `/api/manager/reports/:id/resolve` | User token + `MANAGER` | Resolve or dismiss a pending report | path `id`, required `status` (`resolved`/`dismissed`), required `resolution`, optional `note` |
+| POST | `/api/manager/moderation-feedback` | User token + `MANAGER` | Send moderation feedback to target recipient | required: `targetType`, `targetId`, `recipientUserId`, `message`; optional `templateId` |
+| GET | `/api/manager/history` | User token + `MANAGER` | Get manager moderation action history | optional query: `from`, `to`, `actionType`, `page`, `limit` |
+| GET | `/api/manager/statistics` | User token + `MANAGER` | Get moderation KPI + chart data | optional query: `from`, `to` |
+| POST | `/api/manager/escalations` | User token + `MANAGER` | Create escalation ticket (mock/internal) | required: `targetType`, `targetId`, `severity`, `reason`; optional `evidenceUrls` |
+
+**Manager notes:**
+- State-changing endpoints create action logs in `event_logs` with `eventLogEventType` prefix `manager_*`.
+- `PATCH /api/manager/reports/:id/resolve` only accepts reports currently in `pending` state.
+- `POST /api/manager/escalations` currently creates internal mock ticket (`ticketCode`), no multi-step approval workflow yet.
+
+### Operations Staff (business role: `OPERATION_STAFF`)
+
+Auth rules for all endpoints below:
+- Requires valid **user token**
+- Requires active business role `OPERATION_STAFF` (`verifyToken + requireBusinessRole("OPERATION_STAFF")`)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/operations/tasks` | User token + `OPERATION_STAFF` | Get assigned operations task queue | optional query: `status`, `type`, `priority`, `page`, `limit` |
+| GET | `/api/operations/tasks/:id` | User token + `OPERATION_STAFF` | Get assigned task detail with timeline and actions | path `id` |
+| PATCH | `/api/operations/tasks/:id/status` | User token + `OPERATION_STAFF` | Update task status lifecycle | path `id`, required `status` (`open`/`in_progress`/`closed`), optional `note` |
+| POST | `/api/operations/tasks/:id/replies` | User token + `OPERATION_STAFF` | Add reply entry to task timeline | path `id`, required `message`, optional `attachments`, optional `visibility` (`internal`/`public`) |
+| POST | `/api/operations/tasks/:id/escalate` | User token + `OPERATION_STAFF` | Escalate task to higher role | path `id`, required `reason`, required `targetRole` (`MANAGER`/`ADMIN`), optional `priority` |
+| GET | `/api/operations/workload/daily` | User token + `OPERATION_STAFF` | Get daily workload KPI and hourly distribution | optional query: `date` |
+| GET | `/api/operations/notifications` | User token + `OPERATION_STAFF` | Get operation notifications feed | optional query: `unreadOnly`, `page`, `limit` |
+
+**Operations notes:**
+- Current task source for operations module is built from report records (`reports` table), with deterministic assignment across active `OPERATION_STAFF` users.
+- Timeline/replies/escalations are persisted in `event_logs` using `operations_*` event types.
+- Task status transition enforced in MVP: `open -> in_progress -> closed`.
 
 ### Upload
 
@@ -348,6 +392,8 @@ All admin APIs are mounted under `/api/admin/*` and require:
 - Public user endpoints include browse/detail APIs such as `/api/posts/browse`, `/api/posts/detail/:slug`, `/api/shops/browse`, `/api/shops/:id`.
 - Protected user endpoints require JWT, such as `/api/profile`, `/api/posts/my-posts`, `/api/shops/my-shop`, `/api/shops/dashboard`, `/api/payment/buy-package`.
 - Collaborator module is mounted at `/api/collaborator` and uses business-role guard (`COLLABORATOR`) for all collaborator routes.
+- Manager module is mounted at `/api/manager` and uses business-role guard (`MANAGER`) for all manager routes.
+- Operations module is mounted at `/api/operations` and uses business-role guard (`OPERATION_STAFF`) for all operations routes.
 - `POST /api/posts/:id/contact-click` tracks buyer contact intent per post for analytics.
 - Payment callbacks are handled through `/api/payment/momo-return` and `/api/payment/momo-ipn`.
 - Static uploaded files are served at `/uploads/<filename>`.

@@ -1,1 +1,0 @@
-ALTER TABLE "category_attributes" DROP COLUMN "category_attribute_id";

@@ -227,6 +227,8 @@ CREATE TABLE shops (
     shop_logo_url TEXT,
     shop_cover_url TEXT,
     shop_status VARCHAR(20) DEFAULT 'pending',
+    shop_vip_started_at TIMESTAMP,
+    shop_vip_expires_at TIMESTAMP,
     shop_lat DECIMAL(10, 8),
     shop_lng DECIMAL(11, 8),
     shop_created_at TIMESTAMP DEFAULT now(),
@@ -356,7 +358,7 @@ CREATE TABLE report_evidence (
 -- Moderation Actions
 CREATE TABLE moderation_actions (
     moderation_action_id SERIAL PRIMARY KEY,
-    moderation_action_action_by INTEGER NOT NULL REFERENCES admins(admin_id) ON DELETE CASCADE,
+    moderation_action_action_by INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     moderation_action_post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
     moderation_action_action VARCHAR(50),
     moderation_action_note TEXT,
@@ -651,6 +653,70 @@ CREATE TABLE admin_templates (
     template_updated_at TIMESTAMP DEFAULT now()
 );
 
+-- Operation Tasks
+CREATE TABLE operation_tasks (
+    task_id SERIAL PRIMARY KEY,
+    task_title VARCHAR(255) NOT NULL,
+    task_type VARCHAR(50) NOT NULL,
+    task_status VARCHAR(20) NOT NULL DEFAULT 'open',
+    task_priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+    assignee_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    customer_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    related_target_id INTEGER,
+    task_note TEXT,
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Task Replies
+CREATE TABLE task_replies (
+    reply_id SERIAL PRIMARY KEY,
+    task_id INTEGER NOT NULL REFERENCES operation_tasks(task_id) ON DELETE CASCADE,
+    sender_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    attachments JSONB DEFAULT '[]'::jsonb,
+    visibility VARCHAR(20) DEFAULT 'internal',
+    created_at TIMESTAMP DEFAULT now()
+);
+
+-- Moderation Feedback
+CREATE TABLE moderation_feedback (
+    feedback_id SERIAL PRIMARY KEY,
+    target_type VARCHAR(50) NOT NULL,
+    target_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    recipient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT now()
+);
+
+-- Escalations
+CREATE TABLE escalations (
+    escalation_id SERIAL PRIMARY KEY,
+    source_task_id INTEGER REFERENCES operation_tasks(task_id) ON DELETE SET NULL,
+    target_type VARCHAR(50) NOT NULL,
+    target_id INTEGER NOT NULL,
+    created_by INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    severity VARCHAR(20) NOT NULL DEFAULT 'medium',
+    reason TEXT NOT NULL,
+    evidence_urls JSONB DEFAULT '[]'::jsonb,
+    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    resolution_note TEXT,
+    created_at TIMESTAMP DEFAULT now(),
+    resolved_at TIMESTAMP
+);
+
+-- System Notifications
+CREATE TABLE system_notifications (
+    notification_id SERIAL PRIMARY KEY,
+    recipient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    read_status BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT now()
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -702,6 +768,7 @@ CREATE INDEX idx_admins_status ON admins(admin_status);
 
 -- Shops
 CREATE INDEX idx_shops_status ON shops(shop_status);
+CREATE INDEX idx_shops_vip_expires_at ON shops(shop_vip_expires_at);
 
 -- Categories
 CREATE INDEX idx_categories_parent ON categories(category_parent_id);
@@ -754,14 +821,20 @@ CREATE INDEX idx_event_logs_user ON event_logs(event_log_user_id);
 CREATE INDEX idx_event_logs_type ON event_logs(event_log_event_type);
 CREATE INDEX idx_event_logs_time ON event_logs(event_log_event_time);
 
-
-
 -- Promotion Package Audit Log
 CREATE INDEX idx_pkg_audit_package    ON promotion_package_audit_log(package_id);
 CREATE INDEX idx_pkg_audit_price      ON promotion_package_audit_log(price_id);
 CREATE INDEX idx_pkg_audit_action     ON promotion_package_audit_log(action_type);
 CREATE INDEX idx_pkg_audit_changed_by ON promotion_package_audit_log(changed_by);
 CREATE INDEX idx_pkg_audit_changed_at ON promotion_package_audit_log(changed_at DESC);
+
+-- Internal Ops Indexes
+CREATE INDEX idx_operation_tasks_assignee ON operation_tasks(assignee_id);
+CREATE INDEX idx_operation_tasks_status ON operation_tasks(task_status);
+CREATE INDEX idx_task_replies_task ON task_replies(task_id);
+CREATE INDEX idx_escalations_status ON escalations(status);
+CREATE INDEX idx_system_notifications_recipient ON system_notifications(recipient_id);
+CREATE INDEX idx_system_notifications_read ON system_notifications(read_status);
 
 -- ============================================================
 -- TRIGGERS
@@ -914,7 +987,10 @@ INSERT INTO users (
 (4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Collaborator demo account for mobile job and earnings scenarios.', 'active', 2),
 (5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
 (6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 2),
-(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1);
+(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1),
+(8, '0987654321', 'Người Dùng Test 0987654321', 'test.0987654321@gmail.com', 'Hà Nội', 'Test account for 0987654321', 'active', 1),
+(9, '0909000003', 'Seed Collaborator Account', 'seed.collaborator@greenmarket.local', 'Ha Noi', 'Seed account for collaborator-role API testing and mobile login.', 'active', 3),
+(10, '0909000004', 'Seed Manager Account', 'seed.manager@greenmarket.local', 'Ha Noi', 'Seed account for manager-role API testing and moderation workflows.', 'active', 4);
 
 -- Align demo accounts to business roles used in collaborator APIs
 UPDATE users SET user_business_role_id = 3 WHERE user_id = 4;
@@ -928,9 +1004,19 @@ SET
 WHERE user_id = 4;
 UPDATE users
 SET
+    user_availability_status = 'available',
+    user_availability_note = 'Available for field support and content delivery tasks.'
+WHERE user_id = 9;
+UPDATE users
+SET
     user_availability_status = 'busy',
     user_availability_note = 'Focused on moderation incidents this week.'
 WHERE user_id = 5;
+UPDATE users
+SET
+    user_availability_status = 'busy',
+    user_availability_note = 'Handling moderation queue and escalation workflow.'
+WHERE user_id = 10;
 UPDATE users
 SET
     user_availability_status = 'busy'
@@ -1003,19 +1089,19 @@ INSERT INTO payout_requests (
 (1, 4, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
 
 -- Shops
-INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_lat, shop_lng) VALUES
+INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_vip_started_at, shop_vip_expires_at, shop_lat, shop_lng) VALUES
 (1, 'Vườn Bonsai Phố Huyện', '0978195419', 'nguyenthanhnamidol@gmail.com', TRUE, '14 Nghiêm Ích Khiêm, Thị trấn Chờ, Yên Phong, Bắc Ninh',
     'Chuyên bonsai mini và tầm trung. Nhận thiết kế, chăm sóc và phối thế bonsai theo yêu cầu. Ship toàn quốc qua Viettel Post.',
-    'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', 21.201262, 105.950174),
+    'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', now() - interval '30 days', now() + interval '60 days', 21.201262, 105.950174),
 (3, 'Nam Định Art Garden', '0123456789', 'hoainam.le@gmail.com', TRUE, 'Nam Trực, Nam Định',
     'Nghệ nhân cây cảnh cổ truyền Nam Điền. Chuyên sanh, si, tùng la hán cốt cách truyền thống. Hơn 20 năm kinh nghiệm.',
-    'http://localhost:5000/uploads/shop/nam-dinh-art-garden.jpg', 'active', 20.2506, 106.2355),
+    'http://localhost:5000/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
 (4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
-    'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', 10.2350, 106.1511),
+    'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
 (6, 'Dụng Cụ Bonsai Pro', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
     'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
-    'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', 21.1395, 105.8544);
+    'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
 
 -- ============================================================
 -- CATEGORIES
@@ -1176,7 +1262,11 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
 
 (15, 1, 1, 25, 'Bình Phun Sương Đồng Thau Kiểu Nhật',
     'binh-phun-suong-dong-thau-kieu-nhat',
-    450000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days');
+    450000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days'),
+
+(16, 8, NULL, 11, 'Cây Bonsai Test 0987654321',
+    'cay-bonsai-test-0987654321',
+    1500000, 'Hà Nội', 'approved', '0987654321', 10, 2, true, now() - interval '1 days', now() - interval '1 days');
 
 -- Post Attribute Values
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
@@ -1251,9 +1341,8 @@ INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favori
 -- PLACEMENT SLOTS & PROMOTION PACKAGES
 -- ============================================================
 INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_slot_title, placement_slot_capacity, placement_slot_rules, placement_slot_published) VALUES
-(1, 'HOMEPAGE_BANNER',  'Banner Trang Chủ',          5,  '{"max_per_shop": 1, "min_post_status": "approved"}', true),
-(2, 'CATEGORY_TOP',     'Đầu Trang Danh Mục',        10, '{"max_per_shop": 2, "min_post_status": "approved"}', true),
-(3, 'SEARCH_HIGHLIGHT', 'Nổi Bật Trong Tìm Kiếm',    20, '{"max_per_shop": 3, "min_post_status": "approved"}', true);
+(1, 'BOOST_POST', 'Day bai nha vuon', 200, '{"max_per_shop": 20, "min_post_status": "approved", "audience": "active-shop"}', true),
+(2, 'SHOP_VIP', 'Nha vuon VIP', 500, '{"max_per_shop": 1, "display_priority": "top", "audience": "active-shop"}', true);
 
 INSERT INTO promotion_packages (
     promotion_package_id,
@@ -1265,29 +1354,15 @@ INSERT INTO promotion_packages (
     promotion_package_description,
     promotion_package_published
 ) VALUES
-(1, 1, 'Banner Trang Chủ - 7 ngày',   7,  1, 50000,  'Ưu tiên hiển thị trên trang chủ trong 7 ngày.', true),
-(2, 1, 'Banner Trang Chủ - 30 ngày',  30, 3, 200000, 'Ưu tiên hiển thị trên trang chủ trong 30 ngày.', true),
-(3, 2, 'Đầu Danh Mục - 7 ngày',       7,  1, 30000,  'Nổi bật ở đầu danh mục trong 7 ngày.', true),
-(4, 2, 'Đầu Danh Mục - 30 ngày',      30, 3, 120000, 'Nổi bật ở đầu danh mục trong 30 ngày.', true),
-(5, 3, 'Nổi Bật Tìm Kiếm - 7 ngày',   7,  1, 15000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 7 ngày.', true),
-(6, 3, 'Nổi Bật Tìm Kiếm - 30 ngày',  30, 3, 70000,  'Ưu tiên hiển thị trong kết quả tìm kiếm trong 30 ngày.', true);
+(1, 1, 'Gói tuần', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày.', true),
+(2, 1, 'Gói tháng', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày.', true),
+(3, 2, 'Gói Nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên hiển thị shop trong danh sách nhà vườn và hiển thị huy hiệu VIP.', true);
 
--- Promotion Package Prices (giá khởi tạo + ví dụ lên lịch tăng giá tương lai)
+-- Promotion Package Prices (2 goi day bai + 1 goi Nha vuon VIP 3 thang)
 INSERT INTO promotion_package_prices (package_id, price, effective_from, effective_to, note, created_by) VALUES
--- Gói 1: Banner 7 ngày — giá gốc, sau đó tăng (effective_to đóng lại), rồi lên lịch giá mới
-(1, 150000, now() - interval '90 days', now() - interval '10 days', 'Giá khởi tạo ban đầu',          1),
-(1, 180000, now() - interval '10 days', NULL,                         'Điều chỉnh giá tháng 3/2026',   1),
--- Gói 2: Banner 30 ngày — giá ổn định
-(2, 500000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
--- Gói 3: Đầu Danh Mục 7 ngày — hiện tại + lên lịch tăng giá từ 15/4/2026
-(3, 80000,  now() - interval '90 days', '2026-04-15 00:00:00',        'Giá khởi tạo ban đầu',          1),
-(3, 95000,  '2026-04-15 00:00:00',     NULL,                          'Lên lịch tăng giá từ 15/4',     1),
--- Gói 4: Đầu Danh Mục 30 ngày
-(4, 250000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
--- Gói 5: Nổi Bật Tìm Kiếm 7 ngày
-(5, 50000,  now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1),
--- Gói 6: Nổi Bật Tìm Kiếm 30 ngày
-(6, 150000, now() - interval '90 days', NULL,                         'Giá khởi tạo ban đầu',          1);
+(1, 99000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tuần', 1),
+(2, 299000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tháng', 1),
+(3, 499000, now() - interval '90 days', NULL, 'Giá gói Nhà vườn VIP 3 tháng', 1);
 
 -- ============================================================
 -- POSTING PLANS (OWNER / PERSONAL)
@@ -1370,6 +1445,39 @@ INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_rea
 (2, 5, 2, 3, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
 (3, 5, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00');
 
+-- ============================================================
+-- OPERATIONS & MANAGER DATA
+-- ============================================================
+
+-- Operation Tasks
+INSERT INTO operation_tasks (task_id, task_title, task_type, task_status, task_priority, assignee_id, customer_id, related_target_id, task_note, created_at, updated_at) VALUES
+(1, 'Hỗ trợ đổi email shop', 'support', 'in_progress', 'medium', 6, 2, NULL, 'Khách hàng gặp lỗi OTP khi đổi email.', now() - interval '2 days', now() - interval '1 day'),
+(2, 'Xác minh báo cáo spam', 'report_check', 'open', 'high', 6, 7, 2, 'Report #2 cần tra xét IP.', now() - interval '1 day', now() - interval '1 day'),
+(3, 'Cấp lại quyền đăng bài', 'support', 'closed', 'high', 6, 3, NULL, 'Đã mở khóa.', now() - interval '5 days', now() - interval '4 days');
+
+-- Task Replies
+INSERT INTO task_replies (reply_id, task_id, sender_id, message, visibility, created_at) VALUES
+(1, 1, 6, 'Tôi đang kiểm tra hệ thống SMS provider.', 'internal', now() - interval '1 day'),
+(2, 2, 6, 'Khách này có dấu hiệu spam thực sự. Sẽ báo cấp trên.', 'internal', now() - interval '12 hours');
+
+-- Moderation Actions
+INSERT INTO moderation_actions (moderation_action_id, moderation_action_action_by, moderation_action_post_id, moderation_action_action, moderation_action_note, moderation_action_created_at) VALUES
+(1, 5, 2, 'HIDDEN', 'Tạm ẩn do spam. Chờ shop sửa.', now() - interval '5 days'),
+(2, 5, 2, 'RESTORED', 'Shop đã sửa bài hợp lệ.', now() - interval '4 days');
+
+-- Moderation Feedback
+INSERT INTO moderation_feedback (feedback_id, target_type, target_id, sender_id, recipient_id, message, created_at) VALUES
+(1, 'post', 2, 5, 3, 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', now() - interval '5 days');
+
+-- Escalations
+INSERT INTO escalations (escalation_id, source_task_id, target_type, target_id, created_by, severity, reason, status, resolution_note, created_at) VALUES
+(1, 2, 'shop', 3, 6, 'high', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'open', NULL, now() - interval '12 hours');
+
+-- System Notifications
+INSERT INTO system_notifications (notification_id, recipient_id, title, content, type, read_status, created_at) VALUES
+(1, 6, 'Task mới: Xác minh báo cáo spam', 'Bạn được assign một task mới từ hệ thống phân bổ.', 'new_task', true, now() - interval '1 day'),
+(2, 5, 'Escalation mới: Cần xử lý shop vi phạm', 'Operation Staff (ID: 6) vừa đẩy một ticket lên mức quản lý.', 'escalation', false, now() - interval '12 hours');
+
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
 SELECT setval('admins_admin_id_seq', (SELECT COALESCE(MAX(admin_id), 1) FROM admins));
 SELECT setval('roles_role_id_seq', (SELECT COALESCE(MAX(role_id), 1) FROM roles));
@@ -1395,3 +1503,9 @@ SELECT setval('user_posting_plans_posting_plan_id_seq',          (SELECT COALESC
 SELECT setval('posting_fee_ledger_posting_fee_id_seq',           (SELECT COALESCE(MAX(posting_fee_id),        1) FROM posting_fee_ledger));
 SELECT setval('banned_keywords_banned_keyword_id_seq', (SELECT COALESCE(MAX(banned_keyword_id), 1) FROM banned_keywords));
 SELECT setval('system_settings_system_setting_id_seq', (SELECT COALESCE(MAX(system_setting_id), 1) FROM system_settings));
+SELECT setval('operation_tasks_task_id_seq', (SELECT COALESCE(MAX(task_id), 1) FROM operation_tasks));
+SELECT setval('task_replies_reply_id_seq', (SELECT COALESCE(MAX(reply_id), 1) FROM task_replies));
+SELECT setval('moderation_actions_moderation_action_id_seq', (SELECT COALESCE(MAX(moderation_action_id), 1) FROM moderation_actions));
+SELECT setval('moderation_feedback_feedback_id_seq', (SELECT COALESCE(MAX(feedback_id), 1) FROM moderation_feedback));
+SELECT setval('escalations_escalation_id_seq', (SELECT COALESCE(MAX(escalation_id), 1) FROM escalations));
+SELECT setval('system_notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM system_notifications));

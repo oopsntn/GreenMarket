@@ -26,6 +26,8 @@ export const shops = pgTable("shops", {
   shopLogoUrl: text("shop_logo_url"),
   shopCoverUrl: text("shop_cover_url"),
   shopStatus: varchar("shop_status", { length: 20 }).default("pending"),
+  shopVipStartedAt: timestamp("shop_vip_started_at"),
+  shopVipExpiresAt: timestamp("shop_vip_expires_at"),
   shopLat: decimal("shop_lat", { precision: 10, scale: 8 }),
   shopLng: decimal("shop_lng", { precision: 11, scale: 8 }),
   shopCreatedAt: timestamp("shop_created_at").defaultNow(),
