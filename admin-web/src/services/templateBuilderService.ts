@@ -10,17 +10,17 @@ const defaultPreset: TemplateBuilderPreset = {
   audience: "Seller",
   tone: "Supportive",
   shopName: "Green Corner Garden",
-  postTitle: "Rare Monstera Deliciosa for Sale",
-  reason: "Listing is missing mandatory details.",
+  postTitle: "Monstera Deliciosa cần bổ sung thông tin",
+  reason: "Bài đăng đang thiếu thông tin bắt buộc.",
   slotName: "Home Top",
   contactEmail: "ops@greenmarket.com",
-  adminNote: "Update the content and resubmit within 24 hours.",
+  adminNote: "Cập nhật nội dung rồi gửi duyệt lại trong vòng 24 giờ.",
 };
 
 export const templateBuilderService = {
   getPreset(): Promise<TemplateBuilderPreset> {
     return apiClient.request<TemplateBuilderPreset>(TEMPLATE_BUILDER_API_PATH, {
-      defaultErrorMessage: "Unable to load template builder preset.",
+      defaultErrorMessage: "Không thể tải cấu hình Trình dựng mẫu.",
     });
   },
 
@@ -28,7 +28,7 @@ export const templateBuilderService = {
     return apiClient.request<TemplateBuilderPreset>(TEMPLATE_BUILDER_API_PATH, {
       method: "PUT",
       includeJsonContentType: true,
-      defaultErrorMessage: "Unable to save template builder preset.",
+      defaultErrorMessage: "Không thể lưu cấu hình Trình dựng mẫu.",
       body: JSON.stringify(preset),
     });
   },
@@ -38,7 +38,7 @@ export const templateBuilderService = {
       `${TEMPLATE_BUILDER_API_PATH}/reset`,
       {
         method: "POST",
-        defaultErrorMessage: "Unable to reset template builder preset.",
+        defaultErrorMessage: "Không thể đặt lại cấu hình Trình dựng mẫu.",
       },
     );
   },

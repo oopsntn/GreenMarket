@@ -1,174 +1,178 @@
-import { apiClient } from "../lib/apiClient";
-import type {
-  Template,
-  TemplateFormState,
-  TemplateStatus,
-  TemplateType,
-} from "../types/template";
+import { apiClient } from "./api";
+
+export type TemplateType = "Rejection Reason" | "Report Reason" | "Notification";
+export type TemplateStatus = "Active" | "Disabled";
+
+export type Template = {
+  id: number;
+  name: string;
+  type: TemplateType;
+  content: string;
+  status: TemplateStatus;
+  updatedDate: string;
+};
+
+type TemplateListParams = {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+type TemplateListResponse = {
+  data: Template[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+type TemplateApiItem = {
+  id: number;
+  templateName: string;
+  templateType: TemplateType;
+  templateContent: string;
+  status: TemplateStatus;
+  updatedAt?: string;
+};
 
 type TemplateApiResponse = {
-  templateId: number;
-  templateName: string | null;
-  templateType: string | null;
-  templateContent: string | null;
-  templateStatus: string | null;
-  templateUpdatedAt: string | null;
-};
-
-const TEMPLATE_UPDATED_FALLBACK = "—";
-
-const normalizeText = (value: string) => value.trim().toLowerCase();
-
-const formatDate = (value: string | null) => {
-  if (!value) return TEMPLATE_UPDATED_FALLBACK;
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return TEMPLATE_UPDATED_FALLBACK;
-
-  return date.toISOString().slice(0, 10);
-};
-
-const mapApiTypeToUiType = (value: string | null): TemplateType => {
-  switch ((value || "").toLowerCase()) {
-    case "report reason":
-      return "Report Reason";
-    case "notification":
-      return "Notification";
-    case "rejection reason":
-    default:
-      return "Rejection Reason";
-  }
-};
-
-const mapUiTypeToApiType = (value: TemplateType) => value;
-
-const mapApiStatusToUiStatus = (value: string | null): TemplateStatus =>
-  (value || "").toLowerCase() === "disabled" ? "Disabled" : "Active";
-
-const mapApiTemplateToUi = (item: TemplateApiResponse): Template => {
-  return {
-    id: item.templateId,
-    name: item.templateName?.trim() || "Untitled Template",
-    type: mapApiTypeToUiType(item.templateType),
-    content: item.templateContent?.trim() || "",
-    status: mapApiStatusToUiStatus(item.templateStatus),
-    updatedAt: formatDate(item.templateUpdatedAt),
+  data: TemplateApiItem[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
   };
 };
 
-export const emptyTemplateForm: TemplateFormState = {
-  name: "",
-  type: "Rejection Reason",
-  content: "",
-  status: "Active",
+type TemplateApiDetailResponse = {
+  data: TemplateApiItem;
 };
 
+type TemplatePayload = {
+  templateName: string;
+  templateType: TemplateType;
+  templateContent: string;
+};
+
+export type CreateTemplatePayload = {
+  name: string;
+  type: TemplateType;
+  content: string;
+};
+
+export type UpdateTemplatePayload = CreateTemplatePayload;
+
+const TEMPLATE_BASE_PATH = "/admin/templates";
+
+function normalizeDate(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function mapTemplate(item: TemplateApiItem): Template {
+  return {
+    id: item.id,
+    name: item.templateName?.trim() || "Mau chua dat ten",
+    type: item.templateType,
+    content: item.templateContent ?? "",
+    status: item.status,
+    updatedDate: normalizeDate(item.updatedAt),
+  };
+}
+
+function buildTemplatePayload(payload: CreateTemplatePayload | UpdateTemplatePayload): TemplatePayload {
+  const name = payload.name.trim();
+  const content = payload.content.trim();
+
+  if (!name) {
+    throw new Error("Ten mau la bat buoc.");
+  }
+
+  if (!content) {
+    throw new Error("Noi dung mau la bat buoc.");
+  }
+
+  return {
+    templateName: name,
+    templateType: payload.type,
+    templateContent: content,
+  };
+}
+
+function resolveApiError(error: unknown, fallbackMessage: string) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
 export const templateService = {
-  getEmptyForm(): TemplateFormState {
-    return { ...emptyTemplateForm };
-  },
+  async getTemplates(params: TemplateListParams = {}): Promise<TemplateListResponse> {
+    try {
+      const query = new URLSearchParams();
 
-  validateTemplateForm(
-    templates: Template[],
-    formData: TemplateFormState,
-    selectedTemplateId?: number | null,
-  ) {
-    if (!formData.name.trim()) {
-      throw new Error("Template name is required.");
-    }
-
-    if (!formData.content.trim()) {
-      throw new Error("Template content is required.");
-    }
-
-    const hasDuplicate = templates.some((template) => {
-      if (selectedTemplateId && template.id === selectedTemplateId) {
-        return false;
+      if (params.search?.trim()) {
+        query.set("search", params.search.trim());
       }
 
-      return (
-        normalizeText(template.name) === normalizeText(formData.name) &&
-        template.type === formData.type
-      );
-    });
+      query.set("page", String(params.page ?? 1));
+      query.set("limit", String(params.pageSize ?? 10));
 
-    if (hasDuplicate) {
-      throw new Error("A template with the same name and type already exists.");
+      const path = `${TEMPLATE_BASE_PATH}?${query.toString()}`;
+      const response = await apiClient.get<TemplateApiResponse>(path);
+
+      const data = response.data ?? [];
+      const pagination = response.pagination ?? {};
+
+      return {
+        data: data.map(mapTemplate),
+        total: pagination.total ?? data.length,
+        page: pagination.page ?? (params.page ?? 1),
+        pageSize: pagination.limit ?? (params.pageSize ?? 10),
+      };
+    } catch (error) {
+      throw new Error(resolveApiError(error, "Khong the tai danh sach mau."));
     }
   },
 
-  async getTemplates(): Promise<Template[]> {
-    const data = await apiClient.request<TemplateApiResponse[]>(
-      "/api/admin/templates",
-      {
-        defaultErrorMessage: "Unable to load templates.",
-      },
-    );
-
-    return data.map(mapApiTemplateToUi);
+  async createTemplate(payload: CreateTemplatePayload): Promise<Template> {
+    try {
+      const body = buildTemplatePayload(payload);
+      const response = await apiClient.post<TemplateApiDetailResponse>(TEMPLATE_BASE_PATH, body);
+      return mapTemplate(response.data);
+    } catch (error) {
+      throw new Error(resolveApiError(error, "Khong the tao mau moi."));
+    }
   },
 
-  async createTemplate(formData: TemplateFormState): Promise<Template> {
-    const payload = {
-      templateName: formData.name.trim(),
-      templateType: mapUiTypeToApiType(formData.type),
-      templateContent: formData.content.trim(),
-      templateStatus: formData.status,
-    };
-
-    const data = await apiClient.request<TemplateApiResponse>(
-      "/api/admin/templates",
-      {
-        method: "POST",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Unable to create template.",
-        body: JSON.stringify(payload),
-      },
-    );
-
-    return mapApiTemplateToUi(data);
+  async updateTemplate(templateId: number, payload: UpdateTemplatePayload): Promise<Template> {
+    try {
+      const body = buildTemplatePayload(payload);
+      const response = await apiClient.put<TemplateApiDetailResponse>(`${TEMPLATE_BASE_PATH}/${templateId}`, body);
+      return mapTemplate(response.data);
+    } catch (error) {
+      throw new Error(resolveApiError(error, "Khong the cap nhat mau."));
+    }
   },
 
-  async updateTemplate(
-    templateId: number,
-    formData: TemplateFormState,
-  ): Promise<Template> {
-    const payload = {
-      templateName: formData.name.trim(),
-      templateType: mapUiTypeToApiType(formData.type),
-      templateContent: formData.content.trim(),
-      templateStatus: formData.status,
-    };
+  async updateTemplateStatus(templateId: number, status: TemplateStatus): Promise<Template> {
+    try {
+      const response = await apiClient.patch<TemplateApiDetailResponse>(
+        `${TEMPLATE_BASE_PATH}/${templateId}/status`,
+        { status },
+      );
 
-    const data = await apiClient.request<TemplateApiResponse>(
-      `/api/admin/templates/${templateId}`,
-      {
-        method: "PUT",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update template.",
-        body: JSON.stringify(payload),
-      },
-    );
-
-    return mapApiTemplateToUi(data);
-  },
-
-  async updateTemplateStatus(
-    templateId: number,
-    status: TemplateStatus,
-  ): Promise<Template> {
-    const data = await apiClient.request<TemplateApiResponse>(
-      `/api/admin/templates/${templateId}/status`,
-      {
-        method: "PATCH",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update template status.",
-        body: JSON.stringify({
-          templateStatus: status,
-        }),
-      },
-    );
-
-    return mapApiTemplateToUi(data);
+      return mapTemplate(response.data);
+    } catch (error) {
+      throw new Error(resolveApiError(error, "Khong the cap nhat trang thai mau."));
+    }
   },
 };
