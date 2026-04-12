@@ -7,8 +7,8 @@ import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
-import { categoryService } from "../services/categoryService";
 import { categoryMappingService } from "../services/categoryMappingService";
+import { categoryService } from "../services/categoryService";
 import type {
   Category,
   CategoryFormState,
@@ -29,6 +29,12 @@ const statusFilterOptions: Array<CategoryStatus | "All"> = [
   "Active",
   "Disabled",
 ];
+
+const statusLabels: Record<CategoryStatus | "All", string> = {
+  All: "Tất cả trạng thái",
+  Active: "Đang hoạt động",
+  Disabled: "Đã tắt",
+};
 
 const PAGE_SIZE = 5;
 
@@ -97,7 +103,7 @@ function CategoriesPage() {
       setCategories(hydratedCategories);
     } catch (error) {
       setPageError(
-        error instanceof Error ? error.message : "Failed to load categories.",
+        error instanceof Error ? error.message : "Không thể tải danh mục.",
       );
     } finally {
       if (showLoader) {
@@ -207,6 +213,7 @@ function CategoriesPage() {
     try {
       setIsSubmitting(true);
       setFormError("");
+
       categoryService.validateCategoryForm(
         categories,
         formData,
@@ -216,7 +223,7 @@ function CategoriesPage() {
       if (modalMode === "add") {
         await categoryService.createCategory(formData);
         await loadCategories();
-        showToast("Category added successfully.");
+        showToast("Đã thêm danh mục thành công.");
       }
 
       if (modalMode === "edit" && selectedCategoryId !== null) {
@@ -225,7 +232,7 @@ function CategoriesPage() {
         );
 
         if (!currentCategory) {
-          setFormError("Selected category no longer exists.");
+          setFormError("Danh mục đã chọn không còn tồn tại.");
           return;
         }
 
@@ -236,13 +243,13 @@ function CategoriesPage() {
         );
 
         await loadCategories();
-        showToast("Category updated successfully.");
+        showToast("Đã cập nhật danh mục thành công.");
       }
 
       closeModal();
     } catch (error) {
       setFormError(
-        error instanceof Error ? error.message : "Failed to save category.",
+        error instanceof Error ? error.message : "Không thể lưu danh mục.",
       );
     } finally {
       setIsSubmitting(false);
@@ -250,11 +257,12 @@ function CategoriesPage() {
   };
 
   const handleConfirmAction = async () => {
-    if (confirmState.categoryId === null || confirmState.action === null)
+    if (confirmState.categoryId === null || confirmState.action === null) {
       return;
+    }
 
     const targetCategory = categories.find(
-      (item) => item.id === confirmState.categoryId,
+      (category) => category.id === confirmState.categoryId,
     );
 
     if (!targetCategory) {
@@ -262,39 +270,37 @@ function CategoriesPage() {
       return;
     }
 
-    const nextStatus =
-      confirmState.action === "disable" ? "Disabled" : "Active";
-
     try {
       setIsStatusUpdating(confirmState.categoryId);
 
-      await categoryService.updateCategoryStatus(
-        confirmState.categoryId,
+      const nextStatus: CategoryStatus =
+        confirmState.action === "disable" ? "Disabled" : "Active";
+
+      await categoryService.updateCategory(
+        targetCategory.id,
+        {
+          name: targetCategory.name,
+          slug: targetCategory.slug,
+        },
         nextStatus,
-        targetCategory,
       );
 
       await loadCategories();
-
-      if (confirmState.action === "disable") {
-        showToast(
-          `${targetCategory.name} has been disabled successfully.`,
-          "info",
-        );
-      } else {
-        showToast(`${targetCategory.name} has been enabled successfully.`);
-      }
-
-      closeConfirmDialog();
+      showToast(
+        confirmState.action === "disable"
+          ? "Đã tắt danh mục."
+          : "Đã bật lại danh mục.",
+      );
     } catch (error) {
       showToast(
         error instanceof Error
           ? error.message
-          : "Failed to update category status.",
+          : "Không thể cập nhật trạng thái danh mục.",
         "error",
       );
     } finally {
       setIsStatusUpdating(null);
+      closeConfirmDialog();
     }
   };
 
@@ -303,9 +309,10 @@ function CategoriesPage() {
 
     return categories.filter((category) => {
       const matchesKeyword =
-        !keyword ||
+        keyword.length === 0 ||
         category.name.toLowerCase().includes(keyword) ||
         category.slug.toLowerCase().includes(keyword);
+
       const matchesStatus =
         selectedStatusFilter === "All" ||
         category.status === selectedStatusFilter;
@@ -336,80 +343,46 @@ function CategoriesPage() {
 
   const selectedCategory =
     selectedCategoryId !== null
-      ? (categories.find((item) => item.id === selectedCategoryId) ?? null)
+      ? categories.find((category) => category.id === selectedCategoryId) ?? null
       : null;
 
-  const modalTitle =
-    modalMode === "add"
-      ? "Add Category"
-      : modalMode === "edit"
-        ? "Edit Category"
-        : "Category Details";
+  const confirmDialogTitle =
+    confirmState.action === "disable" ? "Tắt danh mục" : "Bật lại danh mục";
 
-  const modalDescription =
-    modalMode === "add"
-      ? "Create a new category. New categories are created as active by default."
-      : modalMode === "edit"
-        ? "Update category information. Use Enable or Disable in the table to change status."
-        : "Review category information and current activation status.";
-
-  const confirmCategory =
-    confirmState.categoryId !== null
-      ? (categories.find((item) => item.id === confirmState.categoryId) ?? null)
-      : null;
-
-  const categoryLabel = confirmCategory?.name ?? "this category";
-
-  const confirmTitleMap: Record<ConfirmAction, string> = {
-    disable: "Disable Category",
-    enable: "Enable Category",
-  };
-
-  const confirmMessageMap: Record<ConfirmAction, string> = {
-    disable: `Are you sure you want to disable ${categoryLabel}? This category will no longer be active in the system.`,
-    enable: `Are you sure you want to enable ${categoryLabel}? This category will be active again in the system.`,
-  };
-
-  const confirmButtonMap: Record<ConfirmAction, string> = {
-    disable: "Disable Category",
-    enable: "Enable Category",
-  };
-
-  const confirmToneMap: Record<
-    ConfirmAction,
-    "danger" | "success" | "neutral"
-  > = {
-    disable: "danger",
-    enable: "success",
-  };
+  const confirmDialogMessage =
+    confirmState.action === "disable"
+      ? "Danh mục sẽ không còn dùng được trong luồng cấu hình và gán thuộc tính cho tới khi được bật lại."
+      : "Danh mục sẽ hoạt động trở lại và có thể tiếp tục được dùng trong các luồng cấu hình.";
 
   return (
     <div className="categories-page">
       <PageHeader
-        title="Categories Management"
-        description="Manage plant categories and their basic information."
-        actionLabel="+ Add Category"
-        onActionClick={openAddModal}
+        title="Quản lý danh mục"
+        description="Quản lý danh mục cây cảnh và thông tin cơ bản dùng trong hệ thống."
+        actions={
+          <button className="primary-button" onClick={openAddModal}>
+            + Thêm danh mục
+          </button>
+        }
       />
 
       <SearchToolbar
-        placeholder="Search by category name or slug"
+        placeholder="Tìm theo tên danh mục hoặc slug"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Filter by status"
-        filterSummaryLabel="Current status"
-        filterSummaryItems={[selectedStatusFilter]}
+        filterLabel="Lọc theo trạng thái"
+        filterSummaryItems={[statusLabels[selectedStatusFilter]]}
       />
 
       {showFilters ? (
         <SectionCard
-          title="Category Filters"
-          description="Filter category records by publication status."
+          title="Bộ lọc danh mục"
+          description="Thu hẹp danh sách theo trạng thái hoạt động của danh mục."
         >
-          <div className="categories-filters">
-            <div className="categories-filters__field">
-              <label htmlFor="categories-status-filter">Status</label>
+          <div className="categories-page__filters">
+            <div className="categories-page__filter-field">
+              <label htmlFor="categories-status-filter">Trạng thái</label>
               <select
                 id="categories-status-filter"
                 value={selectedStatusFilter}
@@ -419,9 +392,9 @@ function CategoriesPage() {
                   )
                 }
               >
-                {statusFilterOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
+                {statusFilterOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {statusLabels[option]}
                   </option>
                 ))}
               </select>
@@ -431,93 +404,94 @@ function CategoriesPage() {
       ) : null}
 
       <SectionCard
-        title="Category Directory"
-        description="Review category information, publication status, and creation date."
+        title="Danh sách danh mục"
+        description="Theo dõi slug, số thuộc tính đang gắn và trạng thái sử dụng của từng danh mục."
       >
-        {isInitialLoading ? (
-          <div className="categories-state">Loading categories...</div>
-        ) : pageError ? (
-          <div className="categories-state categories-state--error">
-            {pageError}
-          </div>
+        {pageError ? (
+          <EmptyState
+            title="Không thể tải danh mục"
+            description={pageError}
+            actionLabel="Thử tải lại"
+            onAction={() => {
+              void loadCategories(true);
+            }}
+          />
+        ) : isInitialLoading ? (
+          <EmptyState
+            title="Đang tải danh mục..."
+            description="Hệ thống đang đồng bộ dữ liệu danh mục từ máy chủ."
+          />
         ) : filteredCategories.length === 0 ? (
           <EmptyState
-            title="No categories found"
-            description="No categories match your current search. Try another keyword or create a new category."
+            title="Không tìm thấy danh mục phù hợp"
+            description="Hãy đổi từ khóa tìm kiếm hoặc trạng thái lọc để xem dữ liệu."
           />
         ) : (
           <>
-            <div className="categories-table-wrapper">
-              <table className="categories-table">
+            <div className="categories-page__table-wrap">
+              <table className="categories-page__table">
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Category Name</th>
+                    <th>Tên danh mục</th>
                     <th>Slug</th>
-                    <th>Attributes</th>
-                    <th>Status</th>
-                    <th>Created Date</th>
-                    <th>Actions</th>
+                    <th>Thuộc tính đang gắn</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {paginatedCategories.map((category) => (
                     <tr key={category.id}>
                       <td>#{category.id}</td>
                       <td>{category.name}</td>
-                      <td>{category.slug || "—"}</td>
+                      <td>{category.slug}</td>
                       <td>{category.attributesCount ?? 0}</td>
                       <td>
                         <StatusBadge
-                          label={category.status}
-                          variant={
-                            category.status === "Active" ? "active" : "disabled"
-                          }
-                        />
+                          tone={category.status === "Active" ? "green" : "gray"}
+                        >
+                          {category.status === "Active"
+                            ? "Đang hoạt động"
+                            : "Đã tắt"}
+                        </StatusBadge>
                       </td>
-                      <td>{category.createdAt || "—"}</td>
                       <td>
-                        <div className="categories-actions">
+                        <div className="categories-page__actions">
                           <button
-                            type="button"
-                            className="categories-actions__view"
+                            className="soft-button"
                             onClick={() => openViewModal(category)}
                           >
-                            View
+                            Xem
                           </button>
-
                           <button
-                            type="button"
-                            className="categories-actions__edit"
+                            className="secondary-button"
                             onClick={() => openEditModal(category)}
                           >
-                            Edit
+                            Sửa
                           </button>
-
-                          {category.status === "Active" ? (
-                            <button
-                              type="button"
-                              className="categories-actions__disable"
-                              onClick={() =>
-                                openConfirmDialog(category.id, "disable")
-                              }
-                              disabled={isStatusUpdating === category.id}
-                            >
-                              Disable
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="categories-actions__enable"
-                              onClick={() =>
-                                openConfirmDialog(category.id, "enable")
-                              }
-                              disabled={isStatusUpdating === category.id}
-                            >
-                              Enable
-                            </button>
-                          )}
+                          <button
+                            className={
+                              category.status === "Active"
+                                ? "danger-button"
+                                : "success-button"
+                            }
+                            disabled={isStatusUpdating === category.id}
+                            onClick={() =>
+                              openConfirmDialog(
+                                category.id,
+                                category.status === "Active"
+                                  ? "disable"
+                                  : "enable",
+                              )
+                            }
+                          >
+                            {isStatusUpdating === category.id
+                              ? "Đang xử lý..."
+                              : category.status === "Active"
+                                ? "Tắt"
+                                : "Bật lại"}
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -526,27 +500,26 @@ function CategoriesPage() {
               </table>
             </div>
 
-            <div className="categories-pagination">
-              <span className="categories-pagination__info">
+            <div className="categories-page__pagination">
+              <span>
                 Trang {page} / {totalPages}
               </span>
-
-              <div className="categories-pagination__actions">
+              <div className="categories-page__pagination-actions">
                 <button
-                  type="button"
+                  className="soft-button"
+                  disabled={page <= 1}
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                  disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
-                  type="button"
+                  className="soft-button"
+                  disabled={page >= totalPages}
                   onClick={() =>
                     setPage((prev) => Math.min(totalPages, prev + 1))
                   }
-                  disabled={page === totalPages}
                 >
-                  Next
+                  Tiếp
                 </button>
               </div>
             </div>
@@ -556,112 +529,80 @@ function CategoriesPage() {
 
       <BaseModal
         isOpen={isModalOpen}
-        title={modalTitle}
-        description={modalDescription}
         onClose={closeModal}
+        title={
+          modalMode === "add"
+            ? "Thêm danh mục"
+            : modalMode === "edit"
+              ? "Chỉnh sửa danh mục"
+              : "Chi tiết danh mục"
+        }
+        description={
+          modalMode === "add"
+            ? "Tạo một danh mục mới để dùng trong taxonomy và cấu hình thuộc tính."
+            : modalMode === "edit"
+              ? "Cập nhật thông tin cơ bản của danh mục đã có."
+              : "Xem thông tin chi tiết của danh mục đang được cấu hình trong hệ thống."
+        }
       >
-        <form className="categories-modal__form" onSubmit={handleSubmit}>
-          <div className="categories-modal__field">
-            <label htmlFor="name">Category Name</label>
+        <form className="categories-page__form" onSubmit={handleSubmit}>
+          <label>
+            Tên danh mục
             <input
-              id="name"
               name="name"
-              type="text"
               value={formData.name}
               onChange={handleChange}
-              disabled={modalMode === "view" || isSubmitting}
-              placeholder="Enter category name"
+              placeholder="Ví dụ: Cây nội thất"
+              disabled={modalMode === "view"}
             />
-          </div>
+          </label>
 
-          <div className="categories-modal__field">
-            <label htmlFor="slug">Slug</label>
+          <label>
+            Slug
             <input
-              id="slug"
               name="slug"
-              type="text"
               value={formData.slug}
               onChange={handleChange}
-              disabled={modalMode === "view" || isSubmitting}
-              placeholder="Leave blank to auto-generate from category name"
+              placeholder="Ví dụ: cay-noi-that"
+              disabled={modalMode === "view"}
             />
-          </div>
-
-          {modalMode === "view" && selectedCategory ? (
-            <>
-              <div className="categories-modal__field">
-                <label>Status</label>
-                <input type="text" value={selectedCategory.status} disabled />
-              </div>
-
-              <div className="categories-modal__field">
-                <label>Created Date</label>
-                <input
-                  type="text"
-                  value={selectedCategory.createdAt || "—"}
-                  disabled
-                />
-              </div>
-            </>
-          ) : null}
+          </label>
 
           {formError ? (
-            <div className="categories-state categories-state--error">
-              {formError}
-            </div>
+            <p className="categories-page__form-error">{formError}</p>
           ) : null}
 
-          <div className="categories-modal__actions">
-            <button
-              type="button"
-              className="categories-modal__cancel"
-              onClick={closeModal}
-              disabled={isSubmitting}
-            >
-              Close
+          <div className="categories-page__form-actions">
+            <button type="button" className="soft-button" onClick={closeModal}>
+              {modalMode === "view" ? "Đóng" : "Hủy"}
             </button>
 
-            {modalMode !== "view" && (
+            {modalMode !== "view" ? (
               <button
                 type="submit"
-                className="categories-modal__submit"
+                className="primary-button"
                 disabled={isSubmitting}
               >
-                {isSubmitting
-                  ? "Saving..."
-                  : modalMode === "add"
-                    ? "Add Category"
-                    : "Save Changes"}
+                {isSubmitting ? "Đang lưu..." : "Lưu danh mục"}
               </button>
-            )}
+            ) : null}
           </div>
         </form>
       </BaseModal>
 
       <ConfirmDialog
         isOpen={confirmState.isOpen}
-        title={
-          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
-        }
-        message={
-          confirmState.action
-            ? confirmMessageMap[confirmState.action]
-            : "Please confirm this action."
-        }
-        confirmText={
-          confirmState.action
-            ? confirmButtonMap[confirmState.action]
-            : "Confirm"
-        }
-        cancelText="Cancel"
-        tone={
-          confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
-        }
-        onConfirm={handleConfirmAction}
-        onCancel={closeConfirmDialog}
+        title={confirmDialogTitle}
+        message={confirmDialogMessage}
+        onClose={closeConfirmDialog}
+        onConfirm={() => {
+          void handleConfirmAction();
+        }}
+        confirmLabel={confirmState.action === "disable" ? "Tắt" : "Bật lại"}
+        tone={confirmState.action === "disable" ? "danger" : "success"}
       />
 
-      <ToastContainer toasts={toasts} onClose={removeToast} />
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
     </div>
   );
 }
