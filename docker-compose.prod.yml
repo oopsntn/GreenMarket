@@ -1,0 +1,76 @@
+services:
+  # ───── DATABASE ─────
+  db:
+    image: postgres:18.2
+    container_name: greenmarket_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+      POSTGRES_DB: GreenMarket
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./GreenMarket.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ───── BACKEND API ─────
+  api:
+    build:
+      context: ./back-end
+      dockerfile: ./docker/node/Dockerfile
+    container_name: greenmarket_api
+    restart: unless-stopped
+    env_file:
+      - ./back-end/.env.prod
+    environment:
+      - DATABASE_URL=postgresql://postgres:${DB_PASSWORD:-admin}@db:5432/GreenMarket
+      - NODE_ENV=production
+    volumes:
+      - ./back-end/uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ───── USER FRONTEND ─────
+  user-web:
+    build:
+      context: ./user-web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${USER_WEB_API_URL:-https://api.greenmarket.yourdomain.com/api}
+    container_name: greenmarket_user_web
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  # ───── ADMIN FRONTEND ─────
+  admin-web:
+    build:
+      context: ./admin-web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${ADMIN_WEB_API_URL:-https://api.greenmarket.yourdomain.com}
+    container_name: greenmarket_admin_web
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  # ───── CLOUDFLARE TUNNEL ─────
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: greenmarket_tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - api
+      - user-web
+      - admin-web
+
+volumes:
+  pg_data:
