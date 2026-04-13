@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -52,6 +52,21 @@ const statusFilterOptions: Array<PromotionStatus | "All"> = [
   "Paused",
   "Expired",
 ];
+
+const slotLabelMap: Record<PromotionSlot | "All", string> = {
+  All: "Tất cả",
+  "Home Top": "Trang chủ nổi bật",
+  "Category Top": "Danh mục nổi bật",
+  "Search Boost": "Tăng tìm kiếm",
+};
+
+const statusLabelMap: Record<PromotionStatus | "All", string> = {
+  All: "Tất cả",
+  Scheduled: "Đã lên lịch",
+  Active: "Đang chạy",
+  Paused: "Tạm dừng",
+  Expired: "Hết hạn",
+};
 
 const DEFAULT_REOPEN_START_DATE = "2026-04-01";
 const PAGE_SIZE = 5;
@@ -150,7 +165,7 @@ function PromotionsPage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Failed to load promotions.",
+            : "Không thể tải danh sách khuyến mãi.",
         );
       } finally {
         setIsLoading(false);
@@ -203,7 +218,7 @@ function PromotionsPage() {
   const openChangePackageModal = (promotion: Promotion) => {
     const preferredPackage = getPreferredPackage(promotion);
     if (!preferredPackage) {
-      showToast("No active promotion packages are available right now.", "error");
+      showToast("Hiện chưa có gói khuyến mãi nào đang hoạt động.", "error");
       return;
     }
 
@@ -231,7 +246,7 @@ function PromotionsPage() {
 
     const preferredPackage = getPreferredPackage(promotion);
     if (!preferredPackage) {
-      showToast("No active promotion packages are available right now.", "error");
+      showToast("Hiện chưa có gói khuyến mãi nào đang hoạt động.", "error");
       return;
     }
 
@@ -246,7 +261,7 @@ function PromotionsPage() {
         preferredPackage.durationDays,
       ),
       paymentStatus: "Paid",
-      adminNote: `Admin reopened package after confirming payment from ${promotion.owner}.`,
+      adminNote: `Admin mở lại gói sau khi xác nhận thanh toán từ ${promotion.owner}.`,
     });
     setIsActionModalOpen(true);
   };
@@ -320,21 +335,21 @@ function PromotionsPage() {
         null)
       : null;
 
-  const promotionLabel = confirmPromotion?.postTitle ?? "this promotion";
+  const promotionLabel = confirmPromotion?.postTitle ?? "khuyến mãi này";
 
   const confirmTitleMap: Record<ConfirmAction, string> = {
-    pause: "Pause Promotion",
-    resume: "Resume Promotion",
+    pause: "Tạm dừng khuyến mãi",
+    resume: "Tiếp tục khuyến mãi",
   };
 
   const confirmMessageMap: Record<ConfirmAction, string> = {
-    pause: `Are you sure you want to pause ${promotionLabel}? This promotion will stop running until it is resumed.`,
-    resume: `Are you sure you want to resume ${promotionLabel}? This promotion will become active again.`,
+    pause: `Bạn chắc chắn muốn tạm dừng ${promotionLabel}? Khuyến mãi sẽ dừng cho đến khi được mở lại.`,
+    resume: `Bạn chắc chắn muốn tiếp tục ${promotionLabel}? Khuyến mãi sẽ chạy lại.`,
   };
 
   const confirmButtonMap: Record<ConfirmAction, string> = {
-    pause: "Pause Promotion",
-    resume: "Resume Promotion",
+    pause: "Tạm dừng",
+    resume: "Tiếp tục",
   };
 
   const confirmToneMap: Record<
@@ -402,10 +417,7 @@ function PromotionsPage() {
 
         setPromotions(nextPromotions);
 
-        showToast(
-          `${targetPromotion.postTitle} has been paused successfully.`,
-          "info",
-        );
+        showToast(`${targetPromotion.postTitle} đã được tạm dừng.`, "info");
 
         if (selectedPromotion?.id === targetPromotion.id) {
           setSelectedPromotion(
@@ -434,7 +446,7 @@ function PromotionsPage() {
 
         setPromotions(nextPromotions);
 
-        showToast(`${targetPromotion.postTitle} has been resumed successfully.`);
+        showToast(`${targetPromotion.postTitle} đã được tiếp tục.`);
 
         if (selectedPromotion?.id === targetPromotion.id) {
           setSelectedPromotion(
@@ -448,7 +460,7 @@ function PromotionsPage() {
       showToast(
         error instanceof Error
           ? error.message
-          : "Failed to update promotion status.",
+          : "Không thể cập nhật trạng thái khuyến mãi.",
         "error",
       );
     } finally {
@@ -514,13 +526,13 @@ function PromotionsPage() {
     event.preventDefault();
 
     if (!actionTargetPromotion || !selectedActionPackage) {
-      showToast("Please choose a valid package before continuing.", "error");
+      showToast("Vui lòng chọn gói hợp lệ trước khi tiếp tục.", "error");
       return;
     }
 
     if (actionModalMode === "reopen" && actionFormData.paymentStatus !== "Paid") {
       showToast(
-        "Admin can reopen an expired package only after payment is confirmed.",
+        "Chỉ mở lại gói đã hết hạn sau khi xác nhận thanh toán.",
         "error",
       );
       return;
@@ -564,8 +576,8 @@ function PromotionsPage() {
 
       showToast(
         actionModalMode === "reopen"
-          ? `${actionTargetPromotion.postTitle} has been reopened by admin.`
-          : `${actionTargetPromotion.postTitle} has been moved to ${selectedActionPackage.name}.`,
+          ? `${actionTargetPromotion.postTitle} đã được admin mở lại.`
+          : `${actionTargetPromotion.postTitle} đã chuyển sang ${selectedActionPackage.name}.`,
       );
 
       closeActionModal();
@@ -573,7 +585,7 @@ function PromotionsPage() {
       showToast(
         error instanceof Error
           ? error.message
-          : "Failed to update promotion package.",
+          : "Không thể cập nhật gói khuyến mãi.",
         "error",
       );
     } finally {
@@ -585,8 +597,8 @@ function PromotionsPage() {
   return (
     <div className="promotions-page">
       <PageHeader
-        title="Promotions Management"
-        description="Manage purchased promotion packages, verify payment state, handle package changes, and reopen expired packages when admin confirms customer payment."
+        title="Quản lý khuyến mãi"
+        description="Quản lý gói khuyến mãi đã mua, xác nhận thanh toán, đổi gói và mở lại gói hết hạn khi admin xác nhận."
       />
 
       <div className="promotions-summary-grid">
@@ -601,22 +613,25 @@ function PromotionsPage() {
       </div>
 
       <SearchToolbar
-        placeholder="Search by post title, owner, or package"
+        placeholder="Tìm theo tiêu đề bài đăng, chủ sở hữu hoặc gói"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Filter by slot & status"
-        filterSummaryItems={[selectedSlotFilter, selectedStatusFilter]}
+        filterLabel="Lọc theo vị trí hiển thị và trạng thái"
+        filterSummaryItems={[
+          slotLabelMap[selectedSlotFilter],
+          statusLabelMap[selectedStatusFilter],
+        ]}
       />
 
       {showFilters && (
         <SectionCard
-          title="Promotion Filters"
-          description="Refine promotion records by placement slot and runtime status."
+          title="Bộ lọc khuyến mãi"
+          description="Lọc theo vị trí hiển thị và trạng thái vận hành."
         >
           <div className="promotions-filters">
             <div className="promotions-filters__field">
-              <label htmlFor="promotion-slot-filter">Placement Slot</label>
+              <label htmlFor="promotion-slot-filter">Vị trí hiển thị</label>
               <select
                 id="promotion-slot-filter"
                 value={selectedSlotFilter}
@@ -628,14 +643,14 @@ function PromotionsPage() {
               >
                 {slotFilterOptions.map((slot) => (
                   <option key={slot} value={slot}>
-                    {slot}
+                    {slotLabelMap[slot]}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="promotions-filters__field">
-              <label htmlFor="promotion-status-filter">Status</label>
+              <label htmlFor="promotion-status-filter">Trạng thái</label>
               <select
                 id="promotion-status-filter"
                 value={selectedStatusFilter}
@@ -647,7 +662,7 @@ function PromotionsPage() {
               >
                 {statusFilterOptions.map((status) => (
                   <option key={status} value={status}>
-                    {status}
+                    {statusLabelMap[status]}
                   </option>
                 ))}
               </select>
@@ -657,20 +672,20 @@ function PromotionsPage() {
       )}
 
       <SectionCard
-        title="Promotion Directory"
-        description="Review billing state, package window, admin handling, and status for each purchased promotion."
+        title="Danh sách khuyến mãi"
+        description="Theo dõi trạng thái thanh toán, thời gian gói, admin xử lý và trạng thái vận hành."
       >
         {isLoading ? (
           <EmptyState
-            title="Loading promotions"
-            description="Fetching promotion records from the admin API."
+            title="Đang tải khuyến mãi"
+            description="Đang lấy dữ liệu khuyến mãi từ hệ thống quản trị."
           />
         ) : pageError ? (
-          <EmptyState title="Unable to load promotions" description={pageError} />
+          <EmptyState title="Không thể tải khuyến mãi" description={pageError} />
         ) : filteredPromotions.length === 0 ? (
           <EmptyState
-            title="No promotions found"
-            description="No promotions match your current search or filter settings. Try another condition to continue."
+            title="Không có khuyến mãi phù hợp"
+            description="Không có khuyến mãi nào khớp bộ lọc hiện tại. Hãy thử điều kiện khác."
           />
         ) : (
           <div className="promotions-directory">
@@ -679,15 +694,15 @@ function PromotionsPage() {
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Post Title</th>
-                    <th>Owner</th>
-                    <th>Placement Slot</th>
-                    <th>Package</th>
-                    <th>Billing</th>
-                    <th>Delivery Window</th>
-                    <th>Handled By</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>Tiêu đề bài đăng</th>
+                    <th>Chủ sở hữu</th>
+                    <th>Vị trí hiển thị</th>
+                    <th>Gói</th>
+                    <th>Thanh toán</th>
+                    <th>Thời gian chạy</th>
+                    <th>Admin xử lý</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
 
@@ -698,13 +713,17 @@ function PromotionsPage() {
                       <td>{promotion.postTitle}</td>
                       <td>{promotion.owner}</td>
                       <td>
-                        <StatusBadge label={promotion.slot} variant="slot" />
+                        <StatusBadge label={slotLabelMap[promotion.slot]} variant="slot" />
                       </td>
                       <td>{promotion.packageName}</td>
                       <td>
                         <div className="promotions-cell">
                           <StatusBadge
-                            label={promotion.paymentStatus}
+                            label={
+                              promotion.paymentStatus === "Paid"
+                                ? "Đã thanh toán"
+                                : "Chờ xác nhận"
+                            }
                             variant={
                               promotion.paymentStatus === "Paid"
                                 ? "success"
@@ -723,7 +742,7 @@ function PromotionsPage() {
                       <td>{promotion.handledBy}</td>
                       <td>
                         <StatusBadge
-                          label={promotion.status}
+                          label={statusLabelMap[promotion.status]}
                           variant={
                             promotion.status === "Active"
                               ? "active"
@@ -742,7 +761,7 @@ function PromotionsPage() {
                             className="promotions-actions__view"
                             onClick={() => openViewModal(promotion)}
                           >
-                            View
+                            Xem
                           </button>
 
                           {promotion.status === "Active" ? (
@@ -755,14 +774,14 @@ function PromotionsPage() {
                                 }
                                 disabled={isStatusUpdating === promotion.id}
                               >
-                                Pause
+                                Tạm dừng
                               </button>
                               <button
                                 type="button"
                                 className="promotions-actions__change"
                                 onClick={() => openChangePackageModal(promotion)}
                               >
-                                Change Package
+                                Đổi gói
                               </button>
                             </>
                           ) : promotion.status === "Paused" ? (
@@ -775,14 +794,14 @@ function PromotionsPage() {
                                 }
                                 disabled={isStatusUpdating === promotion.id}
                               >
-                                Resume
+                                Tiếp tục
                               </button>
                               <button
                                 type="button"
                                 className="promotions-actions__change"
                                 onClick={() => openChangePackageModal(promotion)}
                               >
-                                Change Package
+                                Đổi gói
                               </button>
                             </>
                           ) : promotion.status === "Scheduled" ? (
@@ -792,15 +811,15 @@ function PromotionsPage() {
                                 className="promotions-actions__change"
                                 onClick={() => openChangePackageModal(promotion)}
                               >
-                                Change Package
+                                Đổi gói
                               </button>
                               <button
                                 type="button"
                                 className="promotions-actions__disabled"
                                 disabled
-                                title="Scheduled promotions have not started yet."
+                                title="Khuyến mãi đã lên lịch nhưng chưa bắt đầu."
                               >
-                                Upcoming
+                                Sắp chạy
                               </button>
                             </>
                           ) : (
@@ -821,10 +840,10 @@ function PromotionsPage() {
                                       promotion,
                                       "reopen",
                                     )
-                                  : "Reopen this expired promotion"
+                                  : "Mở lại khuyến mãi đã hết hạn"
                               }
                             >
-                              Reopen
+                              Mở lại
                             </button>
                           )}
                         </div>
@@ -846,7 +865,7 @@ function PromotionsPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -855,7 +874,7 @@ function PromotionsPage() {
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Tiếp
                 </button>
               </div>
             </div>
@@ -865,8 +884,8 @@ function PromotionsPage() {
 
       <BaseModal
         isOpen={isModalOpen}
-        title="Promotion Details"
-        description="Review package setup, placement schedule, payment confirmation, and current runtime status."
+        title="Chi tiết khuyến mãi"
+        description="Xem cấu hình gói, lịch chạy, xác nhận thanh toán và trạng thái vận hành."
         onClose={closeModal}
         maxWidth="820px"
       >
@@ -874,7 +893,7 @@ function PromotionsPage() {
           <div className="promotions-modal__content">
             <div className="promotions-modal__grid">
               <div className="promotions-modal__field">
-                <label>Post Title</label>
+                <label>Tiêu đề bài đăng</label>
                 <input
                   type="text"
                   value={selectedPromotion.postTitle}
@@ -883,17 +902,21 @@ function PromotionsPage() {
               </div>
 
               <div className="promotions-modal__field">
-                <label>Owner</label>
+                <label>Chủ sở hữu</label>
                 <input type="text" value={selectedPromotion.owner} disabled />
               </div>
 
               <div className="promotions-modal__field">
-                <label>Placement Slot</label>
-                <input type="text" value={selectedPromotion.slot} disabled />
+                <label>Vị trí hiển thị</label>
+                <input
+                  type="text"
+                  value={slotLabelMap[selectedPromotion.slot]}
+                  disabled
+                />
               </div>
 
               <div className="promotions-modal__field">
-                <label>Package</label>
+                <label>Gói</label>
                 <input
                   type="text"
                   value={selectedPromotion.packageName}
@@ -902,21 +925,25 @@ function PromotionsPage() {
               </div>
 
               <div className="promotions-modal__field">
-                <label>Payment Status</label>
+                <label>Trạng thái thanh toán</label>
                 <input
                   type="text"
-                  value={selectedPromotion.paymentStatus}
+                  value={
+                    selectedPromotion.paymentStatus === "Paid"
+                      ? "Đã thanh toán"
+                      : "Chờ xác nhận"
+                  }
                   disabled
                 />
               </div>
 
               <div className="promotions-modal__field">
-                <label>Handled By</label>
+                <label>Admin xử lý</label>
                 <input type="text" value={selectedPromotion.handledBy} disabled />
               </div>
 
               <div className="promotions-modal__field">
-                <label>Start Date</label>
+                <label>Ngày bắt đầu</label>
                 <input
                   type="text"
                   value={selectedPromotion.startDate}
@@ -925,23 +952,27 @@ function PromotionsPage() {
               </div>
 
               <div className="promotions-modal__field">
-                <label>End Date</label>
+                <label>Ngày kết thúc</label>
                 <input type="text" value={selectedPromotion.endDate} disabled />
               </div>
 
               <div className="promotions-modal__field">
-                <label>Status</label>
-                <input type="text" value={selectedPromotion.status} disabled />
+                <label>Trạng thái</label>
+                <input
+                  type="text"
+                  value={statusLabelMap[selectedPromotion.status]}
+                  disabled
+                />
               </div>
 
               <div className="promotions-modal__field">
-                <label>Budget</label>
+                <label>Ngân sách</label>
                 <input type="text" value={selectedPromotion.budget} disabled />
               </div>
             </div>
 
             <div className="promotions-modal__field">
-              <label>Admin Note</label>
+              <label>Ghi chú admin</label>
               <textarea value={selectedPromotion.note} rows={4} disabled />
             </div>
 
@@ -981,7 +1012,7 @@ function PromotionsPage() {
                 className="promotions-modal__close"
                 onClick={closeModal}
               >
-                Close
+                Đóng
               </button>
 
               {selectedPromotion.status === "Active" ? (
@@ -991,7 +1022,7 @@ function PromotionsPage() {
                     className="promotions-modal__change"
                     onClick={() => openChangePackageModal(selectedPromotion)}
                   >
-                    Change Package
+                    Đổi gói
                   </button>
                   <button
                     type="button"
@@ -1006,10 +1037,10 @@ function PromotionsPage() {
                             selectedPromotion,
                             "pause",
                           )
-                        : "Pause this promotion"
+                        : "Tạm dừng khuyến mãi này"
                     }
                   >
-                    Pause Promotion
+                    Tạm dừng
                   </button>
                 </>
               ) : selectedPromotion.status === "Paused" ? (
@@ -1019,7 +1050,7 @@ function PromotionsPage() {
                     className="promotions-modal__change"
                     onClick={() => openChangePackageModal(selectedPromotion)}
                   >
-                    Change Package
+                    Đổi gói
                   </button>
                   <button
                     type="button"
@@ -1034,10 +1065,10 @@ function PromotionsPage() {
                             selectedPromotion,
                             "resume",
                           )
-                        : "Resume this promotion"
+                        : "Tiếp tục khuyến mãi này"
                     }
                   >
-                    Resume Promotion
+                    Tiếp tục
                   </button>
                 </>
               ) : selectedPromotion.status === "Scheduled" ? (
@@ -1046,7 +1077,7 @@ function PromotionsPage() {
                   className="promotions-modal__change"
                   onClick={() => openChangePackageModal(selectedPromotion)}
                 >
-                  Change Package
+                  Đổi gói
                 </button>
               ) : (
                 <button
@@ -1062,10 +1093,10 @@ function PromotionsPage() {
                           selectedPromotion,
                           "reopen",
                         )
-                      : "Reopen this expired promotion"
+                      : "Mở lại khuyến mãi đã hết hạn"
                   }
                 >
-                  Reopen Package
+                  Mở lại gói
                 </button>
               )}
             </div>
@@ -1077,13 +1108,13 @@ function PromotionsPage() {
         isOpen={isActionModalOpen}
         title={
           actionModalMode === "reopen"
-            ? "Reopen Expired Package"
-            : "Change Promotion Package"
+            ? "Mở lại gói đã hết hạn"
+            : "Đổi gói khuyến mãi"
         }
         description={
           actionModalMode === "reopen"
-            ? "Confirm payment, choose the replacement package, and reopen the campaign as admin."
-            : "Move the customer to another package and update the delivery schedule from admin."
+            ? "Xác nhận thanh toán, chọn gói thay thế và mở lại chiến dịch với vai trò admin."
+            : "Chuyển khách sang gói khác và cập nhật lịch chạy từ admin."
         }
         onClose={closeActionModal}
         maxWidth="760px"
@@ -1095,21 +1126,21 @@ function PromotionsPage() {
           >
             <div className="promotions-modal__grid">
               <div className="promotions-modal__field">
-                <label htmlFor="slot">Placement Slot</label>
+                <label htmlFor="slot">Vị trí hiển thị</label>
                 <select
                   id="slot"
                   name="slot"
                   value={actionFormData.slot}
                   onChange={handlePackageActionChange}
                 >
-                  <option value="Home Top">Home Top</option>
-                  <option value="Category Top">Category Top</option>
-                  <option value="Search Boost">Search Boost</option>
+                  <option value="Home Top">Trang chủ nổi bật</option>
+                  <option value="Category Top">Danh mục nổi bật</option>
+                  <option value="Search Boost">Tăng tìm kiếm</option>
                 </select>
               </div>
 
               <div className="promotions-modal__field">
-                <label htmlFor="packageId">Package</label>
+                <label htmlFor="packageId">Gói</label>
                 <select
                   id="packageId"
                   name="packageId"
@@ -1125,7 +1156,7 @@ function PromotionsPage() {
               </div>
 
               <div className="promotions-modal__field">
-                <label htmlFor="startDate">From Date</label>
+                <label htmlFor="startDate">Từ ngày</label>
                 <input
                   id="startDate"
                   name="startDate"
@@ -1136,7 +1167,7 @@ function PromotionsPage() {
               </div>
 
               <div className="promotions-modal__field">
-                <label htmlFor="endDate">To Date</label>
+                <label htmlFor="endDate">Đến ngày</label>
                 <input
                   id="endDate"
                   name="endDate"
@@ -1147,22 +1178,20 @@ function PromotionsPage() {
               </div>
 
               <div className="promotions-modal__field">
-                <label htmlFor="paymentStatus">Payment Status</label>
+                <label htmlFor="paymentStatus">Trạng thái thanh toán</label>
                 <select
                   id="paymentStatus"
                   name="paymentStatus"
                   value={actionFormData.paymentStatus}
                   onChange={handlePackageActionChange}
                 >
-                  <option value="Paid">Paid</option>
-                  <option value="Pending Verification">
-                    Pending Verification
-                  </option>
+                  <option value="Paid">Đã thanh toán</option>
+                  <option value="Pending Verification">Chờ xác nhận</option>
                 </select>
               </div>
 
               <div className="promotions-modal__field">
-                <label>Updated Budget</label>
+                <label>Ngân sách cập nhật</label>
                 <input
                   type="text"
                   value={selectedActionPackage?.price ?? ""}
@@ -1172,14 +1201,14 @@ function PromotionsPage() {
             </div>
 
             <div className="promotions-modal__field">
-              <label htmlFor="adminNote">Admin Note</label>
+              <label htmlFor="adminNote">Ghi chú admin</label>
               <textarea
                 id="adminNote"
                 name="adminNote"
                 rows={4}
                 value={actionFormData.adminNote}
                 onChange={handlePackageActionChange}
-                placeholder="Explain why the package was changed or reopened"
+                placeholder="Nêu lý do đổi gói hoặc mở lại gói"
               />
             </div>
 
@@ -1190,7 +1219,7 @@ function PromotionsPage() {
                 onClick={closeActionModal}
                 disabled={isActionSubmitting}
               >
-                Cancel
+                Hủy
               </button>
               <button
                 type="submit"
@@ -1202,10 +1231,10 @@ function PromotionsPage() {
                 disabled={isActionSubmitting}
               >
                 {isActionSubmitting
-                  ? "Saving..."
+                  ? "Đang lưu..."
                   : actionModalMode === "reopen"
-                    ? "Reopen Package"
-                    : "Save Package Change"}
+                    ? "Mở lại gói"
+                    : "Lưu thay đổi gói"}
               </button>
             </div>
           </form>
@@ -1215,19 +1244,19 @@ function PromotionsPage() {
       <ConfirmDialog
         isOpen={confirmState.isOpen}
         title={
-          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+          confirmState.action ? confirmTitleMap[confirmState.action] : "Xác nhận"
         }
         message={
           confirmState.action
             ? confirmMessageMap[confirmState.action]
-            : "Please confirm this action."
+            : "Vui lòng xác nhận thao tác này."
         }
         confirmText={
           confirmState.action
             ? confirmButtonMap[confirmState.action]
-            : "Confirm"
+            : "Xác nhận"
         }
-        cancelText="Cancel"
+        cancelText="Hủy"
         tone={
           confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
         }

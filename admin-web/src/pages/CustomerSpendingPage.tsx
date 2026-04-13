@@ -18,6 +18,20 @@ import "./CustomerSpendingPage.css";
 
 const PAGE_SIZE = 5;
 
+const CUSTOMER_SEGMENTS = [
+  "All Customers",
+  "Top Spenders",
+  "Returning Buyers",
+  "New Customers",
+] as const;
+
+const customerSegmentLabelMap: Record<(typeof CUSTOMER_SEGMENTS)[number], string> = {
+  "All Customers": "Tất cả khách hàng",
+  "Top Spenders": "Chi tiêu cao nhất",
+  "Returning Buyers": "Khách quay lại",
+  "New Customers": "Khách mới",
+};
+
 const parseCurrencyValue = (value: string) => {
   const numericValue = Number(value.replace(/[^\d]/g, ""));
   return Number.isNaN(numericValue) ? 0 : numericValue;
@@ -32,7 +46,8 @@ function CustomerSpendingPage() {
 
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
-  const [customerSegment, setCustomerSegment] = useState("All Customers");
+  const [customerSegment, setCustomerSegment] =
+    useState<(typeof CUSTOMER_SEGMENTS)[number]>("All Customers");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -55,7 +70,7 @@ function CustomerSpendingPage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Failed to load customer spending summary.",
+            : "Không thể tải báo cáo chi tiêu khách hàng.",
         );
       } finally {
         setIsLoading(false);
@@ -129,74 +144,71 @@ function CustomerSpendingPage() {
 
   const handleExportCustomerReport = () => {
     showToast(
-      `Customer spending report export started for ${dateRangeLabel} • ${customerSegment}.`,
+      `Đã bắt đầu xuất báo cáo chi tiêu khách hàng cho ${dateRangeLabel} • ${customerSegmentLabelMap[customerSegment]}.`,
     );
   };
 
   return (
     <div className="customer-spending-page">
       <PageHeader
-        title="Customer Spending Report"
-        description="Track customer purchase behavior and promotion spending activity."
-        actionLabel="Export Customer Report"
+        title="Chi tiêu khách hàng"
+        description="Theo dõi hành vi mua hàng và mức chi tiêu quảng bá của khách hàng."
+        actionLabel="Xuất báo cáo chi tiêu"
         onActionClick={handleExportCustomerReport}
       />
 
       <SectionCard
-        title="Customer Spending Filters"
-        description="Narrow the reporting period and customer segment."
+        title="Bộ lọc chi tiêu khách hàng"
+        description="Thu hẹp khoảng thời gian báo cáo và nhóm khách hàng cần theo dõi."
       >
         <FilterBar
           fields={[
             {
               id: "customer-spending-from-date",
-              label: "From Date",
+              label: "Từ ngày",
               type: "date",
               value: fromDate,
               onChange: setFromDate,
             },
             {
               id: "customer-spending-to-date",
-              label: "To Date",
+              label: "Đến ngày",
               type: "date",
               value: toDate,
               onChange: setToDate,
             },
             {
               id: "customer-segment",
-              label: "Customer Segment",
+              label: "Nhóm khách hàng",
               type: "select",
               value: customerSegment,
-              onChange: setCustomerSegment,
-              options: [
-                "All Customers",
-                "Top Spenders",
-                "Returning Buyers",
-                "New Customers",
-              ],
+              onChange: (value) =>
+                setCustomerSegment(value as (typeof CUSTOMER_SEGMENTS)[number]),
+              options: [...CUSTOMER_SEGMENTS],
+              optionLabels: customerSegmentLabelMap,
             },
           ]}
         />
       </SectionCard>
 
       <SearchToolbar
-        placeholder="Search by customer name or email"
+        placeholder="Tìm theo tên khách hàng hoặc email"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
-        filterSummary={`Current segment: ${customerSegment} • ${dateRangeLabel}`}
+        filterSummary={`Nhóm hiện tại: ${customerSegmentLabelMap[customerSegment]} • ${dateRangeLabel}`}
       />
 
       {isLoading ? (
-        <SectionCard title="Customer Spending KPIs">
+        <SectionCard title="Chỉ số chi tiêu">
           <EmptyState
-            title="Loading customer spending"
-            description="Fetching customer spend metrics from the admin API."
+            title="Đang tải báo cáo chi tiêu"
+            description="Hệ thống đang lấy các chỉ số chi tiêu khách hàng từ API quản trị."
           />
         </SectionCard>
       ) : pageError ? (
-        <SectionCard title="Customer Spending KPIs">
+        <SectionCard title="Chỉ số chi tiêu">
           <EmptyState
-            title="Unable to load customer spending"
+            title="Không thể tải báo cáo chi tiêu"
             description={pageError}
           />
         </SectionCard>
@@ -215,23 +227,23 @@ function CustomerSpendingPage() {
       )}
 
       <SectionCard
-        title="Top Customer Spending"
-        description={`${dateRangeLabel} • ${customerSegment}`}
+        title="Danh sách chi tiêu khách hàng"
+        description={`${dateRangeLabel} • ${customerSegmentLabelMap[customerSegment]}`}
       >
         {isLoading ? (
           <EmptyState
-            title="Loading customer rows"
-            description="Fetching customer spend rows from the admin API."
+            title="Đang tải danh sách khách hàng"
+            description="Hệ thống đang lấy dữ liệu chi tiêu chi tiết của khách hàng."
           />
         ) : pageError ? (
           <EmptyState
-            title="Unable to load customer spending rows"
+            title="Không thể tải danh sách khách hàng"
             description={pageError}
           />
         ) : filteredRows.length === 0 ? (
           <EmptyState
-            title="No customer spending data found"
-            description="No customer records match the current segment filter."
+            title="Không có dữ liệu chi tiêu phù hợp"
+            description="Không có khách hàng nào khớp với nhóm và từ khóa hiện tại."
           />
         ) : (
           <div className="customer-spending-table-section">
@@ -240,12 +252,12 @@ function CustomerSpendingPage() {
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Customer Name</th>
+                    <th>Tên khách hàng</th>
                     <th>Email</th>
-                    <th>Total Orders</th>
-                    <th>Total Spent</th>
-                    <th>Avg. Order Value</th>
-                    <th>Last Purchase</th>
+                    <th>Tổng đơn hàng</th>
+                    <th>Tổng chi tiêu</th>
+                    <th>Giá trị đơn trung bình</th>
+                    <th>Lần mua gần nhất</th>
                   </tr>
                 </thead>
 
@@ -278,7 +290,7 @@ function CustomerSpendingPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -287,7 +299,7 @@ function CustomerSpendingPage() {
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Tiếp
                 </button>
               </div>
             </div>
