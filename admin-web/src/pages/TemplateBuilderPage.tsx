@@ -231,11 +231,11 @@ function TemplateBuilderPage() {
           </div>
           <div className="template-builder-step-card">
             <strong>2. Cấu hình nội dung</strong>
-            <span>Thêm trường, chọn kiểu dữ liệu, nhập nhãn, placeholder và đánh dấu bắt buộc.</span>
+            <span>Thêm trường, chọn kiểu dữ liệu, nhập nhãn hiển thị, gợi ý nhập liệu và đánh dấu bắt buộc.</span>
           </div>
           <div className="template-builder-step-card">
             <strong>3. Xem trước</strong>
-            <span>Kiểm tra label, placeholder, trạng thái bắt buộc và bố cục hiển thị cuối cùng.</span>
+            <span>Kiểm tra nhãn, gợi ý nhập liệu, trạng thái bắt buộc và bố cục hiển thị cuối cùng.</span>
           </div>
         </div>
       </SectionCard>
@@ -434,7 +434,7 @@ function TemplateBuilderPage() {
                         </div>
 
                         <div className="template-builder-field">
-                          <label>Placeholder</label>
+                          <label>Gợi ý nhập liệu</label>
                           <input
                             value={field.placeholder}
                             onChange={(event) =>
@@ -447,7 +447,7 @@ function TemplateBuilderPage() {
                         </div>
 
                         <div className="template-builder-field template-builder-field--full">
-                          <label>Helper text</label>
+                          <label>Ghi chú hướng dẫn</label>
                           <textarea
                             value={field.helperText}
                             onChange={(event) =>
@@ -496,7 +496,7 @@ function TemplateBuilderPage() {
 
             <SectionCard
               title="Xem trước form"
-              description="Hiển thị gần với trải nghiệm người dùng cuối để rà label, placeholder và bố cục trước khi dùng thật."
+              description="Hiển thị gần với trải nghiệm người dùng cuối để rà nhãn, gợi ý nhập liệu và bố cục trước khi dùng thật."
             >
               <div className="template-builder-preview-banner">
                 Đây là chế độ xem trước. Admin chỉ kiểm tra bố cục hiển thị, không thể gửi form thật từ màn này.
@@ -536,7 +536,7 @@ function TemplateBuilderPage() {
 
                 <div className="template-builder-preview-section">
                   <strong>Thuộc tính đặc thù ngành cây cảnh</strong>
-                  <span>Kiểm tra kỹ nhãn, placeholder và trạng thái bắt buộc của từng trường.</span>
+                  <span>Kiểm tra kỹ nhãn, gợi ý nhập liệu và trạng thái bắt buộc của từng trường.</span>
                 </div>
 
                 {preset.fields.map((field) => (
@@ -581,7 +581,7 @@ function TemplateBuilderPage() {
         </>
       )}
 
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }

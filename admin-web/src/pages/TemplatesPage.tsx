@@ -364,7 +364,7 @@ export default function TemplatesPage() {
                           Sửa
                         </button>
                         <button type="button" onClick={() => openModal("clone", template)}>
-                          Clone
+                          Nhân bản
                         </button>
                         <button type="button" onClick={() => void handleToggleStatus(template)}>
                           {template.status === "Active" ? "Tắt" : "Bật lại"}
@@ -564,7 +564,7 @@ export default function TemplatesPage() {
         </div>
       ) : null}
 
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
