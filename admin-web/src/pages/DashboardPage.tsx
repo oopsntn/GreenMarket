@@ -17,6 +17,11 @@ const USER_SCOPE_LABEL = "Người dùng và cửa hàng";
 const MODERATION_SCOPE_LABEL = "Bài đăng và kiểm duyệt";
 const BUSINESS_SCOPE_LABEL = "Tổng quan kinh doanh";
 
+const isAllTimeCard = (title: string) => {
+  const normalized = title.toLowerCase();
+  return normalized.includes("người dùng") || normalized.includes("bài đăng");
+};
+
 function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(
     dashboardService.getEmptyOverview(),
@@ -173,7 +178,11 @@ function DashboardPage() {
               <StatCard
                 title={card.title}
                 value={card.value}
-                subtitle={`${dateRangeLabel} • ${overviewScope}`}
+                subtitle={
+                  isAllTimeCard(card.title)
+                    ? "Toàn hệ thống"
+                    : `${dateRangeLabel} • ${overviewScope}`
+                }
               />
             </SectionCard>
           ))}

@@ -339,7 +339,7 @@ const buildExportContent = (
     };
 };
 
-const getGeneratedByLabel = (generatedBy: string) => generatedBy || "System Administrator";
+const getGeneratedByLabel = (generatedBy: string) => generatedBy || "Quản trị viên hệ thống";
 
 const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
     const slotCatalog = await adminPlacementSlotCatalogService.getCatalog();
@@ -379,9 +379,9 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
         .map((item) => ({
             paymentTxnId: item.paymentTxnId,
             userId: item.paymentTxnUserId,
-            customerName: item.userDisplayName?.trim() || `User #${item.paymentTxnUserId}`,
-            email: item.userEmail?.trim() || "No email",
-            packageName: item.packageTitle?.trim() || "Unknown Package",
+            customerName: item.userDisplayName?.trim() || `Người dùng #${item.paymentTxnUserId}`,
+            email: item.userEmail?.trim() || "Chưa có email",
+            packageName: item.packageTitle?.trim() || "Chưa xác định gói",
             slot:
                 slotNameById.get(slotByPackageId.get(item.packageId ?? -1) ?? -1) ||
                 "Home Top",
@@ -403,7 +403,7 @@ const buildExportHistoryItem = (
     format,
     generatedBy: getGeneratedByLabel(generatedBy),
     date: formatDate(new Date()),
-    status: "Completed",
+        status: "Completed",
 });
 
 const mapEventLogToHistoryItem = (
@@ -420,11 +420,11 @@ const mapEventLogToHistoryItem = (
 
     return {
         id: item.eventLogId,
-        reportName: typeof meta.reportName === "string" ? meta.reportName : "Export",
+        reportName: typeof meta.reportName === "string" ? meta.reportName : "Xuất dữ liệu",
         type: reportType,
         format,
         generatedBy:
-            typeof meta.generatedBy === "string" ? meta.generatedBy : "System Administrator",
+            typeof meta.generatedBy === "string" ? meta.generatedBy : "Quản trị viên hệ thống",
         date: formatDate(item.eventLogEventTime),
         status,
     };
@@ -705,8 +705,8 @@ export const adminReportingService = {
             },
             {
                 title: "Top Slot Revenue",
-                value: topSlot?.[0] ?? "No data",
-                note: topSlot ? formatCurrency(topSlot[1]) : "No paid orders in period",
+                value: topSlot?.[0] ?? "Chưa có dữ liệu",
+                note: topSlot ? formatCurrency(topSlot[1]) : "Chưa có đơn thanh toán thành công trong kỳ",
             },
         ];
 
