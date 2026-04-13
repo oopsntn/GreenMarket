@@ -918,6 +918,11 @@ INSERT INTO admin_roles (admin_role_admin_id, admin_role_role_id) VALUES
 (1, 1),
 (2, 2);
 
+-- Normalize demo admin passwords to the real bcrypt hash for '123456'
+UPDATE admins
+SET admin_password_hash = '$2b$10$KH82bHpUqKJPRktGSh7osORZI..Ie0E18FqB4I8xewhQAKa13x71m'
+WHERE admin_email IN ('admin@greenmarket.com', 'mod@greenmarket.com');
+
 -- Business Roles
 INSERT INTO business_roles (
     business_role_id,
@@ -1489,7 +1494,10 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('otp_expire_minutes', '10', 1),
 ('vnpay_sandbox', 'true', 1),
 ('contact_email', 'support@greenmarket.com', 1),
-('contact_phone', '1900-xxxx', 1);
+('contact_phone', '1900-xxxx', 1),
+('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"English"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true}}', 1),
+('admin_template_builder_preset', '{"selectedTemplateId":null,"selectedTypeFilter":"All","channel":"Email","audience":"Seller","tone":"Supportive","shopName":"Green Corner Garden","postTitle":"Rare Monstera Deliciosa for Sale","reason":"Listing is missing mandatory details.","slotName":"Home Top","contactEmail":"ops@greenmarket.com","adminNote":"Update the content and resubmit within 24 hours."}', 1),
+('admin_ai_insight_settings', '{"autoDailySummary":true,"anomalyAlerts":true,"operatorDigest":false,"recommendationTone":"Balanced","confidenceThreshold":78,"promptVersion":"gm-admin-v1.4","reviewMode":"Required"}', 1);
 
 -- OTP Requests (Sample)
 INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_expire_at, otp_request_status) VALUES
@@ -1497,12 +1505,209 @@ INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_
 ('0982703398', '654321', now() + interval '10 minutes', 'pending');
 
 -- ============================================================
--- RESET SEQUENCES
+-- ADMIN TEMPLATES
+-- ============================================================
+INSERT INTO admin_templates (
+    template_id,
+    template_name,
+    template_type,
+    template_content,
+    template_status,
+    template_created_by,
+    template_created_at,
+    template_updated_by,
+    template_updated_at
+) VALUES
+(1, 'Post Rejection - Invalid Content', 'Rejection Reason', 'Your post violates GreenMarket content policy because the uploaded media does not match the listing details. Please revise the content and submit again.', 'Active', 1, '2026-03-10 09:00:00', 1, '2026-03-14 10:15:00'),
+(2, 'Post Rejection - Missing Information', 'Rejection Reason', 'Your post is missing required information such as care notes, product size, or accurate pricing. Please complete the details before resubmitting.', 'Active', 1, '2026-03-11 09:20:00', 1, '2026-03-13 08:30:00'),
+(3, 'Report Reason - Spam Content', 'Report Reason', 'This listing appears to contain repetitive promotional messaging, external contact spam, or misleading attention bait.', 'Active', 1, '2026-03-08 13:00:00', 1, '2026-03-12 14:10:00'),
+(4, 'Report Reason - Suspicious Pricing', 'Report Reason', 'This listing price deviates significantly from comparable marketplace items and should be reviewed manually by the moderation team.', 'Active', 1, '2026-03-09 11:10:00', 1, '2026-03-12 16:05:00'),
+(5, 'Notification - Payment Verification', 'Notification', 'We received your transfer confirmation. GreenMarket admin is verifying the payment before reopening or updating your promotion package.', 'Active', 1, '2026-03-15 10:00:00', 1, '2026-03-18 09:30:00'),
+(6, 'Notification - Promotion Reopened', 'Notification', 'Your expired promotion has been reopened after payment verification. Delivery resumes immediately in the assigned placement slot.', 'Active', 1, '2026-03-16 14:00:00', 1, '2026-03-18 15:20:00'),
+(7, 'Notification - Export Completed', 'Notification', 'Your requested admin export has finished successfully. Download the generated report from the export history screen.', 'Active', 1, '2026-03-17 08:00:00', 1, '2026-03-17 08:05:00'),
+(8, 'Internal Moderation Escalation', 'Notification', 'This case has been escalated to the moderation lead for manual review because it affects promotion delivery quality or marketplace safety.', 'Disabled', 1, '2026-03-18 09:45:00', 1, '2026-03-25 10:00:00');
+
+-- ============================================================
+-- POST PROMOTIONS / BOOSTED CAMPAIGNS
+-- ============================================================
+INSERT INTO post_promotions (
+    post_promotion_id,
+    post_promotion_post_id,
+    post_promotion_buyer_id,
+    post_promotion_package_id,
+    post_promotion_slot_id,
+    post_promotion_start_at,
+    post_promotion_end_at,
+    post_promotion_status,
+    post_promotion_created_at
+) VALUES
+(1, 1, 1, 1, 1, '2026-03-05 08:00:00', '2026-03-11 23:59:00', 'expired',  '2026-03-04 16:00:00'),
+(2, 4, 3, 2, 1, '2026-03-12 08:00:00', '2026-04-10 23:59:00', 'active',   '2026-03-11 14:20:00'),
+(3, 2, 4, 3, 2, '2026-03-08 08:00:00', '2026-03-14 23:59:00', 'paused',   '2026-03-07 17:30:00'),
+(4, 8, 4, 4, 2, '2026-03-18 08:00:00', '2026-04-16 23:59:00', 'active',   '2026-03-17 13:10:00'),
+(5, 3, 2, 5, 3, '2026-03-20 08:00:00', '2026-03-26 23:59:00', 'expired',  '2026-03-19 11:00:00'),
+(6, 6, 1, 6, 3, '2026-03-25 08:00:00', '2026-04-23 23:59:00', 'active',   '2026-03-24 15:45:00'),
+(7, 7, 1, 1, 1, '2026-04-05 08:00:00', '2026-04-11 23:59:00', 'active',   '2026-04-04 09:10:00'),
+(8, 11, 6, 3, 2, '2026-04-02 08:00:00', '2026-04-08 23:59:00', 'paused',  '2026-04-01 12:05:00'),
+(9, 12, 6, 5, 3, '2026-04-01 08:00:00', '2026-04-07 23:59:00', 'closed',  '2026-03-31 18:00:00'),
+(10, 9, 3, 6, 3, '2026-04-11 08:00:00', '2026-05-10 23:59:00', 'scheduled','2026-04-09 08:30:00'),
+(11, 10, 1, 2, 1, '2026-04-12 08:00:00', '2026-05-12 23:59:00', 'scheduled','2026-04-10 08:35:00'),
+(12, 13, 6, 4, 2, '2026-03-28 08:00:00', '2026-04-26 23:59:00', 'active', '2026-03-27 15:10:00'),
+(13, 14, 6, 6, 3, '2026-03-29 08:00:00', '2026-04-27 23:59:00', 'active', '2026-03-28 10:45:00');
+
+-- ============================================================
+-- PAYMENT TRANSACTIONS
+-- ============================================================
+INSERT INTO payment_txn (
+    payment_txn_id,
+    payment_txn_user_id,
+    payment_txn_package_id,
+    payment_txn_post_id,
+    payment_txn_price_id,
+    payment_txn_amount,
+    payment_txn_provider,
+    payment_txn_provider_txn_id,
+    payment_txn_status,
+    payment_txn_created_at
+) VALUES
+(1, 1, 1, 1, 2, 180000, 'bank_transfer', 'GM-TXN-20260304-001', 'success', '2026-03-04 15:30:00'),
+(2, 3, 2, 4, 3, 500000, 'bank_transfer', 'GM-TXN-20260311-002', 'success', '2026-03-11 13:40:00'),
+(3, 4, 3, 2, 4, 80000,  'bank_transfer', 'GM-TXN-20260307-003', 'success', '2026-03-07 18:00:00'),
+(4, 4, 4, 8, 6, 250000, 'bank_transfer', 'GM-TXN-20260317-004', 'success', '2026-03-17 12:45:00'),
+(5, 2, 5, 3, 7, 50000,  'bank_transfer', 'GM-TXN-20260319-005', 'success', '2026-03-19 10:20:00'),
+(6, 1, 6, 6, 8, 150000, 'bank_transfer', 'GM-TXN-20260324-006', 'pending', '2026-03-24 14:30:00'),
+(7, 6, 4, 13, 6, 250000, 'bank_transfer', 'GM-TXN-20260327-007', 'success', '2026-03-27 16:10:00'),
+(8, 6, 6, 14, 8, 150000, 'bank_transfer', 'GM-TXN-20260328-008', 'success', '2026-03-28 11:00:00'),
+(9, 1, 1, 7, 2, 180000, 'bank_transfer', 'GM-TXN-20260404-009', 'success', '2026-04-04 09:20:00'),
+(10, 6, 3, 11, 4, 80000, 'bank_transfer', 'GM-TXN-20260401-010', 'pending', '2026-04-01 11:25:00'),
+(11, 6, 5, 12, 7, 50000, 'bank_transfer', 'GM-TXN-20260331-011', 'failed', '2026-03-31 19:15:00'),
+(12, 3, 6, 9, 8, 150000, 'bank_transfer', 'GM-TXN-20260409-012', 'success', '2026-04-09 08:50:00'),
+(13, 1, 2, 10, 3, 500000, 'bank_transfer', 'GM-TXN-20260410-013', 'pending', '2026-04-10 08:55:00'),
+(14, 5, 5, 15, 7, 50000, 'bank_transfer', 'GM-TXN-20260326-014', 'success', '2026-03-26 17:40:00');
+
+-- ============================================================
+-- REPORTS MODERATION
 -- ============================================================
 INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_reason_code, report_reason, report_note, report_status, admin_note, report_created_at, report_updated_at) VALUES
 (1, 5, 1, 1, 'MISLEADING_INFO', 'Post title and product details are not consistent with the attached listing photos.', 'The seller describes a different bonsai shape in the text than in the gallery.', 'pending', NULL, '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
 (2, 5, 2, 3, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
-(3, 5, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00');
+(3, 5, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00'),
+(4, 7, 3, 3, 'COPYRIGHT_MEDIA', 'Listing photos appear copied from another marketplace source.', 'Image set looks duplicated from a third-party seller page.', 'pending', NULL, '2026-03-26 14:05:00', '2026-03-26 14:05:00'),
+(5, 2, 4, 3, 'OFF_PLATFORM_CONTACT', 'Seller requests direct contact outside GreenMarket before checkout.', 'Contains messaging that bypasses marketplace payment flow.', 'resolved', 'Content was edited and compliant version was republished.', '2026-03-25 16:25:00', '2026-03-26 10:10:00'),
+(6, 4, 8, 3, 'WRONG_CATEGORY', 'The post was published under the wrong category and disrupts category relevance.', 'Needs category correction and listing clean-up.', 'dismissed', 'Category was acceptable after manual review.', '2026-03-24 09:30:00', '2026-03-24 17:20:00'),
+(7, 5, 9, 3, 'MISLEADING_INFO', 'The post description overstates the maturity and shape training of the tree.', 'Customer noted mismatch between wording and actual plant size.', 'pending', NULL, '2026-03-23 13:15:00', '2026-03-23 13:15:00'),
+(8, 7, 13, 4, 'SPAM_PROMOTION', 'Repeated marketing text is making the listing difficult to review.', 'Needs moderation note and content clean-up.', 'resolved', 'Seller removed duplicated promotional slogans and listing stayed visible.', '2026-03-22 10:45:00', '2026-03-22 15:40:00'),
+(9, 2, 15, 1, 'SUSPICIOUS_PRICING', 'The reported price looks too low compared with product material quality.', 'Possible bait price to attract off-platform contact.', 'pending', NULL, '2026-03-21 11:05:00', '2026-03-21 11:05:00');
+
+-- ============================================================
+-- EVENT LOGS / EXPORT HISTORY / ACTIVITY LOG
+-- ============================================================
+INSERT INTO event_logs (
+    event_log_id,
+    event_log_user_id,
+    event_log_post_id,
+    event_log_shop_id,
+    event_log_slot_id,
+    event_log_category_id,
+    event_log_event_type,
+    event_log_event_time,
+    event_log_meta
+) VALUES
+(1, 6, NULL, NULL, NULL, NULL, 'admin_login',        '2026-03-29 08:00:00', '{"action":"Admin Login","detail":"Admin dashboard session started successfully.","performedBy":"System Administrator"}'),
+(2, 3, NULL, NULL, NULL, NULL, 'role_assigned',      '2026-03-29 08:35:00', '{"action":"Role Assigned","detail":"Assigned role: Operation Staff.","performedBy":"System Administrator"}'),
+(3, 4, NULL, NULL, NULL, NULL, 'account_locked',     '2026-03-29 09:10:00', '{"action":"Account Locked","detail":"User access was restricted after moderation review.","performedBy":"System Administrator"}'),
+(4, 4, NULL, NULL, NULL, NULL, 'account_unlocked',   '2026-03-29 11:05:00', '{"action":"Account Unlocked","detail":"User access was restored after verification.","performedBy":"System Administrator"}'),
+(5, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:00:00', '{"action":"Export Generated","detail":"Users CSV export completed.","generatedBy":"System Administrator","reportName":"Users Export - 2026-03-29","status":"Completed"}'),
+(6, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:08:00', '{"action":"Export Generated","detail":"Revenue summary CSV export completed.","generatedBy":"System Administrator","reportName":"Revenue Summary - 2026-03-29","status":"Completed"}'),
+(7, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:16:00', '{"action":"Export Generated","detail":"Customer spending CSV export completed.","generatedBy":"System Administrator","reportName":"Customer Spending - 2026-03-29","status":"Completed"}'),
+(8, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:25:00', '{"action":"Export Generated","detail":"Analytics overview CSV export completed.","generatedBy":"System Administrator","reportName":"Analytics Overview - 2026-03-29","status":"Completed"}'),
+(9, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:33:00', '{"action":"Export Generated","detail":"Promotion operations CSV export completed.","generatedBy":"System Administrator","reportName":"Promotion Operations - 2026-03-29","status":"Completed"}'),
+(10, 1, NULL, NULL, NULL, NULL, 'admin_export',      '2026-03-29 12:44:00', '{"action":"Export Generated","detail":"Boosted campaigns CSV export completed.","generatedBy":"System Administrator","reportName":"Boosted Campaigns - 2026-03-29","status":"Completed"}'),
+(11, 2, 2, 3, 2, 11, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Promotion Resumed","detail":"Category Top campaign resumed after content update.","performedBy":"System Administrator"}'),
+(12, 1, 3, 2, 3, 12, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Promotion Reopened","detail":"Expired Search Boost campaign reopened after payment confirmation.","performedBy":"System Administrator"}');
+
+-- ============================================================
+-- DAILY PLACEMENT METRICS
+-- ============================================================
+INSERT INTO daily_placement_metrics (
+    daily_placement_metric_id,
+    daily_placement_metric_date,
+    daily_placement_metric_slot_id,
+    daily_placement_metric_category_id,
+    daily_placement_metric_impressions,
+    daily_placement_metric_clicks,
+    daily_placement_metric_detail_views,
+    daily_placement_metric_contacts,
+    daily_placement_metric_ctr,
+    daily_placement_metric_created_at
+) VALUES
+(1,  '2026-03-05', 1, 11, 3300, 96, 41, 9, 2.91, '2026-03-05 23:59:00'),
+(2,  '2026-03-06', 1, 11, 3100, 89, 38, 8, 2.87, '2026-03-06 23:59:00'),
+(3,  '2026-03-07', 1, 11, 3400, 101, 43, 10, 2.97, '2026-03-07 23:59:00'),
+(4,  '2026-03-08', 2, 11, 1800, 37, 18, 4, 2.06, '2026-03-08 23:59:00'),
+(5,  '2026-03-09', 2, 11, 1850, 39, 19, 4, 2.11, '2026-03-09 23:59:00'),
+(6,  '2026-03-10', 1, 11, 3200, 95, 40, 9, 2.97, '2026-03-10 23:59:00'),
+(7,  '2026-03-11', 1, 11, 3350, 98, 42, 9, 2.93, '2026-03-11 23:59:00'),
+(8,  '2026-03-12', 1, 11, 3450, 103, 46, 10, 2.99, '2026-03-12 23:59:00'),
+(9,  '2026-03-13', 1, 11, 3600, 108, 48, 11, 3.00, '2026-03-13 23:59:00'),
+(10, '2026-03-14', 2, 11, 1900, 41, 20, 5, 2.16, '2026-03-14 23:59:00'),
+(11, '2026-03-20', 3, 12, 7200, 104, 51, 13, 1.44, '2026-03-20 23:59:00'),
+(12, '2026-03-21', 3, 12, 7100, 102, 50, 12, 1.44, '2026-03-21 23:59:00'),
+(13, '2026-03-22', 3, 12, 7250, 108, 53, 14, 1.49, '2026-03-22 23:59:00'),
+(14, '2026-03-23', 3, 12, 7050, 101, 49, 12, 1.43, '2026-03-23 23:59:00'),
+(15, '2026-03-24', 3, 12, 7300, 111, 55, 14, 1.52, '2026-03-24 23:59:00'),
+(16, '2026-03-25', 2, 11, 7600, 182, 88, 20, 2.39, '2026-03-25 23:59:00'),
+(17, '2026-03-26', 3, 12, 7400, 106, 54, 13, 1.43, '2026-03-26 23:59:00'),
+(18, '2026-03-27', 2, 11, 7550, 180, 86, 20, 2.38, '2026-03-27 23:59:00'),
+(19, '2026-03-28', 2, 11, 7480, 177, 85, 19, 2.37, '2026-03-28 23:59:00'),
+(20, '2026-03-29', 2, 11, 7620, 183, 89, 20, 2.40, '2026-03-29 23:59:00'),
+(21, '2026-03-30', 2, 11, 7500, 181, 87, 19, 2.41, '2026-03-30 23:59:00'),
+(22, '2026-03-31', 2, 11, 7580, 184, 90, 21, 2.43, '2026-03-31 23:59:00');
+
+-- ============================================================
+-- AI TREND SCORES
+-- ============================================================
+INSERT INTO trend_scores (
+    trend_score_id,
+    trend_score_as_of_date,
+    trend_score_slot_id,
+    trend_score_score,
+    trend_score_components,
+    trend_score_created_at
+) VALUES
+(1,  '2026-03-05', 1, 82.5, '{"traffic":82,"revenue":76,"operations":88}', '2026-03-05 23:59:00'),
+(2,  '2026-03-08', 2, 68.0, '{"traffic":64,"revenue":66,"operations":74}', '2026-03-08 23:59:00'),
+(3,  '2026-03-11', 1, 84.0, '{"traffic":83,"revenue":79,"operations":86}', '2026-03-11 23:59:00'),
+(4,  '2026-03-14', 2, 71.0, '{"traffic":69,"revenue":67,"operations":77}', '2026-03-14 23:59:00'),
+(5,  '2026-03-20', 3, 63.0, '{"traffic":61,"revenue":65,"operations":63}', '2026-03-20 23:59:00'),
+(6,  '2026-03-22', 3, 66.0, '{"traffic":64,"revenue":68,"operations":66}', '2026-03-22 23:59:00'),
+(7,  '2026-03-25', 2, 87.0, '{"traffic":88,"revenue":83,"operations":90}', '2026-03-25 23:59:00'),
+(8,  '2026-03-27', 3, 72.0, '{"traffic":70,"revenue":73,"operations":73}', '2026-03-27 23:59:00'),
+(9,  '2026-03-29', 2, 89.0, '{"traffic":90,"revenue":86,"operations":91}', '2026-03-29 23:59:00'),
+(10, '2026-03-31', 3, 74.0, '{"traffic":72,"revenue":75,"operations":75}', '2026-03-31 23:59:00');
+
+-- ============================================================
+-- AI INSIGHT HISTORY
+-- ============================================================
+INSERT INTO ai_insights (
+    ai_insight_id,
+    ai_insight_requested_by,
+    ai_insight_scope,
+    ai_insight_input_snapshot,
+    ai_insight_output_text,
+    ai_insight_provider,
+    ai_insight_created_at
+) VALUES
+(1, 1, 'Placement Performance', '{"title":"Placement Performance summary","focus":"Placement Performance","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Homepage traffic stayed stable while Category Top outperformed revenue expectations in the final week of March. Keep Category Top inventory available because it is converting best among active slots.', 'Gemini gemini-2.0-flash', '2026-03-25 10:00:00'),
+(2, 1, 'Promotion Watchlist',   '{"title":"Promotion Watchlist summary","focus":"Promotion Watchlist","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Search Boost campaigns that expired on 2026-03-26 still show demand signals. Review whether any eligible cases should be reopened after payment confirmation.', 'Gemini gemini-2.0-flash', '2026-03-26 09:45:00'),
+(3, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'March revenue was concentrated in Homepage and Category Top packages. Search Boost volume increased late in the month but paid contribution is still smaller than premium placements.', 'Gemini gemini-2.0-flash', '2026-03-27 14:15:00'),
+(4, 1, 'Operator Load',         '{"title":"Operator Load summary","focus":"Operator Load","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Ops Team B handled the largest number of category campaigns. The current load remains acceptable, but new escalations should be balanced toward Team A for the next cycle.', 'Gemini gemini-2.0-flash', '2026-03-28 08:40:00'),
+(5, 1, 'Placement Performance', '{"title":"Placement Performance summary","focus":"Placement Performance","status":"Archived","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Early March homepage impressions were healthy but softened before premium 30-day inventory was activated. Review creative freshness for homepage premium buyers.', 'Gemini gemini-2.0-flash', '2026-03-29 16:25:00'),
+(6, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Average order value is currently supported by premium homepage packages, while smaller search packages are driving order count. Keep both tiers visible in pricing analysis.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
+
+-- ============================================================
+-- RESET SEQUENCES
+-- ============================================================
 
 -- ============================================================
 -- OPERATIONS & MANAGER DATA
@@ -1553,7 +1758,7 @@ SELECT setval('job_contact_requests_contact_request_id_seq', (SELECT COALESCE(MA
 SELECT setval('job_deliverables_deliverable_id_seq', (SELECT COALESCE(MAX(deliverable_id), 1) FROM job_deliverables));
 SELECT setval('earning_entries_earning_entry_id_seq', (SELECT COALESCE(MAX(earning_entry_id), 1) FROM earning_entries));
 SELECT setval('payout_requests_payout_request_id_seq', (SELECT COALESCE(MAX(payout_request_id), 1) FROM payout_requests));
-SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM reports), false);
+SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM reports));
 SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
 SELECT setval('promotion_packages_promotion_package_id_seq', (SELECT COALESCE(MAX(promotion_package_id), 1) FROM promotion_packages));
 SELECT setval('promotion_package_prices_price_id_seq',          (SELECT COALESCE(MAX(price_id),              1) FROM promotion_package_prices));
@@ -1562,6 +1767,13 @@ SELECT setval('user_posting_plans_posting_plan_id_seq',          (SELECT COALESC
 SELECT setval('posting_fee_ledger_posting_fee_id_seq',           (SELECT COALESCE(MAX(posting_fee_id),        1) FROM posting_fee_ledger));
 SELECT setval('banned_keywords_banned_keyword_id_seq', (SELECT COALESCE(MAX(banned_keyword_id), 1) FROM banned_keywords));
 SELECT setval('system_settings_system_setting_id_seq', (SELECT COALESCE(MAX(system_setting_id), 1) FROM system_settings));
+SELECT setval('admin_templates_template_id_seq', (SELECT COALESCE(MAX(template_id), 1) FROM admin_templates));
+SELECT setval('post_promotions_post_promotion_id_seq', (SELECT COALESCE(MAX(post_promotion_id), 1) FROM post_promotions));
+SELECT setval('payment_txn_payment_txn_id_seq', (SELECT COALESCE(MAX(payment_txn_id), 1) FROM payment_txn));
+SELECT setval('event_logs_event_log_id_seq', (SELECT COALESCE(MAX(event_log_id), 1) FROM event_logs));
+SELECT setval('daily_placement_metrics_daily_placement_metric_id_seq', (SELECT COALESCE(MAX(daily_placement_metric_id), 1) FROM daily_placement_metrics));
+SELECT setval('trend_scores_trend_score_id_seq', (SELECT COALESCE(MAX(trend_score_id), 1) FROM trend_scores));
+SELECT setval('ai_insights_ai_insight_id_seq', (SELECT COALESCE(MAX(ai_insight_id), 1) FROM ai_insights));
 SELECT setval('operation_tasks_task_id_seq', (SELECT COALESCE(MAX(task_id), 1) FROM operation_tasks));
 SELECT setval('task_replies_reply_id_seq', (SELECT COALESCE(MAX(reply_id), 1) FROM task_replies));
 SELECT setval('moderation_actions_moderation_action_id_seq', (SELECT COALESCE(MAX(moderation_action_id), 1) FROM moderation_actions));

@@ -2,6 +2,7 @@ export type TemplateType =
   | "Rejection Reason"
   | "Report Reason"
   | "Notification";
+
 export type TemplateStatus = "Active" | "Disabled";
 
 export type Template = {
@@ -10,6 +11,8 @@ export type Template = {
   type: TemplateType;
   content: string;
   status: TemplateStatus;
+  description: string;
+  usageNote: string;
   updatedAt: string;
 };
 
@@ -17,28 +20,43 @@ export type TemplateFormState = {
   name: string;
   type: TemplateType;
   content: string;
+  description: string;
+  usageNote: string;
   status: TemplateStatus;
 };
 
-export type TemplateBuilderChannel =
-  | "Email"
-  | "In-App Notification"
-  | "Moderation Note";
+export type TemplateListParams = {
+  search?: string;
+  type?: TemplateType | "All";
+  status?: TemplateStatus | "All";
+  page?: number;
+  pageSize?: number;
+};
 
-export type TemplateBuilderAudience = "Seller" | "Reporter" | "Internal Admin";
+export type TemplateListResponse = {
+  data: Template[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
 
-export type TemplateBuilderTone = "Formal" | "Supportive" | "Direct";
+export type TemplateBuilderFieldType = "text" | "number" | "select";
+
+export type TemplateBuilderField = {
+  id: string;
+  type: TemplateBuilderFieldType;
+  label: string;
+  placeholder: string;
+  helperText: string;
+  required: boolean;
+  options: string[];
+};
 
 export type TemplateBuilderPreset = {
-  selectedTemplateId: number | null;
-  selectedTypeFilter: TemplateType | "All";
-  channel: TemplateBuilderChannel;
-  audience: TemplateBuilderAudience;
-  tone: TemplateBuilderTone;
-  shopName: string;
-  postTitle: string;
-  reason: string;
-  slotName: string;
-  contactEmail: string;
-  adminNote: string;
+  templateName: string;
+  categoryName: string;
+  usageNote: string;
+  previewTitlePlaceholder: string;
+  submitLabel: string;
+  fields: TemplateBuilderField[];
 };

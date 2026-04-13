@@ -101,7 +101,7 @@ export const apiClient = {
     });
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+      if ((response.status === 401 || response.status === 403) && !skipAuth) {
         clearAdminSession();
 
         throw new ApiError(

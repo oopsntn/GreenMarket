@@ -20,7 +20,7 @@ export const dashboardService = {
     return apiClient.request<DashboardApiResponse>(
       `/api/admin/dashboard${buildQuery(fromDate, toDate)}`,
       {
-        defaultErrorMessage: "Unable to load dashboard overview.",
+        defaultErrorMessage: "Không thể tải dữ liệu tổng quan.",
       },
     );
   },
@@ -29,8 +29,8 @@ export const dashboardService = {
     return {
       statCards: [] as DashboardStatCard[],
       summary: {
-        title: "System Summary",
-        description: "Dashboard data will appear here after loading.",
+        title: "Tóm tắt hệ thống",
+        description: "Dữ liệu tổng quan sẽ xuất hiện sau khi tải xong.",
       } as DashboardSummary,
     };
   },

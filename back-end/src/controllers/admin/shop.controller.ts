@@ -77,7 +77,7 @@ const mapRowToAdminShop = (row: {
   return {
     id: row.shopId,
     name: row.shopName,
-    ownerName: row.ownerName?.trim() || "Unknown Owner",
+    ownerName: row.ownerName?.trim() || "Chưa có chủ sở hữu",
     ownerEmail: row.ownerEmail ?? "",
     totalPosts: Number(row.totalPosts ?? 0),
     status: mapDbStatusToAdminStatus(row.shopStatus),
@@ -117,7 +117,7 @@ export const getShops = async (req: Request, res: Response): Promise<void> => {
     res.json(formattedShops);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -131,7 +131,7 @@ export const createShop = async (
     res.status(201).json(newShop);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -142,7 +142,7 @@ export const getShopById = async (
   try {
     const idNumber = parseId(req.params.id);
     if (idNumber === null) {
-      res.status(400).json({ error: "Invalid shop id" });
+      res.status(400).json({ error: "Mã cửa hàng không hợp lệ" });
       return;
     }
 
@@ -173,14 +173,14 @@ export const getShopById = async (
       .limit(1);
 
     if (!shopRow) {
-      res.status(404).json({ error: "Shop not found" });
+      res.status(404).json({ error: "Không tìm thấy cửa hàng" });
       return;
     }
 
     res.json(mapRowToAdminShop(shopRow));
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -191,13 +191,13 @@ export const updateShopStatus = async (
   try {
     const idNumber = parseId(req.params.id);
     if (idNumber === null) {
-      res.status(400).json({ error: "Invalid shop id" });
+      res.status(400).json({ error: "Mã cửa hàng không hợp lệ" });
       return;
     }
 
     const nextDbStatus = mapRequestStatusToDbStatus(req.body.status);
     if (!nextDbStatus) {
-      res.status(400).json({ error: "Invalid shop status" });
+      res.status(400).json({ error: "Trạng thái cửa hàng không hợp lệ" });
       return;
     }
 
@@ -211,7 +211,7 @@ export const updateShopStatus = async (
       .returning();
 
     if (!updatedShop) {
-      res.status(404).json({ error: "Shop not found" });
+      res.status(404).json({ error: "Không tìm thấy cửa hàng" });
       return;
     }
 
@@ -255,18 +255,18 @@ export const updateShopStatus = async (
       .limit(1);
 
     if (!shopRow) {
-      res.status(404).json({ error: "Shop not found after update" });
+      res.status(404).json({ error: "Không tìm thấy cửa hàng sau khi cập nhật" });
       return;
     }
 
     res.json({
-      message: "Shop status updated successfully",
+      message: "Cập nhật trạng thái cửa hàng thành công",
       shop: mapRowToAdminShop(shopRow),
       postsAssigned,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -277,7 +277,7 @@ export const deleteShop = async (
   try {
     const idNumber = parseId(req.params.id);
     if (idNumber === null) {
-      res.status(400).json({ error: "Invalid shop id" });
+      res.status(400).json({ error: "Mã cửa hàng không hợp lệ" });
       return;
     }
 
@@ -287,14 +287,14 @@ export const deleteShop = async (
       .returning();
 
     if (!deletedShop) {
-      res.status(404).json({ error: "Shop not found" });
+      res.status(404).json({ error: "Không tìm thấy cửa hàng" });
       return;
     }
 
-    res.json({ message: "Shop deleted successfully", deletedShop });
+    res.json({ message: "Xóa cửa hàng thành công", deletedShop });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -305,7 +305,7 @@ export const verifyShop = async (
   try {
     const idNumber = parseId(req.params.id);
     if (idNumber === null) {
-      res.status(400).json({ error: "Invalid shop id" });
+      res.status(400).json({ error: "Mã cửa hàng không hợp lệ" });
       return;
     }
 
@@ -319,7 +319,7 @@ export const verifyShop = async (
       .returning();
 
     if (!updatedShop) {
-      res.status(404).json({ error: "Shop not found" });
+      res.status(404).json({ error: "Không tìm thấy cửa hàng" });
       return;
     }
 
@@ -358,17 +358,17 @@ export const verifyShop = async (
       .limit(1);
 
     if (!shopRow) {
-      res.status(404).json({ error: "Shop not found after verify" });
+      res.status(404).json({ error: "Không tìm thấy cửa hàng sau khi xác minh" });
       return;
     }
 
     res.json({
-      message: "Shop verified successfully",
+      message: "Xác minh cửa hàng thành công",
       shop: mapRowToAdminShop(shopRow),
       postsAssigned: rowCount ?? 0,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };

@@ -3,36 +3,16 @@ import type { Template, TemplateFormState } from "../types/template";
 export const initialTemplates: Template[] = [
   {
     id: 1,
-    name: "Post Rejection - Invalid Content",
-    type: "Rejection Reason",
-    content: "Your post violates our marketplace content policy.",
-    status: "Active",
-    updatedAt: "2026-03-14",
-  },
-  {
-    id: 2,
-    name: "Post Rejection - Missing Information",
+    name: "Từ chối bài đăng thiếu thông tin",
     type: "Rejection Reason",
     content:
-      "Your post is missing required information and cannot be approved.",
+      "Bài đăng của bạn đang thiếu một số thông tin bắt buộc như tiêu đề rõ ràng, mô tả chi tiết hoặc hình ảnh phù hợp. Vui lòng bổ sung và gửi duyệt lại.",
     status: "Active",
-    updatedAt: "2026-03-13",
-  },
-  {
-    id: 3,
-    name: "Report Reason - Spam Content",
-    type: "Report Reason",
-    content: "This content appears to be spam or misleading.",
-    status: "Active",
-    updatedAt: "2026-03-12",
-  },
-  {
-    id: 4,
-    name: "Notification - Account Locked",
-    type: "Notification",
-    content: "Your account has been locked due to suspicious activity.",
-    status: "Disabled",
-    updatedAt: "2026-03-11",
+    description:
+      "Mẫu từ chối dùng cho bài đăng còn thiếu nội dung cơ bản trước khi được duyệt.",
+    usageNote:
+      "Dùng khi bài đăng thiếu thông tin bắt buộc nhưng vẫn có thể chỉnh sửa và gửi lại.",
+    updatedAt: "14/04/2026 09:00",
   },
 ];
 
@@ -40,5 +20,7 @@ export const emptyTemplateForm: TemplateFormState = {
   name: "",
   type: "Rejection Reason",
   content: "",
+  description: "",
+  usageNote: "",
   status: "Active",
 };

@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import BaseModal from "../components/BaseModal";
-import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
@@ -13,32 +12,48 @@ import { userService } from "../services/userService";
 import type {
   AssignableUserRole,
   User,
-  UserSummaryCard,
   UserStatus,
+  UserSummaryCard,
 } from "../types/user";
 import "./UsersPage.css";
 
-const statusFilterOptions: Array<UserStatus | "All"> = [
-  "All",
-  "Active",
-  "Locked",
+const statusFilterOptions: Array<{
+  value: UserStatus | "All";
+  label: string;
+}> = [
+  { value: "All", label: "Tất cả" },
+  { value: "Active", label: "Đang hoạt động" },
+  { value: "Locked", label: "Đã khóa" },
 ];
+
 const profileFilterOptions = [
-  "All",
-  "Has Email",
-  "Missing Email",
-  "Has Location",
-  "Missing Location",
+  "Tất cả",
+  "Có email",
+  "Thiếu email",
+  "Có địa chỉ",
+  "Thiếu địa chỉ",
 ] as const;
 
 const USER_PAGE_SIZE = 5;
 
 type ProfileFilterOption = (typeof profileFilterOptions)[number];
 
-type ConfirmState = {
-  isOpen: boolean;
+type StatusActionState = {
   userId: number | null;
   action: "lock" | "unlock" | null;
+};
+
+const roleLabelMap: Record<AssignableUserRole, string> = {
+  User: "Người dùng",
+  Host: "Host",
+  Collaborator: "Cộng tác viên",
+  Manager: "Quản lý",
+  "Operation Staff": "Nhân viên vận hành",
+};
+
+const statusLabelMap: Record<UserStatus, string> = {
+  Active: "Đang hoạt động",
+  Locked: "Đã khóa",
 };
 
 function UsersPage() {
@@ -53,30 +68,32 @@ function UsersPage() {
   ]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isRoleSaving, setIsRoleSaving] = useState(false);
+  const [isStatusSaving, setIsStatusSaving] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     UserStatus | "All"
   >("All");
   const [selectedProfileFilter, setSelectedProfileFilter] =
-    useState<ProfileFilterOption>("All");
+    useState<ProfileFilterOption>("Tất cả");
   const [showFilters, setShowFilters] = useState(false);
   const [userPage, setUserPage] = useState(1);
-  const [confirmState, setConfirmState] = useState<ConfirmState>({
-    isOpen: false,
+  const [statusActionState, setStatusActionState] = useState<StatusActionState>({
     userId: null,
     action: null,
   });
+  const [statusReason, setStatusReason] = useState("");
+  const [statusReasonError, setStatusReasonError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards: UserSummaryCard[] = userService.getSummaryCards(users);
   const usersWithEmailCount = users.filter(
-    (user) => user.email !== "No email",
+    (user) => user.email !== "Chưa có email",
   ).length;
   const usersMissingLocationCount = users.filter(
-    (user) => user.location === "No location",
+    (user) => user.location === "Chưa có địa chỉ",
   ).length;
   const usersWithoutLoginCount = users.filter(
-    (user) => user.lastLoginAt === "No login yet",
+    (user) => user.lastLoginAt === "Chưa đăng nhập",
   ).length;
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
@@ -100,7 +117,7 @@ function UsersPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const loadUsers = async (showSuccessToast = false) => {
+  const loadUsers = useCallback(async (showSuccessToast = false) => {
     try {
       setIsLoading(true);
       setError("");
@@ -114,21 +131,21 @@ function UsersPage() {
       setAssignableRoles(nextAssignableRoles);
 
       if (showSuccessToast) {
-        showToast("User directory refreshed successfully.");
+        showToast("Đã tải lại danh sách người dùng.");
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Unable to load users.";
+        err instanceof Error ? err.message : "Không thể tải danh sách người dùng.";
       setError(message);
       showToast(message, "error");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadUsers();
-  }, []);
+  }, [loadUsers]);
 
   const openViewModal = async (user: User) => {
     setSelectedUser(user);
@@ -142,7 +159,7 @@ function UsersPage() {
       setSelectedRole(detail.role as AssignableUserRole);
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Unable to load user details.",
+        err instanceof Error ? err.message : "Không thể tải chi tiết người dùng.",
         "error",
       );
     } finally {
@@ -158,7 +175,7 @@ function UsersPage() {
 
   const handleSaveRoleAssignment = async () => {
     if (!selectedUser || selectedUser.role === selectedRole) {
-      showToast("This user already has the selected marketplace role.", "info");
+      showToast("Người dùng này đã có đúng vai trò đang chọn.", "info");
       return;
     }
 
@@ -174,12 +191,14 @@ function UsersPage() {
         prev.map((user) => (user.id === updatedUser.id ? updatedUser : user)),
       );
       setSelectedUser(updatedUser);
-      showToast(`${updatedUser.fullName} is now assigned as ${selectedRole}.`);
+      showToast(
+        `Đã cập nhật vai trò ${roleLabelMap[selectedRole]} cho ${updatedUser.fullName}.`,
+      );
     } catch (err) {
       showToast(
         err instanceof Error
           ? err.message
-          : "Unable to save marketplace role assignment.",
+          : "Không thể lưu vai trò nghiệp vụ.",
         "error",
       );
     } finally {
@@ -187,31 +206,36 @@ function UsersPage() {
     }
   };
 
-  const openConfirmDialog = (userId: number, action: "lock" | "unlock") => {
-    setConfirmState({
-      isOpen: true,
-      userId,
-      action,
-    });
+  const openStatusModal = (userId: number, action: "lock" | "unlock") => {
+    setStatusActionState({ userId, action });
+    setStatusReason("");
+    setStatusReasonError("");
   };
 
-  const closeConfirmDialog = () => {
-    setConfirmState({
-      isOpen: false,
-      userId: null,
-      action: null,
-    });
+  const closeStatusModal = () => {
+    setStatusActionState({ userId: null, action: null });
+    setStatusReason("");
+    setStatusReasonError("");
   };
 
   const handleConfirmAction = async () => {
-    if (confirmState.userId === null || confirmState.action === null) return;
+    if (statusActionState.userId === null || statusActionState.action === null) {
+      return;
+    }
 
-    const targetUser = users.find((user) => user.id === confirmState.userId);
+    if (!statusReason.trim()) {
+      setStatusReasonError("Vui lòng nhập lý do thực hiện thao tác này.");
+      return;
+    }
+
+    const targetUser = users.find((user) => user.id === statusActionState.userId);
 
     try {
+      setIsStatusSaving(true);
       const updatedUser = await userService.updateUserStatusById(
-        confirmState.userId,
-        confirmState.action === "lock" ? "Locked" : "Active",
+        statusActionState.userId,
+        statusActionState.action === "lock" ? "Locked" : "Active",
+        statusReason.trim(),
       );
 
       setUsers((prev) =>
@@ -223,17 +247,20 @@ function UsersPage() {
       );
 
       showToast(
-        `${targetUser?.fullName ?? "User"} has been ${
-          confirmState.action === "lock" ? "locked" : "unlocked"
-        } successfully.`,
+        `${targetUser?.fullName ?? "Người dùng"} đã được ${
+          statusActionState.action === "lock" ? "khóa" : "mở khóa"
+        } thành công.`,
       );
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Unable to update user status.",
+        err instanceof Error
+          ? err.message
+          : "Không thể cập nhật trạng thái người dùng.",
         "error",
       );
     } finally {
-      closeConfirmDialog();
+      setIsStatusSaving(false);
+      closeStatusModal();
     }
   };
 
@@ -252,14 +279,14 @@ function UsersPage() {
         selectedStatusFilter === "All" || user.status === selectedStatusFilter;
 
       const matchesProfile =
-        selectedProfileFilter === "All" ||
-        (selectedProfileFilter === "Has Email" && user.email !== "No email") ||
-        (selectedProfileFilter === "Missing Email" &&
-          user.email === "No email") ||
-        (selectedProfileFilter === "Has Location" &&
-          user.location !== "No location") ||
-        (selectedProfileFilter === "Missing Location" &&
-          user.location === "No location");
+        selectedProfileFilter === "Tất cả" ||
+        (selectedProfileFilter === "Có email" && user.email !== "Chưa có email") ||
+        (selectedProfileFilter === "Thiếu email" &&
+          user.email === "Chưa có email") ||
+        (selectedProfileFilter === "Có địa chỉ" &&
+          user.location !== "Chưa có địa chỉ") ||
+        (selectedProfileFilter === "Thiếu địa chỉ" &&
+          user.location === "Chưa có địa chỉ");
 
       return matchesKeyword && matchesStatus && matchesProfile;
     });
@@ -289,31 +316,27 @@ function UsersPage() {
     }
   }, [userPage, totalUserPages]);
 
-  const confirmUser =
-    confirmState.userId !== null
-      ? (users.find((user) => user.id === confirmState.userId) ?? null)
+  const actionUser =
+    statusActionState.userId !== null
+      ? users.find((user) => user.id === statusActionState.userId) ?? null
       : null;
 
   const confirmTitle =
-    confirmState.action === "lock"
-      ? "Lock User Account"
-      : "Unlock User Account";
+    statusActionState.action === "lock"
+      ? "Khóa tài khoản người dùng"
+      : "Mở khóa tài khoản người dùng";
 
   const confirmMessage =
-    confirmState.action === "lock"
-      ? `Are you sure you want to lock ${
-          confirmUser?.fullName ?? "this user"
-        }? They may lose access until reactivated.`
-      : `Are you sure you want to unlock ${
-          confirmUser?.fullName ?? "this user"
-        }? They will be able to access the system again.`;
+    statusActionState.action === "lock"
+      ? `Nhập lý do khóa tài khoản ${actionUser?.fullName ?? "người dùng này"}. Lý do sẽ được lưu vào nhật ký hoạt động.`
+      : `Nhập lý do mở khóa tài khoản ${actionUser?.fullName ?? "người dùng này"}. Lý do sẽ được lưu vào nhật ký hoạt động.`;
 
   return (
     <div className="users-page">
       <PageHeader
-        title="Users Management"
-        description="Manage marketplace user accounts, account status, and profile quality signals."
-        actionLabel="Refresh Directory"
+        title="Quản lý người dùng marketplace"
+        description="Quản lý tài khoản người dùng, trạng thái truy cập và vai trò nghiệp vụ theo mô hình mỗi người dùng chỉ có một vai trò."
+        actionLabel="Tải lại danh sách"
         onActionClick={() => void loadUsers(true)}
       />
 
@@ -329,22 +352,22 @@ function UsersPage() {
       </div>
 
       <SearchToolbar
-        placeholder="Search by name, phone, email, or location"
+        placeholder="Tìm theo tên, số điện thoại, email hoặc địa chỉ"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Filter by status & profile"
+        filterLabel="Lọc theo trạng thái và hồ sơ"
         filterSummaryItems={[selectedStatusFilter, selectedProfileFilter]}
       />
 
       {showFilters && (
         <SectionCard
-          title="User Filters"
-          description="Refine the user directory by account status and profile completeness."
+          title="Bộ lọc người dùng"
+          description="Thu hẹp danh sách theo trạng thái tài khoản và độ đầy đủ của hồ sơ."
         >
           <div className="users-filters">
             <div className="users-filters__field">
-              <label htmlFor="users-status-filter">Status</label>
+              <label htmlFor="users-status-filter">Trạng thái</label>
               <select
                 id="users-status-filter"
                 value={selectedStatusFilter}
@@ -355,15 +378,15 @@ function UsersPage() {
                 }
               >
                 {statusFilterOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
+                  <option key={status.value} value={status.value}>
+                    {status.label}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="users-filters__field">
-              <label htmlFor="users-profile-filter">Profile Signal</label>
+              <label htmlFor="users-profile-filter">Tín hiệu hồ sơ</label>
               <select
                 id="users-profile-filter"
                 value={selectedProfileFilter}
@@ -385,17 +408,17 @@ function UsersPage() {
       )}
 
       <SectionCard
-        title="User Directory"
-        description="Review user account information, contact details, and account status."
+        title="Danh bạ người dùng"
+        description="Xem thông tin tài khoản, liên hệ, vai trò hiện tại và trạng thái truy cập."
       >
         {isLoading ? (
-          <div className="users-empty-state">Loading user directory...</div>
+          <div className="users-empty-state">Đang tải danh bạ người dùng...</div>
         ) : error ? (
-          <EmptyState title="Unable to load users" description={error} />
+          <EmptyState title="Không thể tải người dùng" description={error} />
         ) : filteredUsers.length === 0 ? (
           <EmptyState
-            title="No users found"
-            description="No users match your current search or filter settings."
+            title="Không tìm thấy người dùng"
+            description="Không có người dùng nào khớp với bộ lọc hoặc từ khóa hiện tại."
           />
         ) : (
           <>
@@ -403,13 +426,13 @@ function UsersPage() {
               <table className="users-table">
                 <thead>
                   <tr>
-                    <th>User</th>
-                    <th>Contact</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Joined Date</th>
-                    <th>Last Login</th>
-                    <th>Actions</th>
+                    <th>Người dùng</th>
+                    <th>Liên hệ</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tham gia</th>
+                    <th>Lần đăng nhập cuối</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
 
@@ -419,7 +442,7 @@ function UsersPage() {
                       <td>
                         <div className="users-user-cell">
                           <strong>{user.fullName}</strong>
-                          <span>User #{user.id}</span>
+                          <span>Mã người dùng #{user.id}</span>
                         </div>
                       </td>
                       <td>
@@ -429,17 +452,20 @@ function UsersPage() {
                         </div>
                       </td>
                       <td>
-                        <StatusBadge label={user.role} variant="type" />
+                        <StatusBadge
+                          label={roleLabelMap[user.role as AssignableUserRole]}
+                          variant="type"
+                        />
                       </td>
                       <td>
                         <StatusBadge
-                          label={user.status}
+                          label={statusLabelMap[user.status]}
                           variant={
                             user.status === "Active" ? "active" : "locked"
                           }
                         />
                       </td>
-                      <td>{user.joinedAt || "Unknown"}</td>
+                      <td>{user.joinedAt || "Chưa rõ"}</td>
                       <td>{user.lastLoginAt}</td>
                       <td>
                         <div className="users-actions">
@@ -448,26 +474,24 @@ function UsersPage() {
                             className="users-actions__view"
                             onClick={() => void openViewModal(user)}
                           >
-                            View
+                            Xem
                           </button>
 
                           {user.status === "Active" ? (
                             <button
                               type="button"
                               className="users-actions__lock"
-                              onClick={() => openConfirmDialog(user.id, "lock")}
+                              onClick={() => openStatusModal(user.id, "lock")}
                             >
-                              Lock
+                              Khóa
                             </button>
                           ) : (
                             <button
                               type="button"
                               className="users-actions__unlock"
-                              onClick={() =>
-                                openConfirmDialog(user.id, "unlock")
-                              }
+                              onClick={() => openStatusModal(user.id, "unlock")}
                             >
-                              Unlock
+                              Mở khóa
                             </button>
                           )}
                         </div>
@@ -480,7 +504,7 @@ function UsersPage() {
 
             <div className="users-table-pagination">
               <span className="users-table-pagination__info">
-                Page {userPage} of {totalUserPages}
+                Trang {userPage} / {totalUserPages}
               </span>
 
               <div className="users-table-pagination__actions">
@@ -489,7 +513,7 @@ function UsersPage() {
                   onClick={() => setUserPage((prev) => Math.max(1, prev - 1))}
                   disabled={userPage === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -498,7 +522,7 @@ function UsersPage() {
                   }
                   disabled={userPage === totalUserPages}
                 >
-                  Next
+                  Sau
                 </button>
               </div>
             </div>
@@ -508,42 +532,40 @@ function UsersPage() {
 
       <div className="users-insight-grid">
         <SectionCard
-          title="Profile Coverage Overview"
-          description="Track contact completeness and location availability across marketplace users."
+          title="Tổng quan độ đầy đủ hồ sơ"
+          description="Theo dõi độ đầy đủ của email, địa chỉ và tình trạng đăng nhập của người dùng marketplace."
         >
           <div className="users-role-overview">
             <div className="users-role-card">
               <strong>{usersWithEmailCount}</strong>
-              <span>profiles with email</span>
+              <span>hồ sơ có email</span>
             </div>
             <div className="users-role-card">
               <strong>{Math.max(users.length - usersWithEmailCount, 0)}</strong>
-              <span>profiles missing email</span>
+              <span>hồ sơ thiếu email</span>
             </div>
             <div className="users-role-card">
               <strong>{usersMissingLocationCount}</strong>
-              <span>profiles missing location</span>
+              <span>hồ sơ thiếu địa chỉ</span>
             </div>
             <div className="users-role-card">
               <strong>{usersWithoutLoginCount}</strong>
-              <span>profiles without login yet</span>
+              <span>tài khoản chưa từng đăng nhập</span>
             </div>
           </div>
         </SectionCard>
 
         <SectionCard
-          title="Activity Log Shortcut"
-          description="Recent derived activity is shown here, and you can open the full Activity Log screen for deeper filtering."
+          title="Lối tắt tới nhật ký hoạt động"
+          description="Xem nhanh các hoạt động gần đây. Màn Nhật ký hoạt động là nơi lọc sâu và đối chiếu toàn bộ lịch sử hệ thống."
           actions={
             <Link className="users-shortcut-link" to="/activity-log">
-              Open Full Log
+              Mở nhật ký đầy đủ
             </Link>
           }
         >
           {recentActivities.length === 0 ? (
-            <div className="users-empty-state">
-              No recent activity is available yet.
-            </div>
+            <div className="users-empty-state">Chưa có hoạt động gần đây.</div>
           ) : (
             <div className="users-shortcut-list">
               {recentActivities.map((activity) => (
@@ -554,14 +576,15 @@ function UsersPage() {
                   <div className="users-shortcut-item__main">
                     <strong>{activity.userName}</strong>
                     <span>{activity.detail}</span>
+                    {activity.reason ? <small>Lý do: {activity.reason}</small> : null}
                   </div>
                   <div className="users-shortcut-item__meta">
                     <StatusBadge
                       label={activity.action}
                       variant={
-                        activity.action.includes("Locked")
+                        activity.action.includes("Khóa")
                           ? "locked"
-                          : activity.action.includes("Login")
+                          : activity.action.includes("đăng nhập")
                             ? "processing"
                             : "active"
                       }
@@ -577,22 +600,22 @@ function UsersPage() {
 
       <BaseModal
         isOpen={isModalOpen}
-        title="User Details"
-        description="Review user profile details and the derived account activity timeline."
+        title="Chi tiết người dùng"
+        description="Xem hồ sơ người dùng, cập nhật vai trò nghiệp vụ duy nhất và theo dõi lịch sử thao tác từ backend."
         onClose={closeModal}
         maxWidth="760px"
       >
         {isDetailLoading && !selectedUser ? (
-          <div className="users-empty-state">Loading user details...</div>
+          <div className="users-empty-state">Đang tải chi tiết người dùng...</div>
         ) : selectedUser ? (
           <div className="users-modal__form">
             <div className="users-modal__grid">
               <div className="users-modal__field">
-                <label>Full Name</label>
+                <label>Họ và tên</label>
                 <input type="text" value={selectedUser.fullName} disabled />
               </div>
               <div className="users-modal__field">
-                <label>Phone</label>
+                <label>Số điện thoại</label>
                 <input type="text" value={selectedUser.phone} disabled />
               </div>
               <div className="users-modal__field">
@@ -600,11 +623,15 @@ function UsersPage() {
                 <input type="text" value={selectedUser.email} disabled />
               </div>
               <div className="users-modal__field">
-                <label>Status</label>
-                <input type="text" value={selectedUser.status} disabled />
+                <label>Trạng thái</label>
+                <input
+                  type="text"
+                  value={statusLabelMap[selectedUser.status]}
+                  disabled
+                />
               </div>
               <div className="users-modal__field">
-                <label htmlFor="user-role-assignment">Marketplace Role</label>
+                <label htmlFor="user-role-assignment">Vai trò nghiệp vụ</label>
                 <select
                   id="user-role-assignment"
                   value={selectedRole}
@@ -614,37 +641,39 @@ function UsersPage() {
                 >
                   {assignableRoles.map((role) => (
                     <option key={role} value={role}>
-                      {role}
+                      {roleLabelMap[role]}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="users-modal__field">
-                <label>Location</label>
+                <label>Địa chỉ</label>
                 <input type="text" value={selectedUser.location} disabled />
               </div>
               <div className="users-modal__field">
-                <label>Last Login</label>
+                <label>Lần đăng nhập cuối</label>
                 <input type="text" value={selectedUser.lastLoginAt} disabled />
               </div>
             </div>
 
             <div className="users-modal__section">
               <div className="users-modal__section-header">
-                <h4>Role Assignment</h4>
+                <h4>Vai trò nghiệp vụ</h4>
                 <p>
-                  Role catalog is maintained in Roles Management, while
-                  user-level role assignment is handled here in the Users
-                  directory.
+                  Mỗi người dùng chỉ có một vai trò nghiệp vụ tại một thời điểm.
+                  Khi đổi vai trò, hệ thống sẽ ghi lại vai trò cũ và vai trò mới.
                 </p>
               </div>
 
               <div className="users-role-assignment">
                 <div className="users-role-assignment__summary">
-                  <strong>Current role: {selectedUser.role}</strong>
+                  <strong>
+                    Vai trò hiện tại:{" "}
+                    {roleLabelMap[selectedUser.role as AssignableUserRole]}
+                  </strong>
                   <span>
-                    Use this control to assign the selected marketplace role to
-                    the user account.
+                    Chọn đúng một vai trò để đồng bộ với nghiệp vụ thực tế của tài
+                    khoản này.
                   </span>
                 </div>
 
@@ -654,7 +683,7 @@ function UsersPage() {
                   onClick={() => void handleSaveRoleAssignment()}
                   disabled={isRoleSaving}
                 >
-                  {isRoleSaving ? "Saving..." : "Save Role Assignment"}
+                  {isRoleSaving ? "Đang lưu..." : "Lưu vai trò"}
                 </button>
               </div>
 
@@ -662,23 +691,29 @@ function UsersPage() {
                 <table className="users-modal__history-table">
                   <thead>
                     <tr>
-                      <th>Role</th>
-                      <th>Assigned By</th>
-                      <th>Assigned At</th>
-                      <th>Note</th>
+                      <th>Vai trò cũ</th>
+                      <th>Vai trò mới</th>
+                      <th>Người cập nhật</th>
+                      <th>Thời gian</th>
+                      <th>Ghi chú</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedUser.roleAssignments.length === 0 ? (
                       <tr>
-                        <td colSpan={4}>
-                          No role assignment history available.
-                        </td>
+                        <td colSpan={5}>Chưa có lịch sử thay đổi vai trò.</td>
                       </tr>
                     ) : (
                       selectedUser.roleAssignments.map((item) => (
                         <tr key={item.id}>
-                          <td>{item.role}</td>
+                          <td>
+                            {item.previousRole
+                              ? roleLabelMap[item.previousRole as AssignableUserRole]
+                              : "Chưa gán"}
+                          </td>
+                          <td>
+                            {roleLabelMap[item.role as AssignableUserRole]}
+                          </td>
                           <td>{item.assignedBy}</td>
                           <td>{item.assignedAt}</td>
                           <td>{item.note}</td>
@@ -692,10 +727,10 @@ function UsersPage() {
 
             <div className="users-modal__section">
               <div className="users-modal__section-header">
-                <h4>Derived Activity Timeline</h4>
+                <h4>Dòng thời gian hoạt động</h4>
                 <p>
-                  Timeline entries are generated from registration, login, and
-                  account update data currently available from backend APIs.
+                  Nhật ký này lấy từ dữ liệu backend, bao gồm khóa hoặc mở khóa tài
+                  khoản, thay đổi vai trò và các hoạt động hệ thống liên quan.
                 </p>
               </div>
 
@@ -703,22 +738,25 @@ function UsersPage() {
                 <table className="users-modal__history-table">
                   <thead>
                     <tr>
-                      <th>Action</th>
-                      <th>Detail</th>
-                      <th>Performed By</th>
-                      <th>Timestamp</th>
+                      <th>Hành động</th>
+                      <th>Chi tiết</th>
+                      <th>Người thực hiện</th>
+                      <th>Thời gian</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedUser.activityLogs.length === 0 ? (
                       <tr>
-                        <td colSpan={4}>No activity data available.</td>
+                        <td colSpan={4}>Chưa có dữ liệu hoạt động.</td>
                       </tr>
                     ) : (
                       selectedUser.activityLogs.map((item) => (
                         <tr key={item.id}>
                           <td>{item.action}</td>
-                          <td>{item.detail}</td>
+                          <td>
+                            {item.detail}
+                            {item.reason ? <div>Lý do: {item.reason}</div> : null}
+                          </td>
                           <td>{item.performedBy}</td>
                           <td>{item.performedAt}</td>
                         </tr>
@@ -735,30 +773,73 @@ function UsersPage() {
                 className="users-modal__cancel"
                 onClick={closeModal}
               >
-                Close
+                Đóng
               </button>
             </div>
           </div>
         ) : (
           <EmptyState
-            title="User detail unavailable"
-            description="No user detail is available for the selected record."
+            title="Không có chi tiết người dùng"
+            description="Không tìm thấy dữ liệu chi tiết cho bản ghi đang chọn."
           />
         )}
       </BaseModal>
 
-      <ConfirmDialog
-        isOpen={confirmState.isOpen}
+      <BaseModal
+        isOpen={Boolean(statusActionState.userId && statusActionState.action)}
         title={confirmTitle}
-        message={confirmMessage}
-        confirmText={
-          confirmState.action === "lock" ? "Lock User" : "Unlock User"
-        }
-        cancelText="Cancel"
-        tone={confirmState.action === "lock" ? "danger" : "success"}
-        onConfirm={() => void handleConfirmAction()}
-        onCancel={closeConfirmDialog}
-      />
+        description={confirmMessage}
+        onClose={closeStatusModal}
+        maxWidth="560px"
+      >
+        <div className="users-modal__form">
+          <div className="users-modal__field">
+            <label htmlFor="user-status-reason">Lý do</label>
+            <textarea
+              id="user-status-reason"
+              rows={4}
+              value={statusReason}
+              onChange={(event) => {
+                setStatusReason(event.target.value);
+                if (statusReasonError) {
+                  setStatusReasonError("");
+                }
+              }}
+              placeholder={
+                statusActionState.action === "lock"
+                  ? "Nhập lý do khóa tài khoản"
+                  : "Nhập lý do mở khóa tài khoản"
+              }
+            />
+            {statusReasonError ? (
+              <span className="users-modal__error">{statusReasonError}</span>
+            ) : null}
+          </div>
+
+          <div className="users-modal__actions">
+            <button
+              type="button"
+              className="users-modal__cancel"
+              onClick={closeStatusModal}
+              disabled={isStatusSaving}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              className="users-role-assignment__submit"
+              onClick={() => void handleConfirmAction()}
+              disabled={isStatusSaving}
+            >
+              {isStatusSaving
+                ? "Đang lưu..."
+                : statusActionState.action === "lock"
+                  ? "Khóa người dùng"
+                  : "Mở khóa người dùng"}
+            </button>
+          </div>
+        </div>
+      </BaseModal>
 
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>

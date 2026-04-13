@@ -36,6 +36,9 @@ export const initialUsers: User[] = [
         performedAt: "2026-03-01 08:01",
       },
     ],
+    businessRoleId: 4,
+    businessRoleCode: "MANAGER",
+    businessRoleTitle: "Manager",
   },
   {
     id: 2,
@@ -72,6 +75,9 @@ export const initialUsers: User[] = [
         performedAt: "2026-03-10 09:01",
       },
     ],
+    businessRoleId: 1,
+    businessRoleCode: "USER",
+    businessRoleTitle: "User",
   },
   {
     id: 3,
@@ -108,6 +114,9 @@ export const initialUsers: User[] = [
         performedAt: "2026-03-11 10:02",
       },
     ],
+    businessRoleId: 4,
+    businessRoleCode: "MANAGER",
+    businessRoleTitle: "Manager",
   },
   {
     id: 4,
@@ -151,6 +160,9 @@ export const initialUsers: User[] = [
         performedAt: "2026-03-18 15:30",
       },
     ],
+    businessRoleId: 2,
+    businessRoleCode: "HOST",
+    businessRoleTitle: "Host",
   },
   {
     id: 5,
@@ -187,6 +199,9 @@ export const initialUsers: User[] = [
         performedAt: "2026-03-13 13:01",
       },
     ],
+    businessRoleId: 3,
+    businessRoleCode: "COLLABORATOR",
+    businessRoleTitle: "Collaborator",
   },
   {
     id: 6,
@@ -223,6 +238,9 @@ export const initialUsers: User[] = [
         performedAt: "2026-03-14 14:02",
       },
     ],
+    businessRoleId: 5,
+    businessRoleCode: "OPERATION_STAFF",
+    businessRoleTitle: "Operation Staff",
   },
 ];
 

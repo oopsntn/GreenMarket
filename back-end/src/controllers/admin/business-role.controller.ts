@@ -40,7 +40,7 @@ export const getBusinessRoles = async (
     res.json(rows);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };
 
@@ -51,7 +51,7 @@ export const getBusinessRoleById = async (
   try {
     const roleId = parseId(req.params.id);
     if (roleId === null) {
-      res.status(400).json({ error: "Invalid business role id" });
+      res.status(400).json({ error: "Mã vai trò nghiệp vụ không hợp lệ." });
       return;
     }
 
@@ -62,14 +62,14 @@ export const getBusinessRoleById = async (
       .limit(1);
 
     if (!role) {
-      res.status(404).json({ error: "Business role not found" });
+      res.status(404).json({ error: "Không tìm thấy vai trò nghiệp vụ." });
       return;
     }
 
     res.json(role);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };
 
@@ -91,7 +91,7 @@ export const createBusinessRole = async (
 
     if (!businessRoleCode?.trim() || !businessRoleTitle?.trim()) {
       res.status(400).json({
-        error: "businessRoleCode and businessRoleTitle are required",
+        error: "Mã vai trò và tên vai trò là bắt buộc.",
       });
       return;
     }
@@ -119,12 +119,12 @@ export const createBusinessRole = async (
     res.status(201).json(createdRole);
   } catch (error: any) {
     if (error?.code === "23505") {
-      res.status(409).json({ error: "Business role code already exists" });
+      res.status(409).json({ error: "Mã vai trò nghiệp vụ đã tồn tại." });
       return;
     }
 
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };
 
@@ -135,7 +135,7 @@ export const updateBusinessRole = async (
   try {
     const roleId = parseId(req.params.id);
     if (roleId === null) {
-      res.status(400).json({ error: "Invalid business role id" });
+      res.status(400).json({ error: "Mã vai trò nghiệp vụ không hợp lệ." });
       return;
     }
 
@@ -192,19 +192,19 @@ export const updateBusinessRole = async (
       .returning();
 
     if (!updatedRole) {
-      res.status(404).json({ error: "Business role not found" });
+      res.status(404).json({ error: "Không tìm thấy vai trò nghiệp vụ." });
       return;
     }
 
     res.json(updatedRole);
   } catch (error: any) {
     if (error?.code === "23505") {
-      res.status(409).json({ error: "Business role code already exists" });
+      res.status(409).json({ error: "Mã vai trò nghiệp vụ đã tồn tại." });
       return;
     }
 
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };
 
@@ -215,7 +215,7 @@ export const updateBusinessRoleStatus = async (
   try {
     const roleId = parseId(req.params.id);
     if (roleId === null) {
-      res.status(400).json({ error: "Invalid business role id" });
+      res.status(400).json({ error: "Mã vai trò nghiệp vụ không hợp lệ." });
       return;
     }
 
@@ -231,14 +231,14 @@ export const updateBusinessRoleStatus = async (
       .returning();
 
     if (!updatedRole) {
-      res.status(404).json({ error: "Business role not found" });
+      res.status(404).json({ error: "Không tìm thấy vai trò nghiệp vụ." });
       return;
     }
 
     res.json(updatedRole);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };
 
@@ -249,7 +249,7 @@ export const deleteBusinessRole = async (
   try {
     const roleId = parseId(req.params.id);
     if (roleId === null) {
-      res.status(400).json({ error: "Invalid business role id" });
+      res.status(400).json({ error: "Mã vai trò nghiệp vụ không hợp lệ." });
       return;
     }
 
@@ -260,7 +260,7 @@ export const deleteBusinessRole = async (
       .limit(1);
 
     if (!role) {
-      res.status(404).json({ error: "Business role not found" });
+      res.status(404).json({ error: "Không tìm thấy vai trò nghiệp vụ." });
       return;
     }
 
@@ -272,7 +272,7 @@ export const deleteBusinessRole = async (
 
     if (assignedUser) {
       res.status(400).json({
-        error: "Cannot delete a business role that is assigned to users",
+        error: "Không thể xóa vai trò nghiệp vụ đang được gán cho người dùng.",
       });
       return;
     }
@@ -281,9 +281,9 @@ export const deleteBusinessRole = async (
       .delete(businessRoles)
       .where(eq(businessRoles.businessRoleId, roleId));
 
-    res.json({ message: "Business role deleted successfully" });
+    res.json({ message: "Đã xóa vai trò nghiệp vụ thành công." });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
   }
 };

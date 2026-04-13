@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db";
 import { desc, eq } from "drizzle-orm";
+import { eventLogs } from "../../models/schema/index.ts";
 import { reports } from "../../models/schema/reports.ts";
 import { users } from "../../models/schema/users.ts";
 import { posts } from "../../models/schema/posts.ts";
@@ -37,7 +38,7 @@ export const getReports = async (req: Request, res: Response): Promise<void> => 
         res.json(allReports);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -45,7 +46,7 @@ export const getReportById = async (req: Request<{ id: string }>, res: Response)
     try {
         const idNumber = parseId(req.params.id);
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid report id" });
+            res.status(400).json({ error: "Mã báo cáo không hợp lệ" });
             return;
         }
 
@@ -58,26 +59,29 @@ export const getReportById = async (req: Request<{ id: string }>, res: Response)
             .where(eq(reports.reportId, idNumber))
             .limit(1);
         if (!report) {
-            res.status(404).json({ error: "Report not found" });
+            res.status(404).json({ error: "Không tìm thấy báo cáo" });
             return;
         }
 
         res.json(report);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
-export const resolveReport = async (req: Request<{ id: string }, {}, { status: string, adminNote?: string }>, res: Response): Promise<void> => {
+export const resolveReport = async (
+    req: Request<{ id: string }, {}, { status: string, adminNote?: string, adminName?: string }>,
+    res: Response,
+): Promise<void> => {
     try {
         const idNumber = parseId(req.params.id);
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid report id" });
+            res.status(400).json({ error: "Mã báo cáo không hợp lệ" });
             return;
         }
 
-        const { status, adminNote } = req.body;
+        const { status, adminNote, adminName } = req.body;
 
         const [updatedReport] = await db.update(reports)
             .set({ 
@@ -89,7 +93,7 @@ export const resolveReport = async (req: Request<{ id: string }, {}, { status: s
             .returning();
 
         if (!updatedReport) {
-            res.status(404).json({ error: "Report not found" });
+            res.status(404).json({ error: "Không tìm thấy báo cáo" });
             return;
         }
 
@@ -102,9 +106,36 @@ export const resolveReport = async (req: Request<{ id: string }, {}, { status: s
             .where(eq(reports.reportId, updatedReport.reportId))
             .limit(1);
 
+        const actionLabel =
+            status.toLowerCase() === "resolved"
+                ? "Xử lý báo cáo"
+                : "Bỏ qua báo cáo";
+
+        const statusLabel =
+            status.toLowerCase() === "resolved" ? "đã xử lý" : "đã bỏ qua";
+
+        await db.insert(eventLogs).values({
+            eventLogUserId: updatedReport.reporterId,
+            eventLogPostId: updatedReport.postId,
+            eventLogShopId: updatedReport.reportShopId,
+            eventLogEventType:
+                status.toLowerCase() === "resolved"
+                    ? "admin_report_resolved"
+                    : "admin_report_dismissed",
+            eventLogEventTime: new Date(),
+            eventLogMeta: {
+                action: actionLabel,
+                detail: adminNote?.trim()
+                    ? `Báo cáo #${updatedReport.reportId} đã được cập nhật sang trạng thái ${statusLabel}. Ghi chú: ${adminNote.trim()}`
+                    : `Báo cáo #${updatedReport.reportId} đã được cập nhật sang trạng thái ${statusLabel}.`,
+                performedBy: adminName?.trim() || "Quản trị viên hệ thống",
+                status: status.toLowerCase(),
+            },
+        });
+
         res.json(enrichedReport ?? updatedReport);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };

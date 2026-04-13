@@ -10,7 +10,7 @@ export const getAttributes = async (req: Request, res: Response): Promise<void> 
         res.json(allAttributes);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -20,7 +20,7 @@ export const createAttribute = async (req: Request<{}, {}, NewAttribute>, res: R
         res.status(201).json(newAttribute);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -28,7 +28,7 @@ export const updateAttribute = async (req: Request<{ id: string }, {}, Partial<N
     try {
         const idNumber = parseId(req.params.id);
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid attribute id" });
+            res.status(400).json({ error: "Mã thuộc tính không hợp lệ" });
             return;
         }
 
@@ -39,14 +39,14 @@ export const updateAttribute = async (req: Request<{ id: string }, {}, Partial<N
             .returning();
 
         if (!updatedAttribute) {
-            res.status(404).json({ error: "Attribute not found" });
+            res.status(404).json({ error: "Không tìm thấy thuộc tính" });
             return;
         }
 
         res.json(updatedAttribute);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -54,20 +54,20 @@ export const deleteAttribute = async (req: Request<{ id: string }>, res: Respons
     try {
         const idNumber = parseId(req.params.id);
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid attribute id" });
+            res.status(400).json({ error: "Mã thuộc tính không hợp lệ" });
             return;
         }
 
         const [deletedAttribute] = await db.delete(attributes).where(eq(attributes.attributeId, idNumber)).returning();
 
         if (!deletedAttribute) {
-            res.status(404).json({ error: "Attribute not found" });
+            res.status(404).json({ error: "Không tìm thấy thuộc tính" });
             return;
         }
 
-        res.json({ message: "Attribute deleted successfully", deletedAttribute });
+        res.json({ message: "Xóa thuộc tính thành công", deletedAttribute });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };

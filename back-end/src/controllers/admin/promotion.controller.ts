@@ -1,9 +1,10 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import { adminPromotionService } from "../../services/adminPromotion.service.ts";
+import { AuthRequest } from "../../dtos/auth.ts";
 import { parseId } from "../../utils/parseId";
 
 export const getPromotions = async (
-    req: Request,
+    req: AuthRequest,
     res: Response,
 ): Promise<void> => {
     try {
@@ -11,86 +12,86 @@ export const getPromotions = async (
         res.json(promotions);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
 export const getPromotionById = async (
-    req: Request<{ id: string }>,
+    req: AuthRequest & { params: { id: string } },
     res: Response,
 ): Promise<void> => {
     try {
         const promotionId = parseId(req.params.id);
         if (promotionId === null) {
-            res.status(400).json({ error: "Invalid promotion id" });
+            res.status(400).json({ error: "Mã chiến dịch không hợp lệ" });
             return;
         }
 
         const promotion = await adminPromotionService.getPromotionById(promotionId);
         if (!promotion) {
-            res.status(404).json({ error: "Promotion not found" });
+            res.status(404).json({ error: "Không tìm thấy chiến dịch quảng bá" });
             return;
         }
 
         res.json(promotion);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
 export const updatePromotionStatus = async (
-    req: Request<{ id: string }, {}, { status?: "Active" | "Paused" }>,
+    req: AuthRequest & { params: { id: string }; body: { status?: "Active" | "Paused" } },
     res: Response,
 ): Promise<void> => {
     try {
         const promotionId = parseId(req.params.id);
         if (promotionId === null) {
-            res.status(400).json({ error: "Invalid promotion id" });
+            res.status(400).json({ error: "Mã chiến dịch không hợp lệ" });
             return;
         }
 
         const { status } = req.body;
         if (status !== "Active" && status !== "Paused") {
-            res.status(400).json({ error: "status must be Active or Paused" });
+            res.status(400).json({ error: "Trạng thái chỉ được là Active hoặc Paused" });
             return;
         }
 
         const promotion = await adminPromotionService.updatePromotionStatus(
             promotionId,
             status,
+            req.user?.email ?? null,
         );
 
         if (!promotion) {
-            res.status(404).json({ error: "Promotion not found" });
+            res.status(404).json({ error: "Không tìm thấy chiến dịch quảng bá" });
             return;
         }
 
         res.json(promotion);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
 export const changePromotionPackage = async (
-    req: Request<
-        { id: string },
-        {},
-        {
+    req: AuthRequest & {
+        params: { id: string };
+        body: {
             packageId?: number;
             startDate?: string;
             endDate?: string;
             paymentStatus?: "Paid" | "Pending Verification";
             adminNote?: string;
-        }
-    >,
+        };
+    },
     res: Response,
 ): Promise<void> => {
     try {
         const promotionId = parseId(req.params.id);
         if (promotionId === null) {
-            res.status(400).json({ error: "Invalid promotion id" });
+            res.status(400).json({ error: "Mã chiến dịch không hợp lệ" });
             return;
         }
 
@@ -98,7 +99,7 @@ export const changePromotionPackage = async (
 
         if (!packageId || !startDate || !endDate || !paymentStatus) {
             res.status(400).json({
-                error: "packageId, startDate, endDate, and paymentStatus are required",
+                error: "Vui lòng truyền đủ packageId, startDate, endDate và paymentStatus",
             });
             return;
         }
@@ -112,10 +113,11 @@ export const changePromotionPackage = async (
                 paymentStatus,
                 adminNote,
             },
+            req.user?.email ?? null,
         );
 
         if (!promotion) {
-            res.status(404).json({ error: "Promotion not found" });
+            res.status(404).json({ error: "Không tìm thấy chiến dịch quảng bá" });
             return;
         }
 
@@ -123,29 +125,28 @@ export const changePromotionPackage = async (
     } catch (error) {
         console.error(error);
         res.status(400).json({
-            error: error instanceof Error ? error.message : "Unable to change promotion package",
+            error: error instanceof Error ? error.message : "Không thể đổi gói quảng bá",
         });
     }
 };
 
 export const reopenPromotion = async (
-    req: Request<
-        { id: string },
-        {},
-        {
+    req: AuthRequest & {
+        params: { id: string };
+        body: {
             packageId?: number;
             startDate?: string;
             endDate?: string;
             paymentStatus?: "Paid" | "Pending Verification";
             adminNote?: string;
-        }
-    >,
+        };
+    },
     res: Response,
 ): Promise<void> => {
     try {
         const promotionId = parseId(req.params.id);
         if (promotionId === null) {
-            res.status(400).json({ error: "Invalid promotion id" });
+            res.status(400).json({ error: "Mã chiến dịch không hợp lệ" });
             return;
         }
 
@@ -153,7 +154,7 @@ export const reopenPromotion = async (
 
         if (!packageId || !startDate || !endDate || !paymentStatus) {
             res.status(400).json({
-                error: "packageId, startDate, endDate, and paymentStatus are required",
+                error: "Vui lòng truyền đủ packageId, startDate, endDate và paymentStatus",
             });
             return;
         }
@@ -167,10 +168,11 @@ export const reopenPromotion = async (
                 paymentStatus,
                 adminNote,
             },
+            req.user?.email ?? null,
         );
 
         if (!promotion) {
-            res.status(404).json({ error: "Promotion not found" });
+            res.status(404).json({ error: "Không tìm thấy chiến dịch quảng bá" });
             return;
         }
 
@@ -178,7 +180,7 @@ export const reopenPromotion = async (
     } catch (error) {
         console.error(error);
         res.status(400).json({
-            error: error instanceof Error ? error.message : "Unable to reopen promotion",
+            error: error instanceof Error ? error.message : "Không thể mở lại chiến dịch quảng bá",
         });
     }
 };

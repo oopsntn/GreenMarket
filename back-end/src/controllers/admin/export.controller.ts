@@ -3,7 +3,7 @@ import { AuthRequest } from "../../dtos/auth.ts";
 import { adminReportingService } from "../../services/adminReporting.service.ts";
 
 const getGeneratedBy = (req: AuthRequest) =>
-    req.user?.email || req.user?.mobile || "System Administrator";
+    req.user?.email || req.user?.mobile || "Quản trị viên hệ thống";
 
 export const getExportHistory = async (
     req: AuthRequest,
@@ -14,7 +14,7 @@ export const getExportHistory = async (
         res.json(historyItems);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -31,7 +31,7 @@ export const createGeneralExport = async (
         };
 
         if (!module || !format) {
-            res.status(400).json({ error: "module and format are required" });
+            res.status(400).json({ error: "Bắt buộc phải có phân hệ và định dạng tệp" });
             return;
         }
 
@@ -47,7 +47,7 @@ export const createGeneralExport = async (
     } catch (error) {
         console.error(error);
         res.status(400).json({
-            error: error instanceof Error ? error.message : "Unable to create export",
+            error: error instanceof Error ? error.message : "Không thể tạo tệp xuất dữ liệu",
         });
     }
 };
@@ -65,7 +65,7 @@ export const createFinancialExport = async (
         };
 
         if (!reportType || !format) {
-            res.status(400).json({ error: "reportType and format are required" });
+            res.status(400).json({ error: "Bắt buộc phải có loại báo cáo và định dạng tệp" });
             return;
         }
 
@@ -81,7 +81,7 @@ export const createFinancialExport = async (
     } catch (error) {
         console.error(error);
         res.status(400).json({
-            error: error instanceof Error ? error.message : "Unable to create export",
+            error: error instanceof Error ? error.message : "Không thể tạo tệp xuất dữ liệu",
         });
     }
 };
