@@ -1420,19 +1420,13 @@ INSERT INTO promotion_packages (
 ) VALUES
 (1, 1, 'Gói tuần', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày.', true),
 (2, 1, 'Gói tháng', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày.', true),
-(3, 2, 'Gói Nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên hiển thị shop trong danh sách nhà vườn và hiển thị huy hiệu VIP.', true),
-(5, 1, 'Gói đẩy bài cấp tốc (7 ngày)', 7, 1, 15000, 'Ưu tiên hiển thị bài đăng trong 7 ngày.', true),
-(6, 1, 'Gói đẩy bài ưu tiên (30 ngày)', 30, 2, 45000, 'Ưu tiên hiển thị bài đăng trong 30 ngày.', true);
+(3, 2, 'Gói nhà vườn VIP', 90, 10, 500000, 'Gói VIP dành cho nhà vườn chuyên nghiệp (90 ngày).', true);
 
 -- Promotion Package Prices (2 goi day bai + 1 goi Nha vuon VIP 3 thang)
 INSERT INTO promotion_package_prices (package_id, price, effective_from, effective_to, note, created_by) VALUES
 (1, 99000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tuần', 1),
 (2, 299000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tháng', 1),
-(3, 499000, now() - interval '90 days', NULL, 'Giá gói Nhà vườn VIP 3 tháng', 1),
-(5, 450000, now() - interval '90 days', NULL, 'Giá gói đẩy bài VIP tháng', 1),
-(6, 250000, now() - interval '90 days', NULL, 'Giá gói Search Boost Tuần', 1),
-(5, 50000,  now() - interval '90 days', NULL, 'Giá khuyến mãi gói 5', 1),
-(6, 150000, now() - interval '90 days', NULL, 'Giá khuyến mãi gói 6', 1);
+(3, 499000, now() - interval '90 days', NULL, 'Giá gói VIP 3 tháng', 1);
 
 -- ============================================================
 -- POSTING PLANS (OWNER / PERSONAL)
@@ -1549,16 +1543,16 @@ INSERT INTO post_promotions (
 ) VALUES
 (1, 1, 1, 1, 1, '2026-03-05 08:00:00', '2026-03-11 23:59:00', 'expired',  '2026-03-04 16:00:00'),
 (2, 4, 3, 2, 1, '2026-03-12 08:00:00', '2026-04-10 23:59:00', 'active',   '2026-03-11 14:20:00'),
-(3, 2, 4, 3, 2, '2026-03-08 08:00:00', '2026-03-14 23:59:00', 'paused',   '2026-03-07 17:30:00'),
-(5, 3, 2, 5, 1, '2026-03-20 08:00:00', '2026-03-26 23:59:00', 'expired',  '2026-03-19 11:00:00'),
-(6, 6, 1, 6, 1, '2026-03-25 08:00:00', '2026-04-23 23:59:00', 'active',   '2026-03-24 15:45:00'),
+(3, 2, 1, 2, 2, '2026-03-08 08:00:00', '2026-03-14 23:59:00', 'paused',   '2026-03-07 17:30:00'),
+(5, 3, 1, 1, 1, '2026-03-20 08:00:00', '2026-03-26 23:59:00', 'expired',  '2026-03-19 11:00:00'),
+(6, 6, 1, 2, 1, '2026-03-25 08:00:00', '2026-04-23 23:59:00', 'active',   '2026-03-24 15:45:00'),
 (7, 7, 1, 1, 1, '2026-04-05 08:00:00', '2026-04-11 23:59:00', 'active',   '2026-04-04 09:10:00'),
-(8, 11, 6, 3, 2, '2026-04-02 08:00:00', '2026-04-08 23:59:00', 'paused',  '2026-04-01 12:05:00'),
-(9, 12, 6, 5, 1, '2026-04-01 08:00:00', '2026-04-07 23:59:00', 'closed',  '2026-03-31 18:00:00'),
-(10, 9, 3, 6, 1, '2026-04-11 08:00:00', '2026-05-10 23:59:00', 'scheduled','2026-04-09 08:30:00'),
-(11, 10, 1, 2, 1, '2026-04-12 08:00:00', '2026-05-12 23:59:00', 'scheduled','2026-04-10 08:35:00'),
-(12, 13, 6, 2, 2, '2026-03-28 08:00:00', '2026-04-26 23:59:00', 'active', '2026-03-27 15:10:00'),
-(13, 14, 6, 6, 1, '2026-03-29 08:00:00', '2026-04-27 23:59:00', 'active', '2026-03-28 10:45:00');
+(8, 11, 1, 3, 2, '2026-04-02 08:00:00', '2026-07-02 23:59:00', 'active',  '2026-04-01 12:05:00'),
+(9, 12, 1, 3, 2, '2026-04-01 08:00:00', '2026-06-30 23:59:00', 'active',  '2026-03-31 18:00:00'),
+(10, 9, 1, 2, 1, '2026-04-11 08:00:00', '2026-05-10 23:59:00', 'scheduled','2026-04-09 08:30:00'),
+(11, 10, 1, 1, 1, '2026-04-12 08:00:00', '2026-05-12 23:59:00', 'scheduled','2026-04-10 08:35:00'),
+(12, 13, 1, 1, 2, '2026-03-28 08:00:00', '2026-04-26 23:59:00', 'active',  '2026-03-27 15:10:00'),
+(13, 14, 1, 1, 1, '2026-03-29 08:00:00', '2026-04-27 23:59:00', 'active',  '2026-03-28 10:45:00');
 
 -- ============================================================
 -- PAYMENT TRANSACTIONS
@@ -1575,22 +1569,19 @@ INSERT INTO payment_txn (
     payment_txn_status,
     payment_txn_created_at
 ) VALUES
-(1, 1, 1, 1, 1, 180000, 'bank_transfer', 'GM-TXN-20260304-001', 'success', '2026-03-04 15:30:00'),
-(2, 3, 2, 4, 2, 500000, 'bank_transfer', 'GM-TXN-20260311-002', 'success', '2026-03-11 13:40:00'),
-(3, 4, 3, 2, 3, 80000,  'bank_transfer', 'GM-TXN-20260307-003', 'success', '2026-03-07 18:00:00'),
-(5, 2, 5, 3, 4, 50000,  'bank_transfer', 'GM-TXN-20260319-005', 'success', '2026-03-19 10:20:00'),
-(6, 1, 6, 6, 5, 150000, 'bank_transfer', 'GM-TXN-20260324-006', 'pending', '2026-03-24 14:30:00'),
-(8, 6, 6, 14, 5, 150000, 'bank_transfer', 'GM-TXN-20260328-008', 'success', '2026-03-28 11:00:00'),
-(9, 1, 1, 7, 1, 180000, 'bank_transfer', 'GM-TXN-20260404-009', 'success', '2026-04-04 09:20:00'),
-(10, 6, 3, 11, 3, 80000, 'bank_transfer', 'GM-TXN-20260401-010', 'pending', '2026-04-01 11:25:00'),
-(11, 6, 5, 12, 4, 50000, 'bank_transfer', 'GM-TXN-20260331-011', 'failed', '2026-03-31 19:15:00'),
-(12, 3, 6, 9, 5, 150000, 'bank_transfer', 'GM-TXN-20260409-012', 'success', '2026-04-09 08:50:00'),
-(13, 1, 2, 10, 2, 500000, 'bank_transfer', 'GM-TXN-20260410-013', 'pending', '2026-04-10 08:55:00'),
-(14, 5, 5, 15, 4, 50000, 'bank_transfer', 'GM-TXN-20260326-014', 'success', '2026-03-26 17:40:00');
+(1, 1, 1, 1, 1, 99000,  'bank_transfer', 'GM-TXN-20260304-001', 'success', '2026-03-04 15:30:00'),
+(2, 3, 2, 4, 2, 299000, 'bank_transfer', 'GM-TXN-20260311-002', 'success', '2026-03-11 13:40:00'),
+(3, 4, 1, 2, 1, 99000,  'bank_transfer', 'GM-TXN-20260307-003', 'success', '2026-03-07 18:00:00'),
+(5, 2, 1, 3, 1, 99000,  'bank_transfer', 'GM-TXN-20260319-005', 'success', '2026-03-19 10:20:00'),
+(6, 1, 2, 6, 2, 299000, 'bank_transfer', 'GM-TXN-20260324-006', 'pending', '2026-03-24 14:30:00'),
+(8, 6, 3, 14, 3, 499000, 'bank_transfer', 'GM-TXN-20260328-008', 'success', '2026-03-28 11:00:00'),
+(9, 1, 1, 7, 1, 99000,  'bank_transfer', 'GM-TXN-20260404-009', 'success', '2026-04-04 09:20:00'),
+(10, 6, 3, 11, 3, 499000, 'bank_transfer', 'GM-TXN-20260401-010', 'pending', '2026-04-01 11:25:00'),
+(11, 6, 1, 12, 1, 99000,  'bank_transfer', 'GM-TXN-20260331-011', 'failed', '2026-03-31 19:15:00'),
+(12, 3, 2, 9, 2, 299000, 'bank_transfer', 'GM-TXN-20260409-012', 'success', '2026-04-09 08:50:00'),
+(13, 1, 2, 10, 2, 299000, 'bank_transfer', 'GM-TXN-20260410-013', 'pending', '2026-04-10 08:55:00'),
+(14, 5, 1, 15, 1, 99000,  'bank_transfer', 'GM-TXN-20260326-014', 'success', '2026-03-26 17:40:00');
 
--- ============================================================
--- REPORTS MODERATION
--- ============================================================
 INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_reason_code, report_reason, report_note, report_status, admin_note, report_created_at, report_updated_at) VALUES
 (1, 5, 1, 1, 'MISLEADING_INFO', 'Post title and product details are not consistent with the attached listing photos.', 'The seller describes a different bonsai shape in the text than in the gallery.', 'pending', NULL, '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
 (2, 5, 2, 3, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
@@ -1617,7 +1608,7 @@ INSERT INTO event_logs (
     event_log_meta
 ) VALUES
 (1, 6, NULL, NULL, NULL, NULL, 'admin_login',        '2026-03-29 08:00:00', '{"action":"Admin Login","detail":"Admin dashboard session started successfully.","performedBy":"System Administrator"}'),
-(2, 3, NULL, NULL, NULL, NULL, 'role_assigned',      '2026-03-29 08:35:00', '{"action":"Role Assigned","detail":"Assigned role: Operation Staff.","performedBy":"System Administrator"}'),
+(2, 1, NULL, NULL, NULL, NULL, 'role_assigned',      '2026-03-29 08:35:00', '{"action":"Role Assigned","detail":"Assigned role: Operation Staff.","performedBy":"System Administrator"}'),
 (3, 4, NULL, NULL, NULL, NULL, 'account_locked',     '2026-03-29 09:10:00', '{"action":"Account Locked","detail":"User access was restricted after moderation review.","performedBy":"System Administrator"}'),
 (4, 4, NULL, NULL, NULL, NULL, 'account_unlocked',   '2026-03-29 11:05:00', '{"action":"Account Unlocked","detail":"User access was restored after verification.","performedBy":"System Administrator"}'),
 (5, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:00:00', '{"action":"Export Generated","detail":"Users CSV export completed.","generatedBy":"System Administrator","reportName":"Users Export - 2026-03-29","status":"Completed"}'),
@@ -1626,8 +1617,8 @@ INSERT INTO event_logs (
 (8, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:25:00', '{"action":"Export Generated","detail":"Analytics overview CSV export completed.","generatedBy":"System Administrator","reportName":"Analytics Overview - 2026-03-29","status":"Completed"}'),
 (9, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:33:00', '{"action":"Export Generated","detail":"Promotion operations CSV export completed.","generatedBy":"System Administrator","reportName":"Promotion Operations - 2026-03-29","status":"Completed"}'),
 (10, 1, NULL, NULL, NULL, NULL, 'admin_export',      '2026-03-29 12:44:00', '{"action":"Export Generated","detail":"Boosted campaigns CSV export completed.","generatedBy":"System Administrator","reportName":"Boosted Campaigns - 2026-03-29","status":"Completed"}'),
-(11, 2, 2, 3, 2, 11, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Promotion Resumed","detail":"Category Top campaign resumed after content update.","performedBy":"System Administrator"}'),
-(12, 1, 3, 2, 3, 12, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Promotion Reopened","detail":"Expired Search Boost campaign reopened after payment confirmation.","performedBy":"System Administrator"}');
+(11, 2, 2, 1, 2, 11, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Promotion Resumed","detail":"Category Top campaign resumed after content update.","performedBy":"System Administrator"}'),
+(12, 1, 1, 2, 1, 12, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Promotion Reopened","detail":"Expired Search Boost campaign reopened after payment confirmation.","performedBy":"System Administrator"}');
 
 -- ============================================================
 -- DAILY PLACEMENT METRICS
@@ -1720,7 +1711,7 @@ INSERT INTO ai_insights (
 INSERT INTO operation_tasks (task_id, task_title, task_type, task_status, task_priority, assignee_id, customer_id, related_target_id, task_note, created_at, updated_at) VALUES
 (1, 'Hỗ trợ đổi email shop', 'support', 'in_progress', 'medium', 6, 2, NULL, 'Khách hàng gặp lỗi OTP khi đổi email.', now() - interval '2 days', now() - interval '1 day'),
 (2, 'Xác minh báo cáo spam', 'report_check', 'open', 'high', 6, 7, 2, 'Report #2 cần tra xét IP.', now() - interval '1 day', now() - interval '1 day'),
-(3, 'Cấp lại quyền đăng bài', 'support', 'closed', 'high', 6, 3, NULL, 'Đã mở khóa.', now() - interval '5 days', now() - interval '4 days');
+(3, 'Cấp lại quyền đăng bài', 'support', 'closed', 'high', 6, 1, NULL, 'Đã mở khóa.', now() - interval '5 days', now() - interval '4 days');
 
 -- Task Replies
 INSERT INTO task_replies (reply_id, task_id, sender_id, message, visibility, created_at) VALUES
@@ -1734,11 +1725,11 @@ INSERT INTO moderation_actions (moderation_action_id, moderation_action_action_b
 
 -- Moderation Feedback
 INSERT INTO moderation_feedback (feedback_id, target_type, target_id, sender_id, recipient_id, message, created_at) VALUES
-(1, 'post', 2, 5, 3, 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', now() - interval '5 days');
+(1, 'post', 2, 5, 1, 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', now() - interval '5 days');
 
 -- Escalations
 INSERT INTO escalations (escalation_id, source_task_id, target_type, target_id, created_by, severity, reason, status, resolution_note, created_at) VALUES
-(1, 2, 'shop', 3, 6, 'high', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'open', NULL, now() - interval '12 hours');
+(1, 2, 'shop', 1, 6, 'high', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'open', NULL, now() - interval '12 hours');
 
 -- System Notifications
 INSERT INTO system_notifications (notification_id, recipient_id, title, content, type, read_status, created_at) VALUES
