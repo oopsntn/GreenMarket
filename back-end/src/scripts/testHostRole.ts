@@ -4,7 +4,11 @@ import dotenv from "dotenv";
 
 import path from "path";
 
-dotenv.config({ path: path.join(process.cwd(), "back-end/.env") });
+dotenv.config({ path: path.join(process.cwd(), ".env") });
+// If running from project root
+if (!process.env.JWT_SECRET) {
+  dotenv.config({ path: path.join(process.cwd(), "back-end/.env") });
+}
 
 const API_BASE = "http://localhost:5000/api";
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
