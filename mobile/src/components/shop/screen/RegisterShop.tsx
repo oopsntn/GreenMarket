@@ -138,7 +138,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
         const validateSocial = (url: string) => {
             if (url && !url.startsWith('http')) {
-                return `https://${url}`; // Tự động thêm https nếu user quên
+                return `https://${url}`; 
             }
             return url;
         };
@@ -241,7 +241,11 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
     return (
         <MobileLayout title="Open Shop" backButton={() => navigation.goBack()}>
-            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+            <ScrollView
+                style={styles.container}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled={true}
+            >
                 <View style={styles.header}>
                     <Store color="#10b981" size={48} />
                     <Text style={styles.title}>Start selling</Text>

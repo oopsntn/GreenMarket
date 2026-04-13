@@ -47,7 +47,7 @@ const AuthStack = () => {
     );
   }
 
-  // Determine which navigator to show based on user role
+
   const renderStack = () => {
     const businessRoleCode = user?.businessRoleCode;
 

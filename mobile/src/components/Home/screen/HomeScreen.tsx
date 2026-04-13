@@ -143,7 +143,7 @@ const HomeScreen = () => {
 
     // Replace localhost with actual machine IP for physical devices
     if (finalImageUrl?.includes('localhost')) {
-      finalImageUrl = finalImageUrl.replace('localhost', '192.168.1.3');
+      finalImageUrl = finalImageUrl.replace('localhost', '14.170.9.64');
     }
 
     console.log('Post:', item.postTitle, 'Image URL:', finalImageUrl);

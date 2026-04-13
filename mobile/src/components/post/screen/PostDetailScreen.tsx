@@ -109,9 +109,26 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   if (!post) return <View style={styles.center}><Text>Post not found or has been deleted.</Text></View>;
 
   const media = [
-    ...(post?.images || []).map((i: any) => ({ type: 'image', url: i.imageUrl })),
-    ...(post?.videos || []).map((v: any) => ({ type: 'video', url: v.videoUrl }))
+    ...(post?.images || []).map((i: any) => {
+      let url = i.imageUrl;
+      if (url?.includes('localhost')) {
+        url = url.replace('localhost', '14.170.9.64');
+      }
+      return { type: 'image', url };
+    }),
+    ...(post?.videos || []).map((v: any) => {
+      let url = v.videoUrl;
+      if (url?.includes('localhost')) {
+        url = url.replace('localhost', '14.170.9.64');
+      }
+      return { type: 'video', url };
+    })
   ]
+
+  // Debug log
+  console.log('📸 Post data:', { images: post?.images, videos: post?.videos });
+  console.log('📸 Media array:', media);
+
   const contactPhone = post?.shop?.shopPhone || post?.shop?.phones?.[0] || post?.postContactPhone || ''
 
   // Nút Share và Heart trên Header

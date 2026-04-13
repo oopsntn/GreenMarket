@@ -18,6 +18,7 @@ import PostDetailScreen from '../components/post/screen/PostDetailScreen';
 import SavedPostsScreen from '../components/post/screen/SavedPostsScreen';
 import PromotePostScreen from '../components/payment/screen/PromotePostScreen';
 import CreateReportScreen from '../components/report/screen/CreateReportService';
+import ShopDashboardScreen from '@/components/shop/screen/ShopDashboardScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -55,6 +56,11 @@ const SettingsStackNavigator = () => {
     >
       <Stack.Screen name="SettingsTab" component={UserSettingsScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="RegisterShop" component={RegisterShopScreen} />
+      <Stack.Screen name="EditShop" component={EditShopScreen} />
+      <Stack.Screen name="MyShop" component={ShoDetailScreen} />
+      <Stack.Screen name="SavedPosts" component={SavedPostsScreen} />
+      <Stack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
     </Stack.Navigator>
   );
 };
