@@ -14,9 +14,10 @@ type EventLogMeta = {
 };
 
 const formatDateTime = (value: Date | string | null | undefined) => {
-  if (!value) return "Not available";
+  if (!value) return "Chưa có dữ liệu";
+
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not available";
+  if (Number.isNaN(date.getTime())) return "Chưa có dữ liệu";
 
   return `${date.toISOString().slice(0, 10)} ${String(date.getHours()).padStart(
     2,
@@ -24,8 +25,27 @@ const formatDateTime = (value: Date | string | null | undefined) => {
   )}:${String(date.getMinutes()).padStart(2, "0")}`;
 };
 
+const eventTypeLabelMap: Record<string, string> = {
+  admin_user_locked: "Khóa tài khoản",
+  admin_user_unlocked: "Mở khóa tài khoản",
+  admin_user_role_assigned: "Gán vai trò",
+  admin_post_approved: "Duyệt bài đăng",
+  admin_post_rejected: "Từ chối bài đăng",
+  admin_post_hidden: "Ẩn bài đăng",
+  admin_post_drafted: "Chuyển về nháp",
+  admin_post_status_updated: "Cập nhật trạng thái bài đăng",
+  admin_report_resolved: "Xử lý báo cáo",
+  admin_report_dismissed: "Bỏ qua báo cáo",
+  admin_settings_updated: "Cập nhật thiết lập hệ thống",
+  admin_settings_reset: "Khôi phục thiết lập hệ thống",
+};
+
 const titleCaseEventType = (value: string | null) => {
-  if (!value) return "System Event";
+  if (!value) return "Sự kiện hệ thống";
+
+  if (eventTypeLabelMap[value]) {
+    return eventTypeLabelMap[value];
+  }
 
   return value
     .split("_")
@@ -59,11 +79,11 @@ export const getActivityLogs = async (
         const action =
           meta?.action || titleCaseEventType(row.eventLogEventType);
         const performedBy =
-          meta?.performedBy || meta?.generatedBy || "System Administrator";
+          meta?.performedBy || meta?.generatedBy || "Quản trị viên hệ thống";
         const userName =
           row.userDisplayName ||
           row.userEmail ||
-          (row.eventLogUserId ? `User #${row.eventLogUserId}` : "System");
+          (row.eventLogUserId ? `Người dùng #${row.eventLogUserId}` : "Hệ thống");
 
         return {
           id: row.eventLogId,
@@ -73,7 +93,7 @@ export const getActivityLogs = async (
           detail:
             meta?.detail ||
             meta?.reportName ||
-            `${action} recorded by the backend event log.`,
+            `${action} được backend ghi nhận trong nhật ký sự kiện.`,
           performedBy,
           performedAt: formatDateTime(row.eventLogEventTime),
         };
@@ -81,6 +101,6 @@ export const getActivityLogs = async (
     );
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
