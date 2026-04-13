@@ -1,4 +1,4 @@
-export type PromotionPackageSlot = "Home Top" | "Category Top" | "Search Boost";
+export type PromotionPackageSlot = string;
 export type PromotionPackageStatus = "Active" | "Disabled";
 
 export type PromotionPackage = {
@@ -36,6 +36,12 @@ export type PromotionPackageFormState = {
   maxPosts: number;
   displayQuota: number;
   description: string;
+};
+
+export type PromotionPackageSlotOption = {
+  id: number;
+  code: string;
+  label: PromotionPackageSlot;
 };
 
 export type PromotionPackageSummaryCard = {

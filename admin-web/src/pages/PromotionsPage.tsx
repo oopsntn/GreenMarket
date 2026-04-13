@@ -38,13 +38,6 @@ type PackageActionFormState = {
   adminNote: string;
 };
 
-const slotFilterOptions: Array<PromotionSlot | "All"> = [
-  "All",
-  "Home Top",
-  "Category Top",
-  "Search Boost",
-];
-
 const statusFilterOptions: Array<PromotionStatus | "All"> = [
   "All",
   "Scheduled",
@@ -59,11 +52,12 @@ const paymentFilterOptions: Array<PromotionPaymentStatus | "All"> = [
   "Pending Verification",
 ];
 
-const slotLabelMap: Record<PromotionSlot | "All", string> = {
-  All: "Tất cả",
-  "Home Top": "Trang chủ nổi bật",
-  "Category Top": "Danh mục nổi bật",
-  "Search Boost": "Tăng tìm kiếm",
+const getSlotLabel = (slot: PromotionSlot | "All") => {
+  if (slot === "All") return "Tất cả";
+  if (slot === "Home Top") return "Trang chủ nổi bật";
+  if (slot === "Category Top") return "Danh mục nổi bật";
+  if (slot === "Search Boost") return "Tăng tìm kiếm";
+  return slot;
 };
 
 const statusLabelMap: Record<PromotionStatus | "All", string> = {
@@ -121,7 +115,7 @@ function PromotionsPage() {
     null,
   );
   const [actionFormData, setActionFormData] = useState<PackageActionFormState>({
-    slot: "Home Top",
+    slot: "",
     packageId: "",
     startDate: "",
     endDate: "",
@@ -162,6 +156,21 @@ function PromotionsPage() {
     availablePackages.find(
       (item) => item.id === Number(actionFormData.packageId),
     ) ?? null;
+  const slotFilterOptions = useMemo<Array<PromotionSlot | "All">>(() => {
+    const dynamicSlots = Array.from(
+      new Set([
+        ...promotions.map((item) => item.slot),
+        ...activePackages.map((item) => item.slot),
+      ]),
+    ).filter(Boolean);
+
+    return ["All", ...dynamicSlots];
+  }, [activePackages, promotions]);
+  const actionSlotOptions = useMemo(() => {
+    return Array.from(new Set(activePackages.map((item) => item.slot))).filter(
+      Boolean,
+    );
+  }, [activePackages]);
 
   useEffect(() => {
     const loadPromotionData = async () => {
@@ -667,7 +676,7 @@ function PromotionsPage() {
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Lọc theo vị trí, trạng thái, thanh toán và khoảng ngày"
         filterSummaryItems={[
-          slotLabelMap[selectedSlotFilter],
+          getSlotLabel(selectedSlotFilter),
           statusLabelMap[selectedStatusFilter],
           paymentLabelMap[selectedPaymentFilter],
           fromDateFilter || "Từ đầu kỳ",
@@ -694,7 +703,7 @@ function PromotionsPage() {
               >
                 {slotFilterOptions.map((slot) => (
                   <option key={slot} value={slot}>
-                    {slotLabelMap[slot]}
+                    {getSlotLabel(slot)}
                   </option>
                 ))}
               </select>
@@ -809,7 +818,7 @@ function PromotionsPage() {
                       <td>{promotion.owner}</td>
                       <td>{promotion.packageName}</td>
                       <td>
-                        <StatusBadge label={slotLabelMap[promotion.slot]} variant="slot" />
+                        <StatusBadge label={getSlotLabel(promotion.slot)} variant="slot" />
                       </td>
                       <td>
                         <div className="promotions-cell">
@@ -1014,7 +1023,7 @@ function PromotionsPage() {
                 <label>Vị trí hiển thị</label>
                 <input
                   type="text"
-                  value={slotLabelMap[selectedPromotion.slot]}
+                  value={getSlotLabel(selectedPromotion.slot)}
                   disabled
                 />
               </div>
@@ -1251,9 +1260,11 @@ function PromotionsPage() {
                   value={actionFormData.slot}
                   onChange={handlePackageActionChange}
                 >
-                  <option value="Home Top">Trang chủ nổi bật</option>
-                  <option value="Category Top">Danh mục nổi bật</option>
-                  <option value="Search Boost">Tăng tìm kiếm</option>
+                  {actionSlotOptions.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {getSlotLabel(slot)}
+                    </option>
+                  ))}
                 </select>
               </div>
 

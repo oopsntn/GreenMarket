@@ -4,19 +4,14 @@ import type {
   PromotionPackage,
   PromotionPackageApiResponse,
   PromotionPackageFormState,
+  PromotionPackageSlotOption,
   PromotionPackageStatus,
   PromotionPackageSummaryCard,
 } from "../types/promotionPackage";
 
-type PromotionPackageSlotOption = {
-  id: number;
-  code: string;
-  label: PromotionPackage["slot"];
-};
-
 const emptyPromotionPackageForm: PromotionPackageFormState = {
   name: "",
-  slot: "Home Top",
+  slot: "",
   durationDays: 7,
   price: "",
   maxPosts: 1,
@@ -45,11 +40,13 @@ const mapSlotToUi = (
   slotCode: string | null,
   slotTitle: string | null,
 ): PromotionPackage["slot"] => {
-  const normalized = `${slotCode ?? ""} ${slotTitle ?? ""}`.toLowerCase();
+  const normalizedTitle = slotTitle?.trim();
+  if (normalizedTitle) return normalizedTitle;
 
-  if (normalized.includes("search")) return "Search Boost";
-  if (normalized.includes("category")) return "Category Top";
-  return "Home Top";
+  const normalizedCode = slotCode?.trim();
+  if (normalizedCode) return normalizedCode;
+
+  return "Vị trí chưa đặt tên";
 };
 
 const mapApiPackageToUi = (
@@ -149,7 +146,7 @@ export const promotionPackageService = {
   },
 
   getEmptyForm(): PromotionPackageFormState {
-    return emptyPromotionPackageForm;
+    return { ...emptyPromotionPackageForm };
   },
 
   getSummaryCards(packages: PromotionPackage[]): PromotionPackageSummaryCard[] {

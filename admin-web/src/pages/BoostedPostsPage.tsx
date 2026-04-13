@@ -26,13 +26,6 @@ type ConfirmState = {
   action: ConfirmAction | null;
 };
 
-const slotFilterOptions: Array<BoostedPostSlot | "All"> = [
-  "All",
-  "Home Top",
-  "Category Top",
-  "Search Boost",
-];
-
 const statusFilterOptions: Array<BoostedPostStatus | "All"> = [
   "All",
   "Scheduled",
@@ -57,11 +50,12 @@ const healthFilterOptions: Array<BoostedPostDeliveryHealth | "All"> = [
   "At Risk",
 ];
 
-const slotLabelMap: Record<BoostedPostSlot | "All", string> = {
-  All: "Tất cả",
-  "Home Top": "Trang chủ nổi bật",
-  "Category Top": "Danh mục nổi bật",
-  "Search Boost": "Tăng tìm kiếm",
+const getSlotLabel = (slot: BoostedPostSlot | "All") => {
+  if (slot === "All") return "Tất cả";
+  if (slot === "Home Top") return "Trang chủ nổi bật";
+  if (slot === "Category Top") return "Danh mục nổi bật";
+  if (slot === "Search Boost") return "Tăng tìm kiếm";
+  return slot;
 };
 
 const statusLabelMap: Record<BoostedPostStatus | "All", string> = {
@@ -146,6 +140,10 @@ function BoostedPostsPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards = boostedPostService.getSummaryCards(posts);
+  const slotFilterOptions = useMemo<Array<BoostedPostSlot | "All">>(() => {
+    const dynamicSlots = Array.from(new Set(posts.map((item) => item.slot)));
+    return ["All", ...dynamicSlots];
+  }, [posts]);
 
   useEffect(() => {
     const loadBoostedPosts = async () => {
@@ -385,7 +383,7 @@ function BoostedPostsPage() {
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Lọc theo vị trí hiển thị, trạng thái, duyệt và chất lượng"
         filterSummaryItems={[
-          slotLabelMap[selectedSlotFilter],
+          getSlotLabel(selectedSlotFilter),
           statusLabelMap[selectedStatusFilter],
           reviewLabelMap[selectedReviewFilter],
           healthLabelMap[selectedHealthFilter],
@@ -411,7 +409,7 @@ function BoostedPostsPage() {
               >
                 {slotFilterOptions.map((slot) => (
                   <option key={slot} value={slot}>
-                    {slotLabelMap[slot]}
+                    {getSlotLabel(slot)}
                   </option>
                 ))}
               </select>
@@ -526,7 +524,7 @@ function BoostedPostsPage() {
                       <td>{item.postTitle}</td>
                       <td>{item.ownerName}</td>
                       <td>
-                        <StatusBadge label={slotLabelMap[item.slot]} variant="slot" />
+                        <StatusBadge label={getSlotLabel(item.slot)} variant="slot" />
                       </td>
                       <td>
                         <div className="boosted-posts-cell">
@@ -667,7 +665,7 @@ function BoostedPostsPage() {
 
               <div className="boosted-posts-modal__field">
                 <label>Vị trí hiển thị</label>
-                <input type="text" value={slotLabelMap[selectedPost.slot]} disabled />
+                <input type="text" value={getSlotLabel(selectedPost.slot)} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
