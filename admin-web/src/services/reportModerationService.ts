@@ -4,12 +4,13 @@ import type {
   ReportModerationItem,
   ReportModerationStatus,
 } from "../types/reportModeration";
+import { getAdminProfile } from "../utils/adminSession";
 
 const formatDateTime = (value: string | null) => {
-  if (!value) return "Not available";
+  if (!value) return "Chưa có dữ liệu";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not available";
+  if (Number.isNaN(date.getTime())) return "Chưa có dữ liệu";
 
   const day = date.toISOString().slice(0, 10);
   const time = `${String(date.getHours()).padStart(2, "0")}:${String(
@@ -36,11 +37,13 @@ const mapReportToUi = (
 ): ReportModerationItem => {
   const reporterDisplayName =
     item.reporterDisplayName?.trim() ||
-    (item.reporterId ? `User #${item.reporterId}` : "Anonymous");
+    (item.reporterId ? `Người dùng #${item.reporterId}` : "Ẩn danh");
 
   const reporterSecondaryLabel =
     item.reporterEmail?.trim() ||
-    (item.reporterId ? `Reporter ID ${item.reporterId}` : "Anonymous report");
+    (item.reporterId
+      ? `Mã người báo cáo ${item.reporterId}`
+      : "Báo cáo ẩn danh");
 
   return {
     id: item.reportId,
@@ -48,14 +51,16 @@ const mapReportToUi = (
     reporterSecondaryLabel,
     postLabel:
       item.postTitle?.trim() ||
-      (item.postId ? `Post #${item.postId}` : "No post linked"),
+      (item.postId ? `Bài đăng #${item.postId}` : "Chưa liên kết bài đăng"),
     shopLabel:
       item.shopName?.trim() ||
-      (item.reportShopId ? `Shop #${item.reportShopId}` : "No shop linked"),
-    reasonCode: item.reportReasonCode?.trim() || "General",
-    reason: item.reportReason?.trim() || "No report reason",
-    reporterNote: item.reportNote?.trim() || "No reporter note",
-    adminNote: item.adminNote?.trim() || "No admin note",
+      (item.reportShopId
+        ? `Cửa hàng #${item.reportShopId}`
+        : "Chưa liên kết cửa hàng"),
+    reasonCode: item.reportReasonCode?.trim() || "Chung",
+    reason: item.reportReason?.trim() || "Chưa có lý do báo cáo",
+    reporterNote: item.reportNote?.trim() || "Chưa có ghi chú người báo cáo",
+    adminNote: item.adminNote?.trim() || "Chưa có ghi chú từ quản trị viên",
     status: mapStatus(item.reportStatus),
     createdAt: formatDateTime(item.reportCreatedAt),
     updatedAt: formatDateTime(item.reportUpdatedAt),
@@ -67,7 +72,7 @@ export const reportModerationService = {
     const data = await apiClient.request<ApiReportModerationResponse[]>(
       "/api/admin/reports",
       {
-        defaultErrorMessage: "Unable to load moderation reports.",
+        defaultErrorMessage: "Không thể tải danh sách báo cáo kiểm duyệt.",
       },
     );
 
@@ -78,7 +83,7 @@ export const reportModerationService = {
     const data = await apiClient.request<ApiReportModerationResponse>(
       `/api/admin/reports/${reportId}`,
       {
-        defaultErrorMessage: "Unable to load report details.",
+        defaultErrorMessage: "Không thể tải chi tiết báo cáo.",
       },
     );
 
@@ -90,14 +95,17 @@ export const reportModerationService = {
     status: Exclude<ReportModerationStatus, "Pending">,
     adminNote?: string,
   ): Promise<ReportModerationItem> {
+    const adminProfile = getAdminProfile();
+
     const data = await apiClient.request<ApiReportModerationResponse>(
       `/api/admin/reports/${reportId}/resolve`,
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update report status.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái báo cáo.",
         body: JSON.stringify({
           status: status.toLowerCase(),
+          adminName: adminProfile?.fullName,
           ...(adminNote?.trim() ? { adminNote: adminNote.trim() } : {}),
         }),
       },
