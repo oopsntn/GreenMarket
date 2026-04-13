@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import BaseModal from "../components/BaseModal";
-import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
@@ -13,8 +12,8 @@ import { userService } from "../services/userService";
 import type {
   AssignableUserRole,
   User,
-  UserSummaryCard,
   UserStatus,
+  UserSummaryCard,
 } from "../types/user";
 import "./UsersPage.css";
 
@@ -39,8 +38,7 @@ const USER_PAGE_SIZE = 5;
 
 type ProfileFilterOption = (typeof profileFilterOptions)[number];
 
-type ConfirmState = {
-  isOpen: boolean;
+type StatusActionState = {
   userId: number | null;
   action: "lock" | "unlock" | null;
 };
@@ -70,6 +68,7 @@ function UsersPage() {
   ]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isRoleSaving, setIsRoleSaving] = useState(false);
+  const [isStatusSaving, setIsStatusSaving] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     UserStatus | "All"
@@ -78,11 +77,12 @@ function UsersPage() {
     useState<ProfileFilterOption>("Tất cả");
   const [showFilters, setShowFilters] = useState(false);
   const [userPage, setUserPage] = useState(1);
-  const [confirmState, setConfirmState] = useState<ConfirmState>({
-    isOpen: false,
+  const [statusActionState, setStatusActionState] = useState<StatusActionState>({
     userId: null,
     action: null,
   });
+  const [statusReason, setStatusReason] = useState("");
+  const [statusReasonError, setStatusReasonError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards: UserSummaryCard[] = userService.getSummaryCards(users);
@@ -175,7 +175,7 @@ function UsersPage() {
 
   const handleSaveRoleAssignment = async () => {
     if (!selectedUser || selectedUser.role === selectedRole) {
-      showToast("Người dùng này đã có đúng vai trò nghiệp vụ đang chọn.", "info");
+      showToast("Người dùng này đã có đúng vai trò đang chọn.", "info");
       return;
     }
 
@@ -192,13 +192,13 @@ function UsersPage() {
       );
       setSelectedUser(updatedUser);
       showToast(
-        `Đã gán vai trò ${roleLabelMap[selectedRole]} cho ${updatedUser.fullName}.`,
+        `Đã cập nhật vai trò ${roleLabelMap[selectedRole]} cho ${updatedUser.fullName}.`,
       );
     } catch (err) {
       showToast(
         err instanceof Error
           ? err.message
-          : "Không thể lưu gán vai trò nghiệp vụ.",
+          : "Không thể lưu vai trò nghiệp vụ.",
         "error",
       );
     } finally {
@@ -206,31 +206,36 @@ function UsersPage() {
     }
   };
 
-  const openConfirmDialog = (userId: number, action: "lock" | "unlock") => {
-    setConfirmState({
-      isOpen: true,
-      userId,
-      action,
-    });
+  const openStatusModal = (userId: number, action: "lock" | "unlock") => {
+    setStatusActionState({ userId, action });
+    setStatusReason("");
+    setStatusReasonError("");
   };
 
-  const closeConfirmDialog = () => {
-    setConfirmState({
-      isOpen: false,
-      userId: null,
-      action: null,
-    });
+  const closeStatusModal = () => {
+    setStatusActionState({ userId: null, action: null });
+    setStatusReason("");
+    setStatusReasonError("");
   };
 
   const handleConfirmAction = async () => {
-    if (confirmState.userId === null || confirmState.action === null) return;
+    if (statusActionState.userId === null || statusActionState.action === null) {
+      return;
+    }
 
-    const targetUser = users.find((user) => user.id === confirmState.userId);
+    if (!statusReason.trim()) {
+      setStatusReasonError("Vui lòng nhập lý do thực hiện thao tác này.");
+      return;
+    }
+
+    const targetUser = users.find((user) => user.id === statusActionState.userId);
 
     try {
+      setIsStatusSaving(true);
       const updatedUser = await userService.updateUserStatusById(
-        confirmState.userId,
-        confirmState.action === "lock" ? "Locked" : "Active",
+        statusActionState.userId,
+        statusActionState.action === "lock" ? "Locked" : "Active",
+        statusReason.trim(),
       );
 
       setUsers((prev) =>
@@ -243,16 +248,19 @@ function UsersPage() {
 
       showToast(
         `${targetUser?.fullName ?? "Người dùng"} đã được ${
-          confirmState.action === "lock" ? "khóa" : "mở khóa"
+          statusActionState.action === "lock" ? "khóa" : "mở khóa"
         } thành công.`,
       );
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Không thể cập nhật trạng thái người dùng.",
+        err instanceof Error
+          ? err.message
+          : "Không thể cập nhật trạng thái người dùng.",
         "error",
       );
     } finally {
-      closeConfirmDialog();
+      setIsStatusSaving(false);
+      closeStatusModal();
     }
   };
 
@@ -272,8 +280,7 @@ function UsersPage() {
 
       const matchesProfile =
         selectedProfileFilter === "Tất cả" ||
-        (selectedProfileFilter === "Có email" &&
-          user.email !== "Chưa có email") ||
+        (selectedProfileFilter === "Có email" && user.email !== "Chưa có email") ||
         (selectedProfileFilter === "Thiếu email" &&
           user.email === "Chưa có email") ||
         (selectedProfileFilter === "Có địa chỉ" &&
@@ -309,30 +316,26 @@ function UsersPage() {
     }
   }, [userPage, totalUserPages]);
 
-  const confirmUser =
-    confirmState.userId !== null
-      ? (users.find((user) => user.id === confirmState.userId) ?? null)
+  const actionUser =
+    statusActionState.userId !== null
+      ? users.find((user) => user.id === statusActionState.userId) ?? null
       : null;
 
   const confirmTitle =
-    confirmState.action === "lock"
+    statusActionState.action === "lock"
       ? "Khóa tài khoản người dùng"
       : "Mở khóa tài khoản người dùng";
 
   const confirmMessage =
-    confirmState.action === "lock"
-      ? `Bạn có chắc muốn khóa ${
-          confirmUser?.fullName ?? "người dùng này"
-        } không? Tài khoản sẽ bị hạn chế truy cập cho đến khi được mở lại.`
-      : `Bạn có chắc muốn mở khóa ${
-          confirmUser?.fullName ?? "người dùng này"
-        } không? Tài khoản sẽ có thể truy cập hệ thống trở lại.`;
+    statusActionState.action === "lock"
+      ? `Nhập lý do khóa tài khoản ${actionUser?.fullName ?? "người dùng này"}. Lý do sẽ được lưu vào nhật ký hoạt động.`
+      : `Nhập lý do mở khóa tài khoản ${actionUser?.fullName ?? "người dùng này"}. Lý do sẽ được lưu vào nhật ký hoạt động.`;
 
   return (
     <div className="users-page">
       <PageHeader
         title="Quản lý người dùng marketplace"
-        description="Quản lý tài khoản người dùng, trạng thái truy cập và nơi gán vai trò nghiệp vụ cho từng tài khoản."
+        description="Quản lý tài khoản người dùng, trạng thái truy cập và vai trò nghiệp vụ theo mô hình mỗi người dùng chỉ có một vai trò."
         actionLabel="Tải lại danh sách"
         onActionClick={() => void loadUsers(true)}
       />
@@ -425,7 +428,7 @@ function UsersPage() {
                   <tr>
                     <th>Người dùng</th>
                     <th>Liên hệ</th>
-                    <th>Vai trò nghiệp vụ</th>
+                    <th>Vai trò</th>
                     <th>Trạng thái</th>
                     <th>Ngày tham gia</th>
                     <th>Lần đăng nhập cuối</th>
@@ -478,7 +481,7 @@ function UsersPage() {
                             <button
                               type="button"
                               className="users-actions__lock"
-                              onClick={() => openConfirmDialog(user.id, "lock")}
+                              onClick={() => openStatusModal(user.id, "lock")}
                             >
                               Khóa
                             </button>
@@ -486,9 +489,7 @@ function UsersPage() {
                             <button
                               type="button"
                               className="users-actions__unlock"
-                              onClick={() =>
-                                openConfirmDialog(user.id, "unlock")
-                              }
+                              onClick={() => openStatusModal(user.id, "unlock")}
                             >
                               Mở khóa
                             </button>
@@ -564,9 +565,7 @@ function UsersPage() {
           }
         >
           {recentActivities.length === 0 ? (
-            <div className="users-empty-state">
-              Chưa có hoạt động gần đây.
-            </div>
+            <div className="users-empty-state">Chưa có hoạt động gần đây.</div>
           ) : (
             <div className="users-shortcut-list">
               {recentActivities.map((activity) => (
@@ -577,6 +576,7 @@ function UsersPage() {
                   <div className="users-shortcut-item__main">
                     <strong>{activity.userName}</strong>
                     <span>{activity.detail}</span>
+                    {activity.reason ? <small>Lý do: {activity.reason}</small> : null}
                   </div>
                   <div className="users-shortcut-item__meta">
                     <StatusBadge
@@ -601,7 +601,7 @@ function UsersPage() {
       <BaseModal
         isOpen={isModalOpen}
         title="Chi tiết người dùng"
-        description="Xem hồ sơ người dùng, gán vai trò nghiệp vụ và theo dõi lịch sử hoạt động phát sinh từ backend."
+        description="Xem hồ sơ người dùng, cập nhật vai trò nghiệp vụ duy nhất và theo dõi lịch sử thao tác từ backend."
         onClose={closeModal}
         maxWidth="760px"
       >
@@ -658,21 +658,22 @@ function UsersPage() {
 
             <div className="users-modal__section">
               <div className="users-modal__section-header">
-                <h4>Gán vai trò nghiệp vụ</h4>
+                <h4>Vai trò nghiệp vụ</h4>
                 <p>
-                  Danh mục vai trò được quản lý ở màn Vai trò nghiệp vụ. Việc gán
-                  vai trò thực tế cho từng tài khoản được xử lý tại đây.
+                  Mỗi người dùng chỉ có một vai trò nghiệp vụ tại một thời điểm.
+                  Khi đổi vai trò, hệ thống sẽ ghi lại vai trò cũ và vai trò mới.
                 </p>
               </div>
 
               <div className="users-role-assignment">
                 <div className="users-role-assignment__summary">
                   <strong>
-                    Vai trò hiện tại: {roleLabelMap[selectedUser.role as AssignableUserRole]}
+                    Vai trò hiện tại:{" "}
+                    {roleLabelMap[selectedUser.role as AssignableUserRole]}
                   </strong>
                   <span>
-                    Chọn vai trò nghiệp vụ marketplace phù hợp rồi lưu lại cho
-                    tài khoản này.
+                    Chọn đúng một vai trò để đồng bộ với nghiệp vụ thực tế của tài
+                    khoản này.
                   </span>
                 </div>
 
@@ -682,7 +683,7 @@ function UsersPage() {
                   onClick={() => void handleSaveRoleAssignment()}
                   disabled={isRoleSaving}
                 >
-                  {isRoleSaving ? "Đang lưu..." : "Lưu gán vai trò"}
+                  {isRoleSaving ? "Đang lưu..." : "Lưu vai trò"}
                 </button>
               </div>
 
@@ -690,23 +691,29 @@ function UsersPage() {
                 <table className="users-modal__history-table">
                   <thead>
                     <tr>
-                      <th>Vai trò</th>
-                      <th>Người gán</th>
-                      <th>Ngày gán</th>
+                      <th>Vai trò cũ</th>
+                      <th>Vai trò mới</th>
+                      <th>Người cập nhật</th>
+                      <th>Thời gian</th>
                       <th>Ghi chú</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedUser.roleAssignments.length === 0 ? (
                       <tr>
-                        <td colSpan={4}>
-                          Chưa có lịch sử gán vai trò.
-                        </td>
+                        <td colSpan={5}>Chưa có lịch sử thay đổi vai trò.</td>
                       </tr>
                     ) : (
                       selectedUser.roleAssignments.map((item) => (
                         <tr key={item.id}>
-                          <td>{roleLabelMap[item.role as AssignableUserRole]}</td>
+                          <td>
+                            {item.previousRole
+                              ? roleLabelMap[item.previousRole as AssignableUserRole]
+                              : "Chưa gán"}
+                          </td>
+                          <td>
+                            {roleLabelMap[item.role as AssignableUserRole]}
+                          </td>
                           <td>{item.assignedBy}</td>
                           <td>{item.assignedAt}</td>
                           <td>{item.note}</td>
@@ -722,8 +729,8 @@ function UsersPage() {
               <div className="users-modal__section-header">
                 <h4>Dòng thời gian hoạt động</h4>
                 <p>
-                  Các mốc dưới đây được suy ra từ đăng ký, đăng nhập và các cập
-                  nhật tài khoản hiện có trên backend.
+                  Nhật ký này lấy từ dữ liệu backend, bao gồm khóa hoặc mở khóa tài
+                  khoản, thay đổi vai trò và các hoạt động hệ thống liên quan.
                 </p>
               </div>
 
@@ -733,7 +740,7 @@ function UsersPage() {
                     <tr>
                       <th>Hành động</th>
                       <th>Chi tiết</th>
-                      <th>Thực hiện bởi</th>
+                      <th>Người thực hiện</th>
                       <th>Thời gian</th>
                     </tr>
                   </thead>
@@ -746,7 +753,10 @@ function UsersPage() {
                       selectedUser.activityLogs.map((item) => (
                         <tr key={item.id}>
                           <td>{item.action}</td>
-                          <td>{item.detail}</td>
+                          <td>
+                            {item.detail}
+                            {item.reason ? <div>Lý do: {item.reason}</div> : null}
+                          </td>
                           <td>{item.performedBy}</td>
                           <td>{item.performedAt}</td>
                         </tr>
@@ -775,18 +785,61 @@ function UsersPage() {
         )}
       </BaseModal>
 
-      <ConfirmDialog
-        isOpen={confirmState.isOpen}
+      <BaseModal
+        isOpen={Boolean(statusActionState.userId && statusActionState.action)}
         title={confirmTitle}
-        message={confirmMessage}
-        confirmText={
-          confirmState.action === "lock" ? "Khóa người dùng" : "Mở khóa người dùng"
-        }
-        cancelText="Hủy"
-        tone={confirmState.action === "lock" ? "danger" : "success"}
-        onConfirm={() => void handleConfirmAction()}
-        onCancel={closeConfirmDialog}
-      />
+        description={confirmMessage}
+        onClose={closeStatusModal}
+        maxWidth="560px"
+      >
+        <div className="users-modal__form">
+          <div className="users-modal__field">
+            <label htmlFor="user-status-reason">Lý do</label>
+            <textarea
+              id="user-status-reason"
+              rows={4}
+              value={statusReason}
+              onChange={(event) => {
+                setStatusReason(event.target.value);
+                if (statusReasonError) {
+                  setStatusReasonError("");
+                }
+              }}
+              placeholder={
+                statusActionState.action === "lock"
+                  ? "Nhập lý do khóa tài khoản"
+                  : "Nhập lý do mở khóa tài khoản"
+              }
+            />
+            {statusReasonError ? (
+              <span className="users-modal__error">{statusReasonError}</span>
+            ) : null}
+          </div>
+
+          <div className="users-modal__actions">
+            <button
+              type="button"
+              className="users-modal__cancel"
+              onClick={closeStatusModal}
+              disabled={isStatusSaving}
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              className="users-role-assignment__submit"
+              onClick={() => void handleConfirmAction()}
+              disabled={isStatusSaving}
+            >
+              {isStatusSaving
+                ? "Đang lưu..."
+                : statusActionState.action === "lock"
+                  ? "Khóa người dùng"
+                  : "Mở khóa người dùng"}
+            </button>
+          </div>
+        </div>
+      </BaseModal>
 
       <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>

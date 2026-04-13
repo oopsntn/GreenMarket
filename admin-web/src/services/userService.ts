@@ -4,7 +4,9 @@ import type {
   ApiUserResponse,
   AssignableUserRole,
   FlattenedUserActivityItem,
+  RoleAssignmentHistoryItem,
   User,
+  UserActivityLogItem,
   UserRole,
   UserRoleCountItem,
   UserStatus,
@@ -79,44 +81,78 @@ const mapUiRoleToBusinessRoleCode = (role: AssignableUserRole): string => {
   }
 };
 
-const buildRoleAssignmentHistory = (
+const mapRoleLabelToUiRole = (roleLabel: string | null | undefined): UserRole | null => {
+  if (!roleLabel?.trim()) {
+    return null;
+  }
+
+  const normalized = roleLabel.trim().toLowerCase();
+
+  if (normalized.includes("operation")) return "Operation Staff";
+  if (normalized.includes("manager") || normalized.includes("quản lý"))
+    return "Manager";
+  if (normalized.includes("collaborator") || normalized.includes("cộng tác"))
+    return "Collaborator";
+  if (normalized.includes("host")) return "Host";
+  return "User";
+};
+
+const buildFallbackRoleHistory = (
   user: ApiUserResponse,
   role: AssignableUserRole,
-): User["roleAssignments"] => {
+): RoleAssignmentHistoryItem[] => {
   const assignedAt =
-    formatDate(user.userUpdatedAt || user.userCreatedAt) || getCurrentDate();
+    formatDateTime(user.userUpdatedAt || user.userCreatedAt) || getCurrentDate();
 
   return [
     {
       id: 1,
+      previousRole: null,
       role,
       assignedBy: DEFAULT_ADMIN_NAME,
       assignedAt,
       note: user.businessRoleTitle
-        ? `Vai trò nghiệp vụ hiện tại là ${user.businessRoleTitle}.`
-        : "Chưa có vai trò nghiệp vụ marketplace.",
+        ? `Vai trò hiện tại là ${user.businessRoleTitle}.`
+        : "Người dùng chưa được gán vai trò nghiệp vụ.",
     },
   ];
 };
 
-const buildDerivedActivityLogs = (
+const buildRoleAssignmentHistory = (
+  user: ApiUserResponse,
+  role: AssignableUserRole,
+): RoleAssignmentHistoryItem[] => {
+  if (!user.roleHistory || user.roleHistory.length === 0) {
+    return buildFallbackRoleHistory(user, role);
+  }
+
+  return user.roleHistory.map((item) => ({
+    id: item.id,
+    previousRole: mapRoleLabelToUiRole(item.previousRole),
+    role: mapRoleLabelToUiRole(item.nextRole) ?? role,
+    assignedBy: item.assignedBy || DEFAULT_ADMIN_NAME,
+    assignedAt: formatDateTime(item.assignedAt) || getCurrentDate(),
+    note: item.note || "Cập nhật vai trò nghiệp vụ.",
+  }));
+};
+
+const buildFallbackActivityLogs = (
   user: ApiUserResponse,
   displayName: string,
-): User["activityLogs"] => {
+): UserActivityLogItem[] => {
   const registrationDateTime = formatDateTime(
     user.userRegisteredAt || user.userCreatedAt,
   );
   const lastLoginDateTime = formatDateTime(user.userLastLoginAt);
   const updatedDateTime = formatDateTime(user.userUpdatedAt);
 
-  const logs: User["activityLogs"] = [];
+  const logs: UserActivityLogItem[] = [];
 
   if (registrationDateTime) {
     logs.push({
       id: 1,
       action: "Tạo tài khoản",
-      detail:
-        "Tài khoản người dùng đã được tạo trong hệ thống marketplace.",
+      detail: "Tài khoản người dùng đã được tạo trong hệ thống marketplace.",
       performedBy: "Hệ thống",
       performedAt: registrationDateTime,
     });
@@ -132,35 +168,27 @@ const buildDerivedActivityLogs = (
     });
   }
 
-  if (user.businessRoleTitle && updatedDateTime) {
-    logs.push({
-      id: logs.length + 1,
-      action: "Gán vai trò",
-      detail: `Đã gán vai trò nghiệp vụ: ${user.businessRoleTitle}.`,
-      performedBy: DEFAULT_ADMIN_NAME,
-      performedAt: updatedDateTime,
-    });
-  }
-
-  if (
-    updatedDateTime &&
-    updatedDateTime !== registrationDateTime &&
-    updatedDateTime !== lastLoginDateTime
-  ) {
-    const isLocked = mapApiStatusToUiStatus(user.userStatus) === "Locked";
-
-    logs.push({
-      id: logs.length + 1,
-      action: isLocked ? "Khóa tài khoản" : "Cập nhật hồ sơ",
-      detail: isLocked
-        ? "Tài khoản hiện đang bị khóa bởi thao tác của admin."
-        : "Thông tin hồ sơ người dùng đã được cập nhật.",
-      performedBy: isLocked ? DEFAULT_ADMIN_NAME : "Đồng bộ hệ thống",
-      performedAt: updatedDateTime,
-    });
-  }
-
   return logs.sort((a, b) => b.performedAt.localeCompare(a.performedAt));
+};
+
+const buildActivityLogs = (
+  user: ApiUserResponse,
+  displayName: string,
+): UserActivityLogItem[] => {
+  if (!user.activityHistory || user.activityHistory.length === 0) {
+    return buildFallbackActivityLogs(user, displayName);
+  }
+
+  return user.activityHistory
+    .map((item) => ({
+      id: item.id,
+      action: item.action || "Hoạt động hệ thống",
+      detail: item.detail || "Không có chi tiết.",
+      performedBy: item.performedBy || DEFAULT_ADMIN_NAME,
+      performedAt: formatDateTime(item.performedAt) || getCurrentDate(),
+      reason: item.reason ?? null,
+    }))
+    .sort((a, b) => b.performedAt.localeCompare(a.performedAt));
 };
 
 const mapApiUserToUi = (item: ApiUserResponse): User => {
@@ -183,7 +211,7 @@ const mapApiUserToUi = (item: ApiUserResponse): User => {
     location: item.userLocation?.trim() || "Chưa có địa chỉ",
     lastLoginAt: formatDateTime(item.userLastLoginAt) || "Chưa đăng nhập",
     roleAssignments: buildRoleAssignmentHistory(item, role),
-    activityLogs: buildDerivedActivityLogs(item, fullName),
+    activityLogs: buildActivityLogs(item, fullName),
     businessRoleId: item.businessRoleId ?? item.userBusinessRoleId ?? null,
     businessRoleCode: item.businessRoleCode ?? null,
     businessRoleTitle: item.businessRoleTitle ?? null,
@@ -213,6 +241,7 @@ export const userService = {
   async updateUserStatusById(
     userId: number,
     status: UserStatus,
+    reason: string,
   ): Promise<User> {
     const data = await apiClient.request<ApiUserResponse>(
       `/api/admin/users/${userId}/status`,
@@ -222,6 +251,7 @@ export const userService = {
         defaultErrorMessage: "Không thể cập nhật trạng thái người dùng.",
         body: JSON.stringify({
           status: status === "Locked" ? "blocked" : "active",
+          reason,
         }),
       },
     );
@@ -255,7 +285,7 @@ export const userService = {
         method: "PATCH",
         includeJsonContentType: true,
         defaultErrorMessage:
-          "Không thể gán vai trò nghiệp vụ cho người dùng.",
+          "Không thể cập nhật vai trò nghiệp vụ cho người dùng.",
         body: JSON.stringify({
           businessRoleId: matchedRole.id,
         }),
@@ -286,12 +316,12 @@ export const userService = {
       {
         title: "Tài khoản bị khóa",
         value: String(lockedCount),
-        subtitle: "Đang bị hạn chế bởi admin",
+        subtitle: "Đang bị hạn chế bởi quản trị viên",
       },
       {
         title: "Đã gán vai trò",
         value: String(roleAssignedCount),
-        subtitle: "Vai trò nghiệp vụ đã đồng bộ từ backend",
+        subtitle: "Mỗi người dùng chỉ có một vai trò nghiệp vụ",
       },
     ];
   },
