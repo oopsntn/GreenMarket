@@ -315,7 +315,7 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
 export const updateContent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
-    const contentId = parseId(req.params.id);
+    const contentId = parseId(req.params.id as string);
 
     if (!userId || !contentId) {
       res.status(400).json({ error: "Invalid content ID" });
@@ -351,7 +351,7 @@ export const updateContent = async (req: AuthRequest, res: Response): Promise<vo
 export const deleteContent = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
-    const contentId = parseId(req.params.id);
+    const contentId = parseId(req.params.id as string);
 
     if (!userId || !contentId) {
       res.status(400).json({ error: "Invalid content ID" });
@@ -384,7 +384,7 @@ export const deleteContent = async (req: AuthRequest, res: Response): Promise<vo
 // --- Tracking ---
 export const trackContentClick = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const contentId = parseId(req.params.id);
+    const contentId = parseId(req.params.id as string);
     if (!contentId) {
       res.status(400).json({ error: "Invalid content ID" });
       return;
