@@ -177,7 +177,7 @@ function ActivityLogPage() {
 
   const todayPrefix = new Date().toISOString().slice(0, 10);
   const todayCount = activityLogs.filter((item) =>
-    item.occurredAt.startsWith(todayPrefix),
+    (item.occurredAt || "").startsWith(todayPrefix),
   ).length;
   const highSeverityCount = activityLogs.filter(
     (item) => item.severity === "cao",
