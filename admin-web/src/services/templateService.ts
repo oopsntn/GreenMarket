@@ -1,4 +1,4 @@
-import { apiClient } from "./api";
+import { apiClient } from "../lib/apiClient";
 
 export type TemplateType = "Rejection Reason" | "Report Reason" | "Notification";
 export type TemplateStatus = "Active" | "Disabled";

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import "./ManagementPage.css";
-import "./DataTablePage.css";
+import "./CategoryAttributeMappingPage.css";
 import { categoryService, type Category } from "../services/categoryService";
 import { attributeService, type Attribute } from "../services/attributeService";
 import {

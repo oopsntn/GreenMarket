@@ -1,4 +1,4 @@
-import { apiClient } from "./api";
+import { apiClient } from "../lib/apiClient";
 
 export type MappingStatus = "Active" | "Disabled";
 export type MappingAttributeType = "Text" | "Number" | "Select" | "Boolean";

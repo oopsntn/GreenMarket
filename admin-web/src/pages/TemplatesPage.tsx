@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import "./ManagementPage.css";
-import "./DataTablePage.css";
+import "./TemplatesPage.css";
 import { templateService, type Template, type TemplateStatus, type TemplateType } from "../services/templateService";
 
 type ModalMode = "create" | "edit" | "view";
