@@ -41,7 +41,7 @@ export class LocalStorageService implements IStorageService {
 
         await fs.promises.writeFile(filePath, file.buffer);
 
-        return `${this.baseUrl}/uploads/${fileName}`;
+        return `/uploads/${fileName}`;
     }
 
     async deleteFile(fileUrl: string): Promise<void> {

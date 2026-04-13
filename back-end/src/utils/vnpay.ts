@@ -72,7 +72,8 @@ export const createVNPayPaymentRequest = async (
 
     if (config.mockMode) {
         // Return a local URL that triggers the mock execution endpoint
-        const mockUrl = new URL(`/api/payment/vnpay-mock-exec`, `http://localhost:${process.env.PORT || 5000}`);
+        const baseUrl = config.redirectUrl ? new URL(config.redirectUrl).origin : `http://localhost:${process.env.PORT || 5000}`;
+        const mockUrl = new URL(`/api/payment/vnpay-mock-exec`, baseUrl);
         mockUrl.searchParams.set("vnp_TxnRef", orderId);
         mockUrl.searchParams.set("vnp_Amount", String(amount));
         mockUrl.searchParams.set("vnp_OrderInfo", orderInfo);

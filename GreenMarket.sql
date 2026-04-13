@@ -717,6 +717,47 @@ CREATE TABLE system_notifications (
     created_at TIMESTAMP DEFAULT now()
 );
 
+-- Host Contents
+CREATE TABLE host_contents (
+    host_content_id SERIAL PRIMARY KEY,
+    host_content_author_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    host_content_title VARCHAR(255) NOT NULL,
+    host_content_description TEXT,
+    host_content_target_type VARCHAR(50) NOT NULL, -- post | shop | external
+    host_content_target_id INTEGER, -- linked post_id or shop_id
+    host_content_tracking_url TEXT,
+    host_content_media_urls JSONB DEFAULT '[]'::jsonb,
+    host_content_status VARCHAR(20) DEFAULT 'draft', -- draft | published
+    host_content_view_count INTEGER DEFAULT 0,
+    host_content_click_count INTEGER DEFAULT 0,
+    host_content_created_at TIMESTAMP DEFAULT now(),
+    host_content_updated_at TIMESTAMP DEFAULT now(),
+    host_content_deleted_at TIMESTAMP
+);
+
+-- Host Earnings
+CREATE TABLE host_earnings (
+    host_earning_id SERIAL PRIMARY KEY,
+    host_earning_host_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    host_earning_amount NUMERIC(15,2) NOT NULL,
+    host_earning_status VARCHAR(20) DEFAULT 'pending', -- pending | available
+    host_earning_source_type VARCHAR(50) NOT NULL, -- view | click | bonus
+    host_earning_source_id INTEGER, -- linked host_content_id
+    host_earning_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Host Payout Requests
+CREATE TABLE host_payout_requests (
+    host_payout_id SERIAL PRIMARY KEY,
+    host_payout_host_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    host_payout_amount NUMERIC(15,2) NOT NULL,
+    host_payout_method VARCHAR(50) NOT NULL,
+    host_payout_status VARCHAR(20) DEFAULT 'pending', -- pending | completed | rejected
+    host_payout_note TEXT,
+    host_payout_processed_at TIMESTAMP,
+    host_payout_created_at TIMESTAMP DEFAULT now()
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -990,7 +1031,9 @@ INSERT INTO users (
 (7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1),
 (8, '0987654321', 'Người Dùng Test 0987654321', 'test.0987654321@gmail.com', 'Hà Nội', 'Test account for 0987654321', 'active', 1),
 (9, '0909000003', 'Seed Collaborator Account', 'seed.collaborator@greenmarket.local', 'Ha Noi', 'Seed account for collaborator-role API testing and mobile login.', 'active', 3),
-(10, '0909000004', 'Seed Manager Account', 'seed.manager@greenmarket.local', 'Ha Noi', 'Seed account for manager-role API testing and moderation workflows.', 'active', 4);
+(10, '0909000004', 'Seed Manager Account', 'seed.manager@greenmarket.local', 'Ha Noi', 'Seed account for manager-role API testing and moderation workflows.', 'active', 4),
+(136, '0998887776', 'Seed Host Account', 'seed.host@greenmarket.local', 'Ha Noi', 'Seed account for host-role API testing and content management.', 'active', 2),
+(137, '0997776665', 'Seed Operation Account', 'seed.operation@greenmarket.local', 'Ha Noi', 'Seed account for operations-staff-role testing and task handling.', 'active', 5);
 
 -- Align demo accounts to business roles used in collaborator APIs
 UPDATE users SET user_business_role_id = 3 WHERE user_id = 4;
@@ -1088,20 +1131,36 @@ INSERT INTO payout_requests (
 ) VALUES
 (1, 4, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
 
+-- Host Contents (Mock)
+INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_target_type, host_content_target_id, host_content_tracking_url, host_content_status, host_content_view_count, host_content_click_count) VALUES
+(1, 1, 'Top 5 loại Tùng La Hán đẹp nhất 2026', 'shop', 3, '/api/host/tracking/1', 'published', 1250, 45),
+(2, 1, 'Review bộ kéo cắt tỉa cây cảnh của Shop A', 'post', 1, '/api/host/tracking/2', 'published', 890, 12),
+(3, 2, 'Kỹ thuật chăm sóc Mai Chiếu Thủy mùa mưa', 'external', NULL, 'https://external-blog.com/care-guide', 'published', 450, 5);
+
+-- Host Earnings (Mock)
+INSERT INTO host_earnings (host_earning_id, host_earning_host_id, host_earning_amount, host_earning_status, host_earning_source_type, host_earning_source_id) VALUES
+(1, 1, 225000, 'available', 'click', 1),
+(2, 1, 60000, 'pending', 'view', 1),
+(3, 1, 500000, 'available', 'bonus', NULL);
+
+-- Host Payout Requests (Mock)
+INSERT INTO host_payout_requests (host_payout_id, host_payout_host_id, host_payout_amount, host_payout_method, host_payout_status, host_payout_note) VALUES
+(1, 1, 600000, 'Momo', 'completed', 'Thanh toán đợt 1 tháng 4.');
+
 -- Shops
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_vip_started_at, shop_vip_expires_at, shop_lat, shop_lng) VALUES
 (1, 'Vườn Bonsai Phố Huyện', '0978195419', 'nguyenthanhnamidol@gmail.com', TRUE, '14 Nghiêm Ích Khiêm, Thị trấn Chờ, Yên Phong, Bắc Ninh',
     'Chuyên bonsai mini và tầm trung. Nhận thiết kế, chăm sóc và phối thế bonsai theo yêu cầu. Ship toàn quốc qua Viettel Post.',
-    'http://[IP_ADDRESS]/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://[IP_ADDRESS]/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', now() - interval '30 days', now() + interval '60 days', 21.201262, 105.950174),
+    '/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', now() - interval '30 days', now() + interval '60 days', 21.201262, 105.950174),
 (3, 'Nam Định Art Garden', '0123456789', 'hoainam.le@gmail.com', TRUE, 'Nam Trực, Nam Định',
     'Nghệ nhân cây cảnh cổ truyền Nam Điền. Chuyên sanh, si, tùng la hán cốt cách truyền thống. Hơn 20 năm kinh nghiệm.',
-    'http://[IP_ADDRESS]/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
+    '/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
 (4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
-    'http://[IP_ADDRESS]/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
+    '/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
 (6, 'Dụng Cụ Bonsai Pro', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
     'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
-    'http://[IP_ADDRESS]/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
+    '/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
 
 -- ============================================================
 -- CATEGORIES
@@ -1303,29 +1362,29 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 
 -- Post Images
 INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
-(1,  'http://[IP_ADDRESS]/uploads/sanh-nam-dien-mini-1.jpg', 0),
-(1,  'http://[IP_ADDRESS]/uploads/sanh-nam-dien-mini-2.jpg', 1),
-(1,  'http://[IP_ADDRESS]/uploads/sanh-nam-dien-mini-3.jpg', 2),
-(2,  'http://[IP_ADDRESS]/uploads/tung-la-han-1.jpg', 0),
-(2,  'http://[IP_ADDRESS]/uploads/tung-la-han-2.jpg', 1),
-(3,  'http://[IP_ADDRESS]/uploads/linh-sam-1.jpg', 0),
-(3,  'http://[IP_ADDRESS]/uploads/linh-sam-2.jpg', 1),
-(4,  'http://[IP_ADDRESS]/uploads/sanh-que-dai-1.jpg', 0),
-(5,  'http://[IP_ADDRESS]/uploads/mct-mini-1.jpg', 0),
-(5,  'http://[IP_ADDRESS]/uploads/mct-mini-2.jpg', 1),
-(6,  'http://[IP_ADDRESS]/uploads/thong-den-1.jpg', 0),
-(7,  'http://[IP_ADDRESS]/uploads/si-phong-thuy-1.jpg', 0),
-(8,  'http://[IP_ADDRESS]/uploads/mai-vang-1.jpg', 0),
-(8,  'http://[IP_ADDRESS]/uploads/mai-vang-2.jpg', 1),
-(9,  'http://[IP_ADDRESS]/uploads/tung-bach-tan-1.jpg', 0),
-(10, 'http://[IP_ADDRESS]/uploads/kim-cap-kaneshin-1.jpg', 0),
-(11, 'http://[IP_ADDRESS]/uploads/bo-keo-5-mon-1.jpg', 0),
-(11, 'http://[IP_ADDRESS]/uploads/bo-keo-5-mon-2.jpg', 1),
-(12, 'http://[IP_ADDRESS]/uploads/dat-akadama-1.jpg', 0),
-(13, 'http://[IP_ADDRESS]/uploads/chau-tokoname-1.jpg', 0),
-(13, 'http://[IP_ADDRESS]/uploads/chau-tokoname-2.jpg', 1),
-(14, 'http://[IP_ADDRESS]/uploads/day-nhom-uon-1.jpg', 0),
-(15, 'http://[IP_ADDRESS]/uploads/binh-phun-suong-1.jpg', 0);
+(1,  '/uploads/sanh-nam-dien-mini-1.jpg', 0),
+(1,  '/uploads/sanh-nam-dien-mini-2.jpg', 1),
+(1,  '/uploads/sanh-nam-dien-mini-3.jpg', 2),
+(2,  '/uploads/tung-la-han-1.jpg', 0),
+(2,  '/uploads/tung-la-han-2.jpg', 1),
+(3,  '/uploads/linh-sam-1.jpg', 0),
+(3,  '/uploads/linh-sam-2.jpg', 1),
+(4,  '/uploads/sanh-que-dai-1.jpg', 0),
+(5,  '/uploads/mct-mini-1.jpg', 0),
+(5,  '/uploads/mct-mini-2.jpg', 1),
+(6,  '/uploads/thong-den-1.jpg', 0),
+(7,  '/uploads/si-phong-thuy-1.jpg', 0),
+(8,  '/uploads/mai-vang-1.jpg', 0),
+(8,  '/uploads/mai-vang-2.jpg', 1),
+(9,  '/uploads/tung-bach-tan-1.jpg', 0),
+(10, '/uploads/kim-cap-kaneshin-1.jpg', 0),
+(11, '/uploads/bo-keo-5-mon-1.jpg', 0),
+(11, '/uploads/bo-keo-5-mon-2.jpg', 1),
+(12, '/uploads/dat-akadama-1.jpg', 0),
+(13, '/uploads/chau-tokoname-1.jpg', 0),
+(13, '/uploads/chau-tokoname-2.jpg', 1),
+(14, '/uploads/day-nhom-uon-1.jpg', 0),
+(15, '/uploads/binh-phun-suong-1.jpg', 0);
 
 -- Favorite Posts (Bookmarks)
 INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favorite_post_created_at) VALUES
@@ -1509,3 +1568,7 @@ SELECT setval('moderation_actions_moderation_action_id_seq', (SELECT COALESCE(MA
 SELECT setval('moderation_feedback_feedback_id_seq', (SELECT COALESCE(MAX(feedback_id), 1) FROM moderation_feedback));
 SELECT setval('escalations_escalation_id_seq', (SELECT COALESCE(MAX(escalation_id), 1) FROM escalations));
 SELECT setval('system_notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM system_notifications));
+SELECT setval('host_contents_host_content_id_seq', (SELECT COALESCE(MAX(host_content_id), 1) FROM host_contents));
+SELECT setval('host_earnings_host_earning_id_seq', (SELECT COALESCE(MAX(host_earning_id), 1) FROM host_earnings));
+SELECT setval('host_payout_requests_host_payout_id_seq', (SELECT COALESCE(MAX(host_payout_id), 1) FROM host_payout_requests));
+
