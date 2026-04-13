@@ -6,7 +6,7 @@ import { businessRoles, users } from "../models/schema/index.ts";
 import { eq } from "drizzle-orm";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
-const ADMIN_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_SUPPORT", "ROLE_FINANCE"];
+const ADMIN_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT", "ROLE_MODERATOR", "ROLE_FINANCE"];
 
 const getRoleCodes = (user?: JWTUserPayload): string[] => {
     if (!user) {
