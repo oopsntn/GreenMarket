@@ -1682,12 +1682,12 @@ INSERT INTO trend_scores (
 (2,  '2026-03-08', 2, 68.0, '{"traffic":64,"revenue":66,"operations":74}', '2026-03-08 23:59:00'),
 (3,  '2026-03-11', 1, 84.0, '{"traffic":83,"revenue":79,"operations":86}', '2026-03-11 23:59:00'),
 (4,  '2026-03-14', 2, 71.0, '{"traffic":69,"revenue":67,"operations":77}', '2026-03-14 23:59:00'),
-(5,  '2026-03-20', 3, 63.0, '{"traffic":61,"revenue":65,"operations":63}', '2026-03-20 23:59:00'),
-(6,  '2026-03-22', 3, 66.0, '{"traffic":64,"revenue":68,"operations":66}', '2026-03-22 23:59:00'),
+(5,  '2026-03-20', 1, 63.0, '{"traffic":61,"revenue":65,"operations":63}', '2026-03-20 23:59:00'),
+(6,  '2026-03-22', 1, 66.0, '{"traffic":64,"revenue":68,"operations":66}', '2026-03-22 23:59:00'),
 (7,  '2026-03-25', 2, 87.0, '{"traffic":88,"revenue":83,"operations":90}', '2026-03-25 23:59:00'),
-(8,  '2026-03-27', 3, 72.0, '{"traffic":70,"revenue":73,"operations":73}', '2026-03-27 23:59:00'),
+(8,  '2026-03-27', 1, 72.0, '{"traffic":70,"revenue":73,"operations":73}', '2026-03-27 23:59:00'),
 (9,  '2026-03-29', 2, 89.0, '{"traffic":90,"revenue":86,"operations":91}', '2026-03-29 23:59:00'),
-(10, '2026-03-31', 3, 74.0, '{"traffic":72,"revenue":75,"operations":75}', '2026-03-31 23:59:00');
+(10, '2026-03-31', 1, 74.0, '{"traffic":72,"revenue":75,"operations":75}', '2026-03-31 23:59:00');
 
 -- ============================================================
 -- AI INSIGHT HISTORY
@@ -1702,11 +1702,11 @@ INSERT INTO ai_insights (
     ai_insight_created_at
 ) VALUES
 (1, 1, 'Placement Performance', '{"title":"Placement Performance summary","focus":"Placement Performance","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Homepage traffic stayed stable while Category Top outperformed revenue expectations in the final week of March. Keep Category Top inventory available because it is converting best among active slots.', 'Gemini gemini-2.0-flash', '2026-03-25 10:00:00'),
-(2, 1, 'Promotion Watchlist',   '{"title":"Promotion Watchlist summary","focus":"Promotion Watchlist","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Search Boost campaigns that expired on 2026-03-26 still show demand signals. Review whether any eligible cases should be reopened after payment confirmation.', 'Gemini gemini-2.0-flash', '2026-03-26 09:45:00'),
-(3, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'March revenue was concentrated in Homepage and Category Top packages. Search Boost volume increased late in the month but paid contribution is still smaller than premium placements.', 'Gemini gemini-2.0-flash', '2026-03-27 14:15:00'),
+(2, 1, 'Promotion Watchlist',   '{"title":"Promotion Watchlist summary","focus":"Promotion Watchlist","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Boost Post campaigns that expired on 2026-03-26 still show demand signals. Review whether any eligible cases should be reopened after payment confirmation.', 'Gemini gemini-2.0-flash', '2026-03-26 09:45:00'),
+(3, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'March revenue was concentrated in Homepage and Category Top packages. Boost Post volume increased late in the month but paid contribution is still smaller than premium placements.', 'Gemini gemini-2.0-flash', '2026-03-27 14:15:00'),
 (4, 1, 'Operator Load',         '{"title":"Operator Load summary","focus":"Operator Load","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Ops Team B handled the largest number of category campaigns. The current load remains acceptable, but new escalations should be balanced toward Team A for the next cycle.', 'Gemini gemini-2.0-flash', '2026-03-28 08:40:00'),
 (5, 1, 'Placement Performance', '{"title":"Placement Performance summary","focus":"Placement Performance","status":"Archived","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Early March homepage impressions were healthy but softened before premium 30-day inventory was activated. Review creative freshness for homepage premium buyers.', 'Gemini gemini-2.0-flash', '2026-03-29 16:25:00'),
-(6, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Average order value is currently supported by premium homepage packages, while smaller search packages are driving order count. Keep both tiers visible in pricing analysis.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
+(6, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Average order value is currently supported by premium homepage packages, while smaller boost packages are driving order count. Keep both tiers visible in pricing analysis.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
 
 -- ============================================================
 -- RESET SEQUENCES
