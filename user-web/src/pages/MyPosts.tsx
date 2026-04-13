@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   getMyPosts,
@@ -14,8 +14,8 @@ import {
 import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
+import { resolveImageUrl } from '../utils/resolveImageUrl';
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 const formatVnd = (value: number) =>
   new Intl.NumberFormat('vi-VN', {
     style: 'currency',
@@ -166,14 +166,9 @@ const MyPosts: React.FC = () => {
     }));
   };
 
-  const toMediaUrl = (url?: string | null) => {
-    if (!url) return '';
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-  };
-
   const getSellerAvatar = (post: any) => {
     if (post?.postShopId) {
-      return toMediaUrl(
+      return resolveImageUrl(
         post?.shop?.shopPreviewImageUrl
         || post?.shop?.shopGalleryImages?.[0]
         || post?.shop?.shopLogoUrl
@@ -183,7 +178,7 @@ const MyPosts: React.FC = () => {
         || ''
       );
     }
-    return toMediaUrl(post?.author?.userAvatarUrl || user?.userAvatarUrl || '');
+    return resolveImageUrl(post?.author?.userAvatarUrl || user?.userAvatarUrl || '');
   };
 
   const getSellerName = (post: any) => {
@@ -422,7 +417,7 @@ const MyPosts: React.FC = () => {
                 {(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl) ? (
                   <div className="w-24 h-24 rounded-3xl overflow-hidden border border-emerald-100 shrink-0 shadow-sm transition-transform group-hover:scale-105">
                     <img
-                      src={toMediaUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl || '')}
+                      src={resolveImageUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl || '')}
                       alt={shop.shopName}
                       className="w-full h-full object-cover"
                     />
@@ -483,9 +478,9 @@ const MyPosts: React.FC = () => {
               {filteredPosts.map((post) => (
                 <div key={post.postId} className="bg-white p-4 rounded-3xl border border-slate-200 hover:border-emerald-500/30 transition-all shadow-sm hover:shadow-xl flex flex-col sm:flex-row items-center gap-6 group">
                   <div className="w-full sm:w-32 h-32 bg-slate-50 rounded-2xl overflow-hidden shrink-0 relative border border-slate-100">
-                    {toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl) ? (
+                    {resolveImageUrl(post.coverImageUrl || post.images?.[0]?.imageUrl) ? (
                       <img
-                        src={toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl)}
+                        src={resolveImageUrl(post.coverImageUrl || post.images?.[0]?.imageUrl)}
                         alt={post.postTitle}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />

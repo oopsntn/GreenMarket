@@ -47,6 +47,8 @@ const protocol = process.env.PROTOCOL || (serverIp === "localhost" ? "http" : "h
 const whitelist = [
   "http://localhost:5173",
   "http://localhost:5174",
+  `${protocol}://${serverIp}:5173`,
+  `${protocol}://${serverIp}:5174`,
   `${protocol}://${serverIp}`,
   `${protocol}://${serverIp}:8080`,
 ];

@@ -47,6 +47,9 @@ export const registerShop = (data: {
   shopGalleryImages?: string[];
   shopLat?: number;
   shopLng?: number;
+  shopFacebook?: string;
+  shopInstagram?: string;
+  shopYoutube?: string;
 }) => api.post('/shops/register', data);
 
 export const getMyShop = () => api.get('/shops/my-shop');
@@ -158,7 +161,7 @@ export const getPromotionPackages = () =>
 export const getPublicPromotionPackages = () => api.get('/promotions/packages');
 export const getShopVipPackage = () => api.get<PromotionPackageItem>('/promotions/packages/shop-vip');
 export const getPromotionPackageDetail = (id: number | string) => api.get(`/promotions/packages/${id}`);
-export const buyPromotionPackage = (postId: number | string, packageId: number | string) => 
+export const buyPromotionPackage = (postId: number | string, packageId: number | string) =>
   api.post('/payment/buy-package', { postId, packageId });
 export const payShopRegistration = () => api.post<{ paymentUrl: string }>('/payment/register-shop');
 export const buyShopVipPackage = () => api.post<{ paymentUrl: string }>('/payment/buy-shop-vip');

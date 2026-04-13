@@ -15,7 +15,7 @@ export class LocalStorageService implements IStorageService {
         this.uploadDir = path.join(process.cwd(), "uploads");
         const ip = process.env.IP || "localhost";
         const port = process.env.PORT || "5000";
-        
+
         // Tự động nhận diện protocol: Nếu là IP hoặc localhost thì dùng http, nếu là domain thì dùng https (hoặc theo biến PROTOCOL)
         const isIp = /^[\d.]+$/.test(ip);
         const isLocal = ip === "localhost" || ip === "127.0.0.1";
@@ -27,7 +27,7 @@ export class LocalStorageService implements IStorageService {
             // Trường hợp là tên miền (domain)
             this.baseUrl = `${protocol}://${ip}`;
         }
-        
+
         // Ensure upload directory exists
         if (!fs.existsSync(this.uploadDir)) {
             fs.mkdirSync(this.uploadDir, { recursive: true });
@@ -47,7 +47,7 @@ export class LocalStorageService implements IStorageService {
     async deleteFile(fileUrl: string): Promise<void> {
         const fileName = path.basename(fileUrl);
         const filePath = path.join(this.uploadDir, fileName);
-        
+
         if (fs.existsSync(filePath)) {
             await fs.promises.unlink(filePath);
         }
