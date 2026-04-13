@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import "./CategoryAttributeMappingPage.css";
+import BaseModal from "../components/BaseModal";
+import ConfirmDialog from "../components/ConfirmDialog";
+import EmptyState from "../components/EmptyState";
+import PageHeader from "../components/PageHeader";
+import SearchToolbar from "../components/SearchToolbar";
+import SectionCard from "../components/SectionCard";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { categoryService, type Category } from "../services/categoryService";
 import { attributeService, type Attribute } from "../services/attributeService";
 import {
@@ -10,6 +16,7 @@ import {
   type MappingAttributeType,
   type MappingStatus,
 } from "../services/categoryMappingService";
+import "./CategoryAttributeMappingPage.css";
 
 type ModalMode = "create" | "edit";
 
@@ -23,15 +30,15 @@ type MappingFormState = {
 const PAGE_SIZE = 5;
 
 const ATTRIBUTE_TYPE_LABELS: Record<MappingAttributeType, string> = {
-  Text: "Van ban",
-  Number: "So",
-  Select: "Danh sach chon",
-  Boolean: "Dung / Sai",
+  Text: "Văn bản",
+  Number: "Số",
+  Select: "Danh sách chọn",
+  Boolean: "Đúng / Sai",
 };
 
 const STATUS_LABELS: Record<MappingStatus, string> = {
-  Active: "Dang hoat dong",
-  Disabled: "Da tat",
+  Active: "Đang hoạt động",
+  Disabled: "Đã tắt",
 };
 
 const EMPTY_FORM: MappingFormState = {
@@ -41,11 +48,7 @@ const EMPTY_FORM: MappingFormState = {
   displayOrder: "1",
 };
 
-function badgeStatusClass(status: MappingStatus) {
-  return status === "Active" ? "active" : "inactive";
-}
-
-export default function CategoryAttributeMappingPage() {
+function CategoryAttributeMappingPage() {
   const [mappings, setMappings] = useState<CategoryAttributeMapping[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
@@ -60,19 +63,42 @@ export default function CategoryAttributeMappingPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("create");
-  const [activeMapping, setActiveMapping] = useState<CategoryAttributeMapping | null>(null);
+  const [activeMapping, setActiveMapping] =
+    useState<CategoryAttributeMapping | null>(null);
   const [formState, setFormState] = useState<MappingFormState>(EMPTY_FORM);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [confirmMapping, setConfirmMapping] = useState<CategoryAttributeMapping | null>(null);
-  const [confirmAction, setConfirmAction] = useState<"disable" | "enable" | "delete">("disable");
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [confirmMapping, setConfirmMapping] =
+    useState<CategoryAttributeMapping | null>(null);
+  const [confirmAction, setConfirmAction] = useState<
+    "disable" | "enable" | "delete"
+  >("disable");
+  const [previewCategoryId, setPreviewCategoryId] = useState<number | null>(
+    null,
+  );
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const [previewCategoryId, setPreviewCategoryId] = useState<number | null>(null);
+  const showToast = useCallback(
+    (message: string, tone: ToastItem["tone"] = "success") => {
+      const toastId = Date.now() + Math.random();
+
+      setToasts((current) => [...current, { id: toastId, message, tone }]);
+
+      window.setTimeout(() => {
+        setToasts((current) => current.filter((toast) => toast.id !== toastId));
+      }, 2600);
+    },
+    [],
+  );
+
+  const removeToast = (id: number) => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  };
 
   const loadMeta = useCallback(async () => {
     setMetaLoading(true);
@@ -90,7 +116,11 @@ export default function CategoryAttributeMappingPage() {
         setPreviewCategoryId((current) => current ?? categoryResponse[0].id);
       }
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Khong the tai du lieu nen.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải dữ liệu nền.",
+      );
     } finally {
       setMetaLoading(false);
     }
@@ -110,7 +140,11 @@ export default function CategoryAttributeMappingPage() {
       setMappings(response.data);
       setTotalItems(response.total);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Khong the tai danh sach anh xa.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải danh sách ánh xạ.",
+      );
       setMappings([]);
       setTotalItems(0);
     } finally {
@@ -118,19 +152,27 @@ export default function CategoryAttributeMappingPage() {
     }
   }, [currentPage, debouncedSearchTerm]);
 
-  const loadPreview = useCallback(async (categoryId: number) => {
-    setPreviewLoading(true);
+  const loadPreview = useCallback(
+    async (categoryId: number) => {
+      setPreviewLoading(true);
 
-    try {
-      const response = await categoryMappingService.previewCategory(categoryId);
-      setPreview(response);
-    } catch (error) {
-      setPreview(null);
-      setToastMessage(error instanceof Error ? error.message : "Khong the tai ban xem truoc.");
-    } finally {
-      setPreviewLoading(false);
-    }
-  }, []);
+      try {
+        const response = await categoryMappingService.previewCategory(categoryId);
+        setPreview(response);
+      } catch (error) {
+        setPreview(null);
+        showToast(
+          error instanceof Error
+            ? error.message
+            : "Không thể tải bản xem trước.",
+          "error",
+        );
+      } finally {
+        setPreviewLoading(false);
+      }
+    },
+    [showToast],
+  );
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -157,34 +199,21 @@ export default function CategoryAttributeMappingPage() {
     }
   }, [loadPreview, previewCategoryId]);
 
-  useEffect(() => {
-    if (!toastMessage) {
-      return undefined;
-    }
-
-    const timeout = window.setTimeout(() => setToastMessage(null), 2600);
-    return () => window.clearTimeout(timeout);
-  }, [toastMessage]);
-
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 
-  const pageLabel = useMemo(() => {
-    if (!totalItems) {
-      return "Khong co du lieu";
-    }
+  const filterSummaryItems = useMemo(() => {
+    return [debouncedSearchTerm ? "Đang lọc theo từ khóa" : "Tất cả ánh xạ"];
+  }, [debouncedSearchTerm]);
 
-    return `Trang ${currentPage} / ${totalPages}`;
-  }, [currentPage, totalItems, totalPages]);
-
-  function openCreateModal() {
+  const openCreateModal = () => {
     setModalMode("create");
     setActiveMapping(null);
     setFormState(EMPTY_FORM);
     setFormError(null);
     setIsModalOpen(true);
-  }
+  };
 
-  function openEditModal(mapping: CategoryAttributeMapping) {
+  const openEditModal = (mapping: CategoryAttributeMapping) => {
     setModalMode("edit");
     setActiveMapping(mapping);
     setFormState({
@@ -195,9 +224,9 @@ export default function CategoryAttributeMappingPage() {
     });
     setFormError(null);
     setIsModalOpen(true);
-  }
+  };
 
-  function closeModal() {
+  const closeModal = () => {
     if (isSubmitting) {
       return;
     }
@@ -206,9 +235,25 @@ export default function CategoryAttributeMappingPage() {
     setActiveMapping(null);
     setFormError(null);
     setFormState(EMPTY_FORM);
-  }
+  };
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const askConfirm = (
+    mapping: CategoryAttributeMapping,
+    action: "disable" | "enable" | "delete",
+  ) => {
+    setConfirmMapping(mapping);
+    setConfirmAction(action);
+  };
+
+  const closeConfirm = () => {
+    if (isConfirming) {
+      return;
+    }
+
+    setConfirmMapping(null);
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
     setIsSubmitting(true);
@@ -223,10 +268,16 @@ export default function CategoryAttributeMappingPage() {
 
       if (modalMode === "create") {
         await categoryMappingService.createMapping(payload);
-        setToastMessage("Da tao anh xa moi.");
+        showToast("Đã tạo ánh xạ mới.");
       } else if (activeMapping) {
-        await categoryMappingService.updateMapping(activeMapping.id, payload);
-        setToastMessage("Da cap nhat anh xa.");
+        await categoryMappingService.updateMapping(
+          {
+            categoryId: activeMapping.categoryId,
+            attributeId: activeMapping.attributeId,
+          },
+          payload,
+        );
+        showToast("Đã cập nhật ánh xạ.");
       }
 
       setIsModalOpen(false);
@@ -237,18 +288,15 @@ export default function CategoryAttributeMappingPage() {
         setPreviewCategoryId(payload.categoryId);
       }
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Khong the luu anh xa.");
+      setFormError(
+        error instanceof Error ? error.message : "Không thể lưu ánh xạ.",
+      );
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
-  function askConfirm(mapping: CategoryAttributeMapping, action: "disable" | "enable" | "delete") {
-    setConfirmMapping(mapping);
-    setConfirmAction(action);
-  }
-
-  async function handleConfirm() {
+  const handleConfirm = async () => {
     if (!confirmMapping) {
       return;
     }
@@ -256,13 +304,23 @@ export default function CategoryAttributeMappingPage() {
     setIsConfirming(true);
 
     try {
+      const target = {
+        categoryId: confirmMapping.categoryId,
+        attributeId: confirmMapping.attributeId,
+      };
+
       if (confirmAction === "delete") {
-        await categoryMappingService.deleteMapping(confirmMapping.id);
-        setToastMessage("Da xoa anh xa.");
+        await categoryMappingService.deleteMapping(target);
+        showToast("Đã xóa ánh xạ.", "info");
       } else {
-        const nextStatus: MappingStatus = confirmAction === "enable" ? "Active" : "Disabled";
-        await categoryMappingService.updateMappingStatus(confirmMapping.id, nextStatus);
-        setToastMessage(nextStatus === "Active" ? "Da bat lai anh xa." : "Da tat anh xa.");
+        const nextStatus: MappingStatus =
+          confirmAction === "enable" ? "Active" : "Disabled";
+
+        await categoryMappingService.updateMappingStatus(target, nextStatus);
+        showToast(
+          nextStatus === "Active" ? "Đã bật lại ánh xạ." : "Đã tắt ánh xạ.",
+          nextStatus === "Active" ? "success" : "info",
+        );
       }
 
       setConfirmMapping(null);
@@ -272,330 +330,428 @@ export default function CategoryAttributeMappingPage() {
         await loadPreview(previewCategoryId);
       }
     } catch (error) {
-      setToastMessage(error instanceof Error ? error.message : "Khong the cap nhat anh xa.");
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật ánh xạ.",
+        "error",
+      );
     } finally {
       setIsConfirming(false);
     }
-  }
+  };
+
+  const confirmTitle =
+    confirmAction === "delete"
+      ? "Xóa ánh xạ"
+      : confirmAction === "enable"
+        ? "Bật lại ánh xạ"
+        : "Tắt ánh xạ";
+
+  const confirmMessage = confirmMapping
+    ? confirmAction === "delete"
+      ? `Bạn có chắc muốn xóa ánh xạ "${confirmMapping.categoryName} - ${confirmMapping.attributeName}"?`
+      : confirmAction === "enable"
+        ? `Bạn có chắc muốn bật lại ánh xạ "${confirmMapping.categoryName} - ${confirmMapping.attributeName}"?`
+        : `Bạn có chắc muốn tắt ánh xạ "${confirmMapping.categoryName} - ${confirmMapping.attributeName}"?`
+    : "Vui lòng xác nhận thao tác.";
 
   return (
-    <div className="management-page">
-      <section className="management-page__header">
-        <div>
-          <h1>Anh xa danh muc - thuoc tinh</h1>
-          <p>Cau hinh moi danh muc se su dung nhung thuoc tinh nao va xem truoc cau truc form dang bai.</p>
-        </div>
-        <button type="button" className="primary-button" onClick={openCreateModal}>
-          + Them anh xa
-        </button>
-      </section>
+    <div className="mapping-page">
+      <PageHeader
+        title="Ánh xạ danh mục - thuộc tính"
+        description="Cấu hình mỗi danh mục sẽ dùng những thuộc tính nào và xem trước cấu trúc form đăng bài."
+        actions={
+          <button type="button" className="primary-button" onClick={openCreateModal}>
+            + Thêm ánh xạ
+          </button>
+        }
+      />
 
-      <section className="management-page__card">
-        <div className="management-page__toolbar">
-          <input
-            type="search"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Tim theo danh muc, thuoc tinh hoac ma thuoc tinh"
-          />
-        </div>
-      </section>
+      <SearchToolbar
+        placeholder="Tìm theo danh mục, thuộc tính hoặc mã thuộc tính"
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        onFilterClick={() => setShowFilters((value) => !value)}
+        filterLabel="Hiện bộ lọc"
+        filterSummaryItems={filterSummaryItems}
+      />
 
-      <section className="management-page__card">
-        <div className="management-page__table-header">
-          <div>
-            <h2>Danh sach anh xa</h2>
-            <p>Theo doi danh muc, thuoc tinh, thu tu hien thi va trang thai su dung.</p>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="management-page__state">Dang tai danh sach anh xa...</div>
-        ) : errorMessage ? (
-          <div className="management-page__state management-page__state--error">
-            <p>{errorMessage}</p>
-            <button type="button" className="secondary-button" onClick={loadMappings}>
-              Tai lai
-            </button>
-          </div>
-        ) : mappings.length === 0 ? (
-          <div className="management-page__state">
-            <p>Khong tim thay anh xa nao phu hop voi bo loc hien tai.</p>
-          </div>
-        ) : (
-          <div className="data-table__wrapper">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Danh muc</th>
-                  <th>Thuoc tinh</th>
-                  <th>Ma thuoc tinh</th>
-                  <th>Kieu du lieu</th>
-                  <th>Bat buoc</th>
-                  <th>Thu tu</th>
-                  <th>Trang thai</th>
-                  <th>Thao tac</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mappings.map((mapping) => (
-                  <tr key={mapping.id}>
-                    <td>{mapping.categoryName}</td>
-                    <td>{mapping.attributeName}</td>
-                    <td>{mapping.attributeCode}</td>
-                    <td>{ATTRIBUTE_TYPE_LABELS[mapping.attributeType]}</td>
-                    <td>{mapping.isRequired ? "Co" : "Khong"}</td>
-                    <td>{mapping.displayOrder}</td>
-                    <td>
-                      <span className={`table-badge table-badge--${badgeStatusClass(mapping.status)}`}>
-                        {STATUS_LABELS[mapping.status]}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="data-table__actions">
-                        <button type="button" className="table-button table-button--secondary" onClick={() => openEditModal(mapping)}>
-                          Sua
-                        </button>
-                        {mapping.status === "Active" ? (
-                          <button
-                            type="button"
-                            className="table-button table-button--danger"
-                            onClick={() => askConfirm(mapping, "disable")}
-                          >
-                            Tat
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="table-button table-button--success"
-                            onClick={() => askConfirm(mapping, "enable")}
-                          >
-                            Bat lai
-                          </button>
-                        )}
-                        <button type="button" className="table-button" onClick={() => askConfirm(mapping, "delete")}>
-                          Xoa
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="management-page__pagination">
-          <span>{pageLabel}</span>
-          <div className="management-page__pagination-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-            >
-              Truoc
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-            >
-              Sau
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="management-page__card">
-        <div className="management-page__table-header">
-          <div>
-            <h2>Xem truoc form theo danh muc</h2>
-            <p>Chon danh muc de kiem tra nhanh bo thuoc tinh se hien thi tren form dang bai.</p>
-          </div>
-          <select
-            value={previewCategoryId ?? ""}
-            onChange={(event) => setPreviewCategoryId(event.target.value ? Number(event.target.value) : null)}
-            disabled={metaLoading}
-          >
-            <option value="">Chon danh muc</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {previewLoading ? (
-          <div className="management-page__state">Dang tai ban xem truoc...</div>
-        ) : !preview ? (
-          <div className="management-page__state">
-            <p>Chua co ban xem truoc cho danh muc dang chon.</p>
-          </div>
-        ) : preview.fields.length === 0 ? (
-          <div className="management-page__state">
-            <p>Danh muc nay chua duoc gan thuoc tinh nao.</p>
-          </div>
-        ) : (
-          <div className="management-page__preview-list">
-            <h3>{preview.categoryName}</h3>
-            <div className="management-page__preview-grid">
-              {preview.fields.map((field) => (
-                <article key={field.attributeId} className="management-page__preview-item">
-                  <div className="management-page__preview-head">
-                    <strong>{field.attributeName}</strong>
-                    <span>{ATTRIBUTE_TYPE_LABELS[field.attributeType]}</span>
-                  </div>
-                  <p>Ma: {field.attributeCode}</p>
-                  <p>Thu tu: {field.displayOrder}</p>
-                  <p>Bat buoc: {field.isRequired ? "Co" : "Khong"}</p>
-                  <p>Placeholder: {field.placeholder}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {isModalOpen && (
-        <div className="management-page__modal-backdrop">
-          <div className="management-page__modal">
-            <div className="management-page__modal-header">
-              <div>
-                <h3>{modalMode === "create" ? "Them anh xa moi" : "Chinh sua anh xa"}</h3>
-                <p>
-                  {modalMode === "create"
-                    ? "Chon danh muc, thuoc tinh va thu tu hien thi de tao anh xa moi."
-                    : "Cap nhat thong tin anh xa dang co."}
-                </p>
-              </div>
-              <button type="button" className="secondary-button" onClick={closeModal}>
-                Dong
-              </button>
-            </div>
-
-            <form className="management-page__form" onSubmit={handleSubmit}>
-              <label>
-                Danh muc
-                <select
-                  value={formState.categoryId}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, categoryId: event.target.value }))
-                  }
-                  disabled={isSubmitting}
-                >
-                  <option value="">Chon danh muc</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Thuoc tinh
-                <select
-                  value={formState.attributeId}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, attributeId: event.target.value }))
-                  }
-                  disabled={isSubmitting}
-                >
-                  <option value="">Chon thuoc tinh</option>
-                  {attributes.map((attribute) => (
-                    <option key={attribute.id} value={attribute.id}>
-                      {attribute.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Thu tu hien thi
-                <input
-                  type="number"
-                  min="1"
-                  value={formState.displayOrder}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, displayOrder: event.target.value }))
-                  }
-                  disabled={isSubmitting}
-                />
-              </label>
-
-              <label className="management-page__checkbox">
-                <input
-                  type="checkbox"
-                  checked={formState.isRequired}
-                  onChange={(event) =>
-                    setFormState((current) => ({ ...current, isRequired: event.target.checked }))
-                  }
-                  disabled={isSubmitting}
-                />
-                Bat buoc khi dang bai
-              </label>
-
-              {formError && <div className="management-page__form-error">{formError}</div>}
-
-              <div className="management-page__form-actions">
-                <button type="button" className="secondary-button" onClick={closeModal} disabled={isSubmitting}>
-                  Huy
-                </button>
-                <button type="submit" className="primary-button" disabled={isSubmitting}>
-                  {isSubmitting
-                    ? "Dang luu..."
-                    : modalMode === "create"
-                      ? "Tao anh xa"
-                      : "Luu thay doi"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {confirmMapping && (
-        <div className="management-page__modal-backdrop">
-          <div className="management-page__modal management-page__modal--compact">
-            <div className="management-page__modal-header">
-              <div>
-                <h3>
-                  {confirmAction === "delete"
-                    ? "Xoa anh xa"
-                    : confirmAction === "enable"
-                      ? "Bat lai anh xa"
-                      : "Tat anh xa"}
-                </h3>
-                <p>
-                  {confirmAction === "delete"
-                    ? `Ban co chac muon xoa anh xa "${confirmMapping.categoryName} - ${confirmMapping.attributeName}"?`
-                    : confirmAction === "enable"
-                      ? `Ban co chac muon bat lai anh xa "${confirmMapping.categoryName} - ${confirmMapping.attributeName}"?`
-                      : `Ban co chac muon tat anh xa "${confirmMapping.categoryName} - ${confirmMapping.attributeName}"?`}
-                </p>
-              </div>
-            </div>
-            <div className="management-page__form-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setConfirmMapping(null)}
-                disabled={isConfirming}
+      {showFilters ? (
+        <SectionCard
+          title="Xem trước theo danh mục"
+          description="Chọn danh mục để kiểm tra nhanh bộ thuộc tính sẽ hiển thị trên form đăng bài."
+        >
+          <div className="mapping-preview__toolbar">
+            <div className="mapping-preview__field">
+              <label htmlFor="mapping-preview-category">Danh mục xem trước</label>
+              <select
+                id="mapping-preview-category"
+                value={previewCategoryId ?? ""}
+                onChange={(event) =>
+                  setPreviewCategoryId(
+                    event.target.value ? Number(event.target.value) : null,
+                  )
+                }
+                disabled={metaLoading}
               >
-                Huy
-              </button>
-              <button type="button" className="primary-button" onClick={handleConfirm} disabled={isConfirming}>
-                {isConfirming ? "Dang xu ly..." : "Xac nhan"}
-              </button>
+                <option value="">Chọn danh mục</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
-        </div>
-      )}
+        </SectionCard>
+      ) : null}
 
-      {toastMessage && <div className="management-page__toast">{toastMessage}</div>}
+      <SectionCard
+        title="Danh sách ánh xạ"
+        description="Theo dõi danh mục, thuộc tính, thứ tự hiển thị và trạng thái sử dụng."
+      >
+        {loading ? (
+          <EmptyState
+            title="Đang tải danh sách ánh xạ"
+            description="Hệ thống đang đồng bộ dữ liệu ánh xạ từ máy chủ."
+          />
+        ) : errorMessage ? (
+          <EmptyState
+            title="Không thể tải danh sách ánh xạ"
+            description={errorMessage}
+            actionLabel="Tải lại"
+            onAction={() => {
+              void loadMappings();
+            }}
+          />
+        ) : mappings.length === 0 ? (
+          <EmptyState
+            title="Không có dữ liệu"
+            description="Không tìm thấy ánh xạ nào phù hợp với bộ lọc hiện tại."
+          />
+        ) : (
+          <>
+            <div className="mapping-table-wrapper">
+              <table className="mapping-table">
+                <thead>
+                  <tr>
+                    <th>Danh mục</th>
+                    <th>Thuộc tính</th>
+                    <th>Mã thuộc tính</th>
+                    <th>Kiểu dữ liệu</th>
+                    <th>Bắt buộc</th>
+                    <th>Thứ tự</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mappings.map((mapping) => (
+                    <tr key={mapping.id}>
+                      <td>{mapping.categoryName}</td>
+                      <td>{mapping.attributeName}</td>
+                      <td>{mapping.attributeCode}</td>
+                      <td>{ATTRIBUTE_TYPE_LABELS[mapping.attributeType]}</td>
+                      <td>{mapping.isRequired ? "Có" : "Không"}</td>
+                      <td>{mapping.displayOrder}</td>
+                      <td>
+                        <span
+                          className={`mapping-status mapping-status--${mapping.status === "Active" ? "active" : "inactive"}`}
+                        >
+                          {STATUS_LABELS[mapping.status]}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="mapping-actions">
+                          <button
+                            type="button"
+                            className="mapping-actions__edit"
+                            onClick={() => openEditModal(mapping)}
+                          >
+                            Sửa
+                          </button>
+                          {mapping.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="mapping-actions__disable"
+                              onClick={() => askConfirm(mapping, "disable")}
+                            >
+                              Tắt
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="mapping-actions__enable"
+                              onClick={() => askConfirm(mapping, "enable")}
+                            >
+                              Bật lại
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="mapping-actions__remove"
+                            onClick={() => askConfirm(mapping, "delete")}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mapping-pagination">
+              <span className="mapping-pagination__info">
+                Trang {currentPage} / {totalPages}
+              </span>
+              <div className="mapping-pagination__actions">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1}
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                >
+                  Trước
+                </button>
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages}
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                >
+                  Tiếp
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        title="Xem trước form theo danh mục"
+        description="Mô phỏng cách thuộc tính hiển thị trên form đăng bài của người dùng cuối."
+      >
+        <div className="mapping-preview">
+          <div className="mapping-preview__toolbar">
+            <div className="mapping-preview__field">
+              <label htmlFor="mapping-preview-category-inline">Danh mục</label>
+              <select
+                id="mapping-preview-category-inline"
+                value={previewCategoryId ?? ""}
+                onChange={(event) =>
+                  setPreviewCategoryId(
+                    event.target.value ? Number(event.target.value) : null,
+                  )
+                }
+                disabled={metaLoading}
+              >
+                <option value="">Chọn danh mục</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {previewLoading ? (
+            <EmptyState
+              title="Đang tải bản xem trước"
+              description="Hệ thống đang dựng cấu trúc form theo danh mục đã chọn."
+            />
+          ) : !preview ? (
+            <EmptyState
+              title="Chưa có bản xem trước"
+              description="Hãy chọn một danh mục để xem cấu trúc form."
+            />
+          ) : preview.fields.length === 0 ? (
+            <EmptyState
+              title="Danh mục chưa có thuộc tính"
+              description="Danh mục này chưa được gắn thuộc tính nào."
+            />
+          ) : (
+            <div className="mapping-preview__form-card">
+              <div className="mapping-preview__header">
+                <h3>{preview.categoryName}</h3>
+                <p>Đây là cách thuộc tính sẽ hiển thị trên form đăng bài.</p>
+              </div>
+
+              <div className="mapping-preview__grid">
+                {preview.fields.map((field) => (
+                  <article
+                    key={field.attributeId}
+                    className="mapping-preview__item"
+                  >
+                    <div className="mapping-preview__label-row">
+                      <label>{field.attributeName}</label>
+                      <div className="mapping-preview__meta">
+                        {field.isRequired ? (
+                          <span className="mapping-preview__required">
+                            Bắt buộc
+                          </span>
+                        ) : null}
+                        <span className="mapping-preview__order">
+                          Thứ tự: {field.displayOrder}
+                        </span>
+                      </div>
+                    </div>
+
+                    {field.attributeType === "Select" ? (
+                      <select disabled>
+                        <option>{field.placeholder}</option>
+                      </select>
+                    ) : field.attributeType === "Boolean" ? (
+                      <div className="mapping-preview__checkbox">
+                        <input type="checkbox" disabled />
+                        <span>{field.placeholder}</span>
+                      </div>
+                    ) : (
+                      <input type="text" value={field.placeholder} disabled readOnly />
+                    )}
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+
+      <BaseModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={modalMode === "create" ? "Thêm ánh xạ" : "Chỉnh sửa ánh xạ"}
+        description={
+          modalMode === "create"
+            ? "Chọn danh mục, thuộc tính và thứ tự hiển thị để tạo ánh xạ mới."
+            : "Cập nhật thông tin ánh xạ đang có."
+        }
+        maxWidth="560px"
+      >
+        <form className="mapping-modal__form" onSubmit={handleSubmit}>
+          <div className="mapping-modal__field">
+            <label htmlFor="mapping-form-category">Danh mục</label>
+            <select
+              id="mapping-form-category"
+              value={formState.categoryId}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  categoryId: event.target.value,
+                }))
+              }
+              disabled={isSubmitting}
+            >
+              <option value="">Chọn danh mục</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mapping-modal__field">
+            <label htmlFor="mapping-form-attribute">Thuộc tính</label>
+            <select
+              id="mapping-form-attribute"
+              value={formState.attributeId}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  attributeId: event.target.value,
+                }))
+              }
+              disabled={isSubmitting}
+            >
+              <option value="">Chọn thuộc tính</option>
+              {attributes.map((attribute) => (
+                <option key={attribute.id} value={attribute.id}>
+                  {attribute.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mapping-modal__field">
+            <label htmlFor="mapping-form-order">Thứ tự hiển thị</label>
+            <input
+              id="mapping-form-order"
+              type="number"
+              min="1"
+              value={formState.displayOrder}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  displayOrder: event.target.value,
+                }))
+              }
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <label className="mapping-modal__checkbox">
+            <input
+              type="checkbox"
+              checked={formState.isRequired}
+              onChange={(event) =>
+                setFormState((current) => ({
+                  ...current,
+                  isRequired: event.target.checked,
+                }))
+              }
+              disabled={isSubmitting}
+            />
+            Bắt buộc khi đăng bài
+          </label>
+
+          {formError ? (
+            <div className="mapping-modal__error">{formError}</div>
+          ) : null}
+
+          <div className="mapping-modal__actions">
+            <button
+              type="button"
+              className="mapping-modal__cancel"
+              onClick={closeModal}
+              disabled={isSubmitting}
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="mapping-modal__submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "Đang lưu..."
+                : modalMode === "create"
+                  ? "Tạo ánh xạ"
+                  : "Lưu thay đổi"}
+            </button>
+          </div>
+        </form>
+      </BaseModal>
+
+      <ConfirmDialog
+        isOpen={Boolean(confirmMapping)}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmText="Xác nhận"
+        cancelText="Hủy"
+        tone={confirmAction === "delete" ? "danger" : "neutral"}
+        onConfirm={handleConfirm}
+        onCancel={closeConfirm}
+      />
+
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
+
+export default CategoryAttributeMappingPage;

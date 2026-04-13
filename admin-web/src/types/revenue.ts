@@ -12,7 +12,6 @@ export type RevenueRow = {
   slot: string;
   orders: number;
   revenue: string;
-  growth: string;
 };
 
 export type RevenueApiResponse = {

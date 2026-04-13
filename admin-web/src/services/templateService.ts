@@ -44,6 +44,50 @@ type TemplatePayload = {
 
 const TEMPLATE_BASE_PATH = "/api/admin/templates";
 
+const TEMPLATE_NAME_LABELS: Record<string, string> = {
+  "Internal Moderation Escalation": "Điều phối kiểm duyệt nội bộ",
+  "Notification - Promotion Reopened": "Thông báo - Mở lại chiến dịch quảng bá",
+  "Notification - Payment Verification": "Thông báo - Xác minh thanh toán",
+  "Notification - Export Completed": "Thông báo - Xuất dữ liệu hoàn tất",
+  "Post Rejection - Invalid Content": "Từ chối bài đăng - Nội dung không hợp lệ",
+  "Post Rejection - Missing Information": "Từ chối bài đăng - Thiếu thông tin",
+};
+
+const TEXT_REPLACEMENTS: Array<[string, string]> = [
+  [
+    "This case has been escalated to the moderation lead for manual review because it affects promotion delivery quality or moderation integrity.",
+    "Trường hợp này đã được chuyển lên đầu mối kiểm duyệt để rà soát thủ công vì ảnh hưởng tới chất lượng quảng bá hoặc tính toàn vẹn của quy trình kiểm duyệt.",
+  ],
+  [
+    "Your expired promotion has been reopened after payment verification. Delivery resumes immediately in the assigned placement slot.",
+    "Chiến dịch đã hết hạn của bạn đã được mở lại sau khi thanh toán được xác minh. Việc phân phối sẽ tiếp tục ngay ở vị trí hiển thị đã gán.",
+  ],
+  [
+    "We received your transfer confirmation. GreenMarket admin is verifying the payment before reopening or updating your promotion.",
+    "GreenMarket đã nhận xác nhận chuyển khoản. Quản trị viên đang kiểm tra thanh toán trước khi mở lại hoặc cập nhật chiến dịch của bạn.",
+  ],
+  [
+    "Your requested admin export has finished successfully. Download the generated report from the export history screen.",
+    "Yêu cầu xuất dữ liệu quản trị đã hoàn tất thành công. Hãy tải báo cáo tại màn lịch sử xuất dữ liệu.",
+  ],
+  [
+    "Your post violates GreenMarket content policy because the uploaded media does not match the listing details. Please review and update before resubmitting.",
+    "Bài đăng của bạn vi phạm chính sách nội dung của GreenMarket vì hình ảnh hoặc video tải lên không khớp với thông tin niêm yết. Vui lòng chỉnh sửa rồi gửi lại.",
+  ],
+  [
+    "Your post is missing required information such as care notes, product condition, or delivery scope. Please complete the missing fields and submit again.",
+    "Bài đăng của bạn đang thiếu thông tin bắt buộc như ghi chú chăm sóc, tình trạng sản phẩm hoặc phạm vi giao hàng. Vui lòng bổ sung rồi gửi lại.",
+  ],
+  [
+    "Used for system notifications, reminders, or generic status updates.",
+    "Dùng cho thông báo hệ thống, nhắc việc hoặc cập nhật trạng thái chung.",
+  ],
+  [
+    "Use when admins need to return a clear rejection reason so the user can revise and submit again.",
+    "Dùng khi admin cần trả về lý do từ chối rõ ràng để người dùng chỉnh sửa và gửi lại.",
+  ],
+];
+
 const normalizeDate = (value?: string, label?: string) => {
   if (label?.trim()) {
     return label;
@@ -67,14 +111,37 @@ const normalizeDate = (value?: string, label?: string) => {
   });
 };
 
+const translateText = (value: string | null | undefined, fallback: string) => {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return fallback;
+  }
+
+  const direct = TEMPLATE_NAME_LABELS[normalized];
+  if (direct) {
+    return direct;
+  }
+
+  return TEXT_REPLACEMENTS.reduce(
+    (result, [source, target]) => result.replaceAll(source, target),
+    normalized,
+  );
+};
+
 const mapTemplate = (item: TemplateApiItem): Template => ({
   id: item.id,
-  name: item.templateName?.trim() || "Mẫu chưa đặt tên",
+  name: translateText(item.templateName, "Mẫu chưa đặt tên"),
   type: item.templateType,
-  content: item.templateContent ?? "",
+  content: translateText(item.templateContent, ""),
   status: item.status,
-  description: item.description?.trim() || "Chưa có mô tả ngắn.",
-  usageNote: item.usageNote?.trim() || "Chưa có hướng dẫn sử dụng.",
+  description: translateText(
+    item.description,
+    "Chưa có mô tả ngắn.",
+  ),
+  usageNote: translateText(
+    item.usageNote,
+    "Chưa có hướng dẫn sử dụng.",
+  ),
   updatedAt: normalizeDate(item.updatedAt, item.updatedLabel),
 });
 

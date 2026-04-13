@@ -4,7 +4,7 @@ export type MappingStatus = "Active" | "Disabled";
 export type MappingAttributeType = "Text" | "Number" | "Select" | "Boolean";
 
 export type CategoryAttributeMapping = {
-  id: number;
+  id: string;
   categoryId: number;
   categoryName: string;
   attributeId: number;
@@ -46,45 +46,23 @@ type MappingListResponse = {
 };
 
 type MappingApiItem = {
-  id: number;
   categoryId: number;
-  categoryName?: string;
   attributeId: number;
-  attributeName?: string;
-  attributeCode?: string;
-  attributeType?: MappingAttributeType;
-  isRequired: boolean;
-  displayOrder: number;
-  status: MappingStatus;
+  categoryName?: string | null;
+  attributeName?: string | null;
+  attributeCode?: string | null;
+  attributeType?: string | null;
+  required?: boolean | null;
+  displayOrder?: number | null;
+  status?: string | null;
 };
 
-type MappingApiResponse = {
-  data: MappingApiItem[];
-  pagination?: {
-    total?: number;
-    page?: number;
-    limit?: number;
-  };
-};
-
-type MappingApiDetailResponse = {
-  data: MappingApiItem;
-};
-
-type MappingPreviewApiResponse = {
-  data: {
-    categoryId: number;
-    categoryName: string;
-    fields: Array<{
-      attributeId: number;
-      attributeName: string;
-      attributeCode: string;
-      attributeType: MappingAttributeType;
-      isRequired: boolean;
-      displayOrder: number;
-      placeholder?: string;
-    }>;
-  };
+type MappingApiWriteResponse = {
+  categoryId: number;
+  attributeId: number;
+  required?: boolean | null;
+  displayOrder?: number | null;
+  status?: string | null;
 };
 
 export type CreateMappingPayload = {
@@ -96,36 +74,58 @@ export type CreateMappingPayload = {
 
 export type UpdateMappingPayload = CreateMappingPayload;
 
-const CATEGORY_MAPPING_BASE_PATH = "/admin/category-mappings";
+const CATEGORY_MAPPING_BASE_PATH = "/api/admin/category-mappings";
+
+const normalizeAttributeType = (value: unknown): MappingAttributeType => {
+  switch (String(value ?? "").toLowerCase()) {
+    case "number":
+      return "Number";
+    case "select":
+      return "Select";
+    case "boolean":
+      return "Boolean";
+    case "text":
+    default:
+      return "Text";
+  }
+};
+
+const normalizeStatus = (value: unknown): MappingStatus => {
+  return value === "Disabled" ? "Disabled" : "Active";
+};
+
+const buildMappingId = (categoryId: number, attributeId: number) =>
+  `${categoryId}-${attributeId}`;
 
 function mapMapping(item: MappingApiItem): CategoryAttributeMapping {
   return {
-    id: item.id,
+    id: buildMappingId(item.categoryId, item.attributeId),
     categoryId: item.categoryId,
-    categoryName: item.categoryName?.trim() || `Danh muc #${item.categoryId}`,
+    categoryName: item.categoryName?.trim() || `Danh mục #${item.categoryId}`,
     attributeId: item.attributeId,
-    attributeName: item.attributeName?.trim() || `Thuoc tinh #${item.attributeId}`,
+    attributeName:
+      item.attributeName?.trim() || `Thuộc tính #${item.attributeId}`,
     attributeCode: item.attributeCode?.trim() || `ATTR_${item.attributeId}`,
-    attributeType: item.attributeType ?? "Text",
-    isRequired: Boolean(item.isRequired),
+    attributeType: normalizeAttributeType(item.attributeType),
+    isRequired: Boolean(item.required),
     displayOrder: item.displayOrder ?? 1,
-    status: item.status,
+    status: normalizeStatus(item.status),
   };
 }
 
 function buildMappingPayload(payload: CreateMappingPayload | UpdateMappingPayload) {
   if (!payload.categoryId || !payload.attributeId) {
-    throw new Error("Vui long chon ca danh muc va thuoc tinh.");
+    throw new Error("Vui lòng chọn cả danh mục và thuộc tính.");
   }
 
   if (!Number.isInteger(payload.displayOrder) || payload.displayOrder < 1) {
-    throw new Error("Thu tu hien thi phai lon hon hoac bang 1.");
+    throw new Error("Thứ tự hiển thị phải lớn hơn hoặc bằng 1.");
   }
 
   return {
     categoryId: payload.categoryId,
     attributeId: payload.attributeId,
-    isRequired: Boolean(payload.isRequired),
+    required: Boolean(payload.isRequired),
     displayOrder: payload.displayOrder,
   };
 }
@@ -141,118 +141,178 @@ function resolveApiError(error: unknown, fallbackMessage: string) {
 function buildPreviewPlaceholder(field: {
   attributeName: string;
   attributeCode: string;
-  placeholder?: string;
 }) {
-  if (field.placeholder?.trim()) {
-    return field.placeholder.trim();
-  }
-
-  return `Nhap ${field.attributeName || field.attributeCode}`;
+  return `Nhập ${field.attributeName || field.attributeCode}`;
 }
 
 export const categoryMappingService = {
   async getMappings(params: MappingListParams = {}): Promise<MappingListResponse> {
     try {
-      const query = new URLSearchParams();
-
-      if (params.search?.trim()) {
-        query.set("search", params.search.trim());
-      }
-
-      query.set("page", String(params.page ?? 1));
-      query.set("limit", String(params.pageSize ?? 10));
-
-      const response = await apiClient.get<MappingApiResponse>(
-        `${CATEGORY_MAPPING_BASE_PATH}?${query.toString()}`,
+      const rows = await apiClient.request<MappingApiItem[]>(
+        CATEGORY_MAPPING_BASE_PATH,
+        {
+          defaultErrorMessage: "Không thể tải danh sách ánh xạ.",
+        },
       );
 
-      const items = (response.data ?? []).map(mapMapping);
-      const pagination = response.pagination ?? {};
+      const keyword = params.search?.trim().toLowerCase() ?? "";
+      const allItems = rows.map(mapMapping);
+      const filteredItems = keyword
+        ? allItems.filter((item) => {
+            const haystack = [
+              item.categoryName,
+              item.attributeName,
+              item.attributeCode,
+            ]
+              .join(" ")
+              .toLowerCase();
+
+            return haystack.includes(keyword);
+          })
+        : allItems;
+
+      const page = params.page ?? 1;
+      const pageSize = params.pageSize ?? 10;
+      const start = (page - 1) * pageSize;
+      const data = filteredItems.slice(start, start + pageSize);
 
       return {
-        data: items,
-        total: pagination.total ?? items.length,
-        page: pagination.page ?? (params.page ?? 1),
-        pageSize: pagination.limit ?? (params.pageSize ?? 10),
+        data,
+        total: filteredItems.length,
+        page,
+        pageSize,
       };
     } catch (error) {
-      throw new Error(resolveApiError(error, "Khong the tai danh sach anh xa."));
+      throw new Error(resolveApiError(error, "Không thể tải danh sách ánh xạ."));
     }
   },
 
   async createMapping(payload: CreateMappingPayload): Promise<CategoryAttributeMapping> {
     try {
       const body = buildMappingPayload(payload);
-      const response = await apiClient.post<MappingApiDetailResponse>(CATEGORY_MAPPING_BASE_PATH, body);
-      return mapMapping(response.data);
+      const response = await apiClient.request<MappingApiWriteResponse>(
+        CATEGORY_MAPPING_BASE_PATH,
+        {
+          method: "POST",
+          includeJsonContentType: true,
+          defaultErrorMessage: "Không thể tạo ánh xạ mới.",
+          body: JSON.stringify(body),
+        },
+      );
+
+      return mapMapping({
+        ...response,
+        categoryName: null,
+        attributeName: null,
+        attributeCode: null,
+        attributeType: null,
+      });
     } catch (error) {
-      throw new Error(resolveApiError(error, "Khong the tao anh xa moi."));
+      throw new Error(resolveApiError(error, "Không thể tạo ánh xạ mới."));
     }
   },
 
-  async updateMapping(mappingId: number, payload: UpdateMappingPayload): Promise<CategoryAttributeMapping> {
+  async updateMapping(
+    currentMapping: Pick<CategoryAttributeMapping, "categoryId" | "attributeId">,
+    payload: UpdateMappingPayload,
+  ): Promise<CategoryAttributeMapping> {
     try {
       const body = buildMappingPayload(payload);
-      const response = await apiClient.put<MappingApiDetailResponse>(
-        `${CATEGORY_MAPPING_BASE_PATH}/${mappingId}`,
-        body,
+      const response = await apiClient.request<MappingApiWriteResponse>(
+        `${CATEGORY_MAPPING_BASE_PATH}/${currentMapping.categoryId}/${currentMapping.attributeId}`,
+        {
+          method: "PUT",
+          includeJsonContentType: true,
+          defaultErrorMessage: "Không thể cập nhật ánh xạ.",
+          body: JSON.stringify(body),
+        },
       );
-      return mapMapping(response.data);
+
+      return mapMapping({
+        ...response,
+        categoryName: null,
+        attributeName: null,
+        attributeCode: null,
+        attributeType: null,
+      });
     } catch (error) {
-      throw new Error(resolveApiError(error, "Khong the cap nhat anh xa."));
+      throw new Error(resolveApiError(error, "Không thể cập nhật ánh xạ."));
     }
   },
 
-  async updateMappingStatus(mappingId: number, status: MappingStatus): Promise<CategoryAttributeMapping> {
+  async updateMappingStatus(
+    currentMapping: Pick<CategoryAttributeMapping, "categoryId" | "attributeId">,
+    status: MappingStatus,
+  ): Promise<CategoryAttributeMapping> {
     try {
-      const response = await apiClient.patch<MappingApiDetailResponse>(
-        `${CATEGORY_MAPPING_BASE_PATH}/${mappingId}/status`,
-        { status },
+      const response = await apiClient.request<MappingApiWriteResponse>(
+        `${CATEGORY_MAPPING_BASE_PATH}/${currentMapping.categoryId}/${currentMapping.attributeId}/status`,
+        {
+          method: "PATCH",
+          includeJsonContentType: true,
+          defaultErrorMessage: "Không thể cập nhật trạng thái ánh xạ.",
+          body: JSON.stringify({ status }),
+        },
       );
-      return mapMapping(response.data);
+
+      return mapMapping({
+        ...response,
+        categoryName: null,
+        attributeName: null,
+        attributeCode: null,
+        attributeType: null,
+      });
     } catch (error) {
-      throw new Error(resolveApiError(error, "Khong the cap nhat trang thai anh xa."));
+      throw new Error(
+        resolveApiError(error, "Không thể cập nhật trạng thái ánh xạ."),
+      );
     }
   },
 
-  async deleteMapping(mappingId: number): Promise<void> {
+  async deleteMapping(
+    currentMapping: Pick<CategoryAttributeMapping, "categoryId" | "attributeId">,
+  ): Promise<void> {
     try {
-      await apiClient.delete<{ success: boolean }>(`${CATEGORY_MAPPING_BASE_PATH}/${mappingId}`);
+      await apiClient.request<void>(
+        `${CATEGORY_MAPPING_BASE_PATH}/${currentMapping.categoryId}/${currentMapping.attributeId}`,
+        {
+          method: "DELETE",
+          defaultErrorMessage: "Không thể xóa ánh xạ.",
+        },
+      );
     } catch (error) {
-      throw new Error(resolveApiError(error, "Khong the xoa anh xa."));
+      throw new Error(resolveApiError(error, "Không thể xóa ánh xạ."));
     }
   },
 
   async previewCategory(categoryId: number): Promise<CategoryMappingPreview> {
     if (!categoryId) {
-      throw new Error("Vui long chon danh muc de xem truoc.");
+      throw new Error("Vui lòng chọn danh mục để xem trước.");
     }
 
-    try {
-      const response = await apiClient.get<MappingPreviewApiResponse>(
-        `${CATEGORY_MAPPING_BASE_PATH}/preview/${categoryId}`,
-      );
+    const response = await this.getMappings({ page: 1, pageSize: 1000 });
+    const fields = response.data
+      .filter(
+        (mapping) =>
+          mapping.categoryId === categoryId && mapping.status === "Active",
+      )
+      .sort((left, right) => left.displayOrder - right.displayOrder)
+      .map((field) => ({
+        attributeId: field.attributeId,
+        attributeName: field.attributeName,
+        attributeCode: field.attributeCode,
+        attributeType: field.attributeType,
+        isRequired: field.isRequired,
+        displayOrder: field.displayOrder,
+        placeholder: buildPreviewPlaceholder(field),
+      }));
 
-      const preview = response.data;
-
-      return {
-        categoryId: preview.categoryId,
-        categoryName: preview.categoryName,
-        fields: (preview.fields ?? [])
-          .slice()
-          .sort((left, right) => left.displayOrder - right.displayOrder)
-          .map((field) => ({
-            attributeId: field.attributeId,
-            attributeName: field.attributeName,
-            attributeCode: field.attributeCode,
-            attributeType: field.attributeType,
-            isRequired: Boolean(field.isRequired),
-            displayOrder: field.displayOrder,
-            placeholder: buildPreviewPlaceholder(field),
-          })),
-      };
-    } catch (error) {
-      throw new Error(resolveApiError(error, "Khong the tai ban xem truoc danh muc."));
-    }
+    return {
+      categoryId,
+      categoryName:
+        response.data.find((mapping) => mapping.categoryId === categoryId)
+          ?.categoryName || `Danh mục #${categoryId}`,
+      fields,
+    };
   },
 };

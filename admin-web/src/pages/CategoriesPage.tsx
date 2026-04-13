@@ -5,7 +5,6 @@ import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
-import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { categoryMappingService } from "../services/categoryMappingService";
 import { categoryService } from "../services/categoryService";
@@ -68,6 +67,20 @@ function CategoriesPage() {
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [...prev, { id: toastId, message, tone }]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
   const loadCategories = async (showLoader = false) => {
     try {
       if (showLoader) {
@@ -78,7 +91,7 @@ function CategoriesPage() {
 
       const [categoryData, mappingData] = await Promise.all([
         categoryService.getCategories(),
-        categoryMappingService.getMappings({ page: 1, pageSize: 500 }),
+        categoryMappingService.getMappings({ page: 1, pageSize: 1000 }),
       ]);
 
       const activeUniqueAttributeIdsByCategory = new Map<number, Set<number>>();
@@ -94,13 +107,13 @@ function CategoriesPage() {
         activeUniqueAttributeIdsByCategory.set(mapping.categoryId, existingSet);
       });
 
-      const hydratedCategories = categoryData.map((category) => ({
-        ...category,
-        attributesCount:
-          activeUniqueAttributeIdsByCategory.get(category.id)?.size ?? 0,
-      }));
-
-      setCategories(hydratedCategories);
+      setCategories(
+        categoryData.map((category) => ({
+          ...category,
+          attributesCount:
+            activeUniqueAttributeIdsByCategory.get(category.id)?.size ?? 0,
+        })),
+      );
     } catch (error) {
       setPageError(
         error instanceof Error ? error.message : "Không thể tải danh mục.",
@@ -115,27 +128,6 @@ function CategoriesPage() {
   useEffect(() => {
     void loadCategories(true);
   }, []);
-
-  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
-    const toastId = Date.now() + Math.random();
-
-    setToasts((prev) => [
-      ...prev,
-      {
-        id: toastId,
-        message,
-        tone,
-      },
-    ]);
-
-    window.setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
-    }, 2600);
-  };
-
-  const removeToast = (id: number) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
 
   const openAddModal = () => {
     setModalMode("add");
@@ -321,10 +313,7 @@ function CategoriesPage() {
     });
   }, [categories, searchKeyword, selectedStatusFilter]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredCategories.length / PAGE_SIZE),
-  );
+  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / PAGE_SIZE));
 
   const paginatedCategories = useMemo(() => {
     const startIndex = (page - 1) * PAGE_SIZE;
@@ -346,7 +335,7 @@ function CategoriesPage() {
 
   const confirmDialogMessage =
     confirmState.action === "disable"
-      ? "Danh mục sẽ không còn dùng được trong luồng cấu hình và gán thuộc tính cho tới khi được bật lại."
+      ? "Danh mục sẽ ngừng được dùng trong luồng cấu hình và gắn thuộc tính cho tới khi được bật lại."
       : "Danh mục sẽ hoạt động trở lại và có thể tiếp tục được dùng trong các luồng cấu hình.";
 
   return (
@@ -374,26 +363,25 @@ function CategoriesPage() {
         <SectionCard
           title="Bộ lọc danh mục"
           description="Thu hẹp danh sách theo trạng thái hoạt động của danh mục."
+          bodyClassName="categories-filters"
         >
-          <div className="categories-page__filters">
-            <div className="categories-page__filter-field">
-              <label htmlFor="categories-status-filter">Trạng thái</label>
-              <select
-                id="categories-status-filter"
-                value={selectedStatusFilter}
-                onChange={(event) =>
-                  setSelectedStatusFilter(
-                    event.target.value as CategoryStatus | "All",
-                  )
-                }
-              >
-                {statusFilterOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {statusLabels[option]}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="categories-filters__field">
+            <label htmlFor="categories-status-filter">Trạng thái</label>
+            <select
+              id="categories-status-filter"
+              value={selectedStatusFilter}
+              onChange={(event) =>
+                setSelectedStatusFilter(
+                  event.target.value as CategoryStatus | "All",
+                )
+              }
+            >
+              {statusFilterOptions.map((option) => (
+                <option key={option} value={option}>
+                  {statusLabels[option]}
+                </option>
+              ))}
+            </select>
           </div>
         </SectionCard>
       ) : null}
@@ -413,7 +401,7 @@ function CategoriesPage() {
           />
         ) : isInitialLoading ? (
           <EmptyState
-            title="Đang tải danh mục..."
+            title="Đang tải danh mục"
             description="Hệ thống đang đồng bộ dữ liệu danh mục từ máy chủ."
           />
         ) : filteredCategories.length === 0 ? (
@@ -423,8 +411,8 @@ function CategoriesPage() {
           />
         ) : (
           <>
-            <div className="categories-page__table-wrap">
-              <table className="categories-page__table">
+            <div className="categories-table-wrapper">
+              <table className="categories-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -442,25 +430,17 @@ function CategoriesPage() {
                       <td>{category.name}</td>
                       <td>{category.slug}</td>
                       <td>{category.attributesCount ?? 0}</td>
+                      <td>{statusLabels[category.status]}</td>
                       <td>
-                        <StatusBadge
-                          tone={category.status === "Active" ? "green" : "gray"}
-                        >
-                          {category.status === "Active"
-                            ? "Đang hoạt động"
-                            : "Đã tắt"}
-                        </StatusBadge>
-                      </td>
-                      <td>
-                        <div className="categories-page__actions">
+                        <div className="categories-actions">
                           <button
-                            className="soft-button"
+                            className="categories-actions__view"
                             onClick={() => openViewModal(category)}
                           >
                             Xem
                           </button>
                           <button
-                            className="secondary-button"
+                            className="categories-actions__edit"
                             onClick={() => openEditModal(category)}
                           >
                             Sửa
@@ -468,8 +448,8 @@ function CategoriesPage() {
                           <button
                             className={
                               category.status === "Active"
-                                ? "danger-button"
-                                : "success-button"
+                                ? "categories-actions__disable"
+                                : "categories-actions__enable"
                             }
                             disabled={isStatusUpdating === category.id}
                             onClick={() =>
@@ -495,24 +475,20 @@ function CategoriesPage() {
               </table>
             </div>
 
-            <div className="categories-page__pagination">
-              <span>
+            <div className="categories-pagination">
+              <span className="categories-pagination__info">
                 Trang {page} / {totalPages}
               </span>
-              <div className="categories-page__pagination-actions">
+              <div className="categories-pagination__actions">
                 <button
-                  className="soft-button"
                   disabled={page <= 1}
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                 >
                   Trước
                 </button>
                 <button
-                  className="soft-button"
                   disabled={page >= totalPages}
-                  onClick={() =>
-                    setPage((prev) => Math.min(totalPages, prev + 1))
-                  }
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                 >
                   Tiếp
                 </button>
@@ -540,42 +516,46 @@ function CategoriesPage() {
               : "Xem thông tin chi tiết của danh mục đang được cấu hình trong hệ thống."
         }
       >
-        <form className="categories-page__form" onSubmit={handleSubmit}>
-          <label>
-            Tên danh mục
+        <form className="categories-modal__form" onSubmit={handleSubmit}>
+          <div className="categories-modal__field">
+            <label htmlFor="category-name">Tên danh mục</label>
             <input
+              id="category-name"
               name="name"
               value={formData.name}
               onChange={handleChange}
               placeholder="Ví dụ: Cây nội thất"
               disabled={modalMode === "view"}
             />
-          </label>
+          </div>
 
-          <label>
-            Slug
+          <div className="categories-modal__field">
+            <label htmlFor="category-slug">Slug</label>
             <input
+              id="category-slug"
               name="slug"
               value={formData.slug}
               onChange={handleChange}
               placeholder="Ví dụ: cay-noi-that"
               disabled={modalMode === "view"}
             />
-          </label>
+          </div>
 
-          {formError ? (
-            <p className="categories-page__form-error">{formError}</p>
-          ) : null}
+          {formError ? <p className="categories-modal__error">{formError}</p> : null}
 
-          <div className="categories-page__form-actions">
-            <button type="button" className="soft-button" onClick={closeModal}>
+          <div className="categories-modal__actions">
+            <button
+              type="button"
+              className="categories-modal__cancel"
+              onClick={closeModal}
+            >
               {modalMode === "view" ? "Đóng" : "Hủy"}
             </button>
 
             {modalMode !== "view" ? (
               <button
                 type="submit"
-                className="primary-button"
+                className="categories-modal__submit"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Đang lưu..." : "Lưu danh mục"}
@@ -589,15 +569,15 @@ function CategoriesPage() {
         isOpen={confirmState.isOpen}
         title={confirmDialogTitle}
         message={confirmDialogMessage}
-        onClose={closeConfirmDialog}
+        onCancel={closeConfirmDialog}
         onConfirm={() => {
           void handleConfirmAction();
         }}
-        confirmLabel={confirmState.action === "disable" ? "Tắt" : "Bật lại"}
+        confirmText={confirmState.action === "disable" ? "Tắt" : "Bật lại"}
         tone={confirmState.action === "disable" ? "danger" : "success"}
       />
 
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }

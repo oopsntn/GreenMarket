@@ -19,13 +19,46 @@ import "./RevenuePage.css";
 const PAGE_SIZE = 5;
 const ALL_SLOTS_FILTER = "Tất cả vị trí";
 
+const SUMMARY_TITLE_LABELS: Record<string, string> = {
+  "Total Revenue": "Tổng doanh thu",
+  "Active Packages": "Gói có phát sinh doanh thu",
+  "Avg. Order Value": "Giá trị đơn hàng trung bình",
+  "Top Slot Revenue": "Vị trí có doanh thu cao nhất",
+};
+
+const SUMMARY_NOTE_LABELS: Record<string, string> = {
+  "successful order(s) in period": "đơn hàng thành công trong kỳ",
+  "Packages with paid orders in period": "gói có đơn thanh toán thành công trong kỳ",
+  "Average successful package payment": "giá trị trung bình của một đơn thanh toán thành công",
+  "No paid orders in period": "không có đơn thanh toán thành công trong kỳ",
+};
+
+const SLOT_LABELS: Record<string, string> = {
+  "Home Top": "Trang chủ nổi bật",
+  "Category Top": "Danh mục nổi bật",
+  "Search Boost": "Tăng tìm kiếm",
+};
+
+const translateSummaryTitle = (value: string) => SUMMARY_TITLE_LABELS[value] || value;
+
+const translateSummaryNote = (value: string) => {
+  let translated = value;
+
+  Object.entries(SUMMARY_NOTE_LABELS).forEach(([source, target]) => {
+    translated = translated.replace(source, target);
+  });
+
+  return translated;
+};
+
+const translateSlot = (value: string) => SLOT_LABELS[value] || value;
+
 function RevenuePage() {
   const [revenueData, setRevenueData] = useState(
     revenueService.getEmptyRevenue(),
   );
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState("");
-
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
   const [slotFilter, setSlotFilter] = useState(ALL_SLOTS_FILTER);
@@ -33,9 +66,8 @@ function RevenuePage() {
   const [page, setPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
-  const summaryCards = revenueData.summaryCards;
-  const rows = revenueData.rows;
   const slotCatalog = revenueData.slotCatalog;
 
   useEffect(() => {
@@ -52,7 +84,7 @@ function RevenuePage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Không thể tải tổng quan doanh thu.",
+            : "Không thể tải báo cáo doanh thu.",
         );
       } finally {
         setIsLoading(false);
@@ -64,12 +96,12 @@ function RevenuePage() {
 
   const slotFilterOptions = useMemo(() => {
     const slotLabels = [
-      ...slotCatalog.map((item) => item.label),
-      ...rows.map((item) => item.slot),
+      ...slotCatalog.map((item) => translateSlot(item.label)),
+      ...revenueData.rows.map((item) => translateSlot(item.slot)),
     ];
 
     return [ALL_SLOTS_FILTER, ...new Set(slotLabels)];
-  }, [rows, slotCatalog]);
+  }, [revenueData.rows, slotCatalog]);
 
   useEffect(() => {
     if (!slotFilterOptions.includes(slotFilter)) {
@@ -80,17 +112,18 @@ function RevenuePage() {
   const filteredRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
-    return rows.filter((row) => {
+    return revenueData.rows.filter((row) => {
+      const translatedSlot = translateSlot(row.slot);
       const matchesSlot =
-        slotFilter === ALL_SLOTS_FILTER || row.slot === slotFilter;
+        slotFilter === ALL_SLOTS_FILTER || translatedSlot === slotFilter;
       const matchesKeyword =
         !keyword ||
         row.packageName.toLowerCase().includes(keyword) ||
-        row.slot.toLowerCase().includes(keyword);
+        translatedSlot.toLowerCase().includes(keyword);
 
       return matchesSlot && matchesKeyword;
     });
-  }, [rows, searchKeyword, slotFilter]);
+  }, [revenueData.rows, searchKeyword, slotFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
 
@@ -101,7 +134,7 @@ function RevenuePage() {
 
   useEffect(() => {
     setPage(1);
-  }, [fromDate, searchKeyword, slotFilter, toDate]);
+  }, [fromDate, toDate, slotFilter, searchKeyword]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -111,7 +144,6 @@ function RevenuePage() {
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
-
     setToasts((prev) => [...prev, { id: toastId, message, tone }]);
 
     window.setTimeout(() => {
@@ -132,9 +164,7 @@ function RevenuePage() {
         toDate,
         "XLSX",
       );
-      showToast(
-        `Đã xuất báo cáo doanh thu cho ${dateRangeLabel} • ${slotFilter}.`,
-      );
+      showToast(`Đã xuất báo cáo doanh thu cho ${dateRangeLabel}.`);
     } catch (error) {
       showToast(
         error instanceof Error
@@ -150,7 +180,7 @@ function RevenuePage() {
   return (
     <div className="revenue-page">
       <PageHeader
-        title="Tổng quan doanh thu"
+        title="Doanh thu"
         description="Theo dõi doanh thu gói quảng bá theo vị trí hiển thị, gói bán và giai đoạn kinh doanh."
         actionLabel={isExporting ? "Đang xuất..." : "Xuất báo cáo doanh thu"}
         onActionClick={() => void handleExportRevenueReport()}
@@ -204,19 +234,16 @@ function RevenuePage() {
         </SectionCard>
       ) : pageError ? (
         <SectionCard title="Chỉ số doanh thu">
-          <EmptyState
-            title="Không thể tải doanh thu"
-            description={pageError}
-          />
+          <EmptyState title="Không thể tải doanh thu" description={pageError} />
         </SectionCard>
       ) : (
         <div className="revenue-cards">
-          {summaryCards.map((card) => (
+          {revenueData.summaryCards.map((card) => (
             <SectionCard key={card.title}>
               <StatCard
-                title={card.title}
-                value={card.value}
-                subtitle={`${card.note} • ${dateRangeLabel}`}
+                title={translateSummaryTitle(card.title)}
+                value={translateSlot(card.value)}
+                subtitle={`${translateSummaryNote(card.note)} • ${dateRangeLabel}`}
               />
             </SectionCard>
           ))}
@@ -253,7 +280,6 @@ function RevenuePage() {
                     <th>Vị trí hiển thị</th>
                     <th>Đơn hàng</th>
                     <th>Doanh thu</th>
-                    <th>Tăng trưởng</th>
                   </tr>
                 </thead>
 
@@ -263,18 +289,10 @@ function RevenuePage() {
                       <td>#{row.id}</td>
                       <td>{row.packageName}</td>
                       <td>
-                        <StatusBadge label={row.slot} variant="slot" />
+                        <StatusBadge label={translateSlot(row.slot)} variant="slot" />
                       </td>
                       <td>{row.orders}</td>
                       <td>{row.revenue}</td>
-                      <td>
-                        <StatusBadge
-                          label={row.growth}
-                          variant={
-                            row.growth.startsWith("-") ? "negative" : "positive"
-                          }
-                        />
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -296,9 +314,7 @@ function RevenuePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((prev) => Math.min(totalPages, prev + 1))
-                  }
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={page === totalPages}
                 >
                   Tiếp

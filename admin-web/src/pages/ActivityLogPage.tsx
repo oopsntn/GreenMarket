@@ -20,6 +20,7 @@ const getSeverityVariant = (severity: ActivityLogItem["severity"]) => {
 
 const getResultVariant = (result: string) => {
   const normalized = result.toLowerCase();
+
   if (
     normalized.includes("từ chối") ||
     normalized.includes("bỏ qua") ||
@@ -34,7 +35,8 @@ const getResultVariant = (result: string) => {
     normalized.includes("hoàn tất") ||
     normalized.includes("đã xử lý") ||
     normalized.includes("đã duyệt") ||
-    normalized.includes("đã mở khóa")
+    normalized.includes("đã mở khóa") ||
+    normalized.includes("thành công")
   ) {
     return "success";
   }
@@ -84,10 +86,7 @@ function ActivityLogPage() {
   );
 
   const actionTypeOptions = useMemo(
-    () => [
-      "All",
-      ...Array.from(new Set(activityLogs.map((item) => item.actionType))),
-    ],
+    () => ["All", ...Array.from(new Set(activityLogs.map((item) => item.actionType)))],
     [activityLogs],
   );
 
@@ -102,9 +101,7 @@ function ActivityLogPage() {
     const toTime = dateTo ? new Date(`${dateTo}T23:59:59`).getTime() : null;
 
     return activityLogs.filter((item) => {
-      const occurredAtTime = item.occurredAt
-        ? new Date(item.occurredAt).getTime()
-        : null;
+      const occurredAtTime = item.occurredAt ? new Date(item.occurredAt).getTime() : null;
 
       const matchesKeyword =
         !keyword ||
@@ -118,17 +115,12 @@ function ActivityLogPage() {
 
       const matchesModule =
         selectedModuleFilter === "All" || item.moduleLabel === selectedModuleFilter;
-
       const matchesActionType =
-        selectedActionTypeFilter === "All" ||
-        item.actionType === selectedActionTypeFilter;
-
+        selectedActionTypeFilter === "All" || item.actionType === selectedActionTypeFilter;
       const matchesPerformer =
         selectedPerformerFilter === "All" || item.actorName === selectedPerformerFilter;
-
       const matchesDateFrom =
         fromTime === null || occurredAtTime === null || occurredAtTime >= fromTime;
-
       const matchesDateTo =
         toTime === null || occurredAtTime === null || occurredAtTime <= toTime;
 
@@ -152,7 +144,6 @@ function ActivityLogPage() {
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE));
-
   const paginatedLogs = useMemo(() => {
     const startIndex = (page - 1) * PAGE_SIZE;
     return filteredLogs.slice(startIndex, startIndex + PAGE_SIZE);
@@ -179,9 +170,7 @@ function ActivityLogPage() {
   const todayCount = activityLogs.filter((item) =>
     (item.occurredAt || "").startsWith(todayPrefix),
   ).length;
-  const highSeverityCount = activityLogs.filter(
-    (item) => item.severity === "cao",
-  ).length;
+  const highSeverityCount = activityLogs.filter((item) => item.severity === "cao").length;
   const settingsAndTemplateCount = activityLogs.filter((item) =>
     ["Thiết lập hệ thống", "Mẫu nội dung"].includes(item.moduleLabel),
   ).length;
@@ -199,7 +188,7 @@ function ActivityLogPage() {
         <StatCard
           title="Tổng số bản ghi"
           value={String(activityLogs.length)}
-          subtitle="Tất cả bản ghi backend đã trả về"
+          subtitle="Toàn bộ bản ghi backend đã trả về"
         />
         <StatCard
           title="Hoạt động hôm nay"
@@ -225,9 +214,7 @@ function ActivityLogPage() {
         onFilterClick={() => setShowFilters((prev) => !prev)}
         filterLabel="Lọc nhật ký"
         filterSummaryItems={[
-          selectedModuleFilter === "All"
-            ? "Tất cả nhóm chức năng"
-            : selectedModuleFilter,
+          selectedModuleFilter === "All" ? "Tất cả nhóm chức năng" : selectedModuleFilter,
           selectedActionTypeFilter === "All"
             ? "Tất cả loại hành động"
             : selectedActionTypeFilter,
@@ -283,9 +270,7 @@ function ActivityLogPage() {
               <select
                 id="activity-log-action-type-filter"
                 value={selectedActionTypeFilter}
-                onChange={(event) =>
-                  setSelectedActionTypeFilter(event.target.value)
-                }
+                onChange={(event) => setSelectedActionTypeFilter(event.target.value)}
               >
                 {actionTypeOptions.map((option) => (
                   <option key={option} value={option}>
@@ -300,9 +285,7 @@ function ActivityLogPage() {
               <select
                 id="activity-log-performer-filter"
                 value={selectedPerformerFilter}
-                onChange={(event) =>
-                  setSelectedPerformerFilter(event.target.value)
-                }
+                onChange={(event) => setSelectedPerformerFilter(event.target.value)}
               >
                 {performerOptions.map((option) => (
                   <option key={option} value={option}>
@@ -325,10 +308,7 @@ function ActivityLogPage() {
             description="Đang lấy dữ liệu nhật ký từ API quản trị."
           />
         ) : error ? (
-          <EmptyState
-            title="Không thể tải nhật ký hoạt động"
-            description={error}
-          />
+          <EmptyState title="Không thể tải nhật ký hoạt động" description={error} />
         ) : filteredLogs.length === 0 ? (
           <EmptyState
             title="Không có hoạt động nào"
@@ -372,18 +352,11 @@ function ActivityLogPage() {
                       <td>
                         <div className="activity-log-cell">
                           <strong>{item.targetName}</strong>
-                          <span>
-                            {item.targetCode
-                              ? `${item.targetType} • ${item.targetCode}`
-                              : item.targetType}
-                          </span>
+                          <span>{item.targetCode ? `${item.targetType} • ${item.targetCode}` : item.targetType}</span>
                         </div>
                       </td>
                       <td>
-                        <StatusBadge
-                          label={item.result}
-                          variant={getResultVariant(item.result)}
-                        />
+                        <StatusBadge label={item.result} variant={getResultVariant(item.result)} />
                       </td>
                       <td>
                         <StatusBadge
@@ -421,9 +394,7 @@ function ActivityLogPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((prev) => Math.min(totalPages, prev + 1))
-                  }
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={page === totalPages}
                 >
                   Sau
@@ -486,7 +457,7 @@ function ActivityLogPage() {
               </div>
               <div className="activity-log-detail__field">
                 <label>Mức độ</label>
-                <strong>{selectedLog.severity}</strong>
+                <strong>{`Mức ${selectedLog.severity}`}</strong>
               </div>
               <div className="activity-log-detail__field">
                 <label>Loại đối tượng</label>

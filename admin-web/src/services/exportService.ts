@@ -7,12 +7,28 @@ import type {
   GeneralExportModule,
 } from "../types/export";
 
+const base64ToUint8Array = (value: string) => {
+  const binary = window.atob(value);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
+};
+
 const downloadFile = (
   fileName: string,
   content: string,
   mimeType: string,
+  contentEncoding: "utf-8" | "base64" = "utf-8",
 ) => {
-  const blob = new Blob([content], { type: mimeType });
+  const blob =
+    contentEncoding === "base64"
+      ? new Blob([base64ToUint8Array(content)], { type: mimeType })
+      : new Blob([content], { type: mimeType });
+
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -46,7 +62,13 @@ export const exportService = {
       },
     );
 
-    downloadFile(response.fileName, response.content, response.mimeType);
+    downloadFile(
+      response.fileName,
+      response.content,
+      response.mimeType,
+      response.contentEncoding,
+    );
+
     return response.historyItem;
   },
 
@@ -66,7 +88,13 @@ export const exportService = {
       },
     );
 
-    downloadFile(response.fileName, response.content, response.mimeType);
+    downloadFile(
+      response.fileName,
+      response.content,
+      response.mimeType,
+      response.contentEncoding,
+    );
+
     return response.historyItem;
   },
 };
