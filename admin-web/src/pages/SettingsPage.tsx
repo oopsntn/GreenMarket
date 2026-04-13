@@ -34,6 +34,28 @@ const DEFAULT_SETTINGS: SettingsState = {
 
 const languageOptions: SupportedLanguage[] = ["Tiếng Việt", "Tiếng Anh"];
 
+const normalizeSettings = (payload: Partial<SettingsState> | undefined): SettingsState => ({
+  general: {
+    ...DEFAULT_SETTINGS.general,
+    ...(payload?.general ?? {}),
+  },
+  moderation: {
+    ...DEFAULT_SETTINGS.moderation,
+    ...(payload?.moderation ?? {}),
+    bannedKeywords: Array.isArray(payload?.moderation?.bannedKeywords)
+      ? payload?.moderation?.bannedKeywords
+      : DEFAULT_SETTINGS.moderation.bannedKeywords,
+  },
+  postLifecycle: {
+    ...DEFAULT_SETTINGS.postLifecycle,
+    ...(payload?.postLifecycle ?? {}),
+  },
+  media: {
+    ...DEFAULT_SETTINGS.media,
+    ...(payload?.media ?? {}),
+  },
+});
+
 const normalizeKeywordList = (value: string) => {
   return Array.from(
     new Set(
@@ -129,7 +151,7 @@ function SettingsPage() {
       setIsLoading(true);
       setFormError("");
 
-      const nextSettings = await settingsService.getSettings();
+      const nextSettings = normalizeSettings(await settingsService.getSettings());
       setSettings(nextSettings);
       setSavedSettings(nextSettings);
       setKeywordInput(nextSettings.moderation.bannedKeywords.join("\n"));
@@ -198,7 +220,9 @@ function SettingsPage() {
       setFormError("");
       setIsSaving(true);
 
-      const updated = await settingsService.updateSettings(nextSettings);
+      const updated = normalizeSettings(
+        await settingsService.updateSettings(nextSettings),
+      );
       setSettings(updated);
       setSavedSettings(updated);
       setKeywordInput(updated.moderation.bannedKeywords.join("\n"));
@@ -224,7 +248,9 @@ function SettingsPage() {
 
     try {
       setIsSaving(true);
-      const defaultSettings = await settingsService.resetSettings();
+      const defaultSettings = normalizeSettings(
+        await settingsService.resetSettings(),
+      );
       setSettings(defaultSettings);
       setSavedSettings(defaultSettings);
       setKeywordInput(defaultSettings.moderation.bannedKeywords.join("\n"));
