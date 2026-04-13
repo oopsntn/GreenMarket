@@ -18,7 +18,7 @@ const ShoDetailScreen = () => {
             return
         }
 
-        navigation.navigate('Profile')
+        navigation.navigate('Home')
     }
 
     if (loading && !shop) {
