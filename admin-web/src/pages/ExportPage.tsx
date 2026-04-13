@@ -39,6 +39,11 @@ const FINANCIAL_REPORT_OPTIONS: FinancialReportType[] = [
 
 const HISTORY_STATUS_OPTIONS = ["All Statuses", "Completed", "In Progress"] as const;
 
+const historyTypeLabelMap: Record<ExportHistoryItem["type"], string> = {
+  General: "Vận hành",
+  Financial: "Tài chính",
+};
+
 const generalModuleLabelMap: Record<GeneralExportModule, string> = {
   Users: "Người dùng",
   Categories: "Danh mục",
@@ -414,7 +419,7 @@ function ExportPage() {
                     <tr key={item.id}>
                       <td>#{item.id}</td>
                       <td>{item.reportName}</td>
-                      <td>{item.type}</td>
+                      <td>{historyTypeLabelMap[item.type]}</td>
                       <td>{item.format}</td>
                       <td>{item.generatedBy}</td>
                       <td>{item.date}</td>
