@@ -9,7 +9,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build-time env: API base URL injected from docker-compose build args
-ARG VITE_API_BASE_URL=http://localhost:5000
+ARG VITE_API_BASE_URL=http://ntncarameoo.ddns.net:5000/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 RUN pnpm build

@@ -132,7 +132,7 @@ export const postModerationService = {
         defaultErrorMessage: "Không thể cập nhật trạng thái bài đăng.",
         body: JSON.stringify({
           status: mapStatusToApi(status),
-          adminName: adminProfile?.fullName,
+          adminName: adminProfile?.name,
           ...(reason?.trim() ? { reason: reason.trim() } : {}),
         }),
       },
@@ -152,7 +152,7 @@ export const postModerationService = {
       defaultErrorMessage: "Không thể ẩn bài đăng.",
       body: JSON.stringify({
         adminId: adminProfile?.id,
-        adminName: adminProfile?.fullName,
+        adminName: adminProfile?.name,
         ...(reason?.trim() ? { reason: reason.trim() } : {}),
       }),
     });

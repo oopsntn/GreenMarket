@@ -1,6 +1,6 @@
 import { clearAdminSession, getAdminToken } from "../utils/adminSession";
 
-const DEFAULT_API_BASE_URL = "http://localhost:5000";
+const DEFAULT_API_BASE_URL = "http://ntncarameoo.ddns.net:5000/api";
 
 export class ApiError extends Error {
   status: number;
@@ -36,7 +36,17 @@ const buildApiUrl = (path: string) => {
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${getApiBaseUrl()}${normalizedPath}`;
+  const baseUrl = getApiBaseUrl();
+
+  if (baseUrl.endsWith("/api") && normalizedPath === "/api") {
+    return baseUrl;
+  }
+
+  if (baseUrl.endsWith("/api") && normalizedPath.startsWith("/api/")) {
+    return `${baseUrl}${normalizedPath.slice(4)}`;
+  }
+
+  return `${baseUrl}${normalizedPath}`;
 };
 
 const parseErrorMessage = async (

@@ -3,10 +3,12 @@ import { db } from "../../config/db";
 import { desc, eq } from "drizzle-orm";
 import { eventLogs } from "../../models/schema/index.ts";
 import { reports } from "../../models/schema/reports.ts";
+import { reportEvidence } from "../../models/schema/report-evidence.ts";
 import { users } from "../../models/schema/users.ts";
 import { posts } from "../../models/schema/posts.ts";
 import { shops } from "../../models/schema/shops.ts";
 import { parseId } from "../../utils/parseId";
+import { AuthRequest } from "../../dtos/auth.ts";
 
 const reportSelection = {
     reportId: reports.reportId,
@@ -26,6 +28,43 @@ const reportSelection = {
     shopName: shops.shopName,
 };
 
+const attachEvidenceToReports = async <
+    T extends {
+        reportId: number;
+    },
+>(
+    items: T[],
+) => {
+    if (items.length === 0) {
+        return items.map((item) => ({ ...item, evidenceUrls: [] as string[] }));
+    }
+
+    const reportIds = new Set(items.map((item) => item.reportId));
+    const evidenceRows = await db
+        .select({
+            reportId: reportEvidence.reportEvidenceReportId,
+            url: reportEvidence.reportEvidenceUrl,
+        })
+        .from(reportEvidence);
+
+    const evidenceMap = new Map<number, string[]>();
+
+    for (const row of evidenceRows) {
+        if (!reportIds.has(row.reportId) || !row.url?.trim()) {
+            continue;
+        }
+
+        const current = evidenceMap.get(row.reportId) ?? [];
+        current.push(row.url.trim());
+        evidenceMap.set(row.reportId, current);
+    }
+
+    return items.map((item) => ({
+        ...item,
+        evidenceUrls: evidenceMap.get(item.reportId) ?? [],
+    }));
+};
+
 export const getReports = async (req: Request, res: Response): Promise<void> => {
     try {
         const allReports = await db
@@ -35,7 +74,7 @@ export const getReports = async (req: Request, res: Response): Promise<void> => 
             .leftJoin(posts, eq(reports.postId, posts.postId))
             .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
             .orderBy(desc(reports.reportCreatedAt), desc(reports.reportId));
-        res.json(allReports);
+        res.json(await attachEvidenceToReports(allReports));
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
@@ -63,7 +102,8 @@ export const getReportById = async (req: Request<{ id: string }>, res: Response)
             return;
         }
 
-        res.json(report);
+        const [reportWithEvidence] = await attachEvidenceToReports([report]);
+        res.json(reportWithEvidence);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
@@ -71,7 +111,7 @@ export const getReportById = async (req: Request<{ id: string }>, res: Response)
 };
 
 export const resolveReport = async (
-    req: Request<{ id: string }, {}, { status: string, adminNote?: string, adminName?: string }>,
+    req: AuthRequest & Request<{ id: string }, {}, { status: string, adminNote?: string, adminName?: string }>,
     res: Response,
 ): Promise<void> => {
     try {
@@ -81,7 +121,11 @@ export const resolveReport = async (
             return;
         }
 
-        const { status, adminNote, adminName } = req.body;
+        const { status, adminNote } = req.body;
+        const performedBy =
+            req.user?.name?.trim() ||
+            req.user?.email?.trim() ||
+            "Quản trị viên hệ thống";
 
         const [updatedReport] = await db.update(reports)
             .set({ 
@@ -128,12 +172,19 @@ export const resolveReport = async (
                 detail: adminNote?.trim()
                     ? `Báo cáo #${updatedReport.reportId} đã được cập nhật sang trạng thái ${statusLabel}. Ghi chú: ${adminNote.trim()}`
                     : `Báo cáo #${updatedReport.reportId} đã được cập nhật sang trạng thái ${statusLabel}.`,
-                performedBy: adminName?.trim() || "Quản trị viên hệ thống",
+                performedBy,
+                actorRole: "Quản trị viên",
                 status: status.toLowerCase(),
             },
         });
 
-        res.json(enrichedReport ?? updatedReport);
+        if (!enrichedReport) {
+            res.json(updatedReport);
+            return;
+        }
+
+        const [reportWithEvidence] = await attachEvidenceToReports([enrichedReport]);
+        res.json(reportWithEvidence);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Lỗi máy chủ nội bộ" });

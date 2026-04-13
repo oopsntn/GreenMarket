@@ -7,6 +7,7 @@ import { postAttributeValues } from "../../models/schema/post-attribute-values";
 import { eventLogs, moderationActions } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId";
 import { slugify } from "../../utils/slugify";
+import { AuthRequest } from "../../dtos/auth.ts";
 
 const getPostActionLabel = (status: string) => {
     switch (status.toLowerCase()) {
@@ -121,7 +122,7 @@ export const getPostById = async (req: Request<{ id: string }>, res: Response): 
 };
 
 export const updatePostStatus = async (
-    req: Request<{ id: string }, {}, { status: string, reason?: string, adminName?: string }>,
+    req: AuthRequest & Request<{ id: string }, {}, { status: string, reason?: string, adminName?: string }>,
     res: Response,
 ): Promise<void> => {
     try {
@@ -131,7 +132,11 @@ export const updatePostStatus = async (
             return;
         }
 
-        const { status, reason, adminName } = req.body;
+        const { status, reason } = req.body;
+        const performedBy =
+            req.user?.name?.trim() ||
+            req.user?.email?.trim() ||
+            "Quản trị viên hệ thống";
 
         const [updatedPost] = await db.update(posts)
             .set({ 
@@ -160,7 +165,8 @@ export const updatePostStatus = async (
                 detail: reason?.trim()
                     ? `Bài đăng "${updatedPost.postTitle}" được cập nhật sang trạng thái ${status.toLowerCase()}. Ghi chú: ${reason.trim()}`
                     : `Bài đăng "${updatedPost.postTitle}" được cập nhật sang trạng thái ${status.toLowerCase()}.`,
-                performedBy: adminName?.trim() || "Quản trị viên hệ thống",
+                performedBy,
+                actorRole: "Quản trị viên",
                 status: status.toLowerCase(),
             },
         });
@@ -175,7 +181,12 @@ export const updatePostStatus = async (
 export const deletePost = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
     try {
         const idNumber = parseId(req.params.id);
-        const { adminId, reason, adminName } = req.body;
+        const authReq = req as AuthRequest;
+        const { adminId, reason } = req.body;
+        const performedBy =
+            authReq.user?.name?.trim() ||
+            authReq.user?.email?.trim() ||
+            "Quản trị viên hệ thống";
 
         if (idNumber === null) {
             res.status(400).json({ error: "Mã bài đăng không hợp lệ" });
@@ -219,7 +230,8 @@ export const deletePost = async (req: Request<{ id: string }>, res: Response): P
                 detail: reason?.trim()
                     ? `Bài đăng "${deletedPost.postTitle}" đã bị ẩn. Ghi chú: ${reason.trim()}`
                     : `Bài đăng "${deletedPost.postTitle}" đã bị ẩn khỏi sàn.`,
-                performedBy: adminName?.trim() || "Quản trị viên hệ thống",
+                performedBy,
+                actorRole: "Quản trị viên",
                 status: "hidden",
             },
         });

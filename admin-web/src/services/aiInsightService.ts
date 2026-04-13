@@ -91,6 +91,11 @@ export const aiInsightService = {
     trendRows: AITrendScoreRow[],
     historyItems: AIInsightHistoryItem[],
   ): AIInsightSummaryCard[] {
+    const toneLabelMap: Record<AIInsightTone, string> = {
+      Conservative: "Thận trọng",
+      Balanced: "Cân bằng",
+      Aggressive: "Tăng trưởng mạnh",
+    };
     const reviewCount = historyItems.filter(
       (item) => item.status === "Needs Review",
     ).length;
@@ -100,24 +105,24 @@ export const aiInsightService = {
 
     return [
       {
-        title: "Phiên bản prompt",
-        value: settings.promptVersion,
-        subtitle: "Hồ sơ gợi ý AI hiện tại",
+        title: "Bản phân tích đã tạo",
+        value: String(historyItems.length),
+        subtitle: "Tổng số bản nhận định AI đang được lưu",
       },
       {
-        title: "Hàng đợi duyệt",
+        title: "Cần admin xem lại",
         value: String(reviewCount),
-        subtitle: "Số bản insight đang chờ admin duyệt",
+        subtitle: "Các bản AI đang ở trạng thái cần kiểm tra",
       },
       {
-        title: "Danh sách điểm cao",
+        title: "Tín hiệu nổi bật",
         value: String(watchlistCount),
         subtitle: `Các dòng xu hướng có điểm từ ${settings.confidenceThreshold} trở lên`,
       },
       {
-        title: "Tóm tắt tự động hằng ngày",
-        value: settings.autoDailySummary ? "Đang bật" : "Đã tắt",
-        subtitle: "Trạng thái tạo bản tóm tắt AI theo lịch",
+        title: "Giọng điệu phân tích",
+        value: toneLabelMap[settings.recommendationTone],
+        subtitle: "Mức độ quyết liệt của các khuyến nghị AI",
       },
     ];
   },

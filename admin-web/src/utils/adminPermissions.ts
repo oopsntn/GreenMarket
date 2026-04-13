@@ -3,9 +3,6 @@ import type { AdminProfile } from "./adminSession";
 export const ADMIN_PORTAL_ROLE_CODES = [
   "ROLE_SUPER_ADMIN",
   "ROLE_ADMIN",
-  "ROLE_MODERATOR",
-  "ROLE_SUPPORT",
-  "ROLE_FINANCE",
 ];
 
 export type AdminModuleKey =
@@ -40,12 +37,12 @@ export type AdminMenuItem = {
 
 const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
   dashboard: ADMIN_PORTAL_ROLE_CODES,
-  users: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"],
-  activityLog: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"],
-  postsModeration: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"],
-  reportsModeration: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"],
+  users: ADMIN_PORTAL_ROLE_CODES,
+  activityLog: ADMIN_PORTAL_ROLE_CODES,
+  postsModeration: ADMIN_PORTAL_ROLE_CODES,
+  reportsModeration: ADMIN_PORTAL_ROLE_CODES,
   rolesManagement: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  shops: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"],
+  shops: ADMIN_PORTAL_ROLE_CODES,
   categories: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
   attributes: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
   categoryMapping: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
@@ -58,9 +55,9 @@ const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
   promotions: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
   analytics: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
   aiInsights: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  revenue: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_FINANCE"],
-  customerSpending: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_FINANCE"],
-  export: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_FINANCE"],
+  revenue: ADMIN_PORTAL_ROLE_CODES,
+  customerSpending: ADMIN_PORTAL_ROLE_CODES,
+  export: ADMIN_PORTAL_ROLE_CODES,
 };
 
 export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [

@@ -4,11 +4,11 @@ import { requireRoles } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
 
-router.get("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), getShops);
-router.post("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), createShop);
-router.get("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), getShopById);
-router.patch("/:id/status", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), updateShopStatus);
-router.patch("/:id/verify", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), verifyShop);
-router.delete("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), deleteShop);
+router.get("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), getShops);
+router.post("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), createShop);
+router.get("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), getShopById);
+router.patch("/:id/status", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), updateShopStatus);
+router.patch("/:id/verify", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), verifyShop);
+router.delete("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), deleteShop);
 
 export default router;

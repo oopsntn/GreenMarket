@@ -14,6 +14,7 @@ export type ApiReportModerationResponse = {
   reportNote: string | null;
   reportStatus: string;
   adminNote: string | null;
+  evidenceUrls?: string[] | null;
   reportCreatedAt: string | null;
   reportUpdatedAt: string | null;
 };
@@ -28,6 +29,7 @@ export type ReportModerationItem = {
   reason: string;
   reporterNote: string;
   adminNote: string;
+  evidenceUrls: string[];
   status: ReportModerationStatus;
   createdAt: string;
   updatedAt: string;
