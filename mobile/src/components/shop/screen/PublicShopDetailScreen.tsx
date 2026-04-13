@@ -39,7 +39,7 @@ const PublicShopDetailScreen = ({ route }: any) => {
 
 
     return (
-        <MobileLayout title="Shop Details" backButton={() => navigation.goBack()}>
+        <MobileLayout scrollEnabled={false} title="Shop Details" backButton={() => navigation.goBack()}>
             {!shop ? (
                 <View style={styles.empty}>
                     <Text style={styles.emptyTitle}>Shop not found</Text>

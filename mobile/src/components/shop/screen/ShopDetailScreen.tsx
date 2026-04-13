@@ -33,6 +33,7 @@ const ShoDetailScreen = () => {
         <MobileLayout
             title="My Shop"
             backButton={handleBack}
+            scrollEnabled={false}
             rightAction={
                 shop && shop.shopStatus !== 'blocked' ? (
                     <View style={styles.headerActions}>
