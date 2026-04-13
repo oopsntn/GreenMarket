@@ -8,6 +8,7 @@ import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { customerSpendingService } from "../services/customerSpendingService";
+import { exportService } from "../services/exportService";
 import type { CustomerSpendingRow } from "../types/customerSpending";
 import {
   DEFAULT_REPORT_FROM_DATE,
@@ -50,6 +51,7 @@ function CustomerSpendingPage() {
     useState<(typeof CUSTOMER_SEGMENTS)[number]>("All Customers");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const summaryCards = customerSpendingData.summaryCards;
@@ -142,10 +144,28 @@ function CustomerSpendingPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const handleExportCustomerReport = () => {
-    showToast(
-      `Đã bắt đầu xuất báo cáo chi tiêu khách hàng cho ${dateRangeLabel} • ${customerSegmentLabelMap[customerSegment]}.`,
-    );
+  const handleExportCustomerReport = async () => {
+    try {
+      setIsExporting(true);
+      await exportService.createFinancialExportHistoryItem(
+        "Customer Spending Report",
+        fromDate,
+        toDate,
+        "XLSX",
+      );
+      showToast(
+        `Đã xuất báo cáo chi tiêu khách hàng cho ${dateRangeLabel} • ${customerSegmentLabelMap[customerSegment]}.`,
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể xuất báo cáo chi tiêu khách hàng.",
+        "error",
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -153,8 +173,8 @@ function CustomerSpendingPage() {
       <PageHeader
         title="Chi tiêu khách hàng"
         description="Theo dõi hành vi mua hàng và mức chi tiêu quảng bá của khách hàng."
-        actionLabel="Xuất báo cáo chi tiêu"
-        onActionClick={handleExportCustomerReport}
+        actionLabel={isExporting ? "Đang xuất..." : "Xuất báo cáo chi tiêu"}
+        onActionClick={() => void handleExportCustomerReport()}
       />
 
       <SectionCard

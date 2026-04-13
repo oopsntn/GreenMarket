@@ -365,14 +365,14 @@ function AnalyticsPage() {
       />
 
       {isLoading ? (
-        <SectionCard title="Analytics KPIs">
+        <SectionCard title="Chỉ số phân tích">
           <EmptyState
             title="Đang tải dữ liệu phân tích"
             description="Đang lấy các chỉ số phân tích từ API admin."
           />
         </SectionCard>
       ) : pageError ? (
-        <SectionCard title="Analytics KPIs">
+        <SectionCard title="Chỉ số phân tích">
           <EmptyState
             title="Không thể tải dữ liệu phân tích"
             description={pageError}

@@ -1,4 +1,3 @@
-import { emptyPromotionPackageForm } from "../mock-data/promotionPackages";
 import { apiClient } from "../lib/apiClient";
 import type { PlacementSlotApiResponse } from "../types/placementSlot";
 import type {
@@ -13,6 +12,16 @@ type PromotionPackageSlotOption = {
   id: number;
   code: string;
   label: PromotionPackage["slot"];
+};
+
+const emptyPromotionPackageForm: PromotionPackageFormState = {
+  name: "",
+  slot: "Home Top",
+  durationDays: 7,
+  price: "",
+  maxPosts: 1,
+  displayQuota: 1000,
+  description: "",
 };
 
 const normalizeText = (value: string) => value.trim();

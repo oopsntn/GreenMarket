@@ -7,6 +7,7 @@ import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
+import { exportService } from "../services/exportService";
 import { revenueService } from "../services/revenueService";
 import {
   DEFAULT_REPORT_FROM_DATE,
@@ -30,6 +31,7 @@ function RevenuePage() {
   const [slotFilter, setSlotFilter] = useState(ALL_SLOTS_FILTER);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const summaryCards = revenueData.summaryCards;
@@ -121,10 +123,28 @@ function RevenuePage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const handleExportRevenueReport = () => {
-    showToast(
-      `Đã bắt đầu xuất báo cáo doanh thu cho ${dateRangeLabel} • ${slotFilter}.`,
-    );
+  const handleExportRevenueReport = async () => {
+    try {
+      setIsExporting(true);
+      await exportService.createFinancialExportHistoryItem(
+        "Revenue Summary",
+        fromDate,
+        toDate,
+        "XLSX",
+      );
+      showToast(
+        `Đã xuất báo cáo doanh thu cho ${dateRangeLabel} • ${slotFilter}.`,
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể xuất báo cáo doanh thu.",
+        "error",
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -132,8 +152,8 @@ function RevenuePage() {
       <PageHeader
         title="Tổng quan doanh thu"
         description="Theo dõi doanh thu gói quảng bá theo vị trí hiển thị, gói bán và giai đoạn kinh doanh."
-        actionLabel="Xuất báo cáo doanh thu"
-        onActionClick={handleExportRevenueReport}
+        actionLabel={isExporting ? "Đang xuất..." : "Xuất báo cáo doanh thu"}
+        onActionClick={() => void handleExportRevenueReport()}
       />
 
       <SectionCard
