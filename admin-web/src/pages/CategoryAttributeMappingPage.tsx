@@ -79,15 +79,15 @@ export default function CategoryAttributeMappingPage() {
 
     try {
       const [categoryResponse, attributeResponse] = await Promise.all([
-        categoryService.getCategories({ page: 1, pageSize: 100 }),
-        attributeService.getAttributes({ page: 1, pageSize: 100 }),
+        categoryService.getCategories(),
+        attributeService.getAttributes(),
       ]);
 
-      setCategories(categoryResponse.data);
-      setAttributes(attributeResponse.data);
+      setCategories(categoryResponse);
+      setAttributes(attributeResponse);
 
-      if (categoryResponse.data.length > 0) {
-        setPreviewCategoryId((current) => current ?? categoryResponse.data[0].id);
+      if (categoryResponse.length > 0) {
+        setPreviewCategoryId((current) => current ?? categoryResponse[0].id);
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Khong the tai du lieu nen.");

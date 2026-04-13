@@ -78,12 +78,12 @@ function CategoriesPage() {
 
       const [categoryData, mappingData] = await Promise.all([
         categoryService.getCategories(),
-        categoryMappingService.fetchMappings(),
+        categoryMappingService.getMappings({ page: 1, pageSize: 500 }),
       ]);
 
       const activeUniqueAttributeIdsByCategory = new Map<number, Set<number>>();
 
-      mappingData.forEach((mapping) => {
+      mappingData.data.forEach((mapping) => {
         if (mapping.status !== "Active") return;
 
         const existingSet =

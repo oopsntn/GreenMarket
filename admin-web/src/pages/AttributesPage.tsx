@@ -57,7 +57,7 @@ const typeLabels: Record<AttributeType | "All", string> = {
 
 const buildUsedInLabels = (
   attributes: Attribute[],
-  mappings: Awaited<ReturnType<typeof categoryMappingService.fetchMappings>>,
+  mappings: Awaited<ReturnType<typeof categoryMappingService.getMappings>>["data"],
 ): Attribute[] =>
   attributes.map((attribute) => {
     const usedIn = Array.from(
@@ -132,10 +132,10 @@ function AttributesPage() {
 
       const [attributeData, mappingData] = await Promise.all([
         attributeService.getAttributes(),
-        categoryMappingService.fetchMappings(),
+        categoryMappingService.getMappings({ page: 1, pageSize: 500 }),
       ]);
 
-      setAttributes(buildUsedInLabels(attributeData, mappingData));
+      setAttributes(buildUsedInLabels(attributeData, mappingData.data));
     } catch (error) {
       setPageError(
         error instanceof Error
