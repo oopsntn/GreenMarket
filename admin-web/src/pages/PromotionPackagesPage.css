@@ -205,6 +205,40 @@
   gap: 18px;
 }
 
+.promotion-packages-modal__content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.promotion-packages-modal__content > div:not(.promotion-packages-modal__actions) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #d7e6d9;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background-color: #fbfdfb;
+}
+
+.promotion-packages-modal__content > div:not(.promotion-packages-modal__actions) span {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2f4f3a;
+}
+
+.promotion-packages-modal__content > div:not(.promotion-packages-modal__actions) strong,
+.promotion-packages-modal__content > div:not(.promotion-packages-modal__actions) p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #223127;
+  margin: 0;
+}
+
+.promotion-packages-modal__content > .promotion-packages-modal__field {
+  grid-column: 1 / -1;
+}
+
 .promotion-packages-modal__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -257,8 +291,26 @@
   flex-wrap: wrap;
 }
 
+.promotion-packages-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .promotion-packages-modal__close,
 .promotion-packages-modal__submit {
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promotion-packages-form-actions__cancel,
+.promotion-packages-form-actions__submit {
   height: 44px;
   padding: 0 18px;
   border: none;
@@ -273,7 +325,18 @@
   color: #486150;
 }
 
+.promotion-packages-form-actions__cancel {
+  background-color: #f3f7f1;
+  color: #486150;
+}
+
 .promotion-packages-modal__submit {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
+}
+
+.promotion-packages-form-actions__submit {
   background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
   color: #ffffff;
   box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);

@@ -7,6 +7,36 @@ import type {
   BoostedPostSummaryCard,
 } from "../types/boostedPost";
 
+const OPERATOR_LABELS: Record<string, string> = {
+  "Ops Team A": "Nhóm vận hành A",
+  "Ops Team B": "Nhóm vận hành B",
+  "Ops Team C": "Nhóm vận hành C",
+};
+
+const NOTE_LABELS: Record<string, string> = {
+  "Campaign is actively delivering boosted impressions under operations monitoring.":
+    "Chiến dịch đang phân phối lượt hiển thị nổi bật và được đội vận hành theo dõi.",
+  "Campaign is paused while the team reviews content and quota strategy.":
+    "Chiến dịch đang tạm dừng để đội vận hành rà soát nội dung và chiến lược quota.",
+  "Campaign is scheduled and waiting for the start time window.":
+    "Chiến dịch đã lên lịch và đang chờ tới khung giờ bắt đầu.",
+  "Campaign finished the purchased quota and closed successfully.":
+    "Chiến dịch đã dùng hết quota đã mua và kết thúc thành công.",
+  "Campaign expired before additional payment or reopen confirmation.":
+    "Chiến dịch đã hết hạn trước khi có xác nhận thanh toán hoặc mở lại.",
+  "Campaign was manually closed by the operations team.":
+    "Chiến dịch đã được đội vận hành đóng thủ công.",
+};
+
+const translateOperator = (value: string) => OPERATOR_LABELS[value] || value;
+const translateNote = (value: string) => NOTE_LABELS[value] || value;
+
+const mapBoostedPost = (item: BoostedPostApiResponse): BoostedPost => ({
+  ...item,
+  assignedOperator: translateOperator(item.assignedOperator),
+  notes: translateNote(item.notes),
+});
+
 const getAverageCtr = (posts: BoostedPost[]) => {
   const livePosts = posts.filter((item) => item.impressions > 0);
 
@@ -29,9 +59,15 @@ const countByDeliveryHealth = (
 
 export const boostedPostService = {
   async getBoostedPosts(): Promise<BoostedPost[]> {
-    return apiClient.request<BoostedPostApiResponse[]>("/api/admin/boosted-posts", {
-      defaultErrorMessage: "KhÃ´ng thá»ƒ táº£i danh sÃ¡ch chiáº¿n dá»‹ch Ä‘áº©y ná»•i báº­t.",
-    });
+    const data = await apiClient.request<BoostedPostApiResponse[]>(
+      "/api/admin/boosted-posts",
+      {
+        defaultErrorMessage:
+          "Không thể tải danh sách chiến dịch đẩy nổi bật.",
+      },
+    );
+
+    return data.map(mapBoostedPost);
   },
 
   getSummaryCards(posts: BoostedPost[]): BoostedPostSummaryCard[] {
@@ -43,37 +79,37 @@ export const boostedPostService = {
       (item) => item.reviewStatus !== "Approved",
     ).length;
     const atRiskCount = countByDeliveryHealth(posts, "At Risk");
-    const deliveredQuota = posts.reduce(
-      (sum, item) => sum + item.usedQuota,
-      0,
-    );
+    const deliveredQuota = posts.reduce((sum, item) => sum + item.usedQuota, 0);
     const averageCtr = getAverageCtr(posts);
 
     return [
       {
-        title: "Äang phÃ¢n phá»‘i",
+        title: "Đang phân phối",
         value: String(activeCount),
-        subtitle: "Chiáº¿n dá»‹ch Ä‘ang hiá»ƒn thá»‹ trÃªn cÃ¡c vá»‹ trÃ­ Ä‘áº©y ná»•i báº­t",
+        subtitle:
+          "Chiến dịch đang hiển thị trên các vị trí đẩy nổi bật",
       },
       {
-        title: "ÄÃ£ lÃªn lá»‹ch",
+        title: "Đã lên lịch",
         value: String(scheduledCount),
-        subtitle: "Chiáº¿n dá»‹ch sáºµn sÃ ng cho khung phÃ¢n phá»‘i tiáº¿p theo",
+        subtitle: "Chiến dịch sẵn sàng cho khung phân phối tiếp theo",
       },
       {
-        title: "Cáº§n rÃ  soÃ¡t",
+        title: "Cần rà soát",
         value: String(needsReviewCount),
-        subtitle: "Chiáº¿n dá»‹ch Ä‘ang chá» kiá»ƒm tra ná»™i dung hoáº·c váº­n hÃ nh",
+        subtitle: "Chiến dịch đang chờ kiểm tra nội dung hoặc vận hành",
       },
       {
-        title: "CÃ³ rá»§i ro",
+        title: "Có rủi ro",
         value: String(atRiskCount),
-        subtitle: "Chiáº¿n dá»‹ch cÃ³ cháº¥t lÆ°á»£ng phÃ¢n phá»‘i dÆ°á»›i ngÆ°á»¡ng an toÃ n",
+        subtitle:
+          "Chiến dịch có chất lượng phân phối dưới ngưỡng an toàn",
       },
       {
-        title: "CTR TB / Quota Ä‘Ã£ dÃ¹ng",
+        title: "CTR TB / Quota đã dùng",
         value: `${averageCtr} / ${deliveredQuota.toLocaleString("en-US")}`,
-        subtitle: "áº¢nh chá»¥p nhanh hiá»‡u quáº£ váº­n hÃ nh trÃªn toÃ n bá»™ chiáº¿n dá»‹ch",
+        subtitle:
+          "Ảnh chụp nhanh hiệu quả vận hành trên toàn bộ chiến dịch",
       },
     ];
   },
@@ -88,11 +124,14 @@ export const boostedPostService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "KhÃ´ng thá»ƒ cáº­p nháº­t tráº¡ng thÃ¡i chiáº¿n dá»‹ch Ä‘áº©y ná»•i báº­t.",
+        defaultErrorMessage:
+          "Không thể cập nhật trạng thái chiến dịch đẩy nổi bật.",
         body: JSON.stringify({ status }),
       },
     );
 
-    return posts.map((item) => (item.id === postId ? updatedPost : item));
+    const normalizedPost = mapBoostedPost(updatedPost);
+
+    return posts.map((item) => (item.id === postId ? normalizedPost : item));
   },
 };

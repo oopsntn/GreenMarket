@@ -36,6 +36,7 @@ import userProfileRoutes from "./routes/user/profile.route.ts";
 import userCollaboratorRoutes from "./routes/user/collaborator.route.ts";
 import userManagerRoutes from "./routes/user/manager.route.ts";
 import userOperationsRoutes from "./routes/user/operations.route.ts";
+import userHostRoutes from "./routes/user/host.route.ts";
 import uploadRoutes from "./routes/upload.route.ts";
 import userPromotionRoutes from "./routes/user/promotion.route.ts";
 import userPaymentRoutes from "./routes/user/payment.route.ts";
@@ -51,6 +52,8 @@ const protocol = process.env.PROTOCOL || (serverIp === "localhost" ? "http" : "h
 const whitelist = [
   "http://localhost:5173",
   "http://localhost:5174",
+  `${protocol}://${serverIp}:5173`,
+  `${protocol}://${serverIp}:5174`,
   `${protocol}://${serverIp}`,
   `${protocol}://${serverIp}:8080`,
 ];
@@ -147,6 +150,7 @@ app.use("/api/payment", userPaymentRoutes);
 app.use("/api/collaborator", userCollaboratorRoutes);
 app.use("/api/manager", userManagerRoutes);
 app.use("/api/operations", userOperationsRoutes);
+app.use("/api/host", userHostRoutes);
 
 // Static files for uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));

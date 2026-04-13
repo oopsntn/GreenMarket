@@ -1,4 +1,4 @@
-# GreenMarket API Documentation
+﻿# GreenMarket API Documentation
 
 Last updated: 2026-04-11
 
@@ -103,6 +103,29 @@ Auth rules for all endpoints below:
 - Current task source for operations module is built from report records (`reports` table), with deterministic assignment across active `OPERATION_STAFF` users.
 - Timeline/replies/escalations are persisted in `event_logs` using `operations_*` event types.
 - Task status transition enforced in MVP: `open -> in_progress -> closed`.
+
+### Host (business role: `HOST`)
+
+Auth rules for all endpoints below:
+- Requires valid **user token**
+- Requires active business role `HOST` (`verifyToken + requireBusinessRole("HOST")`)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/host/dashboard` | User token + `HOST` | Get host dashboard summary (earnings, clicks, views) | none |
+| GET | `/api/host/earnings` | User token + `HOST` | Get detailed earnings history | optional query: `page`, `limit` |
+| GET | `/api/host/payout-requests` | User token + `HOST` | Get payout request history | optional query: `page`, `limit` |
+| POST | `/api/host/payout-requests` | User token + `HOST` | Create a new payout request | required: `amount` (min 500,000), `method`; optional `note` |
+| GET | `/api/host/contents` | User token + `HOST` | List promotional contents created by host | none |
+| POST | `/api/host/contents` | User token + `HOST` | Create promotional content and get tracking URL | required: `title`, `targetType` ('post'/'shop'/'external'), optional `targetId`, `mediaUrls` |
+| PATCH | `/api/host/contents/:id` | User token + `HOST` | Update promotional content | path `id`, all fields optional |
+| DELETE | `/api/host/contents/:id` | User token + `HOST` | Soft delete promotional content | path `id` |
+| GET | `/api/host/tracking/:id` | No | Public tracking link for content redirection | path `id` (content ID) |
+
+**Host notes:**
+- `POST /api/host/contents` automatically returns a `hostContentTrackingUrl` for use on external platforms.
+- `GET /api/host/tracking/:id` increments click counts and logs earnings before redirecting to the target.
+- Payout requests enforce a minimum of `500,000 VND`.
 
 ### Upload
 
@@ -387,7 +410,30 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | GET | `/api/admin/roles/admins/:adminId/roles` | Get roles assigned to admin | path `adminId` |
 | PUT | `/api/admin/roles/admins/:adminId/roles` | Replace admin role assignments | `roleIds` (number[]) |
 
-## Current Implementation Notes
+### Host (business role: `HOST`)
+ 
+ Auth rules for all endpoints below:
+ - Requires valid **user token**
+ - Requires active business role `HOST` (`verifyToken + requireBusinessRole("HOST")`)
+ 
+ | Method | Endpoint | Auth | Description | Main request fields |
+ |---|---|---|---|---|
+ | GET | `/api/host/dashboard` | User token + `HOST` | Get host performance summary and key metrics | none |
+ | GET | `/api/host/earnings` | User token + `HOST` | Get earnings history from tracking activities | optional query: `page`, `limit` |
+ | GET | `/api/host/payout-requests` | User token + `HOST` | Get host payout request history | optional query: `page`, `limit` |
+ | POST | `/api/host/payout-requests` | User token + `HOST` | Request earnings withdrawal | required: `amount` (min 500k), `method`; optional `note` |
+ | GET | `/api/host/contents` | User token + `HOST` | List own promotional contents | none |
+ | POST | `/api/host/contents` | User token + `HOST` | Create new trackable promotional content | required: `title`, `targetType` (`shop`/`post`/`external`), `targetId`; optional `description`, `mediaUrls` |
+ | GET | `/api/host/contents/:id` | User token + `HOST` | Get content detail | path `id` |
+ | PATCH | `/api/host/contents/:id` | User token + `HOST` | Update promotional content | path `id`, same fields as POST |
+ | DELETE | `/api/host/contents/:id` | User token + `HOST` | Delete promotional content | path `id` |
+ | GET | `/api/host/tracking/:id` | No | Public tracking redirect endpoint | path `id` |
+ 
+ **Host notes:**
+ - `POST /api/host/payout-requests` enforces a minimum withdrawal of `500,000` VND.
+ - Content creation automatically generates a unique tracking URL that redirects to the target while logging clicks and awarding earnings.
+ 
+ ## Current Implementation Notes
 
 - Public user endpoints include browse/detail APIs such as `/api/posts/browse`, `/api/posts/detail/:slug`, `/api/shops/browse`, `/api/shops/:id`.
 - Protected user endpoints require JWT, such as `/api/profile`, `/api/posts/my-posts`, `/api/shops/my-shop`, `/api/shops/dashboard`, `/api/payment/buy-package`.

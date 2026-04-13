@@ -717,6 +717,47 @@ CREATE TABLE system_notifications (
     created_at TIMESTAMP DEFAULT now()
 );
 
+-- Host Contents
+CREATE TABLE host_contents (
+    host_content_id SERIAL PRIMARY KEY,
+    host_content_author_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    host_content_title VARCHAR(255) NOT NULL,
+    host_content_description TEXT,
+    host_content_target_type VARCHAR(50) NOT NULL, -- post | shop | external
+    host_content_target_id INTEGER, -- linked post_id or shop_id
+    host_content_tracking_url TEXT,
+    host_content_media_urls JSONB DEFAULT '[]'::jsonb,
+    host_content_status VARCHAR(20) DEFAULT 'draft', -- draft | published
+    host_content_view_count INTEGER DEFAULT 0,
+    host_content_click_count INTEGER DEFAULT 0,
+    host_content_created_at TIMESTAMP DEFAULT now(),
+    host_content_updated_at TIMESTAMP DEFAULT now(),
+    host_content_deleted_at TIMESTAMP
+);
+
+-- Host Earnings
+CREATE TABLE host_earnings (
+    host_earning_id SERIAL PRIMARY KEY,
+    host_earning_host_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    host_earning_amount NUMERIC(15,2) NOT NULL,
+    host_earning_status VARCHAR(20) DEFAULT 'pending', -- pending | available
+    host_earning_source_type VARCHAR(50) NOT NULL, -- view | click | bonus
+    host_earning_source_id INTEGER, -- linked host_content_id
+    host_earning_created_at TIMESTAMP DEFAULT now()
+);
+
+-- Host Payout Requests
+CREATE TABLE host_payout_requests (
+    host_payout_id SERIAL PRIMARY KEY,
+    host_payout_host_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    host_payout_amount NUMERIC(15,2) NOT NULL,
+    host_payout_method VARCHAR(50) NOT NULL,
+    host_payout_status VARCHAR(20) DEFAULT 'pending', -- pending | completed | rejected
+    host_payout_note TEXT,
+    host_payout_processed_at TIMESTAMP,
+    host_payout_created_at TIMESTAMP DEFAULT now()
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -995,7 +1036,9 @@ INSERT INTO users (
 (7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1),
 (8, '0987654321', 'Người Dùng Test 0987654321', 'test.0987654321@gmail.com', 'Hà Nội', 'Test account for 0987654321', 'active', 1),
 (9, '0909000003', 'Seed Collaborator Account', 'seed.collaborator@greenmarket.local', 'Ha Noi', 'Seed account for collaborator-role API testing and mobile login.', 'active', 3),
-(10, '0909000004', 'Seed Manager Account', 'seed.manager@greenmarket.local', 'Ha Noi', 'Seed account for manager-role API testing and moderation workflows.', 'active', 4);
+(10, '0909000004', 'Seed Manager Account', 'seed.manager@greenmarket.local', 'Ha Noi', 'Seed account for manager-role API testing and moderation workflows.', 'active', 4),
+(136, '0998887776', 'Seed Host Account', 'seed.host@greenmarket.local', 'Ha Noi', 'Seed account for host-role API testing and content management.', 'active', 2),
+(137, '0997776665', 'Seed Operation Account', 'seed.operation@greenmarket.local', 'Ha Noi', 'Seed account for operations-staff-role testing and task handling.', 'active', 5);
 
 -- Align demo accounts to business roles used in collaborator APIs
 UPDATE users SET user_business_role_id = 3 WHERE user_id = 4;
@@ -1093,20 +1136,36 @@ INSERT INTO payout_requests (
 ) VALUES
 (1, 4, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
 
+-- Host Contents (Mock)
+INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_target_type, host_content_target_id, host_content_tracking_url, host_content_status, host_content_view_count, host_content_click_count) VALUES
+(1, 1, 'Top 5 loại Tùng La Hán đẹp nhất 2026', 'shop', 3, '/api/host/tracking/1', 'published', 1250, 45),
+(2, 1, 'Review bộ kéo cắt tỉa cây cảnh của Shop A', 'post', 1, '/api/host/tracking/2', 'published', 890, 12),
+(3, 2, 'Kỹ thuật chăm sóc Mai Chiếu Thủy mùa mưa', 'external', NULL, 'https://external-blog.com/care-guide', 'published', 450, 5);
+
+-- Host Earnings (Mock)
+INSERT INTO host_earnings (host_earning_id, host_earning_host_id, host_earning_amount, host_earning_status, host_earning_source_type, host_earning_source_id) VALUES
+(1, 1, 225000, 'available', 'click', 1),
+(2, 1, 60000, 'pending', 'view', 1),
+(3, 1, 500000, 'available', 'bonus', NULL);
+
+-- Host Payout Requests (Mock)
+INSERT INTO host_payout_requests (host_payout_id, host_payout_host_id, host_payout_amount, host_payout_method, host_payout_status, host_payout_note) VALUES
+(1, 1, 600000, 'Momo', 'completed', 'Thanh toán đợt 1 tháng 4.');
+
 -- Shops
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_vip_started_at, shop_vip_expires_at, shop_lat, shop_lng) VALUES
 (1, 'Vườn Bonsai Phố Huyện', '0978195419', 'nguyenthanhnamidol@gmail.com', TRUE, '14 Nghiêm Ích Khiêm, Thị trấn Chờ, Yên Phong, Bắc Ninh',
     'Chuyên bonsai mini và tầm trung. Nhận thiết kế, chăm sóc và phối thế bonsai theo yêu cầu. Ship toàn quốc qua Viettel Post.',
-    'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', now() - interval '30 days', now() + interval '60 days', 21.201262, 105.950174),
+    '/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', now() - interval '30 days', now() + interval '60 days', 21.201262, 105.950174),
 (3, 'Nam Định Art Garden', '0123456789', 'hoainam.le@gmail.com', TRUE, 'Nam Trực, Nam Định',
     'Nghệ nhân cây cảnh cổ truyền Nam Điền. Chuyên sanh, si, tùng la hán cốt cách truyền thống. Hơn 20 năm kinh nghiệm.',
-    'http://localhost:5000/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
+    '/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
 (4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
-    'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
+    '/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
 (6, 'Dụng Cụ Bonsai Pro', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
     'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
-    'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
+    '/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
 
 -- ============================================================
 -- CATEGORIES
@@ -1308,29 +1367,29 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 
 -- Post Images
 INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
-(1,  'http://localhost:5000/uploads/sanh-nam-dien-mini-1.jpg', 0),
-(1,  'http://localhost:5000/uploads/sanh-nam-dien-mini-2.jpg', 1),
-(1,  'http://localhost:5000/uploads/sanh-nam-dien-mini-3.jpg', 2),
-(2,  'http://localhost:5000/uploads/tung-la-han-1.jpg', 0),
-(2,  'http://localhost:5000/uploads/tung-la-han-2.jpg', 1),
-(3,  'http://localhost:5000/uploads/linh-sam-1.jpg', 0),
-(3,  'http://localhost:5000/uploads/linh-sam-2.jpg', 1),
-(4,  'http://localhost:5000/uploads/sanh-que-dai-1.jpg', 0),
-(5,  'http://localhost:5000/uploads/mct-mini-1.jpg', 0),
-(5,  'http://localhost:5000/uploads/mct-mini-2.jpg', 1),
-(6,  'http://localhost:5000/uploads/thong-den-1.jpg', 0),
-(7,  'http://localhost:5000/uploads/si-phong-thuy-1.jpg', 0),
-(8,  'http://localhost:5000/uploads/mai-vang-1.jpg', 0),
-(8,  'http://localhost:5000/uploads/mai-vang-2.jpg', 1),
-(9,  'http://localhost:5000/uploads/tung-bach-tan-1.jpg', 0),
-(10, 'http://localhost:5000/uploads/kim-cap-kaneshin-1.jpg', 0),
-(11, 'http://localhost:5000/uploads/bo-keo-5-mon-1.jpg', 0),
-(11, 'http://localhost:5000/uploads/bo-keo-5-mon-2.jpg', 1),
-(12, 'http://localhost:5000/uploads/dat-akadama-1.jpg', 0),
-(13, 'http://localhost:5000/uploads/chau-tokoname-1.jpg', 0),
-(13, 'http://localhost:5000/uploads/chau-tokoname-2.jpg', 1),
-(14, 'http://localhost:5000/uploads/day-nhom-uon-1.jpg', 0),
-(15, 'http://localhost:5000/uploads/binh-phun-suong-1.jpg', 0);
+(1,  '/uploads/sanh-nam-dien-mini-1.jpg', 0),
+(1,  '/uploads/sanh-nam-dien-mini-2.jpg', 1),
+(1,  '/uploads/sanh-nam-dien-mini-3.jpg', 2),
+(2,  '/uploads/tung-la-han-1.jpg', 0),
+(2,  '/uploads/tung-la-han-2.jpg', 1),
+(3,  '/uploads/linh-sam-1.jpg', 0),
+(3,  '/uploads/linh-sam-2.jpg', 1),
+(4,  '/uploads/sanh-que-dai-1.jpg', 0),
+(5,  '/uploads/mct-mini-1.jpg', 0),
+(5,  '/uploads/mct-mini-2.jpg', 1),
+(6,  '/uploads/thong-den-1.jpg', 0),
+(7,  '/uploads/si-phong-thuy-1.jpg', 0),
+(8,  '/uploads/mai-vang-1.jpg', 0),
+(8,  '/uploads/mai-vang-2.jpg', 1),
+(9,  '/uploads/tung-bach-tan-1.jpg', 0),
+(10, '/uploads/kim-cap-kaneshin-1.jpg', 0),
+(11, '/uploads/bo-keo-5-mon-1.jpg', 0),
+(11, '/uploads/bo-keo-5-mon-2.jpg', 1),
+(12, '/uploads/dat-akadama-1.jpg', 0),
+(13, '/uploads/chau-tokoname-1.jpg', 0),
+(13, '/uploads/chau-tokoname-2.jpg', 1),
+(14, '/uploads/day-nhom-uon-1.jpg', 0),
+(15, '/uploads/binh-phun-suong-1.jpg', 0);
 
 -- Favorite Posts (Bookmarks)
 INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favorite_post_created_at) VALUES
@@ -1361,13 +1420,19 @@ INSERT INTO promotion_packages (
 ) VALUES
 (1, 1, 'Gói tuần', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày.', true),
 (2, 1, 'Gói tháng', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày.', true),
-(3, 2, 'Gói Nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên hiển thị shop trong danh sách nhà vườn và hiển thị huy hiệu VIP.', true);
+(3, 2, 'Gói Nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên hiển thị shop trong danh sách nhà vườn và hiển thị huy hiệu VIP.', true),
+(5, 1, 'Gói đẩy bài cấp tốc (7 ngày)', 7, 1, 15000, 'Ưu tiên hiển thị bài đăng trong 7 ngày.', true),
+(6, 1, 'Gói đẩy bài ưu tiên (30 ngày)', 30, 2, 45000, 'Ưu tiên hiển thị bài đăng trong 30 ngày.', true);
 
 -- Promotion Package Prices (2 goi day bai + 1 goi Nha vuon VIP 3 thang)
 INSERT INTO promotion_package_prices (package_id, price, effective_from, effective_to, note, created_by) VALUES
 (1, 99000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tuần', 1),
 (2, 299000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tháng', 1),
-(3, 499000, now() - interval '90 days', NULL, 'Giá gói Nhà vườn VIP 3 tháng', 1);
+(3, 499000, now() - interval '90 days', NULL, 'Giá gói Nhà vườn VIP 3 tháng', 1),
+(5, 450000, now() - interval '90 days', NULL, 'Giá gói đẩy bài VIP tháng', 1),
+(6, 250000, now() - interval '90 days', NULL, 'Giá gói Search Boost Tuần', 1),
+(5, 50000,  now() - interval '90 days', NULL, 'Giá khuyến mãi gói 5', 1),
+(6, 150000, now() - interval '90 days', NULL, 'Giá khuyến mãi gói 6', 1);
 
 -- ============================================================
 -- POSTING PLANS (OWNER / PERSONAL)
@@ -1485,16 +1550,15 @@ INSERT INTO post_promotions (
 (1, 1, 1, 1, 1, '2026-03-05 08:00:00', '2026-03-11 23:59:00', 'expired',  '2026-03-04 16:00:00'),
 (2, 4, 3, 2, 1, '2026-03-12 08:00:00', '2026-04-10 23:59:00', 'active',   '2026-03-11 14:20:00'),
 (3, 2, 4, 3, 2, '2026-03-08 08:00:00', '2026-03-14 23:59:00', 'paused',   '2026-03-07 17:30:00'),
-(4, 8, 4, 4, 2, '2026-03-18 08:00:00', '2026-04-16 23:59:00', 'active',   '2026-03-17 13:10:00'),
-(5, 3, 2, 5, 3, '2026-03-20 08:00:00', '2026-03-26 23:59:00', 'expired',  '2026-03-19 11:00:00'),
-(6, 6, 1, 6, 3, '2026-03-25 08:00:00', '2026-04-23 23:59:00', 'active',   '2026-03-24 15:45:00'),
+(5, 3, 2, 5, 1, '2026-03-20 08:00:00', '2026-03-26 23:59:00', 'expired',  '2026-03-19 11:00:00'),
+(6, 6, 1, 6, 1, '2026-03-25 08:00:00', '2026-04-23 23:59:00', 'active',   '2026-03-24 15:45:00'),
 (7, 7, 1, 1, 1, '2026-04-05 08:00:00', '2026-04-11 23:59:00', 'active',   '2026-04-04 09:10:00'),
 (8, 11, 6, 3, 2, '2026-04-02 08:00:00', '2026-04-08 23:59:00', 'paused',  '2026-04-01 12:05:00'),
-(9, 12, 6, 5, 3, '2026-04-01 08:00:00', '2026-04-07 23:59:00', 'closed',  '2026-03-31 18:00:00'),
-(10, 9, 3, 6, 3, '2026-04-11 08:00:00', '2026-05-10 23:59:00', 'scheduled','2026-04-09 08:30:00'),
+(9, 12, 6, 5, 1, '2026-04-01 08:00:00', '2026-04-07 23:59:00', 'closed',  '2026-03-31 18:00:00'),
+(10, 9, 3, 6, 1, '2026-04-11 08:00:00', '2026-05-10 23:59:00', 'scheduled','2026-04-09 08:30:00'),
 (11, 10, 1, 2, 1, '2026-04-12 08:00:00', '2026-05-12 23:59:00', 'scheduled','2026-04-10 08:35:00'),
-(12, 13, 6, 4, 2, '2026-03-28 08:00:00', '2026-04-26 23:59:00', 'active', '2026-03-27 15:10:00'),
-(13, 14, 6, 6, 3, '2026-03-29 08:00:00', '2026-04-27 23:59:00', 'active', '2026-03-28 10:45:00');
+(12, 13, 6, 2, 2, '2026-03-28 08:00:00', '2026-04-26 23:59:00', 'active', '2026-03-27 15:10:00'),
+(13, 14, 6, 6, 1, '2026-03-29 08:00:00', '2026-04-27 23:59:00', 'active', '2026-03-28 10:45:00');
 
 -- ============================================================
 -- PAYMENT TRANSACTIONS
@@ -1511,20 +1575,18 @@ INSERT INTO payment_txn (
     payment_txn_status,
     payment_txn_created_at
 ) VALUES
-(1, 1, 1, 1, 2, 180000, 'bank_transfer', 'GM-TXN-20260304-001', 'success', '2026-03-04 15:30:00'),
-(2, 3, 2, 4, 3, 500000, 'bank_transfer', 'GM-TXN-20260311-002', 'success', '2026-03-11 13:40:00'),
-(3, 4, 3, 2, 4, 80000,  'bank_transfer', 'GM-TXN-20260307-003', 'success', '2026-03-07 18:00:00'),
-(4, 4, 4, 8, 6, 250000, 'bank_transfer', 'GM-TXN-20260317-004', 'success', '2026-03-17 12:45:00'),
-(5, 2, 5, 3, 7, 50000,  'bank_transfer', 'GM-TXN-20260319-005', 'success', '2026-03-19 10:20:00'),
-(6, 1, 6, 6, 8, 150000, 'bank_transfer', 'GM-TXN-20260324-006', 'pending', '2026-03-24 14:30:00'),
-(7, 6, 4, 13, 6, 250000, 'bank_transfer', 'GM-TXN-20260327-007', 'success', '2026-03-27 16:10:00'),
-(8, 6, 6, 14, 8, 150000, 'bank_transfer', 'GM-TXN-20260328-008', 'success', '2026-03-28 11:00:00'),
-(9, 1, 1, 7, 2, 180000, 'bank_transfer', 'GM-TXN-20260404-009', 'success', '2026-04-04 09:20:00'),
-(10, 6, 3, 11, 4, 80000, 'bank_transfer', 'GM-TXN-20260401-010', 'pending', '2026-04-01 11:25:00'),
-(11, 6, 5, 12, 7, 50000, 'bank_transfer', 'GM-TXN-20260331-011', 'failed', '2026-03-31 19:15:00'),
-(12, 3, 6, 9, 8, 150000, 'bank_transfer', 'GM-TXN-20260409-012', 'success', '2026-04-09 08:50:00'),
-(13, 1, 2, 10, 3, 500000, 'bank_transfer', 'GM-TXN-20260410-013', 'pending', '2026-04-10 08:55:00'),
-(14, 5, 5, 15, 7, 50000, 'bank_transfer', 'GM-TXN-20260326-014', 'success', '2026-03-26 17:40:00');
+(1, 1, 1, 1, 1, 180000, 'bank_transfer', 'GM-TXN-20260304-001', 'success', '2026-03-04 15:30:00'),
+(2, 3, 2, 4, 2, 500000, 'bank_transfer', 'GM-TXN-20260311-002', 'success', '2026-03-11 13:40:00'),
+(3, 4, 3, 2, 3, 80000,  'bank_transfer', 'GM-TXN-20260307-003', 'success', '2026-03-07 18:00:00'),
+(5, 2, 5, 3, 4, 50000,  'bank_transfer', 'GM-TXN-20260319-005', 'success', '2026-03-19 10:20:00'),
+(6, 1, 6, 6, 5, 150000, 'bank_transfer', 'GM-TXN-20260324-006', 'pending', '2026-03-24 14:30:00'),
+(8, 6, 6, 14, 5, 150000, 'bank_transfer', 'GM-TXN-20260328-008', 'success', '2026-03-28 11:00:00'),
+(9, 1, 1, 7, 1, 180000, 'bank_transfer', 'GM-TXN-20260404-009', 'success', '2026-04-04 09:20:00'),
+(10, 6, 3, 11, 3, 80000, 'bank_transfer', 'GM-TXN-20260401-010', 'pending', '2026-04-01 11:25:00'),
+(11, 6, 5, 12, 4, 50000, 'bank_transfer', 'GM-TXN-20260331-011', 'failed', '2026-03-31 19:15:00'),
+(12, 3, 6, 9, 5, 150000, 'bank_transfer', 'GM-TXN-20260409-012', 'success', '2026-04-09 08:50:00'),
+(13, 1, 2, 10, 2, 500000, 'bank_transfer', 'GM-TXN-20260410-013', 'pending', '2026-04-10 08:55:00'),
+(14, 5, 5, 15, 4, 50000, 'bank_transfer', 'GM-TXN-20260326-014', 'success', '2026-03-26 17:40:00');
 
 -- ============================================================
 -- REPORTS MODERATION
@@ -1592,13 +1654,13 @@ INSERT INTO daily_placement_metrics (
 (8,  '2026-03-12', 1, 11, 3450, 103, 46, 10, 2.99, '2026-03-12 23:59:00'),
 (9,  '2026-03-13', 1, 11, 3600, 108, 48, 11, 3.00, '2026-03-13 23:59:00'),
 (10, '2026-03-14', 2, 11, 1900, 41, 20, 5, 2.16, '2026-03-14 23:59:00'),
-(11, '2026-03-20', 3, 12, 7200, 104, 51, 13, 1.44, '2026-03-20 23:59:00'),
-(12, '2026-03-21', 3, 12, 7100, 102, 50, 12, 1.44, '2026-03-21 23:59:00'),
-(13, '2026-03-22', 3, 12, 7250, 108, 53, 14, 1.49, '2026-03-22 23:59:00'),
-(14, '2026-03-23', 3, 12, 7050, 101, 49, 12, 1.43, '2026-03-23 23:59:00'),
-(15, '2026-03-24', 3, 12, 7300, 111, 55, 14, 1.52, '2026-03-24 23:59:00'),
+(11, '2026-03-20', 1, 12, 7200, 104, 51, 13, 1.44, '2026-03-20 23:59:00'),
+(12, '2026-03-21', 1, 12, 7100, 102, 50, 12, 1.44, '2026-03-21 23:59:00'),
+(13, '2026-03-22', 1, 12, 7250, 108, 53, 14, 1.49, '2026-03-22 23:59:00'),
+(14, '2026-03-23', 1, 12, 7050, 101, 49, 12, 1.43, '2026-03-23 23:59:00'),
+(15, '2026-03-24', 1, 12, 7300, 111, 55, 14, 1.52, '2026-03-24 23:59:00'),
 (16, '2026-03-25', 2, 11, 7600, 182, 88, 20, 2.39, '2026-03-25 23:59:00'),
-(17, '2026-03-26', 3, 12, 7400, 106, 54, 13, 1.43, '2026-03-26 23:59:00'),
+(17, '2026-03-26', 1, 12, 7400, 106, 54, 13, 1.43, '2026-03-26 23:59:00'),
 (18, '2026-03-27', 2, 11, 7550, 180, 86, 20, 2.38, '2026-03-27 23:59:00'),
 (19, '2026-03-28', 2, 11, 7480, 177, 85, 19, 2.37, '2026-03-28 23:59:00'),
 (20, '2026-03-29', 2, 11, 7620, 183, 89, 20, 2.40, '2026-03-29 23:59:00'),
@@ -1620,12 +1682,12 @@ INSERT INTO trend_scores (
 (2,  '2026-03-08', 2, 68.0, '{"traffic":64,"revenue":66,"operations":74}', '2026-03-08 23:59:00'),
 (3,  '2026-03-11', 1, 84.0, '{"traffic":83,"revenue":79,"operations":86}', '2026-03-11 23:59:00'),
 (4,  '2026-03-14', 2, 71.0, '{"traffic":69,"revenue":67,"operations":77}', '2026-03-14 23:59:00'),
-(5,  '2026-03-20', 3, 63.0, '{"traffic":61,"revenue":65,"operations":63}', '2026-03-20 23:59:00'),
-(6,  '2026-03-22', 3, 66.0, '{"traffic":64,"revenue":68,"operations":66}', '2026-03-22 23:59:00'),
+(5,  '2026-03-20', 1, 63.0, '{"traffic":61,"revenue":65,"operations":63}', '2026-03-20 23:59:00'),
+(6,  '2026-03-22', 1, 66.0, '{"traffic":64,"revenue":68,"operations":66}', '2026-03-22 23:59:00'),
 (7,  '2026-03-25', 2, 87.0, '{"traffic":88,"revenue":83,"operations":90}', '2026-03-25 23:59:00'),
-(8,  '2026-03-27', 3, 72.0, '{"traffic":70,"revenue":73,"operations":73}', '2026-03-27 23:59:00'),
+(8,  '2026-03-27', 1, 72.0, '{"traffic":70,"revenue":73,"operations":73}', '2026-03-27 23:59:00'),
 (9,  '2026-03-29', 2, 89.0, '{"traffic":90,"revenue":86,"operations":91}', '2026-03-29 23:59:00'),
-(10, '2026-03-31', 3, 74.0, '{"traffic":72,"revenue":75,"operations":75}', '2026-03-31 23:59:00');
+(10, '2026-03-31', 1, 74.0, '{"traffic":72,"revenue":75,"operations":75}', '2026-03-31 23:59:00');
 
 -- ============================================================
 -- AI INSIGHT HISTORY
@@ -1640,11 +1702,11 @@ INSERT INTO ai_insights (
     ai_insight_created_at
 ) VALUES
 (1, 1, 'Placement Performance', '{"title":"Placement Performance summary","focus":"Placement Performance","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Homepage traffic stayed stable while Category Top outperformed revenue expectations in the final week of March. Keep Category Top inventory available because it is converting best among active slots.', 'Gemini gemini-2.0-flash', '2026-03-25 10:00:00'),
-(2, 1, 'Promotion Watchlist',   '{"title":"Promotion Watchlist summary","focus":"Promotion Watchlist","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Search Boost campaigns that expired on 2026-03-26 still show demand signals. Review whether any eligible cases should be reopened after payment confirmation.', 'Gemini gemini-2.0-flash', '2026-03-26 09:45:00'),
-(3, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'March revenue was concentrated in Homepage and Category Top packages. Search Boost volume increased late in the month but paid contribution is still smaller than premium placements.', 'Gemini gemini-2.0-flash', '2026-03-27 14:15:00'),
+(2, 1, 'Promotion Watchlist',   '{"title":"Promotion Watchlist summary","focus":"Promotion Watchlist","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Boost Post campaigns that expired on 2026-03-26 still show demand signals. Review whether any eligible cases should be reopened after payment confirmation.', 'Gemini gemini-2.0-flash', '2026-03-26 09:45:00'),
+(3, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'March revenue was concentrated in Homepage and Category Top packages. Boost Post volume increased late in the month but paid contribution is still smaller than premium placements.', 'Gemini gemini-2.0-flash', '2026-03-27 14:15:00'),
 (4, 1, 'Operator Load',         '{"title":"Operator Load summary","focus":"Operator Load","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Ops Team B handled the largest number of category campaigns. The current load remains acceptable, but new escalations should be balanced toward Team A for the next cycle.', 'Gemini gemini-2.0-flash', '2026-03-28 08:40:00'),
 (5, 1, 'Placement Performance', '{"title":"Placement Performance summary","focus":"Placement Performance","status":"Archived","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Early March homepage impressions were healthy but softened before premium 30-day inventory was activated. Review creative freshness for homepage premium buyers.', 'Gemini gemini-2.0-flash', '2026-03-29 16:25:00'),
-(6, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Average order value is currently supported by premium homepage packages, while smaller search packages are driving order count. Keep both tiers visible in pricing analysis.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
+(6, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Average order value is currently supported by premium homepage packages, while smaller boost packages are driving order count. Keep both tiers visible in pricing analysis.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
 
 -- ============================================================
 -- RESET SEQUENCES
@@ -1721,3 +1783,7 @@ SELECT setval('moderation_actions_moderation_action_id_seq', (SELECT COALESCE(MA
 SELECT setval('moderation_feedback_feedback_id_seq', (SELECT COALESCE(MAX(feedback_id), 1) FROM moderation_feedback));
 SELECT setval('escalations_escalation_id_seq', (SELECT COALESCE(MAX(escalation_id), 1) FROM escalations));
 SELECT setval('system_notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM system_notifications));
+SELECT setval('host_contents_host_content_id_seq', (SELECT COALESCE(MAX(host_content_id), 1) FROM host_contents));
+SELECT setval('host_earnings_host_earning_id_seq', (SELECT COALESCE(MAX(host_earning_id), 1) FROM host_earnings));
+SELECT setval('host_payout_requests_host_payout_id_seq', (SELECT COALESCE(MAX(host_payout_id), 1) FROM host_payout_requests));
+

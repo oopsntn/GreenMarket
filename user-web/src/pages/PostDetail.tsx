@@ -8,6 +8,7 @@ import {
     Play, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn, Settings, Check
 } from 'lucide-react';
 import ImageModal from '../components/ImageModal';
+import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 const PostDetail: React.FC = () => {
     const { slug } = useParams<{ slug: string }>();
@@ -214,7 +215,7 @@ const PostDetail: React.FC = () => {
                                             }}
                                         >
                                             <img
-                                                src={currentMedia.url.startsWith('http') ? currentMedia.url : `http://localhost:5000${currentMedia.url}`}
+                                                src={resolveImageUrl(currentMedia.url)}
                                                 alt={post.postTitle}
                                                 className="w-full h-full object-cover transition-transform duration-700 group-hover/main:scale-105"
                                             />
@@ -226,7 +227,7 @@ const PostDetail: React.FC = () => {
                                         </div>
                                     ) : (
                                         <video
-                                            src={currentMedia.url.startsWith('http') ? currentMedia.url : `http://localhost:5000${currentMedia.url}`}
+                                            src={resolveImageUrl(currentMedia.url)}
                                             controls
                                             className="w-full h-full object-contain bg-black"
                                         />
@@ -267,7 +268,7 @@ const PostDetail: React.FC = () => {
                                     className={`relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 border-2 transition-all ${activeMediaIndex === idx ? 'border-emerald-500 scale-105 shadow-xl' : 'border-slate-100 opacity-60 hover:opacity-100'}`}
                                 >
                                     {media.type === 'image' ? (
-                                        <img src={media.url.startsWith('http') ? media.url : `http://localhost:5000${media.url}`} className="w-full h-full object-cover" />
+                                        <img src={resolveImageUrl(media.url)} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full bg-slate-900 flex items-center justify-center">
                                             <Play className="w-6 h-6 text-white" />
@@ -436,7 +437,7 @@ const PostDetail: React.FC = () => {
                 isOpen={previewImageIndex !== null}
                 images={mediaList
                     .filter(m => m.type === 'image')
-                    .map(m => m.url.startsWith('http') ? m.url : `http://localhost:5000${m.url}`)
+                    .map(m => resolveImageUrl(m.url))
                 }
                 initialIndex={previewImageIndex || 0}
                 onClose={() => setPreviewImageIndex(null)}

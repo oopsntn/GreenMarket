@@ -13,6 +13,14 @@ import {
 import "./DashboardPage.css";
 
 const ALL_METRICS_LABEL = "Tất cả chỉ số";
+const USER_SCOPE_LABEL = "Người dùng và cửa hàng";
+const MODERATION_SCOPE_LABEL = "Bài đăng và kiểm duyệt";
+const BUSINESS_SCOPE_LABEL = "Tổng quan kinh doanh";
+
+const isAllTimeCard = (title: string) => {
+  const normalized = title.toLowerCase();
+  return normalized.includes("người dùng") || normalized.includes("bài đăng");
+};
 
 function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(
@@ -20,10 +28,10 @@ function DashboardPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState("");
-
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
   const [overviewScope, setOverviewScope] = useState(ALL_METRICS_LABEL);
+
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const statCards = dashboardData.statCards;
   const summary = dashboardData.summary;
@@ -50,55 +58,51 @@ function DashboardPage() {
   }, [fromDate, toDate]);
 
   const filteredCards = useMemo(() => {
-    if (overviewScope === ALL_METRICS_LABEL) return statCards;
+    if (overviewScope === ALL_METRICS_LABEL) {
+      return statCards;
+    }
 
-    const normalizedCards = statCards.map((card, index) => ({
+    const normalizedCards = statCards.map((card) => ({
       ...card,
-      _index: index,
-      _title: card.title.toLowerCase(),
+      normalizedTitle: card.title.toLowerCase(),
     }));
 
-    const scopeRules: Record<string, (title: string) => boolean> = {
-      "Người dùng & cửa hàng": (title) =>
-        title.includes("user") ||
-        title.includes("shop") ||
-        title.includes("seller"),
-      "Bài đăng & kiểm duyệt": (title) =>
-        title.includes("post") ||
-        title.includes("report") ||
-        title.includes("moderat") ||
-        title.includes("review"),
-      "Tổng quan kinh doanh": (title) =>
-        title.includes("revenue") ||
-        title.includes("promotion") ||
-        title.includes("order") ||
-        title.includes("spending") ||
-        title.includes("sale"),
+    const matchesScope = (title: string) => {
+      if (overviewScope === USER_SCOPE_LABEL) {
+        return (
+          title.includes("người dùng") ||
+          title.includes("cửa hàng") ||
+          title.includes("shop")
+        );
+      }
+
+      if (overviewScope === MODERATION_SCOPE_LABEL) {
+        return (
+          title.includes("bài đăng") ||
+          title.includes("kiểm duyệt") ||
+          title.includes("báo cáo")
+        );
+      }
+
+      return (
+        title.includes("doanh thu") ||
+        title.includes("thanh toán") ||
+        title.includes("quảng bá") ||
+        title.includes("chiến dịch")
+      );
     };
 
-    const matched = normalizedCards.filter((card) =>
-      scopeRules[overviewScope]?.(card._title),
-    );
+    const scopedCards = normalizedCards
+      .filter((card) => matchesScope(card.normalizedTitle))
+      .map(({ normalizedTitle, ...card }) => card);
 
-    if (matched.length > 0) {
-      return matched.map(({ _index, _title, ...card }) => card);
-    }
-
-    if (overviewScope === "Người dùng & cửa hàng") {
-      return statCards.slice(0, 2);
-    }
-
-    if (overviewScope === "Bài đăng & kiểm duyệt") {
-      return statCards.slice(1, 3);
-    }
-
-    return statCards.slice(-2);
+    return scopedCards.length > 0 ? scopedCards : statCards;
   }, [overviewScope, statCards]);
 
   const scopeSummaryText =
     overviewScope === ALL_METRICS_LABEL
-      ? "Đang hiển thị toàn bộ nhóm chỉ số của hệ thống quản trị."
-      : `Đang hiển thị các thẻ KPI thuộc nhóm ${overviewScope.toLowerCase()}.`;
+      ? "Đang hiển thị toàn bộ nhóm chỉ số quan trọng của hệ thống quản trị."
+      : `Đang hiển thị các chỉ số thuộc nhóm ${overviewScope.toLowerCase()}.`;
 
   return (
     <div className="dashboard-page">
@@ -135,9 +139,9 @@ function DashboardPage() {
               onChange: setOverviewScope,
               options: [
                 ALL_METRICS_LABEL,
-                "Người dùng & cửa hàng",
-                "Bài đăng & kiểm duyệt",
-                "Tổng quan kinh doanh",
+                USER_SCOPE_LABEL,
+                MODERATION_SCOPE_LABEL,
+                BUSINESS_SCOPE_LABEL,
               ],
             },
           ]}
@@ -174,7 +178,11 @@ function DashboardPage() {
               <StatCard
                 title={card.title}
                 value={card.value}
-                subtitle={`${dateRangeLabel} • ${overviewScope}`}
+                subtitle={
+                  isAllTimeCard(card.title)
+                    ? "Toàn hệ thống"
+                    : `${dateRangeLabel} • ${overviewScope}`
+                }
               />
             </SectionCard>
           ))}

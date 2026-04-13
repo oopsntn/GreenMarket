@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registerShop, updateShop, uploadImages, payShopRegistration } from '../services/api';
-import { Store, CheckCircle, ArrowRight, UploadCloud, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Store, CheckCircle, ArrowRight, UploadCloud, Image as ImageIcon, Loader2, Facebook, Instagram, Youtube } from 'lucide-react';
 import AddressPicker from '../components/AddressPicker';
 import { useAuth } from '../context/AuthContext';
 
@@ -22,7 +22,10 @@ const RegisterShop: React.FC = () => {
     shopLogoUrl: '',
     shopGalleryImages: [] as string[],
     shopLat: undefined as number | undefined,
-    shopLng: undefined as number | undefined
+    shopLng: undefined as number | undefined,
+    shopFacebook: '',
+    shopInstagram: '',
+    shopYoutube: ''
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
@@ -51,7 +54,10 @@ const RegisterShop: React.FC = () => {
         shopLocation: formData.shopLocation,
         shopDescription: formData.shopDescription,
         shopLat: formData.shopLat,
-        shopLng: formData.shopLng
+        shopLng: formData.shopLng,
+        shopFacebook: formData.shopFacebook,
+        shopInstagram: formData.shopInstagram,
+        shopYoutube: formData.shopYoutube,
       });
 
       const createdShopId = Number(registerRes.data?.shopId);
@@ -278,6 +284,45 @@ const RegisterShop: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Facebook className="w-3 h-3 text-[#1877F2]" /> Facebook
+            </label>
+            <input
+              type="url"
+              className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-[#1877F2] focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-bold"
+              placeholder="https://facebook.com/..."
+              value={formData.shopFacebook}
+              onChange={(e) => setFormData({ ...formData, shopFacebook: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Instagram className="w-3 h-3 text-[#E4405F]" /> Instagram
+            </label>
+            <input
+              type="url"
+              className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-[#E4405F] focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-bold"
+              placeholder="https://instagram.com/..."
+              value={formData.shopInstagram}
+              onChange={(e) => setFormData({ ...formData, shopInstagram: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <Youtube className="w-3 h-3 text-[#FF0000]" /> Youtube
+            </label>
+            <input
+              type="url"
+              className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-[#FF0000] focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-bold"
+              placeholder="https://youtube.com/..."
+              value={formData.shopYoutube}
+              onChange={(e) => setFormData({ ...formData, shopYoutube: e.target.value })}
+            />
           </div>
         </div>
 

@@ -306,7 +306,7 @@ const buildInsightOverview = async (
     {
       label: "Báo cáo chờ xử lý",
       value:
-        dashboard.statCards.find((card) => card.title === "Pending Reports")
+        dashboard.statCards.find((card) => card.title === "Báo cáo chờ xử lý")
           ?.value ?? "0",
       detail: dashboard.summary.description,
     },
