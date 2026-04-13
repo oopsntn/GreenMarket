@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
 import { asc, eq } from "drizzle-orm";
 import { db } from "../../config/db";
+import { AuthRequest } from "../../dtos/auth";
 import {
+  eventLogs,
   placementSlots,
   type NewPlacementSlot,
-} from "../../models/schema/placement-slots";
-import { promotionPackages } from "../../models/schema/promotion-packages";
+  promotionPackages,
+} from "../../models/schema/index.ts";
 import { type PlacementSlotParams } from "../../dtos/promotion";
 import { parseId } from "../../utils/parseId";
 
@@ -102,6 +104,30 @@ const buildPlacementSlotPayload = (
   };
 };
 
+const logPlacementSlotEvent = async (params: {
+  slotId: number;
+  action: string;
+  detail: string;
+  performedBy?: string | null;
+  result?: string;
+}) => {
+  await db.insert(eventLogs).values({
+    eventLogUserId: null,
+    eventLogSlotId: params.slotId,
+    eventLogEventType: "admin_slot_updated",
+    eventLogEventTime: new Date(),
+    eventLogMeta: {
+      action: params.action,
+      detail: params.detail,
+      performedBy: params.performedBy?.trim() || "Quản trị viên hệ thống",
+      actorRole: "Quản trị viên",
+      moduleLabel: "Vị trí hiển thị",
+      targetType: "Vị trí hiển thị",
+      result: params.result ?? "Thành công",
+    },
+  });
+};
+
 export const getPlacementSlots = async (
   _req: Request,
   res: Response,
@@ -115,7 +141,7 @@ export const getPlacementSlots = async (
     res.json(allSlots);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -127,7 +153,7 @@ export const getPlacementSlotById = async (
     const idNumber = parseId(req.params.id);
 
     if (idNumber === null) {
-      res.status(400).json({ error: "Invalid placement slot id" });
+      res.status(400).json({ error: "Mã vị trí hiển thị không hợp lệ" });
       return;
     }
 
@@ -138,19 +164,19 @@ export const getPlacementSlotById = async (
       .limit(1);
 
     if (!slot) {
-      res.status(404).json({ error: "Placement slot not found" });
+      res.status(404).json({ error: "Không tìm thấy vị trí hiển thị" });
       return;
     }
 
     res.json(slot);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
 export const createPlacementSlot = async (
-  req: Request<{}, {}, NewPlacementSlot>,
+  req: AuthRequest & Request<{}, {}, NewPlacementSlot>,
   res: Response,
 ): Promise<void> => {
   try {
@@ -168,22 +194,30 @@ export const createPlacementSlot = async (
       .values(payload)
       .returning();
 
+    await logPlacementSlotEvent({
+      slotId: newSlot.placementSlotId,
+      action: "Tạo vị trí hiển thị",
+      detail: `Đã tạo vị trí "${newSlot.placementSlotTitle}" với mã ${newSlot.placementSlotCode}.`,
+      performedBy: req.user?.email ?? null,
+    });
+
     res.status(201).json(newSlot);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
 export const updatePlacementSlot = async (
-  req: Request<PlacementSlotParams, {}, Partial<NewPlacementSlot>>,
+  req: AuthRequest &
+    Request<PlacementSlotParams, {}, Partial<NewPlacementSlot>>,
   res: Response,
 ): Promise<void> => {
   try {
     const idNumber = parseId(req.params.id);
 
     if (idNumber === null) {
-      res.status(400).json({ error: "Invalid placement slot id" });
+      res.status(400).json({ error: "Mã vị trí hiển thị không hợp lệ" });
       return;
     }
 
@@ -194,7 +228,7 @@ export const updatePlacementSlot = async (
       .limit(1);
 
     if (!existingSlot) {
-      res.status(404).json({ error: "Placement slot not found" });
+      res.status(404).json({ error: "Không tìm thấy vị trí hiển thị" });
       return;
     }
 
@@ -229,10 +263,22 @@ export const updatePlacementSlot = async (
       .where(eq(placementSlots.placementSlotId, idNumber))
       .returning();
 
+    await logPlacementSlotEvent({
+      slotId: updatedSlot.placementSlotId,
+      action:
+        existingSlot.placementSlotPublished !== updatedSlot.placementSlotPublished
+          ? updatedSlot.placementSlotPublished
+            ? "Bật vị trí hiển thị"
+            : "Tắt vị trí hiển thị"
+          : "Cập nhật vị trí hiển thị",
+      detail: `Đã cập nhật vị trí "${updatedSlot.placementSlotTitle}" với sức chứa ${updatedSlot.placementSlotCapacity}.`,
+      performedBy: req.user?.email ?? null,
+    });
+
     res.json(updatedSlot);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -244,7 +290,7 @@ export const deletePlacementSlot = async (
     const idNumber = parseId(req.params.id);
 
     if (idNumber === null) {
-      res.status(400).json({ error: "Invalid placement slot id" });
+      res.status(400).json({ error: "Mã vị trí hiển thị không hợp lệ" });
       return;
     }
 
@@ -256,7 +302,7 @@ export const deletePlacementSlot = async (
 
     if (linkedPackages.length > 0) {
       res.status(400).json({
-        error: "Cannot delete slot that has promotion packages linked to it",
+        error: "Không thể xóa vị trí đang được gắn với gói quảng bá",
       });
       return;
     }
@@ -267,16 +313,16 @@ export const deletePlacementSlot = async (
       .returning();
 
     if (!slot) {
-      res.status(404).json({ error: "Placement slot not found" });
+      res.status(404).json({ error: "Không tìm thấy vị trí hiển thị" });
       return;
     }
 
     res.json({
-      message: "Placement slot deleted successfully",
+      message: "Xóa vị trí hiển thị thành công",
       slot,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };

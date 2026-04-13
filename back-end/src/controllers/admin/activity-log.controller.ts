@@ -234,6 +234,51 @@ const eventDefinitionMap: Record<string, EventDefinition> = {
     result: "Hoàn tất",
     targetType: "Tệp xuất dữ liệu",
   },
+  admin_promotion_paused: {
+    actionLabel: "Tạm dừng chiến dịch quảng bá",
+    moduleKey: "system",
+    moduleLabel: "Khuyến mãi",
+    actionType: "Tạm dừng / tiếp tục",
+    severity: "trung bình",
+    result: "Đã tạm dừng",
+    targetType: "Chiến dịch quảng bá",
+  },
+  admin_promotion_resumed: {
+    actionLabel: "Tiếp tục chiến dịch quảng bá",
+    moduleKey: "system",
+    moduleLabel: "Khuyến mãi",
+    actionType: "Tạm dừng / tiếp tục",
+    severity: "trung bình",
+    result: "Đã tiếp tục",
+    targetType: "Chiến dịch quảng bá",
+  },
+  admin_promotion_package_changed: {
+    actionLabel: "Đổi gói quảng bá",
+    moduleKey: "system",
+    moduleLabel: "Khuyến mãi",
+    actionType: "Đổi gói / mở lại",
+    severity: "cao",
+    result: "Đã cập nhật",
+    targetType: "Chiến dịch quảng bá",
+  },
+  admin_promotion_reopened: {
+    actionLabel: "Mở lại chiến dịch quảng bá",
+    moduleKey: "system",
+    moduleLabel: "Khuyến mãi",
+    actionType: "Đổi gói / mở lại",
+    severity: "cao",
+    result: "Đã mở lại",
+    targetType: "Chiến dịch quảng bá",
+  },
+  admin_boosted_post_closed: {
+    actionLabel: "Đóng chiến dịch quảng bá",
+    moduleKey: "system",
+    moduleLabel: "Khuyến mãi",
+    actionType: "Đóng chiến dịch",
+    severity: "cao",
+    result: "Đã đóng",
+    targetType: "Chiến dịch quảng bá",
+  },
 };
 
 const getDefaultDefinition = (eventType: string | null): EventDefinition => {
@@ -258,19 +303,12 @@ const getDefaultDefinition = (eventType: string | null): EventDefinition => {
   };
 };
 
-const resolveActorRole = (
-  rowUserId: number | null,
-  meta: EventLogMeta | null,
-) => {
+const resolveActorRole = (rowUserId: number | null, meta: EventLogMeta | null) => {
   if (meta?.actorRole?.trim()) {
     return meta.actorRole.trim();
   }
 
-  if (!rowUserId) {
-    return "Hệ thống";
-  }
-
-  return "Quản trị viên";
+  return rowUserId ? "Quản trị viên" : "Hệ thống";
 };
 
 const resolveTarget = (
@@ -350,15 +388,8 @@ const resolveTarget = (
   if (definition.moduleKey === "templates") {
     return {
       targetType: definition.targetType,
-      targetName:
-        meta?.detail?.match(/"([^"]+)"/)?.[1] ||
-        (definition.targetType === "Trình dựng mẫu"
-          ? "Trình dựng mẫu"
-          : "Mẫu nội dung"),
-      targetCode:
-        definition.targetType === "Trình dựng mẫu"
-          ? "TEMPLATE-BUILDER"
-          : "TEMPLATE",
+      targetName: meta?.targetName?.trim() || "Mẫu nội dung",
+      targetCode: "TEMPLATE",
     };
   }
 
@@ -372,7 +403,7 @@ const resolveTarget = (
 
   return {
     targetType: definition.targetType,
-    targetName: meta?.reportName?.trim() || "Bản ghi hệ thống",
+    targetName: meta?.targetName?.trim() || "Bản ghi hệ thống",
     targetCode: "",
   };
 };
@@ -410,11 +441,11 @@ export const getActivityLogs = async (
           meta?.generatedBy?.trim() ||
           "Quản trị viên hệ thống";
         const actorRole = resolveActorRole(row.eventLogUserId, meta);
+        const target = resolveTarget(definition, meta, row);
         const detail =
           meta?.detail?.trim() ||
           meta?.reportName?.trim() ||
           `${action} được backend ghi nhận trong nhật ký sự kiện.`;
-        const target = resolveTarget(definition, meta, row);
         const result =
           meta?.result?.trim() || meta?.status?.trim() || definition.result;
 

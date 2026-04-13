@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
+    eventLogs,
     paymentTxn,
     placementSlots,
     postPromotions,
@@ -56,6 +57,7 @@ type PromotionLifecycleStatus =
 
 export type AdminPromotionResponse = {
     id: number;
+    postId: number;
     postTitle: string;
     owner: string;
     packageId: number;
@@ -74,6 +76,7 @@ export type AdminPromotionResponse = {
     pauseBlockedReason?: string;
     resumeBlockedReason?: string;
     reopenBlockedReason?: string;
+    warnings: string[];
 };
 
 export type AdminBoostedPostResponse = {
@@ -203,6 +206,25 @@ const getLifecycleStatus = (
     return "Active";
 };
 
+const isPostEligibleForPromotion = (postStatus: string) =>
+    postStatus.trim().toLowerCase() === "approved";
+
+const rangesOverlap = (
+    startA: Date | null,
+    endA: Date | null,
+    startB: Date | null,
+    endB: Date | null,
+) => {
+    if (!startA || !endA || !startB || !endB) {
+        return false;
+    }
+
+    return startA.getTime() <= endB.getTime() && startB.getTime() <= endA.getTime();
+};
+
+const shouldReserveSlot = (status: PromotionLifecycleStatus) =>
+    status === "Scheduled" || status === "Active" || status === "Paused";
+
 const buildBlockedReason = (
     status: PromotionLifecycleStatus,
     paymentStatus: "Paid" | "Pending Verification",
@@ -210,11 +232,11 @@ const buildBlockedReason = (
 ) => {
     if (action === "pause") {
         if (status !== "Active") {
-            return "Only active promotions can be paused.";
+            return "Chỉ có thể tạm dừng chiến dịch đang chạy.";
         }
 
         if (paymentStatus !== "Paid") {
-            return "Promotions with unverified payment cannot be paused yet.";
+            return "Chỉ có thể tạm dừng khi thanh toán đã được xác nhận.";
         }
 
         return undefined;
@@ -222,22 +244,22 @@ const buildBlockedReason = (
 
     if (action === "resume") {
         if (status !== "Paused") {
-            return "Only paused promotions can be resumed.";
+            return "Chỉ có thể tiếp tục chiến dịch đang tạm dừng.";
         }
 
         if (paymentStatus !== "Paid") {
-            return "Promotions with unverified payment cannot be resumed yet.";
+            return "Chỉ có thể tiếp tục khi thanh toán đã được xác nhận.";
         }
 
         return undefined;
     }
 
     if (status !== "Expired") {
-        return "Only expired promotions can be reopened.";
+        return "Chỉ có thể mở lại chiến dịch đã hết hạn.";
     }
 
     if (paymentStatus !== "Paid") {
-        return "Admin can reopen only after payment has been confirmed.";
+        return "Chỉ có thể mở lại sau khi thanh toán đã được xác nhận.";
     }
 
     return undefined;
@@ -249,24 +271,24 @@ const buildPromotionNote = (
     paymentStatus: "Paid" | "Pending Verification",
 ) => {
     if (lifecycleStatus === "Paused") {
-        return "Promotion was paused by admin while delivery is temporarily stopped.";
+        return "Chiến dịch đang tạm dừng và chưa phân phối lượt hiển thị.";
     }
 
     if (lifecycleStatus === "Scheduled") {
         return paymentStatus === "Paid"
-            ? "Promotion is scheduled for the upcoming placement window."
-            : "Promotion is scheduled and waiting for payment verification.";
+            ? "Chiến dịch đã được lên lịch cho đợt hiển thị sắp tới."
+            : "Chiến dịch đã lên lịch nhưng còn chờ xác nhận thanh toán.";
     }
 
     if (lifecycleStatus === "Expired") {
-        return "Promotion package completed its delivery window and is no longer active.";
+        return "Chiến dịch đã hết thời gian chạy và không còn hoạt động.";
     }
 
     if (lifecycleStatus === "Closed") {
-        return "Campaign delivery was closed by admin and removed from the queue.";
+        return "Chiến dịch đã bị đóng và được đưa ra khỏi hàng chờ phân phối.";
     }
 
-    return `Live promotion for ${item.packageTitle ?? "the selected package"} is currently consuming placement inventory.`;
+    return `Chiến dịch đang sử dụng vị trí hiển thị của gói ${item.packageTitle ?? "đã chọn"}.`;
 };
 
 const getHandledBy = (
@@ -534,8 +556,93 @@ const getPromotionRecordById = async (promotionId: number) => {
     return rows.find((item) => item.promotionId === promotionId) ?? null;
 };
 
+const buildPromotionWarnings = (
+    currentItem: RawPromotionRow & { latestPayment: LatestPaymentRecord | null },
+    allItems: Array<RawPromotionRow & { latestPayment: LatestPaymentRecord | null }>,
+) => {
+    const warnings: string[] = [];
+    const lifecycleStatus = getLifecycleStatus(currentItem);
+
+    if (!isPostEligibleForPromotion(currentItem.postStatus)) {
+        warnings.push("Bài đăng chưa ở trạng thái được phép chạy quảng bá.");
+    }
+
+    if (!currentItem.packageTitle?.trim()) {
+        warnings.push("Chiến dịch đang thiếu gói quảng bá hợp lệ.");
+    }
+
+    if (!currentItem.slotCode?.trim()) {
+        warnings.push("Chiến dịch đang thiếu vị trí hiển thị hợp lệ.");
+    }
+
+    if (
+        currentItem.startAt &&
+        currentItem.endAt &&
+        currentItem.endAt.getTime() < currentItem.startAt.getTime()
+    ) {
+        warnings.push("Khoảng thời gian chạy không hợp lệ.");
+    }
+
+    const slotCapacity = Math.max(0, toNumber(currentItem.slotCapacity));
+    if (
+        slotCapacity > 0 &&
+        shouldReserveSlot(lifecycleStatus) &&
+        currentItem.slotId
+    ) {
+        const overlappingCount = allItems.filter((item) => {
+            if (item.promotionId === currentItem.promotionId || item.slotId !== currentItem.slotId) {
+                return false;
+            }
+
+            const status = getLifecycleStatus(item);
+            if (!shouldReserveSlot(status)) {
+                return false;
+            }
+
+            return rangesOverlap(currentItem.startAt, currentItem.endAt, item.startAt, item.endAt);
+        }).length;
+
+        if (overlappingCount + 1 > slotCapacity) {
+            warnings.push("Vị trí hiển thị đang vượt sức chứa trong khoảng thời gian này.");
+        }
+    }
+
+    return warnings;
+};
+
+const logPromotionEvent = async (params: {
+    eventType: string;
+    userId: number | null;
+    postId: number;
+    slotId: number | null;
+    actorName?: string | null;
+    action: string;
+    detail: string;
+    result?: string;
+    targetName: string;
+}) => {
+    await db.insert(eventLogs).values({
+        eventLogUserId: params.userId,
+        eventLogPostId: params.postId,
+        eventLogSlotId: params.slotId,
+        eventLogEventType: params.eventType,
+        eventLogEventTime: new Date(),
+        eventLogMeta: {
+            action: params.action,
+            detail: params.detail,
+            performedBy: params.actorName?.trim() || "Quản trị viên hệ thống",
+            actorRole: "Quản trị viên",
+            result: params.result ?? "Thành công",
+            moduleLabel: "Khuyến mãi",
+            targetType: "Chiến dịch quảng bá",
+            targetName: params.targetName,
+        },
+    });
+};
+
 const mapRecordToPromotion = (
     item: RawPromotionRow & { latestPayment: LatestPaymentRecord | null },
+    allItems: Array<RawPromotionRow & { latestPayment: LatestPaymentRecord | null }>,
 ): AdminPromotionResponse => {
     const slot = mapPlacementSlotLabel(item.slotCode, item.slotTitle);
     const paymentStatus = getPaymentStatus(item.latestPayment);
@@ -555,9 +662,11 @@ const mapRecordToPromotion = (
         paymentStatus,
         "reopen",
     );
+    const warnings = buildPromotionWarnings(item, allItems);
 
     return {
         id: item.promotionId,
+        postId: item.postId,
         postTitle: item.postTitle,
         owner: getOwnerName(item),
         packageId: item.packageId,
@@ -576,6 +685,7 @@ const mapRecordToPromotion = (
         pauseBlockedReason,
         resumeBlockedReason,
         reopenBlockedReason,
+        warnings,
     };
 };
 
@@ -727,18 +837,32 @@ const upsertPromotionPaymentSnapshot = async (
 export const adminPromotionService = {
     async getPromotions(): Promise<AdminPromotionResponse[]> {
         const records = await getPromotionRecords();
-        return records.map(mapRecordToPromotion);
+        return records.map((record) => mapRecordToPromotion(record, records));
     },
 
     async getPromotionById(promotionId: number): Promise<AdminPromotionResponse | null> {
         const record = await getPromotionRecordById(promotionId);
-        return record ? mapRecordToPromotion(record) : null;
+        if (!record) {
+            return null;
+        }
+
+        const records = await getPromotionRecords();
+        const refreshedRecord =
+            records.find((item) => item.promotionId === promotionId) ?? record;
+
+        return mapRecordToPromotion(refreshedRecord, records);
     },
 
     async updatePromotionStatus(
         promotionId: number,
         status: "Active" | "Paused",
+        actorName?: string | null,
     ): Promise<AdminPromotionResponse | null> {
+        const current = await getPromotionRecordById(promotionId);
+        if (!current) {
+            return null;
+        }
+
         const [updated] = await db
             .update(postPromotions)
             .set({
@@ -751,12 +875,27 @@ export const adminPromotionService = {
             return null;
         }
 
+        await logPromotionEvent({
+            eventType: status === "Paused" ? "admin_promotion_paused" : "admin_promotion_resumed",
+            userId: current.buyerId,
+            postId: current.postId,
+            slotId: current.slotId,
+            actorName,
+            action: status === "Paused" ? "Tạm dừng chiến dịch" : "Tiếp tục chiến dịch",
+            detail:
+                status === "Paused"
+                    ? `Chiến dịch quảng bá cho bài "${current.postTitle}" đã được tạm dừng bởi quản trị viên.`
+                    : `Chiến dịch quảng bá cho bài "${current.postTitle}" đã được tiếp tục bởi quản trị viên.`,
+            targetName: current.postTitle,
+        });
+
         return this.getPromotionById(promotionId);
     },
 
     async changePromotionPackage(
         promotionId: number,
         payload: PromotionActionPayload,
+        actorName?: string | null,
     ): Promise<AdminPromotionResponse | null> {
         const current = await getPromotionRecordById(promotionId);
         if (!current) {
@@ -765,18 +904,36 @@ export const adminPromotionService = {
 
         const packageRecord = await ensurePromotionPackage(payload.packageId);
         if (!packageRecord) {
-            throw new Error("Promotion package not found.");
+            throw new Error("Không tìm thấy gói quảng bá.");
         }
 
         const startAt = parseDateInput(payload.startDate);
         const endAt = parseDateInput(payload.endDate);
 
         if (!startAt || !endAt) {
-            throw new Error("Start date and end date are required.");
+            throw new Error("Vui lòng chọn ngày bắt đầu và ngày kết thúc.");
         }
 
         if (endAt.getTime() < startAt.getTime()) {
-            throw new Error("End date must be on or after start date.");
+            throw new Error("Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.");
+        }
+
+        if (!packageRecord.promotionPackagePublished) {
+            throw new Error("Gói quảng bá đã chọn hiện không còn hoạt động.");
+        }
+
+        const [slotRecord] = await db
+            .select()
+            .from(placementSlots)
+            .where(eq(placementSlots.placementSlotId, packageRecord.promotionPackageSlotId))
+            .limit(1);
+
+        if (!slotRecord?.placementSlotPublished) {
+            throw new Error("Vị trí hiển thị của gói đang tạm tắt.");
+        }
+
+        if (!isPostEligibleForPromotion(current.postStatus)) {
+            throw new Error("Bài đăng chưa đủ điều kiện để chạy quảng bá.");
         }
 
         const nextRawStatus = getPersistedStatus(
@@ -806,15 +963,27 @@ export const adminPromotionService = {
             payload.paymentStatus,
         );
 
+        await logPromotionEvent({
+            eventType: "admin_promotion_package_changed",
+            userId: current.buyerId,
+            postId: current.postId,
+            slotId: packageRecord.promotionPackageSlotId,
+            actorName,
+            action: "Đổi gói quảng bá",
+            detail: `Chiến dịch quảng bá cho bài "${current.postTitle}" đã được đổi sang gói "${packageRecord.promotionPackageTitle ?? "Không rõ tên"}" từ ${payload.startDate} đến ${payload.endDate}.`,
+            targetName: current.postTitle,
+        });
+
         return this.getPromotionById(promotionId);
     },
 
     async reopenPromotion(
         promotionId: number,
         payload: PromotionActionPayload,
+        actorName?: string | null,
     ): Promise<AdminPromotionResponse | null> {
         if (payload.paymentStatus !== "Paid") {
-            throw new Error("Promotion can be reopened only after payment is confirmed.");
+            throw new Error("Chỉ có thể mở lại sau khi thanh toán đã được xác nhận.");
         }
 
         const current = await getPromotionRecordById(promotionId);
@@ -824,18 +993,36 @@ export const adminPromotionService = {
 
         const packageRecord = await ensurePromotionPackage(payload.packageId);
         if (!packageRecord) {
-            throw new Error("Promotion package not found.");
+            throw new Error("Không tìm thấy gói quảng bá.");
         }
 
         const startAt = parseDateInput(payload.startDate);
         const endAt = parseDateInput(payload.endDate);
 
         if (!startAt || !endAt) {
-            throw new Error("Start date and end date are required.");
+            throw new Error("Vui lòng chọn ngày bắt đầu và ngày kết thúc.");
         }
 
         if (endAt.getTime() < startAt.getTime()) {
-            throw new Error("End date must be on or after start date.");
+            throw new Error("Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.");
+        }
+
+        if (!packageRecord.promotionPackagePublished) {
+            throw new Error("Gói quảng bá đã chọn hiện không còn hoạt động.");
+        }
+
+        const [slotRecord] = await db
+            .select()
+            .from(placementSlots)
+            .where(eq(placementSlots.placementSlotId, packageRecord.promotionPackageSlotId))
+            .limit(1);
+
+        if (!slotRecord?.placementSlotPublished) {
+            throw new Error("Vị trí hiển thị của gói đang tạm tắt.");
+        }
+
+        if (!isPostEligibleForPromotion(current.postStatus)) {
+            throw new Error("Bài đăng chưa đủ điều kiện để chạy quảng bá.");
         }
 
         const [updated] = await db
@@ -860,6 +1047,17 @@ export const adminPromotionService = {
             payload.paymentStatus,
         );
 
+        await logPromotionEvent({
+            eventType: "admin_promotion_reopened",
+            userId: current.buyerId,
+            postId: current.postId,
+            slotId: packageRecord.promotionPackageSlotId,
+            actorName,
+            action: "Mở lại chiến dịch quảng bá",
+            detail: `Chiến dịch quảng bá cho bài "${current.postTitle}" đã được mở lại với gói "${packageRecord.promotionPackageTitle ?? "Không rõ tên"}" từ ${payload.startDate} đến ${payload.endDate}.`,
+            targetName: current.postTitle,
+        });
+
         return this.getPromotionById(promotionId);
     },
 
@@ -878,7 +1076,13 @@ export const adminPromotionService = {
     async updateBoostedPostStatus(
         promotionId: number,
         status: "Active" | "Paused" | "Closed",
+        actorName?: string | null,
     ): Promise<AdminBoostedPostResponse | null> {
+        const current = await getPromotionRecordById(promotionId);
+        if (!current) {
+            return null;
+        }
+
         const [updated] = await db
             .update(postPromotions)
             .set({
@@ -895,6 +1099,32 @@ export const adminPromotionService = {
         if (!updated) {
             return null;
         }
+
+        await logPromotionEvent({
+            eventType:
+                status === "Paused"
+                    ? "admin_promotion_paused"
+                    : status === "Active"
+                        ? "admin_promotion_resumed"
+                        : "admin_boosted_post_closed",
+            userId: current.buyerId,
+            postId: current.postId,
+            slotId: current.slotId,
+            actorName,
+            action:
+                status === "Paused"
+                    ? "Tạm dừng chiến dịch"
+                    : status === "Active"
+                        ? "Tiếp tục chiến dịch"
+                        : "Đóng chiến dịch",
+            detail:
+                status === "Closed"
+                    ? `Chiến dịch quảng bá cho bài "${current.postTitle}" đã được đóng khỏi hàng chờ phân phối.`
+                    : status === "Paused"
+                        ? `Chiến dịch quảng bá cho bài "${current.postTitle}" đã được tạm dừng.`
+                        : `Chiến dịch quảng bá cho bài "${current.postTitle}" đã được tiếp tục.`,
+            targetName: current.postTitle,
+        });
 
         return this.getBoostedPostById(promotionId);
     },
