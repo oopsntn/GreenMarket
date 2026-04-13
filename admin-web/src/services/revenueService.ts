@@ -16,7 +16,7 @@ export const revenueService = {
     return apiClient.request<RevenueApiResponse>(
       `/api/admin/revenue${buildQuery(fromDate, toDate)}`,
       {
-        defaultErrorMessage: "Unable to load revenue summary.",
+        defaultErrorMessage: "Không thể tải báo cáo doanh thu.",
       },
     );
   },

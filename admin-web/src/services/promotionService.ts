@@ -10,7 +10,7 @@ import type {
 export const promotionService = {
   async getPromotions(): Promise<Promotion[]> {
     return apiClient.request<PromotionApiResponse[]>("/api/admin/promotions", {
-      defaultErrorMessage: "Unable to load promotions.",
+      defaultErrorMessage: "Không thể tải danh sách khuyến mãi.",
     });
   },
 
@@ -24,7 +24,7 @@ export const promotionService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update promotion status.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái khuyến mãi.",
         body: JSON.stringify({ status }),
       },
     );
@@ -60,7 +60,7 @@ export const promotionService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to change promotion package.",
+        defaultErrorMessage: "Không thể đổi gói khuyến mãi.",
         body: JSON.stringify({
           packageId: payload.packageId,
           startDate: payload.startDate,
@@ -86,7 +86,7 @@ export const promotionService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to reopen promotion.",
+        defaultErrorMessage: "Không thể mở lại khuyến mãi.",
         body: JSON.stringify({
           packageId: payload.packageId,
           startDate: payload.startDate,
@@ -108,37 +108,37 @@ export const promotionService = {
   ): string {
     if (action === "pause") {
       if (promotion.status !== "Active") {
-        return "Only active promotions can be paused.";
+        return "Chỉ có thể tạm dừng khuyến mãi đang hoạt động.";
       }
 
       return (
         promotion.pauseBlockedReason ??
-        "This promotion is not eligible for pause right now."
+        "Khuyến mãi này hiện chưa đủ điều kiện để tạm dừng."
       );
     }
 
     if (action === "reopen") {
       if (promotion.status !== "Expired") {
-        return "Only expired promotions can be reopened.";
+        return "Chỉ có thể mở lại khuyến mãi đã hết hạn.";
       }
 
       if (promotion.paymentStatus !== "Paid") {
-        return "Admin can reopen only after payment has been confirmed.";
+        return "Chỉ mở lại sau khi thanh toán đã được xác nhận.";
       }
 
       return (
         promotion.reopenBlockedReason ??
-        "This promotion is not eligible for reopen right now."
+        "Khuyến mãi này hiện chưa đủ điều kiện để mở lại."
       );
     }
 
     if (promotion.status !== "Paused") {
-      return "Only paused promotions can be resumed.";
+      return "Chỉ có thể tiếp tục khuyến mãi đang tạm dừng.";
     }
 
     return (
       promotion.resumeBlockedReason ??
-      "This promotion is not eligible for resume right now."
+      "Khuyến mãi này hiện chưa đủ điều kiện để tiếp tục."
     );
   },
 
@@ -158,24 +158,24 @@ export const promotionService = {
 
     return [
       {
-        title: "Total Promotions",
+        title: "Tổng khuyến mãi",
         value: String(promotions.length),
-        subtitle: "All tracked promotion packages",
+        subtitle: "Tất cả chiến dịch quảng bá đang theo dõi",
       },
       {
-        title: "Active Promotions",
+        title: "Khuyến mãi đang chạy",
         value: String(activeCount),
-        subtitle: "Currently consuming placement inventory",
+        subtitle: "Đang sử dụng vị trí hiển thị",
       },
       {
-        title: "Paused Promotions",
+        title: "Khuyến mãi tạm dừng",
         value: String(pausedCount),
-        subtitle: "Temporarily stopped by admin action",
+        subtitle: "Đã bị tạm dừng bởi quản trị viên",
       },
       {
-        title: "Scheduled / Expired",
+        title: "Lên lịch / Hết hạn",
         value: `${scheduledCount} / ${expiredCount}`,
-        subtitle: "Upcoming campaigns and completed packages",
+        subtitle: "Tương quan giữa chiến dịch sắp chạy và đã kết thúc",
       },
     ];
   },

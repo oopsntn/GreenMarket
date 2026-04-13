@@ -6,7 +6,7 @@ export const activityLogService = {
     return apiClient.request<FlattenedUserActivityItem[]>(
       "/api/admin/activity-logs",
       {
-        defaultErrorMessage: "Unable to load activity log.",
+        defaultErrorMessage: "Không thể tải nhật ký hoạt động.",
       },
     );
   },

@@ -31,19 +31,19 @@ const validateSlotForm = (
   const normalizedCode = normalizeText(formData.positionCode).toLowerCase();
 
   if (!normalizedName) {
-    throw new Error("Slot name is required.");
+    throw new Error("Tên vị trí là bắt buộc.");
   }
 
   if (!normalizedCode) {
-    throw new Error("Position code is required.");
+    throw new Error("Mã vị trí là bắt buộc.");
   }
 
   if (!Number.isFinite(formData.capacity) || formData.capacity < 1) {
-    throw new Error("Capacity must be at least 1.");
+    throw new Error("Sức chứa phải lớn hơn hoặc bằng 1.");
   }
 
   if (!Number.isFinite(formData.priority) || formData.priority < 1) {
-    throw new Error("Priority must be at least 1.");
+    throw new Error("Độ ưu tiên phải lớn hơn hoặc bằng 1.");
   }
 
   const isDuplicatedName = existingSlots.some((slot) => {
@@ -52,7 +52,7 @@ const validateSlotForm = (
   });
 
   if (isDuplicatedName) {
-    throw new Error("Slot name already exists. Please use a unique slot name.");
+    throw new Error("Tên vị trí đã tồn tại. Vui lòng nhập tên khác.");
   }
 
   const isDuplicatedCode = existingSlots.some((slot) => {
@@ -61,7 +61,7 @@ const validateSlotForm = (
   });
 
   if (isDuplicatedCode) {
-    throw new Error("Position code already exists. Please use a unique code.");
+    throw new Error("Mã vị trí đã tồn tại. Vui lòng nhập mã khác.");
   }
 };
 
@@ -97,7 +97,7 @@ const mapRulesToUi = (rules: Record<string, unknown> | null) => {
 };
 
 const mapApiSlotToUi = (item: PlacementSlotApiResponse): PlacementSlot => {
-  const title = item.placementSlotTitle?.trim() || "Untitled Slot";
+  const title = item.placementSlotTitle?.trim() || "Vị trí chưa đặt tên";
   const code = item.placementSlotCode?.trim() || "";
   const mappedRules = mapRulesToUi(item.placementSlotRules);
   const inferredScope = inferScopeFromSlot(code, title);
@@ -141,7 +141,7 @@ export const placementSlotService = {
     const data = await apiClient.request<PlacementSlotApiResponse[]>(
       "/api/admin/placement-slots",
       {
-        defaultErrorMessage: "Unable to load placement slots.",
+        defaultErrorMessage: "Không thể tải danh sách vị trí hiển thị.",
       },
     );
 
@@ -161,24 +161,24 @@ export const placementSlotService = {
 
     return [
       {
-        title: "Total Slots",
+        title: "Tổng vị trí",
         value: String(slots.length),
-        subtitle: "All configured placement positions",
+        subtitle: "Tất cả vị trí hiển thị đã cấu hình",
       },
       {
-        title: "Active Slots",
+        title: "Vị trí đang hoạt động",
         value: String(activeCount),
-        subtitle: "Currently available for boosted posts",
+        subtitle: "Đang sẵn sàng cho chiến dịch quảng bá",
       },
       {
-        title: "Disabled Slots",
+        title: "Vị trí tạm ngưng",
         value: String(disabledCount),
-        subtitle: "Temporarily unavailable for campaigns",
+        subtitle: "Tạm thời chưa cho phép sử dụng",
       },
       {
-        title: "Total Capacity",
+        title: "Tổng sức chứa",
         value: String(totalCapacity),
-        subtitle: "Maximum concurrent boosted post placements",
+        subtitle: "Số lượng chiến dịch có thể hiển thị đồng thời",
       },
     ];
   },
@@ -194,7 +194,7 @@ export const placementSlotService = {
       {
         method: "POST",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to create placement slot.",
+        defaultErrorMessage: "Không thể tạo vị trí hiển thị.",
         body: JSON.stringify(buildSlotPayload(formData, true)),
       },
     );
@@ -216,7 +216,7 @@ export const placementSlotService = {
       {
         method: "PUT",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update placement slot.",
+        defaultErrorMessage: "Không thể cập nhật vị trí hiển thị.",
         body: JSON.stringify(
           buildSlotPayload(formData, currentSlot?.status !== "Disabled"),
         ),
@@ -244,7 +244,7 @@ export const placementSlotService = {
       {
         method: "PUT",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update placement slot status.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái vị trí hiển thị.",
         body: JSON.stringify(
           buildSlotPayload(
             {
