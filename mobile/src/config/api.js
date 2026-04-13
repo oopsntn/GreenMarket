@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Lấy IP từ environment variable (.env.local)
 const getApiBaseUrl = () => {
-  const API_IP = process.env.EXPO_PUBLIC_API_IP || "192.168.1.3";
+  const API_IP = process.env.EXPO_PUBLIC_API_IP || "14.170.9.64";
   const API_PORT = process.env.EXPO_PUBLIC_API_PORT || "5000";
 
   const DEV_API_URL = `http://10.0.2.2:${API_PORT}/api`; // Android Emulator
