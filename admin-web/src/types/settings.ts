@@ -1,4 +1,4 @@
-export type SupportedLanguage = "Tiếng Việt" | "Tiếng Anh";
+export type SupportedLanguage = "Tiếng Việt";
 
 export type GeneralSettings = {
   platformName: string;

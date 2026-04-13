@@ -3,7 +3,7 @@ import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { settingsService } from "../services/settingsService";
-import type { SettingsState, SupportedLanguage } from "../types/settings";
+import type { SettingsState } from "../types/settings";
 import "./SettingsPage.css";
 
 const DEFAULT_SETTINGS: SettingsState = {
@@ -31,8 +31,6 @@ const DEFAULT_SETTINGS: SettingsState = {
     enableImageCompression: true,
   },
 };
-
-const languageOptions: SupportedLanguage[] = ["Tiếng Việt", "Tiếng Anh"];
 
 const normalizeSettings = (payload: Partial<SettingsState> | undefined): SettingsState => ({
   general: {
@@ -335,26 +333,15 @@ function SettingsPage() {
             </div>
 
             <div className="settings-field">
-              <label htmlFor="default-language">Ngôn ngữ mặc định</label>
-              <select
+              <label htmlFor="default-language">Ngôn ngữ hiển thị</label>
+              <input
                 id="default-language"
-                value={settings.general.defaultLanguage}
-                onChange={(event) =>
-                  handleInputChange(
-                    "general",
-                    "defaultLanguage",
-                    event.target.value as SupportedLanguage,
-                  )
-                }
-                disabled={isLoading || isSaving}
-              >
-                {languageOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-              <small>Áp dụng cho nội dung mặc định khi tạo dữ liệu mới.</small>
+                type="text"
+                value="Tiếng Việt"
+                readOnly
+                disabled
+              />
+              <small>Admin web hiện chỉ hỗ trợ tiếng Việt và không cho phép đổi sang ngôn ngữ khác.</small>
             </div>
 
             <div className="settings-toggle">

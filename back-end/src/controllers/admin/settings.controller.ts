@@ -10,7 +10,7 @@ import { adminConfigStoreService } from "../../services/adminConfigStore.service
 
 const SETTINGS_KEY = "admin_web_settings";
 
-type SupportedLanguage = "Tiếng Việt" | "Tiếng Anh";
+type SupportedLanguage = "Tiếng Việt";
 
 type SettingsState = {
   general: {
@@ -100,10 +100,7 @@ const normalizeSettings = (payload: Partial<SettingsState> | undefined): Setting
       payload?.general?.supportEmail,
       defaultSettings.general.supportEmail,
     ),
-    defaultLanguage:
-      payload?.general?.defaultLanguage === "Tiếng Anh"
-        ? "Tiếng Anh"
-        : "Tiếng Việt",
+    defaultLanguage: "Tiếng Việt",
     otpSandboxEnabled: normalizeBoolean(
       payload?.general?.otpSandboxEnabled,
       defaultSettings.general.otpSandboxEnabled,
