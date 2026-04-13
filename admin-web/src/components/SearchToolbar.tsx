@@ -37,7 +37,7 @@ function SearchToolbar({
           type="text"
           placeholder={placeholder}
           value={searchValue}
-          onChange={(e) => onSearchChange?.(e.target.value)}
+          onChange={(event) => onSearchChange?.(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               onSearchSubmit?.();

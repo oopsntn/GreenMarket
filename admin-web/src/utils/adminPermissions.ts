@@ -96,7 +96,7 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     path: "/template-builder",
     moduleKey: "templateBuilder",
   },
-  { label: "Cài đặt", path: "/settings", moduleKey: "settings" },
+  { label: "Thiết lập hệ thống", path: "/settings", moduleKey: "settings" },
   {
     label: "Vị trí hiển thị",
     path: "/placement-slots",
@@ -108,7 +108,7 @@ export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
     moduleKey: "promotionPackages",
   },
   {
-    label: "Bài đẩy nổi bật",
+    label: "Chiến dịch quảng bá",
     path: "/boosted-posts",
     moduleKey: "boostedPosts",
   },

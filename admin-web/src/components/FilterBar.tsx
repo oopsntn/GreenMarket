@@ -7,6 +7,7 @@ export type FilterField = {
   value: string;
   onChange: (value: string) => void;
   options?: string[];
+  optionLabels?: Record<string, string>;
 };
 
 type FilterBarProps = {
@@ -35,7 +36,7 @@ function FilterBar({ fields }: FilterBarProps) {
             >
               {field.options?.map((option) => (
                 <option key={option} value={option}>
-                  {option}
+                  {field.optionLabels?.[option] ?? option}
                 </option>
               ))}
             </select>
