@@ -16,8 +16,8 @@ function ConfirmDialog({
   isOpen,
   title,
   message,
-  confirmText = "Confirm",
-  cancelText = "Cancel",
+  confirmText = "Xác nhận",
+  cancelText = "Hủy",
   tone = "danger",
   onConfirm,
   onCancel,
@@ -26,7 +26,7 @@ function ConfirmDialog({
     <BaseModal
       isOpen={isOpen}
       title={title}
-      description="Please confirm this action before continuing."
+      description="Vui lòng xác nhận thao tác này trước khi tiếp tục."
       onClose={onCancel}
       maxWidth="480px"
     >

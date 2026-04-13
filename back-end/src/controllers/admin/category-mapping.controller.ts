@@ -50,7 +50,8 @@ const parseCreateOrUpdatePayload = (body: CategoryMappingPayload) => {
     !Number.isInteger(attributeIdValue)
   ) {
     return {
-      error: "categoryId and attributeId are required and must be integers",
+      error: "Bắt buộc phải có mã danh mục và mã thuộc tính, đồng thời cả hai phải là số nguyên",
+      
     } as const;
   }
 
@@ -60,7 +61,7 @@ const parseCreateOrUpdatePayload = (body: CategoryMappingPayload) => {
     displayOrderValue < 1
   ) {
     return {
-      error: "displayOrder must be an integer greater than or equal to 1",
+      error: "Thứ tự hiển thị phải là số nguyên lớn hơn hoặc bằng 1",
     } as const;
   }
 
@@ -111,7 +112,7 @@ export const getCategoryMappings = async (
     res.json(rows);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -136,7 +137,7 @@ export const createCategoryMapping = async (
       .limit(1);
 
     if (!existingCategory) {
-      res.status(404).json({ error: "Category not found" });
+      res.status(404).json({ error: "Không tìm thấy danh mục" });
       return;
     }
 
@@ -147,7 +148,7 @@ export const createCategoryMapping = async (
       .limit(1);
 
     if (!existingAttribute) {
-      res.status(404).json({ error: "Attribute not found" });
+      res.status(404).json({ error: "Không tìm thấy thuộc tính" });
       return;
     }
 
@@ -164,7 +165,7 @@ export const createCategoryMapping = async (
 
     if (duplicateMapping) {
       res.status(409).json({
-        error: "This category already has the selected attribute",
+        error: "Danh mục này đã có thuộc tính được chọn",
       });
       return;
     }
@@ -185,7 +186,7 @@ export const createCategoryMapping = async (
     res.status(201).json(createdMapping);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -204,7 +205,7 @@ export const updateCategoryMapping = async (
     );
 
     if (!currentIds) {
-      res.status(400).json({ error: "Invalid categoryId or attributeId" });
+      res.status(400).json({ error: "Mã danh mục hoặc mã thuộc tính không hợp lệ" });
       return;
     }
 
@@ -229,7 +230,7 @@ export const updateCategoryMapping = async (
       .limit(1);
 
     if (!currentMapping) {
-      res.status(404).json({ error: "Category mapping not found" });
+      res.status(404).json({ error: "Không tìm thấy ánh xạ danh mục - thuộc tính" });
       return;
     }
 
@@ -240,7 +241,7 @@ export const updateCategoryMapping = async (
       .limit(1);
 
     if (!existingCategory) {
-      res.status(404).json({ error: "Category not found" });
+      res.status(404).json({ error: "Không tìm thấy danh mục" });
       return;
     }
 
@@ -251,7 +252,7 @@ export const updateCategoryMapping = async (
       .limit(1);
 
     if (!existingAttribute) {
-      res.status(404).json({ error: "Attribute not found" });
+      res.status(404).json({ error: "Không tìm thấy thuộc tính" });
       return;
     }
 
@@ -273,7 +274,7 @@ export const updateCategoryMapping = async (
 
       if (duplicateMapping) {
         res.status(409).json({
-          error: "This category already has the selected attribute",
+          error: "Danh mục này đã có thuộc tính được chọn",
         });
         return;
       }
@@ -319,14 +320,14 @@ export const updateCategoryMapping = async (
       .returning();
 
     if (!updatedMapping) {
-      res.status(404).json({ error: "Category mapping not found" });
+      res.status(404).json({ error: "Không tìm thấy ánh xạ danh mục - thuộc tính" });
       return;
     }
 
     res.json(updatedMapping);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -345,7 +346,7 @@ export const updateCategoryMappingStatus = async (
     );
 
     if (!ids) {
-      res.status(400).json({ error: "Invalid categoryId or attributeId" });
+      res.status(400).json({ error: "Mã danh mục hoặc mã thuộc tính không hợp lệ" });
       return;
     }
 
@@ -365,14 +366,14 @@ export const updateCategoryMappingStatus = async (
       .returning();
 
     if (!updatedMapping) {
-      res.status(404).json({ error: "Category mapping not found" });
+      res.status(404).json({ error: "Không tìm thấy ánh xạ danh mục - thuộc tính" });
       return;
     }
 
     res.json(updatedMapping);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -387,7 +388,7 @@ export const deleteCategoryMapping = async (
     );
 
     if (!ids) {
-      res.status(400).json({ error: "Invalid categoryId or attributeId" });
+      res.status(400).json({ error: "Mã danh mục hoặc mã thuộc tính không hợp lệ" });
       return;
     }
 
@@ -402,16 +403,16 @@ export const deleteCategoryMapping = async (
       .returning();
 
     if (!deletedMapping) {
-      res.status(404).json({ error: "Category mapping not found" });
+      res.status(404).json({ error: "Không tìm thấy ánh xạ danh mục - thuộc tính" });
       return;
     }
 
     res.json({
-      message: "Category mapping deleted successfully",
+      message: "Xóa ánh xạ danh mục - thuộc tính thành công",
       deletedMapping,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };

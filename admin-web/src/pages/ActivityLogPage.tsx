@@ -1,93 +1,153 @@
 import { useEffect, useMemo, useState } from "react";
+import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
-import { userService } from "../services/userService";
-import type { FlattenedUserActivityItem, User } from "../types/user";
+import { activityLogService } from "../services/activityLogService";
+import type { ActivityLogItem } from "../types/activityLog";
 import "./ActivityLogPage.css";
 
 const PAGE_SIZE = 8;
 
-const getActionVariant = (action: string) => {
-  if (action.includes("Locked")) return "locked";
-  if (action.includes("Unlocked")) return "success";
-  if (action.includes("Role")) return "processing";
-  if (action.includes("Created")) return "active";
-  return "type";
+const getSeverityVariant = (severity: ActivityLogItem["severity"]) => {
+  if (severity === "cao") return "locked";
+  if (severity === "trung bình") return "pending";
+  return "active";
+};
+
+const getResultVariant = (result: string) => {
+  const normalized = result.toLowerCase();
+  if (
+    normalized.includes("từ chối") ||
+    normalized.includes("bỏ qua") ||
+    normalized.includes("đã khóa")
+  ) {
+    return "locked";
+  }
+
+  if (
+    normalized.includes("đã cập nhật") ||
+    normalized.includes("đã lưu") ||
+    normalized.includes("hoàn tất") ||
+    normalized.includes("đã xử lý") ||
+    normalized.includes("đã duyệt") ||
+    normalized.includes("đã mở khóa")
+  ) {
+    return "success";
+  }
+
+  return "processing";
 };
 
 function ActivityLogPage() {
-  const [users, setUsers] = useState<User[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedActionFilter, setSelectedActionFilter] = useState("All");
-  const [selectedPerformerFilter, setSelectedPerformerFilter] = useState("All");
+  const [selectedModuleFilter, setSelectedModuleFilter] = useState("All");
+  const [selectedActionTypeFilter, setSelectedActionTypeFilter] =
+    useState("All");
+  const [selectedPerformerFilter, setSelectedPerformerFilter] =
+    useState("All");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
- 
-  const loadUsers = async () => {
+  const [selectedLog, setSelectedLog] = useState<ActivityLogItem | null>(null);
+
+  const loadActivityLogs = async () => {
     try {
       setIsLoading(true);
       setError("");
-      setUsers(await userService.fetchUsers());
+      setActivityLogs(await activityLogService.fetchActivityLogs());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load activity log.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Không thể tải nhật ký hoạt động.",
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadUsers();
+    void loadActivityLogs();
   }, []);
 
-  const activityLogs = useMemo(
-    () => userService.getRecentActivityLogs(users),
-    [users],
+  const moduleOptions = useMemo(
+    () => ["All", ...Array.from(new Set(activityLogs.map((item) => item.moduleLabel)))],
+    [activityLogs],
   );
 
-  const actionOptions = useMemo(() => {
-    return [
+  const actionTypeOptions = useMemo(
+    () => [
       "All",
-      ...Array.from(new Set(activityLogs.map((item) => item.action))),
-    ];
-  }, [activityLogs]);
+      ...Array.from(new Set(activityLogs.map((item) => item.actionType))),
+    ],
+    [activityLogs],
+  );
 
-  const performerOptions = useMemo(() => {
-    return [
-      "All",
-      ...Array.from(new Set(activityLogs.map((item) => item.performedBy))),
-    ];
-  }, [activityLogs]);
+  const performerOptions = useMemo(
+    () => ["All", ...Array.from(new Set(activityLogs.map((item) => item.actorName)))],
+    [activityLogs],
+  );
 
   const filteredLogs = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
+    const fromTime = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
+    const toTime = dateTo ? new Date(`${dateTo}T23:59:59`).getTime() : null;
 
     return activityLogs.filter((item) => {
+      const occurredAtTime = item.occurredAt
+        ? new Date(item.occurredAt).getTime()
+        : null;
+
       const matchesKeyword =
         !keyword ||
-        item.userName.toLowerCase().includes(keyword) ||
+        item.actorName.toLowerCase().includes(keyword) ||
+        item.actorRole.toLowerCase().includes(keyword) ||
+        item.moduleLabel.toLowerCase().includes(keyword) ||
         item.action.toLowerCase().includes(keyword) ||
-        item.detail.toLowerCase().includes(keyword) ||
-        item.performedBy.toLowerCase().includes(keyword);
+        item.targetName.toLowerCase().includes(keyword) ||
+        item.targetCode.toLowerCase().includes(keyword) ||
+        item.detail.toLowerCase().includes(keyword);
 
-      const matchesAction =
-        selectedActionFilter === "All" || item.action === selectedActionFilter;
+      const matchesModule =
+        selectedModuleFilter === "All" || item.moduleLabel === selectedModuleFilter;
+
+      const matchesActionType =
+        selectedActionTypeFilter === "All" ||
+        item.actionType === selectedActionTypeFilter;
 
       const matchesPerformer =
-        selectedPerformerFilter === "All" ||
-        item.performedBy === selectedPerformerFilter;
+        selectedPerformerFilter === "All" || item.actorName === selectedPerformerFilter;
 
-      return matchesKeyword && matchesAction && matchesPerformer;
+      const matchesDateFrom =
+        fromTime === null || occurredAtTime === null || occurredAtTime >= fromTime;
+
+      const matchesDateTo =
+        toTime === null || occurredAtTime === null || occurredAtTime <= toTime;
+
+      return (
+        matchesKeyword &&
+        matchesModule &&
+        matchesActionType &&
+        matchesPerformer &&
+        matchesDateFrom &&
+        matchesDateTo
+      );
     });
   }, [
     activityLogs,
+    dateFrom,
+    dateTo,
     searchKeyword,
-    selectedActionFilter,
+    selectedActionTypeFilter,
+    selectedModuleFilter,
     selectedPerformerFilter,
   ]);
 
@@ -100,7 +160,14 @@ function ActivityLogPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchKeyword, selectedActionFilter, selectedPerformerFilter]);
+  }, [
+    dateFrom,
+    dateTo,
+    searchKeyword,
+    selectedActionTypeFilter,
+    selectedModuleFilter,
+    selectedPerformerFilter,
+  ]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -108,81 +175,128 @@ function ActivityLogPage() {
     }
   }, [page, totalPages]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const todayPrefix = new Date().toISOString().slice(0, 10);
   const todayCount = activityLogs.filter((item) =>
-    item.performedAt.startsWith(today),
+    (item.occurredAt || "").startsWith(todayPrefix),
   ).length;
-  const lockEvents = activityLogs.filter((item) =>
-    item.action.includes("Locked"),
+  const highSeverityCount = activityLogs.filter(
+    (item) => item.severity === "cao",
   ).length;
-  const roleEvents = activityLogs.filter((item) =>
-    item.action.includes("Role"),
+  const settingsAndTemplateCount = activityLogs.filter((item) =>
+    ["Thiết lập hệ thống", "Mẫu nội dung"].includes(item.moduleLabel),
   ).length;
 
   return (
     <div className="activity-log-page">
       <PageHeader
-        title="Activity Log"
-        description="Review derived account lifecycle activity and admin-side status changes in one dedicated log screen."
-        actionLabel="Refresh Log"
-        onActionClick={() => void loadUsers()}
+        title="Nhật ký hoạt động"
+        description="Tra cứu ai làm gì, ở đâu, khi nào trong toàn bộ màn quản trị. Nhật ký này gom được thay đổi ở người dùng, kiểm duyệt, thiết lập hệ thống, mẫu nội dung và xuất dữ liệu."
+        actionLabel="Làm mới nhật ký"
+        onActionClick={() => void loadActivityLogs()}
       />
 
       <div className="activity-log-summary-grid">
         <StatCard
-          title="Total Log Entries"
+          title="Tổng số bản ghi"
           value={String(activityLogs.length)}
-          subtitle="All user account actions"
+          subtitle="Tất cả bản ghi backend đã trả về"
         />
         <StatCard
-          title="Today Activity"
+          title="Hoạt động hôm nay"
           value={String(todayCount)}
-          subtitle="Entries recorded today"
+          subtitle="Số bản ghi phát sinh trong ngày hiện tại"
         />
         <StatCard
-          title="Role Changes"
-          value={String(roleEvents)}
-          subtitle="Assignment and role update events"
+          title="Mức cao"
+          value={String(highSeverityCount)}
+          subtitle="Những thao tác cần chú ý hơn khi rà soát"
         />
         <StatCard
-          title="Lock Events"
-          value={String(lockEvents)}
-          subtitle="Access restriction actions"
+          title="Settings + Template"
+          value={String(settingsAndTemplateCount)}
+          subtitle="Các thay đổi ở thiết lập hệ thống và mẫu nội dung"
         />
       </div>
 
       <SearchToolbar
-        placeholder="Search by user, action, detail, or performer"
+        placeholder="Tìm theo người thực hiện, nhóm chức năng, hành động, đối tượng hoặc mã đối tượng"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Filter log"
-        filterSummaryItems={[selectedActionFilter, selectedPerformerFilter]}
+        filterLabel="Lọc nhật ký"
+        filterSummaryItems={[
+          selectedModuleFilter === "All"
+            ? "Tất cả nhóm chức năng"
+            : selectedModuleFilter,
+          selectedActionTypeFilter === "All"
+            ? "Tất cả loại hành động"
+            : selectedActionTypeFilter,
+          selectedPerformerFilter === "All"
+            ? "Tất cả người thực hiện"
+            : selectedPerformerFilter,
+        ]}
       />
 
       {showFilters ? (
         <SectionCard
-          title="Log Filters"
-          description="Refine activity records by action type and performer."
+          title="Bộ lọc nhật ký"
+          description="Lọc theo khoảng ngày, nhóm chức năng, loại hành động và người thực hiện."
         >
           <div className="activity-log-filters">
             <div className="activity-log-filters__field">
-              <label htmlFor="activity-log-action-filter">Action</label>
+              <label htmlFor="activity-log-date-from">Từ ngày</label>
+              <input
+                id="activity-log-date-from"
+                type="date"
+                value={dateFrom}
+                onChange={(event) => setDateFrom(event.target.value)}
+              />
+            </div>
+
+            <div className="activity-log-filters__field">
+              <label htmlFor="activity-log-date-to">Đến ngày</label>
+              <input
+                id="activity-log-date-to"
+                type="date"
+                value={dateTo}
+                onChange={(event) => setDateTo(event.target.value)}
+              />
+            </div>
+
+            <div className="activity-log-filters__field">
+              <label htmlFor="activity-log-module-filter">Nhóm chức năng</label>
               <select
-                id="activity-log-action-filter"
-                value={selectedActionFilter}
-                onChange={(event) => setSelectedActionFilter(event.target.value)}
+                id="activity-log-module-filter"
+                value={selectedModuleFilter}
+                onChange={(event) => setSelectedModuleFilter(event.target.value)}
               >
-                {actionOptions.map((action) => (
-                  <option key={action} value={action}>
-                    {action}
+                {moduleOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option === "All" ? "Tất cả nhóm chức năng" : option}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="activity-log-filters__field">
-              <label htmlFor="activity-log-performer-filter">Performed By</label>
+              <label htmlFor="activity-log-action-type-filter">Loại hành động</label>
+              <select
+                id="activity-log-action-type-filter"
+                value={selectedActionTypeFilter}
+                onChange={(event) =>
+                  setSelectedActionTypeFilter(event.target.value)
+                }
+              >
+                {actionTypeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option === "All" ? "Tất cả loại hành động" : option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="activity-log-filters__field activity-log-filters__field--full">
+              <label htmlFor="activity-log-performer-filter">Người thực hiện</label>
               <select
                 id="activity-log-performer-filter"
                 value={selectedPerformerFilter}
@@ -190,9 +304,9 @@ function ActivityLogPage() {
                   setSelectedPerformerFilter(event.target.value)
                 }
               >
-                {performerOptions.map((performer) => (
-                  <option key={performer} value={performer}>
-                    {performer}
+                {performerOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option === "All" ? "Tất cả người thực hiện" : option}
                   </option>
                 ))}
               </select>
@@ -202,23 +316,23 @@ function ActivityLogPage() {
       ) : null}
 
       <SectionCard
-        title="Account Activity Directory"
-        description="Follow registration, login, status updates, and other lifecycle actions derived from user account data."
+        title="Danh sách hoạt động"
+        description="Mỗi bản ghi cho biết rõ thời gian, người thực hiện, vai trò, nhóm chức năng, hành động, đối tượng tác động, kết quả và mức độ ưu tiên."
       >
         {isLoading ? (
           <EmptyState
-            title="Loading activity log"
-            description="Fetching the latest user activity records from the admin API."
+            title="Đang tải nhật ký hoạt động"
+            description="Đang lấy dữ liệu nhật ký từ API quản trị."
           />
         ) : error ? (
           <EmptyState
-            title="Unable to load activity log"
+            title="Không thể tải nhật ký hoạt động"
             description={error}
           />
         ) : filteredLogs.length === 0 ? (
           <EmptyState
-            title="No activity found"
-            description="No activity log entries match the current search or filter settings."
+            title="Không có hoạt động nào"
+            description="Không có bản ghi nào khớp với điều kiện tìm kiếm hoặc bộ lọc hiện tại."
           />
         ) : (
           <>
@@ -226,34 +340,66 @@ function ActivityLogPage() {
               <table className="activity-log-table">
                 <thead>
                   <tr>
-                    <th>Log</th>
-                    <th>User</th>
-                    <th>Action</th>
-                    <th>Detail</th>
-                    <th>Performed By</th>
-                    <th>Timestamp</th>
+                    <th>Thời gian</th>
+                    <th>Người thực hiện</th>
+                    <th>Nhóm chức năng</th>
+                    <th>Hành động</th>
+                    <th>Đối tượng tác động</th>
+                    <th>Kết quả</th>
+                    <th>Mức độ</th>
+                    <th>Chi tiết</th>
                   </tr>
                 </thead>
-
                 <tbody>
-                  {paginatedLogs.map((item: FlattenedUserActivityItem) => (
-                    <tr key={`${item.userId}-${item.id}`}>
-                      <td>#{item.id}</td>
+                  {paginatedLogs.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.occurredAtLabel}</td>
                       <td>
                         <div className="activity-log-cell">
-                          <strong>{item.userName}</strong>
-                          <span>User #{item.userId}</span>
+                          <strong>{item.actorName}</strong>
+                          <span>{item.actorRole}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <StatusBadge label={item.moduleLabel} variant="type" />
+                      </td>
+                      <td>
+                        <div className="activity-log-cell">
+                          <strong>{item.action}</strong>
+                          <span>{item.actionType}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="activity-log-cell">
+                          <strong>{item.targetName}</strong>
+                          <span>
+                            {item.targetCode
+                              ? `${item.targetType} • ${item.targetCode}`
+                              : item.targetType}
+                          </span>
                         </div>
                       </td>
                       <td>
                         <StatusBadge
-                          label={item.action}
-                          variant={getActionVariant(item.action)}
+                          label={item.result}
+                          variant={getResultVariant(item.result)}
                         />
                       </td>
-                      <td>{item.detail}</td>
-                      <td>{item.performedBy}</td>
-                      <td>{item.performedAt}</td>
+                      <td>
+                        <StatusBadge
+                          label={`Mức ${item.severity}`}
+                          variant={getSeverityVariant(item.severity)}
+                        />
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="activity-log-detail-button"
+                          onClick={() => setSelectedLog(item)}
+                        >
+                          Xem chi tiết
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -262,7 +408,7 @@ function ActivityLogPage() {
 
             <div className="activity-log-pagination">
               <span className="activity-log-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="activity-log-pagination__actions">
@@ -271,7 +417,7 @@ function ActivityLogPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -280,13 +426,92 @@ function ActivityLogPage() {
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Sau
                 </button>
               </div>
             </div>
           </>
         )}
       </SectionCard>
+
+      <BaseModal
+        isOpen={Boolean(selectedLog)}
+        title="Chi tiết nhật ký hoạt động"
+        description="Xem đầy đủ thông tin của bản ghi đang chọn để đối chiếu ai làm gì, ở đâu, khi nào."
+        onClose={() => setSelectedLog(null)}
+        maxWidth="880px"
+      >
+        {selectedLog ? (
+          <div className="activity-log-detail">
+            <div className="activity-log-detail__grid">
+              <div className="activity-log-detail__field">
+                <label>Mã log</label>
+                <strong>#{selectedLog.id}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Thời gian</label>
+                <strong>{selectedLog.occurredAtLabel}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Người thực hiện</label>
+                <strong>{selectedLog.actorName}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Vai trò</label>
+                <strong>{selectedLog.actorRole}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Nhóm chức năng</label>
+                <strong>{selectedLog.moduleLabel}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Loại hành động</label>
+                <strong>{selectedLog.actionType}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Hành động</label>
+                <strong>{selectedLog.action}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Kết quả</label>
+                <strong>{selectedLog.result}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Đối tượng tác động</label>
+                <strong>{selectedLog.targetName}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Mã đối tượng</label>
+                <strong>{selectedLog.targetCode || "--"}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Mức độ</label>
+                <strong>{selectedLog.severity}</strong>
+              </div>
+              <div className="activity-log-detail__field">
+                <label>Loại đối tượng</label>
+                <strong>{selectedLog.targetType}</strong>
+              </div>
+            </div>
+
+            <div className="activity-log-detail__panel">
+              <label>Chi tiết đầy đủ</label>
+              <p>{selectedLog.detail}</p>
+            </div>
+
+            <div className="activity-log-detail__panel">
+              <label>ID liên quan</label>
+              <div className="activity-log-detail__tags">
+                <span>User: {selectedLog.relatedIds.userId ?? "--"}</span>
+                <span>Post: {selectedLog.relatedIds.postId ?? "--"}</span>
+                <span>Shop: {selectedLog.relatedIds.shopId ?? "--"}</span>
+                <span>Slot: {selectedLog.relatedIds.slotId ?? "--"}</span>
+                <span>Category: {selectedLog.relatedIds.categoryId ?? "--"}</span>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </BaseModal>
     </div>
   );
 }

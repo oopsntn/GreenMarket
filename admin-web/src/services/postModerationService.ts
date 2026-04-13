@@ -1,17 +1,17 @@
 import { apiClient } from "../lib/apiClient";
-import { getAdminProfile } from "../utils/adminSession";
 import type {
   ApiModerationPostDetailResponse,
   ApiModerationPostResponse,
   PostModerationItem,
   PostModerationStatus,
 } from "../types/postModeration";
+import { getAdminProfile } from "../utils/adminSession";
 
 const formatDateTime = (value: string | null) => {
-  if (!value) return "Not available";
+  if (!value) return "Chưa có dữ liệu";
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not available";
+  if (Number.isNaN(date.getTime())) return "Chưa có dữ liệu";
 
   const day = date.toISOString().slice(0, 10);
   const time = `${String(date.getHours()).padStart(2, "0")}:${String(
@@ -23,17 +23,17 @@ const formatDateTime = (value: string | null) => {
 
 const formatCurrency = (value: string | number | null) => {
   if (value === null || value === undefined || value === "") {
-    return "Negotiable";
+    return "Thỏa thuận";
   }
 
   const numericValue =
     typeof value === "number" ? value : Number.parseFloat(String(value));
 
   if (Number.isNaN(numericValue)) {
-    return "Negotiable";
+    return "Thỏa thuận";
   }
 
-  return `${numericValue.toLocaleString("en-US")} VND`;
+  return `${numericValue.toLocaleString("vi-VN")} VND`;
 };
 
 const mapStatus = (value: string | null): PostModerationStatus => {
@@ -54,41 +54,43 @@ const mapStatus = (value: string | null): PostModerationStatus => {
 
 const mapPostToUi = (
   item: ApiModerationPostResponse | ApiModerationPostDetailResponse,
-): PostModerationItem => {
-  return {
-    id: item.postId,
-    title: item.postTitle?.trim() || `Post #${item.postId}`,
-    slug: item.postSlug?.trim() || "",
-    authorLabel: `User #${item.postAuthorId}`,
-    shopLabel: item.postShopId ? `Shop #${item.postShopId}` : "No shop",
-    categoryLabel: item.categoryId ? `Category #${item.categoryId}` : "No category",
-    priceLabel: formatCurrency(item.postPrice),
-    location: item.postLocation?.trim() || "No location",
-    contactPhone: item.postContactPhone?.trim() || "No phone",
-    status: mapStatus(item.postStatus),
-    publishedLabel: item.postPublished ? "Published" : "Not published",
-    submittedAt: formatDateTime(item.postSubmittedAt || item.postCreatedAt),
-    moderatedAt: formatDateTime(item.postModeratedAt),
-    views: item.postViewCount ?? 0,
-    contacts: item.postContactCount ?? 0,
-    rejectedReason: item.postRejectedReason?.trim() || "No rejection reason",
-    images:
-      "images" in item
-        ? (item.images ?? [])
-            .map((image) => image.imageUrl?.trim() || "")
-            .filter((imageUrl) => imageUrl.length > 0)
-        : [],
-    attributes:
-      "attributes" in item
-        ? (item.attributes ?? [])
-            .map((attribute) => ({
-              id: attribute.attributeId ?? 0,
-              value: attribute.attributeValue?.trim() || "No value",
-            }))
-            .filter((attribute) => attribute.id > 0)
-        : [],
-  };
-};
+): PostModerationItem => ({
+  id: item.postId,
+  title: item.postTitle?.trim() || `Bài đăng #${item.postId}`,
+  slug: item.postSlug?.trim() || "",
+  authorLabel: `Người dùng #${item.postAuthorId}`,
+  shopLabel: item.postShopId
+    ? `Cửa hàng #${item.postShopId}`
+    : "Chưa có cửa hàng",
+  categoryLabel: item.categoryId
+    ? `Danh mục #${item.categoryId}`
+    : "Chưa có danh mục",
+  priceLabel: formatCurrency(item.postPrice),
+  location: item.postLocation?.trim() || "Chưa có địa điểm",
+  contactPhone: item.postContactPhone?.trim() || "Chưa có số điện thoại",
+  status: mapStatus(item.postStatus),
+  publishedLabel: item.postPublished ? "Đã xuất bản" : "Chưa xuất bản",
+  submittedAt: formatDateTime(item.postSubmittedAt || item.postCreatedAt),
+  moderatedAt: formatDateTime(item.postModeratedAt),
+  views: item.postViewCount ?? 0,
+  contacts: item.postContactCount ?? 0,
+  rejectedReason: item.postRejectedReason?.trim() || "Chưa có lý do từ chối",
+  images:
+    "images" in item
+      ? (item.images ?? [])
+          .map((image) => image.imageUrl?.trim() || "")
+          .filter((imageUrl) => imageUrl.length > 0)
+      : [],
+  attributes:
+    "attributes" in item
+      ? (item.attributes ?? [])
+          .map((attribute) => ({
+            id: attribute.attributeId ?? 0,
+            value: attribute.attributeValue?.trim() || "Chưa có giá trị",
+          }))
+          .filter((attribute) => attribute.id > 0)
+      : [],
+});
 
 const mapStatusToApi = (status: PostModerationStatus) => status.toLowerCase();
 
@@ -97,7 +99,7 @@ export const postModerationService = {
     const data = await apiClient.request<ApiModerationPostResponse[]>(
       "/api/admin/posts",
       {
-        defaultErrorMessage: "Unable to load moderation posts.",
+        defaultErrorMessage: "Không thể tải danh sách bài đăng kiểm duyệt.",
       },
     );
 
@@ -108,7 +110,7 @@ export const postModerationService = {
     const data = await apiClient.request<ApiModerationPostDetailResponse>(
       `/api/admin/posts/${postId}`,
       {
-        defaultErrorMessage: "Unable to load post details.",
+        defaultErrorMessage: "Không thể tải chi tiết bài đăng.",
       },
     );
 
@@ -120,14 +122,17 @@ export const postModerationService = {
     status: Extract<PostModerationStatus, "Approved" | "Rejected" | "Pending">,
     reason?: string,
   ): Promise<PostModerationItem> {
+    const adminProfile = getAdminProfile();
+
     const data = await apiClient.request<ApiModerationPostResponse>(
       `/api/admin/posts/${postId}/status`,
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update post status.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái bài đăng.",
         body: JSON.stringify({
           status: mapStatusToApi(status),
+          adminName: adminProfile?.fullName,
           ...(reason?.trim() ? { reason: reason.trim() } : {}),
         }),
       },
@@ -144,9 +149,10 @@ export const postModerationService = {
     }>(`/api/admin/posts/${postId}`, {
       method: "DELETE",
       includeJsonContentType: true,
-      defaultErrorMessage: "Unable to hide post.",
+      defaultErrorMessage: "Không thể ẩn bài đăng.",
       body: JSON.stringify({
         adminId: adminProfile?.id,
+        adminName: adminProfile?.fullName,
         ...(reason?.trim() ? { reason: reason.trim() } : {}),
       }),
     });

@@ -12,6 +12,8 @@ import {
 } from "../utils/dateRange";
 import "./DashboardPage.css";
 
+const ALL_METRICS_LABEL = "Tất cả chỉ số";
+
 function DashboardPage() {
   const [dashboardData, setDashboardData] = useState(
     dashboardService.getEmptyOverview(),
@@ -21,7 +23,7 @@ function DashboardPage() {
 
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
-  const [overviewScope, setOverviewScope] = useState("All Metrics");
+  const [overviewScope, setOverviewScope] = useState(ALL_METRICS_LABEL);
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const statCards = dashboardData.statCards;
   const summary = dashboardData.summary;
@@ -37,7 +39,7 @@ function DashboardPage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Failed to load dashboard overview.",
+            : "Không thể tải dữ liệu tổng quan.",
         );
       } finally {
         setIsLoading(false);
@@ -48,7 +50,7 @@ function DashboardPage() {
   }, [fromDate, toDate]);
 
   const filteredCards = useMemo(() => {
-    if (overviewScope === "All Metrics") return statCards;
+    if (overviewScope === ALL_METRICS_LABEL) return statCards;
 
     const normalizedCards = statCards.map((card, index) => ({
       ...card,
@@ -57,16 +59,16 @@ function DashboardPage() {
     }));
 
     const scopeRules: Record<string, (title: string) => boolean> = {
-      "Users & Shops": (title) =>
+      "Người dùng & cửa hàng": (title) =>
         title.includes("user") ||
         title.includes("shop") ||
         title.includes("seller"),
-      "Posts & Moderation": (title) =>
+      "Bài đăng & kiểm duyệt": (title) =>
         title.includes("post") ||
         title.includes("report") ||
         title.includes("moderat") ||
         title.includes("review"),
-      "Business Overview": (title) =>
+      "Tổng quan kinh doanh": (title) =>
         title.includes("revenue") ||
         title.includes("promotion") ||
         title.includes("order") ||
@@ -82,11 +84,11 @@ function DashboardPage() {
       return matched.map(({ _index, _title, ...card }) => card);
     }
 
-    if (overviewScope === "Users & Shops") {
+    if (overviewScope === "Người dùng & cửa hàng") {
       return statCards.slice(0, 2);
     }
 
-    if (overviewScope === "Posts & Moderation") {
+    if (overviewScope === "Bài đăng & kiểm duyệt") {
       return statCards.slice(1, 3);
     }
 
@@ -94,48 +96,48 @@ function DashboardPage() {
   }, [overviewScope, statCards]);
 
   const scopeSummaryText =
-    overviewScope === "All Metrics"
-      ? "Showing all KPI groups across the admin system."
-      : `Showing KPI cards related to ${overviewScope.toLowerCase()}.`;
+    overviewScope === ALL_METRICS_LABEL
+      ? "Đang hiển thị toàn bộ nhóm chỉ số của hệ thống quản trị."
+      : `Đang hiển thị các thẻ KPI thuộc nhóm ${overviewScope.toLowerCase()}.`;
 
   return (
     <div className="dashboard-page">
       <PageHeader
-        title="Dashboard Overview"
-        description="Welcome back. Here is the summary of GreenMarket system."
+        title="Tổng quan hệ thống"
+        description="Theo dõi nhanh các chỉ số trọng yếu của GreenMarket."
       />
 
       <SectionCard
-        title="Dashboard Filters"
-        description="Adjust the reporting period and overview scope."
+        title="Bộ lọc tổng quan"
+        description="Điều chỉnh khoảng thời gian báo cáo và phạm vi theo dõi."
       >
         <FilterBar
           fields={[
             {
               id: "dashboard-from-date",
-              label: "From Date",
+              label: "Từ ngày",
               type: "date",
               value: fromDate,
               onChange: setFromDate,
             },
             {
               id: "dashboard-to-date",
-              label: "To Date",
+              label: "Đến ngày",
               type: "date",
               value: toDate,
               onChange: setToDate,
             },
             {
               id: "dashboard-overview-scope",
-              label: "Overview Scope",
+              label: "Phạm vi tổng quan",
               type: "select",
               value: overviewScope,
               onChange: setOverviewScope,
               options: [
-                "All Metrics",
-                "Users & Shops",
-                "Posts & Moderation",
-                "Business Overview",
+                ALL_METRICS_LABEL,
+                "Người dùng & cửa hàng",
+                "Bài đăng & kiểm duyệt",
+                "Tổng quan kinh doanh",
               ],
             },
           ]}
@@ -143,7 +145,7 @@ function DashboardPage() {
       </SectionCard>
 
       <SectionCard
-        title="Overview Context"
+        title="Ngữ cảnh tổng quan"
         description={`${dateRangeLabel} • ${overviewScope}`}
       >
         <div className="dashboard-context">
@@ -152,16 +154,16 @@ function DashboardPage() {
       </SectionCard>
 
       {isLoading ? (
-        <SectionCard title="Dashboard KPIs">
+        <SectionCard title="Chỉ số tổng quan">
           <EmptyState
-            title="Loading dashboard"
-            description="Fetching dashboard metrics from the admin API."
+            title="Đang tải dữ liệu tổng quan"
+            description="Đang lấy các chỉ số dashboard từ API quản trị."
           />
         </SectionCard>
       ) : pageError ? (
-        <SectionCard title="Dashboard KPIs">
+        <SectionCard title="Chỉ số tổng quan">
           <EmptyState
-            title="Unable to load dashboard"
+            title="Không thể tải dashboard"
             description={pageError}
           />
         </SectionCard>

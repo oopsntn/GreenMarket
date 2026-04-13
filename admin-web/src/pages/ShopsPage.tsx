@@ -23,25 +23,37 @@ type ConfirmState = {
 
 const PAGE_SIZE = 5;
 
+const statusFilterLabelMap: Record<ShopStatus | "All", string> = {
+  All: "Tất cả",
+  Pending: "Chờ duyệt",
+  Active: "Đang hoạt động",
+  Suspended: "Tạm ngưng",
+  Rejected: "Đã từ chối",
+};
+
+const statusBadgeLabelMap: Record<ShopStatus, string> = {
+  Pending: "Chờ duyệt",
+  Active: "Đang hoạt động",
+  Suspended: "Tạm ngưng",
+  Rejected: "Đã từ chối",
+};
+
 function ShopsPage() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-const [searchInput, setSearchInput] = useState("");
-const [searchKeyword, setSearchKeyword] = useState("");
-const [showFilters, setShowFilters] = useState(false);
-const [page, setPage] = useState(1);
-const [selectedStatusFilter, setSelectedStatusFilter] = useState<
-  ShopStatus | "All"
->("All");
-
+  const [searchInput, setSearchInput] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
+    ShopStatus | "All"
+  >("All");
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
     shopId: null,
     action: null,
   });
-
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,7 +88,11 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
       const data = await shopApi.getShops();
       setShops(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load shops.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Không thể tải danh sách cửa hàng.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -87,10 +103,10 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
   }, []);
 
   const filteredShops = useMemo(() => {
-      return shops.filter((shop) => {
-        const keyword = searchKeyword.trim().toLowerCase();
-        const matchesStatus =
-          selectedStatusFilter === "All" || shop.status === selectedStatusFilter;
+    return shops.filter((shop) => {
+      const keyword = searchKeyword.trim().toLowerCase();
+      const matchesStatus =
+        selectedStatusFilter === "All" || shop.status === selectedStatusFilter;
 
       if (!keyword) return matchesStatus;
 
@@ -131,7 +147,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
       setIsModalOpen(true);
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Failed to load shop details.",
+        err instanceof Error ? err.message : "Không thể tải chi tiết cửa hàng.",
         "error",
       );
     }
@@ -166,32 +182,32 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
       : null;
 
   const confirmTitleMap: Record<ConfirmAction, string> = {
-    approve: "Approve Shop",
-    reject: "Reject Shop",
-    suspend: "Suspend Shop",
-    reactivate: "Reactivate Shop",
+    approve: "Duyệt cửa hàng",
+    reject: "Từ chối cửa hàng",
+    suspend: "Tạm ngưng cửa hàng",
+    reactivate: "Kích hoạt lại cửa hàng",
   };
 
   const confirmMessageMap: Record<ConfirmAction, string> = {
-    approve: `Are you sure you want to approve ${
-      confirmShop?.name ?? "this shop"
-    }? This shop will become active in the system.`,
-    reject: `Are you sure you want to reject ${
-      confirmShop?.name ?? "this shop"
-    }? This shop will not be allowed to operate.`,
-    suspend: `Are you sure you want to suspend ${
-      confirmShop?.name ?? "this shop"
-    }? The shop will be temporarily restricted.`,
-    reactivate: `Are you sure you want to reactivate ${
-      confirmShop?.name ?? "this shop"
-    }? The shop will be active again.`,
+    approve: `Bạn có chắc muốn duyệt ${
+      confirmShop?.name ?? "cửa hàng này"
+    }? Cửa hàng sẽ chuyển sang trạng thái đang hoạt động.`,
+    reject: `Bạn có chắc muốn từ chối ${
+      confirmShop?.name ?? "cửa hàng này"
+    }? Cửa hàng sẽ không được phép hoạt động trên hệ thống.`,
+    suspend: `Bạn có chắc muốn tạm ngưng ${
+      confirmShop?.name ?? "cửa hàng này"
+    }? Cửa hàng sẽ bị hạn chế hoạt động cho đến khi được kích hoạt lại.`,
+    reactivate: `Bạn có chắc muốn kích hoạt lại ${
+      confirmShop?.name ?? "cửa hàng này"
+    }? Cửa hàng sẽ hoạt động trở lại trên hệ thống.`,
   };
 
   const confirmButtonMap: Record<ConfirmAction, string> = {
-    approve: "Approve Shop",
-    reject: "Reject Shop",
-    suspend: "Suspend Shop",
-    reactivate: "Reactivate Shop",
+    approve: "Duyệt cửa hàng",
+    reject: "Từ chối cửa hàng",
+    suspend: "Tạm ngưng",
+    reactivate: "Kích hoạt lại",
   };
 
   const confirmToneMap: Record<
@@ -236,22 +252,19 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
       }
 
       if (confirmState.action === "approve") {
-        showToast(`${targetShop.name} has been approved successfully.`);
+        showToast(`Đã duyệt ${targetShop.name} thành công.`);
       }
 
       if (confirmState.action === "reject") {
-        showToast(`${targetShop.name} has been rejected successfully.`, "info");
+        showToast(`Đã từ chối ${targetShop.name}.`, "info");
       }
 
       if (confirmState.action === "suspend") {
-        showToast(
-          `${targetShop.name} has been suspended successfully.`,
-          "info",
-        );
+        showToast(`Đã tạm ngưng ${targetShop.name}.`, "info");
       }
 
       if (confirmState.action === "reactivate") {
-        showToast(`${targetShop.name} has been reactivated successfully.`);
+        showToast(`Đã kích hoạt lại ${targetShop.name}.`);
       }
 
       setConfirmState({
@@ -261,7 +274,9 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
       });
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Failed to update shop status.",
+        err instanceof Error
+          ? err.message
+          : "Không thể cập nhật trạng thái cửa hàng.",
         "error",
       );
     } finally {
@@ -272,29 +287,29 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
   return (
     <div className="shops-page">
       <PageHeader
-        title="Shops Management"
-        description="Manage shops, shop owners, and approval status in the system."
+        title="Quản lý cửa hàng"
+        description="Theo dõi cửa hàng, chủ sở hữu và trạng thái xét duyệt hoạt động trên hệ thống."
       />
 
       <SearchToolbar
-        placeholder="Search by shop name or owner"
+        placeholder="Tìm theo tên cửa hàng hoặc chủ sở hữu"
         searchValue={searchInput}
         onSearchChange={setSearchInput}
         onSearchSubmit={handleApplyFilter}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Filter by shop status"
-        filterSummaryLabel="Current status"
-        filterSummaryItems={[selectedStatusFilter]}
+        filterLabel="Lọc theo trạng thái cửa hàng"
+        filterSummaryLabel="Trạng thái hiện tại"
+        filterSummaryItems={[statusFilterLabelMap[selectedStatusFilter]]}
       />
 
       {showFilters ? (
         <SectionCard
-          title="Shop Filters"
-          description="Refine shop records by approval and operating status."
+          title="Bộ lọc cửa hàng"
+          description="Thu hẹp danh sách theo trạng thái xét duyệt và vận hành."
         >
           <div className="shops-filters">
             <div className="shops-filters__field">
-              <label htmlFor="shops-status-filter">Status</label>
+              <label htmlFor="shops-status-filter">Trạng thái</label>
               <select
                 id="shops-status-filter"
                 value={selectedStatusFilter}
@@ -304,11 +319,11 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                   )
                 }
               >
-                <option value="All">All</option>
-                <option value="Pending">Pending</option>
-                <option value="Active">Active</option>
-                <option value="Suspended">Suspended</option>
-                <option value="Rejected">Rejected</option>
+                <option value="All">Tất cả</option>
+                <option value="Pending">Chờ duyệt</option>
+                <option value="Active">Đang hoạt động</option>
+                <option value="Suspended">Tạm ngưng</option>
+                <option value="Rejected">Đã từ chối</option>
               </select>
             </div>
           </div>
@@ -316,25 +331,25 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
       ) : null}
 
       <SectionCard
-        title="Shop Directory"
-        description="Review registered shops, owner information, and approval status."
+        title="Danh sách cửa hàng"
+        description="Rà soát thông tin cửa hàng, chủ sở hữu và trạng thái duyệt hiện tại."
       >
         {isLoading ? (
           <LoadingState
-            title="Loading shops..."
-            description="Please wait while the system loads the latest shop data."
+            title="Đang tải cửa hàng"
+            description="Vui lòng chờ trong khi hệ thống lấy dữ liệu cửa hàng mới nhất."
           />
         ) : error ? (
           <ErrorState
-            title="Failed to load shops"
+            title="Không thể tải danh sách cửa hàng"
             description={error}
-            actionLabel="Try Again"
+            actionLabel="Tải lại"
             onActionClick={() => void fetchShops()}
           />
         ) : filteredShops.length === 0 ? (
           <EmptyState
-            title="No shops found"
-            description="No shops match your current search. Try another keyword to continue."
+            title="Không tìm thấy cửa hàng"
+            description="Không có cửa hàng nào khớp với điều kiện tìm kiếm hiện tại."
           />
         ) : (
           <>
@@ -343,13 +358,13 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Shop Name</th>
-                    <th>Owner</th>
-                    <th>Owner Email</th>
-                    <th>Total Posts</th>
-                    <th>Status</th>
-                    <th>Created Date</th>
-                    <th>Actions</th>
+                    <th>Tên cửa hàng</th>
+                    <th>Chủ sở hữu</th>
+                    <th>Email chủ sở hữu</th>
+                    <th>Tổng bài đăng</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
 
@@ -367,7 +382,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                       <td>{shop.totalPosts}</td>
                       <td>
                         <StatusBadge
-                          label={shop.status}
+                          label={statusBadgeLabelMap[shop.status]}
                           variant={
                             shop.status === "Active"
                               ? "active"
@@ -387,7 +402,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                             className="shops-actions__view"
                             onClick={() => void openViewModal(shop)}
                           >
-                            View
+                            Xem
                           </button>
 
                           {shop.status === "Pending" && (
@@ -399,7 +414,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                                   openConfirmDialog(shop.id, "approve")
                                 }
                               >
-                                Approve
+                                Duyệt
                               </button>
                               <button
                                 type="button"
@@ -408,7 +423,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                                   openConfirmDialog(shop.id, "reject")
                                 }
                               >
-                                Reject
+                                Từ chối
                               </button>
                             </>
                           )}
@@ -421,7 +436,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                                 openConfirmDialog(shop.id, "suspend")
                               }
                             >
-                              Suspend
+                              Tạm ngưng
                             </button>
                           )}
 
@@ -433,7 +448,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                                 openConfirmDialog(shop.id, "reactivate")
                               }
                             >
-                              Reactivate
+                              Kích hoạt lại
                             </button>
                           )}
                         </div>
@@ -446,7 +461,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
 
             <div className="shops-pagination">
               <span className="shops-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="shops-pagination__actions">
@@ -455,7 +470,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -464,7 +479,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Tiếp
                 </button>
               </div>
             </div>
@@ -474,8 +489,8 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
 
       <BaseModal
         isOpen={isModalOpen}
-        title="Shop Details"
-        description="Review shop information and current approval status."
+        title="Chi tiết cửa hàng"
+        description="Xem thông tin cửa hàng và trạng thái duyệt hiện tại."
         onClose={closeModal}
         maxWidth="720px"
       >
@@ -483,24 +498,24 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
           <div className="shops-modal__content">
             <div className="shops-modal__grid">
               <div className="shops-modal__field">
-                <label>Shop Name</label>
+                <label>Tên cửa hàng</label>
                 <input type="text" value={selectedShop.name} disabled />
               </div>
 
               <div className="shops-modal__field">
-                <label>Owner</label>
+                <label>Chủ sở hữu</label>
                 <input type="text" value={selectedShop.ownerName} disabled />
               </div>
 
               {selectedShop.ownerEmail && (
                 <div className="shops-modal__field">
-                  <label>Owner Email</label>
+                  <label>Email chủ sở hữu</label>
                   <input type="text" value={selectedShop.ownerEmail} disabled />
                 </div>
               )}
 
               <div className="shops-modal__field">
-                <label>Total Posts</label>
+                <label>Tổng bài đăng</label>
                 <input
                   type="text"
                   value={String(selectedShop.totalPosts)}
@@ -509,18 +524,22 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
               </div>
 
               <div className="shops-modal__field">
-                <label>Status</label>
-                <input type="text" value={selectedShop.status} disabled />
+                <label>Trạng thái</label>
+                <input
+                  type="text"
+                  value={statusBadgeLabelMap[selectedShop.status]}
+                  disabled
+                />
               </div>
 
               <div className="shops-modal__field">
-                <label>Created Date</label>
+                <label>Ngày tạo</label>
                 <input type="text" value={selectedShop.createdAt} disabled />
               </div>
             </div>
 
             <div className="shops-modal__field">
-              <label>Description</label>
+              <label>Mô tả</label>
               <textarea value={selectedShop.description} rows={5} disabled />
             </div>
 
@@ -530,7 +549,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                 className="shops-modal__cancel"
                 onClick={closeModal}
               >
-                Close
+                Đóng
               </button>
 
               {selectedShop.status === "Pending" && (
@@ -538,18 +557,16 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                   <button
                     type="button"
                     className="shops-modal__approve"
-                    onClick={() =>
-                      openConfirmDialog(selectedShop.id, "approve")
-                    }
+                    onClick={() => openConfirmDialog(selectedShop.id, "approve")}
                   >
-                    Approve
+                    Duyệt
                   </button>
                   <button
                     type="button"
                     className="shops-modal__reject"
                     onClick={() => openConfirmDialog(selectedShop.id, "reject")}
                   >
-                    Reject
+                    Từ chối
                   </button>
                 </>
               )}
@@ -560,7 +577,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                   className="shops-modal__suspend"
                   onClick={() => openConfirmDialog(selectedShop.id, "suspend")}
                 >
-                  Suspend
+                  Tạm ngưng
                 </button>
               )}
 
@@ -572,7 +589,7 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
                     openConfirmDialog(selectedShop.id, "reactivate")
                   }
                 >
-                  Reactivate
+                  Kích hoạt lại
                 </button>
               )}
             </div>
@@ -583,19 +600,21 @@ const [selectedStatusFilter, setSelectedStatusFilter] = useState<
       <ConfirmDialog
         isOpen={confirmState.isOpen}
         title={
-          confirmState.action ? confirmTitleMap[confirmState.action] : "Confirm"
+          confirmState.action
+            ? confirmTitleMap[confirmState.action]
+            : "Xác nhận thao tác"
         }
         message={
           confirmState.action
             ? confirmMessageMap[confirmState.action]
-            : "Please confirm this action."
+            : "Vui lòng xác nhận thao tác này."
         }
         confirmText={
           confirmState.action
             ? confirmButtonMap[confirmState.action]
-            : "Confirm"
+            : "Xác nhận"
         }
-        cancelText="Cancel"
+        cancelText="Hủy"
         tone={
           confirmState.action ? confirmToneMap[confirmState.action] : "neutral"
         }

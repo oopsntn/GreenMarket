@@ -6,8 +6,8 @@ type LoadingStateProps = Readonly<{
 }>;
 
 function LoadingState({
-  title = "Loading data...",
-  description = "Please wait while the system fetches the latest information.",
+  title = "Đang tải dữ liệu...",
+  description = "Vui lòng chờ trong khi hệ thống lấy dữ liệu mới nhất.",
 }: LoadingStateProps) {
   return (
     <div className="loading-state">

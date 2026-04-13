@@ -21,7 +21,7 @@ export const analyticsService = {
     return apiClient.request<AnalyticsApiResponse>(
       `/api/admin/analytics${buildQuery(fromDate, toDate)}`,
       {
-        defaultErrorMessage: "Unable to load analytics summary.",
+        defaultErrorMessage: "KhÃ´ng thá»ƒ táº£i tá»•ng quan phÃ¢n tÃ­ch.",
       },
     );
   },
@@ -31,6 +31,7 @@ export const analyticsService = {
       kpiCards: [] as AnalyticsKpiCard[],
       topPlacements: [] as TopPlacement[],
       dailyTraffic: [] as AnalyticsDailyTrafficPoint[],
+      slotCatalog: [],
     };
   },
 };

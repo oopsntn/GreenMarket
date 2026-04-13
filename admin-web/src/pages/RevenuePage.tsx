@@ -7,6 +7,7 @@ import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
+import { exportService } from "../services/exportService";
 import { revenueService } from "../services/revenueService";
 import {
   DEFAULT_REPORT_FROM_DATE,
@@ -16,6 +17,7 @@ import {
 import "./RevenuePage.css";
 
 const PAGE_SIZE = 5;
+const ALL_SLOTS_FILTER = "Tất cả vị trí";
 
 function RevenuePage() {
   const [revenueData, setRevenueData] = useState(
@@ -26,13 +28,15 @@ function RevenuePage() {
 
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
-  const [slotFilter, setSlotFilter] = useState("All Slots");
+  const [slotFilter, setSlotFilter] = useState(ALL_SLOTS_FILTER);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const summaryCards = revenueData.summaryCards;
   const rows = revenueData.rows;
+  const slotCatalog = revenueData.slotCatalog;
 
   useEffect(() => {
     const loadRevenue = async () => {
@@ -48,7 +52,7 @@ function RevenuePage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Failed to load revenue summary.",
+            : "Không thể tải tổng quan doanh thu.",
         );
       } finally {
         setIsLoading(false);
@@ -58,11 +62,27 @@ function RevenuePage() {
     void loadRevenue();
   }, [fromDate, toDate]);
 
+  const slotFilterOptions = useMemo(() => {
+    const slotLabels = [
+      ...slotCatalog.map((item) => item.label),
+      ...rows.map((item) => item.slot),
+    ];
+
+    return [ALL_SLOTS_FILTER, ...new Set(slotLabels)];
+  }, [rows, slotCatalog]);
+
+  useEffect(() => {
+    if (!slotFilterOptions.includes(slotFilter)) {
+      setSlotFilter(ALL_SLOTS_FILTER);
+    }
+  }, [slotFilter, slotFilterOptions]);
+
   const filteredRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
 
     return rows.filter((row) => {
-      const matchesSlot = slotFilter === "All Slots" || row.slot === slotFilter;
+      const matchesSlot =
+        slotFilter === ALL_SLOTS_FILTER || row.slot === slotFilter;
       const matchesKeyword =
         !keyword ||
         row.packageName.toLowerCase().includes(keyword) ||
@@ -103,75 +123,91 @@ function RevenuePage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const handleExportRevenueReport = () => {
-    showToast(
-      `Revenue report export started for ${dateRangeLabel} • ${slotFilter}.`,
-    );
+  const handleExportRevenueReport = async () => {
+    try {
+      setIsExporting(true);
+      await exportService.createFinancialExportHistoryItem(
+        "Revenue Summary",
+        fromDate,
+        toDate,
+        "XLSX",
+      );
+      showToast(
+        `Đã xuất báo cáo doanh thu cho ${dateRangeLabel} • ${slotFilter}.`,
+      );
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể xuất báo cáo doanh thu.",
+        "error",
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
     <div className="revenue-page">
       <PageHeader
-        title="Revenue Summary"
-        description="Track promotion revenue across slots, packages, and sales periods."
-        actionLabel="Export Revenue Report"
-        onActionClick={handleExportRevenueReport}
+        title="Tổng quan doanh thu"
+        description="Theo dõi doanh thu gói quảng bá theo vị trí hiển thị, gói bán và giai đoạn kinh doanh."
+        actionLabel={isExporting ? "Đang xuất..." : "Xuất báo cáo doanh thu"}
+        onActionClick={() => void handleExportRevenueReport()}
       />
 
       <SectionCard
-        title="Revenue Filters"
-        description="Narrow the reporting period and placement scope."
+        title="Bộ lọc doanh thu"
+        description="Thu hẹp khoảng thời gian báo cáo và phạm vi vị trí hiển thị."
       >
         <FilterBar
           fields={[
             {
               id: "revenue-from-date",
-              label: "From Date",
+              label: "Từ ngày",
               type: "date",
               value: fromDate,
               onChange: setFromDate,
             },
             {
               id: "revenue-to-date",
-              label: "To Date",
+              label: "Đến ngày",
               type: "date",
               value: toDate,
               onChange: setToDate,
             },
             {
               id: "revenue-slot-filter",
-              label: "Placement Slot",
+              label: "Vị trí hiển thị",
               type: "select",
               value: slotFilter,
               onChange: setSlotFilter,
-              options: [
-                "All Slots",
-                "Home Top",
-                "Category Top",
-                "Search Boost",
-              ],
+              options: slotFilterOptions,
             },
           ]}
         />
       </SectionCard>
 
       <SearchToolbar
-        placeholder="Search by package name or slot"
+        placeholder="Tìm theo tên gói hoặc vị trí hiển thị"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
-        filterSummary={`Current slot filter: ${slotFilter} • ${dateRangeLabel}`}
+        filterSummary={`Bộ lọc hiện tại: ${slotFilter} • ${dateRangeLabel} • ${slotCatalog.length} vị trí đã cấu hình`}
       />
 
       {isLoading ? (
-        <SectionCard title="Revenue KPIs">
+        <SectionCard title="Chỉ số doanh thu">
           <EmptyState
-            title="Loading revenue"
-            description="Fetching revenue metrics from the admin API."
+            title="Đang tải doanh thu"
+            description="Đang lấy các chỉ số doanh thu từ hệ thống quản trị."
           />
         </SectionCard>
       ) : pageError ? (
-        <SectionCard title="Revenue KPIs">
-          <EmptyState title="Unable to load revenue" description={pageError} />
+        <SectionCard title="Chỉ số doanh thu">
+          <EmptyState
+            title="Không thể tải doanh thu"
+            description={pageError}
+          />
         </SectionCard>
       ) : (
         <div className="revenue-cards">
@@ -188,20 +224,23 @@ function RevenuePage() {
       )}
 
       <SectionCard
-        title="Revenue by Package"
+        title="Doanh thu theo gói"
         description={`${dateRangeLabel} • ${slotFilter}`}
       >
         {isLoading ? (
           <EmptyState
-            title="Loading revenue rows"
-            description="Fetching revenue rows from the admin API."
+            title="Đang tải danh sách doanh thu"
+            description="Đang lấy dữ liệu doanh thu chi tiết từ hệ thống quản trị."
           />
         ) : pageError ? (
-          <EmptyState title="Unable to load revenue rows" description={pageError} />
+          <EmptyState
+            title="Không thể tải danh sách doanh thu"
+            description={pageError}
+          />
         ) : filteredRows.length === 0 ? (
           <EmptyState
-            title="No revenue rows found"
-            description="No revenue package data matches the current filter settings."
+            title="Không có dòng doanh thu phù hợp"
+            description="Không có dữ liệu doanh thu gói nào khớp với bộ lọc hiện tại."
           />
         ) : (
           <div className="revenue-table-section">
@@ -210,11 +249,11 @@ function RevenuePage() {
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Package Name</th>
-                    <th>Placement Slot</th>
-                    <th>Orders</th>
-                    <th>Revenue</th>
-                    <th>Growth</th>
+                    <th>Tên gói</th>
+                    <th>Vị trí hiển thị</th>
+                    <th>Đơn hàng</th>
+                    <th>Doanh thu</th>
+                    <th>Tăng trưởng</th>
                   </tr>
                 </thead>
 
@@ -244,7 +283,7 @@ function RevenuePage() {
 
             <div className="revenue-pagination">
               <span className="revenue-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="revenue-pagination__actions">
@@ -253,7 +292,7 @@ function RevenuePage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -262,7 +301,7 @@ function RevenuePage() {
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Tiếp
                 </button>
               </div>
             </div>

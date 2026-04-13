@@ -30,7 +30,7 @@ const countByDeliveryHealth = (
 export const boostedPostService = {
   async getBoostedPosts(): Promise<BoostedPost[]> {
     return apiClient.request<BoostedPostApiResponse[]>("/api/admin/boosted-posts", {
-      defaultErrorMessage: "Unable to load boosted posts.",
+      defaultErrorMessage: "KhÃ´ng thá»ƒ táº£i danh sÃ¡ch chiáº¿n dá»‹ch Ä‘áº©y ná»•i báº­t.",
     });
   },
 
@@ -51,29 +51,29 @@ export const boostedPostService = {
 
     return [
       {
-        title: "Live Delivery",
+        title: "Äang phÃ¢n phá»‘i",
         value: String(activeCount),
-        subtitle: "Campaigns currently serving boosted placements",
+        subtitle: "Chiáº¿n dá»‹ch Ä‘ang hiá»ƒn thá»‹ trÃªn cÃ¡c vá»‹ trÃ­ Ä‘áº©y ná»•i báº­t",
       },
       {
-        title: "Queued Campaigns",
+        title: "ÄÃ£ lÃªn lá»‹ch",
         value: String(scheduledCount),
-        subtitle: "Prepared for the next delivery window",
+        subtitle: "Chiáº¿n dá»‹ch sáºµn sÃ ng cho khung phÃ¢n phá»‘i tiáº¿p theo",
       },
       {
-        title: "Needs Review",
+        title: "Cáº§n rÃ  soÃ¡t",
         value: String(needsReviewCount),
-        subtitle: "Campaigns waiting for content or operations follow-up",
+        subtitle: "Chiáº¿n dá»‹ch Ä‘ang chá» kiá»ƒm tra ná»™i dung hoáº·c váº­n hÃ nh",
       },
       {
-        title: "At Risk",
+        title: "CÃ³ rá»§i ro",
         value: String(atRiskCount),
-        subtitle: "Delivery health currently below the safe threshold",
+        subtitle: "Chiáº¿n dá»‹ch cÃ³ cháº¥t lÆ°á»£ng phÃ¢n phá»‘i dÆ°á»›i ngÆ°á»¡ng an toÃ n",
       },
       {
-        title: "Avg. CTR / Used Quota",
+        title: "CTR TB / Quota Ä‘Ã£ dÃ¹ng",
         value: `${averageCtr} / ${deliveredQuota.toLocaleString("en-US")}`,
-        subtitle: "Operational performance snapshot across boosted delivery",
+        subtitle: "áº¢nh chá»¥p nhanh hiá»‡u quáº£ váº­n hÃ nh trÃªn toÃ n bá»™ chiáº¿n dá»‹ch",
       },
     ];
   },
@@ -88,7 +88,7 @@ export const boostedPostService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update boosted campaign status.",
+        defaultErrorMessage: "KhÃ´ng thá»ƒ cáº­p nháº­t tráº¡ng thÃ¡i chiáº¿n dá»‹ch Ä‘áº©y ná»•i báº­t.",
         body: JSON.stringify({ status }),
       },
     );

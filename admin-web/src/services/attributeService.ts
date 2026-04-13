@@ -12,6 +12,7 @@ const formatDate = (value: string | null) => {
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
+
   return date.toISOString().slice(0, 10);
 };
 
@@ -48,29 +49,26 @@ const normalizeOptions = (value: unknown): string[] => {
     .filter((item) => item.length > 0);
 };
 
-const parseOptionsText = (value: string): string[] => {
-  return Array.from(
+const parseOptionsText = (value: string): string[] =>
+  Array.from(
     new Set(
       value
-    .split(",")
-    .map((item) => item.trim())
+        .split(",")
+        .map((item) => item.trim())
         .filter((item) => item.length > 0),
     ),
   );
-};
 
-const mapApiAttributeToUi = (item: AttributeApiResponse): Attribute => {
-  return {
-    id: item.attributeId,
-    name: item.attributeTitle?.trim() || "Untitled Attribute",
-    code: item.attributeCode?.trim() || "",
-    type: mapApiTypeToUiType(item.attributeDataType),
-    usedIn: [],
-    status: item.attributePublished ? "Active" : "Disabled",
-    createdAt: formatDate(item.attributeCreatedAt),
-    options: normalizeOptions(item.attributeOptions),
-  };
-};
+const mapApiAttributeToUi = (item: AttributeApiResponse): Attribute => ({
+  id: item.attributeId,
+  name: item.attributeTitle?.trim() || "Thuộc tính chưa đặt tên",
+  code: item.attributeCode?.trim() || "",
+  type: mapApiTypeToUiType(item.attributeDataType),
+  usedIn: [],
+  status: item.attributePublished ? "Active" : "Disabled",
+  createdAt: formatDate(item.attributeCreatedAt),
+  options: normalizeOptions(item.attributeOptions),
+});
 
 export const attributeService = {
   getEmptyForm(): AttributeFormState {
@@ -92,17 +90,20 @@ export const attributeService = {
     selectedAttributeId?: number | null,
   ) {
     if (!formData.name.trim()) {
-      throw new Error("Attribute name is required.");
+      throw new Error("Tên thuộc tính là bắt buộc.");
     }
 
     const nextCode = this.buildCode(formData.name, formData.code);
 
     if (!nextCode) {
-      throw new Error("Attribute code could not be generated.");
+      throw new Error("Không thể tạo mã thuộc tính từ dữ liệu hiện tại.");
     }
 
-    if (formData.type === "Select" && parseOptionsText(formData.optionsText).length === 0) {
-      throw new Error("Options are required for Select type.");
+    if (
+      formData.type === "Select" &&
+      parseOptionsText(formData.optionsText).length === 0
+    ) {
+      throw new Error("Thuộc tính kiểu chọn sẵn phải có ít nhất một lựa chọn.");
     }
 
     const duplicateName = attributes.some((attribute) => {
@@ -114,7 +115,7 @@ export const attributeService = {
     });
 
     if (duplicateName) {
-      throw new Error("Another attribute already uses this name.");
+      throw new Error("Đã có thuộc tính khác sử dụng tên này.");
     }
 
     const duplicateCode = attributes.some((attribute) => {
@@ -126,7 +127,7 @@ export const attributeService = {
     });
 
     if (duplicateCode) {
-      throw new Error("Another attribute already uses this code.");
+      throw new Error("Đã có thuộc tính khác sử dụng mã này.");
     }
   },
 
@@ -134,9 +135,10 @@ export const attributeService = {
     const data = await apiClient.request<AttributeApiResponse[]>(
       "/api/admin/attributes",
       {
-        defaultErrorMessage: "Unable to load attributes.",
+        defaultErrorMessage: "Không thể tải danh sách thuộc tính.",
       },
     );
+
     return data.map(mapApiAttributeToUi);
   },
 
@@ -158,7 +160,7 @@ export const attributeService = {
       {
         method: "POST",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to create attribute.",
+        defaultErrorMessage: "Không thể tạo thuộc tính.",
         body: JSON.stringify(payload),
       },
     );
@@ -188,7 +190,7 @@ export const attributeService = {
       {
         method: "PUT",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update attribute.",
+        defaultErrorMessage: "Không thể cập nhật thuộc tính.",
         body: JSON.stringify(payload),
       },
     );
@@ -215,7 +217,7 @@ export const attributeService = {
       {
         method: "PUT",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update attribute status.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái thuộc tính.",
         body: JSON.stringify(payload),
       },
     );
