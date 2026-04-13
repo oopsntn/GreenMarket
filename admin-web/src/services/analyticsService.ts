@@ -21,7 +21,7 @@ export const analyticsService = {
     return apiClient.request<AnalyticsApiResponse>(
       `/api/admin/analytics${buildQuery(fromDate, toDate)}`,
       {
-        defaultErrorMessage: "KhÃ´ng thá»ƒ táº£i tá»•ng quan phÃ¢n tÃ­ch.",
+        defaultErrorMessage: "Không thể tải tổng quan phân tích.",
       },
     );
   },
