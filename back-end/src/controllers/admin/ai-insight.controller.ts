@@ -114,9 +114,9 @@ const normalizeSettings = (
 });
 
 const formatDateTime = (value: Date | string | null | undefined) => {
-  if (!value) return "Not available";
+  if (!value) return "Chưa có dữ liệu";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not available";
+  if (Number.isNaN(date.getTime())) return "Chưa có dữ liệu";
 
   return `${date.toISOString().slice(0, 10)} ${String(date.getHours()).padStart(
     2,
@@ -141,7 +141,7 @@ const getGeneratedBy = (req: AuthRequest) =>
 const clampThreshold = (value: number) =>
   Math.min(100, Math.max(1, Math.round(value)));
 
-const formatCurrency = (value: number) => `${value.toLocaleString("en-US")} VND`;
+const formatCurrency = (value: number) => `${value.toLocaleString("vi-VN")} VND`;
 
 const getFocusLabelVi = (focus: AIInsightFocus) => {
   switch (focus) {

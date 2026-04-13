@@ -10,7 +10,7 @@ export const getRoles = async (_req: Request, res: Response): Promise<void> => {
         res.json(allRoles);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -21,7 +21,7 @@ export const createRole = async (
     try {
         const { roleCode, roleTitle } = req.body;
         if (!roleCode || !roleTitle) {
-            res.status(400).json({ error: "roleCode and roleTitle are required" });
+            res.status(400).json({ error: "Bắt buộc phải có mã vai trò và tên vai trò" });
             return;
         }
 
@@ -34,11 +34,11 @@ export const createRole = async (
         res.status(201).json(createdRole);
     } catch (error: any) {
         if (error?.code === "23505") {
-            res.status(409).json({ error: "Role code already exists" });
+            res.status(409).json({ error: "Mã vai trò đã tồn tại" });
             return;
         }
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -49,13 +49,13 @@ export const updateRole = async (
     try {
         const roleId = parseId(req.params.id);
         if (roleId === null) {
-            res.status(400).json({ error: "Invalid role id" });
+            res.status(400).json({ error: "Mã vai trò không hợp lệ" });
             return;
         }
 
         const { roleCode, roleTitle } = req.body;
         if (roleCode === undefined && roleTitle === undefined) {
-            res.status(400).json({ error: "No update payload provided" });
+            res.status(400).json({ error: "Không có dữ liệu cập nhật" });
             return;
         }
 
@@ -68,18 +68,18 @@ export const updateRole = async (
             .returning();
 
         if (!updatedRole) {
-            res.status(404).json({ error: "Role not found" });
+            res.status(404).json({ error: "Không tìm thấy vai trò" });
             return;
         }
 
         res.json(updatedRole);
     } catch (error: any) {
         if (error?.code === "23505") {
-            res.status(409).json({ error: "Role code already exists" });
+            res.status(409).json({ error: "Mã vai trò đã tồn tại" });
             return;
         }
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -87,26 +87,26 @@ export const deleteRole = async (req: Request<{ id: string }>, res: Response): P
     try {
         const roleId = parseId(req.params.id);
         if (roleId === null) {
-            res.status(400).json({ error: "Invalid role id" });
+            res.status(400).json({ error: "Mã vai trò không hợp lệ" });
             return;
         }
 
         const [roleToDelete] = await db.select().from(roles).where(eq(roles.roleId, roleId)).limit(1);
         if (!roleToDelete) {
-            res.status(404).json({ error: "Role not found" });
+            res.status(404).json({ error: "Không tìm thấy vai trò" });
             return;
         }
 
         if (roleToDelete.roleCode === "ROLE_SUPER_ADMIN") {
-            res.status(400).json({ error: "ROLE_SUPER_ADMIN cannot be deleted" });
+            res.status(400).json({ error: "Không thể xóa vai trò ROLE_SUPER_ADMIN" });
             return;
         }
 
         const [deletedRole] = await db.delete(roles).where(eq(roles.roleId, roleId)).returning();
-        res.json({ message: "Role deleted successfully", deletedRole });
+        res.json({ message: "Xóa vai trò thành công", deletedRole });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -117,13 +117,13 @@ export const getAdminRoleAssignments = async (
     try {
         const adminId = parseId(req.params.adminId);
         if (adminId === null) {
-            res.status(400).json({ error: "Invalid admin id" });
+            res.status(400).json({ error: "Mã quản trị viên không hợp lệ" });
             return;
         }
 
         const [admin] = await db.select().from(admins).where(eq(admins.adminId, adminId)).limit(1);
         if (!admin) {
-            res.status(404).json({ error: "Admin not found" });
+            res.status(404).json({ error: "Không tìm thấy quản trị viên" });
             return;
         }
 
@@ -142,7 +142,7 @@ export const getAdminRoleAssignments = async (
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -153,7 +153,7 @@ export const replaceAdminRoleAssignments = async (
     try {
         const adminId = parseId(req.params.adminId);
         if (adminId === null) {
-            res.status(400).json({ error: "Invalid admin id" });
+            res.status(400).json({ error: "Mã quản trị viên không hợp lệ" });
             return;
         }
 
@@ -162,7 +162,7 @@ export const replaceAdminRoleAssignments = async (
 
         const [admin] = await db.select().from(admins).where(eq(admins.adminId, adminId)).limit(1);
         if (!admin) {
-            res.status(404).json({ error: "Admin not found" });
+            res.status(404).json({ error: "Không tìm thấy quản trị viên" });
             return;
         }
 
@@ -172,7 +172,7 @@ export const replaceAdminRoleAssignments = async (
                 .where(inArray(roles.roleId, uniqueRoleIds));
 
             if (existingRoles.length !== uniqueRoleIds.length) {
-                res.status(400).json({ error: "Some roleIds do not exist" });
+                res.status(400).json({ error: "Một số vai trò được chọn không tồn tại" });
                 return;
             }
         }
@@ -205,6 +205,6 @@ export const replaceAdminRoleAssignments = async (
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
