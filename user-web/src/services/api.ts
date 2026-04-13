@@ -39,8 +39,8 @@ export const getPublicShop = (id: number | string) => api.get(`/shops/${id}`);
 export const recordShopContactClick = (shopId: number | string) => api.post(`/shops/${shopId}/contact-click`);
 export const registerShop = (data: {
   shopName: string;
-  shopPhone: string;
-  shopLocation: string;
+  shopPhone?: string;
+  shopLocation?: string;
   shopDescription?: string;
   shopLogoUrl?: string;
   shopCoverUrl?: string;
@@ -156,9 +156,13 @@ export interface EligiblePromotionPackagesResponse {
 export const getPromotionPackages = () =>
   api.get<EligiblePromotionPackagesResponse>('/promotions/packages/eligible');
 export const getPublicPromotionPackages = () => api.get('/promotions/packages');
+export const getShopVipPackage = () => api.get<PromotionPackageItem>('/promotions/packages/shop-vip');
 export const getPromotionPackageDetail = (id: number | string) => api.get(`/promotions/packages/${id}`);
 export const buyPromotionPackage = (postId: number | string, packageId: number | string) => 
   api.post('/payment/buy-package', { postId, packageId });
+export const payShopRegistration = () => api.post<{ paymentUrl: string }>('/payment/register-shop');
+export const buyShopVipPackage = () => api.post<{ paymentUrl: string }>('/payment/buy-shop-vip');
+export const buyPersonalPackage = () => api.post<{ paymentUrl: string }>('/payment/buy-personal');
 
 // Profile APIs
 export const getProfile = () => api.get('/profile');

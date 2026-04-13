@@ -1,0 +1,40 @@
+services:
+  # ───── BACKEND API ─────
+  api:
+    build:
+      context: ./back-end
+      dockerfile: ./docker/node/Dockerfile
+    container_name: greenmarket_api
+    restart: unless-stopped
+    env_file:
+      - ./back-end/.env.prod
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./back-end/uploads:/app/uploads
+    ports:
+      - "5000:5000"
+
+  # ───── USER FRONTEND ─────
+  user-web:
+    build:
+      context: ./user-web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${USER_WEB_API_URL}
+    container_name: greenmarket_user_web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+
+  # ───── ADMIN FRONTEND ─────
+  admin-web:
+    build:
+      context: ./admin-web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${ADMIN_WEB_API_URL}
+    container_name: greenmarket_admin_web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"

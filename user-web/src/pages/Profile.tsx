@@ -372,11 +372,8 @@ const Profile: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">
-                Lien ket tien ich
+                Liên kết tiện ích
               </h3>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Cac muc it truy cap duoc dua ve footer Profile de Navbar gon hon.
-              </p>
             </div>
           </div>
 
@@ -387,9 +384,9 @@ const Profile: React.FC = () => {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Wallet className="w-4 h-4 text-emerald-600" />
-                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Goi dich vu</p>
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Gói dịch vụ</p>
               </div>
-              <p className="text-xs text-slate-500">Xem bang gia va quyen loi cac goi.</p>
+              <p className="text-xs text-slate-500">Xem bảng giá và quyền lợi các gói.</p>
             </Link>
 
             <Link
@@ -398,9 +395,9 @@ const Profile: React.FC = () => {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Heart className="w-4 h-4 text-emerald-600" />
-                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Bai da luu</p>
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Bài đã lưu</p>
               </div>
-              <p className="text-xs text-slate-500">Mo lai nhanh cac bai ban da danh dau.</p>
+              <p className="text-xs text-slate-500">Mở lại nhanh các bài bạn đã đánh dấu.</p>
             </Link>
 
             <Link
@@ -409,9 +406,9 @@ const Profile: React.FC = () => {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Store className="w-4 h-4 text-emerald-600" />
-                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Trung tam quan ly</p>
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Trung tâm quản lý</p>
               </div>
-              <p className="text-xs text-slate-500">Quan ly bai dang va giao dich ca nhan.</p>
+              <p className="text-xs text-slate-500">Quản lý bài đăng và giao dịch cá nhân.</p>
             </Link>
 
             {isGardenOwner ? (
@@ -421,9 +418,9 @@ const Profile: React.FC = () => {
               >
                 <div className="flex items-center gap-2 mb-1">
                   <LayoutDashboard className="w-4 h-4 text-emerald-600" />
-                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Dashboard chu vuon</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Dashboard chủ vườn</p>
                 </div>
-                <p className="text-xs text-slate-500">Theo doi KPI va hieu qua day bai.</p>
+                <p className="text-xs text-slate-500">Theo dõi KPI và hiệu quả đẩy bài.</p>
               </Link>
             ) : (
               <Link
@@ -432,9 +429,9 @@ const Profile: React.FC = () => {
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Store className="w-4 h-4 text-emerald-600" />
-                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Len shop</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Lên shop</p>
                 </div>
-                <p className="text-xs text-slate-500">Dang ky nha vuon de mo them quyen ban hang.</p>
+                <p className="text-xs text-slate-500">Đăng ký nhà vườn để mở thêm quyền bán hàng.</p>
               </Link>
             )}
           </div>
@@ -784,10 +781,6 @@ const Profile: React.FC = () => {
                 <p className="text-xs font-black text-slate-700 italic">
                   {(user as any)?.userRegisteredAt ? new Date((user as any).userRegisteredAt).toLocaleDateString('vi-VN') : 'Dân cư mới'}
                 </p>
-              </div>
-              <div className="text-right space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Uy tín</span>
-                <p className="text-xs font-black text-emerald-600 italic">Tuyệt vời</p>
               </div>
             </div>
 

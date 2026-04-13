@@ -34,6 +34,8 @@ import userReportRoutes from "./routes/user/report.route.ts";
 import userCategoryRoutes from "./routes/user/category.route.ts";
 import userProfileRoutes from "./routes/user/profile.route.ts";
 import userCollaboratorRoutes from "./routes/user/collaborator.route.ts";
+import userManagerRoutes from "./routes/user/manager.route.ts";
+import userOperationsRoutes from "./routes/user/operations.route.ts";
 import uploadRoutes from "./routes/upload.route.ts";
 import userPromotionRoutes from "./routes/user/promotion.route.ts";
 import userPaymentRoutes from "./routes/user/payment.route.ts";
@@ -42,7 +44,28 @@ import path from "path";
 import "./services/promotionScheduler.ts";
 
 const app = express();
-app.use(cors());
+
+// Harden CORS
+const serverIp = process.env.IP || "localhost";
+const protocol = process.env.PROTOCOL || (serverIp === "localhost" ? "http" : "http"); 
+const whitelist = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  `${protocol}://${serverIp}`,
+  `${protocol}://${serverIp}:8080`,
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -122,6 +145,8 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/promotions", userPromotionRoutes);
 app.use("/api/payment", userPaymentRoutes);
 app.use("/api/collaborator", userCollaboratorRoutes);
+app.use("/api/manager", userManagerRoutes);
+app.use("/api/operations", userOperationsRoutes);
 
 // Static files for uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
