@@ -303,14 +303,14 @@ const getHandledBy = (
 
 const getOperatorName = (slot: "Home Top" | "Category Top" | "Search Boost") => {
     if (slot === "Home Top") {
-        return "Ops Team A";
+        return "Nhóm vận hành A";
     }
 
     if (slot === "Category Top") {
-        return "Ops Team B";
+        return "Nhóm vận hành B";
     }
 
-    return "Ops Team C";
+    return "Nhóm vận hành C";
 };
 
 const getReviewStatus = (
@@ -427,28 +427,28 @@ const buildBoostedNotes = (
     reviewStatus: "Approved" | "Needs Update" | "Escalated",
 ) => {
     if (boostedStatus === "Closed") {
-        return "Campaign was closed by admin and removed from the delivery queue.";
+        return "Chiến dịch đã bị quản trị viên đóng và được đưa ra khỏi hàng chờ phân phối.";
     }
 
     if (boostedStatus === "Completed") {
-        return "Campaign completed after fully consuming the configured placement quota.";
+        return "Chiến dịch đã hoàn tất sau khi dùng hết quota hiển thị đã cấu hình.";
     }
 
     if (boostedStatus === "Expired") {
         return reviewStatus === "Escalated"
-            ? "Campaign expired after review escalation or post visibility changes."
-            : "Campaign expired before using all of its delivery quota.";
+            ? "Chiến dịch đã hết hạn sau khi phát sinh cảnh báo kiểm duyệt hoặc bài đăng thay đổi khả năng hiển thị."
+            : "Chiến dịch đã hết hạn trước khi dùng hết toàn bộ quota phân phối.";
     }
 
     if (boostedStatus === "Paused") {
-        return "Campaign delivery is paused while operations or content review follow-up is in progress.";
+        return "Chiến dịch đang tạm dừng trong lúc đội vận hành hoặc kiểm duyệt theo dõi thêm.";
     }
 
     if (boostedStatus === "Scheduled") {
-        return "Campaign is queued for the next delivery window and waiting for operations handoff.";
+        return "Chiến dịch đã vào lịch phân phối tiếp theo và đang chờ bàn giao cho vận hành.";
     }
 
-    return "Campaign is actively delivering boosted impressions under operations monitoring.";
+    return "Chiến dịch đang phân phối lượt hiển thị đẩy nổi bật và được đội vận hành theo dõi.";
 };
 
 const selectPromotionRows = async (): Promise<RawPromotionRow[]> => {
@@ -671,7 +671,7 @@ const mapRecordToPromotion = (
         owner: getOwnerName(item),
         packageId: item.packageId,
         slot,
-        packageName: item.packageTitle?.trim() || "Unknown Package",
+        packageName: item.packageTitle?.trim() || "Gói chưa xác định",
         startDate: formatDate(item.startAt),
         endDate: formatDate(item.endAt),
         status: lifecycleStatus === "Closed" ? "Expired" : lifecycleStatus,
@@ -727,7 +727,7 @@ const mapRecordToBoostedPost = (
         postTitle: item.postTitle,
         ownerName: getOwnerName(item),
         slot,
-        packageName: item.packageTitle?.trim() || "Unknown Package",
+        packageName: item.packageTitle?.trim() || "Gói chưa xác định",
         startDate: formatDate(item.startAt),
         endDate: formatDate(item.endAt),
         status: boostedStatus,

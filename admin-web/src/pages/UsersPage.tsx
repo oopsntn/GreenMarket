@@ -45,7 +45,7 @@ type StatusActionState = {
 
 const roleLabelMap: Record<AssignableUserRole, string> = {
   User: "Người dùng",
-  Host: "Host",
+  Host: "Chủ shop",
   Collaborator: "Cộng tác viên",
   Manager: "Quản lý",
   "Operation Staff": "Nhân viên vận hành",

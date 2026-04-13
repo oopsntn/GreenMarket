@@ -30,4 +30,5 @@ export type ExportFileApiResponse = {
   fileName: string;
   mimeType: string;
   content: string;
+  contentEncoding?: "utf-8" | "base64";
 };

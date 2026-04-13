@@ -603,7 +603,7 @@ function PromotionPackagesPage() {
         maxWidth="720px"
       >
         {selectedPackage ? (
-          <div className="promotion-packages-detail-grid">
+          <div className="promotion-packages-modal__content">
             <div>
               <span>Tên gói</span>
               <strong>{selectedPackage.name}</strong>
@@ -632,15 +632,15 @@ function PromotionPackagesPage() {
               <span>Trạng thái</span>
               <strong>{statusLabelMap[selectedPackage.status]}</strong>
             </div>
-            <div className="promotion-packages-detail-description">
+            <div className="promotion-packages-modal__field">
               <span>Mô tả</span>
               <p>{selectedPackage.description}</p>
             </div>
 
-            <div className="promotion-packages-form-actions">
+            <div className="promotion-packages-modal__actions">
               <button
                 type="button"
-                className="promotion-packages-form-actions__cancel"
+                className="promotion-packages-modal__close"
                 onClick={closeViewModal}
               >
                 Đóng

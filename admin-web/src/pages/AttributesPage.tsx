@@ -5,7 +5,6 @@ import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
-import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { attributeService } from "../services/attributeService";
 import { categoryMappingService } from "../services/categoryMappingService";
@@ -57,7 +56,7 @@ const typeLabels: Record<AttributeType | "All", string> = {
 
 const buildUsedInLabels = (
   attributes: Attribute[],
-  mappings: Awaited<ReturnType<typeof categoryMappingService.fetchMappings>>,
+  mappings: Awaited<ReturnType<typeof categoryMappingService.getMappings>>["data"],
 ): Attribute[] =>
   attributes.map((attribute) => {
     const usedIn = Array.from(
@@ -78,16 +77,6 @@ const buildUsedInLabels = (
       usedIn,
     };
   });
-
-const parsePreviewOptions = (value: string): string[] =>
-  Array.from(
-    new Set(
-      value
-        .split(",")
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0),
-    ),
-  );
 
 function AttributesPage() {
   const [attributes, setAttributes] = useState<Attribute[]>([]);
@@ -122,6 +111,20 @@ function AttributesPage() {
   });
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [...prev, { id: toastId, message, tone }]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
   const loadAttributes = async (showLoader = false) => {
     try {
       if (showLoader) {
@@ -132,10 +135,10 @@ function AttributesPage() {
 
       const [attributeData, mappingData] = await Promise.all([
         attributeService.getAttributes(),
-        categoryMappingService.fetchMappings(),
+        categoryMappingService.getMappings({ page: 1, pageSize: 1000 }),
       ]);
 
-      setAttributes(buildUsedInLabels(attributeData, mappingData));
+      setAttributes(buildUsedInLabels(attributeData, mappingData.data));
     } catch (error) {
       setPageError(
         error instanceof Error
@@ -152,27 +155,6 @@ function AttributesPage() {
   useEffect(() => {
     void loadAttributes(true);
   }, []);
-
-  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
-    const toastId = Date.now() + Math.random();
-
-    setToasts((prev) => [
-      ...prev,
-      {
-        id: toastId,
-        message,
-        tone,
-      },
-    ]);
-
-    window.setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
-    }, 2600);
-  };
-
-  const removeToast = (id: number) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  };
 
   const openAddModal = () => {
     setModalMode("add");
@@ -261,16 +243,8 @@ function AttributesPage() {
         selectedAttributeId,
       );
 
-      const normalizedOptions =
-        formData.type === "Select" ? parsePreviewOptions(formData.optionsText) : [];
-
       if (modalMode === "add") {
-        await attributeService.createAttribute({
-          name: formData.name,
-          code: formData.code,
-          type: formData.type,
-          options: normalizedOptions,
-        });
+        await attributeService.createAttribute(formData);
         await loadAttributes();
         showToast("Đã thêm thuộc tính thành công.");
       }
@@ -287,12 +261,7 @@ function AttributesPage() {
 
         await attributeService.updateAttribute(
           selectedAttributeId,
-          {
-            name: formData.name,
-            code: formData.code,
-            type: formData.type,
-            options: normalizedOptions,
-          },
+          formData,
           currentAttribute.status,
         );
 
@@ -336,7 +305,7 @@ function AttributesPage() {
           name: targetAttribute.name,
           code: targetAttribute.code,
           type: targetAttribute.type,
-          options: targetAttribute.options,
+          optionsText: targetAttribute.options.join(", "),
         },
         nextStatus,
       );
@@ -380,10 +349,7 @@ function AttributesPage() {
     });
   }, [attributes, searchKeyword, selectedStatusFilter, selectedTypeFilter]);
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredAttributes.length / PAGE_SIZE),
-  );
+  const totalPages = Math.max(1, Math.ceil(filteredAttributes.length / PAGE_SIZE));
 
   const paginatedAttributes = useMemo(() => {
     const startIndex = (page - 1) * PAGE_SIZE;
@@ -407,7 +373,9 @@ function AttributesPage() {
       : null;
 
   const confirmDialogTitle =
-    confirmState.action === "disable" ? "Tắt thuộc tính" : "Bật lại thuộc tính";
+    confirmState.action === "disable"
+      ? "Tắt thuộc tính"
+      : "Bật lại thuộc tính";
 
   const confirmDialogMessage =
     confirmState.action === "disable"
@@ -442,45 +410,44 @@ function AttributesPage() {
         <SectionCard
           title="Bộ lọc thuộc tính"
           description="Thu hẹp danh sách theo trạng thái hoạt động và kiểu dữ liệu của thuộc tính."
+          bodyClassName="attributes-filters"
         >
-          <div className="attributes-page__filters">
-            <div className="attributes-page__filter-field">
-              <label htmlFor="attributes-status-filter">Trạng thái</label>
-              <select
-                id="attributes-status-filter"
-                value={selectedStatusFilter}
-                onChange={(event) =>
-                  setSelectedStatusFilter(
-                    event.target.value as AttributeStatus | "All",
-                  )
-                }
-              >
-                {statusFilterOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {statusLabels[option]}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="attributes-filters__field">
+            <label htmlFor="attributes-status-filter">Trạng thái</label>
+            <select
+              id="attributes-status-filter"
+              value={selectedStatusFilter}
+              onChange={(event) =>
+                setSelectedStatusFilter(
+                  event.target.value as AttributeStatus | "All",
+                )
+              }
+            >
+              {statusFilterOptions.map((option) => (
+                <option key={option} value={option}>
+                  {statusLabels[option]}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div className="attributes-page__filter-field">
-              <label htmlFor="attributes-type-filter">Kiểu dữ liệu</label>
-              <select
-                id="attributes-type-filter"
-                value={selectedTypeFilter}
-                onChange={(event) =>
-                  setSelectedTypeFilter(
-                    event.target.value as AttributeType | "All",
-                  )
-                }
-              >
-                {typeFilterOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {typeLabels[option]}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="attributes-filters__field">
+            <label htmlFor="attributes-type-filter">Kiểu dữ liệu</label>
+            <select
+              id="attributes-type-filter"
+              value={selectedTypeFilter}
+              onChange={(event) =>
+                setSelectedTypeFilter(
+                  event.target.value as AttributeType | "All",
+                )
+              }
+            >
+              {typeFilterOptions.map((option) => (
+                <option key={option} value={option}>
+                  {typeLabels[option]}
+                </option>
+              ))}
+            </select>
           </div>
         </SectionCard>
       ) : null}
@@ -500,7 +467,7 @@ function AttributesPage() {
           />
         ) : isInitialLoading ? (
           <EmptyState
-            title="Đang tải danh sách thuộc tính..."
+            title="Đang tải danh sách thuộc tính"
             description="Hệ thống đang đồng bộ dữ liệu thuộc tính từ máy chủ."
           />
         ) : filteredAttributes.length === 0 ? (
@@ -510,8 +477,8 @@ function AttributesPage() {
           />
         ) : (
           <>
-            <div className="attributes-page__table-wrap">
-              <table className="attributes-page__table">
+            <div className="attributes-table-wrapper">
+              <table className="attributes-table">
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -535,23 +502,17 @@ function AttributesPage() {
                           ? attribute.usedIn.join(", ")
                           : "Chưa gắn danh mục"}
                       </td>
+                      <td>{statusLabels[attribute.status]}</td>
                       <td>
-                        <StatusBadge
-                          tone={attribute.status === "Active" ? "green" : "gray"}
-                        >
-                          {attribute.status === "Active" ? "Đang bật" : "Đang tắt"}
-                        </StatusBadge>
-                      </td>
-                      <td>
-                        <div className="attributes-page__actions">
+                        <div className="attributes-actions">
                           <button
-                            className="soft-button"
+                            className="attributes-actions__view"
                             onClick={() => openViewModal(attribute)}
                           >
                             Xem
                           </button>
                           <button
-                            className="secondary-button"
+                            className="attributes-actions__edit"
                             onClick={() => openEditModal(attribute)}
                           >
                             Sửa
@@ -559,8 +520,8 @@ function AttributesPage() {
                           <button
                             className={
                               attribute.status === "Active"
-                                ? "danger-button"
-                                : "success-button"
+                                ? "attributes-actions__disable"
+                                : "attributes-actions__enable"
                             }
                             disabled={isStatusUpdating === attribute.id}
                             onClick={() =>
@@ -586,24 +547,20 @@ function AttributesPage() {
               </table>
             </div>
 
-            <div className="attributes-page__pagination">
-              <span>
+            <div className="attributes-pagination">
+              <span className="attributes-pagination__info">
                 Trang {page} / {totalPages}
               </span>
-              <div className="attributes-page__pagination-actions">
+              <div className="attributes-pagination__actions">
                 <button
-                  className="soft-button"
                   disabled={page <= 1}
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                 >
                   Trước
                 </button>
                 <button
-                  className="soft-button"
                   disabled={page >= totalPages}
-                  onClick={() =>
-                    setPage((prev) => Math.min(totalPages, prev + 1))
-                  }
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                 >
                   Tiếp
                 </button>
@@ -631,32 +588,35 @@ function AttributesPage() {
               : "Xem thông tin chi tiết của thuộc tính đang được cấu hình trong hệ thống."
         }
       >
-        <form className="attributes-page__form" onSubmit={handleSubmit}>
-          <label>
-            Tên thuộc tính
+        <form className="attributes-modal__form" onSubmit={handleSubmit}>
+          <div className="attributes-modal__field">
+            <label htmlFor="attribute-name">Tên thuộc tính</label>
             <input
+              id="attribute-name"
               name="name"
               value={formData.name}
               onChange={handleChange}
               placeholder="Ví dụ: Chiều cao cây"
               disabled={modalMode === "view"}
             />
-          </label>
+          </div>
 
-          <label>
-            Mã thuộc tính
+          <div className="attributes-modal__field">
+            <label htmlFor="attribute-code">Mã thuộc tính</label>
             <input
+              id="attribute-code"
               name="code"
               value={formData.code}
               onChange={handleChange}
               placeholder="Ví dụ: plant_height"
               disabled={modalMode === "view"}
             />
-          </label>
+          </div>
 
-          <label>
-            Kiểu dữ liệu
+          <div className="attributes-modal__field">
+            <label htmlFor="attribute-type">Kiểu dữ liệu</label>
             <select
+              id="attribute-type"
               name="type"
               value={formData.type}
               onChange={handleChange}
@@ -670,45 +630,59 @@ function AttributesPage() {
                 ),
               )}
             </select>
-          </label>
+          </div>
 
           {formData.type === "Select" ? (
-            <label>
-              Danh sách lựa chọn
+            <div className="attributes-modal__field">
+              <label htmlFor="attribute-options">Danh sách lựa chọn</label>
               <input
+                id="attribute-options"
                 name="optionsText"
                 value={formData.optionsText}
                 onChange={handleChange}
                 placeholder="Ví dụ: Nhỏ, Trung bình, Lớn"
                 disabled={modalMode === "view"}
               />
-            </label>
-          ) : null}
-
-          {selectedAttribute && modalMode === "view" ? (
-            <div className="attributes-page__preview">
-              <strong>Danh mục đang dùng:</strong>
-              <span>
-                {selectedAttribute.usedIn.length > 0
-                  ? selectedAttribute.usedIn.join(", ")
-                  : "Chưa gắn với danh mục nào"}
-              </span>
+              <p className="attributes-modal__hint">
+                Nhập các giá trị cách nhau bằng dấu phẩy.
+              </p>
             </div>
           ) : null}
 
-          {formError ? (
-            <p className="attributes-page__form-error">{formError}</p>
+          {selectedAttribute && modalMode === "view" ? (
+            <div className="attributes-modal__field">
+              <label>Danh mục đang dùng</label>
+              <div className="attributes-modal__preview">
+                {selectedAttribute.usedIn.length > 0 ? (
+                  selectedAttribute.usedIn.map((item) => (
+                    <span key={item} className="attributes-modal__preview-chip">
+                      {item}
+                    </span>
+                  ))
+                ) : (
+                  <span className="attributes-modal__hint">
+                    Chưa gắn với danh mục nào.
+                  </span>
+                )}
+              </div>
+            </div>
           ) : null}
 
-          <div className="attributes-page__form-actions">
-            <button type="button" className="soft-button" onClick={closeModal}>
+          {formError ? <p className="attributes-modal__error">{formError}</p> : null}
+
+          <div className="attributes-modal__actions">
+            <button
+              type="button"
+              className="attributes-modal__cancel"
+              onClick={closeModal}
+            >
               {modalMode === "view" ? "Đóng" : "Hủy"}
             </button>
 
             {modalMode !== "view" ? (
               <button
                 type="submit"
-                className="primary-button"
+                className="attributes-modal__submit"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Đang lưu..." : "Lưu thuộc tính"}
@@ -722,15 +696,15 @@ function AttributesPage() {
         isOpen={confirmState.isOpen}
         title={confirmDialogTitle}
         message={confirmDialogMessage}
-        onClose={closeConfirmDialog}
+        onCancel={closeConfirmDialog}
         onConfirm={() => {
           void handleConfirmAction();
         }}
-        confirmLabel={confirmState.action === "disable" ? "Tắt" : "Bật lại"}
+        confirmText={confirmState.action === "disable" ? "Tắt" : "Bật lại"}
         tone={confirmState.action === "disable" ? "danger" : "success"}
       />
 
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      <ToastContainer toasts={toasts} onClose={removeToast} />
     </div>
   );
 }
