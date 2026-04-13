@@ -8,6 +8,7 @@ export type VNPayConfig = {
     ipnUrl: string;
     frontendUrl: string;
     frontendPaymentResultPath: string;
+    mockMode: boolean;
 };
 
 const getEnv = (key: string, defaultValue = ""): string => {
@@ -23,6 +24,7 @@ export const getVNPayConfig = (): VNPayConfig => {
         ipnUrl: getEnv("VNPAY_IPN_URL").trim(),
         frontendUrl: getEnv("FRONTEND_URL", "http://localhost:5173").trim(),
         frontendPaymentResultPath: getEnv("FRONTEND_PAYMENT_RESULT_PATH", "/payment-result").trim(),
+        mockMode: getEnv("VNPAY_MOCK_MODE") === "true",
     };
 };
 
@@ -66,6 +68,15 @@ export const createVNPayPaymentRequest = async (
 
     if (!config.hashSecret) {
         throw new Error("VNPAY_HASH_SECRET is missing in environmental variables.");
+    }
+
+    if (config.mockMode) {
+        // Return a local URL that triggers the mock execution endpoint
+        const mockUrl = new URL(`/api/payment/vnpay-mock-exec`, `http://localhost:${process.env.PORT || 5000}`);
+        mockUrl.searchParams.set("vnp_TxnRef", orderId);
+        mockUrl.searchParams.set("vnp_Amount", String(amount));
+        mockUrl.searchParams.set("vnp_OrderInfo", orderInfo);
+        return { payUrl: mockUrl.toString() };
     }
 
     const tmnCode = config.tmnCode;
@@ -137,6 +148,17 @@ export const verifyVNPaySignature = (query: Record<string, any>): boolean => {
     const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");     
 
     return secureHash === signed;
+};
+
+export const signVNPayResponse = (params: Record<string, any>): string => {
+    const config = getVNPayConfig();
+    const secretKey = config.hashSecret;
+    let sorted = sortObject(params);
+    const signData = Object.entries(sorted)
+        .map(([key, value]) => `${key}=${value}`)
+        .join("&");
+    const hmac = crypto.createHmac("sha512", secretKey);
+    return hmac.update(Buffer.from(signData, 'utf-8')).digest("hex");
 };
 
 export const buildFrontendPaymentResultUrl = (payload: {

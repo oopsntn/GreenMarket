@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createPayment, createShopRegistrationPayment, createShopVipPayment, createPersonalPackagePayment, vnpayReturn, vnpayIpn } from "../../controllers/user/payment.controller.ts";
+import { createPayment, createShopRegistrationPayment, createShopVipPayment, createPersonalPackagePayment, vnpayReturn, vnpayIpn, vnpayMockExec } from "../../controllers/user/payment.controller.ts";
 import { verifyToken } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
@@ -14,6 +14,7 @@ router.post("/buy-personal", verifyToken, createPersonalPackagePayment);
 // VNPay Callback Routes (Public)
 router.get("/vnpay-return", vnpayReturn);
 router.post("/vnpay-ipn", vnpayIpn);
+router.get("/vnpay-mock-exec", vnpayMockExec);
 
 
 

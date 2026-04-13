@@ -40,7 +40,28 @@ import path from "path";
 import "./services/promotionScheduler.ts";
 
 const app = express();
-app.use(cors());
+
+// Harden CORS
+const serverIp = process.env.IP || "localhost";
+const protocol = process.env.PROTOCOL || (serverIp === "localhost" ? "http" : "http"); 
+const whitelist = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  `${protocol}://${serverIp}`,
+  `${protocol}://${serverIp}:8080`,
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
