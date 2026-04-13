@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import "./CategoryAttributeMappingPage.css";
 import { categoryService, type Category } from "../services/categoryService";
@@ -74,41 +74,7 @@ export default function CategoryAttributeMappingPage() {
 
   const [previewCategoryId, setPreviewCategoryId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm.trim());
-      setCurrentPage(1);
-    }, 250);
-
-    return () => window.clearTimeout(timeout);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    void loadMeta();
-  }, []);
-
-  useEffect(() => {
-    void loadMappings();
-  }, [debouncedSearchTerm, currentPage]);
-
-  useEffect(() => {
-    if (previewCategoryId) {
-      void loadPreview(previewCategoryId);
-    } else {
-      setPreview(null);
-    }
-  }, [previewCategoryId]);
-
-  useEffect(() => {
-    if (!toastMessage) {
-      return undefined;
-    }
-
-    const timeout = window.setTimeout(() => setToastMessage(null), 2600);
-    return () => window.clearTimeout(timeout);
-  }, [toastMessage]);
-
-  async function loadMeta() {
+  const loadMeta = useCallback(async () => {
     setMetaLoading(true);
 
     try {
@@ -128,9 +94,9 @@ export default function CategoryAttributeMappingPage() {
     } finally {
       setMetaLoading(false);
     }
-  }
+  }, []);
 
-  async function loadMappings() {
+  const loadMappings = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
 
@@ -150,9 +116,9 @@ export default function CategoryAttributeMappingPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [currentPage, debouncedSearchTerm]);
 
-  async function loadPreview(categoryId: number) {
+  const loadPreview = useCallback(async (categoryId: number) => {
     setPreviewLoading(true);
 
     try {
@@ -164,7 +130,41 @@ export default function CategoryAttributeMappingPage() {
     } finally {
       setPreviewLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+      setCurrentPage(1);
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    void loadMeta();
+  }, [loadMeta]);
+
+  useEffect(() => {
+    void loadMappings();
+  }, [loadMappings]);
+
+  useEffect(() => {
+    if (previewCategoryId) {
+      void loadPreview(previewCategoryId);
+    } else {
+      setPreview(null);
+    }
+  }, [loadPreview, previewCategoryId]);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return undefined;
+    }
+
+    const timeout = window.setTimeout(() => setToastMessage(null), 2600);
+    return () => window.clearTimeout(timeout);
+  }, [toastMessage]);
 
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 

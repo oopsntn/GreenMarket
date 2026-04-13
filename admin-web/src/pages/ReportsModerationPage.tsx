@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -24,7 +24,25 @@ type ResolutionState = {
   report: ReportModerationItem | null;
 };
 
-const statusOptions: StatusFilter[] = ["All", "Pending", "Resolved", "Dismissed"];
+const statusOptions: StatusFilter[] = [
+  "All",
+  "Pending",
+  "Resolved",
+  "Dismissed",
+];
+
+const getStatusLabel = (status: StatusFilter) => {
+  switch (status) {
+    case "Pending":
+      return "Chờ xử lý";
+    case "Resolved":
+      return "Đã xử lý";
+    case "Dismissed":
+      return "Đã bỏ qua";
+    default:
+      return "Tất cả";
+  }
+};
 
 function ReportsModerationPage() {
   const [reports, setReports] = useState<ReportModerationItem[]>([]);
@@ -34,9 +52,8 @@ function ReportsModerationPage() {
   const [selectedStatus, setSelectedStatus] = useState<StatusFilter>("All");
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
-  const [selectedReport, setSelectedReport] = useState<ReportModerationItem | null>(
-    null,
-  );
+  const [selectedReport, setSelectedReport] =
+    useState<ReportModerationItem | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [resolutionState, setResolutionState] = useState<ResolutionState>({
     isOpen: false,
@@ -60,7 +77,7 @@ function ReportsModerationPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const loadReports = async (showSuccessToast = false) => {
+  const loadReports = useCallback(async (showSuccessToast = false) => {
     try {
       setIsLoading(true);
       setError("");
@@ -69,21 +86,21 @@ function ReportsModerationPage() {
       setReports(nextReports);
 
       if (showSuccessToast) {
-        showToast("Report moderation queue refreshed.");
+        showToast("Đã làm mới danh sách báo cáo.");
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Unable to load moderation reports.";
+        err instanceof Error ? err.message : "Không thể tải danh sách báo cáo.";
       setError(message);
       showToast(message, "error");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadReports();
-  }, []);
+  }, [loadReports]);
 
   const filteredReports = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -121,9 +138,13 @@ function ReportsModerationPage() {
     }
   }, [page, totalPages]);
 
-  const pendingCount = reports.filter((report) => report.status === "Pending").length;
-  const resolvedCount = reports.filter((report) => report.status === "Resolved").length;
-  const dismissedCount = reports.filter((report) => report.status === "Dismissed").length;
+  const pendingCount = reports.filter((report) => report.status === "Pending")
+    .length;
+  const resolvedCount = reports.filter((report) => report.status === "Resolved")
+    .length;
+  const dismissedCount = reports.filter(
+    (report) => report.status === "Dismissed",
+  ).length;
 
   const openDetailModal = async (report: ReportModerationItem) => {
     setSelectedReport(report);
@@ -134,7 +155,7 @@ function ReportsModerationPage() {
       setSelectedReport(detail);
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Unable to load report details.",
+        err instanceof Error ? err.message : "Không thể tải chi tiết báo cáo.",
         "error",
       );
     } finally {
@@ -155,7 +176,11 @@ function ReportsModerationPage() {
       action,
       report,
     });
-    setAdminNote(report.adminNote === "No admin note" ? "" : report.adminNote);
+    setAdminNote(
+      report.adminNote === "Chưa có ghi chú từ quản trị viên"
+        ? ""
+        : report.adminNote,
+    );
   };
 
   const closeResolutionModal = () => {
@@ -189,15 +214,17 @@ function ReportsModerationPage() {
       );
 
       showToast(
-        `Report #${updatedReport.id} was ${
-          resolutionState.action === "resolve" ? "resolved" : "dismissed"
-        }.`,
+        resolutionState.action === "resolve"
+          ? `Đã xử lý báo cáo #${updatedReport.id}.`
+          : `Đã bỏ qua báo cáo #${updatedReport.id}.`,
       );
 
       closeResolutionModal();
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Unable to update report status.",
+        err instanceof Error
+          ? err.message
+          : "Không thể cập nhật trạng thái báo cáo.",
         "error",
       );
     } finally {
@@ -208,52 +235,52 @@ function ReportsModerationPage() {
   return (
     <div className="reports-moderation-page">
       <PageHeader
-        title="Reports Moderation"
-        description="Review submitted reports, inspect reasons, and resolve or dismiss them."
-        actionLabel="Refresh Reports"
+        title="Kiểm duyệt báo cáo"
+        description="Xem báo cáo do người dùng gửi lên, kiểm tra lý do và quyết định xử lý hoặc bỏ qua."
+        actionLabel="Làm mới báo cáo"
         onActionClick={() => void loadReports(true)}
       />
 
       <div className="reports-moderation-summary-grid">
         <StatCard
-          title="Total Reports"
+          title="Tổng báo cáo"
           value={String(reports.length)}
-          subtitle="Reports currently available in moderation"
+          subtitle="Tất cả báo cáo hiện có trong hàng chờ kiểm duyệt"
         />
         <StatCard
-          title="Pending"
+          title="Chờ xử lý"
           value={String(pendingCount)}
-          subtitle="Reports waiting for admin action"
+          subtitle="Báo cáo đang chờ quản trị viên xử lý"
         />
         <StatCard
-          title="Resolved"
+          title="Đã xử lý"
           value={String(resolvedCount)}
-          subtitle="Reports handled and resolved"
+          subtitle="Báo cáo đã được chấp nhận và xử lý"
         />
         <StatCard
-          title="Dismissed"
+          title="Đã bỏ qua"
           value={String(dismissedCount)}
-          subtitle="Reports dismissed by moderation"
+          subtitle="Báo cáo đã được xác nhận là không cần xử lý"
         />
       </div>
 
       <SearchToolbar
-        placeholder="Search by reason, reporter, post, shop, or code"
+        placeholder="Tìm theo lý do, người báo cáo, bài đăng, cửa hàng hoặc mã lý do"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Filter by status"
-        filterSummaryItems={[selectedStatus]}
+        filterLabel="Lọc theo trạng thái"
+        filterSummaryItems={[getStatusLabel(selectedStatus)]}
       />
 
       {showFilters ? (
         <SectionCard
-          title="Report Filters"
-          description="Refine the queue by moderation status."
+          title="Bộ lọc báo cáo"
+          description="Thu hẹp danh sách theo trạng thái xử lý hiện tại."
         >
           <div className="reports-moderation-filters">
             <div className="reports-moderation-filters__field">
-              <label htmlFor="report-status-filter">Status</label>
+              <label htmlFor="report-status-filter">Trạng thái</label>
               <select
                 id="report-status-filter"
                 value={selectedStatus}
@@ -263,7 +290,7 @@ function ReportsModerationPage() {
               >
                 {statusOptions.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {getStatusLabel(option)}
                   </option>
                 ))}
               </select>
@@ -273,20 +300,20 @@ function ReportsModerationPage() {
       ) : null}
 
       <SectionCard
-        title="Report Queue"
-        description="Inspect report metadata and decide whether to resolve or dismiss."
+        title="Hàng chờ báo cáo"
+        description="Kiểm tra thông tin báo cáo và ra quyết định xử lý cuối cùng."
       >
         {isLoading ? (
           <EmptyState
-            title="Loading reports"
-            description="Fetching reports from the admin moderation API."
+            title="Đang tải báo cáo"
+            description="Đang lấy dữ liệu báo cáo từ API quản trị."
           />
         ) : error ? (
-          <EmptyState title="Unable to load reports" description={error} />
+          <EmptyState title="Không thể tải báo cáo" description={error} />
         ) : filteredReports.length === 0 ? (
           <EmptyState
-            title="No reports found"
-            description="No reports match the current search or status filter."
+            title="Không có báo cáo phù hợp"
+            description="Không có báo cáo nào khớp với bộ lọc hoặc từ khóa hiện tại."
           />
         ) : (
           <>
@@ -294,11 +321,11 @@ function ReportsModerationPage() {
               <table className="reports-moderation-table">
                 <thead>
                   <tr>
-                    <th>Report</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
+                    <th>Báo cáo</th>
+                    <th>Lý do</th>
+                    <th>Trạng thái</th>
+                    <th>Thời gian tạo</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -323,7 +350,7 @@ function ReportsModerationPage() {
                       <td>
                         <div className="reports-moderation-status">
                           <StatusBadge
-                            label={report.status}
+                            label={getStatusLabel(report.status)}
                             variant={
                               report.status === "Resolved"
                                 ? "active"
@@ -332,7 +359,7 @@ function ReportsModerationPage() {
                                   : "processing"
                             }
                           />
-                          <small>{report.updatedAt}</small>
+                          <small>Cập nhật: {report.updatedAt}</small>
                         </div>
                       </td>
                       <td>{report.createdAt}</td>
@@ -343,7 +370,7 @@ function ReportsModerationPage() {
                             className="reports-moderation-actions__view"
                             onClick={() => void openDetailModal(report)}
                           >
-                            View
+                            Xem
                           </button>
                           {report.status !== "Resolved" ? (
                             <button
@@ -353,7 +380,7 @@ function ReportsModerationPage() {
                                 openResolutionModal(report, "resolve")
                               }
                             >
-                              Resolve
+                              Xử lý
                             </button>
                           ) : null}
                           {report.status !== "Dismissed" ? (
@@ -364,7 +391,7 @@ function ReportsModerationPage() {
                                 openResolutionModal(report, "dismiss")
                               }
                             >
-                              Dismiss
+                              Bỏ qua
                             </button>
                           ) : null}
                         </div>
@@ -385,7 +412,7 @@ function ReportsModerationPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -394,7 +421,7 @@ function ReportsModerationPage() {
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Sau
                 </button>
               </div>
             </div>
@@ -404,48 +431,56 @@ function ReportsModerationPage() {
 
       <BaseModal
         isOpen={selectedReport !== null}
-        title={`Report ${selectedReport ? `#${selectedReport.id}` : ""}`}
-        description="Review full report detail and moderation notes."
+        title={
+          selectedReport
+            ? `Chi tiết báo cáo #${selectedReport.id}`
+            : "Chi tiết báo cáo"
+        }
+        description="Xem đầy đủ thông tin báo cáo, nội dung người gửi và ghi chú quản trị."
         onClose={closeDetailModal}
         maxWidth="760px"
       >
         {isDetailLoading && !selectedReport?.reason ? (
           <div className="reports-moderation-empty-state">
-            Loading report details...
+            Đang tải chi tiết báo cáo...
           </div>
         ) : selectedReport ? (
           <div className="reports-moderation-detail">
             <div className="reports-moderation-detail__grid">
               <div className="reports-moderation-detail__field">
-                <label>Status</label>
-                <input type="text" value={selectedReport.status} disabled />
+                <label>Trạng thái</label>
+                <input
+                  type="text"
+                  value={getStatusLabel(selectedReport.status)}
+                  disabled
+                />
               </div>
               <div className="reports-moderation-detail__field">
-                <label>Reporter</label>
+                <label>Người báo cáo</label>
                 <input type="text" value={selectedReport.reporterLabel} disabled />
               </div>
               <div className="reports-moderation-detail__field">
-                <label>Post</label>
+                <label>Bài đăng</label>
                 <input type="text" value={selectedReport.postLabel} disabled />
               </div>
               <div className="reports-moderation-detail__field">
-                <label>Shop</label>
+                <label>Cửa hàng</label>
                 <input type="text" value={selectedReport.shopLabel} disabled />
               </div>
             </div>
 
             <div className="reports-moderation-detail__section">
-              <h4>Reported Reason</h4>
+              <h4>Lý do báo cáo</h4>
               <p>{selectedReport.reason}</p>
             </div>
 
             <div className="reports-moderation-detail__section">
-              <h4>Reporter Note</h4>
+              <h4>Ghi chú người báo cáo</h4>
               <p>{selectedReport.reporterNote}</p>
             </div>
 
             <div className="reports-moderation-detail__section">
-              <h4>Admin Note</h4>
+              <h4>Ghi chú quản trị</h4>
               <p>{selectedReport.adminNote}</p>
             </div>
           </div>
@@ -455,35 +490,38 @@ function ReportsModerationPage() {
       <BaseModal
         isOpen={resolutionState.isOpen}
         title={
-          resolutionState.action === "resolve" ? "Resolve Report" : "Dismiss Report"
+          resolutionState.action === "resolve"
+            ? "Xử lý báo cáo"
+            : "Bỏ qua báo cáo"
         }
-        description="Record an optional moderation note before finalizing this report."
+        description="Nhập ghi chú quản trị nếu cần trước khi xác nhận thao tác."
         onClose={closeResolutionModal}
         maxWidth="520px"
       >
         <div className="reports-moderation-form">
           <p className="reports-moderation-form__target">
-            Target: <strong>Report #{resolutionState.report?.id || "Selected"}</strong>
+            Báo cáo mục tiêu:{" "}
+            <strong>#{resolutionState.report?.id || "Đã chọn"}</strong>
           </p>
-          <label htmlFor="report-admin-note">Admin Note</label>
+          <label htmlFor="report-admin-note">Ghi chú quản trị</label>
           <textarea
             id="report-admin-note"
             rows={4}
             value={adminNote}
             onChange={(event) => setAdminNote(event.target.value)}
-            placeholder="Ghi chú kiểm duyệt (không bắt buộc)"
+            placeholder="Nhập ghi chú xử lý nếu cần"
           />
 
           <div className="reports-moderation-form__actions">
             <button type="button" onClick={closeResolutionModal}>
-              Cancel
+              Hủy
             </button>
             <button
               type="button"
               onClick={() => void handleResolutionSubmit()}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Confirm"}
+              {isSubmitting ? "Đang lưu..." : "Xác nhận"}
             </button>
           </div>
         </div>

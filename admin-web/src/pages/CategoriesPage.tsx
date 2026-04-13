@@ -341,11 +341,6 @@ function CategoriesPage() {
     }
   }, [page, totalPages]);
 
-  const selectedCategory =
-    selectedCategoryId !== null
-      ? categories.find((category) => category.id === selectedCategoryId) ?? null
-      : null;
-
   const confirmDialogTitle =
     confirmState.action === "disable" ? "Tắt danh mục" : "Bật lại danh mục";
 

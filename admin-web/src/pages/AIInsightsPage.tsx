@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
@@ -165,7 +165,7 @@ function AIInsightsPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const loadInsightData = async (showLoader = false) => {
+  const loadInsightData = useCallback(async (showLoader = false) => {
     try {
       if (showLoader) {
         setIsLoading(true);
@@ -195,11 +195,11 @@ function AIInsightsPage() {
         setIsLoading(false);
       }
     }
-  };
+  }, [focusFilter, fromDate, toDate]);
 
   useEffect(() => {
     void loadInsightData(true);
-  }, []);
+  }, [loadInsightData]);
 
   useEffect(() => {
     if (isLoading) {
@@ -207,7 +207,7 @@ function AIInsightsPage() {
     }
 
     void loadInsightData(false);
-  }, [fromDate, toDate, focusFilter]);
+  }, [focusFilter, fromDate, isLoading, loadInsightData, toDate]);
 
   const filteredTrendRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();

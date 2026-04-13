@@ -144,8 +144,6 @@ const buildFallbackActivityLogs = (
     user.userRegisteredAt || user.userCreatedAt,
   );
   const lastLoginDateTime = formatDateTime(user.userLastLoginAt);
-  const updatedDateTime = formatDateTime(user.userUpdatedAt);
-
   const logs: UserActivityLogItem[] = [];
 
   if (registrationDateTime) {

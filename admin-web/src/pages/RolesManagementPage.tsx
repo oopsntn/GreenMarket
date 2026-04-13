@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
@@ -62,7 +62,7 @@ function RolesManagementPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const loadRoles = async (showSuccessToast = false) => {
+  const loadRoles = useCallback(async (showSuccessToast = false) => {
     try {
       setIsLoading(true);
       setError("");
@@ -83,11 +83,11 @@ function RolesManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadRoles();
-  }, []);
+  }, [loadRoles]);
 
   const filteredRoles = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();

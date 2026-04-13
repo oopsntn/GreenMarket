@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
@@ -79,30 +79,6 @@ export default function TemplatesPage() {
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm.trim());
-      setCurrentPage(1);
-    }, 250);
-
-    return () => window.clearTimeout(timeout);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [typeFilter, statusFilter]);
-
-  useEffect(() => {
-    void loadTemplates();
-  }, [debouncedSearchTerm, currentPage, statusFilter, typeFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-
-  const activeCount = useMemo(
-    () => templates.filter((template) => template.status === "Active").length,
-    [templates],
-  );
-
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, message, tone }]);
@@ -115,7 +91,7 @@ export default function TemplatesPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     try {
       setLoading(true);
       setPageError("");
@@ -141,7 +117,31 @@ export default function TemplatesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, debouncedSearchTerm, statusFilter, typeFilter]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+      setCurrentPage(1);
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [typeFilter, statusFilter]);
+
+  useEffect(() => {
+    void loadTemplates();
+  }, [loadTemplates]);
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+
+  const activeCount = useMemo(
+    () => templates.filter((template) => template.status === "Active").length,
+    [templates],
+  );
 
   const openModal = (mode: ModalMode, template?: Template) => {
     setModalMode(mode);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
@@ -117,7 +117,7 @@ function UsersPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const loadUsers = async (showSuccessToast = false) => {
+  const loadUsers = useCallback(async (showSuccessToast = false) => {
     try {
       setIsLoading(true);
       setError("");
@@ -141,11 +141,11 @@ function UsersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadUsers();
-  }, []);
+  }, [loadUsers]);
 
   const openViewModal = async (user: User) => {
     setSelectedUser(user);
