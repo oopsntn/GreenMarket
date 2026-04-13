@@ -384,7 +384,7 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
             packageName: item.packageTitle?.trim() || "Chưa xác định gói",
             slot:
                 slotNameById.get(slotByPackageId.get(item.packageId ?? -1) ?? -1) ||
-                "Home Top",
+                "Vị trí chưa xác định",
             amount: Number(item.paymentTxnAmount ?? 0),
             createdAt: item.paymentTxnCreatedAt,
         }));
@@ -517,16 +517,24 @@ export const adminReportingService = {
             placementMap.set(slot, current);
         });
 
-        const activeSlotLabels = slotCatalog
-            .map((item) => item.label)
-            .filter((label) => placementMap.has(label));
-        const activeTrafficSlotLabels = slotCatalog
-            .map((item) => item.label)
-            .filter((label) =>
-                filteredBoostedPosts.some(
-                    (item) => item.slot === label && item.impressions > 0,
-                ),
-            );
+        const activeSlotLabels = Array.from(
+            new Set(
+                slotCatalog
+                    .map((item) => item.label)
+                    .filter((label) => placementMap.has(label)),
+            ),
+        );
+        const activeTrafficSlotLabels = Array.from(
+            new Set(
+                slotCatalog
+                    .map((item) => item.label)
+                    .filter((label) =>
+                        filteredBoostedPosts.some(
+                            (item) => item.slot === label && item.impressions > 0,
+                        ),
+                    ),
+            ),
+        );
 
         const topPlacements: TopPlacement[] = activeSlotLabels.map((slot, index) => {
             const item = placementMap.get(slot) ?? { impressions: 0, clicks: 0, revenue: 0 };

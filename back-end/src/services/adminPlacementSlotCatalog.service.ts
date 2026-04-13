@@ -1,10 +1,7 @@
 import { db } from "../config/db.ts";
 import { placementSlots } from "../models/schema/index.ts";
 
-export type AdminPlacementSlotLabel =
-    | "Home Top"
-    | "Category Top"
-    | "Search Boost";
+export type AdminPlacementSlotLabel = string;
 
 export type AdminPlacementSlotScope = "Homepage" | "Category" | "Search";
 
@@ -25,17 +22,17 @@ export const mapPlacementSlotLabel = (
     slotCode: string | null,
     slotTitle: string | null,
 ): AdminPlacementSlotLabel => {
-    const normalized = normalizeSlotText(slotCode, slotTitle);
-
-    if (normalized.includes("search")) {
-        return "Search Boost";
+    const normalizedTitle = slotTitle?.trim();
+    if (normalizedTitle) {
+        return normalizedTitle;
     }
 
-    if (normalized.includes("category")) {
-        return "Category Top";
+    const normalizedCode = slotCode?.trim();
+    if (normalizedCode) {
+        return normalizedCode;
     }
 
-    return "Home Top";
+    return "Vị trí chưa đặt tên";
 };
 
 export const mapPlacementSlotScope = (
@@ -56,15 +53,19 @@ export const mapPlacementSlotScope = (
 };
 
 const sortCatalog = (items: AdminPlacementSlotCatalogItem[]) => {
-    const slotOrder: Record<AdminPlacementSlotLabel, number> = {
-        "Home Top": 0,
-        "Category Top": 1,
-        "Search Boost": 2,
+    const scopeOrder: Record<AdminPlacementSlotScope, number> = {
+        Homepage: 0,
+        Category: 1,
+        Search: 2,
     };
 
     return [...items].sort((left, right) => {
-        if (slotOrder[left.label] !== slotOrder[right.label]) {
-            return slotOrder[left.label] - slotOrder[right.label];
+        if (scopeOrder[left.scope] !== scopeOrder[right.scope]) {
+            return scopeOrder[left.scope] - scopeOrder[right.scope];
+        }
+
+        if (left.title !== right.title) {
+            return left.title.localeCompare(right.title, "vi");
         }
 
         return left.id - right.id;

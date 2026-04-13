@@ -11,7 +11,11 @@ import {
     shops,
     users,
 } from "../models/schema/index.ts";
-import { mapPlacementSlotLabel } from "./adminPlacementSlotCatalog.service.ts";
+import {
+    mapPlacementSlotLabel,
+    mapPlacementSlotScope,
+    type AdminPlacementSlotScope,
+} from "./adminPlacementSlotCatalog.service.ts";
 
 type RawPromotionRow = {
     promotionId: number;
@@ -61,7 +65,7 @@ export type AdminPromotionResponse = {
     postTitle: string;
     owner: string;
     packageId: number;
-    slot: "Home Top" | "Category Top" | "Search Boost";
+    slot: string;
     packageName: string;
     startDate: string;
     endDate: string;
@@ -84,7 +88,7 @@ export type AdminBoostedPostResponse = {
     campaignCode: string;
     postTitle: string;
     ownerName: string;
-    slot: "Home Top" | "Category Top" | "Search Boost";
+    slot: string;
     packageName: string;
     startDate: string;
     endDate: string;
@@ -311,6 +315,18 @@ const getOperatorName = (slot: "Home Top" | "Category Top" | "Search Boost") => 
     }
 
     return "Nhóm vận hành C";
+};
+
+const getOperatorNameByScope = (scope: AdminPlacementSlotScope) => {
+    if (scope === "Homepage") {
+        return "Ops Team A";
+    }
+
+    if (scope === "Category") {
+        return "Ops Team B";
+    }
+
+    return "Ops Team C";
 };
 
 const getReviewStatus = (
@@ -693,6 +709,7 @@ const mapRecordToBoostedPost = (
     item: RawPromotionRow & { latestPayment: LatestPaymentRecord | null },
 ): AdminBoostedPostResponse => {
     const slot = mapPlacementSlotLabel(item.slotCode, item.slotTitle);
+    const slotScope = mapPlacementSlotScope(item.slotCode, item.slotTitle);
     const lifecycleStatus = getLifecycleStatus(item);
     const totalQuota = Math.max(
         1,
@@ -710,7 +727,8 @@ const mapRecordToBoostedPost = (
     );
     const slotCode = (item.slotCode ?? "slot").replace(/[^a-z0-9]/gi, "").toUpperCase();
     const impressions = usedQuota;
-    const ctrBase = slot === "Home Top" ? 0.029 : slot === "Category Top" ? 0.024 : 0.02;
+    const ctrBase =
+        slotScope === "Homepage" ? 0.029 : slotScope === "Category" ? 0.024 : 0.02;
     const ctrMultiplier =
         boostedStatus === "Active"
             ? 1
@@ -733,7 +751,7 @@ const mapRecordToBoostedPost = (
         status: boostedStatus,
         deliveryHealth,
         reviewStatus,
-        assignedOperator: getOperatorName(slot),
+        assignedOperator: getOperatorNameByScope(slotScope),
         totalQuota,
         usedQuota,
         impressions,
