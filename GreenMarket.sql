@@ -1092,16 +1092,16 @@ INSERT INTO payout_requests (
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_vip_started_at, shop_vip_expires_at, shop_lat, shop_lng) VALUES
 (1, 'Vườn Bonsai Phố Huyện', '0978195419', 'nguyenthanhnamidol@gmail.com', TRUE, '14 Nghiêm Ích Khiêm, Thị trấn Chờ, Yên Phong, Bắc Ninh',
     'Chuyên bonsai mini và tầm trung. Nhận thiết kế, chăm sóc và phối thế bonsai theo yêu cầu. Ship toàn quốc qua Viettel Post.',
-    'http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://localhost:5000/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', now() - interval '30 days', now() + interval '60 days', 21.201262, 105.950174),
+    'http://[IP_ADDRESS]/uploads/shop/vuon-bonsai-pho-huyen-1.jpg|http://[IP_ADDRESS]/uploads/shop/vuon-bonsai-pho-huyen-2.jpg', 'active', now() - interval '30 days', now() + interval '60 days', 21.201262, 105.950174),
 (3, 'Nam Định Art Garden', '0123456789', 'hoainam.le@gmail.com', TRUE, 'Nam Trực, Nam Định',
     'Nghệ nhân cây cảnh cổ truyền Nam Điền. Chuyên sanh, si, tùng la hán cốt cách truyền thống. Hơn 20 năm kinh nghiệm.',
-    'http://localhost:5000/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
+    'http://[IP_ADDRESS]/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
 (4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
-    'http://localhost:5000/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
+    'http://[IP_ADDRESS]/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
 (6, 'Dụng Cụ Bonsai Pro', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
     'Nhập khẩu và phân phối dụng cụ bonsai chính hãng Nhật Bản: kéo Kaneshin, kìm Masakuni, đất Akadama, chậu Tokoname.',
-    'http://localhost:5000/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
+    'http://[IP_ADDRESS]/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
 
 -- ============================================================
 -- CATEGORIES
@@ -1303,29 +1303,29 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 
 -- Post Images
 INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
-(1,  'http://localhost:5000/uploads/sanh-nam-dien-mini-1.jpg', 0),
-(1,  'http://localhost:5000/uploads/sanh-nam-dien-mini-2.jpg', 1),
-(1,  'http://localhost:5000/uploads/sanh-nam-dien-mini-3.jpg', 2),
-(2,  'http://localhost:5000/uploads/tung-la-han-1.jpg', 0),
-(2,  'http://localhost:5000/uploads/tung-la-han-2.jpg', 1),
-(3,  'http://localhost:5000/uploads/linh-sam-1.jpg', 0),
-(3,  'http://localhost:5000/uploads/linh-sam-2.jpg', 1),
-(4,  'http://localhost:5000/uploads/sanh-que-dai-1.jpg', 0),
-(5,  'http://localhost:5000/uploads/mct-mini-1.jpg', 0),
-(5,  'http://localhost:5000/uploads/mct-mini-2.jpg', 1),
-(6,  'http://localhost:5000/uploads/thong-den-1.jpg', 0),
-(7,  'http://localhost:5000/uploads/si-phong-thuy-1.jpg', 0),
-(8,  'http://localhost:5000/uploads/mai-vang-1.jpg', 0),
-(8,  'http://localhost:5000/uploads/mai-vang-2.jpg', 1),
-(9,  'http://localhost:5000/uploads/tung-bach-tan-1.jpg', 0),
-(10, 'http://localhost:5000/uploads/kim-cap-kaneshin-1.jpg', 0),
-(11, 'http://localhost:5000/uploads/bo-keo-5-mon-1.jpg', 0),
-(11, 'http://localhost:5000/uploads/bo-keo-5-mon-2.jpg', 1),
-(12, 'http://localhost:5000/uploads/dat-akadama-1.jpg', 0),
-(13, 'http://localhost:5000/uploads/chau-tokoname-1.jpg', 0),
-(13, 'http://localhost:5000/uploads/chau-tokoname-2.jpg', 1),
-(14, 'http://localhost:5000/uploads/day-nhom-uon-1.jpg', 0),
-(15, 'http://localhost:5000/uploads/binh-phun-suong-1.jpg', 0);
+(1,  'http://[IP_ADDRESS]/uploads/sanh-nam-dien-mini-1.jpg', 0),
+(1,  'http://[IP_ADDRESS]/uploads/sanh-nam-dien-mini-2.jpg', 1),
+(1,  'http://[IP_ADDRESS]/uploads/sanh-nam-dien-mini-3.jpg', 2),
+(2,  'http://[IP_ADDRESS]/uploads/tung-la-han-1.jpg', 0),
+(2,  'http://[IP_ADDRESS]/uploads/tung-la-han-2.jpg', 1),
+(3,  'http://[IP_ADDRESS]/uploads/linh-sam-1.jpg', 0),
+(3,  'http://[IP_ADDRESS]/uploads/linh-sam-2.jpg', 1),
+(4,  'http://[IP_ADDRESS]/uploads/sanh-que-dai-1.jpg', 0),
+(5,  'http://[IP_ADDRESS]/uploads/mct-mini-1.jpg', 0),
+(5,  'http://[IP_ADDRESS]/uploads/mct-mini-2.jpg', 1),
+(6,  'http://[IP_ADDRESS]/uploads/thong-den-1.jpg', 0),
+(7,  'http://[IP_ADDRESS]/uploads/si-phong-thuy-1.jpg', 0),
+(8,  'http://[IP_ADDRESS]/uploads/mai-vang-1.jpg', 0),
+(8,  'http://[IP_ADDRESS]/uploads/mai-vang-2.jpg', 1),
+(9,  'http://[IP_ADDRESS]/uploads/tung-bach-tan-1.jpg', 0),
+(10, 'http://[IP_ADDRESS]/uploads/kim-cap-kaneshin-1.jpg', 0),
+(11, 'http://[IP_ADDRESS]/uploads/bo-keo-5-mon-1.jpg', 0),
+(11, 'http://[IP_ADDRESS]/uploads/bo-keo-5-mon-2.jpg', 1),
+(12, 'http://[IP_ADDRESS]/uploads/dat-akadama-1.jpg', 0),
+(13, 'http://[IP_ADDRESS]/uploads/chau-tokoname-1.jpg', 0),
+(13, 'http://[IP_ADDRESS]/uploads/chau-tokoname-2.jpg', 1),
+(14, 'http://[IP_ADDRESS]/uploads/day-nhom-uon-1.jpg', 0),
+(15, 'http://[IP_ADDRESS]/uploads/binh-phun-suong-1.jpg', 0);
 
 -- Favorite Posts (Bookmarks)
 INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favorite_post_created_at) VALUES
