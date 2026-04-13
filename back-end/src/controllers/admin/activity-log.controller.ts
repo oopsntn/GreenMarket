@@ -38,6 +38,12 @@ const eventTypeLabelMap: Record<string, string> = {
   admin_report_dismissed: "Bỏ qua báo cáo",
   admin_settings_updated: "Cập nhật thiết lập hệ thống",
   admin_settings_reset: "Khôi phục thiết lập hệ thống",
+  admin_template_created: "Tạo mẫu nội dung",
+  admin_template_updated: "Cập nhật mẫu nội dung",
+  admin_template_cloned: "Nhân bản mẫu nội dung",
+  admin_template_status_updated: "Cập nhật trạng thái mẫu nội dung",
+  admin_template_builder_updated: "Cập nhật trình dựng mẫu",
+  admin_template_builder_reset: "Khôi phục trình dựng mẫu",
 };
 
 const titleCaseEventType = (value: string | null) => {
