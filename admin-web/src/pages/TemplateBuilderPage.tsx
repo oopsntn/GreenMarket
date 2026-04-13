@@ -1,309 +1,75 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
-import SearchToolbar from "../components/SearchToolbar";
 import SectionCard from "../components/SectionCard";
-import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { templateBuilderService } from "../services/templateBuilderService";
-import { templateService } from "../services/templateService";
 import type {
-  Template,
-  TemplateBuilderAudience,
-  TemplateBuilderChannel,
-  TemplateBuilderTone,
+  TemplateBuilderField,
+  TemplateBuilderFieldType,
   TemplateBuilderPreset,
-  TemplateType,
 } from "../types/template";
 import "./TemplateBuilderPage.css";
 
-const PAGE_SIZE = 4;
-
-const typeFilterOptions: Array<TemplateType | "All"> = [
-  "All",
-  "Rejection Reason",
-  "Report Reason",
-  "Notification",
-];
-
-const templateTypeLabels: Record<TemplateType | "All", string> = {
-  All: "Tất cả loại mẫu",
-  "Rejection Reason": "Lý do từ chối",
-  "Report Reason": "Lý do báo cáo",
-  Notification: "Thông báo",
+const fieldTypeLabels: Record<TemplateBuilderFieldType, string> = {
+  text: "Văn bản",
+  number: "Số",
+  select: "Chọn từ danh sách",
 };
 
-const channelLabels: Record<TemplateBuilderChannel, string> = {
-  Email: "Email",
-  "In-App Notification": "Thông báo trong hệ thống",
-  "Moderation Note": "Ghi chú kiểm duyệt",
-};
+const createField = (type: TemplateBuilderFieldType): TemplateBuilderField => ({
+  id: `${type}-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+  type,
+  label:
+    type === "text"
+      ? "Trường văn bản mới"
+      : type === "number"
+        ? "Trường số mới"
+        : "Trường chọn mới",
+  placeholder:
+    type === "number" ? "Nhập giá trị số" : "Nhập nội dung hiển thị",
+  helperText: "Giải thích ngắn cho người dùng cuối biết trường này dùng để làm gì.",
+  required: false,
+  options: type === "select" ? ["Lựa chọn 1", "Lựa chọn 2"] : [],
+});
 
-const audienceLabels: Record<TemplateBuilderAudience, string> = {
-  Seller: "Người bán",
-  Reporter: "Người báo cáo",
-  "Internal Admin": "Quản trị nội bộ",
-};
-
-const toneLabels: Record<TemplateBuilderTone, string> = {
-  Formal: "Trang trọng",
-  Supportive: "Hỗ trợ",
-  Direct: "Trực tiếp",
-};
-
-const builderSteps = [
-  {
-    title: "BƯỚC 1",
-    heading: "Chọn một template gốc",
-    description:
-      "Chọn một template đang Active trong thư viện. Template đó sẽ là nội dung gốc để builder mô phỏng.",
-  },
-  {
-    title: "BƯỚC 2",
-    heading: "Điền một tình huống mẫu",
-    description:
-      "Điền các trường như kênh gửi, giọng văn, shop, bài post, lý do và ghi chú để mô phỏng tình huống thực tế.",
-  },
-  {
-    title: "BƯỚC 3",
-    heading: "Áp dụng bản nháp và xem trước",
-    description:
-      "Bấm Áp dụng để cập nhật phần xem trước và kiểm tra nội dung cuối cùng trước khi dùng.",
-  },
-];
-
-const buildPreviewMessage = (
-  template: Template | null,
-  audience: TemplateBuilderAudience,
-  tone: TemplateBuilderTone,
-  fields: {
-    shopName: string;
-    postTitle: string;
-    reason: string;
-    slotName: string;
-    contactEmail: string;
-    adminNote: string;
-  },
-) => {
-  if (!template) return "";
-
-  const toneLead: Record<TemplateBuilderTone, string> = {
-    Formal: "Đây là cập nhật chính thức từ đội ngũ quản trị GreenMarket.",
-    Supportive:
-      "GreenMarket gửi bạn bản cập nhật nhanh cùng hướng xử lý đề xuất cho tình huống này.",
-    Direct: "Vui lòng xử lý ngay nội dung sau.",
-  };
-
-  const audienceTail: Record<TemplateBuilderAudience, string> = {
-    Seller: `Shop liên quan: ${fields.shopName}. Bài đăng liên quan: ${fields.postTitle}.`,
-    Reporter: `Ngữ cảnh báo cáo: ${fields.reason}. Liên hệ phụ trách: ${fields.contactEmail}.`,
-    "Internal Admin": `Điểm vận hành cần theo dõi: ${fields.slotName}. Liên hệ xử lý: ${fields.contactEmail}.`,
-  };
-
-  return [
-    toneLead[tone],
-    "",
-    template.content,
-    "",
-    audienceTail[audience],
-    `Lý do tham chiếu: ${fields.reason}.`,
-    `Ghi chú quản trị: ${fields.adminNote || "Không có ghi chú bổ sung."}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+const normalizeOptions = (value: string) => {
+  return Array.from(
+    new Set(
+      value
+        .split(/\r?\n|,/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
 };
 
 function TemplateBuilderPage() {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [preset, setPreset] = useState<TemplateBuilderPreset>(
+    templateBuilderService.getDefaultPreset(),
+  );
+  const [savedPreset, setSavedPreset] = useState<TemplateBuilderPreset>(
+    templateBuilderService.getDefaultPreset(),
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [pageError, setPageError] = useState("");
-
-  const initialPreset = templateBuilderService.getDefaultPreset();
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<
-    TemplateType | "All"
-  >(initialPreset.selectedTypeFilter);
-  const [page, setPage] = useState(1);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
-    initialPreset.selectedTemplateId,
-  );
-  const [channel, setChannel] = useState<TemplateBuilderChannel>(
-    initialPreset.channel,
-  );
-  const [audience, setAudience] = useState<TemplateBuilderAudience>(
-    initialPreset.audience,
-  );
-  const [tone, setTone] = useState<TemplateBuilderTone>(initialPreset.tone);
-  const [shopName, setShopName] = useState(initialPreset.shopName);
-  const [postTitle, setPostTitle] = useState(initialPreset.postTitle);
-  const [reason, setReason] = useState(initialPreset.reason);
-  const [slotName, setSlotName] = useState(initialPreset.slotName);
-  const [contactEmail, setContactEmail] = useState(initialPreset.contactEmail);
-  const [adminNote, setAdminNote] = useState(initialPreset.adminNote);
-  const [appliedPreset, setAppliedPreset] = useState<TemplateBuilderPreset>({
-    ...initialPreset,
-  });
-  const [lastAppliedAt, setLastAppliedAt] = useState("Chưa áp dụng lần nào");
-  const [isPreviewHighlighted, setIsPreviewHighlighted] = useState(false);
-  const [isPresetSaving, setIsPresetSaving] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const previewRef = useRef<HTMLDivElement | null>(null);
 
-  const applyPresetToState = (preset: TemplateBuilderPreset) => {
-    setSelectedTypeFilter(preset.selectedTypeFilter);
-    setSelectedTemplateId(preset.selectedTemplateId);
-    setChannel(preset.channel);
-    setAudience(preset.audience);
-    setTone(preset.tone);
-    setShopName(preset.shopName);
-    setPostTitle(preset.postTitle);
-    setReason(preset.reason);
-    setSlotName(preset.slotName);
-    setContactEmail(preset.contactEmail);
-    setAdminNote(preset.adminNote);
-    setAppliedPreset({ ...preset });
-  };
-
-  const loadTemplates = async (showLoader = false) => {
-    try {
-      if (showLoader) {
-        setIsInitialLoading(true);
-      }
-
-      setPageError("");
-      const [data, preset] = await Promise.all([
-        templateService.getTemplates(),
-        templateBuilderService.getPreset(),
-      ]);
-      setTemplates(data);
-      applyPresetToState(preset);
-    } catch (error) {
-      setPageError(
-        error instanceof Error
-          ? error.message
-          : "Không thể tải danh sách mẫu mô phỏng.",
-      );
-    } finally {
-      if (showLoader) {
-        setIsInitialLoading(false);
-      }
-    }
-  };
+  const isDirty = useMemo(
+    () => JSON.stringify(preset) !== JSON.stringify(savedPreset),
+    [preset, savedPreset],
+  );
 
   useEffect(() => {
-    void loadTemplates(true);
+    void loadPreset();
   }, []);
 
-  const activeTemplates = useMemo(
-    () => templates.filter((template) => template.status === "Active"),
-    [templates],
-  );
-
-  const filteredTemplates = useMemo(() => {
-    const keyword = searchKeyword.trim().toLowerCase();
-
-    return activeTemplates.filter((template) => {
-      const matchesKeyword =
-        !keyword ||
-        template.name.toLowerCase().includes(keyword) ||
-        template.type.toLowerCase().includes(keyword) ||
-        template.content.toLowerCase().includes(keyword);
-
-      const matchesType =
-        selectedTypeFilter === "All" || template.type === selectedTypeFilter;
-
-      return matchesKeyword && matchesType;
-    });
-  }, [activeTemplates, searchKeyword, selectedTypeFilter]);
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredTemplates.length / PAGE_SIZE),
-  );
-
-  const paginatedTemplates = useMemo(() => {
-    const startIndex = (page - 1) * PAGE_SIZE;
-    return filteredTemplates.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredTemplates, page]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchKeyword, selectedTypeFilter]);
-
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
-
-  useEffect(() => {
-    if (!selectedTemplateId && activeTemplates.length > 0) {
-      setSelectedTemplateId(activeTemplates[0].id);
-    }
-  }, [activeTemplates, selectedTemplateId]);
-
-  const selectedTemplate =
-    activeTemplates.find((template) => template.id === selectedTemplateId) ??
-    null;
-
-  useEffect(() => {
-    if (!appliedPreset.selectedTemplateId && selectedTemplate) {
-      setAppliedPreset((prev) => ({
-        ...prev,
-        selectedTemplateId: selectedTemplate.id,
-      }));
-    }
-  }, [appliedPreset.selectedTemplateId, selectedTemplate]);
-
-  const appliedTemplate =
-    activeTemplates.find(
-      (template) => template.id === appliedPreset.selectedTemplateId,
-    ) ??
-    selectedTemplate ??
-    null;
-
-  const draftPreset: TemplateBuilderPreset = {
-    selectedTemplateId,
-    selectedTypeFilter,
-    channel,
-    audience,
-    tone,
-    shopName,
-    postTitle,
-    reason,
-    slotName,
-    contactEmail,
-    adminNote,
-  };
-
-  const isPreviewOutdated =
-    JSON.stringify(draftPreset) !== JSON.stringify(appliedPreset);
-
-  const previewMessage = buildPreviewMessage(
-    appliedTemplate,
-    appliedPreset.audience,
-    appliedPreset.tone,
-    {
-      shopName: appliedPreset.shopName,
-      postTitle: appliedPreset.postTitle,
-      reason: appliedPreset.reason,
-      slotName: appliedPreset.slotName,
-      contactEmail: appliedPreset.contactEmail,
-      adminNote: appliedPreset.adminNote,
-    },
-  );
-
-  const showToast = (
-    message: string,
-    toneValue: ToastItem["tone"] = "success",
-  ) => {
-    const toastId = Date.now() + Math.random();
-
-    setToasts((prev) => [...prev, { id: toastId, message, tone: toneValue }]);
-
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, tone }]);
     window.setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+      setToasts((prev) => prev.filter((toast) => toast.id !== id));
     }, 2600);
   };
 
@@ -311,603 +77,511 @@ function TemplateBuilderPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const applyWorkspaceToPreview = () => {
-    if (!selectedTemplateId) {
-      showToast(
-        "Hãy chọn một mẫu gốc trước khi áp dụng vào phần xem trước.",
-        "error",
+  const loadPreset = async () => {
+    try {
+      setIsLoading(true);
+      setPageError("");
+      const nextPreset = await templateBuilderService.getPreset();
+      setPreset(nextPreset);
+      setSavedPreset(nextPreset);
+    } catch (error) {
+      setPageError(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải cấu hình trình dựng mẫu.",
       );
-      return;
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    setAppliedPreset(draftPreset);
-    setLastAppliedAt(
-      new Date().toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    );
-    setIsPreviewHighlighted(true);
+  const updateField = (
+    fieldId: string,
+    updater: (field: TemplateBuilderField) => TemplateBuilderField,
+  ) => {
+    setPreset((prev) => ({
+      ...prev,
+      fields: prev.fields.map((field) =>
+        field.id === fieldId ? updater(field) : field,
+      ),
+    }));
+  };
 
-    window.setTimeout(() => {
-      setIsPreviewHighlighted(false);
-    }, 1800);
+  const addField = (type: TemplateBuilderFieldType) => {
+    setPreset((prev) => ({
+      ...prev,
+      fields: [...prev.fields, createField(type)],
+    }));
+  };
 
-    previewRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
+  const removeField = (fieldId: string) => {
+    setPreset((prev) => ({
+      ...prev,
+      fields: prev.fields.filter((field) => field.id !== fieldId),
+    }));
+  };
+
+  const moveField = (fieldId: string, direction: -1 | 1) => {
+    setPreset((prev) => {
+      const currentIndex = prev.fields.findIndex((field) => field.id === fieldId);
+      if (currentIndex < 0) return prev;
+
+      const nextIndex = currentIndex + direction;
+      if (nextIndex < 0 || nextIndex >= prev.fields.length) {
+        return prev;
+      }
+
+      const nextFields = [...prev.fields];
+      const [field] = nextFields.splice(currentIndex, 1);
+      nextFields.splice(nextIndex, 0, field);
+
+      return {
+        ...prev,
+        fields: nextFields,
+      };
     });
-
-    showToast(
-      `Đã cập nhật phần xem trước cho ${selectedTemplate?.name ?? "mẫu đang chọn"}.`,
-      "info",
-    );
   };
 
-  const handleRestoreDefault = async () => {
+  const validatePreset = (value: TemplateBuilderPreset) => {
+    if (!value.templateName.trim()) {
+      throw new Error("Tên mẫu biểu mẫu là bắt buộc.");
+    }
+
+    if (!value.categoryName.trim()) {
+      throw new Error("Danh mục xem trước là bắt buộc.");
+    }
+
+    if (!value.submitLabel.trim()) {
+      throw new Error("Nhãn nút xem trước là bắt buộc.");
+    }
+
+    if (value.fields.length === 0) {
+      throw new Error("Trình dựng mẫu phải có ít nhất một trường hiển thị.");
+    }
+
+    value.fields.forEach((field, index) => {
+      if (!field.label.trim()) {
+        throw new Error(`Trường số ${index + 1} chưa có nhãn hiển thị.`);
+      }
+
+      if (field.type === "select" && field.options.length === 0) {
+        throw new Error(
+          `Trường chọn "${field.label}" cần có ít nhất một lựa chọn.`,
+        );
+      }
+    });
+  };
+
+  const handleSave = async () => {
     try {
-      setIsPresetSaving(true);
-      const defaultPreset = await templateBuilderService.resetPreset();
-      applyPresetToState(defaultPreset);
-      setLastAppliedAt("Đã khôi phục cấu hình mặc định");
-      showToast("Đã khôi phục cấu hình mô phỏng mặc định.", "info");
+      validatePreset(preset);
+      setIsSaving(true);
+      const nextPreset = await templateBuilderService.savePreset(preset);
+      setPreset(nextPreset);
+      setSavedPreset(nextPreset);
+      showToast("Đã lưu cấu hình trình dựng mẫu.");
     } catch (error) {
       showToast(
         error instanceof Error
           ? error.message
-          : "Không thể khôi phục cấu hình mô phỏng mặc định.",
+          : "Không thể lưu cấu hình trình dựng mẫu.",
         "error",
       );
     } finally {
-      setIsPresetSaving(false);
+      setIsSaving(false);
     }
   };
 
-  const handleSavePreset = async () => {
+  const handleReset = async () => {
     try {
-      setIsPresetSaving(true);
-      await templateBuilderService.savePreset(draftPreset);
-      showToast(
-        `Đã lưu cấu hình mô phỏng cho ${selectedTemplate?.name ?? "mẫu hiện tại"}.`,
-      );
+      setIsSaving(true);
+      const nextPreset = await templateBuilderService.resetPreset();
+      setPreset(nextPreset);
+      setSavedPreset(nextPreset);
+      showToast("Đã khôi phục trình dựng mẫu về mặc định.", "info");
     } catch (error) {
       showToast(
         error instanceof Error
           ? error.message
-          : "Không thể lưu cấu hình mô phỏng.",
+          : "Không thể khôi phục trình dựng mẫu.",
         "error",
       );
     } finally {
-      setIsPresetSaving(false);
+      setIsSaving(false);
     }
   };
 
   return (
     <div className="template-builder-page">
       <PageHeader
-        title="Mô Phỏng Mẫu Nội Dung"
-        description="Xem trước một mẫu nội dung có sẵn trong tình huống kiểm duyệt hoặc thông báo giả lập trước khi dùng thật."
+        title="Trình dựng mẫu"
+        description="Cấu hình form xem trước theo cách dễ hiểu: nhập thông tin mẫu, thêm trường hiển thị và xem kết quả ngay như người dùng cuối."
+        actionLabel={isSaving ? "Đang lưu..." : "Lưu cấu hình"}
+        onActionClick={() => void handleSave()}
       />
 
       <SectionCard
-        title="Màn Này Dùng Để Làm Gì"
-        description="Màn này chỉ dùng để xem trước, rà nội dung và lưu cấu hình mô phỏng. Nó không tạo mẫu mới và cũng không gửi thông báo thật."
-      >
-        <div className="template-builder-purpose">
-          <div className="template-builder-purpose__item">
-            <strong>Xem trước nội dung cuối</strong>
-            <span>Dùng màn này để rà câu chữ trước khi áp dụng thực tế.</span>
-          </div>
-          <div className="template-builder-purpose__item">
-            <strong>Chọn một mẫu gốc có sẵn</strong>
-            <span>Trước hết hãy chọn một mẫu đang hoạt động trong thư viện.</span>
-          </div>
-          <div className="template-builder-purpose__item">
-            <strong>Điền dữ liệu mẫu</strong>
-            <span>Chỉ nhập dữ liệu mô phỏng để tái hiện một ca sử dụng thực tế.</span>
-          </div>
-          <div className="template-builder-purpose__item">
-            <strong>Áp dụng bản nháp để cập nhật xem trước</strong>
-            <span>Bấm Áp dụng vào xem trước để phần preview phản ánh đúng dữ liệu hiện tại.</span>
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        title="Cách Dùng Nhanh"
-        description="Làm theo 3 bước từ trái sang phải để chọn mẫu, nhập dữ liệu mô phỏng và xem kết quả cuối."
+        title="Cách dùng nhanh"
+        description="Màn này được chia rõ thành 3 phần để người mới nhìn vào biết phải thao tác gì trước."
       >
         <div className="template-builder-steps">
-          {builderSteps.map((step) => (
-            <div key={step.title} className="template-builder-step-card">
-              <span className="template-builder-step-card__eyebrow">
-                {step.title}
-              </span>
-              <strong>{step.heading}</strong>
-              <p>{step.description}</p>
-            </div>
-          ))}
+          <div className="template-builder-step-card">
+            <strong>1. Thông tin mẫu</strong>
+            <span>Đặt tên, danh mục và ghi chú ngắn cho mẫu biểu mẫu cần xem trước.</span>
+          </div>
+          <div className="template-builder-step-card">
+            <strong>2. Cấu hình nội dung</strong>
+            <span>Thêm trường, chọn kiểu dữ liệu, nhập nhãn, placeholder và đánh dấu bắt buộc.</span>
+          </div>
+          <div className="template-builder-step-card">
+            <strong>3. Xem trước</strong>
+            <span>Kiểm tra label, placeholder, trạng thái bắt buộc và bố cục hiển thị cuối cùng.</span>
+          </div>
         </div>
       </SectionCard>
 
-      <SearchToolbar
-        placeholder="Tìm mẫu gốc theo tên, loại hoặc nội dung"
-        searchValue={searchKeyword}
-        onSearchChange={setSearchKeyword}
-        onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Lọc thư viện"
-        filterSummaryItems={[
-          templateTypeLabels[selectedTypeFilter],
-          selectedTemplate?.name ?? "Chưa chọn mẫu",
-          audienceLabels[audience],
-        ]}
-      />
-
-      {showFilters ? (
-        <SectionCard
-          title="Bộ Lọc Thư Viện Mẫu"
-          description="Thu hẹp danh sách mẫu trước khi chọn một mẫu gốc cho phần mô phỏng."
-        >
-          <div className="template-builder-filters">
-            <div className="template-builder-filters__field">
-              <label htmlFor="template-builder-type-filter">Loại mẫu</label>
-              <select
-                id="template-builder-type-filter"
-                value={selectedTypeFilter}
-                onChange={(event) =>
-                  setSelectedTypeFilter(
-                    event.target.value as TemplateType | "All",
-                  )
-                }
-              >
-                {typeFilterOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {templateTypeLabels[option]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+      {pageError ? (
+        <SectionCard title="Không thể tải dữ liệu" description={pageError}>
+          <button
+            type="button"
+            className="template-builder-action template-builder-action--secondary"
+            onClick={() => void loadPreset()}
+          >
+            Tải lại
+          </button>
         </SectionCard>
       ) : null}
 
-      <div className="template-builder-grid">
+      {isLoading ? (
         <SectionCard
-          title="Bước 1 • Chọn Mẫu Gốc"
-          description="Chọn một mẫu đang hoạt động. Mẫu được chọn sẽ là nội dung nguồn cho màn mô phỏng."
+          title="Đang tải trình dựng mẫu"
+          description="Hệ thống đang lấy cấu hình builder hiện tại từ máy chủ."
         >
-          {isInitialLoading ? (
-            <EmptyState
-              title="Đang tải thư viện mẫu"
-              description="Đang lấy danh sách mẫu hoạt động từ hệ thống quản trị."
-            />
-          ) : pageError ? (
-            <EmptyState
-              title="Không thể tải thư viện mẫu"
-              description={pageError}
-            />
-          ) : filteredTemplates.length === 0 ? (
-            <EmptyState
-              title="Không tìm thấy mẫu"
-              description="Không có mẫu nào khớp với từ khóa hoặc bộ lọc hiện tại."
-            />
-          ) : (
-            <>
-              <div className="template-builder-library">
-                {paginatedTemplates.map((template) => (
-                  <div
-                    key={template.id}
-                    className={`template-builder-library__card${
-                      selectedTemplateId === template.id
-                        ? " template-builder-library__card--selected"
-                        : ""
-                    }`}
-                  >
-                    <div className="template-builder-library__header">
-                      <div>
-                        <strong>
-                          #{template.id} {template.name}
-                        </strong>
-                        <p>Cập nhật lần cuối {template.updatedAt}</p>
-                      </div>
-
-                      <button
-                        type="button"
-                        className={
-                          selectedTemplateId === template.id
-                            ? "template-builder-library__use template-builder-library__use--active"
-                            : "template-builder-library__use"
-                        }
-                        onClick={() => setSelectedTemplateId(template.id)}
-                      >
-                        {selectedTemplateId === template.id
-                          ? "Đang dùng trong mô phỏng"
-                          : "Chọn mẫu này"}
-                      </button>
-                    </div>
-
-                    <div className="template-builder-library__meta">
-                      <StatusBadge
-                        label={templateTypeLabels[template.type]}
-                        variant="type"
-                      />
-                      <StatusBadge label={template.status} variant="active" />
-                    </div>
-
-                    <p className="template-builder-library__snippet">
-                      {template.content}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="template-builder-pagination">
-                <span className="template-builder-pagination__info">
-                  Trang {page} / {totalPages}
-                </span>
-
-                <div className="template-builder-pagination__actions">
-                  <button
-                    type="button"
-                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                    disabled={page === 1}
-                  >
-                    Trước
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPage((prev) => Math.min(totalPages, prev + 1))
-                    }
-                    disabled={page === totalPages}
-                  >
-                    Tiếp
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
+          <EmptyState
+            title="Đang đồng bộ cấu hình"
+            description="Vui lòng chờ trong giây lát để hiển thị dữ liệu builder."
+          />
         </SectionCard>
+      ) : (
+        <>
+          <div className="template-builder-toolbar">
+            <div className="template-builder-toolbar__status">
+              {isDirty
+                ? "Bạn đang có thay đổi chưa lưu."
+                : "Cấu hình trình dựng mẫu đã đồng bộ với máy chủ."}
+            </div>
 
-        <SectionCard
-          title="Bước 2 • Điền Dữ Liệu Mô Phỏng"
-          description="Nhập một tình huống mẫu, sau đó áp dụng bản nháp để phần xem trước phía dưới hiển thị nội dung cuối cùng."
-        >
-          {selectedTemplate ? (
-            <div className="template-builder-form">
-              <div className="template-builder-callout">
-                <strong>Đây chỉ là dữ liệu mô phỏng</strong>
-                <p>
-                  Các trường bên dưới không tạo mẫu mới. Chúng chỉ giúp bạn mô
-                  phỏng cách mẫu đã chọn sẽ hiển thị trong một tình huống ví dụ.
-                </p>
-              </div>
+            <div className="template-builder-toolbar__actions">
+              <button
+                type="button"
+                className="template-builder-action template-builder-action--secondary"
+                onClick={() => void handleReset()}
+                disabled={isSaving}
+              >
+                Khôi phục mặc định
+              </button>
+            </div>
+          </div>
 
-              <div className="template-builder-sync-panel">
-                <div>
-                  <strong>
-                    {isPreviewOutdated
-                      ? "Phần xem trước cần cập nhật lại"
-                      : "Phần xem trước đã đồng bộ với bản nháp"}
-                  </strong>
-                  <p>
-                    {isPreviewOutdated
-                      ? "Bạn đã sửa bản nháp sau lần áp dụng gần nhất. Hãy bấm Áp dụng vào xem trước để đồng bộ lại phần preview."
-                      : "Phần xem trước hiện đã phản ánh đúng mẫu đang chọn và toàn bộ dữ liệu mô phỏng hiện tại."}
-                  </p>
-                </div>
-                <span
-                  className={`template-builder-sync-panel__badge${
-                    isPreviewOutdated
-                      ? " template-builder-sync-panel__badge--warning"
-                      : ""
-                  }`}
-                >
-                  {isPreviewOutdated
-                    ? "Bản nháp đã thay đổi"
-                    : "Đã đồng bộ xem trước"}
-                </span>
-              </div>
-
-              <div className="template-builder-field-guide">
-                <h4>Ý Nghĩa Các Trường</h4>
-                <ul>
-                  <li>
-                    <strong>Mẫu đã chọn</strong>: mẫu nội dung gốc đang được dùng để mô phỏng.
-                  </li>
-                  <li>
-                    <strong>Kênh</strong>: nơi hiển thị thông điệp, ví dụ email hoặc thông báo trong hệ thống.
-                  </li>
-                  <li>
-                    <strong>Đối tượng nhận</strong>: người nhận mô phỏng, ví dụ người bán, người báo cáo hoặc quản trị nội bộ.
-                  </li>
-                  <li>
-                    <strong>Giọng văn</strong>: phong cách thể hiện của thông điệp.
-                  </li>
-                  <li>
-                    <strong>
-                      Tên shop / Tiêu đề bài / Lý do / Vị trí hiển thị / Email liên hệ / Ghi chú quản trị
-                    </strong>
-                    : dữ liệu mẫu sẽ được chèn vào phần xem trước.
-                  </li>
-                </ul>
-              </div>
-
-              <div className="template-builder-form__section">
-                <div className="template-builder-form__section-header">
-                  <strong>Cấu Hình Thông Điệp</strong>
-                  <span>
-                    Chọn cách mẫu đã chọn sẽ được trình bày trong tình huống mô phỏng.
-                  </span>
+          <div className="template-builder-grid">
+            <SectionCard
+              title="Thông tin mẫu"
+              description="Định nghĩa tên mẫu và ngữ cảnh để phần preview nhìn là hiểu ngay."
+            >
+              <div className="template-builder-form">
+                <div className="template-builder-field">
+                  <label htmlFor="builder-template-name">Tên mẫu biểu mẫu</label>
+                  <input
+                    id="builder-template-name"
+                    value={preset.templateName}
+                    onChange={(event) =>
+                      setPreset((prev) => ({
+                        ...prev,
+                        templateName: event.target.value,
+                      }))
+                    }
+                  />
                 </div>
 
-                <div className="template-builder-form__grid">
-                  <div className="template-builder-form__field">
-                    <label>Mẫu đã chọn</label>
-                    <input type="text" value={selectedTemplate.name} disabled />
-                  </div>
-
-                  <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-channel">Kênh hiển thị</label>
-                    <select
-                      id="template-builder-channel"
-                      value={channel}
-                      onChange={(event) =>
-                        setChannel(event.target.value as TemplateBuilderChannel)
-                      }
-                    >
-                      <option value="Email">{channelLabels.Email}</option>
-                      <option value="In-App Notification">
-                        {channelLabels["In-App Notification"]}
-                      </option>
-                      <option value="Moderation Note">
-                        {channelLabels["Moderation Note"]}
-                      </option>
-                    </select>
-                  </div>
-
-                  <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-audience">Đối tượng nhận</label>
-                    <select
-                      id="template-builder-audience"
-                      value={audience}
-                      onChange={(event) =>
-                        setAudience(
-                          event.target.value as TemplateBuilderAudience,
-                        )
-                      }
-                    >
-                      <option value="Seller">{audienceLabels.Seller}</option>
-                      <option value="Reporter">
-                        {audienceLabels.Reporter}
-                      </option>
-                      <option value="Internal Admin">
-                        {audienceLabels["Internal Admin"]}
-                      </option>
-                    </select>
-                  </div>
-
-                  <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-tone">Giọng văn</label>
-                    <select
-                      id="template-builder-tone"
-                      value={tone}
-                      onChange={(event) =>
-                        setTone(event.target.value as TemplateBuilderTone)
-                      }
-                    >
-                      <option value="Formal">{toneLabels.Formal}</option>
-                      <option value="Supportive">
-                        {toneLabels.Supportive}
-                      </option>
-                      <option value="Direct">{toneLabels.Direct}</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="template-builder-form__section">
-                <div className="template-builder-form__section-header">
-                  <strong>Chi Tiết Tình Huống Mẫu</strong>
-                  <span>
-                    Điền các dữ liệu mô phỏng sẽ được dùng trong phần xem trước.
-                  </span>
+                <div className="template-builder-field">
+                  <label htmlFor="builder-category-name">Danh mục xem trước</label>
+                  <input
+                    id="builder-category-name"
+                    value={preset.categoryName}
+                    onChange={(event) =>
+                      setPreset((prev) => ({
+                        ...prev,
+                        categoryName: event.target.value,
+                      }))
+                    }
+                  />
                 </div>
 
-                <div className="template-builder-form__grid">
-                  <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-shop-name">Tên shop mẫu</label>
-                    <input
-                      id="template-builder-shop-name"
-                      type="text"
-                      value={shopName}
-                      onChange={(event) => setShopName(event.target.value)}
-                    />
-                  </div>
-
-                  <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-post-title">Tiêu đề bài đăng mẫu</label>
-                    <input
-                      id="template-builder-post-title"
-                      type="text"
-                      value={postTitle}
-                      onChange={(event) => setPostTitle(event.target.value)}
-                    />
-                  </div>
-
-                  <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-reason">Lý do mẫu</label>
-                    <input
-                      id="template-builder-reason"
-                      type="text"
-                      value={reason}
-                      onChange={(event) => setReason(event.target.value)}
-                    />
-                  </div>
-
-                  <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-slot">Vị trí hiển thị mẫu</label>
-                    <input
-                      id="template-builder-slot"
-                      type="text"
-                      value={slotName}
-                      onChange={(event) => setSlotName(event.target.value)}
-                    />
-                  </div>
-
-                  <div className="template-builder-form__field">
-                    <label htmlFor="template-builder-contact">Email liên hệ mẫu</label>
-                    <input
-                      id="template-builder-contact"
-                      type="email"
-                      value={contactEmail}
-                      onChange={(event) => setContactEmail(event.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="template-builder-form__field">
-                  <label htmlFor="template-builder-note">Ghi chú quản trị mẫu</label>
+                <div className="template-builder-field">
+                  <label htmlFor="builder-usage-note">Ghi chú sử dụng</label>
                   <textarea
-                    id="template-builder-note"
-                    rows={4}
-                    value={adminNote}
-                    onChange={(event) => setAdminNote(event.target.value)}
+                    id="builder-usage-note"
+                    value={preset.usageNote}
+                    onChange={(event) =>
+                      setPreset((prev) => ({
+                        ...prev,
+                        usageNote: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="template-builder-field">
+                  <label htmlFor="builder-title-placeholder">
+                    Placeholder tiêu đề tin
+                  </label>
+                  <input
+                    id="builder-title-placeholder"
+                    value={preset.previewTitlePlaceholder}
+                    onChange={(event) =>
+                      setPreset((prev) => ({
+                        ...prev,
+                        previewTitlePlaceholder: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="template-builder-field">
+                  <label htmlFor="builder-submit-label">Nhãn nút xem trước</label>
+                  <input
+                    id="builder-submit-label"
+                    value={preset.submitLabel}
+                    onChange={(event) =>
+                      setPreset((prev) => ({
+                        ...prev,
+                        submitLabel: event.target.value,
+                      }))
+                    }
                   />
                 </div>
               </div>
+            </SectionCard>
 
-              <div className="template-builder-form__action-panel">
-                <div className="template-builder-form__actions-note">
-                  <strong>
-                    {isPreviewOutdated
-                      ? "Bản nháp đã thay đổi sau lần áp dụng gần nhất"
-                      : "Phần xem trước hiện đã mới nhất"}
-                  </strong>
-                  <span>
-                    Hãy áp dụng bản nháp trước để xem chính xác nội dung cuối cùng.
-                  </span>
+            <SectionCard
+              title="Cấu hình nội dung"
+              description="Thêm trường theo đúng kiểu dữ liệu và chỉnh sửa chúng ngay tại đây."
+            >
+              <div className="template-builder-field-actions">
+                <button type="button" onClick={() => addField("text")}>
+                  + Thêm trường văn bản
+                </button>
+                <button type="button" onClick={() => addField("number")}>
+                  + Thêm trường số
+                </button>
+                <button type="button" onClick={() => addField("select")}>
+                  + Thêm trường chọn
+                </button>
+              </div>
+
+              {preset.fields.length === 0 ? (
+                <EmptyState
+                  title="Chưa có trường nào"
+                  description="Hãy thêm ít nhất một trường để phần xem trước có dữ liệu hiển thị."
+                />
+              ) : (
+                <div className="template-builder-field-list">
+                  {preset.fields.map((field, index) => (
+                    <div key={field.id} className="template-builder-field-card">
+                      <div className="template-builder-field-card__header">
+                        <div>
+                          <strong>
+                            Trường {index + 1} • {fieldTypeLabels[field.type]}
+                          </strong>
+                          <span>{field.label}</span>
+                        </div>
+                        <div className="template-builder-field-card__actions">
+                          <button
+                            type="button"
+                            onClick={() => moveField(field.id, -1)}
+                            disabled={index === 0}
+                          >
+                            Lên
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveField(field.id, 1)}
+                            disabled={index === preset.fields.length - 1}
+                          >
+                            Xuống
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeField(field.id)}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="template-builder-field-grid">
+                        <div className="template-builder-field">
+                          <label>Nhãn hiển thị</label>
+                          <input
+                            value={field.label}
+                            onChange={(event) =>
+                              updateField(field.id, (current) => ({
+                                ...current,
+                                label: event.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+
+                        <div className="template-builder-field">
+                          <label>Placeholder</label>
+                          <input
+                            value={field.placeholder}
+                            onChange={(event) =>
+                              updateField(field.id, (current) => ({
+                                ...current,
+                                placeholder: event.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+
+                        <div className="template-builder-field template-builder-field--full">
+                          <label>Helper text</label>
+                          <textarea
+                            value={field.helperText}
+                            onChange={(event) =>
+                              updateField(field.id, (current) => ({
+                                ...current,
+                                helperText: event.target.value,
+                              }))
+                            }
+                          />
+                        </div>
+
+                        {field.type === "select" ? (
+                          <div className="template-builder-field template-builder-field--full">
+                            <label>Danh sách lựa chọn</label>
+                            <textarea
+                              value={field.options.join("\n")}
+                              onChange={(event) =>
+                                updateField(field.id, (current) => ({
+                                  ...current,
+                                  options: normalizeOptions(event.target.value),
+                                }))
+                              }
+                            />
+                          </div>
+                        ) : null}
+
+                        <label className="template-builder-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={field.required}
+                            onChange={(event) =>
+                              updateField(field.id, (current) => ({
+                                ...current,
+                                required: event.target.checked,
+                              }))
+                            }
+                          />
+                          <span>Đánh dấu là trường bắt buộc</span>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              title="Xem trước form"
+              description="Hiển thị gần với trải nghiệm người dùng cuối để rà label, placeholder và bố cục trước khi dùng thật."
+            >
+              <div className="template-builder-preview-banner">
+                Đây là chế độ xem trước. Admin chỉ kiểm tra bố cục hiển thị, không thể gửi form thật từ màn này.
+              </div>
+
+              <div className="template-builder-preview-card">
+                <div className="template-builder-preview-card__header">
+                  <div>
+                    <strong>{preset.templateName}</strong>
+                    <span>{preset.usageNote}</span>
+                  </div>
+                  <div className="template-builder-preview-pill">
+                    Danh mục: {preset.categoryName}
+                  </div>
                 </div>
 
-                <div className="template-builder-form__actions">
-                  <button
-                    type="button"
-                    className="template-builder-form__action template-builder-form__action--secondary"
-                    onClick={applyWorkspaceToPreview}
-                  >
-                    Áp dụng vào xem trước
-                  </button>
-                  <button
-                    type="button"
-                    className="template-builder-form__action"
-                    onClick={() => void handleSavePreset()}
-                    disabled={isPresetSaving}
-                  >
-                    {isPresetSaving ? "Đang lưu..." : "Lưu cấu hình mô phỏng"}
-                  </button>
-                  <button
-                    type="button"
-                    className="template-builder-form__action template-builder-form__action--secondary"
-                    onClick={() => void handleRestoreDefault()}
-                    disabled={isPresetSaving}
-                  >
-                    Đặt lại dữ liệu mẫu
-                  </button>
+                <div className="template-builder-preview-field">
+                  <label>Tiêu đề tin <span>*</span></label>
+                  <input
+                    type="text"
+                    value=""
+                    placeholder={preset.previewTitlePlaceholder}
+                    disabled
+                  />
+                  <small>
+                    Người dùng sẽ nhập tiêu đề bài đăng thật tại đây.
+                  </small>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <EmptyState
-              title="Chưa chọn mẫu"
-              description="Hãy chọn một mẫu từ thư viện để tiếp tục cấu hình phần mô phỏng."
-            />
-          )}
-        </SectionCard>
-      </div>
 
-      <SectionCard
-        title="Bước 3 • Xem Trước Nội Dung"
-        description="Phần này luôn hiển thị đúng dữ liệu của lần áp dụng gần nhất."
-      >
-        {appliedTemplate ? (
-          <div className="template-builder-preview">
-            <div
-              className={`template-builder-preview__banner${
-                isPreviewOutdated
-                  ? " template-builder-preview__banner--warning"
-                  : ""
-              }`}
-            >
-              {isPreviewOutdated
-                ? "Bạn đã thay đổi bản nháp sau lần áp dụng gần nhất. Hãy bấm Áp dụng vào xem trước để thẻ này cập nhật lại."
-                : "Phần xem trước đang đồng bộ với bản nháp hiện tại và sẵn sàng để rà soát."}
-            </div>
+                <div className="template-builder-preview-field">
+                  <label>Danh mục</label>
+                  <select disabled value={preset.categoryName}>
+                    <option>{preset.categoryName}</option>
+                  </select>
+                  <small>Đây là danh mục được khóa để mô phỏng theo đúng ngữ cảnh.</small>
+                </div>
 
-            <div className="template-builder-preview__summary">
-              <div>
-                <strong>Nguồn xem trước</strong>
-                <span>{appliedTemplate.name}</span>
-              </div>
-              <div>
-                <strong>Áp dụng lúc</strong>
-                <span>{lastAppliedAt}</span>
-              </div>
-              <div>
-                <strong>Mục tiêu hiển thị</strong>
-                <span>
-                  {channelLabels[appliedPreset.channel]} •{" "}
-                  {audienceLabels[appliedPreset.audience]}
-                </span>
-              </div>
-            </div>
+                <div className="template-builder-preview-section">
+                  <strong>Thuộc tính đặc thù ngành cây cảnh</strong>
+                  <span>Kiểm tra kỹ nhãn, placeholder và trạng thái bắt buộc của từng trường.</span>
+                </div>
 
-            <div className="template-builder-preview__meta">
-              <StatusBadge
-                label={templateTypeLabels[appliedTemplate.type]}
-                variant="type"
-              />
-              <StatusBadge
-                label={channelLabels[appliedPreset.channel]}
-                variant="processing"
-              />
-              <StatusBadge
-                label={toneLabels[appliedPreset.tone]}
-                variant="success"
-              />
-            </div>
+                {preset.fields.map((field) => (
+                  <div key={field.id} className="template-builder-preview-field">
+                    <label>
+                      {field.label}
+                      {field.required ? <span>*</span> : null}
+                    </label>
 
-            <div
-              ref={previewRef}
-              className={`template-builder-preview__card${
-                isPreviewHighlighted
-                  ? " template-builder-preview__card--highlighted"
-                  : ""
-              }`}
-            >
-              <div className="template-builder-preview__header">
-                <strong>{appliedTemplate.name}</strong>
-                <span>{audienceLabels[appliedPreset.audience]}</span>
+                    {field.type === "select" ? (
+                      <select disabled value="">
+                        <option value="">{field.placeholder}</option>
+                        {field.options.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.type === "number" ? "number" : "text"}
+                        value=""
+                        placeholder={field.placeholder}
+                        disabled
+                      />
+                    )}
+
+                    <small>{field.helperText}</small>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  className="template-builder-preview-submit"
+                  disabled
+                >
+                  {preset.submitLabel}
+                </button>
               </div>
-
-              <div className="template-builder-preview__context">
-                <span>Shop: {appliedPreset.shopName}</span>
-                <span>Bài đăng: {appliedPreset.postTitle}</span>
-                <span>Lý do: {appliedPreset.reason}</span>
-                <span>Vị trí: {appliedPreset.slotName}</span>
-              </div>
-
-              <pre>{previewMessage}</pre>
-            </div>
+            </SectionCard>
           </div>
-        ) : (
-          <EmptyState
-            title="Chưa có phần xem trước"
-            description="Hãy chọn một mẫu từ thư viện để tạo phần xem trước nội dung."
-          />
-        )}
-      </SectionCard>
+        </>
+      )}
 
-      <ToastContainer toasts={toasts} onClose={removeToast} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }
