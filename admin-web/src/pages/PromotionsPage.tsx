@@ -53,6 +53,12 @@ const statusFilterOptions: Array<PromotionStatus | "All"> = [
   "Expired",
 ];
 
+const paymentFilterOptions: Array<PromotionPaymentStatus | "All"> = [
+  "All",
+  "Paid",
+  "Pending Verification",
+];
+
 const slotLabelMap: Record<PromotionSlot | "All", string> = {
   All: "Tất cả",
   "Home Top": "Trang chủ nổi bật",
@@ -66,6 +72,12 @@ const statusLabelMap: Record<PromotionStatus | "All", string> = {
   Active: "Đang chạy",
   Paused: "Tạm dừng",
   Expired: "Hết hạn",
+};
+
+const paymentLabelMap: Record<PromotionPaymentStatus | "All", string> = {
+  All: "Tất cả",
+  Paid: "Đã thanh toán",
+  "Pending Verification": "Chờ xác nhận",
 };
 
 const DEFAULT_REOPEN_START_DATE = "2026-04-01";
@@ -124,6 +136,11 @@ function PromotionsPage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     PromotionStatus | "All"
   >("All");
+  const [selectedPaymentFilter, setSelectedPaymentFilter] = useState<
+    PromotionPaymentStatus | "All"
+  >("All");
+  const [fromDateFilter, setFromDateFilter] = useState("");
+  const [toDateFilter, setToDateFilter] = useState("");
   const [page, setPage] = useState(1);
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     isOpen: false,
@@ -305,9 +322,33 @@ function PromotionsPage() {
         selectedStatusFilter === "All" ||
         promotion.status === selectedStatusFilter;
 
-      return matchesKeyword && matchesSlot && matchesStatus;
+      const matchesPayment =
+        selectedPaymentFilter === "All" ||
+        promotion.paymentStatus === selectedPaymentFilter;
+
+      const matchesFromDate =
+        !fromDateFilter || promotion.endDate >= fromDateFilter;
+
+      const matchesToDate = !toDateFilter || promotion.startDate <= toDateFilter;
+
+      return (
+        matchesKeyword &&
+        matchesSlot &&
+        matchesStatus &&
+        matchesPayment &&
+        matchesFromDate &&
+        matchesToDate
+      );
     });
-  }, [promotions, searchKeyword, selectedSlotFilter, selectedStatusFilter]);
+  }, [
+    promotions,
+    searchKeyword,
+    selectedSlotFilter,
+    selectedStatusFilter,
+    selectedPaymentFilter,
+    fromDateFilter,
+    toDateFilter,
+  ]);
 
   const totalPages = Math.max(
     1,
@@ -321,7 +362,14 @@ function PromotionsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchKeyword, selectedSlotFilter, selectedStatusFilter]);
+  }, [
+    searchKeyword,
+    selectedSlotFilter,
+    selectedStatusFilter,
+    selectedPaymentFilter,
+    fromDateFilter,
+    toDateFilter,
+  ]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -617,17 +665,20 @@ function PromotionsPage() {
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Lọc theo vị trí hiển thị và trạng thái"
+        filterLabel="Lọc theo vị trí, trạng thái, thanh toán và khoảng ngày"
         filterSummaryItems={[
           slotLabelMap[selectedSlotFilter],
           statusLabelMap[selectedStatusFilter],
+          paymentLabelMap[selectedPaymentFilter],
+          fromDateFilter || "Từ đầu kỳ",
+          toDateFilter || "Đến hiện tại",
         ]}
       />
 
       {showFilters && (
         <SectionCard
           title="Bộ lọc khuyến mãi"
-          description="Lọc theo vị trí hiển thị và trạng thái vận hành."
+          description="Lọc theo vị trí hiển thị, trạng thái vận hành, thanh toán và khoảng ngày chạy."
         >
           <div className="promotions-filters">
             <div className="promotions-filters__field">
@@ -667,13 +718,52 @@ function PromotionsPage() {
                 ))}
               </select>
             </div>
+
+            <div className="promotions-filters__field">
+              <label htmlFor="promotion-payment-filter">Thanh toán</label>
+              <select
+                id="promotion-payment-filter"
+                value={selectedPaymentFilter}
+                onChange={(event) =>
+                  setSelectedPaymentFilter(
+                    event.target.value as PromotionPaymentStatus | "All",
+                  )
+                }
+              >
+                {paymentFilterOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {paymentLabelMap[status]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="promotions-filters__field">
+              <label htmlFor="promotion-from-date">Từ ngày</label>
+              <input
+                id="promotion-from-date"
+                type="date"
+                value={fromDateFilter}
+                onChange={(event) => setFromDateFilter(event.target.value)}
+              />
+            </div>
+
+            <div className="promotions-filters__field">
+              <label htmlFor="promotion-to-date">Đến ngày</label>
+              <input
+                id="promotion-to-date"
+                type="date"
+                value={toDateFilter}
+                onChange={(event) => setToDateFilter(event.target.value)}
+              />
+            </div>
           </div>
         </SectionCard>
       )}
 
       <SectionCard
-        title="Danh sách khuyến mãi"
-        description="Theo dõi trạng thái thanh toán, thời gian gói, admin xử lý và trạng thái vận hành."
+        title="Danh sách chiến dịch quảng bá"
+        description="Theo dõi bài đăng, chủ sở hữu, gói áp dụng, vị trí hiển thị, thanh toán, lịch chạy và cảnh báo vận hành."
       >
         {isLoading ? (
           <EmptyState
@@ -694,14 +784,14 @@ function PromotionsPage() {
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Tiêu đề bài đăng</th>
+                    <th>Bài đăng</th>
                     <th>Chủ sở hữu</th>
-                    <th>Vị trí hiển thị</th>
                     <th>Gói</th>
-                    <th>Thanh toán</th>
+                    <th>Vị trí hiển thị</th>
                     <th>Thời gian chạy</th>
-                    <th>Admin xử lý</th>
+                    <th>Thanh toán</th>
                     <th>Trạng thái</th>
+                    <th>Ghi chú</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -710,20 +800,27 @@ function PromotionsPage() {
                   {paginatedPromotions.map((promotion) => (
                     <tr key={promotion.id}>
                       <td>#{promotion.id}</td>
-                      <td>{promotion.postTitle}</td>
+                      <td>
+                        <div className="promotions-cell">
+                          <strong>{promotion.postTitle}</strong>
+                          <span>Mã bài: #{promotion.postId}</span>
+                        </div>
+                      </td>
                       <td>{promotion.owner}</td>
+                      <td>{promotion.packageName}</td>
                       <td>
                         <StatusBadge label={slotLabelMap[promotion.slot]} variant="slot" />
                       </td>
-                      <td>{promotion.packageName}</td>
+                      <td>
+                        <div className="promotions-cell">
+                          <strong>{promotion.startDate}</strong>
+                          <span>{promotion.endDate}</span>
+                        </div>
+                      </td>
                       <td>
                         <div className="promotions-cell">
                           <StatusBadge
-                            label={
-                              promotion.paymentStatus === "Paid"
-                                ? "Đã thanh toán"
-                                : "Chờ xác nhận"
-                            }
+                            label={paymentLabelMap[promotion.paymentStatus]}
                             variant={
                               promotion.paymentStatus === "Paid"
                                 ? "success"
@@ -733,13 +830,6 @@ function PromotionsPage() {
                           <span>{promotion.budget}</span>
                         </div>
                       </td>
-                      <td>
-                        <div className="promotions-cell">
-                          <strong>{promotion.startDate}</strong>
-                          <span>{promotion.endDate}</span>
-                        </div>
-                      </td>
-                      <td>{promotion.handledBy}</td>
                       <td>
                         <StatusBadge
                           label={statusLabelMap[promotion.status]}
@@ -753,6 +843,20 @@ function PromotionsPage() {
                                   : "expired"
                           }
                         />
+                      </td>
+                      <td>
+                        <div className="promotions-cell promotions-cell--note">
+                          <span>{promotion.note}</span>
+                          {promotion.warnings.length > 0 ? (
+                            <span className="promotions-warning-list">
+                              {promotion.warnings.join(" • ")}
+                            </span>
+                          ) : (
+                            <span className="promotions-warning-list promotions-warning-list--ok">
+                              Không có cảnh báo xung đột
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <div className="promotions-actions">
@@ -938,8 +1042,16 @@ function PromotionsPage() {
               </div>
 
               <div className="promotions-modal__field">
-                <label>Admin xử lý</label>
-                <input type="text" value={selectedPromotion.handledBy} disabled />
+                <label>Người theo dõi</label>
+                <input
+                  type="text"
+                  value={
+                    selectedPromotion.handledBy === "Admin"
+                      ? "Quản trị viên"
+                      : "Quản lý vận hành"
+                  }
+                  disabled
+                />
               </div>
 
               <div className="promotions-modal__field">
@@ -975,6 +1087,12 @@ function PromotionsPage() {
               <label>Ghi chú admin</label>
               <textarea value={selectedPromotion.note} rows={4} disabled />
             </div>
+
+            {selectedPromotion.warnings.length > 0 ? (
+              <div className="promotions-modal__notice">
+                {selectedPromotion.warnings.join(" • ")}
+              </div>
+            ) : null}
 
             {selectedPromotion.status === "Active" &&
               !promotionService.canPausePromotion(selectedPromotion) && (

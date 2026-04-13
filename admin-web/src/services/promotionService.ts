@@ -10,7 +10,7 @@ import type {
 export const promotionService = {
   async getPromotions(): Promise<Promotion[]> {
     return apiClient.request<PromotionApiResponse[]>("/api/admin/promotions", {
-      defaultErrorMessage: "Không thể tải danh sách khuyến mãi.",
+      defaultErrorMessage: "Không thể tải danh sách chiến dịch quảng bá.",
     });
   },
 
@@ -24,7 +24,8 @@ export const promotionService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Không thể cập nhật trạng thái khuyến mãi.",
+        defaultErrorMessage:
+          "Không thể cập nhật trạng thái chiến dịch quảng bá.",
         body: JSON.stringify({ status }),
       },
     );
@@ -60,7 +61,7 @@ export const promotionService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Không thể đổi gói khuyến mãi.",
+        defaultErrorMessage: "Không thể đổi gói quảng bá.",
         body: JSON.stringify({
           packageId: payload.packageId,
           startDate: payload.startDate,
@@ -86,7 +87,7 @@ export const promotionService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Không thể mở lại khuyến mãi.",
+        defaultErrorMessage: "Không thể mở lại chiến dịch quảng bá.",
         body: JSON.stringify({
           packageId: payload.packageId,
           startDate: payload.startDate,
@@ -108,18 +109,18 @@ export const promotionService = {
   ): string {
     if (action === "pause") {
       if (promotion.status !== "Active") {
-        return "Chỉ có thể tạm dừng khuyến mãi đang hoạt động.";
+        return "Chỉ có thể tạm dừng chiến dịch đang chạy.";
       }
 
       return (
         promotion.pauseBlockedReason ??
-        "Khuyến mãi này hiện chưa đủ điều kiện để tạm dừng."
+        "Chiến dịch này hiện chưa đủ điều kiện để tạm dừng."
       );
     }
 
     if (action === "reopen") {
       if (promotion.status !== "Expired") {
-        return "Chỉ có thể mở lại khuyến mãi đã hết hạn.";
+        return "Chỉ có thể mở lại chiến dịch đã hết hạn.";
       }
 
       if (promotion.paymentStatus !== "Paid") {
@@ -128,17 +129,17 @@ export const promotionService = {
 
       return (
         promotion.reopenBlockedReason ??
-        "Khuyến mãi này hiện chưa đủ điều kiện để mở lại."
+        "Chiến dịch này hiện chưa đủ điều kiện để mở lại."
       );
     }
 
     if (promotion.status !== "Paused") {
-      return "Chỉ có thể tiếp tục khuyến mãi đang tạm dừng.";
+      return "Chỉ có thể tiếp tục chiến dịch đang tạm dừng.";
     }
 
     return (
       promotion.resumeBlockedReason ??
-      "Khuyến mãi này hiện chưa đủ điều kiện để tiếp tục."
+      "Chiến dịch này hiện chưa đủ điều kiện để tiếp tục."
     );
   },
 
@@ -158,19 +159,19 @@ export const promotionService = {
 
     return [
       {
-        title: "Tổng khuyến mãi",
+        title: "Tổng chiến dịch",
         value: String(promotions.length),
         subtitle: "Tất cả chiến dịch quảng bá đang theo dõi",
       },
       {
-        title: "Khuyến mãi đang chạy",
+        title: "Đang chạy",
         value: String(activeCount),
         subtitle: "Đang sử dụng vị trí hiển thị",
       },
       {
-        title: "Khuyến mãi tạm dừng",
+        title: "Tạm dừng",
         value: String(pausedCount),
-        subtitle: "Đã bị tạm dừng bởi quản trị viên",
+        subtitle: "Đã bị quản trị viên tạm dừng",
       },
       {
         title: "Lên lịch / Hết hạn",
