@@ -17,7 +17,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
 
     const handlePress = () => {
         if (item.postStatus === 'pending') {
-            CustomAlert('Post Pending', 'This post is currently under review by our moderators. Please check back later.')
+            CustomAlert('Post Pending', 'This post is currently under review by our managers. Please check back later.')
             return
         }
 

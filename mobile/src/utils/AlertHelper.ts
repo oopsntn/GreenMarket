@@ -19,7 +19,7 @@ const CustomAlert = (
             if (cancelButton.onPress) cancelButton.onPress();
         }
     } else {
-        Alert.alert(title, message, buttons);
+        Alert.alert(title, message, buttons, { cancelable: true});
     }
 };
 
