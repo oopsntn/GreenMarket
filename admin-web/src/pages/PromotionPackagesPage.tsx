@@ -1,163 +1,195 @@
 import { useEffect, useMemo, useState } from "react";
-import { BaseModal } from "../components/BaseModal";
-import { ConfirmDialog } from "../components/ConfirmDialog";
-import { EmptyState } from "../components/EmptyState";
-import { PageHeader } from "../components/PageHeader";
-import { SectionCard } from "../components/SectionCard";
-import { StatusBadge } from "../components/StatusBadge";
-import { ToastContainer, type ToastMessage } from "../components/Toast";
+import BaseModal from "../components/BaseModal";
+import ConfirmDialog from "../components/ConfirmDialog";
+import EmptyState from "../components/EmptyState";
+import PageHeader from "../components/PageHeader";
+import SectionCard from "../components/SectionCard";
+import StatusBadge from "../components/StatusBadge";
+import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { placementSlotService } from "../services/placementSlotService";
 import { promotionPackageService } from "../services/promotionPackageService";
+import type { PlacementSlot } from "../types/placementSlot";
 import type {
   PromotionPackage,
   PromotionPackageFormState,
   PromotionPackageSlot,
   PromotionPackageStatus,
-} from "../types";
+} from "../types/promotionPackage";
 import "./PromotionPackagesPage.css";
 
-const slotLabelMap: Record<PromotionPackageSlot, string> = {
+type ConfirmAction = "disable" | "enable";
+
+type ConfirmState = {
+  isOpen: boolean;
+  packageId: number | null;
+  action: ConfirmAction | null;
+};
+
+type SlotOption = {
+  id: number;
+  code: string;
+  label: PromotionPackageSlot;
+};
+
+const PAGE_SIZE = 5;
+
+const slotFilterOptions: Array<PromotionPackageSlot | "All"> = [
+  "All",
+  "Home Top",
+  "Category Top",
+  "Search Boost",
+];
+
+const statusFilterOptions: Array<PromotionPackageStatus | "All"> = [
+  "All",
+  "Active",
+  "Disabled",
+];
+
+const slotLabelMap: Record<PromotionPackageSlot | "All", string> = {
+  All: "Tất cả",
   "Home Top": "Trang chủ nổi bật",
   "Category Top": "Danh mục nổi bật",
   "Search Boost": "Tăng tìm kiếm",
 };
 
-const statusLabelMap: Record<PromotionPackageStatus, string> = {
+const statusLabelMap: Record<PromotionPackageStatus | "All", string> = {
+  All: "Tất cả",
   Active: "Đang bật",
   Disabled: "Đã tắt",
 };
 
-const slotFilterOptions: Array<{
-  value: PromotionPackageSlot | "All";
-  label: string;
-}> = [
-  { value: "All", label: "Tất cả" },
-  { value: "Home Top", label: "Trang chủ nổi bật" },
-  { value: "Category Top", label: "Danh mục nổi bật" },
-  { value: "Search Boost", label: "Tăng tìm kiếm" },
-];
+const currencyToNumber = (value: string) => {
+  const normalized = Number(value.replace(/[^\d]/g, ""));
+  return Number.isFinite(normalized) ? normalized : 0;
+};
 
-const statusFilterOptions: Array<{
-  value: PromotionPackageStatus | "All";
-  label: string;
-}> = [
-  { value: "All", label: "Tất cả" },
-  { value: "Active", label: "Đang bật" },
-  { value: "Disabled", label: "Đã tắt" },
-];
+const mapPlacementSlotToPackageSlot = (
+  slot: Pick<PlacementSlot, "name" | "positionCode">,
+): PromotionPackageSlot => {
+  const normalized = `${slot.positionCode} ${slot.name}`.toLowerCase();
 
-const PAGE_SIZE = 5;
-
-function emptyFormState(): PromotionPackageFormState {
-  return {
-    name: "",
-    slot: "Home Top",
-    durationDays: 7,
-    price: 0,
-    maxPosts: 1,
-    quota: 10000,
-    description: "",
-  };
-}
+  if (normalized.includes("search")) return "Search Boost";
+  if (normalized.includes("category")) return "Category Top";
+  return "Home Top";
+};
 
 function PromotionPackagesPage() {
   const [packages, setPackages] = useState<PromotionPackage[]>([]);
-  const [availableSlots, setAvailableSlots] = useState<PromotionPackageSlot[]>(
-    [],
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [slotFilter, setSlotFilter] = useState<PromotionPackageSlot | "All">(
-    "All",
-  );
-  const [statusFilter, setStatusFilter] = useState<
+  const [slotOptions, setSlotOptions] = useState<SlotOption[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
+
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [selectedSlotFilter, setSelectedSlotFilter] = useState<
+    PromotionPackageSlot | "All"
+  >("All");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     PromotionPackageStatus | "All"
   >("All");
   const [page, setPage] = useState(1);
-  const [selectedPackage, setSelectedPackage] =
-    useState<PromotionPackage | null>(null);
-  const [editingPackage, setEditingPackage] =
-    useState<PromotionPackage | null>(null);
-  const [confirmTarget, setConfirmTarget] = useState<PromotionPackage | null>(
+
+  const [selectedPackage, setSelectedPackage] = useState<PromotionPackage | null>(
     null,
   );
-  const [formState, setFormState] = useState<PromotionPackageFormState>(
-    emptyFormState(),
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [editingPackageId, setEditingPackageId] = useState<number | null>(null);
+  const [formData, setFormData] = useState<PromotionPackageFormState>(
+    promotionPackageService.getEmptyForm(),
   );
-  const [isSaving, setIsSaving] = useState(false);
-  const [toastMessages, setToastMessages] = useState<ToastMessage[]>([]);
+  const [formError, setFormError] = useState("");
 
-  const pushToast = (
-    message: string,
-    tone: ToastMessage["tone"] = "success",
-  ) => {
-    setToastMessages((current) => [
-      ...current,
-      {
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        message,
-        tone,
-      },
-    ]);
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    isOpen: false,
+    packageId: null,
+    action: null,
+  });
+
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const summaryCards = promotionPackageService.getSummaryCards(packages);
+
+  const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
+    const toastId = Date.now() + Math.random();
+
+    setToasts((prev) => [...prev, { id: toastId, message, tone }]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
+    }, 2600);
   };
 
-  const dismissToast = (id: string) => {
-    setToastMessages((current) =>
-      current.filter((toast) => toast.id !== id),
-    );
-  };
-
-  const loadPackages = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [packageRows, slotRows] = await Promise.all([
-        promotionPackageService.listAll(),
-        placementSlotService.listAll(),
-      ]);
-      setPackages(packageRows);
-      const slotNames = Array.from(
-        new Set(slotRows.map((slot) => slot.name as PromotionPackageSlot)),
-      );
-      setAvailableSlots(slotNames);
-    } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Không thể tải dữ liệu gói quảng bá.",
-      );
-    } finally {
-      setLoading(false);
-    }
+  const removeToast = (id: number) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
   useEffect(() => {
-    void loadPackages();
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setPageError("");
+
+        const [nextPackages, nextSlots] = await Promise.all([
+          promotionPackageService.getPromotionPackages(),
+          placementSlotService.getPlacementSlots(),
+        ]);
+
+        setPackages(nextPackages);
+        setSlotOptions(
+          nextSlots.map((slot) => ({
+            id: slot.id,
+            code: slot.positionCode,
+            label: mapPlacementSlotToPackageSlot(slot),
+          })),
+        );
+      } catch (error) {
+        setPageError(
+          error instanceof Error
+            ? error.message
+            : "Không thể tải dữ liệu gói quảng bá.",
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void loadData();
   }, []);
 
   const filteredPackages = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    return packages.filter((pkg) => {
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        pkg.name.toLowerCase().includes(normalizedSearch) ||
-        pkg.slot.toLowerCase().includes(normalizedSearch) ||
-        pkg.description.toLowerCase().includes(normalizedSearch);
+    const keyword = searchKeyword.trim().toLowerCase();
 
-      const matchesSlot = slotFilter === "All" || pkg.slot === slotFilter;
+    return packages.filter((item) => {
+      const matchesKeyword =
+        !keyword ||
+        item.name.toLowerCase().includes(keyword) ||
+        item.slot.toLowerCase().includes(keyword) ||
+        item.description.toLowerCase().includes(keyword);
+
+      const matchesSlot =
+        selectedSlotFilter === "All" || item.slot === selectedSlotFilter;
+
       const matchesStatus =
-        statusFilter === "All" || pkg.status === statusFilter;
+        selectedStatusFilter === "All" || item.status === selectedStatusFilter;
 
-      return matchesSearch && matchesSlot && matchesStatus;
+      return matchesKeyword && matchesSlot && matchesStatus;
     });
-  }, [packages, searchTerm, slotFilter, statusFilter]);
+  }, [packages, searchKeyword, selectedSlotFilter, selectedStatusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredPackages.length / PAGE_SIZE));
 
+  const paginatedPackages = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE;
+    return filteredPackages.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredPackages, page]);
+
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, slotFilter, statusFilter]);
+  }, [searchKeyword, selectedSlotFilter, selectedStatusFilter]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -165,230 +197,303 @@ function PromotionPackagesPage() {
     }
   }, [page, totalPages]);
 
-  const currentItems = useMemo(() => {
-    const startIndex = (page - 1) * PAGE_SIZE;
-    return filteredPackages.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredPackages, page]);
-
-  const summary = useMemo(() => {
-    const activePackages = packages.filter((pkg) => pkg.status === "Active");
-    const disabledPackages = packages.filter(
-      (pkg) => pkg.status === "Disabled",
-    );
-    const peakPrice = packages.reduce((max, pkg) => Math.max(max, pkg.price), 0);
-    const totalQuota = packages.reduce((sum, pkg) => sum + pkg.quota, 0);
-
-    return [
-      {
-        label: "Tổng gói",
-        value: packages.length.toString(),
-        meta: "Tất cả gói quảng bá đã cấu hình",
-      },
-      {
-        label: "Gói đang bật",
-        value: activePackages.length.toString(),
-        meta: "Đang mở bán cho khách hàng",
-      },
-      {
-        label: "Gói đã tắt",
-        value: disabledPackages.length.toString(),
-        meta: "Tạm ẩn khỏi danh sách bán",
-      },
-      {
-        label: "Giá cao nhất",
-        value: `${peakPrice.toLocaleString("vi-VN")} VND`,
-        meta: "Mức giá lớn nhất trong các gói hiện có",
-      },
-      {
-        label: "Tổng hạn mức",
-        value: totalQuota.toLocaleString("vi-VN"),
-        meta: "Tổng lượt hiển thị của toàn bộ gói đã cấu hình",
-      },
-    ];
-  }, [packages]);
-
-  const openCreateModal = () => {
-    setEditingPackage(null);
-    setFormState(emptyFormState());
+  const openViewModal = (item: PromotionPackage) => {
+    setSelectedPackage(item);
+    setIsViewModalOpen(true);
   };
 
-  const openEditModal = (pkg: PromotionPackage) => {
-    setEditingPackage(pkg);
-    setFormState({
-      name: pkg.name,
-      slot: pkg.slot,
-      durationDays: pkg.durationDays,
-      price: pkg.price,
-      maxPosts: pkg.maxPosts,
-      quota: pkg.quota,
-      description: pkg.description,
+  const closeViewModal = () => {
+    setSelectedPackage(null);
+    setIsViewModalOpen(false);
+  };
+
+  const openAddModal = () => {
+    setModalMode("add");
+    setEditingPackageId(null);
+    setFormData(promotionPackageService.getEmptyForm());
+    setFormError("");
+    setIsFormModalOpen(true);
+  };
+
+  const openEditModal = (item: PromotionPackage) => {
+    setModalMode("edit");
+    setEditingPackageId(item.id);
+    setFormData({
+      name: item.name,
+      slot: item.slot,
+      durationDays: item.durationDays,
+      price: String(currencyToNumber(item.price)),
+      maxPosts: item.maxPosts,
+      displayQuota: item.displayQuota,
+      description: item.description,
     });
+    setFormError("");
+    setIsFormModalOpen(true);
   };
 
   const closeFormModal = () => {
-    if (isSaving) {
-      return;
-    }
-    setEditingPackage(null);
-    setFormState(emptyFormState());
+    if (isSubmitting) return;
+
+    setEditingPackageId(null);
+    setFormData(promotionPackageService.getEmptyForm());
+    setFormError("");
+    setIsFormModalOpen(false);
   };
 
-  const submitForm = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleFormChange = (
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
+  ) => {
+    const { name, value } = event.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === "durationDays" ||
+        name === "maxPosts" ||
+        name === "displayQuota"
+          ? Number(value)
+          : value,
+    }));
+
+    if (formError) {
+      setFormError("");
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsSaving(true);
+
     try {
-      if (editingPackage) {
-        const updated = await promotionPackageService.update(
-          editingPackage.id,
-          formState,
-        );
-        setPackages((current) =>
-          current.map((pkg) => (pkg.id === updated.id ? updated : pkg)),
-        );
-        pushToast(`Đã cập nhật gói "${updated.name}".`);
-      } else {
-        const created = await promotionPackageService.create(formState);
-        setPackages((current) => [created, ...current]);
-        pushToast(`Đã tạo gói "${created.name}".`);
-      }
+      setIsSubmitting(true);
+
+      const nextPackages =
+        modalMode === "add"
+          ? await promotionPackageService.createPromotionPackage(
+              packages,
+              slotOptions,
+              formData,
+            )
+          : await promotionPackageService.updatePromotionPackage(
+              packages,
+              slotOptions,
+              editingPackageId as number,
+              formData,
+            );
+
+      setPackages(nextPackages);
+
+      showToast(
+        modalMode === "add"
+          ? "Đã thêm gói quảng bá thành công."
+          : "Đã cập nhật gói quảng bá thành công.",
+      );
+
       closeFormModal();
-    } catch (saveError) {
-      pushToast(
-        saveError instanceof Error
-          ? saveError.message
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
           : "Không thể lưu gói quảng bá.",
-        "error",
       );
     } finally {
-      setIsSaving(false);
+      setIsSubmitting(false);
     }
   };
 
-  const toggleStatus = async () => {
-    if (!confirmTarget) {
+  const openConfirmDialog = (packageId: number, action: ConfirmAction) => {
+    setConfirmState({
+      isOpen: true,
+      packageId,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmState({
+      isOpen: false,
+      packageId: null,
+      action: null,
+    });
+  };
+
+  const confirmPackage =
+    confirmState.packageId !== null
+      ? (packages.find((item) => item.id === confirmState.packageId) ?? null)
+      : null;
+
+  const handleConfirmAction = async () => {
+    if (confirmState.packageId === null || confirmState.action === null) return;
+
+    const targetPackage = packages.find(
+      (item) => item.id === confirmState.packageId,
+    );
+
+    if (!targetPackage) {
+      closeConfirmDialog();
       return;
     }
 
+    const nextStatus: PromotionPackageStatus =
+      confirmState.action === "disable" ? "Disabled" : "Active";
+
     try {
-      const nextStatus: PromotionPackageStatus =
-        confirmTarget.status === "Active" ? "Disabled" : "Active";
-      const updated = await promotionPackageService.setStatus(
-        confirmTarget.id,
-        nextStatus,
-      );
-      setPackages((current) =>
-        current.map((pkg) => (pkg.id === updated.id ? updated : pkg)),
-      );
-      pushToast(
+      setIsStatusUpdating(confirmState.packageId);
+
+      const nextPackages =
+        await promotionPackageService.updatePromotionPackageStatus(
+          packages,
+          slotOptions,
+          confirmState.packageId,
+          nextStatus,
+        );
+
+      setPackages(nextPackages);
+
+      if (selectedPackage?.id === confirmState.packageId) {
+        setSelectedPackage(
+          nextPackages.find((item) => item.id === confirmState.packageId) ?? null,
+        );
+      }
+
+      showToast(
         nextStatus === "Active"
-          ? `Đã bật lại gói "${updated.name}".`
-          : `Đã tắt gói "${updated.name}".`,
+          ? `Đã bật lại gói ${targetPackage.name}.`
+          : `Đã tạm ngưng gói ${targetPackage.name}.`,
+        nextStatus === "Active" ? "success" : "info",
       );
-    } catch (statusError) {
-      pushToast(
-        statusError instanceof Error
-          ? statusError.message
-          : "Không thể cập nhật trạng thái gói.",
+
+      closeConfirmDialog();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật trạng thái gói quảng bá.",
         "error",
       );
     } finally {
-      setConfirmTarget(null);
+      setIsStatusUpdating(null);
     }
   };
+
+  const confirmTitle =
+    confirmState.action === "disable"
+      ? "Tạm ngưng gói quảng bá"
+      : "Bật lại gói quảng bá";
+
+  const confirmMessage =
+    confirmState.action === "disable"
+      ? `Bạn có chắc muốn tạm ngưng ${
+          confirmPackage?.name ?? "gói quảng bá này"
+        }? Gói này sẽ không còn hiển thị để bán.`
+      : `Bạn có chắc muốn bật lại ${
+          confirmPackage?.name ?? "gói quảng bá này"
+        }? Gói này sẽ hoạt động trở lại trong hệ thống.`;
 
   return (
-    <>
+    <div className="promotion-packages-page">
       <PageHeader
         title="Gói quảng bá"
-        description="Quản lý các gói quảng bá đang bán cho vị trí trang chủ, danh mục và khu vực tìm kiếm."
+        description="Quản lý các gói quảng bá theo vị trí hiển thị, thời lượng, hạn mức và trạng thái kinh doanh."
         actionLabel="+ Thêm gói"
-        onAction={openCreateModal}
+        onActionClick={openAddModal}
       />
 
-      <section className="promotion-packages-summary-grid">
-        {summary.map((card) => (
-          <article key={card.label} className="summary-card">
-            <p className="summary-card-label">{card.label}</p>
-            <strong className="summary-card-value">{card.value}</strong>
-            <span className="summary-card-meta">{card.meta}</span>
-          </article>
+      <div className="promotion-packages-summary-grid">
+        {summaryCards.map((card) => (
+          <div key={card.title} className="promotion-packages-summary-card">
+            <span className="promotion-packages-summary-card__label">
+              {card.title}
+            </span>
+            <strong className="promotion-packages-summary-card__value">
+              {card.value}
+            </strong>
+            <p className="promotion-packages-summary-card__subtitle">
+              {card.subtitle}
+            </p>
+          </div>
         ))}
-      </section>
+      </div>
 
       <SectionCard
         title="Bộ lọc gói quảng bá"
-        description="Tìm kiếm và lọc gói quảng bá theo vị trí hiển thị và trạng thái kinh doanh."
+        description="Tìm kiếm và thu hẹp danh sách gói theo vị trí hiển thị và trạng thái."
       >
-        <div className="promotion-packages-filter-grid">
-          <label className="promotion-packages-filter-field">
-            <span>Tìm kiếm</span>
+        <div className="promotion-packages-filters">
+          <div className="promotion-packages-filters__field promotion-packages-filters__field--search">
+            <label htmlFor="promotion-package-search">Tìm kiếm</label>
             <input
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              id="promotion-package-search"
+              type="text"
+              value={searchKeyword}
+              onChange={(event) => setSearchKeyword(event.target.value)}
               placeholder="Tìm theo tên gói, vị trí hoặc mô tả"
             />
-          </label>
+          </div>
 
-          <label className="promotion-packages-filter-field">
-            <span>Vị trí</span>
+          <div className="promotion-packages-filters__field">
+            <label htmlFor="promotion-package-slot-filter">Vị trí</label>
             <select
-              value={slotFilter}
+              id="promotion-package-slot-filter"
+              value={selectedSlotFilter}
               onChange={(event) =>
-                setSlotFilter(event.target.value as PromotionPackageSlot | "All")
+                setSelectedSlotFilter(
+                  event.target.value as PromotionPackageSlot | "All",
+                )
               }
             >
-              {slotFilterOptions
-                .filter(
-                  (option) =>
-                    option.value === "All" || availableSlots.includes(option.value),
-                )
-                .map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+              {slotFilterOptions.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slotLabelMap[slot]}
+                </option>
+              ))}
             </select>
-          </label>
+          </div>
 
-          <label className="promotion-packages-filter-field">
-            <span>Trạng thái</span>
+          <div className="promotion-packages-filters__field">
+            <label htmlFor="promotion-package-status-filter">Trạng thái</label>
             <select
-              value={statusFilter}
+              id="promotion-package-status-filter"
+              value={selectedStatusFilter}
               onChange={(event) =>
-                setStatusFilter(
+                setSelectedStatusFilter(
                   event.target.value as PromotionPackageStatus | "All",
                 )
               }
             >
-              {statusFilterOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              {statusFilterOptions.map((status) => (
+                <option key={status} value={status}>
+                  {statusLabelMap[status]}
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         </div>
       </SectionCard>
 
       <SectionCard
         title="Danh sách gói quảng bá"
-        description="Theo dõi giá bán, thời lượng, vị trí hiển thị, hạn mức và trạng thái kinh doanh của từng gói."
+        description="Theo dõi giá bán, quota hiển thị, số bài tối đa và trạng thái kinh doanh của từng gói."
       >
-        {loading ? (
+        {isLoading ? (
           <EmptyState
             title="Đang tải gói quảng bá"
-            description="Vui lòng chờ trong khi hệ thống lấy dữ liệu gói mới nhất."
+            description="Vui lòng chờ trong khi hệ thống lấy dữ liệu gói quảng bá mới nhất."
           />
-        ) : error ? (
-          <EmptyState title="Không thể tải gói quảng bá" description={error} />
+        ) : pageError ? (
+          <EmptyState
+            title="Không thể tải gói quảng bá"
+            description={pageError}
+          />
         ) : filteredPackages.length === 0 ? (
           <EmptyState
             title="Không tìm thấy gói quảng bá"
-            description="Không có gói nào khớp với bộ lọc hiện tại."
+            description="Không có gói nào khớp với điều kiện tìm kiếm hiện tại."
           />
         ) : (
           <>
-            <div className="promotion-packages-table-wrap">
+            <div className="promotion-packages-table-wrapper">
               <table className="promotion-packages-table">
                 <thead>
                   <tr>
@@ -398,46 +503,63 @@ function PromotionPackagesPage() {
                     <th>Thời lượng</th>
                     <th>Giá bán</th>
                     <th>Số bài tối đa</th>
-                    <th>Hạn mức</th>
+                    <th>Quota</th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {currentItems.map((pkg) => (
-                    <tr key={pkg.id}>
-                      <td>#{pkg.id}</td>
-                      <td>{pkg.name}</td>
-                      <td>{slotLabelMap[pkg.slot]}</td>
-                      <td>{pkg.durationDays} ngày</td>
-                      <td>{pkg.price.toLocaleString("vi-VN")} VND</td>
-                      <td>{pkg.maxPosts}</td>
-                      <td>{pkg.quota.toLocaleString("vi-VN")}</td>
+                  {paginatedPackages.map((item) => (
+                    <tr key={item.id}>
+                      <td>#{item.id}</td>
+                      <td>{item.name}</td>
+                      <td>{slotLabelMap[item.slot]}</td>
+                      <td>{item.durationDays} ngày</td>
+                      <td>{item.price}</td>
+                      <td>{item.maxPosts}</td>
+                      <td>{item.displayQuota.toLocaleString("en-US")}</td>
                       <td>
-                        <StatusBadge status={pkg.status} />
+                        <StatusBadge
+                          label={statusLabelMap[item.status]}
+                          variant={item.status === "Active" ? "active" : "disabled"}
+                        />
                       </td>
                       <td>
                         <div className="promotion-packages-actions">
                           <button
                             type="button"
-                            onClick={() => setSelectedPackage(pkg)}
+                            className="promotion-packages-actions__view"
+                            onClick={() => openViewModal(item)}
                           >
                             Xem
                           </button>
                           <button
                             type="button"
-                            className="secondary"
-                            onClick={() => openEditModal(pkg)}
+                            className="promotion-packages-actions__edit"
+                            onClick={() => openEditModal(item)}
                           >
                             Sửa
                           </button>
-                          <button
-                            type="button"
-                            className="danger"
-                            onClick={() => setConfirmTarget(pkg)}
-                          >
-                            {pkg.status === "Active" ? "Tắt" : "Bật"}
-                          </button>
+                          {item.status === "Active" ? (
+                            <button
+                              type="button"
+                              className="promotion-packages-actions__disable"
+                              onClick={() => openConfirmDialog(item.id, "disable")}
+                              disabled={isStatusUpdating === item.id}
+                            >
+                              Tắt
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="promotion-packages-actions__enable"
+                              onClick={() => openConfirmDialog(item.id, "enable")}
+                              disabled={isStatusUpdating === item.id}
+                            >
+                              Bật
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -447,21 +569,23 @@ function PromotionPackagesPage() {
             </div>
 
             <div className="promotion-packages-pagination">
-              <span>
+              <span className="promotion-packages-pagination__info">
                 Trang {page} / {totalPages}
               </span>
-              <div className="promotion-packages-pagination-actions">
+              <div className="promotion-packages-pagination__actions">
                 <button
                   type="button"
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
-                  onClick={() => setPage((current) => current - 1)}
                 >
                   Trước
                 </button>
                 <button
                   type="button"
+                  onClick={() =>
+                    setPage((prev) => Math.min(totalPages, prev + 1))
+                  }
                   disabled={page === totalPages}
-                  onClick={() => setPage((current) => current + 1)}
                 >
                   Tiếp
                 </button>
@@ -472,19 +596,11 @@ function PromotionPackagesPage() {
       </SectionCard>
 
       <BaseModal
-        isOpen={selectedPackage !== null}
+        isOpen={isViewModalOpen}
         title="Chi tiết gói quảng bá"
-        description="Xem vị trí, hạn mức, trạng thái kinh doanh và mô tả chi tiết của gói."
-        onClose={() => setSelectedPackage(null)}
-        footer={
-          <button
-            type="button"
-            className="modal-secondary-button"
-            onClick={() => setSelectedPackage(null)}
-          >
-            Đóng
-          </button>
-        }
+        description="Xem cấu hình chi tiết, giá bán và trạng thái hiện tại của gói."
+        onClose={closeViewModal}
+        maxWidth="720px"
       >
         {selectedPackage ? (
           <div className="promotion-packages-detail-grid">
@@ -502,15 +618,15 @@ function PromotionPackagesPage() {
             </div>
             <div>
               <span>Giá bán</span>
-              <strong>{selectedPackage.price.toLocaleString("vi-VN")} VND</strong>
+              <strong>{selectedPackage.price}</strong>
             </div>
             <div>
               <span>Số bài tối đa</span>
               <strong>{selectedPackage.maxPosts}</strong>
             </div>
             <div>
-              <span>Hạn mức hiển thị</span>
-              <strong>{selectedPackage.quota.toLocaleString("vi-VN")}</strong>
+              <span>Quota hiển thị</span>
+              <strong>{selectedPackage.displayQuota.toLocaleString("en-US")}</strong>
             </div>
             <div>
               <span>Trạng thái</span>
@@ -520,52 +636,60 @@ function PromotionPackagesPage() {
               <span>Mô tả</span>
               <p>{selectedPackage.description}</p>
             </div>
+
+            <div className="promotion-packages-form-actions">
+              <button
+                type="button"
+                className="promotion-packages-form-actions__cancel"
+                onClick={closeViewModal}
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         ) : null}
       </BaseModal>
 
       <BaseModal
-        isOpen={editingPackage !== null || formState.name !== ""}
+        isOpen={isFormModalOpen}
         title={
-          editingPackage ? "Chỉnh sửa gói quảng bá" : "Thêm gói quảng bá"
+          modalMode === "add" ? "Thêm gói quảng bá" : "Chỉnh sửa gói quảng bá"
         }
         description={
-          editingPackage
-            ? "Cập nhật giá bán, hạn mức, thời lượng và thông tin kinh doanh của gói."
-            : "Tạo gói mới cho một vị trí hiển thị đang được hỗ trợ."
+          modalMode === "add"
+            ? "Tạo gói quảng bá mới với vị trí hiển thị, giá bán và quota phù hợp."
+            : "Cập nhật thông tin kinh doanh và hạn mức của gói quảng bá."
         }
         onClose={closeFormModal}
+        maxWidth="760px"
       >
-        <form className="promotion-package-form" onSubmit={submitForm}>
+        <form className="promotion-package-form" onSubmit={handleSubmit}>
           <label>
             <span>Tên gói</span>
             <input
-              value={formState.name}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-              placeholder="Nhập tên gói"
-              required
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleFormChange}
+              disabled={isSubmitting}
+              placeholder="Nhập tên gói quảng bá"
             />
           </label>
 
           <label>
             <span>Vị trí</span>
             <select
-              value={formState.slot}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  slot: event.target.value as PromotionPackageSlot,
-                }))
-              }
+              name="slot"
+              value={formData.slot}
+              onChange={handleFormChange}
+              disabled={isSubmitting}
             >
-              {availableSlots.map((slot) => (
+              {(slotOptions.length > 0
+                ? Array.from(new Set(slotOptions.map((item) => item.label)))
+                : ["Home Top", "Category Top", "Search Boost"]
+              ).map((slot) => (
                 <option key={slot} value={slot}>
-                  {slotLabelMap[slot]}
+                  {slotLabelMap[slot as PromotionPackageSlot]}
                 </option>
               ))}
             </select>
@@ -574,130 +698,106 @@ function PromotionPackagesPage() {
           <label>
             <span>Thời lượng (ngày)</span>
             <input
+              name="durationDays"
               type="number"
               min={1}
-              value={formState.durationDays}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  durationDays: Number(event.target.value),
-                }))
-              }
-              required
+              value={formData.durationDays}
+              onChange={handleFormChange}
+              disabled={isSubmitting}
             />
           </label>
 
           <label>
             <span>Giá bán</span>
             <input
-              type="number"
-              min={0}
-              value={formState.price}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  price: Number(event.target.value),
-                }))
-              }
-              placeholder="Nhập giá bán của gói"
-              required
+              name="price"
+              type="text"
+              value={formData.price}
+              onChange={handleFormChange}
+              disabled={isSubmitting}
+              placeholder="Nhập giá bán"
             />
           </label>
 
           <label>
             <span>Số bài tối đa</span>
             <input
+              name="maxPosts"
               type="number"
               min={1}
-              value={formState.maxPosts}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  maxPosts: Number(event.target.value),
-                }))
-              }
-              required
+              value={formData.maxPosts}
+              onChange={handleFormChange}
+              disabled={isSubmitting}
             />
           </label>
 
           <label>
-            <span>Hạn mức hiển thị</span>
+            <span>Quota hiển thị</span>
             <input
+              name="displayQuota"
               type="number"
               min={1}
-              value={formState.quota}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  quota: Number(event.target.value),
-                }))
-              }
-              required
+              value={formData.displayQuota}
+              onChange={handleFormChange}
+              disabled={isSubmitting}
             />
           </label>
 
           <label className="promotion-package-form-description">
             <span>Mô tả</span>
             <textarea
+              name="description"
               rows={4}
-              value={formState.description}
-              onChange={(event) =>
-                setFormState((current) => ({
-                  ...current,
-                  description: event.target.value,
-                }))
-              }
-              placeholder="Nhập mô tả và quyền lợi của gói"
-              required
+              value={formData.description}
+              onChange={handleFormChange}
+              disabled={isSubmitting}
+              placeholder="Nhập mô tả quyền lợi và phạm vi áp dụng"
             />
           </label>
 
-          <div className="promotion-package-form-actions">
+          {formError ? (
+            <p className="promotion-packages-form-error">{formError}</p>
+          ) : null}
+
+          <div className="promotion-packages-form-actions">
             <button
               type="button"
-              className="modal-secondary-button"
+              className="promotion-packages-form-actions__cancel"
               onClick={closeFormModal}
+              disabled={isSubmitting}
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="modal-primary-button"
-              disabled={isSaving}
+              className="promotion-packages-form-actions__submit"
+              disabled={isSubmitting}
             >
-              {isSaving
+              {isSubmitting
                 ? "Đang lưu..."
-                : editingPackage
-                  ? "Lưu thay đổi"
-                  : "Thêm gói"}
+                : modalMode === "add"
+                  ? "Thêm gói"
+                  : "Lưu thay đổi"}
             </button>
           </div>
         </form>
       </BaseModal>
 
       <ConfirmDialog
-        isOpen={confirmTarget !== null}
-        title={
-          confirmTarget?.status === "Active"
-            ? "Tắt gói quảng bá"
-            : "Bật gói quảng bá"
+        isOpen={confirmState.isOpen}
+        title={confirmTitle}
+        message={confirmMessage}
+        confirmText={
+          confirmState.action === "disable" ? "Tạm ngưng gói" : "Bật lại gói"
         }
-        description={
-          confirmTarget?.status === "Active"
-            ? `Bạn có chắc muốn tắt "${confirmTarget?.name}"? Gói này sẽ không còn được phép bán ra.`
-            : `Bạn có chắc muốn bật lại "${confirmTarget?.name}"? Gói này sẽ được bán lại cho khách hàng.`
-        }
-        confirmLabel={
-          confirmTarget?.status === "Active" ? "Tắt gói" : "Bật gói"
-        }
-        cancelLabel="Hủy"
-        confirmTone={confirmTarget?.status === "Active" ? "danger" : "primary"}
-        onCancel={() => setConfirmTarget(null)}
-        onConfirm={toggleStatus}
+        cancelText="Hủy"
+        tone={confirmState.action === "disable" ? "danger" : "success"}
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmDialog}
       />
 
-      <ToastContainer messages={toastMessages} onDismiss={dismissToast} />
-    </>
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+    </div>
   );
 }
 
