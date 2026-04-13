@@ -24,16 +24,14 @@ const slugifyCategory = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-const mapApiCategoryToUi = (item: CategoryApiResponse): Category => {
-  return {
-    id: item.categoryId,
-    name: item.categoryTitle?.trim() || "Untitled Category",
-    slug: item.categorySlug?.trim() || "",
-    attributesCount: null,
-    status: item.categoryPublished ? "Active" : "Disabled",
-    createdAt: formatDate(item.categoryCreatedAt),
-  };
-};
+const mapApiCategoryToUi = (item: CategoryApiResponse): Category => ({
+  id: item.categoryId,
+  name: item.categoryTitle?.trim() || "Danh mục chưa đặt tên",
+  slug: item.categorySlug?.trim() || "",
+  attributesCount: null,
+  status: item.categoryPublished ? "Active" : "Disabled",
+  createdAt: formatDate(item.categoryCreatedAt),
+});
 
 export const categoryService = {
   getEmptyForm(): CategoryFormState {
@@ -53,13 +51,13 @@ export const categoryService = {
     selectedCategoryId?: number | null,
   ) {
     if (!formData.name.trim()) {
-      throw new Error("Category name is required.");
+      throw new Error("Tên danh mục là bắt buộc.");
     }
 
     const nextSlug = this.buildSlug(formData.name, formData.slug);
 
     if (!nextSlug) {
-      throw new Error("Slug could not be generated from the current category name.");
+      throw new Error("Không thể tạo slug từ tên danh mục hiện tại.");
     }
 
     const duplicateName = categories.some((category) => {
@@ -71,7 +69,7 @@ export const categoryService = {
     });
 
     if (duplicateName) {
-      throw new Error("Another category already uses this name.");
+      throw new Error("Đã có danh mục khác sử dụng tên này.");
     }
 
     const duplicateSlug = categories.some((category) => {
@@ -83,7 +81,7 @@ export const categoryService = {
     });
 
     if (duplicateSlug) {
-      throw new Error("Another category already uses this slug.");
+      throw new Error("Đã có danh mục khác sử dụng slug này.");
     }
   },
 
@@ -91,9 +89,10 @@ export const categoryService = {
     const data = await apiClient.request<CategoryApiResponse[]>(
       "/api/admin/categories",
       {
-        defaultErrorMessage: "Unable to load categories.",
+        defaultErrorMessage: "Không thể tải danh sách danh mục.",
       },
     );
+
     return data.map(mapApiCategoryToUi);
   },
 
@@ -111,7 +110,7 @@ export const categoryService = {
       {
         method: "POST",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to create category.",
+        defaultErrorMessage: "Không thể tạo danh mục.",
         body: JSON.stringify(payload),
       },
     );
@@ -137,7 +136,7 @@ export const categoryService = {
       {
         method: "PUT",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update category.",
+        defaultErrorMessage: "Không thể cập nhật danh mục.",
         body: JSON.stringify(payload),
       },
     );
@@ -161,7 +160,7 @@ export const categoryService = {
       {
         method: "PUT",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update category status.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái danh mục.",
         body: JSON.stringify(payload),
       },
     );

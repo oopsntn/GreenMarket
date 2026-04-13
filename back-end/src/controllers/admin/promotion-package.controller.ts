@@ -10,6 +10,7 @@ import {
     or,
 } from "drizzle-orm";
 import { db } from "../../config/db";
+import { eventLogs } from "../../models/schema/index.ts";
 import { promotionPackages } from "../../models/schema/promotion-packages";
 import { promotionPackagePrices } from "../../models/schema/promotion-package-prices";
 import { placementSlots } from "../../models/schema/placement-slots";
@@ -159,6 +160,29 @@ const setCurrentPackagePrice = async (params: {
     });
 };
 
+const logPromotionPackageEvent = async (params: {
+    action: string;
+    detail: string;
+    performedBy?: string | null;
+    targetName: string;
+}) => {
+    await db.insert(eventLogs).values({
+        eventLogUserId: null,
+        eventLogEventType: "admin_promotion_package_updated",
+        eventLogEventTime: new Date(),
+        eventLogMeta: {
+            action: params.action,
+            detail: params.detail,
+            performedBy: params.performedBy?.trim() || "Quản trị viên hệ thống",
+            actorRole: "Quản trị viên",
+            moduleLabel: "Gói quảng bá",
+            targetType: "Gói quảng bá",
+            targetName: params.targetName,
+            result: "Thành công",
+        },
+    });
+};
+
 export const getPromotionPackages = async (
     req: Request,
     res: Response,
@@ -191,7 +215,7 @@ export const getPromotionPackages = async (
         res.json(hydrated);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -203,7 +227,7 @@ export const getPromotionPackageById = async (
         const idNumber = parseId(req.params.id);
 
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid promotion package id" });
+            res.status(400).json({ error: "Mã gói quảng bá không hợp lệ" });
             return;
         }
 
@@ -234,14 +258,14 @@ export const getPromotionPackageById = async (
 
         const [pkg] = await attachCurrentPrices(rows);
         if (!pkg) {
-            res.status(404).json({ error: "Promotion package not found" });
+            res.status(404).json({ error: "Không tìm thấy gói quảng bá" });
             return;
         }
 
         res.json(pkg);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -267,7 +291,7 @@ export const createPromotionPackage = async (
 
         if (!slotId || !promotionPackageTitle || !durationDays || !parsedPrice) {
             res.status(400).json({
-                error: "slotId, title, durationDays, and price are required",
+                error: "Vui lòng nhập đủ vị trí hiển thị, tên gói, thời lượng và giá bán",
             });
             return;
         }
@@ -276,7 +300,7 @@ export const createPromotionPackage = async (
         const displayQuota = parseNonNegativeInteger(promotionPackageDisplayQuota, 1);
         if (maxPosts < 1 || displayQuota < 1) {
             res.status(400).json({
-                error: "maxPosts and displayQuota must be at least 1 when provided",
+                error: "Số bài tối đa và quota hiển thị phải lớn hơn hoặc bằng 1",
             });
             return;
         }
@@ -288,7 +312,7 @@ export const createPromotionPackage = async (
             .limit(1);
 
         if (!slot) {
-            res.status(400).json({ error: "Placement slot not found" });
+            res.status(400).json({ error: "Không tìm thấy vị trí hiển thị" });
             return;
         }
 
@@ -315,6 +339,13 @@ export const createPromotionPackage = async (
             note: "Initial package price",
         });
 
+        await logPromotionPackageEvent({
+            action: "Tạo gói quảng bá",
+            detail: `Đã tạo gói "${newPkg.promotionPackageTitle}" cho vị trí ${slot.placementSlotTitle ?? slot.placementSlotCode ?? "không xác định"}.`,
+            performedBy: req.user?.email ?? null,
+            targetName: newPkg.promotionPackageTitle ?? `Gói #${newPkg.promotionPackageId}`,
+        });
+
         const [created] = await attachCurrentPrices([
             {
                 promotionPackageId: newPkg.promotionPackageId,
@@ -334,7 +365,7 @@ export const createPromotionPackage = async (
         res.status(201).json(created);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -346,7 +377,7 @@ export const updatePromotionPackage = async (
         const idNumber = parseId(req.params.id);
 
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid promotion package id" });
+            res.status(400).json({ error: "Mã gói quảng bá không hợp lệ" });
             return;
         }
 
@@ -360,7 +391,7 @@ export const updatePromotionPackage = async (
             : null;
 
         if (hasPriceInput && !parsedPrice) {
-            res.status(400).json({ error: "promotionPackagePrice must be > 0" });
+            res.status(400).json({ error: "Giá bán phải lớn hơn 0" });
             return;
         }
 
@@ -369,7 +400,7 @@ export const updatePromotionPackage = async (
         if (Object.prototype.hasOwnProperty.call(body, "promotionPackageSlotId")) {
             const nextSlotId = parsePositiveInteger(body.promotionPackageSlotId);
             if (!nextSlotId) {
-                res.status(400).json({ error: "Invalid placement slot id" });
+                res.status(400).json({ error: "Mã vị trí hiển thị không hợp lệ" });
                 return;
             }
 
@@ -380,7 +411,7 @@ export const updatePromotionPackage = async (
                 .limit(1);
 
             if (!slot) {
-                res.status(400).json({ error: "Placement slot not found" });
+                res.status(400).json({ error: "Không tìm thấy vị trí hiển thị" });
                 return;
             }
 
@@ -399,7 +430,7 @@ export const updatePromotionPackage = async (
                 body.promotionPackageDurationDays,
             );
             if (!parsedDuration) {
-                res.status(400).json({ error: "promotionPackageDurationDays must be > 0" });
+                res.status(400).json({ error: "Thời lượng phải lớn hơn 0" });
                 return;
             }
             updatePayload.promotionPackageDurationDays = parsedDuration;
@@ -412,7 +443,7 @@ export const updatePromotionPackage = async (
             );
             if (parsedMaxPosts < 1) {
                 res.status(400).json({
-                    error: "promotionPackageMaxPosts must be at least 1",
+                    error: "Số bài tối đa phải lớn hơn hoặc bằng 1",
                 });
                 return;
             }
@@ -428,7 +459,7 @@ export const updatePromotionPackage = async (
             );
             if (parsedDisplayQuota < 1) {
                 res.status(400).json({
-                    error: "promotionPackageDisplayQuota must be at least 1",
+                    error: "Quota hiển thị phải lớn hơn hoặc bằng 1",
                 });
                 return;
             }
@@ -454,7 +485,7 @@ export const updatePromotionPackage = async (
 
         if (Object.keys(updatePayload).length === 0 && !hasPriceInput) {
             res.status(400).json({
-                error: "No valid fields to update",
+                error: "Không có dữ liệu hợp lệ để cập nhật",
             });
             return;
         }
@@ -472,7 +503,7 @@ export const updatePromotionPackage = async (
                   .limit(1);
 
         if (!updatedPkg) {
-            res.status(404).json({ error: "Promotion package not found" });
+            res.status(404).json({ error: "Không tìm thấy gói quảng bá" });
             return;
         }
 
@@ -510,10 +541,23 @@ export const updatePromotionPackage = async (
             },
         ]);
 
+        await logPromotionPackageEvent({
+            action:
+                Object.prototype.hasOwnProperty.call(body, "promotionPackagePublished")
+                    ? Boolean(body.promotionPackagePublished)
+                        ? "Bật gói quảng bá"
+                        : "Tắt gói quảng bá"
+                    : "Cập nhật gói quảng bá",
+            detail: `Đã cập nhật gói "${updatedPkg.promotionPackageTitle ?? `#${updatedPkg.promotionPackageId}`}".`,
+            performedBy: req.user?.email ?? null,
+            targetName:
+                updatedPkg.promotionPackageTitle ?? `Gói #${updatedPkg.promotionPackageId}`,
+        });
+
         res.json(hydrated);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -525,7 +569,7 @@ export const deletePromotionPackage = async (
         const idNumber = parseId(req.params.id);
 
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid promotion package id" });
+            res.status(400).json({ error: "Mã gói quảng bá không hợp lệ" });
             return;
         }
 
@@ -537,7 +581,7 @@ export const deletePromotionPackage = async (
 
         if (linkedPromotions.length > 0) {
             res.status(400).json({
-                error: "Cannot delete package that has active promotions linked to it",
+                error: "Không thể xóa gói đang được dùng trong chiến dịch quảng bá",
             });
             return;
         }
@@ -548,16 +592,16 @@ export const deletePromotionPackage = async (
             .returning();
 
         if (!pkg) {
-            res.status(404).json({ error: "Promotion package not found" });
+            res.status(404).json({ error: "Không tìm thấy gói quảng bá" });
             return;
         }
 
         res.json({
-            message: "Promotion package deleted successfully",
+            message: "Xóa gói quảng bá thành công",
             package: pkg,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };

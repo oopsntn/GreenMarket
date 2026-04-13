@@ -1,7 +1,9 @@
 export type AIInsightFocus =
+  | "Executive Summary"
   | "Placement Performance"
   | "Promotion Watchlist"
   | "Revenue Signals"
+  | "Customer Spending"
   | "Operator Load";
 
 export type AIInsightFocusFilter = AIInsightFocus | "All Focus Areas";
@@ -53,4 +55,32 @@ export type AIInsightSummaryCard = {
   title: string;
   value: string;
   subtitle: string;
+};
+
+export type AIInsightOverviewCard = {
+  title: string;
+  value: string;
+  subtitle: string;
+};
+
+export type AIInsightOverviewTone = "neutral" | "positive" | "warning";
+
+export type AIInsightOverviewBullet = {
+  title: string;
+  body: string;
+  tone: AIInsightOverviewTone;
+};
+
+export type AIInsightOverviewRow = {
+  label: string;
+  value: string;
+  detail: string;
+};
+
+export type AIInsightOverview = {
+  summaryCards: AIInsightOverviewCard[];
+  highlightCards: AIInsightOverviewBullet[];
+  recommendations: AIInsightOverviewBullet[];
+  topRows: AIInsightOverviewRow[];
+  availableFocuses: AIInsightFocus[];
 };

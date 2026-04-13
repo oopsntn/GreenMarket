@@ -4,7 +4,7 @@ export const defaultSettings: SettingsState = {
   general: {
     platformName: "GreenMarket",
     supportEmail: "support@greenmarket.vn",
-    defaultLanguage: "English",
+    defaultLanguage: "Tiếng Việt",
   },
   moderation: {
     autoModeration: true,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -17,7 +17,6 @@ import "./PostsModerationPage.css";
 const PAGE_SIZE = 5;
 
 type StatusFilter = PostModerationStatus | "All";
-
 type ModerationAction = "approve" | "reject" | "hide";
 
 type ModerationState = {
@@ -34,6 +33,38 @@ const statusFilterOptions: StatusFilter[] = [
   "Hidden",
   "Draft",
 ];
+
+const getStatusLabel = (status: StatusFilter) => {
+  switch (status) {
+    case "All":
+      return "Tất cả";
+    case "Pending":
+      return "Chờ duyệt";
+    case "Approved":
+      return "Đã duyệt";
+    case "Rejected":
+      return "Từ chối";
+    case "Hidden":
+      return "Đã ẩn";
+    case "Draft":
+      return "Nháp";
+    default:
+      return status;
+  }
+};
+
+const getActionLabel = (action: ModerationAction) => {
+  switch (action) {
+    case "approve":
+      return "Duyệt bài";
+    case "reject":
+      return "Từ chối bài";
+    case "hide":
+      return "Ẩn bài";
+    default:
+      return "Cập nhật";
+  }
+};
 
 function PostsModerationPage() {
   const [posts, setPosts] = useState<PostModerationItem[]>([]);
@@ -59,7 +90,6 @@ function PostsModerationPage() {
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
-
     setToasts((prev) => [...prev, { id: toastId, message, tone }]);
 
     window.setTimeout(() => {
@@ -71,7 +101,7 @@ function PostsModerationPage() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   };
 
-  const loadPosts = async (showSuccessToast = false) => {
+  const loadPosts = useCallback(async (showSuccessToast = false) => {
     try {
       setIsLoading(true);
       setError("");
@@ -80,21 +110,23 @@ function PostsModerationPage() {
       setPosts(nextPosts);
 
       if (showSuccessToast) {
-        showToast("Post moderation queue refreshed.");
+        showToast("Đã làm mới hàng chờ kiểm duyệt bài đăng.");
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Unable to load moderation posts.";
+        err instanceof Error
+          ? err.message
+          : "Không thể tải danh sách bài đăng kiểm duyệt.";
       setError(message);
       showToast(message, "error");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadPosts();
-  }, []);
+  }, [loadPosts]);
 
   const filteredPosts = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -133,7 +165,9 @@ function PostsModerationPage() {
   }, [page, totalPages]);
 
   const pendingCount = posts.filter((post) => post.status === "Pending").length;
-  const rejectedCount = posts.filter((post) => post.status === "Rejected").length;
+  const rejectedCount = posts.filter(
+    (post) => post.status === "Rejected",
+  ).length;
   const hiddenCount = posts.filter((post) => post.status === "Hidden").length;
 
   const openDetailModal = async (post: PostModerationItem) => {
@@ -145,7 +179,9 @@ function PostsModerationPage() {
       setSelectedPost(detail);
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Unable to load post details.",
+        err instanceof Error
+          ? err.message
+          : "Không thể tải chi tiết bài đăng.",
         "error",
       );
     } finally {
@@ -209,19 +245,15 @@ function PostsModerationPage() {
       );
 
       showToast(
-        `Post "${updatedPost.title}" was ${
-          moderationState.action === "approve"
-            ? "approved"
-            : moderationState.action === "reject"
-              ? "rejected"
-              : "hidden"
-        } successfully.`,
+        `${getActionLabel(moderationState.action)} thành công: "${updatedPost.title}".`,
       );
 
       closeModerationModal();
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Unable to update moderation.",
+        err instanceof Error
+          ? err.message
+          : "Không thể cập nhật trạng thái kiểm duyệt.",
         "error",
       );
     } finally {
@@ -231,67 +263,67 @@ function PostsModerationPage() {
 
   const moderationTitle =
     moderationState.action === "approve"
-      ? "Approve Post"
+      ? "Duyệt bài đăng"
       : moderationState.action === "reject"
-        ? "Reject Post"
-        : "Hide Post";
+        ? "Từ chối bài đăng"
+        : "Ẩn bài đăng";
 
   const moderationDescription =
     moderationState.action === "approve"
-      ? "Approve this post so it can move forward in the marketplace workflow."
+      ? "Bài đăng sẽ được chuyển sang trạng thái đã duyệt để tiếp tục hiển thị trên hệ thống."
       : moderationState.action === "reject"
-        ? "Reject this post and optionally provide a moderation reason."
-        : "Hide this post from the marketplace and optionally record why.";
+        ? "Nhập lý do nếu cần để lưu lại quyết định từ chối."
+        : "Bài đăng sẽ bị ẩn khỏi hệ thống. Có thể nhập ghi chú vận hành nếu cần.";
 
   return (
     <div className="posts-moderation-page">
       <PageHeader
-        title="Posts Moderation"
-        description="Review marketplace posts, inspect moderation details, and take approval actions."
-        actionLabel="Refresh Queue"
+        title="Kiểm duyệt bài đăng"
+        description="Rà soát bài đăng trên sàn, xem chi tiết kiểm duyệt và thực hiện duyệt hoặc từ chối."
+        actionLabel="Làm mới hàng chờ"
         onActionClick={() => void loadPosts(true)}
       />
 
       <div className="posts-moderation-summary-grid">
         <StatCard
-          title="Total Posts"
+          title="Tổng bài đăng"
           value={String(posts.length)}
-          subtitle="Posts currently available in admin moderation"
+          subtitle="Bài đăng hiện có trong hàng chờ quản trị"
         />
         <StatCard
-          title="Pending Review"
+          title="Chờ duyệt"
           value={String(pendingCount)}
-          subtitle="Posts still waiting for action"
+          subtitle="Bài đăng đang chờ quản trị xử lý"
         />
         <StatCard
-          title="Rejected Posts"
+          title="Đã từ chối"
           value={String(rejectedCount)}
-          subtitle="Posts rejected by moderation"
+          subtitle="Bài đăng đã bị từ chối"
         />
         <StatCard
-          title="Hidden Posts"
+          title="Đã ẩn"
           value={String(hiddenCount)}
-          subtitle="Posts manually hidden by admin"
+          subtitle="Bài đăng bị quản trị ẩn thủ công"
         />
       </div>
 
       <SearchToolbar
-        placeholder="Search by title, author, shop, category, or location"
+        placeholder="Tìm theo tiêu đề, chủ bài đăng, cửa hàng, danh mục hoặc địa điểm"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Filter by status"
-        filterSummaryItems={[selectedStatusFilter]}
+        filterLabel="Lọc theo trạng thái"
+        filterSummaryItems={[getStatusLabel(selectedStatusFilter)]}
       />
 
       {showFilters ? (
         <SectionCard
-          title="Moderation Filters"
-          description="Refine the queue by moderation status."
+          title="Bộ lọc kiểm duyệt"
+          description="Thu hẹp danh sách theo trạng thái kiểm duyệt."
         >
           <div className="posts-moderation-filters">
             <div className="posts-moderation-filters__field">
-              <label htmlFor="post-status-filter">Status</label>
+              <label htmlFor="post-status-filter">Trạng thái</label>
               <select
                 id="post-status-filter"
                 value={selectedStatusFilter}
@@ -301,7 +333,7 @@ function PostsModerationPage() {
               >
                 {statusFilterOptions.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {getStatusLabel(option)}
                   </option>
                 ))}
               </select>
@@ -311,20 +343,20 @@ function PostsModerationPage() {
       ) : null}
 
       <SectionCard
-        title="Moderation Queue"
-        description="Inspect post metadata, current status, and moderation actions."
+        title="Danh sách bài đăng chờ xử lý"
+        description="Kiểm tra thông tin bài đăng, trạng thái hiện tại và thao tác kiểm duyệt."
       >
         {isLoading ? (
           <EmptyState
-            title="Loading moderation queue"
-            description="Fetching posts from the admin moderation API."
+            title="Đang tải hàng chờ kiểm duyệt"
+            description="Hệ thống đang lấy danh sách bài đăng từ API quản trị."
           />
         ) : error ? (
-          <EmptyState title="Unable to load posts" description={error} />
+          <EmptyState title="Không thể tải bài đăng" description={error} />
         ) : filteredPosts.length === 0 ? (
           <EmptyState
-            title="No posts found"
-            description="No posts match the current search or moderation filter."
+            title="Không có bài đăng phù hợp"
+            description="Không có bài đăng nào khớp với từ khóa tìm kiếm hoặc bộ lọc hiện tại."
           />
         ) : (
           <>
@@ -332,12 +364,12 @@ function PostsModerationPage() {
               <table className="posts-moderation-table">
                 <thead>
                   <tr>
-                    <th>Post</th>
-                    <th>Owner</th>
-                    <th>Status</th>
-                    <th>Engagement</th>
-                    <th>Submitted</th>
-                    <th>Actions</th>
+                    <th>Bài đăng</th>
+                    <th>Chủ bài đăng</th>
+                    <th>Trạng thái</th>
+                    <th>Tương tác</th>
+                    <th>Thời gian</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -360,7 +392,7 @@ function PostsModerationPage() {
                       <td>
                         <div className="posts-moderation-status">
                           <StatusBadge
-                            label={post.status}
+                            label={getStatusLabel(post.status)}
                             variant={
                               post.status === "Approved"
                                 ? "active"
@@ -376,14 +408,18 @@ function PostsModerationPage() {
                       </td>
                       <td>
                         <div className="posts-moderation-metrics">
-                          <strong>{post.views} views</strong>
-                          <span>{post.contacts} contacts</span>
+                          <strong>
+                            {post.views.toLocaleString("vi-VN")} lượt xem
+                          </strong>
+                          <span>
+                            {post.contacts.toLocaleString("vi-VN")} liên hệ
+                          </span>
                         </div>
                       </td>
                       <td>
                         <div className="posts-moderation-cell">
-                          <strong>{post.submittedAt}</strong>
-                          <small>{post.moderatedAt}</small>
+                          <strong>Gửi: {post.submittedAt}</strong>
+                          <small>Duyệt: {post.moderatedAt}</small>
                         </div>
                       </td>
                       <td>
@@ -393,7 +429,7 @@ function PostsModerationPage() {
                             className="posts-moderation-actions__view"
                             onClick={() => void openDetailModal(post)}
                           >
-                            View
+                            Xem
                           </button>
 
                           {post.status !== "Approved" ? (
@@ -402,7 +438,7 @@ function PostsModerationPage() {
                               className="posts-moderation-actions__approve"
                               onClick={() => openModerationModal(post, "approve")}
                             >
-                              Approve
+                              Duyệt
                             </button>
                           ) : null}
 
@@ -412,7 +448,7 @@ function PostsModerationPage() {
                               className="posts-moderation-actions__reject"
                               onClick={() => openModerationModal(post, "reject")}
                             >
-                              Reject
+                              Từ chối
                             </button>
                           ) : null}
 
@@ -422,7 +458,7 @@ function PostsModerationPage() {
                               className="posts-moderation-actions__hide"
                               onClick={() => openModerationModal(post, "hide")}
                             >
-                              Hide
+                              Ẩn
                             </button>
                           ) : null}
                         </div>
@@ -435,7 +471,7 @@ function PostsModerationPage() {
 
             <div className="posts-moderation-pagination">
               <span className="posts-moderation-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="posts-moderation-pagination__actions">
@@ -444,7 +480,7 @@ function PostsModerationPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -453,7 +489,7 @@ function PostsModerationPage() {
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Sau
                 </button>
               </div>
             </div>
@@ -463,55 +499,57 @@ function PostsModerationPage() {
 
       <BaseModal
         isOpen={selectedPost !== null}
-        title={selectedPost?.title || "Post Details"}
-        description="Review moderation metadata, content, and supporting details."
+        title={selectedPost?.title || "Chi tiết bài đăng"}
+        description="Xem thông tin kiểm duyệt, nội dung và dữ liệu hỗ trợ của bài đăng."
         onClose={closeDetailModal}
         maxWidth="920px"
       >
         {isDetailLoading ? (
           <div className="posts-moderation-empty-state">
-            Loading post details...
+            Đang tải chi tiết bài đăng...
           </div>
         ) : selectedPost ? (
           <div className="posts-moderation-detail">
             <div className="posts-moderation-detail__grid">
               <div className="posts-moderation-detail__field">
-                <label>Status</label>
-                <input type="text" value={selectedPost.status} disabled />
+                <label>Trạng thái</label>
+                <input
+                  type="text"
+                  value={getStatusLabel(selectedPost.status)}
+                  disabled
+                />
               </div>
               <div className="posts-moderation-detail__field">
                 <label>Slug</label>
                 <input type="text" value={selectedPost.slug} disabled />
               </div>
               <div className="posts-moderation-detail__field">
-                <label>Author</label>
+                <label>Người đăng</label>
                 <input type="text" value={selectedPost.authorLabel} disabled />
               </div>
               <div className="posts-moderation-detail__field">
-                <label>Shop</label>
+                <label>Cửa hàng</label>
                 <input type="text" value={selectedPost.shopLabel} disabled />
               </div>
               <div className="posts-moderation-detail__field">
-                <label>Category</label>
+                <label>Danh mục</label>
                 <input type="text" value={selectedPost.categoryLabel} disabled />
               </div>
               <div className="posts-moderation-detail__field">
-                <label>Price</label>
+                <label>Giá</label>
                 <input type="text" value={selectedPost.priceLabel} disabled />
               </div>
             </div>
 
-
-
             <div className="posts-moderation-detail__section">
-              <h4>Moderation Notes</h4>
+              <h4>Ghi chú kiểm duyệt</h4>
               <p>{selectedPost.rejectedReason}</p>
             </div>
 
             <div className="posts-moderation-detail__section">
-              <h4>Images</h4>
+              <h4>Ảnh liên quan</h4>
               {selectedPost.images.length === 0 ? (
-                <p>No image metadata available.</p>
+                <p>Chưa có dữ liệu ảnh trả về từ API.</p>
               ) : (
                 <ul className="posts-moderation-detail__list">
                   {selectedPost.images.map((imageUrl) => (
@@ -522,14 +560,14 @@ function PostsModerationPage() {
             </div>
 
             <div className="posts-moderation-detail__section">
-              <h4>Attribute Values</h4>
+              <h4>Thuộc tính bài đăng</h4>
               {selectedPost.attributes.length === 0 ? (
-                <p>No attribute values returned by API.</p>
+                <p>Chưa có thuộc tính nào được trả về.</p>
               ) : (
                 <ul className="posts-moderation-detail__list">
                   {selectedPost.attributes.map((attribute) => (
                     <li key={`${attribute.id}-${attribute.value}`}>
-                      Attribute #{attribute.id}: {attribute.value}
+                      Thuộc tính #{attribute.id}: {attribute.value}
                     </li>
                   ))}
                 </ul>
@@ -548,28 +586,29 @@ function PostsModerationPage() {
       >
         <div className="posts-moderation-form">
           <p className="posts-moderation-form__target">
-            Target: <strong>{moderationState.post?.title || "Selected post"}</strong>
+            Đối tượng:{" "}
+            <strong>{moderationState.post?.title || "Bài đăng đã chọn"}</strong>
           </p>
 
-          <label htmlFor="posts-moderation-reason">Reason / Note</label>
+          <label htmlFor="posts-moderation-reason">Lý do / ghi chú</label>
           <textarea
             id="posts-moderation-reason"
             value={moderationReason}
             onChange={(event) => setModerationReason(event.target.value)}
-            placeholder="Optional moderation note"
+            placeholder="Nhập ghi chú kiểm duyệt nếu cần"
             rows={4}
           />
 
           <div className="posts-moderation-form__actions">
             <button type="button" onClick={closeModerationModal}>
-              Cancel
+              Hủy
             </button>
             <button
               type="button"
               onClick={() => void handleModerationSubmit()}
               disabled={isSubmittingAction}
             >
-              {isSubmittingAction ? "Saving..." : "Confirm"}
+              {isSubmittingAction ? "Đang lưu..." : "Xác nhận"}
             </button>
           </div>
         </div>

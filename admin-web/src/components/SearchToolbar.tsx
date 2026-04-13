@@ -20,9 +20,9 @@ function SearchToolbar({
   onSearchSubmit,
   submitLabel,
   onFilterClick,
-  filterLabel = "Filter",
+  filterLabel = "Bộ lọc",
   filterSummary,
-  filterSummaryLabel = "Current filters",
+  filterSummaryLabel = "Bộ lọc hiện tại",
   filterSummaryItems,
 }: SearchToolbarProps) {
   const hasActions = Boolean(onSearchSubmit || onFilterClick);
@@ -37,7 +37,7 @@ function SearchToolbar({
           type="text"
           placeholder={placeholder}
           value={searchValue}
-          onChange={(e) => onSearchChange?.(e.target.value)}
+          onChange={(event) => onSearchChange?.(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               onSearchSubmit?.();
@@ -56,7 +56,9 @@ function SearchToolbar({
                 <span
                   key={item}
                   className={`search-toolbar__summary-tag${
-                    item === "All" ? " search-toolbar__summary-tag--muted" : ""
+                    item === "All" || item === "Tất cả"
+                      ? " search-toolbar__summary-tag--muted"
+                      : ""
                   }`}
                 >
                   {item}
@@ -77,7 +79,7 @@ function SearchToolbar({
               type="button"
               onClick={onSearchSubmit}
             >
-              {submitLabel ?? "Search"}
+              {submitLabel ?? "Tìm kiếm"}
             </button>
           ) : null}
 

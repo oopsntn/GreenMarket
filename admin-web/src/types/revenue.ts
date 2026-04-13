@@ -1,3 +1,5 @@
+import type { ReportingSlotCatalogItem } from "./reportingSlot";
+
 export type RevenueCard = {
   title: string;
   value: string;
@@ -16,4 +18,5 @@ export type RevenueRow = {
 export type RevenueApiResponse = {
   summaryCards: RevenueCard[];
   rows: RevenueRow[];
+  slotCatalog: ReportingSlotCatalogItem[];
 };

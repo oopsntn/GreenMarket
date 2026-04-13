@@ -1,3 +1,5 @@
+import type { ReportingSlotCatalogItem } from "./reportingSlot";
+
 export type AnalyticsKpiCard = {
   title: string;
   value: string;
@@ -27,4 +29,5 @@ export type AnalyticsApiResponse = {
   kpiCards: AnalyticsKpiCard[];
   topPlacements: TopPlacement[];
   dailyTraffic: AnalyticsDailyTrafficPoint[];
+  slotCatalog: ReportingSlotCatalogItem[];
 };

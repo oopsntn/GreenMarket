@@ -4,6 +4,7 @@ import {
   getTemplates,
   createTemplate,
   updateTemplate,
+  cloneTemplate,
   updateTemplateStatus,
 } from "../../controllers/admin/template.controller.ts";
 
@@ -19,6 +20,11 @@ router.put(
   "/:id",
   requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
   updateTemplate,
+);
+router.post(
+  "/:id/clone",
+  requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
+  cloneTemplate,
 );
 router.patch(
   "/:id/status",

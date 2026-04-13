@@ -26,7 +26,7 @@ const downloadFile = (
 export const exportService = {
   async getExportHistory(): Promise<ExportHistoryItem[]> {
     return apiClient.request<ExportHistoryItem[]>("/api/admin/exports/history", {
-      defaultErrorMessage: "Unable to load export history.",
+      defaultErrorMessage: "Không thể tải lịch sử xuất dữ liệu.",
     });
   },
 
@@ -41,7 +41,7 @@ export const exportService = {
       {
         method: "POST",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to create general export.",
+        defaultErrorMessage: "Không thể tạo tệp xuất dữ liệu tổng quát.",
         body: JSON.stringify({ module, fromDate, toDate, format }),
       },
     );
@@ -61,7 +61,7 @@ export const exportService = {
       {
         method: "POST",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to create financial export.",
+        defaultErrorMessage: "Không thể tạo tệp xuất dữ liệu tài chính.",
         body: JSON.stringify({ reportType, fromDate, toDate, format }),
       },
     );

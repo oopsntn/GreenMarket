@@ -18,7 +18,7 @@ function AdminLayout() {
       <aside className="admin-sidebar">
         <div className="admin-sidebar__brand">
           <h2>GreenMarket</h2>
-          <span>Admin Panel</span>
+          <span>Trang quản trị</span>
         </div>
 
         <nav className="admin-sidebar__nav">
@@ -41,13 +41,13 @@ function AdminLayout() {
       <div className="admin-main">
         <header className="admin-header">
           <div>
-            <h1>GreenMarket Admin</h1>
-            <p>Plant marketplace management system</p>
+            <h1>Quản trị GreenMarket</h1>
+            <p>Hệ thống quản lý sàn cây cảnh</p>
           </div>
 
           <div className="admin-header__profile">
             <div className="admin-header__profile-info">
-              <strong>{profile?.name || "Admin"}</strong>
+              <strong>{profile?.name || "Quản trị viên"}</strong>
               <span>{profile?.email || "admin@greenmarket.com"}</span>
             </div>
 
@@ -56,7 +56,7 @@ function AdminLayout() {
               className="admin-header__logout"
               onClick={handleLogout}
             >
-              Logout
+              Đăng xuất
             </button>
           </div>
         </header>

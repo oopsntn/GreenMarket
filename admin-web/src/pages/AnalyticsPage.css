@@ -95,122 +95,60 @@
 }
 
 .analytics-daily-chart-wrapper {
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
   padding-bottom: 2px;
 }
 
 .analytics-daily-chart {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 8px;
-  align-items: stretch;
   width: 100%;
-  min-width: 0;
-}
-
-.analytics-daily-chart__scale {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-end;
-  padding: 18px 0 34px;
-  color: #6a7d6d;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.analytics-daily-chart__canvas {
-  position: relative;
-  min-height: 360px;
-  padding: 16px 16px 0 16px;
-  border-left: 2px solid rgba(61, 130, 77, 0.3);
-  border-bottom: 2px solid rgba(61, 130, 77, 0.3);
-}
-
-.analytics-daily-chart__grid {
-  position: absolute;
-  inset: 16px 16px 34px 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  pointer-events: none;
+  height: auto;
+  display: block;
+  overflow: visible;
 }
 
 .analytics-daily-chart__grid-line {
-  border-top: 1px dashed rgba(61, 130, 77, 0.18);
+  stroke: rgba(61, 130, 77, 0.2);
+  stroke-dasharray: 4 4;
+  stroke-width: 1;
 }
 
-.analytics-daily-chart__groups {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  display: grid;
-  align-items: flex-end;
-  gap: 6px;
-  padding: 0 4px 0 0;
+.analytics-daily-chart__axis {
+  stroke: rgba(61, 130, 77, 0.38);
+  stroke-width: 2;
 }
 
-.analytics-daily-chart__group {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+.analytics-daily-chart__axis-label,
+.analytics-daily-chart__value,
+.analytics-daily-chart__date,
+.analytics-daily-chart__month {
+  color: #244b36;
+  fill: currentColor;
+  font-family: inherit;
+  font-weight: 700;
 }
 
-.analytics-daily-chart__bars {
-  width: auto;
-  height: 318px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 2px;
-  padding: 0;
-  max-width: 100%;
-}
-
-.analytics-daily-chart__bar-column {
-  width: 28px;
-  min-width: 28px;
-  max-width: 28px;
-  flex: 0 0 28px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+.analytics-daily-chart__axis-label {
+  color: #6a7d6d;
+  font-size: 12px;
 }
 
 .analytics-daily-chart__value {
-  color: #244b36;
   font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  min-height: 16px;
-  white-space: nowrap;
-}
-
-.analytics-daily-chart__value--spacer {
-  visibility: hidden;
 }
 
 .analytics-daily-chart__bar {
-  width: 100%;
-  min-height: 0;
-  border-radius: 8px 8px 0 0;
-  box-shadow: inset 0 -10px 18px rgba(0, 0, 0, 0.08);
+  filter: drop-shadow(0 3px 4px rgba(14, 75, 31, 0.12));
 }
 
 .analytics-daily-chart__date {
   color: #486150;
   font-size: 12px;
-  font-weight: 700;
-  line-height: 1.4;
-  text-align: center;
-  min-height: 20px;
-  white-space: nowrap;
+}
+
+.analytics-daily-chart__month {
+  color: #6a7d6d;
+  font-size: 10px;
 }
 
 .analytics-donut {
@@ -383,7 +321,7 @@
   }
 
   .analytics-daily-chart {
-    min-width: 760px !important;
+    min-width: 760px;
   }
 
   .analytics-table-wrapper {

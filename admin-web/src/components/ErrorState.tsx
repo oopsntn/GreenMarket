@@ -8,9 +8,9 @@ type ErrorStateProps = Readonly<{
 }>;
 
 function ErrorState({
-  title = "Something went wrong",
-  description = "The system could not load data at the moment. Please try again.",
-  actionLabel = "Try Again",
+  title = "Đã xảy ra lỗi",
+  description = "Hệ thống chưa thể tải dữ liệu lúc này. Vui lòng thử lại.",
+  actionLabel = "Thử lại",
   onActionClick,
 }: ErrorStateProps) {
   return (

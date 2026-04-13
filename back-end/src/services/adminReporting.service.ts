@@ -5,12 +5,15 @@ import {
     categories,
     eventLogs,
     paymentTxn,
-    placementSlots,
     posts,
     promotionPackages,
     reports,
     users,
 } from "../models/schema/index.ts";
+import {
+    adminPlacementSlotCatalogService,
+    type AdminPlacementSlotCatalogItem,
+} from "./adminPlacementSlotCatalog.service.ts";
 import { adminPromotionService } from "./adminPromotion.service.ts";
 
 type DateRange = {
@@ -52,6 +55,8 @@ type AnalyticsDailyTrafficPoint = {
     date: string;
     slots: AnalyticsDailyTrafficSlot[];
 };
+
+type ReportingSlotCatalogItem = AdminPlacementSlotCatalogItem;
 
 type RevenueCard = {
     title: string;
@@ -115,6 +120,19 @@ type ExportFileResult = {
     fileName: string;
     mimeType: string;
     content: string;
+};
+
+type AnalyticsSummaryResponse = {
+    kpiCards: AnalyticsKpiCard[];
+    topPlacements: TopPlacement[];
+    dailyTraffic: AnalyticsDailyTrafficPoint[];
+    slotCatalog: ReportingSlotCatalogItem[];
+};
+
+type RevenueSummaryResponse = {
+    summaryCards: RevenueCard[];
+    rows: RevenueRow[];
+    slotCatalog: ReportingSlotCatalogItem[];
 };
 
 type PaymentOrder = {
@@ -240,6 +258,7 @@ const toDelimitedContent = (
 const getGeneratedByLabel = (generatedBy: string) => generatedBy || "System Administrator";
 
 const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
+    const slotCatalog = await adminPlacementSlotCatalogService.getCatalog();
     const transactions = await db
         .select({
             paymentTxnId: paymentTxn.paymentTxnId,
@@ -266,17 +285,9 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
         slotByPackageId.set(item.promotionPackageId, item.promotionPackageSlotId);
     });
 
-    const actualPlacementSlots = await db.select().from(placementSlots);
     const slotNameById = new Map<number, string>();
-    actualPlacementSlots.forEach((item) => {
-        const normalized = `${item.placementSlotCode ?? ""} ${item.placementSlotTitle ?? ""}`.toLowerCase();
-        if (normalized.includes("search")) {
-            slotNameById.set(item.placementSlotId, "Search Boost");
-        } else if (normalized.includes("category")) {
-            slotNameById.set(item.placementSlotId, "Category Top");
-        } else {
-            slotNameById.set(item.placementSlotId, "Home Top");
-        }
+    slotCatalog.forEach((item) => {
+        slotNameById.set(item.id, item.label);
     });
 
     return transactions
@@ -374,11 +385,12 @@ export const adminReportingService = {
         return { statCards, summary };
     },
 
-    async getAnalyticsSummary(fromDate?: string, toDate?: string) {
+    async getAnalyticsSummary(fromDate?: string, toDate?: string): Promise<AnalyticsSummaryResponse> {
         const range = parseDateRange(fromDate, toDate);
-        const [boostedPosts, payments] = await Promise.all([
+        const [boostedPosts, payments, slotCatalog] = await Promise.all([
             adminPromotionService.getBoostedPosts(),
             getSuccessfulPayments(),
+            adminPlacementSlotCatalogService.getCatalog(),
         ]);
 
         const filteredBoostedPosts = boostedPosts.filter((item) =>
@@ -393,26 +405,52 @@ export const adminReportingService = {
         const conversions = filteredPayments.length;
 
         const placementMap = new Map<string, { impressions: number; clicks: number; revenue: number }>();
+        const revenueBySlot = new Map<string, number>();
+
+        filteredPayments.forEach((item) => {
+            revenueBySlot.set(item.slot, (revenueBySlot.get(item.slot) ?? 0) + item.amount);
+        });
+
         filteredBoostedPosts.forEach((item) => {
             const current = placementMap.get(item.slot) ?? { impressions: 0, clicks: 0, revenue: 0 };
             current.impressions += item.impressions;
             current.clicks += item.clicks;
-            current.revenue += payments
-                .filter((payment) => payment.slot === item.slot)
-                .reduce((sum, payment) => sum + payment.amount, 0);
             placementMap.set(item.slot, current);
         });
 
-        const topPlacements: TopPlacement[] = Array.from(placementMap.entries()).map(
-            ([slot, item], index) => ({
+        revenueBySlot.forEach((slotRevenue, slot) => {
+            const current = placementMap.get(slot) ?? {
+                impressions: 0,
+                clicks: 0,
+                revenue: 0,
+            };
+            current.revenue = slotRevenue;
+            placementMap.set(slot, current);
+        });
+
+        const activeSlotLabels = slotCatalog
+            .map((item) => item.label)
+            .filter((label) => placementMap.has(label));
+        const activeTrafficSlotLabels = slotCatalog
+            .map((item) => item.label)
+            .filter((label) =>
+                filteredBoostedPosts.some(
+                    (item) => item.slot === label && item.impressions > 0,
+                ),
+            );
+
+        const topPlacements: TopPlacement[] = activeSlotLabels.map((slot, index) => {
+            const item = placementMap.get(slot) ?? { impressions: 0, clicks: 0, revenue: 0 };
+
+            return {
                 id: index + 1,
                 slot,
                 impressions: formatNumber(item.impressions),
                 clicks: formatNumber(item.clicks),
                 ctr: formatPercent(item.impressions > 0 ? (item.clicks / item.impressions) * 100 : 0),
                 revenue: formatCurrency(item.revenue),
-            }),
-        );
+            };
+        });
 
         const fallbackFrom = range.from
             ?? new Date(`${filteredBoostedPosts[0]?.startDate ?? formatDate(new Date())}T00:00:00`);
@@ -497,7 +535,7 @@ export const adminReportingService = {
             ),
         ).map((day) => {
             const dayKey = formatDate(day);
-            const slots = Array.from(placementMap.keys()).map((slot) => ({
+            const slots = activeTrafficSlotLabels.map((slot) => ({
                 slot,
                 impressions: dailyTrafficMap.get(`${dayKey}::${slot}`)?.impressions ?? 0,
             }));
@@ -515,17 +553,22 @@ export const adminReportingService = {
             { title: "Revenue", value: formatCurrency(revenue), change: "Paid promotion revenue" },
         ];
 
-        return { kpiCards, topPlacements, dailyTraffic };
+        return { kpiCards, topPlacements, dailyTraffic, slotCatalog };
     },
 
-    async getRevenueSummary(fromDate?: string, toDate?: string) {
+    async getRevenueSummary(fromDate?: string, toDate?: string): Promise<RevenueSummaryResponse> {
         const range = parseDateRange(fromDate, toDate);
-        const payments = (await getSuccessfulPayments()).filter((item) =>
-            isDateInRange(item.createdAt, range),
-        );
+        const [payments, slotCatalog] = await Promise.all([
+            getSuccessfulPayments(),
+            adminPlacementSlotCatalogService.getCatalog(),
+        ]);
+        const filteredPayments = payments.filter((item) => isDateInRange(item.createdAt, range));
 
         const grouped = new Map<string, { packageName: string; slot: string; orders: number; revenue: number }>();
-        payments.forEach((item) => {
+        const revenueBySlot = new Map<string, number>();
+        const packageNames = new Set<string>();
+
+        filteredPayments.forEach((item) => {
             const key = `${item.packageName}::${item.slot}`;
             const current = grouped.get(key) ?? {
                 packageName: item.packageName,
@@ -536,6 +579,8 @@ export const adminReportingService = {
             current.orders += 1;
             current.revenue += item.amount;
             grouped.set(key, current);
+            revenueBySlot.set(item.slot, (revenueBySlot.get(item.slot) ?? 0) + item.amount);
+            packageNames.add(item.packageName);
         });
 
         const rows: RevenueRow[] = Array.from(grouped.values())
@@ -546,22 +591,23 @@ export const adminReportingService = {
                 slot: item.slot,
                 orders: item.orders,
                 revenue: formatCurrency(item.revenue),
-                growth: item.orders >= 3 ? "+12.5%" : item.orders === 2 ? "+5.0%" : "0.0%",
+                growth: "0.0%",
             }));
 
-        const totalRevenue = payments.reduce((sum, item) => sum + item.amount, 0);
-        const avgOrderValue = payments.length > 0 ? totalRevenue / payments.length : 0;
-        const topRow = rows[0];
+        const totalRevenue = filteredPayments.reduce((sum, item) => sum + item.amount, 0);
+        const avgOrderValue = filteredPayments.length > 0 ? totalRevenue / filteredPayments.length : 0;
+        const topSlot = Array.from(revenueBySlot.entries())
+            .sort((left, right) => right[1] - left[1])[0];
 
         const summaryCards: RevenueCard[] = [
             {
                 title: "Total Revenue",
                 value: formatCurrency(totalRevenue),
-                note: `${payments.length} successful order(s) in period`,
+                note: `${filteredPayments.length} successful order(s) in period`,
             },
             {
                 title: "Active Packages",
-                value: formatNumber(rows.length),
+                value: formatNumber(packageNames.size),
                 note: "Packages with paid orders in period",
             },
             {
@@ -571,12 +617,12 @@ export const adminReportingService = {
             },
             {
                 title: "Top Slot Revenue",
-                value: topRow?.slot ?? "No data",
-                note: topRow ? topRow.revenue : "No paid orders in period",
+                value: topSlot?.[0] ?? "No data",
+                note: topSlot ? formatCurrency(topSlot[1]) : "No paid orders in period",
             },
         ];
 
-        return { summaryCards, rows };
+        return { summaryCards, rows, slotCatalog };
     },
 
     async getCustomerSpendingSummary(fromDate?: string, toDate?: string) {

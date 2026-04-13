@@ -16,6 +16,7 @@ export type PromotionPackageActionPayload = {
 
 export type Promotion = {
   id: number;
+  postId: number;
   postTitle: string;
   owner: string;
   packageId: number;
@@ -34,6 +35,7 @@ export type Promotion = {
   pauseBlockedReason?: string;
   resumeBlockedReason?: string;
   reopenBlockedReason?: string;
+  warnings: string[];
 };
 
 export type PromotionApiResponse = Promotion;
