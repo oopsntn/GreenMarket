@@ -169,7 +169,7 @@ const RegisterShop: React.FC = () => {
             {paymentLoading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Đang tạo thanh toán...</>
             ) : (
-              <>Tiếp tục thanh toán kích hoạt - {formatVnd(pricingConfig?.shopRegistrationPrice || 250000)}</>
+              <>Tiếp tục thanh toán kích hoạt {pricingConfig?.ownerPolicy?.planTitle ? `- ${pricingConfig.ownerPolicy.planTitle}` : ''} - {formatVnd(pricingConfig?.shopRegistrationPrice || 250000)}</>
             )}
           </button>
         </div>
@@ -205,7 +205,9 @@ const RegisterShop: React.FC = () => {
         <div className="bg-emerald-50 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm transition-transform hover:rotate-3">
           <Store className="w-10 h-10 text-emerald-600" />
         </div>
-        <h1 className="text-4xl font-extrabold mb-4 text-slate-900 tracking-tight uppercase">Mở Nhà Vườn</h1>
+        <h1 className="text-4xl font-extrabold mb-4 text-slate-900 tracking-tight uppercase">
+          {pricingConfig?.ownerPolicy?.planTitle || 'Mở Nhà Vườn'}
+        </h1>
         <p className="text-slate-500 font-medium max-w-lg mx-auto">Trở thành đối tác tin cậy và bắt đầu kinh doanh cây cảnh chuyên nghiệp cùng cộng đồng GreenMarket.</p>
       </div>
 
@@ -362,7 +364,7 @@ const RegisterShop: React.FC = () => {
             ) : loading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Đang gửi hồ sơ...</>
             ) : (
-              <>Gửi Đăng Ký Nhà Vườn - {formatVnd(pricingConfig?.shopRegistrationPrice || 250000)}</>
+              <>Đăng ký {pricingConfig?.ownerPolicy?.planTitle || 'Nhà Vườn'} - {formatVnd(pricingConfig?.shopRegistrationPrice || 250000)}</>
             )}
           </button>
           <p className="mt-6 text-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">

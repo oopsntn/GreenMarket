@@ -18,6 +18,12 @@ const DEFAULTS = {
     postFeeAmount: 20000,
     freeEditQuota: 4,
     editFeeAmount: 5000,
+    features: [
+      "Đăng bài ngay, không qua chờ duyệt",
+      "Giới hạn 20 bài viết mỗi ngày",
+      "4 lượt sửa bài miễn phí",
+      "Phí đăng tin lẻ cực thấp",
+    ],
   },
 
   personal_policy: {
@@ -27,6 +33,21 @@ const DEFAULTS = {
     postFeeAmount: 0,
     freeEditQuota: 4,
     editFeeAmount: 5000,
+    features: [
+      "Dành cho người chơi nhỏ lẻ",
+      "Đăng bài tự động duyệt trong chu kỳ",
+      "Giới hạn 20 bài viết mỗi ngày",
+      "4 lượt sửa bài miễn phí mỗi tháng",
+    ],
+  },
+  shop_vip_policy: {
+    planTitle: "Gói Nhà Vườn VIP",
+    features: [
+      "Xếp đầu danh sách nhà vườn",
+      "Huy hiệu VIP nổi bật trên trang chủ",
+      "Hiển thị viền vàng sang trọng",
+      "Ưu tiên hỗ trợ từ đội ngũ vận hành",
+    ],
   },
 };
 
@@ -70,7 +91,7 @@ export const getPricingConfig = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const [shopRegPrice, personalPrice, ownerPolicy, personalPolicy] =
+    const [shopRegPrice, personalPrice, ownerPolicy, personalPolicy, shopVipPolicy] =
       await Promise.all([
         readSettingNumber(
           "shop_registration_price",
@@ -82,6 +103,7 @@ export const getPricingConfig = async (
         ),
         readSettingJson("owner_posting_policy", DEFAULTS.owner_policy),
         readSettingJson("personal_posting_policy", DEFAULTS.personal_policy),
+        readSettingJson("shop_vip_policy", DEFAULTS.shop_vip_policy),
       ]);
 
     res.json({
@@ -89,6 +111,7 @@ export const getPricingConfig = async (
       personalMonthlyPrice: personalPrice,
       ownerPolicy,
       personalPolicy,
+      shopVipPolicy,
     });
   } catch (error) {
     console.error("Failed to load pricing config:", error);

@@ -5,6 +5,7 @@ import {
   buyShopVipPackage,
   buyPersonalPackage,
   getPostingPolicy,
+  getPricingConfig,
   getPromotionPackages,
   getPublicPromotionPackages,
   getShopVipPackage,
@@ -58,6 +59,7 @@ const Packages: React.FC = () => {
   const [personalBuying, setPersonalBuying] = useState(false);
   const [personalError, setPersonalError] = useState<string | null>(null);
   const [activePlanCode, setActivePlanCode] = useState<string>('STANDARD');
+  const [postingPolicy, setPostingPolicy] = useState<any>(null);
   const [audience, setAudience] = useState<'guest' | 'individual' | 'garden_owner'>(
     isGardenOwner ? 'garden_owner' : isAuthenticated ? 'individual' : 'guest',
   );
@@ -94,6 +96,7 @@ const Packages: React.FC = () => {
 
           try {
             const policyRes = await getPostingPolicy();
+            setPostingPolicy(policyRes.data);
             setActivePlanCode(policyRes.data?.policy?.planCode || 'STANDARD');
           } catch {
             console.error('Failed to load posting policy');
@@ -169,8 +172,14 @@ const Packages: React.FC = () => {
     };
   }, [vipPackage]);
 
-  const isVipActive = Boolean(shop?.shopIsVipActive && shop?.shopStatus === 'active');
-  const vipExpiresAtLabel = formatDate(shop?.shopVipExpiresAt ?? null);
+  const isVipActive = !!postingPolicy?.shopVipExpiry && new Date(postingPolicy.shopVipExpiry) > new Date();
+  const vipExpiresAtLabel = postingPolicy?.shopVipExpiry ? formatDate(postingPolicy.shopVipExpiry) : null;
+
+  const isPersonalActive =
+    activePlanCode === 'PERSONAL_MONTHLY' &&
+    !!postingPolicy?.planExpiresAt &&
+    new Date(postingPolicy.planExpiresAt) > new Date();
+  const personalExpiresAtLabel = postingPolicy?.planExpiresAt ? formatDate(postingPolicy.planExpiresAt) : null;
 
   const handleBuyVipPackage = async () => {
     setVipBuying(true);
@@ -251,22 +260,25 @@ const Packages: React.FC = () => {
               </p>
 
               <ul className="space-y-2 text-sm text-slate-700 mb-5">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  {pricingConfig?.ownerPolicy?.autoApprove ? 'Đăng bài ngay, không qua chờ duyệt.' : 'Bài đăng cần được phê duyệt bởi Admin.'}
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Đăng tin lẻ: {pricingConfig ? formatVnd(pricingConfig.ownerPolicy.postFeeAmount) : '-'}/tin.
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Giới hạn tối đa: {pricingConfig?.ownerPolicy?.dailyPostLimit || 'Không giới hạn'} bài/ngày.
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  {pricingConfig?.ownerPolicy?.freeEditQuota || 0} lượt sửa miễn phí, sau đó {pricingConfig ? formatVnd(pricingConfig.ownerPolicy.editFeeAmount) : '-'}/lượt.
-                </li>
+                {(pricingConfig?.ownerPolicy?.features && pricingConfig.ownerPolicy.features.length > 0) ? (
+                  pricingConfig.ownerPolicy.features.map((feature: string, idx: number) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                      {feature}
+                    </li>
+                  ))
+                ) : (
+                  <>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                      Đăng bài ngay, không qua chờ duyệt.
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                      Đăng tin lẻ: {pricingConfig ? formatVnd(pricingConfig.ownerPolicy.postFeeAmount) : '-'}/tin.
+                    </li>
+                  </>
+                )}
               </ul>
 
               {isGardenOwner ? (
@@ -297,9 +309,9 @@ const Packages: React.FC = () => {
               <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <h3 className="text-lg font-black text-slate-900">{pricingConfig?.personalPolicy?.planTitle || 'Cá nhân'}</h3>
-                  {activePlanCode === 'PERSONAL_MONTHLY' ? (
-                    <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase font-black tracking-wider">
-                      Đang sử dụng
+                  {isPersonalActive ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase text-emerald-800 tracking-wider">
+                      <CheckCircle2 className="w-3 h-3" /> Đang sử dụng
                     </span>
                   ) : (
                     <span className="text-[10px] px-2 py-1 rounded-full bg-slate-200 text-slate-700 uppercase font-black tracking-wider">
@@ -316,27 +328,37 @@ const Packages: React.FC = () => {
                 </p>
 
                 <ul className="space-y-2 text-sm text-slate-700 mb-5">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                    {pricingConfig?.personalPolicy?.autoApprove ? 'Đăng bài ngay trong thời gian gói còn hiệu lực.' : 'Bài đăng cần được phê duyệt bởi Admin.'}
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                    Tối đa: {pricingConfig?.personalPolicy?.dailyPostLimit || 'Không giới hạn'} bài/ngày.
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                    {pricingConfig?.personalPolicy?.freeEditQuota || 0} lượt sửa miễn phí, sau đó {pricingConfig ? formatVnd(pricingConfig.personalPolicy.editFeeAmount) : '-'}/lượt.
-                  </li>
+                  {(pricingConfig?.personalPolicy?.features && pricingConfig.personalPolicy.features.length > 0) ? (
+                    pricingConfig.personalPolicy.features.map((feature: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                        {feature}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                      Đăng bài tự động duyệt trong chu kỳ.
+                    </li>
+                  )}
                 </ul>
 
-                {activePlanCode === 'PERSONAL_MONTHLY' ? (
-                  <Link
-                    to="/my-posts"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-600"
-                  >
-                    Xem trong trung tâm quản lý <ArrowRight className="w-4 h-4" />
-                  </Link>
+                {isPersonalActive ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="bg-white/60 rounded-xl p-3 border border-emerald-200">
+                      <p className="text-[11px] text-emerald-700 font-bold uppercase tracking-wider mb-1">Thời hạn sử dụng</p>
+                      <p className="text-sm font-black text-emerald-900 flex items-center gap-2">
+                         <CalendarDays className="w-4 h-4 text-emerald-600" />
+                         Đến {personalExpiresAtLabel}
+                      </p>
+                    </div>
+                    <button
+                      disabled
+                      className="w-full flex justify-center items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs uppercase cursor-not-allowed border border-emerald-200"
+                    >
+                      Đang kích hoạt
+                    </button>
+                  </div>
                 ) : isAuthenticated ? (
                   <>
                     <button
@@ -364,7 +386,7 @@ const Packages: React.FC = () => {
             <article className="rounded-2xl border border-amber-300 bg-amber-50/60 p-5">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <h3 className="text-lg font-black text-slate-900 inline-flex items-center gap-2">
-                  <Crown className="w-5 h-5 text-amber-600" /> Nhà vườn VIP
+                  <Crown className="w-5 h-5 text-amber-600" /> {pricingConfig?.shopVipPolicy?.planTitle || 'Nhà vườn VIP'}
                 </h3>
                 <span className="text-[10px] px-2 py-1 rounded-full bg-amber-200 text-amber-800 uppercase font-black tracking-wider">
                   3 tháng
@@ -380,20 +402,46 @@ const Packages: React.FC = () => {
                   : 'Đang cập nhật giá gói VIP'}
               </p>
 
-              <ul className="space-y-2 text-sm text-slate-700 mb-4">
-                <li className="flex items-start gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                  Shop VIP được xếp đầu danh sách nhà vườn.
-                </li>
-                <li className="flex items-start gap-2">
-                  <Crown className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                  Hiển thị huy hiệu/nhãn VIP khác biệt trên danh sách shop.
-                </li>
-              </ul>
+              <div className="space-y-3 mb-5">
+                <p className="text-sm text-slate-700 leading-relaxed font-medium">
+                  {vipPackage?.promotionPackageDescription || 'Ưu tiên hiển thị và nhận diện đặc biệt dành cho nhà vườn chuyên nghiệp.'}
+                </p>
+                <ul className="space-y-2 text-sm text-slate-700">
+                  {pricingConfig?.shopVipPolicy?.features && pricingConfig.shopVipPolicy.features.length > 0 ? (
+                    pricingConfig.shopVipPolicy.features.map((feature: string, idx: number) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        {idx % 2 === 0 ? (
+                          <Sparkles className="w-3.5 h-3.5 text-amber-600 mt-1 shrink-0" />
+                        ) : (
+                          <Crown className="w-3.5 h-3.5 text-amber-600 mt-1 shrink-0" />
+                        )}
+                        {feature}
+                      </li>
+                    ))
+                  ) : (
+                    <>
+                      <li className="flex items-start gap-2">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-600 mt-1 shrink-0" />
+                        Xếp đầu danh sách nhà vườn
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Crown className="w-3.5 h-3.5 text-amber-600 mt-1 shrink-0" />
+                        Huy hiệu VIP nổi bật
+                      </li>
+                    </>
+                  )}
+                </ul>
+              </div>
 
               {isVipActive && vipExpiresAtLabel ? (
-                <div className="mb-4 rounded-lg border border-amber-300 bg-white/80 px-3 py-2 text-xs font-semibold text-amber-800">
-                  VIP đang hoạt động đến {vipExpiresAtLabel}
+                <div className="mb-4 rounded-xl border border-amber-300 bg-white/90 p-3 shadow-inner">
+                  <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest mb-1.5 opacity-70">
+                    VIP đang kích hoạt
+                  </p>
+                  <p className="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-amber-600" />
+                    Đến {vipExpiresAtLabel}
+                  </p>
                 </div>
               ) : null}
 
@@ -414,14 +462,25 @@ const Packages: React.FC = () => {
                   Mở shop để mua VIP <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleBuyVipPackage}
-                  disabled={vipBuying || !vipMetrics}
-                  className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {vipBuying ? 'Đang tạo thanh toán...' : isVipActive ? 'Gia hạn VIP ngay' : 'Mua gói VIP'}
-                </button>
+                <div className="space-y-4">
+                  {isVipActive ? (
+                    <button
+                      disabled
+                      className="w-full flex justify-center items-center gap-2 rounded-2xl bg-amber-100 py-4 text-sm font-black text-amber-800 border-2 border-amber-200 cursor-not-allowed opacity-80"
+                    >
+                      <CheckCircle2 className="w-5 h-5" /> ĐANG SỬ DỤNG
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleBuyVipPackage}
+                      disabled={vipBuying || !vipMetrics}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-4 text-sm font-black text-white hover:bg-slate-800 transition-all shadow-lg active:scale-95 disabled:opacity-60"
+                    >
+                      {vipBuying ? 'Đang tạo thanh toán...' : 'Kích hoạt VIP'} <ArrowRight className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
               )}
             </article>
           </div>
@@ -490,16 +549,21 @@ const Packages: React.FC = () => {
                           {formatVnd(pkg.packagePrice)}
                         </p>
 
-                        <div className="text-xs text-slate-500 space-y-1">
-                          <p>Thời hạn: {pkg.durationDays} ngày</p>
-                          <p>Chi phí/ngày: {formatVnd(pkg.costPerDay)}</p>
-                          <p>Số bài áp dụng: {pkg.maxPosts > 0 ? `${pkg.maxPosts} bài` : '-'}</p>
-                          <p>
-                            Quota hiển thị:{' '}
-                            {pkg.displayQuota > 0
-                              ? `${pkg.displayQuota.toLocaleString('vi-VN')} luot`
-                              : '-'}
+                        <div className="text-xs text-slate-500 space-y-2">
+                          <p className="text-slate-700 font-medium leading-relaxed italic">
+                            "{pkg.promotionPackageDescription}"
                           </p>
+                          <div className="pt-1 space-y-1">
+                            <p>Thời hạn: {pkg.durationDays} ngày</p>
+                            <p>Chi phí/ngày: {formatVnd(pkg.costPerDay)}</p>
+                            <p>Số bài áp dụng: {pkg.maxPosts > 0 ? `${pkg.maxPosts} bài` : '-'}</p>
+                            <p>
+                              Quota hiển thị:{' '}
+                              {pkg.displayQuota > 0
+                                ? `${pkg.displayQuota.toLocaleString('vi-VN')} lượt`
+                                : '-'}
+                            </p>
+                          </div>
                         </div>
                       </article>
                     );

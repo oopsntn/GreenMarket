@@ -175,6 +175,7 @@ export interface PricingConfig {
     postFeeAmount: number;
     freeEditQuota: number;
     editFeeAmount: number;
+    features?: string[];
   };
   personalPolicy: {
     planTitle: string;
@@ -183,6 +184,11 @@ export interface PricingConfig {
     postFeeAmount: number;
     freeEditQuota: number;
     editFeeAmount: number;
+    features?: string[];
+  };
+  shopVipPolicy: {
+    planTitle: string;
+    features?: string[];
   };
 }
 

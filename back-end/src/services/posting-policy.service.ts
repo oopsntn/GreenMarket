@@ -43,6 +43,8 @@ export type EffectivePostingPolicy = BasePostingPolicy & {
 
 export type PostingPolicySnapshot = {
   policy: EffectivePostingPolicy;
+  shopVipExpiry: Date | null;
+  planExpiresAt: Date | null;
   usage: {
     dailyPostsUsed: number;
     dailyPostsRemaining: number | null;
@@ -245,8 +247,20 @@ export const postingPolicyService = {
         : Math.max(policy.dailyPostLimit - dailyPostsUsed, 0);
     const totalTrackedFees = await getTotalTrackedFees(userId);
 
+    // Fetch VIP status separately (for card UI)
+    const [shop] = await db
+      .select({ shopVipExpiresAt: shops.shopVipExpiresAt })
+      .from(shops)
+      .where(eq(shops.shopId, userId))
+      .limit(1);
+
+    // Fetch Personal plan expiry if active
+    const activePersonalPlan = await getActivePersonalMonthlyPlan(userId);
+
     return {
       policy,
+      shopVipExpiry: shop?.shopVipExpiresAt || null,
+      planExpiresAt: activePersonalPlan?.postingPlanExpiresAt || null,
       usage: {
         dailyPostsUsed,
         dailyPostsRemaining,

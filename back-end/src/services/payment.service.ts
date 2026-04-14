@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, lte, or } from "drizzle-orm";
+import { and, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
   paymentTxn,
@@ -516,7 +516,7 @@ export const paymentService = {
       finalAmount,
       orderId,
       orderInfo,
-      orderId,
+      ipAddr,
     );
 
     await db.insert(paymentTxn).values({
@@ -595,15 +595,7 @@ export const paymentService = {
       .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
       .limit(1);
 
-    if (!activeShop) {
-      throw new PaymentServiceError(
-        403,
-        "BOOST_OWNER_REQUIRED",
-        "Boost packages are available only for active garden-owner accounts.",
-      );
-    }
-
-    if (post.postShopId !== activeShop.shopId) {
+    if (activeShop && post.postShopId !== activeShop.shopId) {
       if (post.postShopId === null) {
         await db
           .update(posts)
