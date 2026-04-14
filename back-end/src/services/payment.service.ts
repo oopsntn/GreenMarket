@@ -587,31 +587,8 @@ export const paymentService = {
       );
     }
 
-    const [activeShop] = await db
-      .select({
-        shopId: shops.shopId,
-      })
-      .from(shops)
-      .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
-      .limit(1);
-
-    if (activeShop && post.postShopId !== activeShop.shopId) {
-      if (post.postShopId === null) {
-        await db
-          .update(posts)
-          .set({
-            postShopId: activeShop.shopId,
-            postUpdatedAt: new Date(),
-          })
-          .where(eq(posts.postId, parsedPostId));
-      } else {
-        throw new PaymentServiceError(
-          403,
-          "POST_NOT_LINKED_TO_OWNER_SHOP",
-          "This post is not linked to your active shop.",
-        );
-      }
-    }
+    // No longer forcing personal posts to become shop posts when promoted.
+    // Garden owners can keep personal posts if they want.
 
     const now = new Date();
     const [pkg] = await db
@@ -716,5 +693,52 @@ export const paymentService = {
     }
 
     return processVerifiedCallback(body);
+  },
+
+  async getUserTransactionHistory(userId: number) {
+    const transactionsResult = await db
+      .select({
+        id: paymentTxn.paymentTxnId,
+        amount: paymentTxn.paymentTxnAmount,
+        status: paymentTxn.paymentTxnStatus,
+        createdAt: paymentTxn.paymentTxnCreatedAt,
+        packageId: paymentTxn.paymentTxnPackageId,
+        postId: paymentTxn.paymentTxnPostId,
+        packageTitle: promotionPackages.promotionPackageTitle,
+        postTitle: posts.postTitle,
+        postShopId: posts.postShopId,
+      })
+      .from(paymentTxn)
+      .leftJoin(promotionPackages, eq(paymentTxn.paymentTxnPackageId, promotionPackages.promotionPackageId))
+      .leftJoin(posts, eq(paymentTxn.paymentTxnPostId, posts.postId))
+      .where(eq(paymentTxn.paymentTxnUserId, userId))
+      .orderBy(sql`${paymentTxn.paymentTxnCreatedAt} DESC`)
+      .limit(50);
+
+    const activePromotionsResult = await db
+      .select({
+        promotionId: postPromotions.postPromotionId,
+        postId: postPromotions.postPromotionPostId,
+        postTitle: posts.postTitle,
+        packageTitle: promotionPackages.promotionPackageTitle,
+        startAt: postPromotions.postPromotionStartAt,
+        endAt: postPromotions.postPromotionEndAt,
+        status: postPromotions.postPromotionStatus,
+      })
+      .from(postPromotions)
+      .innerJoin(posts, eq(postPromotions.postPromotionPostId, posts.postId))
+      .innerJoin(promotionPackages, eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId))
+      .where(
+        and(
+          eq(posts.postAuthorId, userId),
+          or(eq(postPromotions.postPromotionStatus, "active"), eq(postPromotions.postPromotionStatus, "pending"))
+        )
+      )
+      .orderBy(sql`${postPromotions.postPromotionStartAt} DESC`);
+
+    return { 
+      transactions: transactionsResult, 
+      activePromotions: activePromotionsResult 
+    };
   },
 };

@@ -194,6 +194,7 @@ export interface PricingConfig {
 
 export const getPricingConfig = () => api.get<PricingConfig>('/pricing-config');
 export const buyPersonalPackage = () => api.post<{ paymentUrl: string }>('/payment/buy-personal');
+export const getPaymentHistory = () => api.get('/payment/history');
 
 // Profile APIs
 export const getProfile = () => api.get('/profile');

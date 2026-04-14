@@ -87,7 +87,7 @@ const Packages: React.FC = () => {
             const eligibleRes = await getPromotionPackages();
             const payload = eligibleRes.data;
             detectedAudience = payload?.audience === 'garden_owner' ? 'garden_owner' : 'individual';
-            if (payload?.audience === 'garden_owner' && Array.isArray(payload.packages)) {
+            if (Array.isArray(payload?.packages)) {
               selectedPackages = sortPackages(payload.packages);
             }
           } catch {

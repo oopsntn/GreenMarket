@@ -16,6 +16,7 @@ import SavedPosts from './pages/SavedPosts';
 import Splash from './pages/Splash';
 import OwnerDashboard from './pages/OwnerDashboard';
 import Packages from './pages/Packages';
+import PersonalDashboard from './pages/PersonalDashboard';
 import ScrollToTop from './components/ScrollToTop';
 
 /**
@@ -58,6 +59,11 @@ const AppContent: React.FC = () => {
         <Route path="/owner-dashboard" element={
           <ProtectedRoute>
             <OwnerDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/personal-dashboard" element={
+          <ProtectedRoute>
+            <PersonalDashboard />
           </ProtectedRoute>
         } />
         <Route path="/create-post" element={

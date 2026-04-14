@@ -267,3 +267,18 @@ export const vnpayMockExec = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+export const getTransactionHistory = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const result = await paymentService.getUserTransactionHistory(userId);
+    res.json(result);
+  } catch (error) {
+    console.error("Get Transaction History Error:", error);
+    res.status(500).json({ error: "Lỗi hệ thống khi lấy lịch sử giao dịch." });
+  }
+};

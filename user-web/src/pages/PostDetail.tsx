@@ -356,30 +356,57 @@ const PostDetail: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            {!isOwner && post.shop && (
-                                <Link
-                                    to={`/shop/${post.postShopId}`}
-                                    className="group bg-white p-8 rounded-4xl border border-slate-200 shadow-xl hover:shadow-2xl hover:shadow-emerald-500/5 transition-all duration-500 relative overflow-hidden block"
-                                >
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
-                                    <div className="flex items-center gap-6 relative z-10 mb-6">
-                                        <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-3xl flex items-center justify-center text-emerald-600 group-hover:scale-110 group-hover:bg-emerald-50 transition-all duration-500">
-                                            <Store className="w-10 h-10" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-2xl font-black text-slate-900 leading-none mb-2 uppercase group-hover:text-emerald-700 transition-colors">{post.shop.shopName}</h3>
-                                            <div className="flex items-center gap-2 text-emerald-600 text-xs font-black uppercase tracking-widest">
-                                                <ShieldCheck className="w-4 h-4" /> Nhà vườn uy tín
+                            {!isOwner && (
+                                post.shop ? (
+                                    <Link
+                                        to={`/shop/${post.postShopId}`}
+                                        className="group bg-white p-8 rounded-4xl border border-slate-200 shadow-xl hover:shadow-2xl hover:shadow-emerald-500/5 transition-all duration-500 relative overflow-hidden block"
+                                    >
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
+                                        <div className="flex items-center gap-6 relative z-10 mb-6">
+                                            <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-3xl flex items-center justify-center text-emerald-600 group-hover:scale-110 group-hover:bg-emerald-50 transition-all duration-500">
+                                                <Store className="w-10 h-10" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-2xl font-black text-slate-900 leading-none mb-2 uppercase group-hover:text-emerald-700 transition-colors">{post.shop.shopName}</h3>
+                                                <div className="flex items-center gap-2 text-emerald-600 text-xs font-black uppercase tracking-widest">
+                                                    <ShieldCheck className="w-4 h-4" /> Nhà vườn uy tín
+                                                </div>
                                             </div>
                                         </div>
+                                        <p className="text-slate-500 text-sm leading-relaxed mb-6 font-medium line-clamp-3 italic">
+                                            {post.shop.shopDescription || 'Đang cập nhật giới thiệu chi tiết về không gian và phong cách của nhà vườn.'}
+                                        </p>
+                                        <div className="w-full py-4 rounded-2xl bg-slate-50 text-slate-900 border border-slate-200 font-black uppercase text-[10px] tracking-widest text-center transition-all group-hover:bg-emerald-700 group-hover:text-white group-hover:border-emerald-700">
+                                            Xem đầy đủ nhà vườn
+                                        </div>
+                                    </Link>
+                                ) : post.author ? (
+                                    <div className="group bg-white p-8 rounded-4xl border border-slate-200 shadow-xl relative overflow-hidden block">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
+                                        <div className="flex items-center gap-6 relative z-10 mb-6">
+                                            <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-3xl overflow-hidden flex items-center justify-center text-indigo-600 shrink-0">
+                                                {post.author.userAvatarUrl ? (
+                                                    <img src={resolveImageUrl(post.author.userAvatarUrl)} className="w-full h-full object-cover" alt={post.author.userDisplayName || post.author.userMobile} />
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-full bg-slate-200" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h3 className="text-2xl font-black text-slate-900 leading-none mb-2 uppercase transition-colors">{post.author.userDisplayName || post.author.userMobile || 'Người bán'}</h3>
+                                                <div className="flex items-center gap-2 text-indigo-600 text-xs font-black uppercase tracking-widest">
+                                                    <ShieldCheck className="w-4 h-4" /> Cá nhân bán hàng
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-slate-500 text-sm leading-relaxed mb-6 font-medium line-clamp-3 italic">
+                                            {post.author.userBio || 'Người bán cá nhân trên GreenMarket.'}
+                                        </p>
+                                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-4 border-t border-slate-100">
+                                            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Tham gia từ {new Date(post.author.userCreatedAt).getFullYear()}</span>
+                                        </div>
                                     </div>
-                                    <p className="text-slate-500 text-sm leading-relaxed mb-6 font-medium line-clamp-3 italic">
-                                        {post.shop.shopDescription || 'Đang cập nhật giới thiệu chi tiết về không gian và phong cách của nhà vườn.'}
-                                    </p>
-                                    <div className="w-full py-4 rounded-2xl bg-slate-50 text-slate-900 border border-slate-200 font-black uppercase text-[10px] tracking-widest text-center transition-all group-hover:bg-emerald-700 group-hover:text-white group-hover:border-emerald-700">
-                                        Xem đầy đủ nhà vườn
-                                    </div>
-                                </Link>
+                                ) : null
                             )}
                         </div>
 
