@@ -7,6 +7,25 @@ import type {
 } from "../types/analytics";
 import type { ReportingSlotCatalogItem } from "../types/reportingSlot";
 
+const KPI_TITLE_LABELS: Record<string, string> = {
+  "Total Views": "Tổng lượt hiển thị",
+  Conversions: "Lượt chuyển đổi",
+  Revenue: "Doanh thu quảng bá",
+};
+
+const KPI_CHANGE_LABELS: Record<string, string> = {
+  "Live delivery reach": "Độ phủ phân phối thực tế",
+  "Across boosted campaigns": "Tỷ lệ nhấp trên các chiến dịch quảng bá",
+  "Successful package purchases": "Giao dịch mua gói thành công",
+  "Paid promotion revenue": "Doanh thu từ các gói quảng bá đã thanh toán",
+};
+
+const SLOT_LABELS: Record<string, string> = {
+  "Home Top": "Trang chủ nổi bật",
+  "Category Top": "Danh mục nổi bật",
+  "Search Boost": "Tăng tìm kiếm",
+};
+
 const buildQuery = (fromDate: string, toDate: string) => {
   const params = new URLSearchParams();
   params.set("fromDate", fromDate);
@@ -26,7 +45,17 @@ const formatCurrency = (value: number) => `${value.toLocaleString("en-US")} VND`
 
 const formatPercent = (value: number) => `${value.toFixed(1)}%`;
 
-const normalizeSlotLabel = (value: string) => value.trim();
+const normalizeSlotLabel = (value: string) => {
+  const normalized = value.trim();
+  return SLOT_LABELS[normalized] || normalized;
+};
+
+const normalizeKpiCards = (items: AnalyticsKpiCard[]): AnalyticsKpiCard[] =>
+  items.map((item) => ({
+    ...item,
+    title: KPI_TITLE_LABELS[item.title] || item.title,
+    change: KPI_CHANGE_LABELS[item.change] || item.change,
+  }));
 
 const normalizeTopPlacements = (items: TopPlacement[]): TopPlacement[] => {
   const grouped = items.reduce<
@@ -123,6 +152,8 @@ const normalizeSlotCatalog = (
     }
 
     seen.add(key);
+    item.label = label;
+    item.title = normalizeSlotLabel(item.title);
     return true;
   });
 };
@@ -131,6 +162,7 @@ const normalizeAnalyticsResponse = (
   response: AnalyticsApiResponse,
 ): AnalyticsApiResponse => ({
   ...response,
+  kpiCards: normalizeKpiCards(response.kpiCards),
   topPlacements: normalizeTopPlacements(response.topPlacements),
   dailyTraffic: normalizeDailyTraffic(response.dailyTraffic),
   slotCatalog: normalizeSlotCatalog(response.slotCatalog),

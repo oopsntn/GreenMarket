@@ -80,7 +80,7 @@ export const adminPlacementSlotCatalogService = {
             rows.map((item) => ({
                 id: item.placementSlotId,
                 code: item.placementSlotCode?.trim() || "",
-                title: item.placementSlotTitle?.trim() || "Untitled Slot",
+                title: item.placementSlotTitle?.trim() || "Vị trí chưa đặt tên",
                 label: mapPlacementSlotLabel(
                     item.placementSlotCode,
                     item.placementSlotTitle,
