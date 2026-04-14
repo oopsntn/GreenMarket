@@ -49,6 +49,14 @@ const buildApiUrl = (path: string) => {
   return `${baseUrl}${normalizedPath}`;
 };
 
+export const resolveImageUrl = (path?: string | null): string => {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${getApiBaseUrl()}${normalizedPath}`;
+};
+
 const parseErrorMessage = async (
   response: Response,
   fallbackMessage: string,

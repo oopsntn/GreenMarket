@@ -5,8 +5,7 @@ import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, E
 import { updateProfile, updateShop, getProfile, uploadImages, requestShopVerificationOTP, verifyShopEmailOTP, addShopPhoneOTP, deleteShopPhone } from '../services/api';
 import clsx from 'clsx';
 import AddressPicker from '../components/AddressPicker';
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 const Profile: React.FC = () => {
   const { user, shop, updateUser, refreshShop } = useAuth();
@@ -86,11 +85,6 @@ const Profile: React.FC = () => {
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
-  };
-
-  const toMediaUrl = (url?: string | null) => {
-    if (!url) return '';
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -324,7 +318,7 @@ const Profile: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {shopGalleryImages.map((url, i) => (
                   <div key={i} className="aspect-square rounded-2xl overflow-hidden border border-slate-100 shadow-sm group">
-                    <img src={toMediaUrl(url)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <img src={resolveImageUrl(url)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                   </div>
                 ))}
               </div>
@@ -544,7 +538,7 @@ const Profile: React.FC = () => {
                   {shopGalleryImages.map((imageUrl, index) => (
                     <div key={`${imageUrl}-${index}`} className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 aspect-square group">
                       <img
-                        src={toMediaUrl(imageUrl)}
+                        src={resolveImageUrl(imageUrl)}
                         alt={`Anh vuon ${index + 1}`}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
@@ -717,7 +711,7 @@ const Profile: React.FC = () => {
                 <div className="w-40 h-40 rounded-[2.5rem] border-8 border-slate-50 overflow-hidden bg-white transition-all shadow-2xl flex items-center justify-center relative">
                   {shopGalleryImages[0] ? (
                     <img
-                      src={toMediaUrl(shopGalleryImages[0])}
+                      src={resolveImageUrl(shopGalleryImages[0])}
                       alt="Shop"
                       className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700"
                     />
@@ -734,7 +728,7 @@ const Profile: React.FC = () => {
                   >
                     {avatarUrl ? (
                       <img
-                        src={toMediaUrl(avatarUrl)}
+                        src={resolveImageUrl(avatarUrl)}
                         alt="Avatar"
                         className="w-full h-full object-cover"
                       />

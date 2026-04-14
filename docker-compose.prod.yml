@@ -1,4 +1,24 @@
 services:
+  # ───── DATABASE ─────
+  db:
+    image: postgres:18.2
+    container_name: greenmarket_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: GreenMarket
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_prod_data:/var/lib/postgresql
+      - ./GreenMarket.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ───── BACKEND API ─────
   api:
     build:
@@ -9,11 +29,15 @@ services:
     env_file:
       - ./back-end/.env.prod
     environment:
+      - DATABASE_URL=postgresql://postgres:admin@db:5432/GreenMarket
       - NODE_ENV=production
     volumes:
       - ./back-end/uploads:/app/uploads
     ports:
       - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
 
   # ───── USER FRONTEND ─────
   user-web:
@@ -25,7 +49,9 @@ services:
     container_name: greenmarket_user_web
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "5173:80"
+    depends_on:
+      - api
 
   # ───── ADMIN FRONTEND ─────
   admin-web:
@@ -37,4 +63,9 @@ services:
     container_name: greenmarket_admin_web
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "5174:8080"
+    depends_on:
+      - api
+
+volumes:
+  pg_prod_data:

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   getMyPosts,
@@ -14,8 +14,8 @@ import {
 import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
+import { resolveImageUrl } from '../utils/resolveImageUrl';
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 const formatVnd = (value: number) =>
   new Intl.NumberFormat('vi-VN', {
     style: 'currency',
@@ -166,14 +166,9 @@ const MyPosts: React.FC = () => {
     }));
   };
 
-  const toMediaUrl = (url?: string | null) => {
-    if (!url) return '';
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-  };
-
   const getSellerAvatar = (post: any) => {
     if (post?.postShopId) {
-      return toMediaUrl(
+      return resolveImageUrl(
         post?.shop?.shopPreviewImageUrl
         || post?.shop?.shopGalleryImages?.[0]
         || post?.shop?.shopLogoUrl
@@ -183,7 +178,7 @@ const MyPosts: React.FC = () => {
         || ''
       );
     }
-    return toMediaUrl(post?.author?.userAvatarUrl || user?.userAvatarUrl || '');
+    return resolveImageUrl(post?.author?.userAvatarUrl || user?.userAvatarUrl || '');
   };
 
   const getSellerName = (post: any) => {
@@ -422,7 +417,7 @@ const MyPosts: React.FC = () => {
                 {(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl) ? (
                   <div className="w-24 h-24 rounded-3xl overflow-hidden border border-emerald-100 shrink-0 shadow-sm transition-transform group-hover:scale-105">
                     <img
-                      src={toMediaUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl || '')}
+                      src={resolveImageUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl || '')}
                       alt={shop.shopName}
                       className="w-full h-full object-cover"
                     />
@@ -483,9 +478,9 @@ const MyPosts: React.FC = () => {
               {filteredPosts.map((post) => (
                 <div key={post.postId} className="bg-white p-4 rounded-3xl border border-slate-200 hover:border-emerald-500/30 transition-all shadow-sm hover:shadow-xl flex flex-col sm:flex-row items-center gap-6 group">
                   <div className="w-full sm:w-32 h-32 bg-slate-50 rounded-2xl overflow-hidden shrink-0 relative border border-slate-100">
-                    {toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl) ? (
+                    {resolveImageUrl(post.coverImageUrl || post.images?.[0]?.imageUrl) ? (
                       <img
-                        src={toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl)}
+                        src={resolveImageUrl(post.coverImageUrl || post.images?.[0]?.imageUrl)}
                         alt={post.postTitle}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
@@ -514,8 +509,13 @@ const MyPosts: React.FC = () => {
 
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
                       <h3 className="text-base font-black text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors uppercase tracking-tight leading-tight">{post.postTitle}</h3>
-                      <div className="flex justify-center sm:justify-start">
+                      <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                         {getStatusBadge(post.postStatus)}
+                        {post.activePromotion && (
+                          <span className="bg-indigo-50 text-indigo-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-indigo-100 shadow-sm animate-pulse-slow">
+                            <Zap className="w-3 h-3 fill-indigo-600" /> Đang đẩy tin
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -608,7 +608,16 @@ const MyPosts: React.FC = () => {
             <div className="relative z-10 flex items-center justify-between mb-6 gap-4 border-b border-slate-100 pb-4">
               <div>
                 <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">Chọn gói ưu tiên hiển thị</h2>
-                <p className="text-slate-500 text-sm mt-1 line-clamp-1 font-bold">Bài đăng: <span className="text-emerald-700">{boostingPost.postTitle}</span></p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                  <p className="text-slate-500 text-sm font-bold">Bài đăng: <span className="text-emerald-700">{boostingPost.postTitle}</span></p>
+                  {boostingPost.activePromotion && (
+                    <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100 shadow-sm animate-pulse-slow">
+                      <Zap className="w-3.5 h-3.5 fill-indigo-600" />
+                      <span className="text-[11px] font-black uppercase tracking-wider">Đang chạy gói: {boostingPost.activePromotion.packageName}</span>
+                      <span className="text-[10px] opacity-70 font-bold border-l border-indigo-200 pl-2 ml-1">Hết hạn: {new Date(boostingPost.activePromotion.endAt).toLocaleDateString('vi-VN')}</span>
+                    </div>
+                  )}
+                </div>
                 <Link
                   to="/packages"
                   className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-emerald-700 hover:text-emerald-600 uppercase tracking-wider"

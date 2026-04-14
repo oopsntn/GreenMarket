@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getFavoritePosts } from '../services/api';
+import { resolveImageUrl } from '../utils/resolveImageUrl';
 import { PackageOpen, MapPin, Heart, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
 
 const SavedPosts: React.FC = () => {
   const { user } = useAuth();
@@ -26,11 +25,6 @@ const SavedPosts: React.FC = () => {
     };
     fetchPosts();
   }, [user?.id]);
-
-  const toMediaUrl = (url?: string | null) => {
-    if (!url) return '';
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-  };
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -66,9 +60,9 @@ const SavedPosts: React.FC = () => {
                   className="bg-white p-4 rounded-4xl border border-slate-200 hover:border-emerald-500/30 transition-all flex flex-col gap-4 group shadow-sm hover:shadow-2xl"
                 >
                   <div className="w-full aspect-square md:aspect-video bg-slate-50 rounded-3xl overflow-hidden relative border border-slate-100">
-                    {toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl) ? (
+                    {resolveImageUrl(post.coverImageUrl || post.images?.[0]?.imageUrl) ? (
                       <img
-                        src={toMediaUrl(post.coverImageUrl || post.images?.[0]?.imageUrl)}
+                        src={resolveImageUrl(post.coverImageUrl || post.images?.[0]?.imageUrl)}
                         alt={post.postTitle}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
@@ -84,13 +78,13 @@ const SavedPosts: React.FC = () => {
 
                   <div className="flex-1 min-w-0 px-2 pb-2">
                     <h3 className="text-lg font-black text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors uppercase tracking-tight mb-3 leading-tight">
-                        {post.postTitle}
+                      {post.postTitle}
                     </h3>
 
                     <div className="flex items-center gap-2 font-black text-2xl text-emerald-600 mb-4">
                       {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(post.postPrice)}
                     </div>
-                    
+
                     <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
                       <MapPin className="w-4 h-4 text-slate-400" />
                       {post.postLocation || 'Chưa cập nhật vị trí'}
@@ -100,7 +94,7 @@ const SavedPosts: React.FC = () => {
               ))}
             </div>
           ) : (
-             <div className="text-center py-24 bg-white border border-slate-200 rounded-4xl shadow-sm border-dashed">
+            <div className="text-center py-24 bg-white border border-slate-200 rounded-4xl shadow-sm border-dashed">
               <div className="bg-rose-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-100">
                 <Heart className="w-10 h-10 text-rose-300" />
               </div>

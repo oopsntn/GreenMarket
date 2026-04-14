@@ -11,8 +11,7 @@ import {
   ChevronRight,
   Crown,
 } from 'lucide-react';
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 type ShopItem = {
   shopId: number;
@@ -49,11 +48,6 @@ const ShopList: React.FC = () => {
 
     void fetchShops();
   }, [page]);
-
-  const toMediaUrl = (url?: string | null) => {
-    if (!url) return '';
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-  };
 
   if (loading)
     return (
@@ -106,7 +100,7 @@ const ShopList: React.FC = () => {
                     >
                       {shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl ? (
                         <img
-                          src={toMediaUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl)}
+                          src={resolveImageUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl)}
                           alt={shop.shopName}
                           className="w-full h-full object-cover"
                         />

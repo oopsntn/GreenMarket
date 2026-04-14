@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and, ne, sql, inArray } from "drizzle-orm";
-import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts } from "../../models/schema/index.ts";
+import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts, postPromotions, promotionPackages } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
@@ -263,6 +263,33 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
             });
         }
 
+        const activePromotions = postIds.length > 0 ? await db.select({
+            postPromotionId: postPromotions.postPromotionId,
+            postId: postPromotions.postPromotionPostId,
+            packageId: postPromotions.postPromotionPackageId,
+            status: postPromotions.postPromotionStatus,
+            startAt: postPromotions.postPromotionStartAt,
+            endAt: postPromotions.postPromotionEndAt,
+            packageName: promotionPackages.promotionPackageTitle,
+            packageDescription: promotionPackages.promotionPackageDescription,
+        })
+        .from(postPromotions)
+        .innerJoin(promotionPackages, eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId))
+        .where(
+            and(
+                inArray(postPromotions.postPromotionPostId, postIds),
+                eq(postPromotions.postPromotionStatus, "active"),
+                sql`post_promotion_end_at > now()`
+            )
+        ) : [];
+
+        const promotionsByPostId = new Map<number, any>();
+        for (const promo of activePromotions) {
+            if (promo.postId) {
+                promotionsByPostId.set(promo.postId, promo);
+            }
+        }
+
         const response = userPosts.map((post) => {
             const postImagesData = imagesByPostId.get(post.postId) || [];
 
@@ -273,6 +300,7 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
                 attributes: attributesByPostId.get(post.postId) || [],
                 author: author || null,
                 shop: post.postShopId ? (shopById.get(post.postShopId) || null) : null,
+                activePromotion: promotionsByPostId.get(post.postId) || null,
             };
         });
 
@@ -653,4 +681,3 @@ export const toggleFavoritePost = async (req: AuthRequest, res: Response): Promi
         res.status(500).json({ error: "Internal server error" });
     }
 };
-
