@@ -8,7 +8,7 @@ import { posts } from "./posts";
 export const paymentTxn = pgTable("payment_txn", {
     paymentTxnId: serial("payment_txn_id").primaryKey(),
     paymentTxnUserId: integer("payment_txn_user_id").references(() => users.userId, { onDelete: "cascade" }).notNull(),
-    paymentTxnPackageId: integer("payment_txn_package_id").references(() => promotionPackages.promotionPackageId, { onDelete: "cascade" }),
+    paymentTxnPackageId: integer("payment_txn_package_id").references(() => promotionPackages.promotionPackageId, { onDelete: "restrict" }),
     paymentTxnPostId: integer("payment_txn_post_id").references(() => posts.postId, { onDelete: "cascade" }),
     // Snapshot giá tại thời điểm mua — không đổi dù giá gói thay đổi sau này
     paymentTxnPriceId: integer("payment_txn_price_id").references(() => promotionPackagePrices.priceId, { onDelete: "set null" }),

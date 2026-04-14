@@ -83,8 +83,20 @@ const activatePromotionForTransaction = async (
       promotionPackageId: promotionPackages.promotionPackageId,
       promotionPackageSlotId: promotionPackages.promotionPackageSlotId,
       promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+      promotionPackageTitle: promotionPackages.promotionPackageTitle,
+      priority: sql<number>`
+        CASE 
+          WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$' 
+            THEN (${placementSlots.placementSlotRules} ->> 'priority')::int 
+          ELSE 1 
+        END
+      `,
     })
     .from(promotionPackages)
+    .innerJoin(
+      placementSlots,
+      eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
+    )
     .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId!))
     .limit(1);
 
@@ -105,6 +117,8 @@ const activatePromotionForTransaction = async (
     postPromotionBuyerId: txn.paymentTxnUserId,
     postPromotionPackageId: txn.paymentTxnPackageId,
     postPromotionSlotId: pkg.promotionPackageSlotId,
+    postPromotionSnapshotTitle: pkg.promotionPackageTitle,
+    postPromotionSnapshotPriority: pkg.priority,
     postPromotionStartAt: startAt,
     postPromotionEndAt: endAt,
     postPromotionStatus: "active",

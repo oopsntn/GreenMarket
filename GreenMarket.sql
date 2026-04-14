@@ -445,8 +445,10 @@ CREATE TABLE post_promotions (
     post_promotion_id SERIAL PRIMARY KEY,
     post_promotion_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
     post_promotion_buyer_id INTEGER NOT NULL,
-    post_promotion_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
+    post_promotion_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE RESTRICT,
     post_promotion_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
+    post_promotion_snapshot_title VARCHAR(255),
+    post_promotion_snapshot_priority INTEGER,
     post_promotion_start_at TIMESTAMP,
     post_promotion_end_at TIMESTAMP,
     post_promotion_status VARCHAR(20),
@@ -458,7 +460,7 @@ CREATE TABLE payment_txn (
     payment_txn_id       SERIAL PRIMARY KEY,
     payment_txn_user_id  INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     payment_txn_post_id  INTEGER REFERENCES posts(post_id),
-    payment_txn_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
+    payment_txn_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE RESTRICT,
     payment_txn_price_id INTEGER REFERENCES promotion_package_prices(price_id) ON DELETE SET NULL, -- Snapshot bảng giá tại thời điểm mua
     payment_txn_amount   DECIMAL(15, 2),                  -- Số tiền thực thu (snapshot, không đổi dù giá gói thay đổi sau)
     payment_txn_provider VARCHAR(50),
