@@ -5,13 +5,7 @@ import LoginScreen from "../components/auth/LoginScreen";
 import UserNavigator from "./UserNavigator";
 import ManagerNavigator from "../manager/navigation/ManagerNavigator";
 import SuccessToast from "../components/SuccessToast";
-
-// Define role-based routes mapping
-const ROLE_ROUTES = {
-  "MANAGER": "ManagerNavigator",
-  "ROLE_SHOP_OWNER": "ShopOwnerNavigator", // For future shop owner panel
-  // Default/null role goes to UserNavigator
-};
+import CollaboratorNavigator from "@/collaborator/navigation/CollaboratorNavigator";
 
 const AuthStack = () => {
   const { token, user, loading } = useAuth();
@@ -54,6 +48,8 @@ const AuthStack = () => {
     switch (businessRoleCode) {
       case "MANAGER":
         return <ManagerNavigator />;
+      case "COLLABORATOR":
+        return <CollaboratorNavigator />
       default:
         return <UserNavigator />;
     }

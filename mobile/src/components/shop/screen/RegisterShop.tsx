@@ -138,7 +138,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
         const validateSocial = (url: string) => {
             if (url && !url.startsWith('http')) {
-                return `https://${url}`; 
+                return `https://${url}`;
             }
             return url;
         };
@@ -160,7 +160,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 shopInstagram: validateSocial(formData.shopInstagram).trim() || undefined,
                 shopYoutube: validateSocial(formData.shopYoutube).trim() || undefined,
             }
-
+            
             const res = await ShopService.createShop(cleanData)
             if (res) {
                 await refreshShop()

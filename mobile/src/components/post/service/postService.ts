@@ -1,5 +1,6 @@
 import { Platform } from 'react-native'
-import { api } from '../../../config/api'
+import { api, API_BASE_URL } from '../../../config/api'
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface BrowsePostsParams {
     page?: number;
@@ -23,6 +24,12 @@ export interface PostPayload {
         attributeId: number;
         value: string;
     }>;
+}
+
+type UploadOptions = {
+    onProgress?: (progress: number) => void
+    retries?: number
+    timeout?: number
 }
 
 type UploadResponse = {
@@ -126,13 +133,21 @@ export const postService = {
                     } as any)
                 }
             }
-
-            const response = await api.post('/upload', formData)
-
-            if (!response?.data?.urls) {
+            const token = await AsyncStorage.getItem('token')
+            const response = await fetch(`${API_BASE_URL}/upload`, {
+                method: 'POST',
+                headers: {
+                    // KHÔNG set Content-Type — fetch tự set multipart boundary
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: formData,
+            })
+            console.log('Upload status:', response.status)
+            const data = await response.json()
+            if (!data?.urls) {
                 throw new Error('Invalid upload response')
             }
-            return response.data
+            return data
         } catch (error: any) {
             console.error('uploadMedia failed:', {
                 message: error?.message,

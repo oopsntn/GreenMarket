@@ -10,19 +10,19 @@ import {
     SafeAreaView,
     StatusBar,
 } from 'react-native';
-import { 
-    LayoutDashboard, 
-    Briefcase, 
-    CheckCircle2, 
-    Wallet, 
-    Settings, 
+import {
+    LayoutDashboard,
+    Briefcase,
+    CheckCircle2,
+    Wallet,
+    Settings,
     ChevronRight,
     Circle,
     Bell
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CollaboratorService, CollaboratorProfileResponse } from '../services/collaboratorService';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 const StatsCard = ({ title, value, icon: Icon, color }: any) => (
     <View style={styles.statsCard}>
@@ -82,15 +82,15 @@ const DashboardScreen = () => {
         );
     }
 
-    const { profile, stats } = data || { 
-        profile: { availabilityStatus: 'offline', displayName: user?.userDisplayName }, 
-        stats: { totalJobs: 0, activeJobs: 0, completedJobs: 0, totalEarnings: 0, availableBalance: 0 } 
+    const { profile, stats } = data || {
+        profile: { availabilityStatus: 'offline', displayName: user?.userDisplayName },
+        stats: { totalJobs: 0, activeJobs: 0, completedJobs: 0, totalEarnings: 0, availableBalance: 0 }
     };
 
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <ScrollView 
+            <ScrollView
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                 showsVerticalScrollIndicator={false}
             >
@@ -127,19 +127,19 @@ const DashboardScreen = () => {
                             <View style={styles.availabilityInfo}>
                                 <Text style={styles.sectionTitle}>Working Status</Text>
                                 <View style={styles.statusBadge}>
-                                    <Circle 
-                                        size={10} 
-                                        fill={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'} 
-                                        color={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'} 
+                                    <Circle
+                                        size={10}
+                                        fill={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
+                                        color={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
                                     />
                                     <Text style={styles.statusText}>
                                         {profile.availabilityStatus?.toUpperCase()}
                                     </Text>
                                 </View>
                             </View>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={[
-                                    styles.toggleBtn, 
+                                    styles.toggleBtn,
                                     { backgroundColor: profile.availabilityStatus === 'available' ? '#FEE2E2' : '#DCFCE7' }
                                 ]}
                                 onPress={toggleAvailability}
@@ -156,17 +156,17 @@ const DashboardScreen = () => {
 
                     {/* Stats Grid */}
                     <View style={styles.statsGrid}>
-                        <StatsCard 
-                            title="Active Tasks" 
-                            value={stats.activeJobs} 
-                            icon={Briefcase} 
-                            color="#3B82F6" 
+                        <StatsCard
+                            title="Active Tasks"
+                            value={stats.activeJobs}
+                            icon={Briefcase}
+                            color="#3B82F6"
                         />
-                        <StatsCard 
-                            title="Completed" 
-                            value={stats.completedJobs} 
-                            icon={CheckCircle2} 
-                            color="#10B981" 
+                        <StatsCard
+                            title="Completed"
+                            value={stats.completedJobs}
+                            icon={CheckCircle2}
+                            color="#10B981"
                         />
                     </View>
 
