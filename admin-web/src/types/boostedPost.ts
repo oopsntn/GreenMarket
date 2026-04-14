@@ -1,4 +1,4 @@
-export type BoostedPostSlot = "Home Top" | "Category Top" | "Search Boost";
+export type BoostedPostSlot = string;
 
 export type BoostedPostStatus =
   | "Scheduled"

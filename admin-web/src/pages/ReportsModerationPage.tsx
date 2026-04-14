@@ -483,6 +483,28 @@ function ReportsModerationPage() {
               <h4>Ghi chú quản trị</h4>
               <p>{selectedReport.adminNote}</p>
             </div>
+
+            <div className="reports-moderation-detail__section">
+              <h4>Evidence đính kèm</h4>
+              {selectedReport.evidenceUrls.length === 0 ? (
+                <p>Người báo cáo chưa đính kèm evidence.</p>
+              ) : (
+                <div className="reports-moderation-detail__evidence-grid">
+                  {selectedReport.evidenceUrls.map((evidenceUrl) => (
+                    <a
+                      key={evidenceUrl}
+                      href={evidenceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="reports-moderation-detail__evidence-item"
+                    >
+                      <img src={evidenceUrl} alt="Evidence báo cáo" />
+                      <span>Mở evidence</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : null}
       </BaseModal>

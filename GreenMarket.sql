@@ -1405,8 +1405,9 @@ INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favori
 -- PLACEMENT SLOTS & PROMOTION PACKAGES
 -- ============================================================
 INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_slot_title, placement_slot_capacity, placement_slot_rules, placement_slot_published) VALUES
-(1, 'BOOST_POST', 'Day bai nha vuon', 200, '{"max_per_shop": 20, "min_post_status": "approved", "audience": "active-shop"}', true),
-(2, 'SHOP_VIP', 'Nha vuon VIP', 500, '{"max_per_shop": 1, "display_priority": "top", "audience": "active-shop"}', true);
+(1, 'HOME_TOP', 'Home Top', 200, '{"max_per_shop": 20, "min_post_status": "approved", "audience": "active-shop"}', true),
+(2, 'CATEGORY_TOP', 'Category Top', 120, '{"max_per_shop": 10, "min_post_status": "approved", "audience": "active-shop"}', true),
+(3, 'SEARCH_BOOST', 'Search Boost', 300, '{"max_per_shop": 15, "min_post_status": "approved", "audience": "active-shop"}', true);
 
 INSERT INTO promotion_packages (
     promotion_package_id,
@@ -1418,15 +1419,23 @@ INSERT INTO promotion_packages (
     promotion_package_description,
     promotion_package_published
 ) VALUES
-(1, 1, 'Gói tuần', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày.', true),
-(2, 1, 'Gói tháng', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày.', true),
-(3, 2, 'Gói nhà vườn VIP', 90, 10, 500000, 'Gói VIP dành cho nhà vườn chuyên nghiệp (90 ngày).', true);
+(1, 1, 'Gói Home Top 7 ngày', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng ở vị trí trang chủ trong 7 ngày.', true),
+(2, 1, 'Gói Home Top 30 ngày', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng ở vị trí trang chủ trong 30 ngày.', true),
+(3, 2, 'Gói Category Top 7 ngày', 7, 1, 26000, 'Ưu tiên hiển thị bài đăng ở danh mục nổi bật trong 7 ngày.', true),
+(4, 2, 'Gói Category Top 30 ngày', 30, 1, 140000, 'Ưu tiên hiển thị bài đăng ở danh mục nổi bật trong 30 ngày.', true),
+(5, 3, 'Gói Search Boost 7 ngày', 7, 1, 18000, 'Tăng hiển thị bài đăng ở khu vực tìm kiếm trong 7 ngày.', true),
+(6, 3, 'Gói Search Boost 30 ngày', 30, 1, 90000, 'Tăng hiển thị bài đăng ở khu vực tìm kiếm trong 30 ngày.', true);
 
--- Promotion Package Prices (2 goi day bai + 1 goi Nha vuon VIP 3 thang)
-INSERT INTO promotion_package_prices (package_id, price, effective_from, effective_to, note, created_by) VALUES
-(1, 99000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tuần', 1),
-(2, 299000, now() - interval '90 days', NULL, 'Giá gói đẩy bài theo tháng', 1),
-(3, 499000, now() - interval '90 days', NULL, 'Giá gói VIP 3 tháng', 1);
+-- Promotion Package Prices
+INSERT INTO promotion_package_prices (price_id, package_id, price, effective_from, effective_to, note, created_by) VALUES
+(1, 1, 99000, now() - interval '120 days', now() - interval '45 days', 'Giá cũ của gói Home Top 7 ngày.', 1),
+(2, 1, 180000, now() - interval '45 days', NULL, 'Giá hiện hành của gói Home Top 7 ngày.', 1),
+(3, 2, 500000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Home Top 30 ngày.', 1),
+(4, 3, 80000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Category Top 7 ngày.', 1),
+(5, 3, 95000, now() - interval '150 days', now() - interval '90 days', 'Giá cũ của gói Category Top 7 ngày.', 1),
+(6, 4, 250000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Category Top 30 ngày.', 1),
+(7, 5, 50000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Search Boost 7 ngày.', 1),
+(8, 6, 150000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Search Boost 30 ngày.', 1);
 
 -- ============================================================
 -- POSTING PLANS (OWNER / PERSONAL)
@@ -1495,8 +1504,8 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('vnpay_sandbox', 'true', 1),
 ('contact_email', 'support@greenmarket.com', 1),
 ('contact_phone', '1900-xxxx', 1),
-('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"English"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true}}', 1),
-('admin_template_builder_preset', '{"selectedTemplateId":null,"selectedTypeFilter":"All","channel":"Email","audience":"Seller","tone":"Supportive","shopName":"Green Corner Garden","postTitle":"Rare Monstera Deliciosa for Sale","reason":"Listing is missing mandatory details.","slotName":"Home Top","contactEmail":"ops@greenmarket.com","adminNote":"Update the content and resubmit within 24 hours."}', 1),
+('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"Vietnamese"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true}}', 1),
+('admin_template_builder_config', '{"templateName":"Mẫu đăng tin cây cảnh","categoryName":"Cây cảnh & Bonsai","usageNote":"Dùng để xem trước bố cục form đăng tin cho ngành cây cảnh trước khi đưa vào vận hành.","previewTitlePlaceholder":"Ví dụ: Sanh mini 8 năm tuổi, dáng trực","submitLabel":"Đăng tin cây cảnh (Xem trước)","fields":[{"id":"bonsai-style","type":"select","label":"Dáng cây (Thế cây)","placeholder":"Chọn dáng cây","helperText":"Giúp người đăng mô tả bố cục bonsai theo đúng cách gọi phổ biến.","required":true,"options":["Trực","Xiêu","Huyền","Hoành","Văn nhân"]},{"id":"pot-type","type":"select","label":"Loại chậu đi kèm","placeholder":"Chọn loại chậu","helperText":"Thể hiện tình trạng đi kèm chậu để người mua định giá rõ hơn.","required":true,"options":["Chậu gốm","Chậu đá","Bầu đất / túi ươm"]},{"id":"tree-age","type":"number","label":"Tuổi cây (ước lượng)","placeholder":"Ví dụ: 8","helperText":"Dùng để ước lượng độ trưởng thành của cây, hỗ trợ so sánh giá trị.","required":false,"options":[]}]}', 1),
 ('admin_ai_insight_settings', '{"autoDailySummary":true,"anomalyAlerts":true,"operatorDigest":false,"recommendationTone":"Balanced","confidenceThreshold":78,"promptVersion":"gm-admin-v1.4","reviewMode":"Required"}', 1);
 
 -- OTP Requests (Sample)
@@ -1518,14 +1527,14 @@ INSERT INTO admin_templates (
     template_updated_by,
     template_updated_at
 ) VALUES
-(1, 'Post Rejection - Invalid Content', 'Rejection Reason', 'Your post violates GreenMarket content policy because the uploaded media does not match the listing details. Please revise the content and submit again.', 'Active', 1, '2026-03-10 09:00:00', 1, '2026-03-14 10:15:00'),
-(2, 'Post Rejection - Missing Information', 'Rejection Reason', 'Your post is missing required information such as care notes, product size, or accurate pricing. Please complete the details before resubmitting.', 'Active', 1, '2026-03-11 09:20:00', 1, '2026-03-13 08:30:00'),
-(3, 'Report Reason - Spam Content', 'Report Reason', 'This listing appears to contain repetitive promotional messaging, external contact spam, or misleading attention bait.', 'Active', 1, '2026-03-08 13:00:00', 1, '2026-03-12 14:10:00'),
-(4, 'Report Reason - Suspicious Pricing', 'Report Reason', 'This listing price deviates significantly from comparable marketplace items and should be reviewed manually by the moderation team.', 'Active', 1, '2026-03-09 11:10:00', 1, '2026-03-12 16:05:00'),
-(5, 'Notification - Payment Verification', 'Notification', 'We received your transfer confirmation. GreenMarket admin is verifying the payment before reopening or updating your promotion package.', 'Active', 1, '2026-03-15 10:00:00', 1, '2026-03-18 09:30:00'),
-(6, 'Notification - Promotion Reopened', 'Notification', 'Your expired promotion has been reopened after payment verification. Delivery resumes immediately in the assigned placement slot.', 'Active', 1, '2026-03-16 14:00:00', 1, '2026-03-18 15:20:00'),
-(7, 'Notification - Export Completed', 'Notification', 'Your requested admin export has finished successfully. Download the generated report from the export history screen.', 'Active', 1, '2026-03-17 08:00:00', 1, '2026-03-17 08:05:00'),
-(8, 'Internal Moderation Escalation', 'Notification', 'This case has been escalated to the moderation lead for manual review because it affects promotion delivery quality or marketplace safety.', 'Disabled', 1, '2026-03-18 09:45:00', 1, '2026-03-25 10:00:00');
+(1, 'Post Rejection - Invalid Content', 'Rejection Reason', 'Bài đăng của bạn vi phạm chính sách nội dung của GreenMarket vì hình ảnh hoặc video tải lên không khớp với thông tin niêm yết. Vui lòng chỉnh sửa nội dung rồi gửi lại.', 'Active', 1, '2026-03-10 09:00:00', 1, '2026-03-14 10:15:00'),
+(2, 'Post Rejection - Missing Information', 'Rejection Reason', 'Bài đăng của bạn đang thiếu thông tin bắt buộc như hướng dẫn chăm sóc, kích thước sản phẩm hoặc giá bán chính xác. Vui lòng bổ sung đầy đủ trước khi gửi lại.', 'Active', 1, '2026-03-11 09:20:00', 1, '2026-03-13 08:30:00'),
+(3, 'Report Reason - Spam Content', 'Report Reason', 'Bài đăng này có dấu hiệu lặp lại nội dung quảng bá, chèn thông tin liên hệ ngoài hệ thống hoặc sử dụng câu chữ gây hiểu nhầm để thu hút chú ý.', 'Active', 1, '2026-03-08 13:00:00', 1, '2026-03-12 14:10:00'),
+(4, 'Report Reason - Suspicious Pricing', 'Report Reason', 'Mức giá của bài đăng này chênh lệch đáng kể so với các bài tương tự trên sàn và cần được đội kiểm duyệt xem xét thủ công.', 'Active', 1, '2026-03-09 11:10:00', 1, '2026-03-12 16:05:00'),
+(5, 'Notification - Payment Verification', 'Notification', 'GreenMarket đã nhận xác nhận chuyển khoản. Quản trị viên đang kiểm tra thanh toán trước khi mở lại hoặc cập nhật gói quảng bá của bạn.', 'Active', 1, '2026-03-15 10:00:00', 1, '2026-03-18 09:30:00'),
+(6, 'Notification - Promotion Reopened', 'Notification', 'Chiến dịch đã hết hạn của bạn đã được mở lại sau khi thanh toán được xác minh. Việc phân phối sẽ tiếp tục ngay ở vị trí hiển thị đã gán.', 'Active', 1, '2026-03-16 14:00:00', 1, '2026-03-18 15:20:00'),
+(7, 'Notification - Export Completed', 'Notification', 'Yêu cầu xuất dữ liệu quản trị đã hoàn tất thành công. Hãy tải báo cáo tại màn lịch sử xuất dữ liệu.', 'Active', 1, '2026-03-17 08:00:00', 1, '2026-03-17 08:05:00'),
+(8, 'Internal Moderation Escalation', 'Notification', 'Trường hợp này đã được chuyển lên đầu mối kiểm duyệt để rà soát thủ công vì ảnh hưởng đến chất lượng phân phối quảng bá hoặc mức độ an toàn của sàn.', 'Disabled', 1, '2026-03-18 09:45:00', 1, '2026-03-25 10:00:00');
 
 -- ============================================================
 -- POST PROMOTIONS / BOOSTED CAMPAIGNS
@@ -1607,18 +1616,18 @@ INSERT INTO event_logs (
     event_log_event_time,
     event_log_meta
 ) VALUES
-(1, 6, NULL, NULL, NULL, NULL, 'admin_login',        '2026-03-29 08:00:00', '{"action":"Admin Login","detail":"Admin dashboard session started successfully.","performedBy":"System Administrator"}'),
-(2, 1, NULL, NULL, NULL, NULL, 'role_assigned',      '2026-03-29 08:35:00', '{"action":"Role Assigned","detail":"Assigned role: Operation Staff.","performedBy":"System Administrator"}'),
-(3, 4, NULL, NULL, NULL, NULL, 'account_locked',     '2026-03-29 09:10:00', '{"action":"Account Locked","detail":"User access was restricted after moderation review.","performedBy":"System Administrator"}'),
-(4, 4, NULL, NULL, NULL, NULL, 'account_unlocked',   '2026-03-29 11:05:00', '{"action":"Account Unlocked","detail":"User access was restored after verification.","performedBy":"System Administrator"}'),
-(5, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:00:00', '{"action":"Export Generated","detail":"Users CSV export completed.","generatedBy":"System Administrator","reportName":"Users Export - 2026-03-29","status":"Completed"}'),
-(6, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:08:00', '{"action":"Export Generated","detail":"Revenue summary CSV export completed.","generatedBy":"System Administrator","reportName":"Revenue Summary - 2026-03-29","status":"Completed"}'),
-(7, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:16:00', '{"action":"Export Generated","detail":"Customer spending CSV export completed.","generatedBy":"System Administrator","reportName":"Customer Spending - 2026-03-29","status":"Completed"}'),
-(8, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:25:00', '{"action":"Export Generated","detail":"Analytics overview CSV export completed.","generatedBy":"System Administrator","reportName":"Analytics Overview - 2026-03-29","status":"Completed"}'),
-(9, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:33:00', '{"action":"Export Generated","detail":"Promotion operations CSV export completed.","generatedBy":"System Administrator","reportName":"Promotion Operations - 2026-03-29","status":"Completed"}'),
-(10, 1, NULL, NULL, NULL, NULL, 'admin_export',      '2026-03-29 12:44:00', '{"action":"Export Generated","detail":"Boosted campaigns CSV export completed.","generatedBy":"System Administrator","reportName":"Boosted Campaigns - 2026-03-29","status":"Completed"}'),
-(11, 2, 2, 1, 2, 11, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Promotion Resumed","detail":"Category Top campaign resumed after content update.","performedBy":"System Administrator"}'),
-(12, 1, 1, 2, 1, 12, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Promotion Reopened","detail":"Expired Search Boost campaign reopened after payment confirmation.","performedBy":"System Administrator"}');
+(1, 6, NULL, NULL, NULL, NULL, 'admin_login',        '2026-03-29 08:00:00', '{"action":"Đăng nhập trang quản trị","detail":"Phiên đăng nhập trang quản trị đã được khởi tạo thành công.","performedBy":"Quản trị viên hệ thống"}'),
+(2, 3, NULL, NULL, NULL, NULL, 'role_assigned',      '2026-03-29 08:35:00', '{"action":"Gán vai trò","detail":"Đã gán vai trò: Nhân viên vận hành.","performedBy":"Quản trị viên hệ thống"}'),
+(3, 4, NULL, NULL, NULL, NULL, 'account_locked',     '2026-03-29 09:10:00', '{"action":"Khóa tài khoản","detail":"Quyền truy cập của người dùng đã bị hạn chế sau bước rà soát kiểm duyệt.","performedBy":"Quản trị viên hệ thống"}'),
+(4, 4, NULL, NULL, NULL, NULL, 'account_unlocked',   '2026-03-29 11:05:00', '{"action":"Mở khóa tài khoản","detail":"Quyền truy cập của người dùng đã được khôi phục sau khi xác minh.","performedBy":"Quản trị viên hệ thống"}'),
+(5, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:00:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV danh sách người dùng.","generatedBy":"Quản trị viên hệ thống","reportName":"Xuất danh sách người dùng - 2026-03-29","status":"Completed"}'),
+(6, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:08:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV tổng quan doanh thu.","generatedBy":"Quản trị viên hệ thống","reportName":"Tổng quan doanh thu - 2026-03-29","status":"Completed"}'),
+(7, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:16:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV chi tiêu khách hàng.","generatedBy":"Quản trị viên hệ thống","reportName":"Chi tiêu khách hàng - 2026-03-29","status":"Completed"}'),
+(8, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:25:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV tổng quan phân tích.","generatedBy":"Quản trị viên hệ thống","reportName":"Tổng quan phân tích - 2026-03-29","status":"Completed"}'),
+(9, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:33:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV vận hành khuyến mãi.","generatedBy":"Quản trị viên hệ thống","reportName":"Vận hành khuyến mãi - 2026-03-29","status":"Completed"}'),
+(10, 1, NULL, NULL, NULL, NULL, 'admin_export',      '2026-03-29 12:44:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV chiến dịch đẩy nổi bật.","generatedBy":"Quản trị viên hệ thống","reportName":"Chiến dịch đẩy nổi bật - 2026-03-29","status":"Completed"}'),
+(11, 2, 2, 3, 2, 11, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Tiếp tục chiến dịch quảng bá","detail":"Chiến dịch Danh mục nổi bật đã được tiếp tục sau khi cập nhật nội dung.","performedBy":"Quản trị viên hệ thống"}'),
+(12, 1, 3, 2, 3, 12, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Mở lại chiến dịch quảng bá","detail":"Chiến dịch Tăng tìm kiếm đã hết hạn được mở lại sau khi xác nhận thanh toán.","performedBy":"Quản trị viên hệ thống"}');
 
 -- ============================================================
 -- DAILY PLACEMENT METRICS
@@ -1692,12 +1701,12 @@ INSERT INTO ai_insights (
     ai_insight_provider,
     ai_insight_created_at
 ) VALUES
-(1, 1, 'Placement Performance', '{"title":"Placement Performance summary","focus":"Placement Performance","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Homepage traffic stayed stable while Category Top outperformed revenue expectations in the final week of March. Keep Category Top inventory available because it is converting best among active slots.', 'Gemini gemini-2.0-flash', '2026-03-25 10:00:00'),
-(2, 1, 'Promotion Watchlist',   '{"title":"Promotion Watchlist summary","focus":"Promotion Watchlist","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Boost Post campaigns that expired on 2026-03-26 still show demand signals. Review whether any eligible cases should be reopened after payment confirmation.', 'Gemini gemini-2.0-flash', '2026-03-26 09:45:00'),
-(3, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'March revenue was concentrated in Homepage and Category Top packages. Boost Post volume increased late in the month but paid contribution is still smaller than premium placements.', 'Gemini gemini-2.0-flash', '2026-03-27 14:15:00'),
-(4, 1, 'Operator Load',         '{"title":"Operator Load summary","focus":"Operator Load","status":"Generated","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Ops Team B handled the largest number of category campaigns. The current load remains acceptable, but new escalations should be balanced toward Team A for the next cycle.', 'Gemini gemini-2.0-flash', '2026-03-28 08:40:00'),
-(5, 1, 'Placement Performance', '{"title":"Placement Performance summary","focus":"Placement Performance","status":"Archived","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Early March homepage impressions were healthy but softened before premium 30-day inventory was activated. Review creative freshness for homepage premium buyers.', 'Gemini gemini-2.0-flash', '2026-03-29 16:25:00'),
-(6, 1, 'Revenue Signals',       '{"title":"Revenue Signals summary","focus":"Revenue Signals","status":"Needs Review","generatedBy":"System Administrator","model":"Gemini gemini-2.0-flash"}', 'Average order value is currently supported by premium homepage packages, while smaller boost packages are driving order count. Keep both tiers visible in pricing analysis.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
+(1, 1, 'Placement Performance', '{"title":"Tóm tắt hiệu quả vị trí hiển thị","focus":"Placement Performance","status":"Generated","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Lưu lượng trang chủ giữ ở mức ổn định, trong khi Danh mục nổi bật vượt kỳ vọng doanh thu ở tuần cuối tháng 3. Nên tiếp tục duy trì vị trí Danh mục nổi bật vì đây là slot chuyển đổi tốt nhất trong các slot đang hoạt động.', 'Gemini gemini-2.0-flash', '2026-03-25 10:00:00'),
+(2, 1, 'Promotion Watchlist',   '{"title":"Tóm tắt khuyến mãi cần theo dõi","focus":"Promotion Watchlist","status":"Needs Review","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Các chiến dịch Tăng tìm kiếm hết hạn vào ngày 2026-03-26 vẫn cho thấy tín hiệu nhu cầu. Cần rà soát xem trường hợp nào đủ điều kiện để mở lại sau khi xác nhận thanh toán.', 'Gemini gemini-2.0-flash', '2026-03-26 09:45:00'),
+(3, 1, 'Revenue Signals',       '{"title":"Tóm tắt tín hiệu doanh thu","focus":"Revenue Signals","status":"Generated","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Doanh thu tháng 3 tập trung chủ yếu ở các gói Trang chủ nổi bật và Danh mục nổi bật. Tăng tìm kiếm tăng về số lượng ở cuối tháng nhưng đóng góp doanh thu vẫn thấp hơn các vị trí cao cấp.', 'Gemini gemini-2.0-flash', '2026-03-27 14:15:00'),
+(4, 1, 'Operator Load',         '{"title":"Tóm tắt khối lượng vận hành","focus":"Operator Load","status":"Generated","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Nhóm vận hành B đang xử lý nhiều chiến dịch danh mục nhất. Khối lượng hiện tại vẫn trong ngưỡng chấp nhận, nhưng các ca leo thang mới nên được phân bổ thêm cho Nhóm vận hành A ở chu kỳ tiếp theo.', 'Gemini gemini-2.0-flash', '2026-03-28 08:40:00'),
+(5, 1, 'Placement Performance', '{"title":"Tóm tắt hiệu quả vị trí hiển thị","focus":"Placement Performance","status":"Archived","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Lượt hiển thị trang chủ đầu tháng 3 ở mức tốt nhưng giảm dần trước khi gói cao cấp 30 ngày được kích hoạt. Cần rà soát lại độ mới của nội dung quảng bá dành cho khách mua vị trí trang chủ.', 'Gemini gemini-2.0-flash', '2026-03-29 16:25:00'),
+(6, 1, 'Revenue Signals',       '{"title":"Tóm tắt tín hiệu doanh thu","focus":"Revenue Signals","status":"Needs Review","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Giá trị đơn hàng trung bình hiện được giữ bởi các gói trang chủ cao cấp, trong khi các gói tìm kiếm nhỏ đang kéo số lượng đơn. Nên tiếp tục theo dõi đồng thời cả hai tầng gói trong phân tích giá.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
 
 -- ============================================================
 -- RESET SEQUENCES

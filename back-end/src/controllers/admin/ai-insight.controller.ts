@@ -136,7 +136,10 @@ const resolveMomentum = (score: number) => {
 };
 
 const getGeneratedBy = (req: AuthRequest) =>
-  req.user?.email || req.user?.mobile || "Quản trị hệ thống";
+  req.user?.name ||
+  req.user?.email ||
+  req.user?.mobile ||
+  "Quản trị hệ thống";
 
 const clampThreshold = (value: number) =>
   Math.min(100, Math.max(1, Math.round(value)));

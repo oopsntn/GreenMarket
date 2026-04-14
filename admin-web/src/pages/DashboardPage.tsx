@@ -94,7 +94,7 @@ function DashboardPage() {
 
     const scopedCards = normalizedCards
       .filter((card) => matchesScope(card.normalizedTitle))
-      .map(({ normalizedTitle, ...card }) => card);
+      .map(({ normalizedTitle: _normalizedTitle, ...card }) => card);
 
     return scopedCards.length > 0 ? scopedCards : statCards;
   }, [overviewScope, statCards]);

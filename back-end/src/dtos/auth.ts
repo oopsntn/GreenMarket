@@ -3,6 +3,7 @@ import { Request } from "express";
 export interface JWTUserPayload {
     id: number;
     email?: string;
+    name?: string;
     mobile?: string;
     role: string;
     roleCodes?: string[];

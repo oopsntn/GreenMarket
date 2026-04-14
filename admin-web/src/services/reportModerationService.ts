@@ -165,6 +165,12 @@ const mapReportToUi = (item: ApiReportModerationResponse): ReportModerationItem 
       item.adminNote,
       "Chưa có ghi chú từ quản trị viên",
     ),
+    evidenceUrls: Array.isArray(item.evidenceUrls)
+      ? item.evidenceUrls
+          .filter((value): value is string => typeof value === "string")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [],
     status: mapStatus(item.reportStatus),
     createdAt: formatDateTime(item.reportCreatedAt),
     updatedAt: formatDateTime(item.reportUpdatedAt),
@@ -209,7 +215,7 @@ export const reportModerationService = {
         defaultErrorMessage: "Không thể cập nhật trạng thái báo cáo.",
         body: JSON.stringify({
           status: status.toLowerCase(),
-          adminName: adminProfile?.fullName,
+          adminName: adminProfile?.name,
           ...(adminNote?.trim() ? { adminNote: adminNote.trim() } : {}),
         }),
       },

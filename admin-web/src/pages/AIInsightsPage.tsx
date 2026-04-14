@@ -84,11 +84,6 @@ const toneLabelMap: Record<AIInsightSettings["recommendationTone"], string> = {
   Aggressive: "Tăng trưởng mạnh",
 };
 
-const reviewModeLabelMap: Record<AIInsightSettings["reviewMode"], string> = {
-  Required: "Bắt buộc duyệt",
-  Optional: "Duyệt tùy chọn",
-};
-
 const momentumLabelMap: Record<AITrendScoreRow["momentum"], string> = {
   Up: "Tăng",
   Stable: "Ổn định",
@@ -118,8 +113,6 @@ const getStatusLabelVi = (status: AIInsightHistoryStatusFilter) =>
   statusLabelMap[status];
 const getToneLabelVi = (tone: AIInsightSettings["recommendationTone"]) =>
   toneLabelMap[tone];
-const getReviewModeLabelVi = (mode: AIInsightSettings["reviewMode"]) =>
-  reviewModeLabelMap[mode];
 const getMomentumLabelVi = (momentum: AITrendScoreRow["momentum"]) =>
   momentumLabelMap[momentum];
 
@@ -304,28 +297,6 @@ function AIInsightsPage() {
     }));
   };
 
-  const handleSaveSettings = async () => {
-    if (isDateRangeInvalid) {
-      showToast("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.", "error");
-      return;
-    }
-
-    try {
-      const nextSettings = await aiInsightService.updateSettings(settings);
-      setSettings(nextSettings);
-      showToast(
-        `Đã lưu cấu hình AI. Ngưỡng tin cậy hiện tại là ${nextSettings.confidenceThreshold}.`,
-      );
-    } catch (error) {
-      showToast(
-        error instanceof Error
-          ? error.message
-          : "Không thể lưu cấu hình gợi ý AI.",
-        "error",
-      );
-    }
-  };
-
   const handleGenerateInsight = async () => {
     if (isDateRangeInvalid) {
       showToast("Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.", "error");
@@ -347,7 +318,7 @@ function AIInsightsPage() {
       setHistoryItems((prev) => [newInsight, ...prev]);
       setHistoryPage(1);
       showToast(
-        `Đã tạo bản tóm tắt ${getFocusLabelVi(newInsight.focus)} cho giai đoạn ${dateRangeLabel}.`,
+        `Đã tạo bản phân tích ${getFocusLabelVi(newInsight.focus)} cho giai đoạn ${dateRangeLabel}.`,
         "info",
       );
     } catch (error) {
@@ -361,9 +332,9 @@ function AIInsightsPage() {
   return (
     <div className="ai-insights-page">
       <PageHeader
-        title="Đánh Giá Kinh Doanh Bằng AI"
-        description="Phân tích GreenMarket theo khoảng thời gian, tổng hợp chỉ số quan trọng, rút ra nhận định và đề xuất hướng tăng trưởng."
-        actionLabel="Tải lại phân tích"
+        title="Phân Tích Kinh Doanh Bằng AI"
+        description="AI tổng hợp số liệu từ các màn doanh thu, gói quảng bá, xu hướng tiêu dùng và vận hành để đưa ra nhận định ngắn gọn, dễ đọc cho admin."
+        actionLabel="Tải lại dữ liệu"
         onActionClick={() => void loadInsightData(true)}
       />
 
@@ -375,23 +346,16 @@ function AIInsightsPage() {
       ) : null}
 
       <SectionCard
-        title="Khu Vực Phân Tích"
-        description="Chọn khoảng thời gian và trọng tâm phân tích trước. Sau đó xem tín hiệu kinh doanh bên dưới hoặc tạo bản tổng hợp AI mới."
+        title="Tạo Nhận Định AI"
+        description="Chọn kỳ dữ liệu và trọng tâm cần xem. AI sẽ dựa trên các số liệu hiện có của hệ thống để tạo một bản nhận định kinh doanh ngắn gọn."
         actions={
           <div className="ai-insights-analysis__actions">
             <button
               type="button"
-              className="ai-insights-button ai-insights-button--secondary"
+              className="ai-insights-button ai-insights-button--primary"
               onClick={() => void handleGenerateInsight()}
             >
-              Tạo Bản Tổng Hợp AI
-            </button>
-            <button
-              type="button"
-              className="ai-insights-button ai-insights-button--primary"
-              onClick={() => void handleSaveSettings()}
-            >
-              Lưu Cấu Hình AI
+              Tạo Phân Tích AI
             </button>
           </div>
         }
@@ -406,7 +370,7 @@ function AIInsightsPage() {
                 onChange={(event) => setFromDate(event.target.value)}
               />
               <small>
-                Mốc bắt đầu để AI gom dữ liệu, phân tích xu hướng và đưa ra gợi ý.
+                Mốc bắt đầu để AI gom số liệu và đánh giá xu hướng.
               </small>
             </label>
 
@@ -418,7 +382,7 @@ function AIInsightsPage() {
                 onChange={(event) => setToDate(event.target.value)}
               />
               <small>
-                Mốc kết thúc của kỳ phân tích. Nên giữ đồng nhất với Analytics và Revenue khi đối chiếu dữ liệu.
+                Mốc kết thúc của kỳ phân tích nên thống nhất với các màn báo cáo khác.
               </small>
             </label>
 
@@ -437,7 +401,7 @@ function AIInsightsPage() {
                 ))}
               </select>
               <small>
-                Chọn Tất cả trọng tâm để có báo cáo tổng thể GreenMarket, hoặc thu hẹp vào một mảng nghiệp vụ cụ thể.
+                Có thể xem toàn cảnh hoặc chỉ tập trung vào một nhóm chỉ số cụ thể.
               </small>
             </label>
 
@@ -454,34 +418,34 @@ function AIInsightsPage() {
                 <option value="Aggressive">{getToneLabelVi("Aggressive")}</option>
               </select>
               <small>
-                Điều chỉnh mức độ thận trọng hay quyết liệt của các đề xuất tăng trưởng.
+                Điều chỉnh mức độ thận trọng của phần nhận định và đề xuất.
               </small>
             </label>
           </div>
 
           {isDateRangeInvalid ? (
             <p className="ai-insights-analysis__warning">
-              Khoảng thời gian đang không hợp lệ. Hãy đặt Từ ngày nhỏ hơn hoặc bằng Đến ngày trước khi lưu hoặc tạo báo cáo.
+              Khoảng thời gian đang không hợp lệ. Hãy đặt Từ ngày nhỏ hơn hoặc bằng Đến ngày trước khi tạo phân tích.
             </p>
           ) : null}
 
           <div className="ai-insights-analysis__meta">
             <div className="ai-insights-analysis__meta-card">
-              <strong>Khoảng phân tích</strong>
+              <strong>Kỳ dữ liệu</strong>
               <span>{dateRangeLabel}</span>
             </div>
             <div className="ai-insights-analysis__meta-card">
-              <strong>Ngưỡng cảnh báo</strong>
-              <span>{settings.confidenceThreshold}/100 ngưỡng tin cậy</span>
+              <strong>Trọng tâm đang chọn</strong>
+              <span>{getFocusLabelVi(focusFilter)}</span>
             </div>
             <div className="ai-insights-analysis__meta-card">
-              <strong>Chế độ duyệt</strong>
-              <span>{getReviewModeLabelVi(settings.reviewMode)} trước khi áp dụng</span>
+              <strong>Giọng điệu nhận định</strong>
+              <span>{getToneLabelVi(settings.recommendationTone)}</span>
             </div>
             <div className="ai-insights-analysis__meta-card">
-              <strong>Cách dùng màn này</strong>
+              <strong>Dữ liệu nền</strong>
               <span>
-                Chọn khoảng thời gian, xem các tín hiệu kinh doanh bên dưới, rồi tạo một bản đánh giá AI ngắn gọn cho giai đoạn đó.
+                {trendRows.length} tín hiệu xu hướng và {historyItems.length} bản phân tích đang có sẵn cho admin đối chiếu.
               </span>
             </div>
           </div>
@@ -505,8 +469,8 @@ function AIInsightsPage() {
 
       <div className="ai-insights-business-grid">
         <SectionCard
-          title="Điểm Quan Trọng Trong Giai Đoạn Này"
-          description="Màn AI ưu tiên hiển thị tín hiệu kinh doanh trực tiếp, thay vì chỉ có phần cấu hình."
+          title="Điểm Đáng Chú Ý"
+          description="Các tín hiệu kinh doanh nổi bật mà admin nên đọc trước trong kỳ dữ liệu đang chọn."
         >
           <div className="ai-insights-bullet-grid">
             {overview.highlightCards.length === 0 ? (
@@ -531,8 +495,8 @@ function AIInsightsPage() {
         </SectionCard>
 
         <SectionCard
-          title="Hành Động Tăng Trưởng Được Đề Xuất"
-          description="Đây là các bước hành động được AI đề xuất dựa trên dữ liệu GreenMarket trong giai đoạn hiện tại."
+          title="Đề Xuất Cho Admin"
+          description="Các hướng xử lý hoặc ưu tiên phát triển được AI đề xuất từ số liệu hiện có."
         >
           <div className="ai-insights-bullet-grid">
             {overview.recommendations.length === 0 ? (
@@ -558,8 +522,8 @@ function AIInsightsPage() {
       </div>
 
       <SectionCard
-        title="Bản Tóm Tắt AI Mới Nhất"
-        description="Đây là bản đánh giá kinh doanh AI mới nhất cho khoảng thời gian đang chọn. Nên đọc phần này trước khi xem toàn bộ lịch sử."
+        title="Bản Phân Tích AI Mới Nhất"
+        description="Đây là bản nhận định mới nhất để admin xem nhanh trước khi xuống phần lịch sử."
       >
         {latestInsightPreview ? (
           <div className="ai-insights-latest">
@@ -598,8 +562,8 @@ function AIInsightsPage() {
       </SectionCard>
 
       <SectionCard
-        title="Ảnh Chụp Nhanh Tình Hình Kinh Doanh"
-        description="Dùng bảng này để kiểm tra nhanh các thực thể và số liệu đứng sau kết luận của AI."
+        title="Số Liệu Nền Cho AI"
+        description="Bảng này giúp đối chiếu nhanh các số liệu chính đứng sau kết luận của AI."
       >
         {overview.topRows.length === 0 ? (
           <EmptyState
@@ -625,113 +589,8 @@ function AIInsightsPage() {
         )}
       </SectionCard>
 
-      <SectionCard
-        title="Cấu Hình Gợi Ý AI"
-        description="Các tùy chọn này ảnh hưởng đến cách AI trình bày nội dung phân tích và đề xuất."
-      >
-        <div className="ai-insights-settings">
-          <div className="ai-insights-settings__toggles">
-            <label className="ai-insights-settings__toggle">
-              <div>
-                <strong>Tóm tắt tự động hằng ngày</strong>
-                <span>Tự động tạo bản tóm tắt cho admin mỗi sáng.</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.autoDailySummary}
-                onChange={(event) =>
-                  handleSettingChange("autoDailySummary", event.target.checked)
-                }
-              />
-            </label>
-
-            <label className="ai-insights-settings__toggle">
-              <div>
-                <strong>Cảnh báo bất thường</strong>
-                <span>Cảnh báo khi có dấu hiệu bất thường về khuyến mãi hoặc doanh thu.</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.anomalyAlerts}
-                onChange={(event) =>
-                  handleSettingChange("anomalyAlerts", event.target.checked)
-                }
-              />
-            </label>
-
-            <label className="ai-insights-settings__toggle">
-              <div>
-                <strong>Tóm tắt cho vận hành</strong>
-                <span>Đưa ghi chú khối lượng vận hành vào bản tổng hợp được tạo.</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.operatorDigest}
-                onChange={(event) =>
-                  handleSettingChange("operatorDigest", event.target.checked)
-                }
-              />
-            </label>
-          </div>
-
-          <div className="ai-insights-settings__grid">
-            <div className="ai-insights-settings__field">
-              <label htmlFor="ai-review-mode">Chế độ duyệt</label>
-              <select
-                id="ai-review-mode"
-                value={settings.reviewMode}
-                onChange={(event) =>
-                  handleSettingChange("reviewMode", event.target.value)
-                }
-              >
-                <option value="Required">{getReviewModeLabelVi("Required")}</option>
-                <option value="Optional">{getReviewModeLabelVi("Optional")}</option>
-              </select>
-              <small>
-                Chọn xem mọi bản tổng hợp AI có cần admin duyệt trước khi xem là kết luận chính thức hay không.
-              </small>
-            </div>
-
-            <div className="ai-insights-settings__field">
-              <label htmlFor="ai-confidence-threshold">Ngưỡng tin cậy</label>
-              <input
-                id="ai-confidence-threshold"
-                type="number"
-                min={1}
-                max={100}
-                value={settings.confidenceThreshold}
-                onChange={(event) =>
-                  handleSettingChange(
-                    "confidenceThreshold",
-                    Number(event.target.value),
-                  )
-                }
-              />
-              <small>
-                Giá trị hợp lệ từ 1 đến 100. Số càng cao thì AI càng thận trọng khi kết luận đó là tín hiệu mạnh.
-              </small>
-            </div>
-
-            <div className="ai-insights-settings__field">
-              <label htmlFor="ai-prompt-version">Phiên bản prompt</label>
-              <input
-                id="ai-prompt-version"
-                type="text"
-                value={settings.promptVersion}
-                onChange={(event) =>
-                  handleSettingChange("promptVersion", event.target.value)
-                }
-              />
-              <small>
-                Dùng để đánh dấu phiên bản chiến lược prompt khi bạn muốn so sánh các cách đánh giá AI theo thời gian.
-              </small>
-            </div>
-          </div>
-        </div>
-      </SectionCard>
-
       <SearchToolbar
-        placeholder="Tìm theo thực thể, khuyến nghị, nội dung tóm tắt hoặc người tạo"
+        placeholder="Tìm theo thực thể, khuyến nghị, nội dung phân tích hoặc người tạo"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         filterSummaryItems={[
@@ -741,7 +600,7 @@ function AIInsightsPage() {
       />
 
       <SectionCard
-        title="Báo Cáo Chấm Điểm Xu Hướng"
+        title="Bảng Tín Hiệu Xu Hướng"
         description={`${dateRangeLabel} / ${getFocusLabelVi(focusFilter)}`}
       >
         {isLoading ? (
@@ -824,7 +683,7 @@ function AIInsightsPage() {
       </SectionCard>
 
       <SectionCard
-        title="Lịch Sử Insight Gần Đây"
+        title="Lịch Sử Phân Tích AI"
         description={`${dateRangeLabel} / ${getStatusLabelVi(statusFilter)}`}
         actions={
           <select

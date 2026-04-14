@@ -6,7 +6,7 @@ const router = Router();
 
 router.get(
     "/",
-    requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT", "ROLE_MODERATOR", "ROLE_FINANCE"),
+    requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
     getDashboardOverview,
 );
 
