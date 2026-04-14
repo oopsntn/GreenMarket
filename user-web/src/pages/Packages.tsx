@@ -52,6 +52,7 @@ const Packages: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [boostPackages, setBoostPackages] = useState<PromotionPackageItem[]>([]);
   const [vipPackage, setVipPackage] = useState<PromotionPackageItem | null>(null);
+  const [pricingConfig, setPricingConfig] = useState<any>(null);
   const [vipError, setVipError] = useState<string | null>(null);
   const [vipBuying, setVipBuying] = useState(false);
   const [personalBuying, setPersonalBuying] = useState(false);
@@ -68,7 +69,13 @@ const Packages: React.FC = () => {
       setVipError(null);
 
       try {
-        const publicRes = await getPublicPromotionPackages();
+        const [publicRes, pricingRes] = await Promise.all([
+          getPublicPromotionPackages(),
+          getPricingConfig(),
+        ]);
+        
+        setPricingConfig(pricingRes.data);
+        
         let selectedPackages = sortPackages((publicRes.data || []) as PromotionPackageItem[]);
         let detectedAudience: 'guest' | 'individual' | 'garden_owner' =
           isAuthenticated ? 'individual' : 'guest';
@@ -228,7 +235,7 @@ const Packages: React.FC = () => {
           <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <article className="rounded-2xl border border-emerald-200 bg-emerald-50/30 p-5">
               <div className="flex items-center justify-between gap-3 mb-3">
-                <h3 className="text-lg font-black text-slate-900">Chủ vườn vĩnh viễn</h3>
+                <h3 className="text-lg font-black text-slate-900">{pricingConfig?.ownerPolicy?.planTitle || 'Chủ vườn vĩnh viễn'}</h3>
                 {isGardenOwner ? (
                   <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase font-black tracking-wider">
                     Đang sử dụng
@@ -237,7 +244,7 @@ const Packages: React.FC = () => {
               </div>
 
               <p className="text-2xl font-black text-emerald-700 mb-1">
-                250.000 ₫
+                {pricingConfig ? formatVnd(pricingConfig.shopRegistrationPrice) : '--'}
               </p>
               <p className="text-sm text-slate-600 mb-4">
                 Nâng cấp tài khoản lên chủ vườn, phù hợp người bán chuyên nghiệp.
@@ -246,19 +253,19 @@ const Packages: React.FC = () => {
               <ul className="space-y-2 text-sm text-slate-700 mb-5">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Đăng bài ngay, không qua chờ duyệt.
+                  {pricingConfig?.ownerPolicy?.autoApprove ? 'Đăng bài ngay, không qua chờ duyệt.' : 'Bài đăng cần được phê duyệt bởi Admin.'}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Đăng tin lẻ tính phí 20,000 VND/tin.
+                  Đăng tin lẻ: {pricingConfig ? formatVnd(pricingConfig.ownerPolicy.postFeeAmount) : '-'}/tin.
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  Giới hạn tối đa 20 bài/ngày.
+                  Giới hạn tối đa: {pricingConfig?.ownerPolicy?.dailyPostLimit || 'Không giới hạn'} bài/ngày.
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                  4 lượt sửa bài miễn phí, sau đó 5,000 VND/lượt.
+                  {pricingConfig?.ownerPolicy?.freeEditQuota || 0} lượt sửa miễn phí, sau đó {pricingConfig ? formatVnd(pricingConfig.ownerPolicy.editFeeAmount) : '-'}/lượt.
                 </li>
               </ul>
 
@@ -289,7 +296,7 @@ const Packages: React.FC = () => {
             {!isGardenOwner && (
               <article className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex items-center justify-between gap-3 mb-3">
-                  <h3 className="text-lg font-black text-slate-900">Cá nhân</h3>
+                  <h3 className="text-lg font-black text-slate-900">{pricingConfig?.personalPolicy?.planTitle || 'Cá nhân'}</h3>
                   {activePlanCode === 'PERSONAL_MONTHLY' ? (
                     <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase font-black tracking-wider">
                       Đang sử dụng
@@ -302,7 +309,7 @@ const Packages: React.FC = () => {
                 </div>
 
                 <p className="text-2xl font-black text-slate-700 mb-1">
-                  30.000 ₫ <span className="text-sm font-normal text-slate-500">/ tháng</span>
+                  {pricingConfig ? formatVnd(pricingConfig.personalMonthlyPrice) : '--'} <span className="text-sm font-normal text-slate-500">/ tháng</span>
                 </p>
                 <p className="text-sm text-slate-600 mb-4">
                   Dành cho người chơi cây nhỏ lẻ nhưng đăng bài thường xuyên.
@@ -311,15 +318,15 @@ const Packages: React.FC = () => {
                 <ul className="space-y-2 text-sm text-slate-700 mb-5">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                    Đăng bài ngay trong thời gian gói còn hiệu lực.
+                    {pricingConfig?.personalPolicy?.autoApprove ? 'Đăng bài ngay trong thời gian gói còn hiệu lực.' : 'Bài đăng cần được phê duyệt bởi Admin.'}
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                    Tối đa 20 bài/ngày.
+                    Tối đa: {pricingConfig?.personalPolicy?.dailyPostLimit || 'Không giới hạn'} bài/ngày.
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
-                    4 lượt sửa bài miễn phí, sau đó 5,000 VND/lượt.
+                    {pricingConfig?.personalPolicy?.freeEditQuota || 0} lượt sửa miễn phí, sau đó {pricingConfig ? formatVnd(pricingConfig.personalPolicy.editFeeAmount) : '-'}/lượt.
                   </li>
                 </ul>
 

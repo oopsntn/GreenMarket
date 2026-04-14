@@ -5,6 +5,7 @@ import {
   placementSlots,
   promotionPackagePrices,
   promotionPackages,
+  systemSettings,
 } from "../models/schema";
 
 const BOOST_SLOT_CODE = "BOOST_POST";
@@ -37,6 +38,33 @@ const SHOP_VIP_PACKAGE = {
   displayQuota: 0,
   description: "Uu tien shop len dau danh sach nha vuon va hien thi vien VIP trong 90 ngay.",
 };
+
+const GLOBAL_SETTINGS = [
+  { key: "shop_registration_price", value: "250000" },
+  { key: "personal_monthly_price", value: "30000" },
+  {
+    key: "owner_posting_policy",
+    value: JSON.stringify({
+      planTitle: "Gói Chủ Vườn Vĩnh Viễn",
+      autoApprove: true,
+      dailyPostLimit: 20,
+      postFeeAmount: 20000,
+      freeEditQuota: 4,
+      editFeeAmount: 5000,
+    }),
+  },
+  {
+    key: "personal_posting_policy",
+    value: JSON.stringify({
+      planTitle: "Gói Cá Nhân Theo Tháng",
+      autoApprove: true,
+      dailyPostLimit: 20,
+      postFeeAmount: 0,
+      freeEditQuota: 4,
+      editFeeAmount: 5000,
+    }),
+  },
+];
 
 const getCurrentPrice = async (packageId: number) => {
   const now = new Date();
@@ -192,6 +220,23 @@ const upsertPackage = async (params: {
   return createdPackage.promotionPackageId;
 };
 
+const upsertSystemSetting = async (key: string, value: string) => {
+  await db
+    .insert(systemSettings)
+    .values({
+      systemSettingKey: key,
+      systemSettingValue: value,
+      systemSettingUpdatedAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: systemSettings.systemSettingKey,
+      set: {
+        systemSettingValue: value,
+        systemSettingUpdatedAt: new Date(),
+      },
+    });
+};
+
 const run = async () => {
   console.log("--- Syncing promotion catalog to boost-week/boost-month + shop-vip ---");
 
@@ -264,6 +309,13 @@ const run = async () => {
     );
 
   console.log("Catalog synced. Published slots: BOOST_POST + SHOP_VIP.");
+
+  console.log("--- Syncing global system settings ---");
+  for (const setting of GLOBAL_SETTINGS) {
+    await upsertSystemSetting(setting.key, setting.value);
+    console.log(`Upserted system setting: ${setting.key}`);
+  }
+  console.log("Global settings synced.");
 };
 
 run()

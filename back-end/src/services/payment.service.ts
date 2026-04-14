@@ -17,9 +17,9 @@ import {
 } from "../utils/vnpay.ts";
 import {
   BOOST_POST_SLOT_CODE,
-  SHOP_VIP_DURATION_DAYS,
   SHOP_VIP_SLOT_CODE,
 } from "../constants/promotion.ts";
+import { readSettingNumber } from "../controllers/user/pricing-config.controller.ts";
 import { postingPolicyService } from "./posting-policy.service.ts";
 
 export class PaymentServiceError extends Error {
@@ -151,14 +151,6 @@ const activateShopVipForTransaction = async (
       500,
       "SHOP_VIP_DURATION_INVALID",
       "Shop VIP package duration is invalid.",
-    );
-  }
-
-  if (durationDays !== SHOP_VIP_DURATION_DAYS) {
-    throw new PaymentServiceError(
-      500,
-      "SHOP_VIP_DURATION_UNSUPPORTED",
-      "Shop VIP package must use a fixed 90-day duration.",
     );
   }
 
@@ -386,7 +378,7 @@ export const paymentService = {
     if (!shop) throw new PaymentServiceError(404, "SHOP_NOT_FOUND", "Thong tin shop khong ton tai.");
     if (shop.shopStatus === "active") throw new PaymentServiceError(400, "SHOP_ALREADY_ACTIVE", "Shop da duoc kich hoat tien trinh dang ky.");
 
-    const finalAmount = 250000;
+    const finalAmount = await readSettingNumber("shop_registration_price", 250000);
     const orderId = createOrderId();
     const orderInfo = `PayShopReg${userId}`;
 
@@ -418,7 +410,7 @@ export const paymentService = {
       throw new PaymentServiceError(400, "ALREADY_GARDEN_OWNER", "Shop owner cannot buy personal plan.");
     }
 
-    const finalAmount = 30000;
+    const finalAmount = await readSettingNumber("personal_monthly_price", 30000);
     const orderId = createOrderId();
     const orderInfo = `PayPersonalPkg${userId}`;
 
@@ -486,11 +478,11 @@ export const paymentService = {
     }
 
     const vipDurationDays = Number(vipPackage.promotionPackageDurationDays || 0);
-    if (vipDurationDays !== SHOP_VIP_DURATION_DAYS) {
+    if (!Number.isFinite(vipDurationDays) || vipDurationDays <= 0) {
       throw new PaymentServiceError(
         500,
-        "SHOP_VIP_DURATION_UNSUPPORTED",
-        "Goi Nha Vuon VIP phai co chu ky 90 ngay.",
+        "SHOP_VIP_DURATION_INVALID",
+        "Goi Nha Vuon VIP co thoi luong khong hop le.",
       );
     }
 

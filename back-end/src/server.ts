@@ -40,6 +40,7 @@ import userHostRoutes from "./routes/user/host.route.ts";
 import uploadRoutes from "./routes/upload.route.ts";
 import userPromotionRoutes from "./routes/user/promotion.route.ts";
 import userPaymentRoutes from "./routes/user/payment.route.ts";
+import pricingConfigRoutes from "./routes/user/pricing-config.route.ts";
 import { verifyToken, isAdmin } from "./middlewares/authMiddleware.ts";
 import path from "path";
 import "./services/promotionScheduler.ts";
@@ -151,6 +152,7 @@ app.use("/api/collaborator", userCollaboratorRoutes);
 app.use("/api/manager", userManagerRoutes);
 app.use("/api/operations", userOperationsRoutes);
 app.use("/api/host", userHostRoutes);
+app.use("/api/pricing-config", pricingConfigRoutes);
 
 // Static files for uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
