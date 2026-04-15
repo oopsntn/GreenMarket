@@ -36,8 +36,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     leftAction,
     rightAction,
     headerStyle = 'default',
-    containerStyle,
-    scrollEnabled = true,
+    containerStyle
 }) => {
 
     const navigation = useNavigation<any>();
@@ -123,7 +122,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
 
                 {/* Body: Kiem soat Scroll dua tren prop scrollEnabled */}
                 <ScrollView
-                    scrollEnabled={scrollEnabled}
+                    scrollEnabled={false}
                     style={[styles.body, containerStyle]}
                     contentContainerStyle={{ flexGrow: 1 }}
                     showsVerticalScrollIndicator={false}
@@ -151,7 +150,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         zIndex: 10,
         ...Platform.select({
-            android: { paddingTop: 12 }, // Android bù đắp thêm chút padding
+            android: { paddingTop: 12 }, 
         }),
     },
     headerDefault: {
