@@ -37,7 +37,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     rightAction,
     headerStyle = 'default',
     containerStyle,
-    scrollEnabled = true,
+    scrollEnabled = false
 }) => {
 
     const navigation = useNavigation<any>();
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         zIndex: 10,
         ...Platform.select({
-            android: { paddingTop: 12 }, // Android bù đắp thêm chút padding
+            android: { paddingTop: 12 }, 
         }),
     },
     headerDefault: {
