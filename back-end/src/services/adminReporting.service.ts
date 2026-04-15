@@ -4,11 +4,13 @@ import { db } from "../config/db.ts";
 import {
     attributes,
     categories,
+    categoryAttributes,
     eventLogs,
     paymentTxn,
     posts,
     promotionPackages,
     reports,
+    shops,
     users,
 } from "../models/schema/index.ts";
 import {
@@ -25,6 +27,14 @@ type DateRange = {
 type DashboardStatCard = {
     title: string;
     value: string;
+    note?: string;
+};
+
+type DashboardAlert = {
+    id: string;
+    level: "critical" | "warning" | "info";
+    title: string;
+    detail: string;
 };
 
 type DashboardSummary = {
@@ -136,6 +146,12 @@ type AnalyticsSummaryResponse = {
     slotCatalog: ReportingSlotCatalogItem[];
 };
 
+type DashboardOverviewResponse = {
+    statCards: DashboardStatCard[];
+    alerts: DashboardAlert[];
+    summary: DashboardSummary;
+};
+
 type RevenueSummaryResponse = {
     summaryCards: RevenueCard[];
     rows: RevenueRow[];
@@ -177,6 +193,23 @@ const isDateInRange = (value: Date | null, range: DateRange) => {
     }
 
     return true;
+};
+
+const differenceInDays = (target: Date, base: Date) =>
+    Math.ceil((target.getTime() - base.getTime()) / (1000 * 60 * 60 * 24));
+
+const isSevereReport = (reasonCode: string | null, reason: string | null) => {
+    const normalizedCode = (reasonCode ?? "").trim().toLowerCase();
+    const normalizedReason = (reason ?? "").trim().toLowerCase();
+
+    return (
+        ["fraud", "scam", "counterfeit", "illegal", "violence", "harassment"].includes(
+            normalizedCode,
+        ) ||
+        ["lừa đảo", "giả mạo", "hàng cấm", "vi phạm nghiêm trọng", "quấy rối"].some(
+            (keyword) => normalizedReason.includes(keyword),
+        )
+    );
 };
 
 const doesRangeOverlap = (startDate: string, endDate: string, range: DateRange) => {

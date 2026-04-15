@@ -38,6 +38,11 @@ const capabilityRows = [
   },
 ];
 
+const audienceGroupLabel = {
+  Marketplace: "Kinh doanh trên sàn",
+  Operations: "Vận hành",
+} as const;
+
 function RolesManagementPage() {
   const [roles, setRoles] = useState<RoleManagementItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -199,7 +204,7 @@ function RolesManagementPage() {
           subtitle="Danh mục vai trò nghiệp vụ do admin duy trì"
         />
         <StatCard
-          title="Vai trò marketplace"
+          title="Vai trò kinh doanh trên sàn"
           value={String(marketplaceRoleCount)}
           subtitle="Vai trò tham gia luồng mua bán trên sàn"
         />
@@ -222,7 +227,7 @@ function RolesManagementPage() {
 
       <SectionCard
         title="Nơi gán vai trò thực tế"
-        description="Màn này chỉ định nghĩa danh mục vai trò. Việc gán vai trò cho từng tài khoản marketplace được thực hiện ở màn Người dùng."
+        description="Màn này chỉ định nghĩa danh mục vai trò. Việc gán vai trò cho từng tài khoản trên sàn được thực hiện ở màn Người dùng."
         actions={
           <Link className="roles-management-link" to="/users">
             Mở màn Người dùng
@@ -271,8 +276,8 @@ function RolesManagementPage() {
                   <StatusBadge
                     label={
                       role.audienceGroup === "Marketplace"
-                        ? "Marketplace"
-                        : "Vận hành"
+                        ? audienceGroupLabel.Marketplace
+                        : audienceGroupLabel.Operations
                     }
                     variant="processing"
                   />
@@ -384,8 +389,8 @@ function RolesManagementPage() {
                   value={formData.audienceGroup}
                   onChange={handleFormChange}
                 >
-                  <option value="Marketplace">Marketplace</option>
-                  <option value="Operations">Vận hành</option>
+                  <option value="Marketplace">{audienceGroupLabel.Marketplace}</option>
+                  <option value="Operations">{audienceGroupLabel.Operations}</option>
                 </select>
               </div>
             </div>

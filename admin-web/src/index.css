@@ -34,6 +34,20 @@ body {
   overflow-x: hidden;
 }
 
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(64, 110, 72, 0.25);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(219, 231, 221, 0.5);
+}
+
 button,
 input,
 select,
@@ -47,4 +61,185 @@ button {
 
 a {
   color: inherit;
+}
+
+.primary-button {
+  min-width: 172px;
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.18);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(27, 94, 32, 0.22);
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+:is(
+  .users-table-wrapper,
+  .activity-log-table-wrapper,
+  .analytics-table-wrapper,
+  .promotion-packages-table-wrapper,
+  .categories-table-wrapper,
+  .attributes-table-wrapper,
+  .mapping-table-wrapper,
+  .placement-slots-table-wrapper,
+  .boosted-posts-table-wrapper,
+  .posts-moderation-table-wrapper,
+  .reports-moderation-table-wrapper,
+  .promotions-table-wrapper,
+  .revenue-table-wrapper,
+  .customer-spending-table-wrapper,
+  .shops-table-wrapper,
+  .templates-table-wrapper,
+  .ai-insights-table-wrapper,
+  .export-history-table-wrapper
+) {
+  overflow: auto;
+  border: 1px solid #e7efe6;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+:is(
+  .users-table,
+  .activity-log-table,
+  .analytics-table,
+  .promotion-packages-table,
+  .categories-table,
+  .attributes-table,
+  .mapping-table,
+  .placement-slots-table,
+  .boosted-posts-table,
+  .posts-moderation-table,
+  .reports-moderation-table,
+  .promotions-table,
+  .revenue-table,
+  .customer-spending-table,
+  .shops-table,
+  .templates-table,
+  .ai-insights-table,
+  .export-history-table
+) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+:is(
+  .users-table,
+  .activity-log-table,
+  .analytics-table,
+  .promotion-packages-table,
+  .categories-table,
+  .attributes-table,
+  .mapping-table,
+  .placement-slots-table,
+  .boosted-posts-table,
+  .posts-moderation-table,
+  .reports-moderation-table,
+  .promotions-table,
+  .revenue-table,
+  .customer-spending-table,
+  .shops-table,
+  .templates-table,
+  .ai-insights-table,
+  .export-history-table
+) thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, #f7faf5 0%, #f2f7ef 100%);
+  color: #55695b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+:is(
+  .users-table,
+  .activity-log-table,
+  .analytics-table,
+  .promotion-packages-table,
+  .categories-table,
+  .attributes-table,
+  .mapping-table,
+  .placement-slots-table,
+  .boosted-posts-table,
+  .posts-moderation-table,
+  .reports-moderation-table,
+  .promotions-table,
+  .revenue-table,
+  .customer-spending-table,
+  .shops-table,
+  .templates-table,
+  .ai-insights-table,
+  .export-history-table
+) th,
+:is(
+  .users-table,
+  .activity-log-table,
+  .analytics-table,
+  .promotion-packages-table,
+  .categories-table,
+  .attributes-table,
+  .mapping-table,
+  .placement-slots-table,
+  .boosted-posts-table,
+  .posts-moderation-table,
+  .reports-moderation-table,
+  .promotions-table,
+  .revenue-table,
+  .customer-spending-table,
+  .shops-table,
+  .templates-table,
+  .ai-insights-table,
+  .export-history-table
+) td {
+  padding: 15px 16px;
+  border-bottom: 1px solid #edf3ea;
+  vertical-align: middle;
+}
+
+:is(
+  .users-table,
+  .activity-log-table,
+  .analytics-table,
+  .promotion-packages-table,
+  .categories-table,
+  .attributes-table,
+  .mapping-table,
+  .placement-slots-table,
+  .boosted-posts-table,
+  .posts-moderation-table,
+  .reports-moderation-table,
+  .promotions-table,
+  .revenue-table,
+  .customer-spending-table,
+  .shops-table,
+  .templates-table,
+  .ai-insights-table,
+  .export-history-table
+) tbody tr:hover td {
+  background-color: #fbfdf9;
 }

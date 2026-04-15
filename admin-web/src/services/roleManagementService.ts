@@ -30,8 +30,9 @@ const translateText = (value: string | null | undefined) => {
   }
 
   const replacements: Record<string, string> = {
-    Marketplace: "Marketplace",
+    Marketplace: "Kinh doanh trên sàn",
     Operations: "Vận hành",
+    "Mobile App": "Ứng dụng di động",
     "User Web + User App": "Web người dùng + ứng dụng người dùng",
     "Browse listings": "Xem bài đăng",
     "Save favorites": "Lưu yêu thích",
@@ -42,9 +43,23 @@ const translateText = (value: string | null | undefined) => {
     "Track personal purchase and contact history":
       "Theo dõi lịch sử mua hàng và liên hệ cá nhân",
     "Marketplace customer role used by buyers and visitors who explore ornamental plant listings.":
-      "Vai trò khách hàng marketplace dành cho người mua và người truy cập đang xem các bài đăng cây cảnh.",
+      "Vai trò khách hàng trên sàn dành cho người mua và người truy cập đang xem các bài đăng cây cảnh.",
+    "Seller-side business role for shop owners who list ornamental plants and manage promotion packages.":
+      "Vai trò người bán dành cho chủ shop đăng cây cảnh và quản lý các gói quảng bá.",
+    "Freelance collaborator role for plant care or support jobs available inside the marketplace ecosystem.":
+      "Vai trò cộng tác viên tự do cho các công việc chăm cây hoặc hỗ trợ trong hệ sinh thái GreenMarket.",
+    "Operational manager role for moderation-oriented tasks and report resolution flows.":
+      "Vai trò quản lý vận hành tập trung vào kiểm duyệt và xử lý các luồng báo cáo.",
+    "Internal operations support role for task handling and day-to-day support workload.":
+      "Vai trò nhân viên vận hành nội bộ, phụ trách xử lý tác vụ và hỗ trợ công việc hằng ngày.",
     "Manage shop profile and listings":
       "Quản lý hồ sơ shop và bài đăng",
+    "Manage storefront profile": "Quản lý hồ sơ gian hàng",
+    "Publish and update listings": "Đăng mới và cập nhật bài bán hàng",
+    "Review promotion package options": "Xem và đánh giá các gói quảng bá",
+    "Create and maintain listings": "Tạo và duy trì bài đăng",
+    "Manage shop content": "Quản lý nội dung shop",
+    "Request payout for host earnings": "Gửi yêu cầu rút doanh thu của chủ shop",
     "Purchase promotion packages": "Mua gói quảng bá",
     "Track shop analytics": "Theo dõi phân tích của shop",
     "Prepare content and media for listings":
@@ -54,6 +69,25 @@ const translateText = (value: string | null | undefined) => {
     "View moderation feedback": "Xem phản hồi kiểm duyệt",
     "View moderation reports and results":
       "Xem báo cáo và kết quả kiểm duyệt",
+    "Browse available jobs": "Xem các công việc có thể nhận",
+    "Accept or decline assignments": "Nhận hoặc từ chối công việc được giao",
+    "Submit work results": "Nộp kết quả công việc",
+    "Track assigned jobs": "Theo dõi công việc đã nhận",
+    "Upload deliverables": "Tải lên kết quả bàn giao",
+    "Request payout for completed work":
+      "Gửi yêu cầu thanh toán cho công việc đã hoàn thành",
+    "Review moderation queue": "Rà soát hàng đợi kiểm duyệt",
+    "Resolve reports": "Xử lý báo cáo",
+    "Track moderation quality": "Theo dõi chất lượng kiểm duyệt",
+    "Inspect report evidence": "Kiểm tra bằng chứng báo cáo",
+    "Approve or reject pending actions": "Phê duyệt hoặc từ chối tác vụ đang chờ",
+    "Monitor marketplace quality": "Theo dõi chất lượng vận hành của sàn",
+    "Handle daily moderation tasks": "Xử lý các tác vụ kiểm duyệt hằng ngày",
+    "Support promotion adjustments": "Hỗ trợ điều chỉnh chiến dịch quảng bá",
+    "Prepare operational exports": "Chuẩn bị các file xuất phục vụ vận hành",
+    "Execute moderation actions": "Thực hiện các thao tác kiểm duyệt",
+    "Assist promotion workflows": "Hỗ trợ xử lý các luồng quảng bá",
+    "Export logs and reports": "Xuất nhật ký và báo cáo",
     "Oversee promotion operations": "Giám sát vận hành quảng bá",
     "Access operational dashboards": "Truy cập dashboard điều hành",
     "Perform moderation workflows": "Thực hiện thao tác kiểm duyệt",
@@ -224,7 +258,7 @@ export const roleManagementService = {
       "/api/admin/business-roles",
       {
         defaultErrorMessage:
-          "Không thể tải danh mục vai trò nghiệp vụ của marketplace.",
+          "Không thể tải danh mục vai trò nghiệp vụ của sàn.",
       },
     );
 
@@ -253,7 +287,7 @@ export const roleManagementService = {
         method: "PUT",
         includeJsonContentType: true,
         defaultErrorMessage:
-          "Không thể cập nhật vai trò nghiệp vụ của marketplace.",
+          "Không thể cập nhật vai trò nghiệp vụ của sàn.",
         body: JSON.stringify(mapFormToApiPayload(existingRole, formData)),
       },
     );

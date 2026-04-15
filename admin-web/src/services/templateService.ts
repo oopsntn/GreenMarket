@@ -13,6 +13,7 @@ type TemplateApiItem = {
   templateName: string;
   templateType: TemplateType;
   templateContent: string;
+  previewText?: string;
   status: TemplateStatus;
   description?: string;
   usageNote?: string;
@@ -37,6 +38,7 @@ type TemplatePayload = {
   templateName: string;
   templateType: TemplateType;
   templateContent: string;
+  previewText: string;
   description: string;
   usageNote: string;
   status: TemplateStatus;
@@ -137,6 +139,25 @@ const normalizeDate = (value?: string, label?: string) => {
   });
 };
 
+const buildPreviewFallback = (
+  previewText: string | null | undefined,
+  content: string,
+) => {
+  const normalizedPreview = previewText?.trim();
+  if (normalizedPreview) {
+    return normalizedPreview;
+  }
+
+  const normalizedContent = content.trim();
+  if (!normalizedContent) {
+    return "--";
+  }
+
+  return normalizedContent.length > 180
+    ? `${normalizedContent.slice(0, 180).trim()}...`
+    : normalizedContent;
+};
+
 const translateText = (value: string | null | undefined, fallback: string) => {
   const normalized = value?.trim();
   if (!normalized) {
@@ -159,6 +180,10 @@ const mapTemplate = (item: TemplateApiItem): Template => ({
   name: translateText(item.templateName, "Mẫu chưa đặt tên"),
   type: item.templateType,
   content: translateText(item.templateContent, ""),
+  previewText: translateText(
+    buildPreviewFallback(item.previewText, item.templateContent),
+    buildPreviewFallback(item.previewText, item.templateContent),
+  ),
   status: item.status,
   description: translateText(item.description, "Chưa có mô tả ngắn."),
   usageNote: translateText(item.usageNote, "Chưa có hướng dẫn sử dụng."),
@@ -176,6 +201,7 @@ const resolveApiError = (error: unknown, fallbackMessage: string) => {
 const buildTemplatePayload = (payload: TemplateFormState): TemplatePayload => {
   const name = payload.name.trim();
   const content = payload.content.trim();
+  const previewText = payload.previewText.trim();
   const description = payload.description.trim();
   const usageNote = payload.usageNote.trim();
 
@@ -195,10 +221,15 @@ const buildTemplatePayload = (payload: TemplateFormState): TemplatePayload => {
     throw new Error("Hướng dẫn sử dụng là bắt buộc.");
   }
 
+  if (!previewText) {
+    throw new Error("Nội dung xem trước nhanh là bắt buộc.");
+  }
+
   return {
     templateName: name,
     templateType: payload.type,
     templateContent: content,
+    previewText,
     description,
     usageNote,
     status: payload.status,

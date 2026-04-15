@@ -52,37 +52,14 @@
 
 .activity-log-table {
   width: 100%;
-  min-width: 1320px;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.activity-log-table thead {
-  background-color: #f6faf5;
+  min-width: 1180px;
+  table-layout: auto;
 }
 
 .activity-log-table th,
 .activity-log-table td {
-  padding: 16px 14px;
-  border-bottom: 1px solid #eef3ea;
-  font-size: 14px;
   vertical-align: middle;
   text-align: left;
-}
-
-.activity-log-table th {
-  color: #486150;
-  font-weight: 700;
-}
-
-.activity-log-table td {
-  color: #223127;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.activity-log-table tbody tr:hover {
-  background-color: #fbfdfb;
 }
 
 .activity-log-cell {
@@ -99,10 +76,11 @@
 .activity-log-detail-button {
   border: none;
   border-radius: 12px;
+  min-width: 110px;
   padding: 10px 14px;
   background: #edf4ec;
   color: #345a3d;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
