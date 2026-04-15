@@ -15,6 +15,9 @@ interface Shop {
   shopId: number;
   shopName: string;
   shopStatus: string;
+  shopIsVipActive?: boolean;
+  shopVipStartedAt?: string | null;
+  shopVipExpiresAt?: string | null;
   shopDescription?: string;
   shopPhone?: string;
   shopLocation?: string;
@@ -118,6 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setShop(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    window.location.href = '/login';
   };
 
   const updateUser = (newData: Partial<User>) => {

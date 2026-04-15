@@ -1,15 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getPublicShop, recordShopContactClick } from '../services/api';
-import { ShoppingBag, MapPin, Phone, Info, Loader2, MessageCircle, Map as MapIcon, ExternalLink, ShieldCheck, ZoomIn } from 'lucide-react';
+import { ShoppingBag, MapPin, Phone, Info, Loader2, MessageCircle, Map as MapIcon, ExternalLink, ShieldCheck, ZoomIn, Facebook, Instagram, Youtube } from 'lucide-react';
 import ImageModal from '../components/ImageModal';
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
-
-const toMediaUrl = (url?: string | null) => {
-  if (!url) return '';
-  return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-};
+import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 const ShopDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -73,7 +67,7 @@ const ShopDetail: React.FC = () => {
         <div className="bg-white p-8 md:p-12 rounded-[3.5rem] relative overflow-hidden border border-slate-200 shadow-xl">
           {heroImage ? (
             <div className="absolute inset-0 -z-10">
-              <img src={toMediaUrl(heroImage)} alt="Cover" className="w-full h-full object-cover opacity-10" />
+              <img src={resolveImageUrl(heroImage)} alt="Cover" className="w-full h-full object-cover opacity-10" />
               <div className="absolute inset-0 bg-linear-to-t from-white to-transparent" />
             </div>
           ) : (
@@ -114,7 +108,7 @@ const ShopDetail: React.FC = () => {
                     </div>
                   </div>
                   {shopPrimaryPhone && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center flex-wrap gap-2">
                       <a
                         href={`https://zalo.me/${shopPrimaryPhone}`}
                         target="_blank"
@@ -124,6 +118,39 @@ const ShopDetail: React.FC = () => {
                       >
                         <MessageCircle className="w-4 h-4" /> Zalo
                       </a>
+
+                      {shop.shopFacebook && (
+                        <a
+                          href={shop.shopFacebook}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1877F2]/5 border border-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2] hover:text-white transition-all text-xs font-bold uppercase tracking-wider"
+                        >
+                          <Facebook className="w-4 h-4" /> Facebook
+                        </a>
+                      )}
+
+                      {shop.shopInstagram && (
+                        <a
+                          href={shop.shopInstagram}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#E4405F]/5 border border-[#E4405F]/10 text-[#E4405F] hover:bg-[#E4405F] hover:text-white transition-all text-xs font-bold uppercase tracking-wider"
+                        >
+                          <Instagram className="w-4 h-4" /> Instagram
+                        </a>
+                      )}
+
+                      {shop.shopYoutube && (
+                        <a
+                          href={shop.shopYoutube}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FF0000]/5 border border-[#FF0000]/10 text-[#FF0000] hover:bg-[#FF0000] hover:text-white transition-all text-xs font-bold uppercase tracking-wider"
+                        >
+                          <Youtube className="w-4 h-4" /> Youtube
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>
@@ -149,7 +176,7 @@ const ShopDetail: React.FC = () => {
                         onClick={() => setPreviewImageIndex(index)}
                       >
                         <img
-                          src={toMediaUrl(imageUrl)}
+                          src={resolveImageUrl(imageUrl)}
                           alt={`Anh nha vuon ${index + 1}`}
                           className="w-full h-full object-cover group-hover/image:scale-110 transition-transform duration-500"
                         />
@@ -231,7 +258,7 @@ const ShopDetail: React.FC = () => {
                   <div className="aspect-square bg-slate-900 overflow-hidden relative">
                     {post.images && post.images.length > 0 ? (
                       <img
-                        src={toMediaUrl(post.images[0].imageUrl)}
+                        src={resolveImageUrl(post.images[0].imageUrl)}
                         alt={post.postTitle}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
@@ -272,7 +299,7 @@ const ShopDetail: React.FC = () => {
 
       <ImageModal
         isOpen={previewImageIndex !== null}
-        images={shopGalleryImages.map(toMediaUrl)}
+        images={shopGalleryImages.map(img => resolveImageUrl(img))}
         initialIndex={previewImageIndex || 0}
         onClose={() => setPreviewImageIndex(null)}
         alt={shop.shopName}

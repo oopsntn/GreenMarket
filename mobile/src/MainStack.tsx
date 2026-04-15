@@ -7,6 +7,7 @@ import HomeScreen from './components/Home/screen/HomeScreen'
 
 import RegisterShopScreen from './components/shop/screen/RegisterShop'
 import EditShopScreen from './components/shop/screen/EditShopScreen'
+import ShopDashboardScreen from './components/shop/screen/ShopDashboardScreen'
 import CreatePostLayout from './components/post/screen/CreatePostScreen'
 import CreateReportScreen from './components/report/screen/CreateReportService'
 import BrowseShopsScreen from './components/shop/screen/BrowseShopsScreen'
@@ -14,6 +15,7 @@ import PublicShopDetailScreen from './components/shop/screen/PublicShopDetailScr
 import PostDetailScreen from './components/post/screen/PostDetailScreen'
 import SavedPostsScreen from './components/post/screen/SavedPostsScreen'
 import PromotePostScreen from './components/payment/screen/PromotePostScreen'
+import CollaboratorNavigator from './collaborator/navigation/CollaboratorNavigator'
 
 const Stack = createNativeStackNavigator()
 
@@ -28,6 +30,7 @@ const MainStack = () => {
 
             <Stack.Screen name="RegisterShop" component={RegisterShopScreen} />
             <Stack.Screen name="MyShop" component={ShoDetailScreen} />
+            <Stack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
             <Stack.Screen name="EditShop" component={EditShopScreen} />
             <Stack.Screen name="BrowseShops" component={BrowseShopsScreen} />
             <Stack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} />
@@ -38,7 +41,7 @@ const MainStack = () => {
             <Stack.Screen name="SavedPosts" component={SavedPostsScreen} />
             <Stack.Screen name="CreateReport" component={CreateReportScreen} />
             <Stack.Screen name="PromotePost" component={PromotePostScreen} />
-
+            <Stack.Screen name="CollaboratorRoot" component={CollaboratorNavigator} />
         </Stack.Navigator>
     )
 }

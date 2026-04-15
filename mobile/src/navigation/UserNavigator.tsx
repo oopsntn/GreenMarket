@@ -22,6 +22,7 @@ import ShopDashboardScreen from '@/components/shop/screen/ShopDashboardScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator();
 
 // Home Stack
 const HomeStackNavigator = () => {

@@ -19,9 +19,7 @@ const CustomAlert = (
             if (cancelButton.onPress) cancelButton.onPress();
         }
     } else {
-        // If no buttons provided, add default OK button
-        const buttonsToShow = buttons.length > 0 ? buttons : [{ text: 'OK', onPress: () => {} }];
-        Alert.alert(title, message, buttonsToShow);
+        Alert.alert(title, message, buttons, { cancelable: true});
     }
 };
 

@@ -1,4 +1,3 @@
-import { emptyPromotionPackageForm } from "../mock-data/promotionPackages";
 import { apiClient } from "../lib/apiClient";
 import type { PlacementSlotApiResponse } from "../types/placementSlot";
 import type {
@@ -13,6 +12,16 @@ type PromotionPackageSlotOption = {
   id: number;
   code: string;
   label: PromotionPackage["slot"];
+};
+
+const emptyPromotionPackageForm: PromotionPackageFormState = {
+  name: "",
+  slot: "Home Top",
+  durationDays: 7,
+  price: "",
+  maxPosts: 1,
+  displayQuota: 1000,
+  description: "",
 };
 
 const normalizeText = (value: string) => value.trim();
@@ -48,7 +57,7 @@ const mapApiPackageToUi = (
 ): PromotionPackage => {
   return {
     id: item.promotionPackageId,
-    name: item.promotionPackageTitle?.trim() || "Untitled Package",
+    name: item.promotionPackageTitle?.trim() || "Gói chưa đặt tên",
     slot: mapSlotToUi(item.slotCode ?? null, item.slotTitle ?? null),
     durationDays: item.promotionPackageDurationDays ?? 1,
     price: formatCurrencyLabel(item.promotionPackagePrice),
@@ -65,27 +74,27 @@ const validatePromotionPackageForm = (
   excludeId?: number,
 ) => {
   if (!normalizeText(formData.name)) {
-    throw new Error("Package name is required.");
+    throw new Error("Tên gói là bắt buộc.");
   }
 
   if (!normalizeText(formData.price)) {
-    throw new Error("Package price is required.");
+    throw new Error("Giá gói là bắt buộc.");
   }
 
   if (!Number.isFinite(formData.durationDays) || formData.durationDays < 1) {
-    throw new Error("Duration must be at least 1 day.");
+    throw new Error("Thời lượng phải lớn hơn hoặc bằng 1 ngày.");
   }
 
   if (!Number.isFinite(formData.maxPosts) || formData.maxPosts < 1) {
-    throw new Error("Max posts must be at least 1.");
+    throw new Error("Số bài đăng tối đa phải lớn hơn hoặc bằng 1.");
   }
 
   if (!Number.isFinite(formData.displayQuota) || formData.displayQuota < 1) {
-    throw new Error("Display quota must be at least 1.");
+    throw new Error("Quota hiển thị phải lớn hơn hoặc bằng 1.");
   }
 
   if (parseCurrencyValue(formData.price) <= 0) {
-    throw new Error("Package price must be greater than 0.");
+    throw new Error("Giá gói phải lớn hơn 0.");
   }
 
   const normalizedName = normalizeText(formData.name).toLowerCase();
@@ -96,7 +105,7 @@ const validatePromotionPackageForm = (
   });
 
   if (isDuplicateName) {
-    throw new Error("Package name already exists. Please use a unique name.");
+    throw new Error("Tên gói đã tồn tại. Vui lòng nhập tên khác.");
   }
 };
 
@@ -128,7 +137,7 @@ export const promotionPackageService = {
     const data = await apiClient.request<PromotionPackageApiResponse[]>(
       "/api/admin/promotion-packages",
       {
-        defaultErrorMessage: "Unable to load promotion packages.",
+        defaultErrorMessage: "Không thể tải danh sách gói quảng bá.",
       },
     );
 
@@ -161,29 +170,29 @@ export const promotionPackageService = {
 
     return [
       {
-        title: "Total Packages",
+        title: "Tổng gói quảng bá",
         value: String(packages.length),
-        subtitle: "All configured promotion plans",
+        subtitle: "Tất cả gói quảng bá đã cấu hình",
       },
       {
-        title: "Active Packages",
+        title: "Gói đang mở bán",
         value: String(activeCount),
-        subtitle: "Currently available for sale",
+        subtitle: "Đang sẵn sàng bán cho khách hàng",
       },
       {
-        title: "Disabled Packages",
+        title: "Gói tạm ngưng",
         value: String(disabledCount),
-        subtitle: "Temporarily hidden from package sales",
+        subtitle: "Tạm thời ẩn khỏi danh sách bán",
       },
       {
-        title: "Peak Price",
+        title: "Giá cao nhất",
         value: highestPrice.toLocaleString("en-US"),
-        subtitle: "Highest package price across all active and disabled plans",
+        subtitle: "Mức giá cao nhất trong các gói hiện có",
       },
       {
-        title: "Total Quota",
+        title: "Tổng quota",
         value: totalQuota.toLocaleString("en-US"),
-        subtitle: "Combined delivery quota across all configured packages",
+        subtitle: "Tổng lượng hiển thị của tất cả gói đã cấu hình",
       },
     ];
   },
@@ -197,7 +206,7 @@ export const promotionPackageService = {
     const targetSlot = slotOptions.find((item) => item.label === formData.slot);
 
     if (!targetSlot) {
-      throw new Error("Selected placement slot could not be found.");
+      throw new Error("Không tìm thấy vị trí hiển thị đã chọn.");
     }
 
     const data = await apiClient.request<PromotionPackageApiResponse>(
@@ -205,7 +214,7 @@ export const promotionPackageService = {
       {
         method: "POST",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to create promotion package.",
+        defaultErrorMessage: "Không thể tạo gói quảng bá.",
         body: JSON.stringify(buildPackagePayload(formData, targetSlot.id, true)),
       },
     );
@@ -230,7 +239,7 @@ export const promotionPackageService = {
     const targetSlot = slotOptions.find((item) => item.label === formData.slot);
 
     if (!targetSlot) {
-      throw new Error("Selected placement slot could not be found.");
+      throw new Error("Không tìm thấy vị trí hiển thị đã chọn.");
     }
 
     const data = await apiClient.request<PromotionPackageApiResponse>(
@@ -238,7 +247,7 @@ export const promotionPackageService = {
       {
         method: "PUT",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update promotion package.",
+        defaultErrorMessage: "Không thể cập nhật gói quảng bá.",
         body: JSON.stringify(
           buildPackagePayload(
             formData,
@@ -273,7 +282,7 @@ export const promotionPackageService = {
     );
 
     if (!targetSlot) {
-      throw new Error("Selected placement slot could not be found.");
+      throw new Error("Không tìm thấy vị trí hiển thị đã chọn.");
     }
 
     const data = await apiClient.request<PromotionPackageApiResponse>(
@@ -281,7 +290,7 @@ export const promotionPackageService = {
       {
         method: "PUT",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update promotion package status.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái gói quảng bá.",
         body: JSON.stringify(
           buildPackagePayload(
             {

@@ -164,12 +164,14 @@ const useCreatePost = () => {
     }
 
     const submitForm = async () => {
+
         if (!validateForm()) {
             return
         }
 
         setSubmitting(true)
         try {
+
             //1. Upload toan bo media len server
             const mediaUris = media.map((m) => m.uri)
             const uploadedMedia = await postService.uploadMedia(mediaUris)

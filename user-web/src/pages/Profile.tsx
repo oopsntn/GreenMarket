@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings } from 'lucide-react';
+import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings, Heart, Wallet, LayoutDashboard } from 'lucide-react';
 import { updateProfile, updateShop, getProfile, uploadImages, requestShopVerificationOTP, verifyShopEmailOTP, addShopPhoneOTP, deleteShopPhone } from '../services/api';
 import clsx from 'clsx';
 import AddressPicker from '../components/AddressPicker';
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '');
+import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 const Profile: React.FC = () => {
   const { user, shop, updateUser, refreshShop } = useAuth();
+  const isGardenOwner = shop?.shopStatus === 'active';
 
   // User Fields
   const [displayName, setDisplayName] = useState('');
@@ -84,11 +85,6 @@ const Profile: React.FC = () => {
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
-  };
-
-  const toMediaUrl = (url?: string | null) => {
-    if (!url) return '';
-    return url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -322,7 +318,7 @@ const Profile: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {shopGalleryImages.map((url, i) => (
                   <div key={i} className="aspect-square rounded-2xl overflow-hidden border border-slate-100 shadow-sm group">
-                    <img src={toMediaUrl(url)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <img src={resolveImageUrl(url)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                   </div>
                 ))}
               </div>
@@ -362,6 +358,78 @@ const Profile: React.FC = () => {
             </div>
           </div>
         )}
+
+        <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div className="p-2.5 bg-emerald-50 rounded-xl">
+              <Settings className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">
+                Liên kết tiện ích
+              </h3>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Link
+              to="/packages"
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Gói dịch vụ</p>
+              </div>
+              <p className="text-xs text-slate-500">Xem bảng giá và quyền lợi các gói.</p>
+            </Link>
+
+            <Link
+              to="/saved-posts"
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Heart className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Bài đã lưu</p>
+              </div>
+              <p className="text-xs text-slate-500">Mở lại nhanh các bài bạn đã đánh dấu.</p>
+            </Link>
+
+            <Link
+              to="/my-posts"
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Store className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Trung tâm quản lý</p>
+              </div>
+              <p className="text-xs text-slate-500">Quản lý bài đăng và giao dịch cá nhân.</p>
+            </Link>
+
+            {isGardenOwner ? (
+              <Link
+                to="/owner-dashboard"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <LayoutDashboard className="w-4 h-4 text-emerald-600" />
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Dashboard chủ vườn</p>
+                </div>
+                <p className="text-xs text-slate-500">Theo dõi KPI và hiệu quả đẩy bài.</p>
+              </Link>
+            ) : (
+              <Link
+                to="/register-shop"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Store className="w-4 h-4 text-emerald-600" />
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Lên shop</p>
+                </div>
+                <p className="text-xs text-slate-500">Đăng ký nhà vườn để mở thêm quyền bán hàng.</p>
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -470,7 +538,7 @@ const Profile: React.FC = () => {
                   {shopGalleryImages.map((imageUrl, index) => (
                     <div key={`${imageUrl}-${index}`} className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 aspect-square group">
                       <img
-                        src={toMediaUrl(imageUrl)}
+                        src={resolveImageUrl(imageUrl)}
                         alt={`Anh vuon ${index + 1}`}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       />
@@ -643,7 +711,7 @@ const Profile: React.FC = () => {
                 <div className="w-40 h-40 rounded-[2.5rem] border-8 border-slate-50 overflow-hidden bg-white transition-all shadow-2xl flex items-center justify-center relative">
                   {shopGalleryImages[0] ? (
                     <img
-                      src={toMediaUrl(shopGalleryImages[0])}
+                      src={resolveImageUrl(shopGalleryImages[0])}
                       alt="Shop"
                       className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700"
                     />
@@ -660,7 +728,7 @@ const Profile: React.FC = () => {
                   >
                     {avatarUrl ? (
                       <img
-                        src={toMediaUrl(avatarUrl)}
+                        src={resolveImageUrl(avatarUrl)}
                         alt="Avatar"
                         className="w-full h-full object-cover"
                       />
@@ -707,10 +775,6 @@ const Profile: React.FC = () => {
                 <p className="text-xs font-black text-slate-700 italic">
                   {(user as any)?.userRegisteredAt ? new Date((user as any).userRegisteredAt).toLocaleDateString('vi-VN') : 'Dân cư mới'}
                 </p>
-              </div>
-              <div className="text-right space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Uy tín</span>
-                <p className="text-xs font-black text-emerald-600 italic">Tuyệt vời</p>
               </div>
             </div>
 

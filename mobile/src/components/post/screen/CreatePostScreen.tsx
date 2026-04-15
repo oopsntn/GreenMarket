@@ -116,6 +116,7 @@ const CreatePostLayout = () => {
                 {isShop && shop?.shopLocation ? (
                     <View style={styles.locationBlock}>
                         <Input
+                            testID="create-post-location-input"
                             label="Location"
                             value={state.formData.postLocation}
                             onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}
@@ -144,17 +145,40 @@ const CreatePostLayout = () => {
                         placeholder="Example: Cau Giay, Hanoi"
                     />
                 )}
-
-                <Input
-                    testID="create-post-contact-phone-input"
-                    label="Contact phone number"
-                    type="phone-pad"
-                    value={state.formData.postContactPhone}
-                    onChangeText={(txt) => actions.setFormData({ ...state.formData, postContactPhone: txt })}
-                    icon={<Phone size={16} color="#10b981" />}
-                    placeholder="Leave blank to use the default number"
-                />
-
+                {isShop && shop?.shopPhone ? (
+                    <View style={styles.locationBlock}>
+                        <Input
+                            testID="create-post-contact-phone-input"
+                            label="Contact phone number"
+                            type="phone-pad"
+                            value={state.formData.postContactPhone}
+                            onChangeText={(txt) => actions.setFormData({ ...state.formData, postContactPhone: txt })}
+                            icon={<Phone size={16} color="#10b981" />}
+                            placeholder="Leave blank to use the default number"
+                        />
+                        <TouchableOpacity
+                            style={styles.useShopLocationBtn}
+                            onPress={() =>
+                                actions.setFormData({
+                                    ...state.formData,
+                                    postContactPhone: shop.shopPhone || '',
+                                })
+                            }
+                        >
+                            <Text style={styles.useShopLocationText}>Use shop phone</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <Input
+                        testID="create-post-contact-phone-input"
+                        label="Contact phone number"
+                        type="phone-pad"
+                        value={state.formData.postContactPhone}
+                        onChangeText={(txt) => actions.setFormData({ ...state.formData, postContactPhone: txt })}
+                        icon={<Phone size={16} color="#10b981" />}
+                        placeholder="Leave blank to use the default number"
+                    />
+                )}
 
             </Card>
 

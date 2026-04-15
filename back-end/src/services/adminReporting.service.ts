@@ -1,16 +1,20 @@
 import { desc, eq } from "drizzle-orm";
+import ExcelJS from "exceljs";
 import { db } from "../config/db.ts";
 import {
     attributes,
     categories,
     eventLogs,
     paymentTxn,
-    placementSlots,
     posts,
     promotionPackages,
     reports,
     users,
 } from "../models/schema/index.ts";
+import {
+    adminPlacementSlotCatalogService,
+    type AdminPlacementSlotCatalogItem,
+} from "./adminPlacementSlotCatalog.service.ts";
 import { adminPromotionService } from "./adminPromotion.service.ts";
 
 type DateRange = {
@@ -53,6 +57,8 @@ type AnalyticsDailyTrafficPoint = {
     slots: AnalyticsDailyTrafficSlot[];
 };
 
+type ReportingSlotCatalogItem = AdminPlacementSlotCatalogItem;
+
 type RevenueCard = {
     title: string;
     value: string;
@@ -65,7 +71,6 @@ type RevenueRow = {
     slot: string;
     orders: number;
     revenue: string;
-    growth: string;
 };
 
 type CustomerSpendingCard = {
@@ -115,6 +120,26 @@ type ExportFileResult = {
     fileName: string;
     mimeType: string;
     content: string;
+    contentEncoding: "utf-8" | "base64";
+};
+
+type ExportColumn = {
+    key: string;
+    header: string;
+    width?: number;
+};
+
+type AnalyticsSummaryResponse = {
+    kpiCards: AnalyticsKpiCard[];
+    topPlacements: TopPlacement[];
+    dailyTraffic: AnalyticsDailyTrafficPoint[];
+    slotCatalog: ReportingSlotCatalogItem[];
+};
+
+type RevenueSummaryResponse = {
+    summaryCards: RevenueCard[];
+    rows: RevenueRow[];
+    slotCatalog: ReportingSlotCatalogItem[];
 };
 
 type PaymentOrder = {
@@ -202,6 +227,21 @@ const enumerateDateRange = (from: Date, to: Date) => {
     return days;
 };
 
+const getPreviousRange = (range: DateRange): DateRange | null => {
+    if (!range.from || !range.to) {
+        return null;
+    }
+
+    const durationMs = range.to.getTime() - range.from.getTime();
+    const previousTo = new Date(range.from.getTime() - 1);
+    const previousFrom = new Date(previousTo.getTime() - durationMs);
+
+    return {
+        from: previousFrom,
+        to: previousTo,
+    };
+};
+
 const escapeDelimitedValue = (value: unknown, delimiter: "," | "\t") => {
     const text = String(value ?? "");
     if (delimiter === "\t") {
@@ -218,18 +258,24 @@ const escapeDelimitedValue = (value: unknown, delimiter: "," | "\t") => {
 const toDelimitedContent = (
     rows: Array<Record<string, unknown>>,
     format: "CSV" | "XLSX",
+    columns?: ExportColumn[],
 ) => {
-    if (rows.length === 0) {
+    const delimiter: "," | "\t" = format === "CSV" ? "," : "\t";
+    const headers = columns?.length
+        ? columns.map((column) => column.header)
+        : rows.length > 0
+            ? Object.keys(rows[0])
+            : [];
+
+    if (headers.length === 0) {
         return "";
     }
 
-    const delimiter: "," | "\t" = format === "CSV" ? "," : "\t";
-    const headers = Object.keys(rows[0]);
     const lines = [
         headers.join(delimiter),
         ...rows.map((row) =>
-            headers
-                .map((header) => escapeDelimitedValue(row[header], delimiter))
+            (columns?.length ? columns : headers.map((header) => ({ key: header, header })))
+                .map((column) => escapeDelimitedValue(row[column.key], delimiter))
                 .join(delimiter),
         ),
     ];
@@ -237,9 +283,66 @@ const toDelimitedContent = (
     return lines.join("\n");
 };
 
-const getGeneratedByLabel = (generatedBy: string) => generatedBy || "System Administrator";
+const buildXlsxBase64 = async (
+    rows: Array<Record<string, unknown>>,
+    sheetName: string,
+    columns?: ExportColumn[],
+) => {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "GreenMarket Admin";
+    workbook.lastModifiedBy = "GreenMarket Admin";
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    const worksheet = workbook.addWorksheet((sheetName || "Sheet1").slice(0, 31));
+    const resolvedColumns: ExportColumn[] = columns?.length
+        ? columns
+        : rows.length > 0
+            ? Object.keys(rows[0]).map((key) => ({ key, header: key }))
+            : [];
+
+    if (resolvedColumns.length === 0) {
+        return Buffer.from(await workbook.xlsx.writeBuffer()).toString("base64");
+    }
+
+    worksheet.addRow(resolvedColumns.map((column) => column.header));
+    rows.forEach((row) => {
+        worksheet.addRow(resolvedColumns.map((column) => row[column.key] ?? ""));
+    });
+
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.columns = resolvedColumns.map((column) => ({
+        key: column.key,
+        width: column.width ?? Math.max(16, column.header.length + 4),
+    }));
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(buffer).toString("base64");
+};
+
+const buildExportContent = (
+    rows: Array<Record<string, unknown>>,
+    format: "CSV" | "XLSX",
+    sheetName: string,
+    columns?: ExportColumn[],
+) => {
+    if (format === "XLSX") {
+        return {
+            content: "",
+            contentEncoding: "base64" as const,
+        };
+    }
+
+    return {
+        content: toDelimitedContent(rows, format, columns),
+        contentEncoding: "utf-8" as const,
+    };
+};
+
+const getGeneratedByLabel = (generatedBy: string) => generatedBy || "Quản trị viên hệ thống";
 
 const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
+    const slotCatalog = await adminPlacementSlotCatalogService.getCatalog();
     const transactions = await db
         .select({
             paymentTxnId: paymentTxn.paymentTxnId,
@@ -266,17 +369,9 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
         slotByPackageId.set(item.promotionPackageId, item.promotionPackageSlotId);
     });
 
-    const actualPlacementSlots = await db.select().from(placementSlots);
     const slotNameById = new Map<number, string>();
-    actualPlacementSlots.forEach((item) => {
-        const normalized = `${item.placementSlotCode ?? ""} ${item.placementSlotTitle ?? ""}`.toLowerCase();
-        if (normalized.includes("search")) {
-            slotNameById.set(item.placementSlotId, "Search Boost");
-        } else if (normalized.includes("category")) {
-            slotNameById.set(item.placementSlotId, "Category Top");
-        } else {
-            slotNameById.set(item.placementSlotId, "Home Top");
-        }
+    slotCatalog.forEach((item) => {
+        slotNameById.set(item.id, item.label);
     });
 
     return transactions
@@ -284,9 +379,9 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
         .map((item) => ({
             paymentTxnId: item.paymentTxnId,
             userId: item.paymentTxnUserId,
-            customerName: item.userDisplayName?.trim() || `User #${item.paymentTxnUserId}`,
-            email: item.userEmail?.trim() || "No email",
-            packageName: item.packageTitle?.trim() || "Unknown Package",
+            customerName: item.userDisplayName?.trim() || `Người dùng #${item.paymentTxnUserId}`,
+            email: item.userEmail?.trim() || "Chưa có email",
+            packageName: item.packageTitle?.trim() || "Chưa xác định gói",
             slot:
                 slotNameById.get(slotByPackageId.get(item.packageId ?? -1) ?? -1) ||
                 "Home Top",
@@ -308,7 +403,7 @@ const buildExportHistoryItem = (
     format,
     generatedBy: getGeneratedByLabel(generatedBy),
     date: formatDate(new Date()),
-    status: "Completed",
+        status: "Completed",
 });
 
 const mapEventLogToHistoryItem = (
@@ -325,11 +420,11 @@ const mapEventLogToHistoryItem = (
 
     return {
         id: item.eventLogId,
-        reportName: typeof meta.reportName === "string" ? meta.reportName : "Export",
+        reportName: typeof meta.reportName === "string" ? meta.reportName : "Xuất dữ liệu",
         type: reportType,
         format,
         generatedBy:
-            typeof meta.generatedBy === "string" ? meta.generatedBy : "System Administrator",
+            typeof meta.generatedBy === "string" ? meta.generatedBy : "Quản trị viên hệ thống",
         date: formatDate(item.eventLogEventTime),
         status,
     };
@@ -346,8 +441,10 @@ export const adminReportingService = {
             adminPromotionService.getPromotions(),
         ]);
 
-        const filteredUsers = allUsers.filter((item) => isDateInRange(item.userCreatedAt, range));
-        const filteredPosts = allPosts.filter((item) => isDateInRange(item.postCreatedAt, range));
+        const filteredUsers = allUsers.filter((item) =>
+            item.userStatus?.toLowerCase() !== "deleted",
+        );
+        const filteredPosts = allPosts.filter((item) => item.postStatus !== "deleted");
         const filteredReports = allReports.filter((item) => isDateInRange(item.reportCreatedAt, range));
         const filteredPayments = allPayments.filter((item) => isDateInRange(item.createdAt, range));
 
@@ -355,30 +452,34 @@ export const adminReportingService = {
         const activePromotions = promotions.filter((item) => item.status === "Active").length;
 
         const statCards: DashboardStatCard[] = [
-            { title: "Total Users", value: formatNumber(filteredUsers.length) },
-            { title: "Total Posts", value: formatNumber(filteredPosts.length) },
+            { title: "Tổng người dùng", value: formatNumber(filteredUsers.length) },
+            { title: "Tổng bài đăng", value: formatNumber(filteredPosts.length) },
             {
-                title: "Pending Reports",
+                title: "Báo cáo chờ xử lý",
                 value: formatNumber(
                     filteredReports.filter((item) => item.reportStatus === "pending").length,
                 ),
             },
-            { title: "Revenue", value: formatCurrency(revenue) },
+            { title: "Doanh thu", value: formatCurrency(revenue) },
         ];
 
         const summary: DashboardSummary = {
-            title: "System Summary",
-            description: `${activePromotions} active promotion(s) and ${filteredPayments.length} successful payment(s) were recorded in the selected period.`,
+            title: "Tóm tắt hệ thống",
+            description:
+                activePromotions > 0 || filteredPayments.length > 0
+                    ? `Hiện có ${formatNumber(activePromotions)} chiến dịch quảng bá đang hoạt động và ${formatNumber(filteredPayments.length)} giao dịch thanh toán thành công trong giai đoạn đã chọn.`
+                    : "Chưa ghi nhận thêm chiến dịch quảng bá hoặc giao dịch thanh toán thành công trong giai đoạn đã chọn.",
         };
 
         return { statCards, summary };
     },
 
-    async getAnalyticsSummary(fromDate?: string, toDate?: string) {
+    async getAnalyticsSummary(fromDate?: string, toDate?: string): Promise<AnalyticsSummaryResponse> {
         const range = parseDateRange(fromDate, toDate);
-        const [boostedPosts, payments] = await Promise.all([
+        const [boostedPosts, payments, slotCatalog] = await Promise.all([
             adminPromotionService.getBoostedPosts(),
             getSuccessfulPayments(),
+            adminPlacementSlotCatalogService.getCatalog(),
         ]);
 
         const filteredBoostedPosts = boostedPosts.filter((item) =>
@@ -393,26 +494,52 @@ export const adminReportingService = {
         const conversions = filteredPayments.length;
 
         const placementMap = new Map<string, { impressions: number; clicks: number; revenue: number }>();
+        const revenueBySlot = new Map<string, number>();
+
+        filteredPayments.forEach((item) => {
+            revenueBySlot.set(item.slot, (revenueBySlot.get(item.slot) ?? 0) + item.amount);
+        });
+
         filteredBoostedPosts.forEach((item) => {
             const current = placementMap.get(item.slot) ?? { impressions: 0, clicks: 0, revenue: 0 };
             current.impressions += item.impressions;
             current.clicks += item.clicks;
-            current.revenue += payments
-                .filter((payment) => payment.slot === item.slot)
-                .reduce((sum, payment) => sum + payment.amount, 0);
             placementMap.set(item.slot, current);
         });
 
-        const topPlacements: TopPlacement[] = Array.from(placementMap.entries()).map(
-            ([slot, item], index) => ({
+        revenueBySlot.forEach((slotRevenue, slot) => {
+            const current = placementMap.get(slot) ?? {
+                impressions: 0,
+                clicks: 0,
+                revenue: 0,
+            };
+            current.revenue = slotRevenue;
+            placementMap.set(slot, current);
+        });
+
+        const activeSlotLabels = slotCatalog
+            .map((item) => item.label)
+            .filter((label) => placementMap.has(label));
+        const activeTrafficSlotLabels = slotCatalog
+            .map((item) => item.label)
+            .filter((label) =>
+                filteredBoostedPosts.some(
+                    (item) => item.slot === label && item.impressions > 0,
+                ),
+            );
+
+        const topPlacements: TopPlacement[] = activeSlotLabels.map((slot, index) => {
+            const item = placementMap.get(slot) ?? { impressions: 0, clicks: 0, revenue: 0 };
+
+            return {
                 id: index + 1,
                 slot,
                 impressions: formatNumber(item.impressions),
                 clicks: formatNumber(item.clicks),
                 ctr: formatPercent(item.impressions > 0 ? (item.clicks / item.impressions) * 100 : 0),
                 revenue: formatCurrency(item.revenue),
-            }),
-        );
+            };
+        });
 
         const fallbackFrom = range.from
             ?? new Date(`${filteredBoostedPosts[0]?.startDate ?? formatDate(new Date())}T00:00:00`);
@@ -497,7 +624,7 @@ export const adminReportingService = {
             ),
         ).map((day) => {
             const dayKey = formatDate(day);
-            const slots = Array.from(placementMap.keys()).map((slot) => ({
+            const slots = activeTrafficSlotLabels.map((slot) => ({
                 slot,
                 impressions: dailyTrafficMap.get(`${dayKey}::${slot}`)?.impressions ?? 0,
             }));
@@ -515,17 +642,22 @@ export const adminReportingService = {
             { title: "Revenue", value: formatCurrency(revenue), change: "Paid promotion revenue" },
         ];
 
-        return { kpiCards, topPlacements, dailyTraffic };
+        return { kpiCards, topPlacements, dailyTraffic, slotCatalog };
     },
 
-    async getRevenueSummary(fromDate?: string, toDate?: string) {
+    async getRevenueSummary(fromDate?: string, toDate?: string): Promise<RevenueSummaryResponse> {
         const range = parseDateRange(fromDate, toDate);
-        const payments = (await getSuccessfulPayments()).filter((item) =>
-            isDateInRange(item.createdAt, range),
-        );
+        const [payments, slotCatalog] = await Promise.all([
+            getSuccessfulPayments(),
+            adminPlacementSlotCatalogService.getCatalog(),
+        ]);
+        const filteredPayments = payments.filter((item) => isDateInRange(item.createdAt, range));
 
         const grouped = new Map<string, { packageName: string; slot: string; orders: number; revenue: number }>();
-        payments.forEach((item) => {
+        const revenueBySlot = new Map<string, number>();
+        const packageNames = new Set<string>();
+
+        filteredPayments.forEach((item) => {
             const key = `${item.packageName}::${item.slot}`;
             const current = grouped.get(key) ?? {
                 packageName: item.packageName,
@@ -536,6 +668,8 @@ export const adminReportingService = {
             current.orders += 1;
             current.revenue += item.amount;
             grouped.set(key, current);
+            revenueBySlot.set(item.slot, (revenueBySlot.get(item.slot) ?? 0) + item.amount);
+            packageNames.add(item.packageName);
         });
 
         const rows: RevenueRow[] = Array.from(grouped.values())
@@ -546,22 +680,22 @@ export const adminReportingService = {
                 slot: item.slot,
                 orders: item.orders,
                 revenue: formatCurrency(item.revenue),
-                growth: item.orders >= 3 ? "+12.5%" : item.orders === 2 ? "+5.0%" : "0.0%",
             }));
 
-        const totalRevenue = payments.reduce((sum, item) => sum + item.amount, 0);
-        const avgOrderValue = payments.length > 0 ? totalRevenue / payments.length : 0;
-        const topRow = rows[0];
+        const totalRevenue = filteredPayments.reduce((sum, item) => sum + item.amount, 0);
+        const avgOrderValue = filteredPayments.length > 0 ? totalRevenue / filteredPayments.length : 0;
+        const topSlot = Array.from(revenueBySlot.entries())
+            .sort((left, right) => right[1] - left[1])[0];
 
         const summaryCards: RevenueCard[] = [
             {
                 title: "Total Revenue",
                 value: formatCurrency(totalRevenue),
-                note: `${payments.length} successful order(s) in period`,
+                note: `${filteredPayments.length} successful order(s) in period`,
             },
             {
                 title: "Active Packages",
-                value: formatNumber(rows.length),
+                value: formatNumber(packageNames.size),
                 note: "Packages with paid orders in period",
             },
             {
@@ -571,12 +705,12 @@ export const adminReportingService = {
             },
             {
                 title: "Top Slot Revenue",
-                value: topRow?.slot ?? "No data",
-                note: topRow ? topRow.revenue : "No paid orders in period",
+                value: topSlot?.[0] ?? "Chưa có dữ liệu",
+                note: topSlot ? formatCurrency(topSlot[1]) : "Chưa có đơn thanh toán thành công trong kỳ",
             },
         ];
 
-        return { summaryCards, rows };
+        return { summaryCards, rows, slotCatalog };
     },
 
     async getCustomerSpendingSummary(fromDate?: string, toDate?: string) {
@@ -656,21 +790,35 @@ export const adminReportingService = {
         const range = parseDateRange(payload.fromDate, payload.toDate);
         let reportName = `${payload.module} Export`;
         let rows: Array<Record<string, unknown>> = [];
+        let columns: ExportColumn[] = [];
 
         if (payload.module === "Users") {
             const allUsers = await db.select().from(users);
-            rows = allUsers
-                .filter((item) => isDateInRange(item.userCreatedAt, range))
-                .map((item) => ({
-                    userId: item.userId,
-                    displayName: item.userDisplayName ?? "",
-                    email: item.userEmail ?? "",
-                    mobile: item.userMobile,
-                    status: item.userStatus ?? "",
-                    createdAt: formatDate(item.userCreatedAt),
-                }));
+            columns = [
+                { key: "userId", header: "Mã người dùng", width: 16 },
+                { key: "displayName", header: "Tên hiển thị", width: 28 },
+                { key: "email", header: "Email", width: 32 },
+                { key: "mobile", header: "Số điện thoại", width: 18 },
+                { key: "status", header: "Trạng thái", width: 18 },
+                { key: "createdAt", header: "Ngày tạo", width: 18 },
+            ];
+            rows = allUsers.map((item) => ({
+                userId: item.userId,
+                displayName: item.userDisplayName ?? "",
+                email: item.userEmail ?? "",
+                mobile: item.userMobile,
+                status: item.userStatus ?? "",
+                createdAt: formatDate(item.userCreatedAt),
+            }));
         } else if (payload.module === "Categories") {
             const allCategories = await db.select().from(categories);
+            columns = [
+                { key: "categoryId", header: "Mã danh mục", width: 16 },
+                { key: "title", header: "Tên danh mục", width: 28 },
+                { key: "slug", header: "Slug", width: 24 },
+                { key: "published", header: "Đang hiển thị", width: 18 },
+                { key: "createdAt", header: "Ngày tạo", width: 18 },
+            ];
             rows = allCategories.map((item) => ({
                 categoryId: item.categoryId,
                 title: item.categoryTitle ?? "",
@@ -680,6 +828,14 @@ export const adminReportingService = {
             }));
         } else if (payload.module === "Attributes") {
             const allAttributes = await db.select().from(attributes);
+            columns = [
+                { key: "attributeId", header: "Mã thuộc tính", width: 16 },
+                { key: "code", header: "Mã", width: 20 },
+                { key: "title", header: "Tên thuộc tính", width: 28 },
+                { key: "dataType", header: "Kiểu dữ liệu", width: 20 },
+                { key: "published", header: "Đang hiển thị", width: 18 },
+                { key: "createdAt", header: "Ngày tạo", width: 18 },
+            ];
             rows = allAttributes.map((item) => ({
                 attributeId: item.attributeId,
                 code: item.attributeCode ?? "",
@@ -690,6 +846,18 @@ export const adminReportingService = {
             }));
         } else if (payload.module === "Promotions") {
             const promotions = await adminPromotionService.getPromotions();
+            columns = [
+                { key: "id", header: "Mã chiến dịch", width: 16 },
+                { key: "postTitle", header: "Bài đăng", width: 36 },
+                { key: "owner", header: "Chủ sở hữu", width: 28 },
+                { key: "slot", header: "Vị trí hiển thị", width: 22 },
+                { key: "packageName", header: "Gói áp dụng", width: 24 },
+                { key: "startDate", header: "Bắt đầu", width: 16 },
+                { key: "endDate", header: "Kết thúc", width: 16 },
+                { key: "status", header: "Trạng thái", width: 18 },
+                { key: "paymentStatus", header: "Thanh toán", width: 18 },
+                { key: "budget", header: "Ngân sách", width: 18 },
+            ];
             rows = promotions
                 .filter((item) => doesRangeOverlap(item.startDate, item.endDate, range))
                 .map((item) => ({
@@ -707,6 +875,14 @@ export const adminReportingService = {
         } else if (payload.module === "Analytics") {
             reportName = "Analytics Export";
             const analytics = await this.getAnalyticsSummary(payload.fromDate, payload.toDate);
+            columns = [
+                { key: "id", header: "Mã vị trí", width: 14 },
+                { key: "slot", header: "Vị trí hiển thị", width: 22 },
+                { key: "impressions", header: "Lượt hiển thị", width: 18 },
+                { key: "clicks", header: "Lượt nhấp", width: 16 },
+                { key: "ctr", header: "CTR", width: 12 },
+                { key: "revenue", header: "Doanh thu", width: 18 },
+            ];
             rows = analytics.topPlacements.map((item) => ({
                 id: item.id,
                 slot: item.slot,
@@ -716,14 +892,22 @@ export const adminReportingService = {
                 revenue: item.revenue,
             }));
         } else {
+            columns = [
+                { key: "message", header: "Ghi chú", width: 96 },
+            ];
             rows = [
                 {
-                    message: "Template data is managed on the admin-web client and is not yet persisted on the server.",
+                    message: "Dữ liệu mẫu nội dung hiện được quản lý trên admin web và chưa lưu đầy đủ ở máy chủ.",
                 },
             ];
         }
 
-        const content = toDelimitedContent(rows, payload.format);
+        const exportFile = payload.format === "XLSX"
+            ? {
+                content: await buildXlsxBase64(rows, payload.module, columns),
+                contentEncoding: "base64" as const,
+            }
+            : buildExportContent(rows, payload.format, payload.module, columns);
         const fileExtension = payload.format === "CSV" ? "csv" : "xlsx";
         const fileName = `${payload.module.toLowerCase().replace(/\s+/g, "-")}-export.${fileExtension}`;
 
@@ -752,7 +936,8 @@ export const adminReportingService = {
                 payload.format === "CSV"
                     ? "text/csv;charset=utf-8"
                     : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            content,
+            content: exportFile.content,
+            contentEncoding: exportFile.contentEncoding,
         };
     },
 
@@ -768,7 +953,6 @@ export const adminReportingService = {
                 slot: item.slot,
                 orders: item.orders,
                 revenue: item.revenue,
-                growth: item.growth,
             }));
         } else if (payload.reportType === "Customer Spending Report") {
             const customerSpending = await this.getCustomerSpendingSummary(
@@ -801,7 +985,12 @@ export const adminReportingService = {
                 }));
         }
 
-        const content = toDelimitedContent(rows, payload.format);
+        const exportFile = payload.format === "XLSX"
+            ? {
+                content: await buildXlsxBase64(rows, reportName),
+                contentEncoding: "base64" as const,
+            }
+            : buildExportContent(rows, payload.format, reportName);
         const fileExtension = payload.format === "CSV" ? "csv" : "xlsx";
         const fileName = `${payload.reportType.toLowerCase().replace(/\s+/g, "-")}.${fileExtension}`;
 
@@ -830,7 +1019,8 @@ export const adminReportingService = {
                 payload.format === "CSV"
                     ? "text/csv;charset=utf-8"
                     : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            content,
+            content: exportFile.content,
+            contentEncoding: exportFile.contentEncoding,
         };
     },
 };

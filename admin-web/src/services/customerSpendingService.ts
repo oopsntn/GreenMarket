@@ -20,7 +20,7 @@ export const customerSpendingService = {
     return apiClient.request<CustomerSpendingApiResponse>(
       `/api/admin/customer-spending${buildQuery(fromDate, toDate)}`,
       {
-        defaultErrorMessage: "Unable to load customer spending summary.",
+        defaultErrorMessage: "Không thể tải báo cáo chi tiêu khách hàng.",
       },
     );
   },

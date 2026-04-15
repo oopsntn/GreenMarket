@@ -1,6 +1,6 @@
-# GreenMarket API Documentation
+﻿# GreenMarket API Documentation
 
-Last updated: 2026-04-08
+Last updated: 2026-04-11
 
 This document lists APIs that are already implemented in `back-end/src/routes`.
 It is intended for `mobile`, `user-web`, and `admin-web` teams.
@@ -36,6 +36,97 @@ It is intended for `mobile`, `user-web`, and `admin-web` teams.
 | PATCH | `/api/profile` | User token | Update current user profile | `userDisplayName`, `userAvatarUrl`, `userEmail`, `userLocation`, `userBio` |
 | GET | `/api/profile/favorites` | User token | Get list of favorite posts for current user | none |
 
+### Collaborator (business role: `COLLABORATOR`)
+
+Auth rules for all endpoints below:
+- Requires valid **user token**
+- Requires active business role `COLLABORATOR` (`verifyToken + requireBusinessRole("COLLABORATOR")`)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/collaborator/profile` | User token + `COLLABORATOR` | Get collaborator profile with availability and summary stats | none |
+| PATCH | `/api/collaborator/profile` | User token + `COLLABORATOR` | Update collaborator availability | optional: `availabilityStatus` (`available`, `busy`, `offline`), `availabilityNote` |
+| GET | `/api/collaborator/jobs` | User token + `COLLABORATOR` | Get available jobs list (open + unassigned) | optional query: `keyword`, `category`, `location`, `page`, `limit` |
+| GET | `/api/collaborator/jobs/:id` | User token + `COLLABORATOR` | Get job detail (open jobs or assigned jobs) | path `id` |
+| POST | `/api/collaborator/jobs/:id/decision` | User token + `COLLABORATOR` | Accept or decline open job | `decision` (`accept`/`decline`), optional `reason` |
+| POST | `/api/collaborator/jobs/:id/contact` | User token + `COLLABORATOR` | Send ask-more request to customer (mock) | path `id`, required `message` |
+| GET | `/api/collaborator/my-jobs` | User token + `COLLABORATOR` | Get jobs assigned to current collaborator | optional query: `status`, `page`, `limit` |
+| POST | `/api/collaborator/jobs/:id/deliverables` | User token + `COLLABORATOR` | Submit job deliverables and mark job completed | path `id`, required `fileUrls` (string[]), optional `note` |
+| GET | `/api/collaborator/earnings` | User token + `COLLABORATOR` | Get earnings summary and history | optional query: `from`, `to` |
+| GET | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Get payout request history | optional query: `page`, `limit` |
+| POST | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Create payout request (mock) | required: `amount`, `method`; optional `note` |
+
+**Collaborator notes:**
+- `GET /api/collaborator/my-jobs` includes `progressPercent` derived from job status.
+- `POST /api/collaborator/payout-requests` enforces minimum payout amount `500000`.
+
+### Manager (business role: `MANAGER`)
+
+Auth rules for all endpoints below:
+- Requires valid **user token**
+- Requires active business role `MANAGER` (`verifyToken + requireBusinessRole("MANAGER")`)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/manager/moderation/queue` | User token + `MANAGER` | Get unified moderation queue across posts/reports/shops | optional query: `status`, `priority`, `type`, `page`, `limit` |
+| PATCH | `/api/manager/posts/:id/status` | User token + `MANAGER` | Update post moderation status | path `id`, required `status` (`approved`/`rejected`/`hidden`), optional `reason`, `note` |
+| PATCH | `/api/manager/shops/:id/status` | User token + `MANAGER` | Block/unblock shop status | path `id`, required `status` (`blocked`/`active`), required `reason` when `blocked`, optional `note` |
+| GET | `/api/manager/reports` | User token + `MANAGER` | List reports for moderation flow | optional query: `status`, `severity`, `page`, `limit` |
+| PATCH | `/api/manager/reports/:id/resolve` | User token + `MANAGER` | Resolve or dismiss a pending report | path `id`, required `status` (`resolved`/`dismissed`), required `resolution`, optional `note` |
+| POST | `/api/manager/moderation-feedback` | User token + `MANAGER` | Send moderation feedback to target recipient | required: `targetType`, `targetId`, `recipientUserId`, `message`; optional `templateId` |
+| GET | `/api/manager/history` | User token + `MANAGER` | Get manager moderation action history | optional query: `from`, `to`, `actionType`, `page`, `limit` |
+| GET | `/api/manager/statistics` | User token + `MANAGER` | Get moderation KPI + chart data | optional query: `from`, `to` |
+| POST | `/api/manager/escalations` | User token + `MANAGER` | Create escalation ticket (mock/internal) | required: `targetType`, `targetId`, `severity`, `reason`; optional `evidenceUrls` |
+
+**Manager notes:**
+- State-changing endpoints create action logs in `event_logs` with `eventLogEventType` prefix `manager_*`.
+- `PATCH /api/manager/reports/:id/resolve` only accepts reports currently in `pending` state.
+- `POST /api/manager/escalations` currently creates internal mock ticket (`ticketCode`), no multi-step approval workflow yet.
+
+### Operations Staff (business role: `OPERATION_STAFF`)
+
+Auth rules for all endpoints below:
+- Requires valid **user token**
+- Requires active business role `OPERATION_STAFF` (`verifyToken + requireBusinessRole("OPERATION_STAFF")`)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/operations/tasks` | User token + `OPERATION_STAFF` | Get assigned operations task queue | optional query: `status`, `type`, `priority`, `page`, `limit` |
+| GET | `/api/operations/tasks/:id` | User token + `OPERATION_STAFF` | Get assigned task detail with timeline and actions | path `id` |
+| PATCH | `/api/operations/tasks/:id/status` | User token + `OPERATION_STAFF` | Update task status lifecycle | path `id`, required `status` (`open`/`in_progress`/`closed`), optional `note` |
+| POST | `/api/operations/tasks/:id/replies` | User token + `OPERATION_STAFF` | Add reply entry to task timeline | path `id`, required `message`, optional `attachments`, optional `visibility` (`internal`/`public`) |
+| POST | `/api/operations/tasks/:id/escalate` | User token + `OPERATION_STAFF` | Escalate task to higher role | path `id`, required `reason`, required `targetRole` (`MANAGER`/`ADMIN`), optional `priority` |
+| GET | `/api/operations/workload/daily` | User token + `OPERATION_STAFF` | Get daily workload KPI and hourly distribution | optional query: `date` |
+| GET | `/api/operations/notifications` | User token + `OPERATION_STAFF` | Get operation notifications feed | optional query: `unreadOnly`, `page`, `limit` |
+
+**Operations notes:**
+- Current task source for operations module is built from report records (`reports` table), with deterministic assignment across active `OPERATION_STAFF` users.
+- Timeline/replies/escalations are persisted in `event_logs` using `operations_*` event types.
+- Task status transition enforced in MVP: `open -> in_progress -> closed`.
+
+### Host (business role: `HOST`)
+
+Auth rules for all endpoints below:
+- Requires valid **user token**
+- Requires active business role `HOST` (`verifyToken + requireBusinessRole("HOST")`)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/host/dashboard` | User token + `HOST` | Get host dashboard summary (earnings, clicks, views) | none |
+| GET | `/api/host/earnings` | User token + `HOST` | Get detailed earnings history | optional query: `page`, `limit` |
+| GET | `/api/host/payout-requests` | User token + `HOST` | Get payout request history | optional query: `page`, `limit` |
+| POST | `/api/host/payout-requests` | User token + `HOST` | Create a new payout request | required: `amount` (min 500,000), `method`; optional `note` |
+| GET | `/api/host/contents` | User token + `HOST` | List promotional contents created by host | none |
+| POST | `/api/host/contents` | User token + `HOST` | Create promotional content and get tracking URL | required: `title`, `targetType` ('post'/'shop'/'external'), optional `targetId`, `mediaUrls` |
+| PATCH | `/api/host/contents/:id` | User token + `HOST` | Update promotional content | path `id`, all fields optional |
+| DELETE | `/api/host/contents/:id` | User token + `HOST` | Soft delete promotional content | path `id` |
+| GET | `/api/host/tracking/:id` | No | Public tracking link for content redirection | path `id` (content ID) |
+
+**Host notes:**
+- `POST /api/host/contents` automatically returns a `hostContentTrackingUrl` for use on external platforms.
+- `GET /api/host/tracking/:id` increments click counts and logs earnings before redirecting to the target.
+- Payout requests enforce a minimum of `500,000 VND`.
+
 ### Upload
 
 | Method | Endpoint | Auth | Description | Main request fields |
@@ -59,10 +150,21 @@ It is intended for `mobile`, `user-web`, and `admin-web` teams.
 | POST | `/api/posts/:id/contact-click` | No | Record buyer contact click (analytics counter) | path `id` |
 | POST | `/api/posts` | User token | Create user post | required: `categoryId`, `postTitle` |
 | GET | `/api/posts/my-posts` | User token | Get current user posts | none |
+| GET | `/api/posts/posting-policy` | User token | Get effective posting plan, daily usage, and tracked posting fees | none |
+| POST | `/api/posts/personal-plan/mock-activate` | User token | Activate monthly personal plan (development/mock) | optional: `durationDays` (7-365) |
 | PATCH | `/api/posts/:id` | User token | Update user post | path `id` (post owner only) |
 | DELETE | `/api/posts/:id` | User token | Soft delete user post | path `id` (post owner only) |
 | GET | `/api/posts/:id/favorite` | User token | Check if a post is favorited by current user | path `id` |
 | POST | `/api/posts/:id/favorite` | User token | Toggle (add/remove) favorite post | path `id` |
+
+**Posting plan behavior notes (V1):**
+- Active garden owner (shop `active`) is treated as `GARDEN_OWNER_LIFETIME` policy:
+  - auto-approve new and edited posts
+  - daily limit: `20` new posts/day
+  - post creation fee tracking: `20,000 VND` per post
+  - free edits per post: `4`; then edit fee tracking `5,000 VND` per edit
+- Monthly personal policy can be activated via mock endpoint and also auto-approves posts while active.
+- Fee tracking is currently recorded in `posting_fee_ledger` for analytics/reconciliation; payment collection workflow is separated.
 
 ### Shops
 
@@ -82,7 +184,7 @@ It is intended for `mobile`, `user-web`, and `admin-web` teams.
 
 **`GET /api/shops/dashboard` response highlights:**
 - `shop`: `shopId`, `shopName`, `shopStatus`
-- `summary`: `totalPosts`, `approvedPosts`, `pendingPosts`, `rejectedPosts`, `totalViews`, `totalContacts`, `totalShopViews`, `totalShopContactClicks`, `contactRate`, `totalPromotionSpend`, `successfulPayments`, `activePromotions`
+- `summary`: `totalPosts`, `approvedPosts`, `pendingPosts`, `rejectedPosts`, `totalViews`, `totalContacts`, `totalShopViews`, `totalShopContactClicks`, `contactRate`, `postContactRate`, `totalPromotionSpend`, `totalBoostPackageSpend`, `successfulPayments`, `successfulBoostPurchases`, `activePromotions`, `boostedPostsActive`
 - `topPosts`: top 5 posts by views with `postViewCount`, `postContactCount`, `postStatus`, `isPromoted`, `postUpdatedAt`
 - `recentPayments`: latest 10 owner payment records with package/post references
 
@@ -97,12 +199,17 @@ It is intended for `mobile`, `user-web`, and `admin-web` teams.
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
 | GET | `/api/promotions/packages` | No | Get published promotion packages | none |
+| GET | `/api/promotions/packages/eligible` | User token | Get promotion packages eligible for current account type | none |
 | GET | `/api/promotions/packages/:id` | No | Get promotion package detail | path `id` |
 
 **Response fields (highlights):**
 - `promotionPackageId`, `promotionPackageTitle`, `promotionPackageDurationDays`, `promotionPackagePrice`
+- `promotionPackageMaxPosts`, `promotionPackageDisplayQuota`, `promotionPackageDescription`
 - `slotCode`, `slotTitle`, `slotCapacity`
 - `slotRules` (JSON): currently supports `priority` for feed ranking weight
+- `GET /api/promotions/packages/eligible` returns `{ audience, reason?, packages[] }`:
+  - `audience = garden_owner` for active shop accounts.
+  - `audience = individual`, `reason = ACTIVE_SHOP_REQUIRED`, `packages = []` for non-owner accounts.
 
 **Promotion ranking behavior:**
 - `/api/posts/browse` prioritizes promoted posts by `slotRules.priority` (descending)
@@ -119,7 +226,8 @@ It is intended for `mobile`, `user-web`, and `admin-web` teams.
 | POST | `/api/payment/mock-gate-process` | No | Development mock approve/cancel action | form fields from mock gateway |
 
 **Payment behavior notes:**
-- `buy-package` validates post ownership, post approval status, package publish status, and slot availability before creating payment intent.
+- `buy-package` validates post ownership, post approval status, active shop ownership, package publish status, and slot availability before creating payment intent.
+- If seller has active shop but post is missing `postShopId`, backend auto-links post to seller shop before creating payment.
 - Callback handling (`momo-return` + `momo-ipn`) is idempotent by transaction state to avoid duplicate promotion activation.
 - Common error shape: `{ error, code, ...details }`.
 
@@ -213,6 +321,11 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | PUT | `/api/admin/promotion-packages/:id` | Update package |
 | DELETE | `/api/admin/promotion-packages/:id` | Delete package |
 
+**Pricing source-of-truth:**
+- Package runtime price is sourced from `promotion_package_prices` only.
+- Admin `POST/PUT /api/admin/promotion-packages` still accepts `promotionPackagePrice`, but this now writes a new effective price row in `promotion_package_prices` (and closes current open-ended row).
+- The legacy `promotion_packages.promotion_package_price` field is deprecated and should not be used as runtime price.
+
 ### Promotions
 
 | Method | Endpoint | Description | Main request fields |
@@ -236,8 +349,8 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | Method | Endpoint | Description | Main request fields |
 |---|---|---|---|
 | GET | `/api/admin/dashboard` | Get dashboard overview cards and summary | optional query `fromDate`, `toDate` |
-| GET | `/api/admin/analytics` | Get analytics KPI cards and top placement performance | optional query `fromDate`, `toDate` |
-| GET | `/api/admin/revenue` | Get revenue KPI cards and package revenue rows | optional query `fromDate`, `toDate` |
+| GET | `/api/admin/analytics` | Get analytics KPI cards, top placement performance, daily traffic, and configured slot catalog metadata | optional query `fromDate`, `toDate` |
+| GET | `/api/admin/revenue` | Get revenue KPI cards, package revenue rows, and configured slot catalog metadata | optional query `fromDate`, `toDate` |
 | GET | `/api/admin/customer-spending` | Get customer spending KPI cards and customer rows | optional query `fromDate`, `toDate` |
 
 ### Exports
@@ -297,10 +410,36 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | GET | `/api/admin/roles/admins/:adminId/roles` | Get roles assigned to admin | path `adminId` |
 | PUT | `/api/admin/roles/admins/:adminId/roles` | Replace admin role assignments | `roleIds` (number[]) |
 
-## Current Implementation Notes
+### Host (business role: `HOST`)
+ 
+ Auth rules for all endpoints below:
+ - Requires valid **user token**
+ - Requires active business role `HOST` (`verifyToken + requireBusinessRole("HOST")`)
+ 
+ | Method | Endpoint | Auth | Description | Main request fields |
+ |---|---|---|---|---|
+ | GET | `/api/host/dashboard` | User token + `HOST` | Get host performance summary and key metrics | none |
+ | GET | `/api/host/earnings` | User token + `HOST` | Get earnings history from tracking activities | optional query: `page`, `limit` |
+ | GET | `/api/host/payout-requests` | User token + `HOST` | Get host payout request history | optional query: `page`, `limit` |
+ | POST | `/api/host/payout-requests` | User token + `HOST` | Request earnings withdrawal | required: `amount` (min 500k), `method`; optional `note` |
+ | GET | `/api/host/contents` | User token + `HOST` | List own promotional contents | none |
+ | POST | `/api/host/contents` | User token + `HOST` | Create new trackable promotional content | required: `title`, `targetType` (`shop`/`post`/`external`), `targetId`; optional `description`, `mediaUrls` |
+ | GET | `/api/host/contents/:id` | User token + `HOST` | Get content detail | path `id` |
+ | PATCH | `/api/host/contents/:id` | User token + `HOST` | Update promotional content | path `id`, same fields as POST |
+ | DELETE | `/api/host/contents/:id` | User token + `HOST` | Delete promotional content | path `id` |
+ | GET | `/api/host/tracking/:id` | No | Public tracking redirect endpoint | path `id` |
+ 
+ **Host notes:**
+ - `POST /api/host/payout-requests` enforces a minimum withdrawal of `500,000` VND.
+ - Content creation automatically generates a unique tracking URL that redirects to the target while logging clicks and awarding earnings.
+ 
+ ## Current Implementation Notes
 
 - Public user endpoints include browse/detail APIs such as `/api/posts/browse`, `/api/posts/detail/:slug`, `/api/shops/browse`, `/api/shops/:id`.
 - Protected user endpoints require JWT, such as `/api/profile`, `/api/posts/my-posts`, `/api/shops/my-shop`, `/api/shops/dashboard`, `/api/payment/buy-package`.
+- Collaborator module is mounted at `/api/collaborator` and uses business-role guard (`COLLABORATOR`) for all collaborator routes.
+- Manager module is mounted at `/api/manager` and uses business-role guard (`MANAGER`) for all manager routes.
+- Operations module is mounted at `/api/operations` and uses business-role guard (`OPERATION_STAFF`) for all operations routes.
 - `POST /api/posts/:id/contact-click` tracks buyer contact intent per post for analytics.
 - Payment callbacks are handled through `/api/payment/momo-return` and `/api/payment/momo-ipn`.
 - Static uploaded files are served at `/uploads/<filename>`.

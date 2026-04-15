@@ -1,0 +1,71 @@
+services:
+  # ───── DATABASE ─────
+  db:
+    image: postgres:18.2
+    container_name: greenmarket_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: GreenMarket
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_prod_data:/var/lib/postgresql
+      - ./GreenMarket.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ───── BACKEND API ─────
+  api:
+    build:
+      context: ./back-end
+      dockerfile: ./docker/node/Dockerfile
+    container_name: greenmarket_api
+    restart: unless-stopped
+    env_file:
+      - ./back-end/.env.prod
+    environment:
+      - DATABASE_URL=postgresql://postgres:admin@db:5432/GreenMarket
+      - NODE_ENV=production
+    volumes:
+      - ./back-end/uploads:/app/uploads
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ───── USER FRONTEND ─────
+  user-web:
+    build:
+      context: ./user-web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${USER_WEB_API_URL}
+    container_name: greenmarket_user_web
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+  # ───── ADMIN FRONTEND ─────
+  admin-web:
+    build:
+      context: ./admin-web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${ADMIN_WEB_API_URL}
+    container_name: greenmarket_admin_web
+    restart: unless-stopped
+    ports:
+      - "5174:8080"
+    depends_on:
+      - api
+
+volumes:
+  pg_prod_data:

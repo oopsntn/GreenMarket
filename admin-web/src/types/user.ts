@@ -11,6 +11,7 @@ export type AssignableUserRole = UserRole;
 
 export type RoleAssignmentHistoryItem = {
   id: number;
+  previousRole: UserRole | null;
   role: UserRole;
   assignedBy: string;
   assignedAt: string;
@@ -23,6 +24,7 @@ export type UserActivityLogItem = {
   detail: string;
   performedBy: string;
   performedAt: string;
+  reason?: string | null;
 };
 
 export type User = {
@@ -62,6 +64,22 @@ export type ApiUserResponse = {
   businessRoleAudienceGroup: string | null;
   businessRoleAccessScope: string | null;
   businessRoleStatus: string | null;
+  roleHistory?: Array<{
+    id: number;
+    previousRole: string | null;
+    nextRole: string | null;
+    assignedBy: string;
+    assignedAt: string;
+    note: string;
+  }>;
+  activityHistory?: Array<{
+    id: number;
+    action: string;
+    detail: string;
+    performedBy: string;
+    performedAt: string;
+    reason?: string | null;
+  }>;
 };
 
 export type UserFormState = {

@@ -1,6 +1,6 @@
 import axios from "axios";
 import { db } from "../../config/db";
-import { users, categories, posts, promotionPackages, placementSlots, paymentTxn, postPromotions } from "../../models/schema/index";
+import { users, categories, posts, promotionPackages, promotionPackagePrices, placementSlots, paymentTxn, postPromotions, shops } from "../../models/schema/index";
 import { eq, desc } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { slugify } from "../../utils/slugify";
@@ -18,6 +18,7 @@ async function runUserMonetizationTests() {
     let testUserId: number = 0;
     let testCategoryId: number = 0;
     let testPostId: number = 0;
+    let testShopId: number = 0;
     let testSlotId: number = 0;
     let testPackageId: number = 0;
     let testOrderId: string = "";
@@ -38,8 +39,16 @@ async function runUserMonetizationTests() {
         }).returning();
         testCategoryId = cat.categoryId;
 
+        const [shop] = await db.insert(shops).values({
+            shopId: testUserId,
+            shopName: "Premium Test Shop",
+            shopStatus: "active",
+        }).returning();
+        testShopId = shop.shopId;
+
         const [post] = await db.insert(posts).values({
             postAuthorId: testUserId,
+            postShopId: testShopId,
             categoryId: testCategoryId,
             postTitle: "Premium Test Post",
             postPrice: "100000",
@@ -60,10 +69,16 @@ async function runUserMonetizationTests() {
             promotionPackageSlotId: testSlotId,
             promotionPackageTitle: "User Test Pkg",
             promotionPackageDurationDays: 30,
-            promotionPackagePrice: "50000.00",
             promotionPackagePublished: true
         }).returning();
         testPackageId = pkg.promotionPackageId;
+
+        await db.insert(promotionPackagePrices).values({
+            packageId: testPackageId,
+            price: "50000.00",
+            effectiveFrom: new Date(),
+            note: "Test seed price",
+        });
 
         console.log(`✅ Setup complete. PostId: ${testPostId}, PkgId: ${testPackageId}`);
 
@@ -168,6 +183,7 @@ async function runUserMonetizationTests() {
     } finally {
         console.log("Cleaning up Test 06 data...");
         if (testPostId) await db.delete(posts).where(eq(posts.postId, testPostId));
+        if (testShopId) await db.delete(shops).where(eq(shops.shopId, testShopId));
         if (testUserId) await db.delete(users).where(eq(users.userId, testUserId));
         if (testCategoryId) await db.delete(categories).where(eq(categories.categoryId, testCategoryId));
         if (testPackageId) await db.delete(promotionPackages).where(eq(promotionPackages.promotionPackageId, testPackageId));

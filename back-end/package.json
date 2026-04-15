@@ -20,13 +20,17 @@
     "test:rbac": "tsx src/scripts/testRbacApis.ts",
     "test:sprint1": "tsx src/scripts/testSprint1.ts",
     "test:sprint2": "tsx src/scripts/testSprint2.ts",
-    "test:sprint3": "tsx src/scripts/testSprint3Promotion.ts"
+    "test:sprint3": "tsx src/scripts/testSprint3Promotion.ts",
+    "test:collaborator": "tsx src/scripts/tests/08-collaborator.test.ts",
+    "test:manager": "tsx src/scripts/tests/09-manager.test.ts",
+    "test:operations": "tsx src/scripts/tests/10-operations.test.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "drizzle-orm": "^0.45.1",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",

@@ -36,7 +36,7 @@ const BrowseShopsScreen = () => {
     }, [])
 
     return (
-        <MobileLayout title="Explore Shops" backButton={() => navigation.goBack()}>
+        <MobileLayout scrollEnabled={false} title="Explore Shops" backButton={() => navigation.goBack()}>
             {loading ? (
                 <ActivityIndicator style={{ marginTop: 80 }} color="#10b981" />
             ) : (

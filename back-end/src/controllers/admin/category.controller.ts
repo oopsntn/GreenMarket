@@ -20,7 +20,7 @@ export const getCategories = async (
         res.json(allCategories);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -32,7 +32,7 @@ export const getCategoryById = async (
         const idNumber = parseId(req.params.id);
 
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid category id" });
+            res.status(400).json({ error: "Mã danh mục không hợp lệ" });
             return;
         }
 
@@ -43,14 +43,14 @@ export const getCategoryById = async (
             .limit(1);
 
         if (!category) {
-            res.status(404).json({ error: "Category not found" });
+            res.status(404).json({ error: "Không tìm thấy danh mục" });
             return;
         }
 
         res.json(category);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -74,7 +74,7 @@ export const createCategory = async (
                 .then(res => res[0]);
 
             if (!parent) {
-                res.status(400).json({ error: "Parent category not found" });
+                res.status(400).json({ error: "Không tìm thấy danh mục cha" });
                 return;
             }
         }
@@ -91,7 +91,7 @@ export const createCategory = async (
         res.status(201).json(newCategory);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -103,7 +103,7 @@ export const updateCategory = async (
         const idNumber = parseId(req.params.id);
 
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid category id" });
+            res.status(400).json({ error: "Mã danh mục không hợp lệ" });
             return;
         }
 
@@ -118,7 +118,7 @@ export const updateCategory = async (
 
         if (categoryParentId) {
             if (categoryParentId === idNumber) {
-                res.status(400).json({ error: "Category cannot be its own parent" });
+                res.status(400).json({ error: "Danh mục không thể tự làm danh mục cha của chính nó" });
                 return;
             }
 
@@ -129,7 +129,7 @@ export const updateCategory = async (
                 .limit(1);
 
             if (!parent) {
-                res.status(400).json({ error: "Parent category not found" });
+                res.status(400).json({ error: "Không tìm thấy danh mục cha" });
                 return;
             }
         }
@@ -141,14 +141,14 @@ export const updateCategory = async (
             .returning();
 
         if (!updatedCategory) {
-            res.status(404).json({ error: "Category not found" });
+            res.status(404).json({ error: "Không tìm thấy danh mục" });
             return;
         }
 
         res.json(updatedCategory);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };
 
@@ -160,7 +160,7 @@ export const deleteCategory = async (
         const idNumber = parseId(req.params.id);
 
         if (idNumber === null) {
-            res.status(400).json({ error: "Invalid category id" });
+            res.status(400).json({ error: "Mã danh mục không hợp lệ" });
             return;
         }
 
@@ -176,21 +176,21 @@ export const deleteCategory = async (
             .returning();
 
         if (!category) {
-            res.status(404).json({ error: "Category not found" });
+            res.status(404).json({ error: "Không tìm thấy danh mục" });
             return;
         }
 
         res.json({
-            message: "Category deleted successfully",
+            message: "Xóa danh mục thành công",
             category,
         });
     } catch (error) {
         console.error(error);
         // Handle constraint violation (e.g. if it has children)
         if ((error as any).code === '23503') {
-            res.status(400).json({ error: "Cannot delete category with sub-categories or products" });
+            res.status(400).json({ error: "Không thể xóa danh mục đang có danh mục con hoặc dữ liệu liên quan" });
             return;
         }
-        res.status(500).json({ error: "Internal server error" });
+        res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
     }
 };

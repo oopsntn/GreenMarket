@@ -1,10 +1,14 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and, ne, sql, inArray } from "drizzle-orm";
-import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts } from "../../models/schema/index.ts";
+import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts, postPromotions, promotionPackages } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
+import {
+    PostingPolicyError,
+    postingPolicyService,
+} from "../../services/posting-policy.service.ts";
 
 const actionCache = new Set<string>();
 const SHOP_GALLERY_DELIMITER = "|";
@@ -40,14 +44,16 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        // Check if user has an active shop
+        const policySnapshot = await postingPolicyService.assertCanCreatePost(userId);
+
+        // Check if user has an active shop (used to bind post -> shop profile)
         const [activeShop] = await db.select()
             .from(shops)
             .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
             .limit(1);
 
         const now = new Date();
-        const isActiveGardenOwner = Boolean(activeShop);
+        const canAutoApprove = policySnapshot.policy.autoApprove;
         const finalSlug = slugify(postTitle) + "-" + Date.now().toString().slice(-4);
 
         const [newPost] = await db.insert(posts).values({
@@ -59,10 +65,10 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             postPrice: postPrice?.toString(),
             postLocation,
             postContactPhone,
-            postStatus: isActiveGardenOwner ? "approved" : "pending",
-            postPublished: isActiveGardenOwner,
+            postStatus: canAutoApprove ? "approved" : "pending",
+            postPublished: canAutoApprove,
             postSubmittedAt: now,
-            postPublishedAt: isActiveGardenOwner ? now : null,
+            postPublishedAt: canAutoApprove ? now : null,
             postCreatedAt: now,
             postUpdatedAt: now,
         }).returning();
@@ -93,8 +99,47 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             }
         }
 
-        res.status(201).json(newPost);
+        const creationFee = await postingPolicyService.addFeeLedgerEntry({
+            userId,
+            postId: newPost.postId,
+            planId: policySnapshot.policy.activePlanId,
+            actionType: "POST_CREATE",
+            amount: policySnapshot.policy.postFeeAmount,
+            note: `Post creation fee - ${policySnapshot.policy.planTitle}`,
+        });
+
+        const nextDailyUsage = policySnapshot.usage.dailyPostsUsed + 1;
+        const dailyPostLimit = policySnapshot.policy.dailyPostLimit;
+
+        res.status(201).json({
+            ...newPost,
+            postingPolicy: {
+                planCode: policySnapshot.policy.planCode,
+                planTitle: policySnapshot.policy.planTitle,
+                autoApprove: policySnapshot.policy.autoApprove,
+                dailyPostLimit,
+                dailyPostsUsed: nextDailyUsage,
+                dailyPostsRemaining:
+                    dailyPostLimit === null
+                        ? null
+                        : Math.max(dailyPostLimit - nextDailyUsage, 0),
+            },
+            billing: {
+                actionType: "POST_CREATE",
+                chargedAmount: creationFee?.amount ?? 0,
+                currency: "VND",
+            },
+        });
     } catch (error) {
+        if (error instanceof PostingPolicyError) {
+            res.status(error.statusCode).json({
+                error: error.message,
+                code: error.code,
+                ...(error.details || {}),
+            });
+            return;
+        }
+
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
     }
@@ -218,6 +263,33 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
             });
         }
 
+        const activePromotions = postIds.length > 0 ? await db.select({
+            postPromotionId: postPromotions.postPromotionId,
+            postId: postPromotions.postPromotionPostId,
+            packageId: postPromotions.postPromotionPackageId,
+            status: postPromotions.postPromotionStatus,
+            startAt: postPromotions.postPromotionStartAt,
+            endAt: postPromotions.postPromotionEndAt,
+            packageName: promotionPackages.promotionPackageTitle,
+            packageDescription: promotionPackages.promotionPackageDescription,
+        })
+        .from(postPromotions)
+        .innerJoin(promotionPackages, eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId))
+        .where(
+            and(
+                inArray(postPromotions.postPromotionPostId, postIds),
+                eq(postPromotions.postPromotionStatus, "active"),
+                sql`post_promotion_end_at > now()`
+            )
+        ) : [];
+
+        const promotionsByPostId = new Map<number, any>();
+        for (const promo of activePromotions) {
+            if (promo.postId) {
+                promotionsByPostId.set(promo.postId, promo);
+            }
+        }
+
         const response = userPosts.map((post) => {
             const postImagesData = imagesByPostId.get(post.postId) || [];
 
@@ -228,6 +300,7 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
                 attributes: attributesByPostId.get(post.postId) || [],
                 author: author || null,
                 shop: post.postShopId ? (shopById.get(post.postShopId) || null) : null,
+                activePromotion: promotionsByPostId.get(post.postId) || null,
             };
         });
 
@@ -235,6 +308,52 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const getPostingPolicy = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+            return;
+        }
+
+        const snapshot = await postingPolicyService.getPolicySnapshot(userId);
+        res.json(snapshot);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR" });
+    }
+};
+
+export const activatePersonalMonthlyPlanMock = async (
+    req: AuthRequest,
+    res: Response,
+): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
+            return;
+        }
+
+        const parsedDuration = Number(req.body?.durationDays ?? 30);
+        const durationDays = Number.isFinite(parsedDuration) ? parsedDuration : 30;
+
+        const result = await postingPolicyService.activatePersonalMonthlyPlan({
+            userId,
+            durationDays,
+        });
+
+        res.status(201).json({
+            message: "Personal monthly plan activated (mock).",
+            plan: result.plan,
+            effectivePolicy: result.effectivePolicy,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error", code: "INTERNAL_ERROR" });
     }
 };
 
@@ -267,21 +386,34 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        // Shop owners with active shops can publish edits immediately.
+        const effectivePolicy = await postingPolicyService.getEffectivePolicy(userId);
+
+        // Keep linking post -> shop when user already has an active shop.
         const [activeShop] = await db.select()
             .from(shops)
             .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
             .limit(1);
 
         const now = new Date();
-        const isActiveGardenOwner = Boolean(activeShop);
+        const canAutoApprove = effectivePolicy.autoApprove;
+        const currentEditCount = Number(existingPost.postEditCount || 0);
+        const currentPaidEditCount = Number(existingPost.postPaidEditCount || 0);
+        const editPricing = postingPolicyService.getEditPricing(
+            effectivePolicy,
+            currentEditCount,
+        );
 
         const postUpdatePayload: Record<string, any> = {
             postUpdatedAt: now,
-            postStatus: isActiveGardenOwner ? "approved" : "pending",
+            postStatus: canAutoApprove ? "approved" : "pending",
+            postEditCount: editPricing.nextEditCount,
+            postPaidEditCount:
+                editPricing.chargeAmount > 0
+                    ? currentPaidEditCount + 1
+                    : currentPaidEditCount,
         };
 
-        if (isActiveGardenOwner) {
+        if (canAutoApprove) {
             postUpdatePayload.postModeratedAt = now;
             postUpdatePayload.postSubmittedAt = now;
             postUpdatePayload.postPublishedAt = now;
@@ -318,8 +450,41 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             }
         }
 
-        res.json(updatedPost);
+        const editFee = await postingPolicyService.addFeeLedgerEntry({
+            userId,
+            postId,
+            planId: effectivePolicy.activePlanId,
+            actionType: "POST_EDIT",
+            amount: editPricing.chargeAmount,
+            note: `Post edit fee - ${effectivePolicy.planTitle}`,
+        });
+
+        res.json({
+            ...updatedPost,
+            postingPolicy: {
+                planCode: effectivePolicy.planCode,
+                planTitle: effectivePolicy.planTitle,
+                autoApprove: effectivePolicy.autoApprove,
+                freeEditQuota: effectivePolicy.freeEditQuota,
+                editFeeAmount: effectivePolicy.editFeeAmount,
+                remainingFreeEdits: editPricing.remainingFreeEdits,
+            },
+            billing: {
+                actionType: "POST_EDIT",
+                chargedAmount: editFee?.amount ?? 0,
+                currency: "VND",
+            },
+        });
     } catch (error) {
+        if (error instanceof PostingPolicyError) {
+            res.status(error.statusCode).json({
+                error: error.message,
+                code: error.code,
+                ...(error.details || {}),
+            });
+            return;
+        }
+
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
     }
@@ -516,4 +681,3 @@ export const toggleFavoritePost = async (req: AuthRequest, res: Response): Promi
         res.status(500).json({ error: "Internal server error" });
     }
 };
-

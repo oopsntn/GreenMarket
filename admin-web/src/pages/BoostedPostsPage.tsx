@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import EmptyState from "../components/EmptyState";
@@ -56,6 +56,37 @@ const healthFilterOptions: Array<BoostedPostDeliveryHealth | "All"> = [
   "Watch",
   "At Risk",
 ];
+
+const slotLabelMap: Record<BoostedPostSlot | "All", string> = {
+  All: "Tất cả",
+  "Home Top": "Trang chủ nổi bật",
+  "Category Top": "Danh mục nổi bật",
+  "Search Boost": "Tăng tìm kiếm",
+};
+
+const statusLabelMap: Record<BoostedPostStatus | "All", string> = {
+  All: "Tất cả",
+  Scheduled: "Đã lên lịch",
+  Active: "Đang chạy",
+  Paused: "Tạm dừng",
+  Completed: "Hoàn tất",
+  Expired: "Hết hạn",
+  Closed: "Đã đóng",
+};
+
+const reviewLabelMap: Record<BoostedPostReviewStatus | "All", string> = {
+  All: "Tất cả",
+  Approved: "Đã duyệt",
+  "Needs Update": "Cần cập nhật",
+  Escalated: "Cần xử lý",
+};
+
+const healthLabelMap: Record<BoostedPostDeliveryHealth | "All", string> = {
+  All: "Tất cả",
+  Healthy: "Ổn định",
+  Watch: "Theo dõi",
+  "At Risk": "Có rủi ro",
+};
 
 const PAGE_SIZE = 5;
 
@@ -127,7 +158,7 @@ function BoostedPostsPage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Failed to load boosted posts.",
+            : "Không thể tải danh sách chiến dịch.",
         );
       } finally {
         setIsLoading(false);
@@ -286,14 +317,14 @@ function BoostedPostsPage() {
 
       if (confirmState.action === "pause") {
         showToast(
-          `${targetPost.campaignCode} has been paused successfully.`,
+          `${targetPost.campaignCode} đã được tạm dừng.`,
           "info",
         );
       } else if (confirmState.action === "resume") {
-        showToast(`${targetPost.campaignCode} has been resumed successfully.`);
+        showToast(`${targetPost.campaignCode} đã được tiếp tục.`);
       } else {
         showToast(
-          `${targetPost.campaignCode} has been closed successfully.`,
+          `${targetPost.campaignCode} đã được đóng.`,
           "info",
         );
       }
@@ -303,7 +334,7 @@ function BoostedPostsPage() {
       showToast(
         error instanceof Error
           ? error.message
-          : "Failed to update boosted campaign status.",
+          : "Không thể cập nhật trạng thái chiến dịch.",
         "error",
       );
     } finally {
@@ -312,28 +343,28 @@ function BoostedPostsPage() {
   };
 
   const confirmTitleMap: Record<ConfirmAction, string> = {
-    pause: "Pause Boosted Campaign",
-    resume: "Resume Boosted Campaign",
-    close: "Close Boosted Campaign",
+    pause: "Tạm dừng chiến dịch",
+    resume: "Tiếp tục chiến dịch",
+    close: "Đóng chiến dịch",
   };
 
   const confirmMessageMap: Record<ConfirmAction, string> = {
-    pause: `Are you sure you want to pause ${
-      confirmPost?.campaignCode ?? "this boosted campaign"
-    }? Delivery will stop until operations resumes it.`,
-    resume: `Are you sure you want to resume ${
-      confirmPost?.campaignCode ?? "this boosted campaign"
-    }? Delivery will continue using the assigned slot and quota.`,
-    close: `Are you sure you want to close ${
-      confirmPost?.campaignCode ?? "this boosted campaign"
-    }? It will be removed from the delivery queue.`,
+    pause: `Bạn chắc chắn muốn tạm dừng ${
+      confirmPost?.campaignCode ?? "chiến dịch này"
+    }? Việc phân phối sẽ dừng cho đến khi được mở lại.`,
+    resume: `Bạn chắc chắn muốn tiếp tục ${
+      confirmPost?.campaignCode ?? "chiến dịch này"
+    }? Chiến dịch sẽ chạy theo slot và quota hiện tại.`,
+    close: `Bạn chắc chắn muốn đóng ${
+      confirmPost?.campaignCode ?? "chiến dịch này"
+    }? Chiến dịch sẽ bị loại khỏi hàng chờ phân phối.`,
   };
 
   return (
     <div className="boosted-posts-page">
       <PageHeader
-        title="Boosted Posts Management"
-        description="Operate boosted delivery campaigns, monitor quota usage, review campaign health, and follow up with operations assignments."
+        title="Quản lý bài viết đẩy nổi bật"
+        description="Theo dõi chiến dịch đẩy nổi bật, mức dùng quota, chất lượng vận hành và phân công xử lý."
       />
 
       <div className="boosted-posts-summary-grid">
@@ -348,27 +379,27 @@ function BoostedPostsPage() {
       </div>
 
       <SearchToolbar
-        placeholder="Search by campaign code, post title, owner, or operator"
+        placeholder="Tìm theo mã chiến dịch, bài đăng, chủ sở hữu hoặc nhân sự vận hành"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Filter by slot, status, review, health"
+        filterLabel="Lọc theo vị trí hiển thị, trạng thái, duyệt và chất lượng"
         filterSummaryItems={[
-          selectedSlotFilter,
-          selectedStatusFilter,
-          selectedReviewFilter,
-          selectedHealthFilter,
+          slotLabelMap[selectedSlotFilter],
+          statusLabelMap[selectedStatusFilter],
+          reviewLabelMap[selectedReviewFilter],
+          healthLabelMap[selectedHealthFilter],
         ]}
       />
 
       {showFilters && (
         <SectionCard
-          title="Campaign Filters"
-          description="Refine boosted delivery records by slot, runtime status, review state, and campaign health."
+          title="Bộ lọc chiến dịch"
+          description="Lọc theo vị trí hiển thị, trạng thái chạy, trạng thái duyệt và sức khỏe chiến dịch."
         >
           <div className="boosted-posts-filters">
             <div className="boosted-posts-filters__field">
-              <label htmlFor="boosted-post-slot-filter">Slot</label>
+              <label htmlFor="boosted-post-slot-filter">Vị trí hiển thị</label>
               <select
                 id="boosted-post-slot-filter"
                 value={selectedSlotFilter}
@@ -380,14 +411,14 @@ function BoostedPostsPage() {
               >
                 {slotFilterOptions.map((slot) => (
                   <option key={slot} value={slot}>
-                    {slot}
+                    {slotLabelMap[slot]}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="boosted-posts-filters__field">
-              <label htmlFor="boosted-post-status-filter">Campaign Status</label>
+              <label htmlFor="boosted-post-status-filter">Trạng thái chiến dịch</label>
               <select
                 id="boosted-post-status-filter"
                 value={selectedStatusFilter}
@@ -399,14 +430,14 @@ function BoostedPostsPage() {
               >
                 {statusFilterOptions.map((status) => (
                   <option key={status} value={status}>
-                    {status}
+                    {statusLabelMap[status]}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="boosted-posts-filters__field">
-              <label htmlFor="boosted-post-review-filter">Review Status</label>
+              <label htmlFor="boosted-post-review-filter">Trạng thái duyệt</label>
               <select
                 id="boosted-post-review-filter"
                 value={selectedReviewFilter}
@@ -418,14 +449,14 @@ function BoostedPostsPage() {
               >
                 {reviewFilterOptions.map((reviewStatus) => (
                   <option key={reviewStatus} value={reviewStatus}>
-                    {reviewStatus}
+                    {reviewLabelMap[reviewStatus]}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="boosted-posts-filters__field">
-              <label htmlFor="boosted-post-health-filter">Delivery Health</label>
+              <label htmlFor="boosted-post-health-filter">Sức khỏe vận hành</label>
               <select
                 id="boosted-post-health-filter"
                 value={selectedHealthFilter}
@@ -437,7 +468,7 @@ function BoostedPostsPage() {
               >
                 {healthFilterOptions.map((health) => (
                   <option key={health} value={health}>
-                    {health}
+                    {healthLabelMap[health]}
                   </option>
                 ))}
               </select>
@@ -447,20 +478,20 @@ function BoostedPostsPage() {
       )}
 
       <SectionCard
-        title="Boosted Campaign Directory"
-        description="Review operational delivery state, quota consumption, assigned operator, and optimization activity."
+        title="Danh sách chiến dịch đẩy nổi bật"
+        description="Theo dõi trạng thái vận hành, quota đã dùng, nhân sự phụ trách và hoạt động tối ưu."
       >
         {isLoading ? (
           <EmptyState
-            title="Loading boosted campaigns"
-            description="Fetching boosted campaign records from the admin API."
+            title="Đang tải chiến dịch"
+            description="Đang lấy dữ liệu chiến dịch từ hệ thống quản trị."
           />
         ) : pageError ? (
-          <EmptyState title="Unable to load boosted campaigns" description={pageError} />
+          <EmptyState title="Không thể tải chiến dịch" description={pageError} />
         ) : filteredPosts.length === 0 ? (
           <EmptyState
-            title="No boosted campaigns found"
-            description="No boosted campaigns match the current search or filter settings."
+            title="Không có chiến dịch phù hợp"
+            description="Không có chiến dịch nào khớp với bộ lọc hiện tại."
           />
         ) : (
           <>
@@ -468,16 +499,16 @@ function BoostedPostsPage() {
               <table className="boosted-posts-table">
                 <thead>
                   <tr>
-                    <th>Campaign</th>
-                    <th>Post</th>
-                    <th>Owner</th>
-                    <th>Slot</th>
-                    <th>Delivery</th>
-                    <th>Review</th>
+                    <th>Chiến dịch</th>
+                    <th>Bài đăng</th>
+                    <th>Chủ sở hữu</th>
+                    <th>Vị trí</th>
+                    <th>Vận hành</th>
+                    <th>Duyệt</th>
                     <th>CTR</th>
-                    <th>Quota Used</th>
-                    <th>Operator</th>
-                    <th>Actions</th>
+                    <th>Quota đã dùng</th>
+                    <th>Nhân sự</th>
+                    <th>Thao tác</th>
                   </tr>
                 </thead>
 
@@ -488,27 +519,27 @@ function BoostedPostsPage() {
                         <div className="boosted-posts-cell">
                           <strong>{item.campaignCode}</strong>
                           <span>
-                            {item.startDate} to {item.endDate}
+                            {item.startDate} đến {item.endDate}
                           </span>
                         </div>
                       </td>
                       <td>{item.postTitle}</td>
                       <td>{item.ownerName}</td>
                       <td>
-                        <StatusBadge label={item.slot} variant="slot" />
+                        <StatusBadge label={slotLabelMap[item.slot]} variant="slot" />
                       </td>
                       <td>
                         <div className="boosted-posts-cell">
                           <StatusBadge
-                            label={item.deliveryHealth}
+                            label={healthLabelMap[item.deliveryHealth]}
                             variant={getHealthVariant(item.deliveryHealth)}
                           />
-                          <span>{item.status}</span>
+                          <span>{statusLabelMap[item.status]}</span>
                         </div>
                       </td>
                       <td>
                         <StatusBadge
-                          label={item.reviewStatus}
+                          label={reviewLabelMap[item.reviewStatus]}
                           variant={getReviewVariant(item.reviewStatus)}
                         />
                       </td>
@@ -527,7 +558,7 @@ function BoostedPostsPage() {
                             className="boosted-posts-actions__view"
                             onClick={() => openViewModal(item)}
                           >
-                            View
+                            Xem
                           </button>
 
                           {item.status === "Active" && (
@@ -537,7 +568,7 @@ function BoostedPostsPage() {
                               onClick={() => openConfirmDialog(item.id, "pause")}
                               disabled={isStatusUpdating === item.id}
                             >
-                              Pause
+                              Tạm dừng
                             </button>
                           )}
 
@@ -548,7 +579,7 @@ function BoostedPostsPage() {
                               onClick={() => openConfirmDialog(item.id, "resume")}
                               disabled={isStatusUpdating === item.id}
                             >
-                              Resume
+                              Tiếp tục
                             </button>
                           )}
 
@@ -561,7 +592,7 @@ function BoostedPostsPage() {
                               onClick={() => openConfirmDialog(item.id, "close")}
                               disabled={isStatusUpdating === item.id}
                             >
-                              Close
+                              Đóng
                             </button>
                           )}
                         </div>
@@ -574,7 +605,7 @@ function BoostedPostsPage() {
 
             <div className="boosted-posts-pagination">
               <span className="boosted-posts-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="boosted-posts-pagination__actions">
@@ -583,7 +614,7 @@ function BoostedPostsPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -592,7 +623,7 @@ function BoostedPostsPage() {
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Tiếp
                 </button>
               </div>
             </div>
@@ -602,8 +633,8 @@ function BoostedPostsPage() {
 
       <BaseModal
         isOpen={isViewModalOpen}
-        title="Boosted Campaign Details"
-        description="Review operational delivery metrics, optimization ownership, and campaign notes."
+        title="Chi tiết chiến dịch đẩy nổi bật"
+        description="Theo dõi chỉ số vận hành, phân công tối ưu và ghi chú chiến dịch."
         onClose={closeViewModal}
         maxWidth="760px"
       >
@@ -611,22 +642,22 @@ function BoostedPostsPage() {
           <div className="boosted-posts-modal__content">
             <div className="boosted-posts-modal__grid">
               <div className="boosted-posts-modal__field">
-                <label>Campaign Code</label>
+                <label>Mã chiến dịch</label>
                 <input type="text" value={selectedPost.campaignCode} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Post Title</label>
+                <label>Tiêu đề bài đăng</label>
                 <input type="text" value={selectedPost.postTitle} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Owner</label>
+                <label>Chủ sở hữu</label>
                 <input type="text" value={selectedPost.ownerName} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Assigned Operator</label>
+                <label>Nhân sự phụ trách</label>
                 <input
                   type="text"
                   value={selectedPost.assignedOperator}
@@ -635,49 +666,49 @@ function BoostedPostsPage() {
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Placement Slot</label>
-                <input type="text" value={selectedPost.slot} disabled />
+                <label>Vị trí hiển thị</label>
+                <input type="text" value={slotLabelMap[selectedPost.slot]} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Campaign Status</label>
-                <input type="text" value={selectedPost.status} disabled />
+                <label>Trạng thái chiến dịch</label>
+                <input type="text" value={statusLabelMap[selectedPost.status]} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Delivery Health</label>
+                <label>Sức khỏe vận hành</label>
                 <input
                   type="text"
-                  value={selectedPost.deliveryHealth}
+                  value={healthLabelMap[selectedPost.deliveryHealth]}
                   disabled
                 />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Review Status</label>
+                <label>Trạng thái duyệt</label>
                 <input
                   type="text"
-                  value={selectedPost.reviewStatus}
+                  value={reviewLabelMap[selectedPost.reviewStatus]}
                   disabled
                 />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Package Context</label>
+                <label>Gói áp dụng</label>
                 <input type="text" value={selectedPost.packageName} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Delivery Window</label>
+                <label>Khoảng chạy</label>
                 <input
                   type="text"
-                  value={`${selectedPost.startDate} to ${selectedPost.endDate}`}
+                  value={`${selectedPost.startDate} đến ${selectedPost.endDate}`}
                   disabled
                 />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Quota Used</label>
+                <label>Quota đã dùng</label>
                 <input
                   type="text"
                   value={formatQuotaUsage(
@@ -701,7 +732,7 @@ function BoostedPostsPage() {
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Impressions</label>
+                <label>Lượt hiển thị</label>
                 <input
                   type="text"
                   value={selectedPost.impressions.toLocaleString("en-US")}
@@ -710,7 +741,7 @@ function BoostedPostsPage() {
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Clicks</label>
+                <label>Lượt nhấp</label>
                 <input
                   type="text"
                   value={selectedPost.clicks.toLocaleString("en-US")}
@@ -719,7 +750,7 @@ function BoostedPostsPage() {
               </div>
 
               <div className="boosted-posts-modal__field boosted-posts-modal__field--full">
-                <label>Last Optimized</label>
+                <label>Lần tối ưu gần nhất</label>
                 <input
                   type="text"
                   value={selectedPost.lastOptimizedAt}
@@ -729,7 +760,7 @@ function BoostedPostsPage() {
             </div>
 
             <div className="boosted-posts-modal__field">
-              <label>Notes</label>
+              <label>Ghi chú</label>
               <textarea value={selectedPost.notes} rows={4} disabled />
             </div>
 
@@ -739,7 +770,7 @@ function BoostedPostsPage() {
                 className="boosted-posts-modal__close"
                 onClick={closeViewModal}
               >
-                Close
+                Đóng
               </button>
             </div>
           </div>
@@ -751,21 +782,21 @@ function BoostedPostsPage() {
         title={
           confirmState.action
             ? confirmTitleMap[confirmState.action]
-            : "Confirm Action"
+            : "Xác nhận thao tác"
         }
         message={
           confirmState.action
             ? confirmMessageMap[confirmState.action]
-            : "Please confirm this action."
+            : "Vui lòng xác nhận thao tác này."
         }
         confirmText={
           confirmState.action === "pause"
-            ? "Pause Campaign"
+            ? "Tạm dừng chiến dịch"
             : confirmState.action === "resume"
-              ? "Resume Campaign"
-              : "Close Campaign"
+              ? "Tiếp tục chiến dịch"
+              : "Đóng chiến dịch"
         }
-        cancelText="Cancel"
+        cancelText="Hủy"
         tone={
           confirmState.action === "resume"
             ? "success"

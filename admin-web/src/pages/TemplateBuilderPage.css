@@ -5,553 +5,283 @@
   min-width: 0;
 }
 
-.template-builder-purpose {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.template-builder-purpose__item {
-  border: 1px solid #deeadf;
-  background: #fbfdfb;
-  border-radius: 20px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.template-builder-purpose__item strong {
-  color: #204f2a;
-  font-size: 1rem;
-}
-
-.template-builder-purpose__item span {
-  color: #57715e;
-  line-height: 1.55;
-}
-
 .template-builder-steps {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
 }
 
 .template-builder-step-card {
   border: 1px solid #deeadf;
+  border-radius: 20px;
   background: #fbfdfb;
-  border-radius: 22px;
-  padding: 22px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.template-builder-step-card__eyebrow {
-  display: inline-flex;
-  width: fit-content;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #e9f5e7;
-  color: #1f6a2d;
-  font-size: 0.82rem;
-  font-weight: 800;
+  gap: 8px;
 }
 
 .template-builder-step-card strong {
-  color: #24452d;
-  font-size: 1.05rem;
+  color: #204f2a;
 }
 
-.template-builder-step-card p {
-  margin: 0;
+.template-builder-step-card span {
   color: #57715e;
   line-height: 1.6;
 }
 
-.template-builder-step-card__vi {
-  color: #355c3f;
-  background: #f4f9f3;
-  border-radius: 14px;
-  padding: 10px 12px;
-}
-
-.template-builder-filters {
+.template-builder-toolbar {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 16px;
 }
 
-.template-builder-filters__field {
+.template-builder-toolbar__status {
+  color: #4f6756;
+  font-weight: 600;
+}
+
+.template-builder-toolbar__actions {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 260px;
-}
-
-.template-builder-filters__field label {
-  font-weight: 700;
-  color: #284633;
-}
-
-.template-builder-filters__field select {
-  border: 1px solid #d6e3d6;
-  border-radius: 16px;
-  padding: 13px 16px;
-  background: #fbfdfb;
-  font: inherit;
-  color: #253b2c;
+  gap: 12px;
 }
 
 .template-builder-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 0.9fr) minmax(420px, 1.2fr) minmax(360px, 1fr);
   gap: 24px;
   align-items: start;
 }
 
-.template-builder-library {
+.template-builder-form,
+.template-builder-field-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.template-builder-library__card {
-  border: 1px solid #deeadf;
-  background: #fbfdfb;
-  border-radius: 22px;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease;
-}
-
-.template-builder-library__card--selected {
-  border-color: #6ba974;
-  box-shadow: 0 10px 24px rgba(56, 104, 67, 0.08);
-}
-
-.template-builder-library__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.template-builder-library__header strong {
-  color: #24452d;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-.template-builder-library__header p {
-  margin: 6px 0 0;
-  color: #69816f;
-  font-size: 0.92rem;
-}
-
-.template-builder-library__use {
-  border: none;
-  border-radius: 16px;
-  padding: 11px 16px;
-  background: #edf5ec;
-  color: #345a3d;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.template-builder-library__use--active {
-  background: #1f7a2f;
-  color: #ffffff;
-}
-
-.template-builder-library__meta {
+.template-builder-field-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  margin-bottom: 16px;
 }
 
-.template-builder-library__snippet {
-  margin: 0;
-  color: #4f6756;
-  line-height: 1.6;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.template-builder-pagination {
-  margin-top: 18px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-
-.template-builder-pagination__info {
-  color: #5b7261;
-  font-weight: 600;
-}
-
-.template-builder-pagination__actions {
-  display: flex;
-  gap: 10px;
-}
-
-.template-builder-pagination__actions button {
+.template-builder-field-actions button,
+.template-builder-action,
+.template-builder-field-card__actions button,
+.template-builder-preview-submit {
   border: none;
   border-radius: 14px;
-  padding: 10px 16px;
-  background: #edf4ec;
-  color: #46604d;
+  padding: 10px 14px;
+  font: inherit;
   font-weight: 700;
   cursor: pointer;
 }
 
-.template-builder-pagination__actions button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.template-builder-field-actions button,
+.template-builder-field-card__actions button,
+.template-builder-action--secondary {
+  background: #edf4ec;
+  color: #345a3d;
 }
 
-.template-builder-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.template-builder-action {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  color: #ffffff;
 }
 
-.template-builder-callout,
-.template-builder-field-guide,
-.template-builder-sync-panel {
-  border: 1px solid #deeadf;
-  background: #f8fcf7;
-  border-radius: 22px;
-  padding: 18px 20px;
-}
-
-.template-builder-callout strong,
-.template-builder-field-guide h4,
-.template-builder-sync-panel strong {
-  color: #21492b;
-}
-
-.template-builder-callout p,
-.template-builder-sync-panel p {
-  margin: 8px 0 0;
-  color: #56705d;
-  line-height: 1.65;
-}
-
-.template-builder-field-guide h4 {
-  margin: 0 0 10px;
-  font-size: 1rem;
-}
-
-.template-builder-field-guide ul {
-  margin: 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  color: #4f6756;
-  line-height: 1.6;
-}
-
-.template-builder-sync-panel {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.template-builder-sync-panel__badge {
-  min-width: 126px;
-  text-align: center;
-  border-radius: 999px;
-  padding: 8px 14px;
-  background: #e8f6ea;
-  color: #1f7a2f;
-  font-weight: 800;
-}
-
-.template-builder-sync-panel__badge--warning {
-  background: #fff4de;
-  color: #b07a10;
-}
-
-.template-builder-form__section {
-  border: 1px solid #e2ece1;
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.template-builder-form__section-header {
+.template-builder-field,
+.template-builder-preview-field {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.template-builder-form__section-header strong {
-  color: #254730;
-  font-size: 1.05rem;
-}
-
-.template-builder-form__section-header span {
-  color: #617865;
-  line-height: 1.55;
-}
-
-.template-builder-form__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.template-builder-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.template-builder-form__field label {
+.template-builder-field label,
+.template-builder-preview-field label {
   color: #284633;
   font-weight: 700;
-  font-size: 0.96rem;
-  line-height: 1.45;
 }
 
-.template-builder-form__field input,
-.template-builder-form__field select,
-.template-builder-form__field textarea {
+.template-builder-field input,
+.template-builder-field textarea,
+.template-builder-preview-field input,
+.template-builder-preview-field select {
   width: 100%;
-  max-width: 100%;
-  border: 1px solid #d6e3d6;
-  border-radius: 18px;
-  padding: 14px 16px;
+  border: 1px solid #d7e6d9;
+  border-radius: 16px;
+  padding: 13px 15px;
   background: #fbfdfb;
-  color: #22382a;
+  color: #24382b;
   font: inherit;
-  outline: none;
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
   box-sizing: border-box;
 }
 
-.template-builder-form__field input:focus,
-.template-builder-form__field select:focus,
-.template-builder-form__field textarea:focus {
-  border-color: #77ab7b;
-  box-shadow: 0 0 0 3px rgba(96, 160, 103, 0.12);
-}
-
-.template-builder-form__field textarea {
+.template-builder-field textarea {
+  min-height: 96px;
   resize: vertical;
-  min-height: 120px;
   line-height: 1.6;
 }
 
-.template-builder-form__action-panel {
-  border: 1px solid #deeadf;
-  background: #fbfdfb;
-  border-radius: 22px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.template-builder-form__actions-note {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.template-builder-form__actions-note strong {
-  color: #234a2d;
-}
-
-.template-builder-form__actions-note span {
-  color: #5c7362;
-  line-height: 1.55;
-}
-
-.template-builder-form__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.template-builder-form__action {
-  border: none;
-  border-radius: 16px;
-  padding: 12px 18px;
-  background: #1f7a2f;
-  color: #ffffff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.template-builder-form__action--secondary {
-  background: #edf4ec;
-  color: #345a3d;
-}
-
-.template-builder-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.template-builder-preview__banner {
-  border-radius: 18px;
-  padding: 16px 18px;
-  background: #eaf6e9;
-  color: #1c6c2a;
-  font-weight: 700;
-  line-height: 1.55;
-}
-
-.template-builder-preview__banner--warning {
-  background: #fff4de;
-  color: #9a6a0c;
-}
-
-.template-builder-preview__summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.template-builder-preview__summary > div {
+.template-builder-field-card {
   border: 1px solid #deeadf;
   background: #fbfdfb;
   border-radius: 20px;
   padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-
-.template-builder-preview__summary strong {
-  color: #254730;
-}
-
-.template-builder-preview__summary span {
-  color: #5c7362;
-  line-height: 1.5;
-}
-
-.template-builder-preview__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.template-builder-preview__card {
-  border: 1px solid #deeadf;
-  background: #fbfdfb;
-  border-radius: 26px;
-  padding: 30px;
-  transition:
-    box-shadow 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.template-builder-preview__card--highlighted {
-  border-color: #77ab7b;
-  box-shadow: 0 12px 24px rgba(56, 104, 67, 0.12);
-}
-
-.template-builder-preview__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
 }
 
-.template-builder-preview__header strong {
-  color: #24452d;
-  font-size: 1.1rem;
+.template-builder-field-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
 }
 
-.template-builder-preview__header span {
-  color: #56705d;
-  font-weight: 700;
+.template-builder-field-card__header strong {
+  color: #22492c;
 }
 
-.template-builder-preview__context {
+.template-builder-field-card__header span {
+  display: block;
+  margin-top: 6px;
+  color: #69816f;
+}
+
+.template-builder-field-card__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: 8px;
 }
 
-.template-builder-preview__context span {
-  border-radius: 999px;
-  background: #eef5ed;
-  color: #31553a;
-  padding: 10px 14px;
+.template-builder-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.template-builder-field--full {
+  grid-column: 1 / -1;
+}
+
+.template-builder-checkbox {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #47614d;
   font-weight: 600;
 }
 
-.template-builder-preview__card pre {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  line-height: 1.75;
-  font-family: inherit;
-  color: #2a4030;
+.template-builder-checkbox input {
+  width: 18px;
+  height: 18px;
 }
 
-@media (max-width: 1280px) {
+.template-builder-preview-banner {
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: #eaf6e9;
+  color: #1c6c2a;
+  line-height: 1.55;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.template-builder-preview-card {
+  border: 1px solid #deeadf;
+  background: #fbfdfb;
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.template-builder-preview-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.template-builder-preview-card__header strong {
+  color: #24452d;
+  font-size: 1.05rem;
+}
+
+.template-builder-preview-card__header span {
+  display: block;
+  margin-top: 6px;
+  color: #5c7362;
+  line-height: 1.6;
+}
+
+.template-builder-preview-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #edf5ec;
+  color: #33563b;
+  padding: 10px 14px;
+  font-weight: 700;
+  height: fit-content;
+  max-width: 220px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.template-builder-preview-section {
+  border-radius: 16px;
+  background: #f4f9f3;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.template-builder-preview-section strong {
+  color: #234a2d;
+}
+
+.template-builder-preview-section span,
+.template-builder-preview-field small {
+  color: #5c7362;
+  line-height: 1.55;
+}
+
+.template-builder-preview-field label span {
+  color: #bf4d3d;
+  margin-left: 4px;
+}
+
+.template-builder-preview-submit {
+  margin-top: 8px;
+  background: #dfeadd;
+  color: #5d7261;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1320px) {
   .template-builder-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 900px) {
   .template-builder-steps,
-  .template-builder-purpose,
-  .template-builder-preview__summary {
+  .template-builder-field-grid {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .template-builder-form__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .template-builder-sync-panel,
-  .template-builder-library__header {
+  .template-builder-toolbar,
+  .template-builder-preview-card__header,
+  .template-builder-field-card__header {
     flex-direction: column;
-  }
-
-  .template-builder-form__actions {
-    flex-direction: column;
-  }
-
-  .template-builder-form__action,
-  .template-builder-library__use {
-    width: 100%;
-  }
-
-  .template-builder-pagination {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }

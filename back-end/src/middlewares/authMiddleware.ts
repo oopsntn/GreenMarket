@@ -1,9 +1,12 @@
 import { Response, NextFunction, RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { AuthRequest, JWTUserPayload } from "../dtos/auth";
+import { db } from "../config/db.ts";
+import { businessRoles, users } from "../models/schema/index.ts";
+import { eq } from "drizzle-orm";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
-const ADMIN_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_SUPPORT", "ROLE_FINANCE"];
+const ADMIN_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT", "ROLE_MODERATOR", "ROLE_FINANCE"];
 
 const getRoleCodes = (user?: JWTUserPayload): string[] => {
     if (!user) {
@@ -20,6 +23,31 @@ const getRoleCodes = (user?: JWTUserPayload): string[] => {
     }
 
     return [];
+};
+
+const getActiveBusinessRoleCode = async (userId: number): Promise<string | null> => {
+    const [roleRow] = await db
+        .select({
+            roleCode: businessRoles.businessRoleCode,
+            roleStatus: businessRoles.businessRoleStatus,
+        })
+        .from(users)
+        .leftJoin(
+            businessRoles,
+            eq(users.userBusinessRoleId, businessRoles.businessRoleId),
+        )
+        .where(eq(users.userId, userId))
+        .limit(1);
+
+    if (!roleRow?.roleCode) {
+        return null;
+    }
+
+    if (roleRow.roleStatus?.toLowerCase() !== "active") {
+        return null;
+    }
+
+    return roleRow.roleCode.toUpperCase();
 };
 
 export const verifyToken: RequestHandler = (req, res: Response, next: NextFunction): void => {
@@ -111,6 +139,61 @@ export const requireRoles = (...allowedRoles: string[]) => {
         }
 
         next();
+    };
+
+    return handler;
+};
+
+export const requireBusinessRole = (...allowedBusinessRoles: string[]) => {
+    const normalizedAllowedRoles = allowedBusinessRoles.map((role) =>
+        role.toUpperCase(),
+    );
+
+    const handler: RequestHandler = async (
+        req,
+        res: Response,
+        next: NextFunction,
+    ): Promise<void> => {
+        try {
+            const authReq = req as AuthRequest;
+            const userId = authReq.user?.id;
+
+            if (!userId || !authReq.user) {
+                res.status(401).json({ error: "Unauthorized" });
+                return;
+            }
+
+            if (authReq.user.role !== "user") {
+                res
+                    .status(403)
+                    .json({ error: "Access denied. User account required." });
+                return;
+            }
+
+            const currentRoleCode = await getActiveBusinessRoleCode(userId);
+
+            if (!currentRoleCode) {
+                res.status(403).json({
+                    error: "Access denied. Active business role is required.",
+                });
+                return;
+            }
+
+            authReq.user.businessRoleCode = currentRoleCode;
+
+            const hasPermission = normalizedAllowedRoles.includes(currentRoleCode);
+            if (!hasPermission) {
+                res.status(403).json({
+                    error: "Access denied. Insufficient business role permissions.",
+                });
+                return;
+            }
+
+            next();
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal server error" });
+        }
     };
 
     return handler;

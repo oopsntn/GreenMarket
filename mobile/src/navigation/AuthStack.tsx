@@ -3,15 +3,9 @@ import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import LoginScreen from "../components/auth/LoginScreen";
 import UserNavigator from "./UserNavigator";
-import ModeratorNavigator from "../moderator/navigation/ModeratorNavigator";
+import ManagerNavigator from "../manager/navigation/ManagerNavigator";
 import SuccessToast from "../components/SuccessToast";
-
-// Define role-based routes mapping
-const ROLE_ROUTES = {
-  "ROLE_MODERATOR": "ModeratorNavigator",
-  "ROLE_SHOP_OWNER": "ShopOwnerNavigator", // For future shop owner panel
-  // Default/null role goes to UserNavigator
-};
+import CollaboratorNavigator from "@/collaborator/navigation/CollaboratorNavigator";
 
 const AuthStack = () => {
   const { token, user, loading } = useAuth();
@@ -52,8 +46,10 @@ const AuthStack = () => {
     const businessRoleCode = user?.businessRoleCode;
 
     switch (businessRoleCode) {
-      case "ROLE_MODERATOR":
-        return <ModeratorNavigator />;
+      case "MANAGER":
+        return <ManagerNavigator />;
+      case "COLLABORATOR":
+        return <CollaboratorNavigator />
       default:
         return <UserNavigator />;
     }

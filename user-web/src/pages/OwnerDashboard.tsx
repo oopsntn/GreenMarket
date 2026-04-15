@@ -12,7 +12,12 @@ import {
   Sparkles,
   Wallet,
 } from 'lucide-react';
-import { getOwnerDashboard, type OwnerDashboardResponse } from '../services/api';
+import {
+  getOwnerDashboard,
+  getPromotionPackages,
+  type OwnerDashboardResponse,
+  type PromotionPackageItem,
+} from '../services/api';
 
 const formatVnd = (value: number) =>
   new Intl.NumberFormat('vi-VN', {
@@ -28,6 +33,11 @@ const formatDateTime = (value: string | null) => {
   return parsed.toLocaleString('vi-VN');
 };
 
+const toSafeNumber = (value: unknown): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const getPaymentBadgeClass = (status: string | null) => {
   switch (status) {
     case 'success':
@@ -39,19 +49,14 @@ const getPaymentBadgeClass = (status: string | null) => {
   }
 };
 
-const getPostStatusBadgeClass = (status: string) => {
-  if (status === 'approved') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 'pending') return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (status === 'rejected') return 'bg-rose-50 text-rose-700 border-rose-200';
-  return 'bg-slate-100 text-slate-700 border-slate-200';
-};
-
 const OwnerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<OwnerDashboardResponse | null>(null);
   const [error, setError] = useState<{ code?: string; message: string } | null>(
     null,
   );
+  const [packagesLoading, setPackagesLoading] = useState(true);
+  const [packages, setPackages] = useState<PromotionPackageItem[]>([]);
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -74,11 +79,42 @@ const OwnerDashboard: React.FC = () => {
     }
   };
 
+  const loadPackages = async () => {
+    setPackagesLoading(true);
+    try {
+      const res = await getPromotionPackages();
+      const payload = res.data;
+
+      if (payload?.audience !== 'garden_owner') {
+        setPackages([]);
+        return;
+      }
+
+      const sorted = [...(payload.packages || [])].sort((a, b) => {
+        const durationDiff =
+          toSafeNumber(a.promotionPackageDurationDays) -
+          toSafeNumber(b.promotionPackageDurationDays);
+        if (durationDiff !== 0) return durationDiff;
+        return (
+          toSafeNumber(a.promotionPackagePrice) -
+          toSafeNumber(b.promotionPackagePrice)
+        );
+      });
+
+      setPackages(sorted);
+    } catch {
+      setPackages([]);
+    } finally {
+      setPackagesLoading(false);
+    }
+  };
+
   useEffect(() => {
     void loadDashboard();
+    void loadPackages();
   }, []);
 
-    const cards = useMemo(() => {
+  const cards = useMemo(() => {
     if (!data) return [];
     const summary = data.summary;
     const postContactRate = Number(
@@ -147,6 +183,42 @@ const OwnerDashboard: React.FC = () => {
       },
     ];
   }, [data]);
+
+  const packageMetrics = useMemo(() => {
+    return packages.map((pkg) => {
+      const durationDays = Math.max(1, toSafeNumber(pkg.promotionPackageDurationDays));
+      const packagePrice = Math.max(0, toSafeNumber(pkg.promotionPackagePrice));
+      const costPerDay = Math.round(packagePrice / durationDays);
+      const maxPosts = toSafeNumber(pkg.promotionPackageMaxPosts);
+      const displayQuota = toSafeNumber(pkg.promotionPackageDisplayQuota);
+
+      return {
+        ...pkg,
+        durationDays,
+        packagePrice,
+        costPerDay,
+        maxPosts,
+        displayQuota,
+      };
+    });
+  }, [packages]);
+
+  const recommendedPackage = useMemo(() => {
+    return packageMetrics.reduce<(typeof packageMetrics)[number] | null>(
+      (best, current) => {
+        if (!best) return current;
+        if (current.costPerDay < best.costPerDay) return current;
+        if (
+          current.costPerDay === best.costPerDay &&
+          current.durationDays > best.durationDays
+        ) {
+          return current;
+        }
+        return best;
+      },
+      null,
+    );
+  }, [packageMetrics]);
 
   if (loading) {
     return (
@@ -230,18 +302,6 @@ const OwnerDashboard: React.FC = () => {
               Quản lý bài đăng <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-
-          <div className="mt-6 flex flex-wrap gap-3 text-xs">
-            <span className="px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold uppercase tracking-wider">
-              Đã duyệt: {summary.approvedPosts}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-bold uppercase tracking-wider">
-              Chờ duyệt: {summary.pendingPosts}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-rose-700 font-bold uppercase tracking-wider">
-              Từ chối: {summary.rejectedPosts}
-            </span>
-          </div>
         </section>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -259,6 +319,80 @@ const OwnerDashboard: React.FC = () => {
               </p>
             </article>
           ))}
+        </section>
+
+        <section className="bg-white rounded-3xl border border-slate-200 shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                Gói hiện có
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                So sánh nhanh giá, thời hạn và quota để chọn gói phù hợp.
+              </p>
+            </div>
+            <Link
+              to="/packages"
+              className="inline-flex items-center gap-1 text-sm font-bold text-emerald-700 hover:text-emerald-600"
+            >
+              Xem bảng giá chi tiết <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="p-5 space-y-5">
+            {packagesLoading ? (
+              <div className="py-8 text-sm text-slate-500">
+                Đang tải danh sách gói...
+              </div>
+            ) : packageMetrics.length === 0 ? (
+              <div className="py-8 text-sm text-slate-500">
+                Chưa có gói nào phù hợp với tài khoản hiện tại.
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {packageMetrics.map((pkg) => {
+                    const isRecommended =
+                      recommendedPackage?.promotionPackageId ===
+                      pkg.promotionPackageId;
+                    return (
+                      <article
+                        key={pkg.promotionPackageId}
+                        className={`rounded-2xl border p-4 ${isRecommended
+                          ? 'border-emerald-500 ring-2 ring-emerald-100 bg-emerald-50/30'
+                          : 'border-slate-200 bg-slate-50'
+                          }`}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-black text-slate-900">
+                            {pkg.promotionPackageTitle || `Gói ${pkg.durationDays} ngày`}
+                          </h3>
+                          {isRecommended && (
+                            <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase font-black tracking-wider">
+                              Đề xuất
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-2xl font-black text-emerald-700 mb-2">
+                          {formatVnd(pkg.packagePrice)}
+                        </p>
+                        <div className="text-xs text-slate-500 space-y-1">
+                          <p>Thời hạn: {pkg.durationDays} ngày</p>
+                          <p>Chi phí/ngày: {formatVnd(pkg.costPerDay)}</p>
+                          <p>
+                            Số bài: {pkg.maxPosts > 0 ? `${pkg.maxPosts} bài` : '-'}
+                          </p>
+                          <p>
+                            Lượt hiển thị: {pkg.displayQuota > 0 ? `${pkg.displayQuota.toLocaleString('vi-VN')} lượt` : '-'}
+                          </p>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </section>
 
         <section className="grid grid-cols-1 xl:grid-cols-5 gap-5">

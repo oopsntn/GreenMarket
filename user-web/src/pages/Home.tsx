@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getPublicPosts, getCategories } from '../services/api';
 import { Leaf, Search, ShoppingBag, MapPin, ListFilter, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
+import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 const VIETNAM_PROVINCES = [
   'Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ',
@@ -115,7 +116,7 @@ const Home: React.FC = () => {
       <div className="aspect-square bg-slate-50 overflow-hidden relative border-b border-slate-100">
         {post.images && post.images.length > 0 ? (
           <img
-            src={post.images[0].imageUrl.startsWith('http') ? post.images[0].imageUrl : `http://localhost:5000${post.images[0].imageUrl}`}
+            src={resolveImageUrl(post.images[0].imageUrl)}
             alt={post.postTitle}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
           />

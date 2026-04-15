@@ -45,8 +45,10 @@ const syncPromotionLifecycle = async () => {
 const startPromotionScheduler = () => {
     console.log("[Scheduler] Promotion expiration scheduler started.");
     
-    // Run immediately once
-    syncPromotionLifecycle();
+    // Run once after a short delay (10s) to allow DB to be ready
+    setTimeout(() => {
+        syncPromotionLifecycle();
+    }, 10000);
 
     // Loop
     setInterval(syncPromotionLifecycle, CHECK_INTERVAL);

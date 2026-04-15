@@ -470,7 +470,8 @@
 }
 
 .users-modal__field input,
-.users-modal__field select {
+.users-modal__field select,
+.users-modal__field textarea {
   height: 46px;
   border: 1px solid #d7e6d9;
   border-radius: 12px;
@@ -481,10 +482,24 @@
   color: #223127;
 }
 
+.users-modal__field textarea {
+  min-height: 120px;
+  padding: 12px 14px;
+  resize: vertical;
+  font-family: inherit;
+}
+
 .users-modal__field input:disabled,
-.users-modal__field select:disabled {
+.users-modal__field select:disabled,
+.users-modal__field textarea:disabled {
   background-color: #f5f7f4;
   color: #617066;
+}
+
+.users-modal__error {
+  color: #c62828;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .users-modal__notice {

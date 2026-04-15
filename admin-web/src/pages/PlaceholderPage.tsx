@@ -6,7 +6,7 @@ function PlaceholderPage({ title }: PlaceholderPageProps) {
   return (
     <div>
       <h2>{title}</h2>
-      <p>This page is under development.</p>
+      <p>Màn này đang được hoàn thiện.</p>
     </div>
   );
 }

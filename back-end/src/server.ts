@@ -9,6 +9,7 @@ import categoryRoutes from "./routes/admin/category.route.ts";
 import attributeRoutes from "./routes/admin/attribute.route.ts";
 import categoryMappingRoutes from "./routes/admin/category-mapping.route.ts";
 import templateRoutes from "./routes/admin/template.route.ts";
+import templateBuilderRoutes from "./routes/admin/template-builder.route.ts";
 import postRoutes from "./routes/admin/post.route.ts";
 import shopRoutes from "./routes/admin/shop.route.ts";
 import reportRoutes from "./routes/admin/report.route.ts";
@@ -24,11 +25,18 @@ import adminAnalyticsRoutes from "./routes/admin/analytics.route.ts";
 import adminRevenueRoutes from "./routes/admin/revenue.route.ts";
 import adminCustomerSpendingRoutes from "./routes/admin/customer-spending.route.ts";
 import adminExportRoutes from "./routes/admin/export.route.ts";
+import adminSettingsRoutes from "./routes/admin/settings.route.ts";
+import adminAIInsightRoutes from "./routes/admin/ai-insight.route.ts";
+import adminActivityLogRoutes from "./routes/admin/activity-log.route.ts";
 import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
 import userReportRoutes from "./routes/user/report.route.ts";
 import userCategoryRoutes from "./routes/user/category.route.ts";
 import userProfileRoutes from "./routes/user/profile.route.ts";
+import userCollaboratorRoutes from "./routes/user/collaborator.route.ts";
+import userManagerRoutes from "./routes/user/manager.route.ts";
+import userOperationsRoutes from "./routes/user/operations.route.ts";
+import userHostRoutes from "./routes/user/host.route.ts";
 import uploadRoutes from "./routes/upload.route.ts";
 import userPromotionRoutes from "./routes/user/promotion.route.ts";
 import userPaymentRoutes from "./routes/user/payment.route.ts";
@@ -37,7 +45,30 @@ import path from "path";
 import "./services/promotionScheduler.ts";
 
 const app = express();
-app.use(cors());
+
+// Harden CORS
+const serverIp = process.env.IP || "localhost";
+const protocol = process.env.PROTOCOL || (serverIp === "localhost" ? "http" : "http"); 
+const whitelist = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  `${protocol}://${serverIp}:5173`,
+  `${protocol}://${serverIp}:5174`,
+  `${protocol}://${serverIp}`,
+  `${protocol}://${serverIp}:8080`,
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -52,6 +83,12 @@ app.use(
   categoryMappingRoutes,
 );
 app.use("/api/admin/templates", verifyToken, isAdmin, templateRoutes);
+app.use(
+  "/api/admin/template-builder",
+  verifyToken,
+  isAdmin,
+  templateBuilderRoutes,
+);
 app.use("/api/admin/posts", verifyToken, isAdmin, postRoutes);
 app.use("/api/admin/shops", verifyToken, isAdmin, shopRoutes);
 app.use("/api/admin/reports", verifyToken, isAdmin, reportRoutes);
@@ -92,6 +129,14 @@ app.use(
   adminCustomerSpendingRoutes,
 );
 app.use("/api/admin/exports", verifyToken, isAdmin, adminExportRoutes);
+app.use("/api/admin/settings", verifyToken, isAdmin, adminSettingsRoutes);
+app.use("/api/admin/ai-insights", verifyToken, isAdmin, adminAIInsightRoutes);
+app.use(
+  "/api/admin/activity-logs",
+  verifyToken,
+  isAdmin,
+  adminActivityLogRoutes,
+);
 
 // User Routes
 app.use("/api/shops", userShopRoutes);
@@ -102,6 +147,10 @@ app.use("/api/profile", userProfileRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/promotions", userPromotionRoutes);
 app.use("/api/payment", userPaymentRoutes);
+app.use("/api/collaborator", userCollaboratorRoutes);
+app.use("/api/manager", userManagerRoutes);
+app.use("/api/operations", userOperationsRoutes);
+app.use("/api/host", userHostRoutes);
 
 // Static files for uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));

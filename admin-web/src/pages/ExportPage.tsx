@@ -22,6 +22,49 @@ import "./ExportPage.css";
 
 const PAGE_SIZE = 5;
 
+const GENERAL_MODULE_OPTIONS: GeneralExportModule[] = [
+  "Users",
+  "Categories",
+  "Attributes",
+  "Templates",
+  "Promotions",
+  "Analytics",
+];
+
+const FINANCIAL_REPORT_OPTIONS: FinancialReportType[] = [
+  "Revenue Summary",
+  "Customer Spending Report",
+  "Promotion Performance",
+];
+
+const HISTORY_STATUS_OPTIONS = ["All Statuses", "Completed", "In Progress"] as const;
+
+const historyTypeLabelMap: Record<ExportHistoryItem["type"], string> = {
+  General: "Vận hành",
+  Financial: "Tài chính",
+};
+
+const generalModuleLabelMap: Record<GeneralExportModule, string> = {
+  Users: "Người dùng",
+  Categories: "Danh mục",
+  Attributes: "Thuộc tính",
+  Templates: "Mẫu nội dung",
+  Promotions: "Khuyến mãi",
+  Analytics: "Phân tích",
+};
+
+const financialReportLabelMap: Record<FinancialReportType, string> = {
+  "Revenue Summary": "Tổng quan doanh thu",
+  "Customer Spending Report": "Báo cáo chi tiêu khách hàng",
+  "Promotion Performance": "Hiệu quả khuyến mãi",
+};
+
+const historyStatusLabelMap: Record<(typeof HISTORY_STATUS_OPTIONS)[number], string> = {
+  "All Statuses": "Tất cả trạng thái",
+  Completed: "Hoàn tất",
+  "In Progress": "Đang xử lý",
+};
+
 function ExportPage() {
   const [historyItems, setHistoryItems] = useState<ExportHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,7 +89,8 @@ function ExportPage() {
   );
   const [financialFormat, setFinancialFormat] = useState<ExportFormat>("CSV");
   const [historySearchKeyword, setHistorySearchKeyword] = useState("");
-  const [historyStatusFilter, setHistoryStatusFilter] = useState("All Statuses");
+  const [historyStatusFilter, setHistoryStatusFilter] =
+    useState<(typeof HISTORY_STATUS_OPTIONS)[number]>("All Statuses");
   const [showHistoryFilters, setShowHistoryFilters] = useState(false);
 
   const [page, setPage] = useState(1);
@@ -119,7 +163,7 @@ function ExportPage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Failed to load export history.",
+            : "Không thể tải lịch sử xuất dữ liệu.",
         );
       } finally {
         setIsLoading(false);
@@ -143,13 +187,13 @@ function ExportPage() {
       setPage(1);
 
       showToast(
-        `${generalModule} export started for ${generalDateRangeLabel} in ${generalFormat} format.`,
+        `Đã bắt đầu xuất dữ liệu ${generalModuleLabelMap[generalModule]} cho ${generalDateRangeLabel} dưới định dạng ${generalFormat}.`,
       );
     } catch (error) {
       showToast(
         error instanceof Error
           ? error.message
-          : "Failed to export general data.",
+          : "Không thể xuất dữ liệu vận hành.",
         "error",
       );
     } finally {
@@ -172,13 +216,13 @@ function ExportPage() {
       setPage(1);
 
       showToast(
-        `${financialReportType} export started for ${financialDateRangeLabel} in ${financialFormat} format.`,
+        `Đã bắt đầu xuất ${financialReportLabelMap[financialReportType]} cho ${financialDateRangeLabel} dưới định dạng ${financialFormat}.`,
       );
     } catch (error) {
       showToast(
         error instanceof Error
           ? error.message
-          : "Failed to export financial report.",
+          : "Không thể xuất báo cáo tài chính.",
         "error",
       );
     } finally {
@@ -189,51 +233,45 @@ function ExportPage() {
   return (
     <div className="export-page">
       <PageHeader
-        title="Export CSV"
-        description="Export operational and financial reports for GreenMarket admin."
+        title="Xuất dữ liệu"
+        description="Xuất báo cáo vận hành và tài chính phục vụ quản trị GreenMarket."
       />
 
       <div className="export-grid">
         <SectionCard
-          title="General Data Export"
-          description="Export operational records from the admin system."
+          title="Xuất dữ liệu vận hành"
+          description="Tạo tệp xuất dữ liệu từ các phân hệ quản trị."
         >
           <div className="export-form export-form--padded">
             <FilterBar
               fields={[
                 {
                   id: "general-module",
-                  label: "Module",
+                  label: "Phân hệ",
                   type: "select",
                   value: generalModule,
                   onChange: (value) =>
                     setGeneralModule(value as GeneralExportModule),
-                  options: [
-                    "Users",
-                    "Categories",
-                    "Attributes",
-                    "Templates",
-                    "Promotions",
-                    "Analytics",
-                  ],
+                  options: GENERAL_MODULE_OPTIONS,
+                  optionLabels: generalModuleLabelMap,
                 },
                 {
                   id: "general-from-date",
-                  label: "From Date",
+                  label: "Từ ngày",
                   type: "date",
                   value: generalFromDate,
                   onChange: setGeneralFromDate,
                 },
                 {
                   id: "general-to-date",
-                  label: "To Date",
+                  label: "Đến ngày",
                   type: "date",
                   value: generalToDate,
                   onChange: setGeneralToDate,
                 },
                 {
                   id: "general-format",
-                  label: "File Format",
+                  label: "Định dạng tệp",
                   type: "select",
                   value: generalFormat,
                   onChange: (value) => setGeneralFormat(value as ExportFormat),
@@ -248,48 +286,45 @@ function ExportPage() {
               onClick={handleExportGeneralData}
               disabled={isGeneralExporting}
             >
-              {isGeneralExporting ? "Exporting..." : "Export General Data"}
+              {isGeneralExporting ? "Đang xuất..." : "Xuất dữ liệu vận hành"}
             </button>
           </div>
         </SectionCard>
 
         <SectionCard
-          title="Financial Export"
-          description="Export revenue and customer spending reports."
+          title="Xuất báo cáo tài chính"
+          description="Tạo báo cáo doanh thu và chi tiêu khách hàng theo khoảng thời gian."
         >
           <div className="export-form export-form--padded">
             <FilterBar
               fields={[
                 {
                   id: "financial-report-type",
-                  label: "Report Type",
+                  label: "Loại báo cáo",
                   type: "select",
                   value: financialReportType,
                   onChange: (value) =>
                     setFinancialReportType(value as FinancialReportType),
-                  options: [
-                    "Revenue Summary",
-                    "Customer Spending Report",
-                    "Promotion Performance",
-                  ],
+                  options: FINANCIAL_REPORT_OPTIONS,
+                  optionLabels: financialReportLabelMap,
                 },
                 {
                   id: "financial-from-date",
-                  label: "From Date",
+                  label: "Từ ngày",
                   type: "date",
                   value: financialFromDate,
                   onChange: setFinancialFromDate,
                 },
                 {
                   id: "financial-to-date",
-                  label: "To Date",
+                  label: "Đến ngày",
                   type: "date",
                   value: financialToDate,
                   onChange: setFinancialToDate,
                 },
                 {
                   id: "financial-format",
-                  label: "File Format",
+                  label: "Định dạng tệp",
                   type: "select",
                   value: financialFormat,
                   onChange: (value) =>
@@ -305,35 +340,39 @@ function ExportPage() {
               onClick={handleExportFinancialReport}
               disabled={isFinancialExporting}
             >
-              {isFinancialExporting ? "Exporting..." : "Export Financial Report"}
+              {isFinancialExporting ? "Đang xuất..." : "Xuất báo cáo tài chính"}
             </button>
           </div>
         </SectionCard>
       </div>
 
       <SearchToolbar
-        placeholder="Search by report name, type, or generated by"
+        placeholder="Tìm theo tên báo cáo, loại báo cáo hoặc người tạo"
         searchValue={historySearchKeyword}
         onSearchChange={setHistorySearchKeyword}
         onFilterClick={() => setShowHistoryFilters((prev) => !prev)}
-        filterLabel="Filter by export status"
-        filterSummary={`Showing ${filteredHistory.length} history item(s)`}
+        filterLabel="Lọc theo trạng thái xuất dữ liệu"
+        filterSummary={`Đang hiển thị ${filteredHistory.length} bản ghi lịch sử`}
       />
 
       {showHistoryFilters ? (
         <SectionCard
-          title="Export History Filters"
-          description="Refine recent exports by completion status."
+          title="Bộ lọc lịch sử xuất dữ liệu"
+          description="Thu hẹp danh sách theo trạng thái xử lý của tệp xuất."
         >
           <FilterBar
             fields={[
               {
                 id: "export-history-status",
-                label: "Status",
+                label: "Trạng thái",
                 type: "select",
                 value: historyStatusFilter,
-                onChange: setHistoryStatusFilter,
-                options: ["All Statuses", "Completed", "In Progress"],
+                onChange: (value) =>
+                  setHistoryStatusFilter(
+                    value as (typeof HISTORY_STATUS_OPTIONS)[number],
+                  ),
+                options: [...HISTORY_STATUS_OPTIONS],
+                optionLabels: historyStatusLabelMap,
               },
             ]}
           />
@@ -341,20 +380,23 @@ function ExportPage() {
       ) : null}
 
       <SectionCard
-        title="Recent Export History"
-        description={`Track recently generated reports • ${historyStatusFilter}`}
+        title="Lịch sử xuất dữ liệu gần đây"
+        description={`Theo dõi các tệp vừa tạo • ${historyStatusLabelMap[historyStatusFilter]}`}
       >
         {isLoading ? (
           <EmptyState
-            title="Loading export history"
-            description="Fetching export history from the admin API."
+            title="Đang tải lịch sử xuất dữ liệu"
+            description="Hệ thống đang lấy lịch sử xuất dữ liệu từ API quản trị."
           />
         ) : pageError ? (
-          <EmptyState title="Unable to load export history" description={pageError} />
+          <EmptyState
+            title="Không thể tải lịch sử xuất dữ liệu"
+            description={pageError}
+          />
         ) : filteredHistory.length === 0 ? (
           <EmptyState
-            title="No export history found"
-            description="Generated export records will appear here after you run an export."
+            title="Chưa có lịch sử xuất dữ liệu"
+            description="Các lần xuất dữ liệu gần đây sẽ xuất hiện tại đây sau khi bạn tạo báo cáo."
           />
         ) : (
           <div className="export-history-section">
@@ -363,12 +405,12 @@ function ExportPage() {
                 <thead>
                   <tr>
                     <th>ID</th>
-                    <th>Report Name</th>
-                    <th>Type</th>
-                    <th>Format</th>
-                    <th>Generated By</th>
-                    <th>Date</th>
-                    <th>Status</th>
+                    <th>Tên báo cáo</th>
+                    <th>Loại</th>
+                    <th>Định dạng</th>
+                    <th>Người tạo</th>
+                    <th>Ngày tạo</th>
+                    <th>Trạng thái</th>
                   </tr>
                 </thead>
 
@@ -377,13 +419,13 @@ function ExportPage() {
                     <tr key={item.id}>
                       <td>#{item.id}</td>
                       <td>{item.reportName}</td>
-                      <td>{item.type}</td>
+                      <td>{historyTypeLabelMap[item.type]}</td>
                       <td>{item.format}</td>
                       <td>{item.generatedBy}</td>
                       <td>{item.date}</td>
                       <td>
                         <StatusBadge
-                          label={item.status}
+                          label={historyStatusLabelMap[item.status]}
                           variant={
                             item.status === "Completed"
                               ? "success"
@@ -399,7 +441,7 @@ function ExportPage() {
 
             <div className="export-pagination">
               <span className="export-pagination__info">
-                Page {page} of {totalPages}
+                Trang {page} / {totalPages}
               </span>
 
               <div className="export-pagination__actions">
@@ -408,7 +450,7 @@ function ExportPage() {
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  Trước
                 </button>
                 <button
                   type="button"
@@ -417,7 +459,7 @@ function ExportPage() {
                   }
                   disabled={page === totalPages}
                 >
-                  Next
+                  Tiếp
                 </button>
               </div>
             </div>

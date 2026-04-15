@@ -1,4 +1,4 @@
- import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -149,39 +149,39 @@ const HomeScreen = () => {
     console.log('Post:', item.postTitle, 'Image URL:', finalImageUrl);
 
     return (
-    <TouchableOpacity
-      style={styles.postCard}
-      onPress={() => navigation.navigate('PostDetail', { slug: item.postSlug })}
-    >
-      <View style={styles.imageContainer}>
-        {finalImageUrl ? (
-          <Image
-            source={{ uri: finalImageUrl }}
-            style={styles.postImage}
-          />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <Text style={styles.placeholderText}>No Image</Text>
-          </View>
-        )}
-        <TouchableOpacity style={styles.favoriteButton}>
-          <Heart size={20} color="#10b981" fill="#10b981" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.postInfo}>
-        <Text style={styles.postTitle} numberOfLines={2}>
-          {item.postTitle}
-        </Text>
-        <Text style={styles.postPrice}>
-          {Number(item.postPrice).toLocaleString()} <Text style={styles.currencyText}>VND</Text>
-        </Text>
-        <View style={styles.locationContainer}>
-          <MapPin size={12} color="#666" />
-          <Text style={styles.locationText}>{item.postLocation || 'Hà Nội'}</Text>
+      <TouchableOpacity
+        style={styles.postCard}
+        onPress={() => navigation.navigate('PostDetail', { slug: item.postSlug })}
+      >
+        <View style={styles.imageContainer}>
+          {finalImageUrl ? (
+            <Image
+              source={{ uri: finalImageUrl }}
+              style={styles.postImage}
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Text style={styles.placeholderText}>No Image</Text>
+            </View>
+          )}
+          <TouchableOpacity style={styles.favoriteButton}>
+            <Heart size={20} color="#10b981" fill="#10b981" />
+          </TouchableOpacity>
         </View>
-      </View>
-    </TouchableOpacity>
+
+        <View style={styles.postInfo}>
+          <Text style={styles.postTitle} numberOfLines={2}>
+            {item.postTitle}
+          </Text>
+          <Text style={styles.postPrice}>
+            {Number(item.postPrice).toLocaleString()} <Text style={styles.currencyText}>VND</Text>
+          </Text>
+          <View style={styles.locationContainer}>
+            <MapPin size={12} color="#666" />
+            <Text style={styles.locationText}>{item.postLocation || 'Hà Nội'}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
     );
   };
 

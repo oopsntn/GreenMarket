@@ -39,6 +39,14 @@ const buildApiUrl = (path: string) => {
   return `${getApiBaseUrl()}${normalizedPath}`;
 };
 
+export const resolveImageUrl = (path?: string | null): string => {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${getApiBaseUrl()}${normalizedPath}`;
+};
+
 const parseErrorMessage = async (
   response: Response,
   fallbackMessage: string,
@@ -93,7 +101,7 @@ export const apiClient = {
     });
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+      if ((response.status === 401 || response.status === 403) && !skipAuth) {
         clearAdminSession();
 
         throw new ApiError(

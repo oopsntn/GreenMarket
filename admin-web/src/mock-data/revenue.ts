@@ -14,7 +14,6 @@ export const revenueRows: RevenueRow[] = [
     slot: "Home Top",
     orders: 42,
     revenue: "$7,800",
-    growth: "+14.2%",
   },
   {
     id: 2,
@@ -22,7 +21,6 @@ export const revenueRows: RevenueRow[] = [
     slot: "Category Top",
     orders: 38,
     revenue: "$5,240",
-    growth: "+8.9%",
   },
   {
     id: 3,
@@ -30,7 +28,6 @@ export const revenueRows: RevenueRow[] = [
     slot: "Search Boost",
     orders: 31,
     revenue: "$3,120",
-    growth: "+5.1%",
   },
   {
     id: 4,
@@ -38,6 +35,5 @@ export const revenueRows: RevenueRow[] = [
     slot: "Search Boost",
     orders: 18,
     revenue: "$1,260",
-    growth: "-2.4%",
   },
 ];

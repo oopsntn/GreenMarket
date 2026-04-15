@@ -1,27 +1,83 @@
 import { apiClient } from "../lib/apiClient";
-import type { Attribute } from "../types/attribute";
-import type { Category } from "../types/category";
-import type {
-  CategoryMapping,
-  CategoryMappingApiResponse,
-  CategoryMappingAttributeType,
-  CategoryMappingFormState,
-  MappingStatus,
-} from "../types/categoryMapping";
 
-const toNumberId = (value: string) => Number(value);
+export type MappingStatus = "Active" | "Disabled";
+export type MappingAttributeType = "Text" | "Number" | "Select" | "Boolean";
 
-const normalizeText = (value: string) => value.trim().toLowerCase();
+export type CategoryAttributeMapping = {
+  id: string;
+  categoryId: number;
+  categoryName: string;
+  attributeId: number;
+  attributeName: string;
+  attributeCode: string;
+  attributeType: MappingAttributeType;
+  isRequired: boolean;
+  displayOrder: number;
+  status: MappingStatus;
+};
 
-const normalizeMappingStatus = (
-  value: string | null | undefined,
-): MappingStatus =>
-  (value || "").toLowerCase() === "disabled" ? "Disabled" : "Active";
+export type CategoryMappingPreviewField = {
+  attributeId: number;
+  attributeName: string;
+  attributeCode: string;
+  attributeType: MappingAttributeType;
+  isRequired: boolean;
+  displayOrder: number;
+  placeholder: string;
+};
 
-const normalizeAttributeType = (
-  value: string | null | undefined,
-): CategoryMappingAttributeType => {
-  switch ((value || "").toLowerCase()) {
+export type CategoryMappingPreview = {
+  categoryId: number;
+  categoryName: string;
+  fields: CategoryMappingPreviewField[];
+};
+
+type MappingListParams = {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+type MappingListResponse = {
+  data: CategoryAttributeMapping[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+type MappingApiItem = {
+  categoryId: number;
+  attributeId: number;
+  categoryName?: string | null;
+  attributeName?: string | null;
+  attributeCode?: string | null;
+  attributeType?: string | null;
+  required?: boolean | null;
+  displayOrder?: number | null;
+  status?: string | null;
+};
+
+type MappingApiWriteResponse = {
+  categoryId: number;
+  attributeId: number;
+  required?: boolean | null;
+  displayOrder?: number | null;
+  status?: string | null;
+};
+
+export type CreateMappingPayload = {
+  categoryId: number;
+  attributeId: number;
+  isRequired: boolean;
+  displayOrder: number;
+};
+
+export type UpdateMappingPayload = CreateMappingPayload;
+
+const CATEGORY_MAPPING_BASE_PATH = "/api/admin/category-mappings";
+
+const normalizeAttributeType = (value: unknown): MappingAttributeType => {
+  switch (String(value ?? "").toLowerCase()) {
     case "number":
       return "Number";
     case "select":
@@ -34,301 +90,229 @@ const normalizeAttributeType = (
   }
 };
 
-const normalizeOptions = (value: unknown): string[] => {
-  if (!Array.isArray(value)) return [];
-
-  return value
-    .map((item) => String(item).trim())
-    .filter((item) => item.length > 0);
+const normalizeStatus = (value: unknown): MappingStatus => {
+  return value === "Disabled" ? "Disabled" : "Active";
 };
 
 const buildMappingId = (categoryId: number, attributeId: number) =>
   `${categoryId}-${attributeId}`;
 
-const hydrateMappingFromCatalogs = (
-  mapping: CategoryMapping,
-  categories: Category[],
-  attributes: Attribute[],
-): CategoryMapping => {
-  const matchedCategory =
-    categories.find((item) => item.id === mapping.categoryId) ?? null;
-  const matchedAttribute =
-    attributes.find((item) => item.id === mapping.attributeId) ?? null;
-
+function mapMapping(item: MappingApiItem): CategoryAttributeMapping {
   return {
-    ...mapping,
-    categoryName:
-      matchedCategory?.name ||
-      mapping.categoryName ||
-      `Category #${mapping.categoryId}`,
-    categorySlug: matchedCategory?.slug || mapping.categorySlug || "",
+    id: buildMappingId(item.categoryId, item.attributeId),
+    categoryId: item.categoryId,
+    categoryName: item.categoryName?.trim() || `Danh mục #${item.categoryId}`,
+    attributeId: item.attributeId,
     attributeName:
-      matchedAttribute?.name ||
-      mapping.attributeName ||
-      `Attribute #${mapping.attributeId}`,
-    attributeCode: matchedAttribute?.code || mapping.attributeCode || "",
-    attributeType: matchedAttribute?.type || mapping.attributeType,
-    attributeOptions: matchedAttribute?.options?.length
-      ? matchedAttribute.options
-      : mapping.attributeOptions,
-  };
-};
-
-const mapApiMappingToUi = (
-  item: CategoryMappingApiResponse,
-  categories: Category[] = [],
-  attributes: Attribute[] = [],
-): CategoryMapping => {
-  const categoryId = Number(item.categoryId);
-  const attributeId = Number(item.attributeId);
-
-  const baseMapping: CategoryMapping = {
-    id: buildMappingId(categoryId, attributeId),
-    categoryId,
-    categoryName: item.categoryName?.trim() || `Category #${categoryId}`,
-    categorySlug: item.categorySlug?.trim() || "",
-    attributeId,
-    attributeName: item.attributeName?.trim() || `Attribute #${attributeId}`,
-    attributeCode: item.attributeCode?.trim() || "",
+      item.attributeName?.trim() || `Thuộc tính #${item.attributeId}`,
+    attributeCode: item.attributeCode?.trim() || `ATTR_${item.attributeId}`,
     attributeType: normalizeAttributeType(item.attributeType),
-    attributeOptions: normalizeOptions(item.attributeOptions),
-    required: Boolean(item.required),
+    isRequired: Boolean(item.required),
     displayOrder: item.displayOrder ?? 1,
-    status: normalizeMappingStatus(item.status),
+    status: normalizeStatus(item.status),
   };
+}
 
-  return hydrateMappingFromCatalogs(baseMapping, categories, attributes);
-};
-
-const findCategoryById = (categories: Category[], categoryId: number) =>
-  categories.find(
-    (item) => item.id === categoryId && item.status === "Active",
-  ) ?? null;
-
-const findAttributeById = (attributes: Attribute[], attributeId: number) =>
-  attributes.find(
-    (item) => item.id === attributeId && item.status === "Active",
-  ) ?? null;
-
-const hasDuplicateMapping = (
-  mappings: CategoryMapping[],
-  categoryId: number,
-  attributeId: number,
-  excludeMappingId?: string,
-) => {
-  return mappings.some((mapping) => {
-    if (excludeMappingId && mapping.id === excludeMappingId) {
-      return false;
-    }
-
-    return (
-      mapping.categoryId === categoryId && mapping.attributeId === attributeId
-    );
-  });
-};
-
-const validateFormData = (
-  mappings: CategoryMapping[],
-  categories: Category[],
-  attributes: Attribute[],
-  formData: CategoryMappingFormState,
-  excludeMappingId?: string,
-) => {
-  const categoryId = toNumberId(formData.categoryId);
-  const attributeId = toNumberId(formData.attributeId);
-
-  if (!Number.isInteger(categoryId) || !Number.isInteger(attributeId)) {
-    throw new Error("Please select both category and attribute.");
+function buildMappingPayload(payload: CreateMappingPayload | UpdateMappingPayload) {
+  if (!payload.categoryId || !payload.attributeId) {
+    throw new Error("Vui lòng chọn cả danh mục và thuộc tính.");
   }
 
-  if (!Number.isFinite(formData.displayOrder) || formData.displayOrder < 1) {
-    throw new Error("Display order must be at least 1.");
-  }
-
-  const category = findCategoryById(categories, categoryId);
-  const attribute = findAttributeById(attributes, attributeId);
-
-  if (!category) {
-    throw new Error("Selected category was not found or is disabled.");
-  }
-
-  if (!attribute) {
-    throw new Error("Selected attribute was not found or is disabled.");
-  }
-
-  if (
-    hasDuplicateMapping(mappings, categoryId, attributeId, excludeMappingId)
-  ) {
-    throw new Error("This category already has the selected attribute.");
+  if (!Number.isInteger(payload.displayOrder) || payload.displayOrder < 1) {
+    throw new Error("Thứ tự hiển thị phải lớn hơn hoặc bằng 1.");
   }
 
   return {
-    categoryId,
-    attributeId,
-    required: formData.required,
-    displayOrder: formData.displayOrder,
+    categoryId: payload.categoryId,
+    attributeId: payload.attributeId,
+    required: Boolean(payload.isRequired),
+    displayOrder: payload.displayOrder,
   };
-};
+}
 
-export const emptyCategoryMappingForm: CategoryMappingFormState = {
-  categoryId: "",
-  attributeId: "",
-  required: false,
-  displayOrder: 1,
-};
+function resolveApiError(error: unknown, fallbackMessage: string) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
+function buildPreviewPlaceholder(field: {
+  attributeName: string;
+  attributeCode: string;
+}) {
+  return `Nhập ${field.attributeName || field.attributeCode}`;
+}
 
 export const categoryMappingService = {
-  getAvailableCategories(categories: Category[]): Category[] {
-    return categories.filter((category) => category.status === "Active");
+  async getMappings(params: MappingListParams = {}): Promise<MappingListResponse> {
+    try {
+      const rows = await apiClient.request<MappingApiItem[]>(
+        CATEGORY_MAPPING_BASE_PATH,
+        {
+          defaultErrorMessage: "Không thể tải danh sách ánh xạ.",
+        },
+      );
+
+      const keyword = params.search?.trim().toLowerCase() ?? "";
+      const allItems = rows.map(mapMapping);
+      const filteredItems = keyword
+        ? allItems.filter((item) => {
+            const haystack = [
+              item.categoryName,
+              item.attributeName,
+              item.attributeCode,
+            ]
+              .join(" ")
+              .toLowerCase();
+
+            return haystack.includes(keyword);
+          })
+        : allItems;
+
+      const page = params.page ?? 1;
+      const pageSize = params.pageSize ?? 10;
+      const start = (page - 1) * pageSize;
+      const data = filteredItems.slice(start, start + pageSize);
+
+      return {
+        data,
+        total: filteredItems.length,
+        page,
+        pageSize,
+      };
+    } catch (error) {
+      throw new Error(resolveApiError(error, "Không thể tải danh sách ánh xạ."));
+    }
   },
 
-  getAvailableAttributes(attributes: Attribute[]): Attribute[] {
-    return attributes.filter((attribute) => attribute.status === "Active");
-  },
+  async createMapping(payload: CreateMappingPayload): Promise<CategoryAttributeMapping> {
+    try {
+      const body = buildMappingPayload(payload);
+      const response = await apiClient.request<MappingApiWriteResponse>(
+        CATEGORY_MAPPING_BASE_PATH,
+        {
+          method: "POST",
+          includeJsonContentType: true,
+          defaultErrorMessage: "Không thể tạo ánh xạ mới.",
+          body: JSON.stringify(body),
+        },
+      );
 
-  async fetchMappings(
-    categories: Category[] = [],
-    attributes: Attribute[] = [],
-  ): Promise<CategoryMapping[]> {
-    const data = await apiClient.request<CategoryMappingApiResponse[]>(
-      "/api/admin/category-mappings",
-      {
-        defaultErrorMessage: "Unable to load category-attribute mappings.",
-      },
-    );
-
-    return data.map((item) => mapApiMappingToUi(item, categories, attributes));
-  },
-
-  async createMapping(
-    mappings: CategoryMapping[],
-    categories: Category[],
-    attributes: Attribute[],
-    formData: CategoryMappingFormState,
-  ): Promise<CategoryMapping> {
-    const payload = validateFormData(
-      mappings,
-      categories,
-      attributes,
-      formData,
-    );
-
-    const data = await apiClient.request<CategoryMappingApiResponse>(
-      "/api/admin/category-mappings",
-      {
-        method: "POST",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Unable to create category mapping.",
-        body: JSON.stringify(payload),
-      },
-    );
-
-    return mapApiMappingToUi(data, categories, attributes);
+      return mapMapping({
+        ...response,
+        categoryName: null,
+        attributeName: null,
+        attributeCode: null,
+        attributeType: null,
+      });
+    } catch (error) {
+      throw new Error(resolveApiError(error, "Không thể tạo ánh xạ mới."));
+    }
   },
 
   async updateMapping(
-    mappings: CategoryMapping[],
-    categories: Category[],
-    attributes: Attribute[],
-    currentMapping: CategoryMapping,
-    formData: CategoryMappingFormState,
-  ): Promise<CategoryMapping> {
-    const payload = validateFormData(
-      mappings,
-      categories,
-      attributes,
-      formData,
-      currentMapping.id,
-    );
+    currentMapping: Pick<CategoryAttributeMapping, "categoryId" | "attributeId">,
+    payload: UpdateMappingPayload,
+  ): Promise<CategoryAttributeMapping> {
+    try {
+      const body = buildMappingPayload(payload);
+      const response = await apiClient.request<MappingApiWriteResponse>(
+        `${CATEGORY_MAPPING_BASE_PATH}/${currentMapping.categoryId}/${currentMapping.attributeId}`,
+        {
+          method: "PUT",
+          includeJsonContentType: true,
+          defaultErrorMessage: "Không thể cập nhật ánh xạ.",
+          body: JSON.stringify(body),
+        },
+      );
 
-    const data = await apiClient.request<CategoryMappingApiResponse>(
-      `/api/admin/category-mappings/${currentMapping.categoryId}/${currentMapping.attributeId}`,
-      {
-        method: "PUT",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update category mapping.",
-        body: JSON.stringify(payload),
-      },
-    );
-
-    return mapApiMappingToUi(data, categories, attributes);
+      return mapMapping({
+        ...response,
+        categoryName: null,
+        attributeName: null,
+        attributeCode: null,
+        attributeType: null,
+      });
+    } catch (error) {
+      throw new Error(resolveApiError(error, "Không thể cập nhật ánh xạ."));
+    }
   },
 
   async updateMappingStatus(
-    currentMapping: CategoryMapping,
+    currentMapping: Pick<CategoryAttributeMapping, "categoryId" | "attributeId">,
     status: MappingStatus,
-    categories: Category[] = [],
-    attributes: Attribute[] = [],
-  ): Promise<CategoryMapping> {
-    const data = await apiClient.request<CategoryMappingApiResponse>(
-      `/api/admin/category-mappings/${currentMapping.categoryId}/${currentMapping.attributeId}/status`,
-      {
-        method: "PATCH",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update mapping status.",
-        body: JSON.stringify({
-          status,
-        }),
-      },
-    );
+  ): Promise<CategoryAttributeMapping> {
+    try {
+      const response = await apiClient.request<MappingApiWriteResponse>(
+        `${CATEGORY_MAPPING_BASE_PATH}/${currentMapping.categoryId}/${currentMapping.attributeId}/status`,
+        {
+          method: "PATCH",
+          includeJsonContentType: true,
+          defaultErrorMessage: "Không thể cập nhật trạng thái ánh xạ.",
+          body: JSON.stringify({ status }),
+        },
+      );
 
-    return mapApiMappingToUi(data, categories, attributes);
+      return mapMapping({
+        ...response,
+        categoryName: null,
+        attributeName: null,
+        attributeCode: null,
+        attributeType: null,
+      });
+    } catch (error) {
+      throw new Error(
+        resolveApiError(error, "Không thể cập nhật trạng thái ánh xạ."),
+      );
+    }
   },
 
-  async removeMapping(currentMapping: CategoryMapping): Promise<void> {
-    await apiClient.request<{
-      message: string;
-    }>(
-      `/api/admin/category-mappings/${currentMapping.categoryId}/${currentMapping.attributeId}`,
-      {
-        method: "DELETE",
-        defaultErrorMessage: "Unable to remove category mapping.",
-      },
-    );
+  async deleteMapping(
+    currentMapping: Pick<CategoryAttributeMapping, "categoryId" | "attributeId">,
+  ): Promise<void> {
+    try {
+      await apiClient.request<void>(
+        `${CATEGORY_MAPPING_BASE_PATH}/${currentMapping.categoryId}/${currentMapping.attributeId}`,
+        {
+          method: "DELETE",
+          defaultErrorMessage: "Không thể xóa ánh xạ.",
+        },
+      );
+    } catch (error) {
+      throw new Error(resolveApiError(error, "Không thể xóa ánh xạ."));
+    }
   },
 
-  getPreviewMappingsByCategory(
-    mappings: CategoryMapping[],
-    categoryId: number,
-  ): CategoryMapping[] {
-    return mappings
+  async previewCategory(categoryId: number): Promise<CategoryMappingPreview> {
+    if (!categoryId) {
+      throw new Error("Vui lòng chọn danh mục để xem trước.");
+    }
+
+    const response = await this.getMappings({ page: 1, pageSize: 1000 });
+    const fields = response.data
       .filter(
         (mapping) =>
           mapping.categoryId === categoryId && mapping.status === "Active",
       )
-      .sort((a, b) => a.displayOrder - b.displayOrder);
-  },
+      .sort((left, right) => left.displayOrder - right.displayOrder)
+      .map((field) => ({
+        attributeId: field.attributeId,
+        attributeName: field.attributeName,
+        attributeCode: field.attributeCode,
+        attributeType: field.attributeType,
+        isRequired: field.isRequired,
+        displayOrder: field.displayOrder,
+        placeholder: buildPreviewPlaceholder(field),
+      }));
 
-  getDefaultPreviewCategoryId(
-    mappings: CategoryMapping[],
-    categories: Category[],
-  ): string {
-    const activeCategoryIds = new Set(
-      this.getAvailableCategories(categories).map((item) => item.id),
-    );
-
-    const firstMappedCategoryId =
-      mappings.find((mapping) => activeCategoryIds.has(mapping.categoryId))
-        ?.categoryId ?? null;
-
-    if (firstMappedCategoryId !== null) {
-      return String(firstMappedCategoryId);
-    }
-
-    return String(this.getAvailableCategories(categories)[0]?.id ?? "");
-  },
-
-  filterMappings(mappings: CategoryMapping[], searchKeyword: string) {
-    const keyword = normalizeText(searchKeyword);
-
-    if (!keyword) return mappings;
-
-    return mappings.filter((item) => {
-      return (
-        normalizeText(item.categoryName).includes(keyword) ||
-        normalizeText(item.attributeName).includes(keyword) ||
-        normalizeText(item.attributeCode).includes(keyword)
-      );
-    });
+    return {
+      categoryId,
+      categoryName:
+        response.data.find((mapping) => mapping.categoryId === categoryId)
+          ?.categoryName || `Danh mục #${categoryId}`,
+      fields,
+    };
   },
 };

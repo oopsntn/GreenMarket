@@ -121,14 +121,18 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
                 {title && renderHeader()}
 
                 {/* Body: Kiem soat Scroll dua tren prop scrollEnabled */}
-                <ScrollView
-                    scrollEnabled={false}
+                {scrollEnabled ? (<ScrollView
+                    scrollEnabled={scrollEnabled}
                     style={[styles.body, containerStyle]}
                     contentContainerStyle={{ flexGrow: 1 }}
                     showsVerticalScrollIndicator={false}
                 >
                     {children}
-                </ScrollView>
+                </ScrollView>) : (
+                    <View style={{ flex: 1 }}>
+                        {children}
+                    </View>
+                )}
 
                 {/* Bottom Navigation / Footer */}
                 {bottom && <View style={styles.bottomWrapper}>{bottom}</View>}

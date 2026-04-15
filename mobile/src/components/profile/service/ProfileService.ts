@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
-import { api } from "../../../config/api";
+import { api, API_BASE_URL } from "../../../config/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface ProfilePayload {
     userDisplayName?: string;
@@ -50,29 +51,46 @@ export const ProfileService = {
     uploadAvatar: async (fileUri: string) => {
         try {
             const formData = new FormData()
+
             const cleanUri = fileUri.split('?')[0]
             const fileName = cleanUri.split('/').pop() || 'avatar.jpg'
             const extension = fileName.split('.').pop()?.toLowerCase()
 
-            let type = extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg'
+            let type =
+                extension === 'png'
+                    ? 'image/png'
+                    : extension === 'webp'
+                        ? 'image/webp'
+                        : 'image/jpeg'
 
-            if (Platform.OS === 'web') {
-                const response = await fetch(fileUri);
-                const blob = await response.blob();
-                const file = new File([blob], fileName, { type: blob.type || type });
-                formData.append('media', file);
-            } else {
-                formData.append('media', {
-                    uri: fileUri,
-                    type: type,
-                    name: fileName,
-                } as any)
+            // 🔥 FIX QUAN TRỌNG
+            let normalizedUri = fileUri
+            if (Platform.OS === 'ios' && fileUri.startsWith('file://')) {
+                normalizedUri = fileUri.replace('file://', '')
             }
 
-            const res = await api.post('/upload', formData)
-            return res.data
+            formData.append('media', {
+                uri: normalizedUri,
+                type,
+                name: fileName,
+            } as any)
+
+            const token = await AsyncStorage.getItem('token')
+
+            const response = await fetch(`${API_BASE_URL}/upload`, {
+                method: 'POST',
+                headers: {
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: formData,
+            })
+
+            console.log('Upload status:', response.status)
+
+            const data = await response.json()
+            return data
         } catch (e) {
-            console.error('Error calling uploadAvatar API: ', e);
+            console.error('Error calling uploadAvatar API: ', e)
             throw e
         }
     }

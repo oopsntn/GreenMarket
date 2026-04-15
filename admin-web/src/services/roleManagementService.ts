@@ -5,6 +5,65 @@ import type {
   RoleManagementItem,
 } from "../types/roleManagement";
 
+const translateRoleTitle = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "user") return "Người dùng";
+  if (normalized === "host") return "Chủ shop";
+  if (normalized === "collaborator") return "Cộng tác viên";
+  if (normalized === "manager") return "Quản lý";
+  if (normalized === "operation staff") return "Nhân viên vận hành";
+
+  return value;
+};
+
+const translateAudienceGroup = (
+  value: string | null | undefined,
+): "Marketplace" | "Operations" => {
+  return value?.toLowerCase() === "operations" ? "Operations" : "Marketplace";
+};
+
+const translateText = (value: string | null | undefined) => {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const replacements: Record<string, string> = {
+    Marketplace: "Marketplace",
+    Operations: "Vận hành",
+    "User Web + User App": "Web người dùng + ứng dụng người dùng",
+    "Browse listings": "Xem bài đăng",
+    "Save favorites": "Lưu yêu thích",
+    "Contact sellers": "Liên hệ người bán",
+    "Submit reports": "Gửi báo cáo",
+    "View approved posts": "Xem bài đăng đã duyệt",
+    "Report listings": "Báo cáo bài đăng",
+    "Track personal purchase and contact history":
+      "Theo dõi lịch sử mua hàng và liên hệ cá nhân",
+    "Marketplace customer role used by buyers and visitors who explore ornamental plant listings.":
+      "Vai trò khách hàng marketplace dành cho người mua và người truy cập đang xem các bài đăng cây cảnh.",
+    "Manage shop profile and listings":
+      "Quản lý hồ sơ shop và bài đăng",
+    "Purchase promotion packages": "Mua gói quảng bá",
+    "Track shop analytics": "Theo dõi phân tích của shop",
+    "Prepare content and media for listings":
+      "Chuẩn bị nội dung và media cho bài đăng",
+    "Edit assigned listings": "Chỉnh sửa bài đăng được phân công",
+    "Upload media": "Tải lên media",
+    "View moderation feedback": "Xem phản hồi kiểm duyệt",
+    "View moderation reports and results":
+      "Xem báo cáo và kết quả kiểm duyệt",
+    "Oversee promotion operations": "Giám sát vận hành quảng bá",
+    "Access operational dashboards": "Truy cập dashboard điều hành",
+    "Perform moderation workflows": "Thực hiện thao tác kiểm duyệt",
+    "Support campaign operations": "Hỗ trợ xử lý chiến dịch",
+    "Export reports and logs": "Xuất báo cáo và nhật ký",
+  };
+
+  return replacements[normalized] || normalized;
+};
+
 const defaultRoleCatalog: Array<{
   code: string;
   title: string;
@@ -16,97 +75,97 @@ const defaultRoleCatalog: Array<{
 }> = [
   {
     code: "USER",
-    title: "User",
+    title: "Người dùng",
     audienceGroup: "Marketplace",
     accessScope:
-      "Browse listings, save favorites, contact sellers, and submit abuse reports.",
+      "Duyệt bài đăng, lưu mục yêu thích, liên hệ người bán và gửi báo cáo vi phạm.",
     summary:
-      "Marketplace customer role used by buyers and visitors who explore ornamental plant listings.",
+      "Vai trò khách hàng trong sàn, dùng cho người mua và người truy cập đang xem các bài đăng cây cảnh.",
     responsibilities: [
-      "Search and review ornamental plant listings",
-      "Save posts and contact hosts",
-      "Submit reports when content looks suspicious",
+      "Tìm kiếm và xem các bài đăng cây cảnh",
+      "Lưu bài đăng và liên hệ shop",
+      "Gửi báo cáo khi nội dung có dấu hiệu bất thường",
     ],
     capabilities: [
-      "View approved posts",
-      "Report listings",
-      "Track personal purchase and contact history",
+      "Xem các bài đăng đã duyệt",
+      "Báo cáo bài đăng",
+      "Theo dõi lịch sử mua hàng và liên hệ cá nhân",
     ],
   },
   {
     code: "HOST",
-    title: "Host",
+    title: "Chủ shop",
     audienceGroup: "Marketplace",
     accessScope:
-      "Operate a plant shop, publish listings, manage profile, and purchase promotion packages.",
+      "Vận hành shop cây cảnh, đăng bài, quản lý hồ sơ shop và mua gói quảng bá.",
     summary:
-      "Seller-side business role for shop owners who list ornamental plants and manage promotion packages.",
+      "Vai trò người bán dành cho chủ shop đăng cây cảnh và quản lý các gói quảng bá.",
     responsibilities: [
-      "Create and maintain shop profile",
-      "Publish and update product posts",
-      "Buy promotion packages and monitor campaign delivery",
+      "Tạo và duy trì hồ sơ shop",
+      "Đăng mới và cập nhật bài bán hàng",
+      "Mua gói quảng bá và theo dõi chiến dịch",
     ],
     capabilities: [
-      "Manage shop and posts",
-      "Purchase promotions",
-      "Track shop analytics",
+      "Quản lý shop và bài đăng",
+      "Mua gói quảng bá",
+      "Theo dõi phân tích của shop",
     ],
   },
   {
     code: "COLLABORATOR",
-    title: "Collaborator",
+    title: "Cộng tác viên",
     audienceGroup: "Marketplace",
     accessScope:
-      "Support a host with content preparation, listing updates, and media management.",
+      "Hỗ trợ Chủ shop chuẩn bị nội dung, cập nhật bài đăng và quản lý hình ảnh hoặc video.",
     summary:
-      "Operational support role delegated by a host to help maintain listing quality and shop content.",
+      "Vai trò cộng tác vận hành do Chủ shop phân công để hỗ trợ duy trì chất lượng bài đăng và nội dung shop.",
     responsibilities: [
-      "Prepare content and media for listings",
-      "Update post details on behalf of the host",
-      "Coordinate with manager or operations staff when moderation feedback appears",
+      "Chuẩn bị nội dung và media cho bài đăng",
+      "Cập nhật thông tin bài đăng thay cho Chủ shop",
+      "Phối hợp với quản lý hoặc nhân viên vận hành khi có phản hồi kiểm duyệt",
     ],
     capabilities: [
-      "Edit delegated posts",
-      "Upload media",
-      "Review moderation feedback",
+      "Chỉnh sửa bài đăng được phân công",
+      "Tải lên media",
+      "Xem phản hồi kiểm duyệt",
     ],
   },
   {
     code: "MANAGER",
-    title: "Manager",
+    title: "Quản lý",
     audienceGroup: "Operations",
     accessScope:
-      "Oversee moderation, promotion follow-up, policy execution, and high-level business review.",
+      "Giám sát kiểm duyệt, theo dõi quảng bá, thực thi chính sách và tổng hợp đánh giá vận hành.",
     summary:
-      "Supervisory role that tracks operational quality, campaign handling, and staff coordination.",
+      "Vai trò giám sát theo dõi chất lượng vận hành, xử lý chiến dịch và phối hợp nhân sự.",
     responsibilities: [
-      "Review operational escalations",
-      "Approve campaign handling decisions",
-      "Monitor analytics and revenue summaries",
+      "Xem các tình huống vận hành bị chuyển cấp",
+      "Phê duyệt quyết định xử lý chiến dịch",
+      "Theo dõi phân tích và tổng hợp doanh thu",
     ],
     capabilities: [
-      "Review reports and moderation outcomes",
-      "Supervise promotion handling",
-      "Access management dashboards",
+      "Xem báo cáo và kết quả kiểm duyệt",
+      "Giám sát xử lý quảng bá",
+      "Truy cập các dashboard điều hành",
     ],
   },
   {
     code: "OPERATION_STAFF",
-    title: "Operation Staff",
+    title: "Nhân viên vận hành",
     audienceGroup: "Operations",
     accessScope:
-      "Execute daily moderation, support promotion reopening, export reports, and handle admin workflows.",
+      "Thực hiện kiểm duyệt hằng ngày, hỗ trợ mở lại quảng bá, xuất báo cáo và xử lý nghiệp vụ vận hành.",
     summary:
-      "Execution-focused staff role that carries out the day-to-day actions delegated by manager or admin.",
+      "Vai trò nhân sự vận hành trực tiếp, thực hiện các tác vụ hằng ngày do quản lý hoặc admin giao.",
     responsibilities: [
-      "Moderate reported content and user issues",
-      "Handle promotion reopening and package support",
-      "Prepare exports and operational summaries",
+      "Kiểm duyệt nội dung bị báo cáo và xử lý vấn đề người dùng",
+      "Hỗ trợ mở lại quảng bá và xử lý gói dịch vụ",
+      "Chuẩn bị file xuất và tổng hợp vận hành",
     ],
     capabilities: [
-      "Process moderation actions",
-      "Support campaign handling",
-      "Generate exports and logs",
+      "Thực hiện thao tác kiểm duyệt",
+      "Hỗ trợ xử lý chiến dịch",
+      "Xuất báo cáo và nhật ký",
     ],
   },
 ];
@@ -115,7 +174,7 @@ const ensureStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value
     .filter((item): item is string => typeof item === "string")
-    .map((item) => item.trim())
+    .map((item) => translateText(item))
     .filter(Boolean);
 };
 
@@ -130,19 +189,13 @@ const parseMultilineText = (value: string) =>
 const mapApiStatusToUi = (value: string | null | undefined) =>
   value?.toLowerCase() === "disabled" ? "Disabled" : "Active";
 
-const mapApiAudienceGroup = (
-  value: string | null | undefined,
-): "Marketplace" | "Operations" => {
-  return value?.toLowerCase() === "operations" ? "Operations" : "Marketplace";
-};
-
 const mapApiRoleToUi = (item: ApiBusinessRoleResponse): RoleManagementItem => ({
   id: item.businessRoleId,
   code: item.businessRoleCode,
-  title: item.businessRoleTitle,
-  audienceGroup: mapApiAudienceGroup(item.businessRoleAudienceGroup),
-  accessScope: item.businessRoleAccessScope ?? "",
-  summary: item.businessRoleSummary ?? "",
+  title: translateRoleTitle(item.businessRoleTitle),
+  audienceGroup: translateAudienceGroup(item.businessRoleAudienceGroup),
+  accessScope: translateText(item.businessRoleAccessScope),
+  summary: translateText(item.businessRoleSummary),
   responsibilities: ensureStringArray(item.businessRoleResponsibilities),
   capabilities: ensureStringArray(item.businessRoleCapabilities),
   createdAt: item.businessRoleCreatedAt?.slice(0, 10) ?? "",
@@ -159,9 +212,7 @@ const mapFormToApiPayload = (
   businessRoleAudienceGroup: formData.audienceGroup,
   businessRoleAccessScope: formData.accessScope.trim(),
   businessRoleSummary: formData.summary.trim(),
-  businessRoleResponsibilities: parseMultilineText(
-    formData.responsibilitiesText,
-  ),
+  businessRoleResponsibilities: parseMultilineText(formData.responsibilitiesText),
   businessRoleCapabilities: parseMultilineText(formData.capabilitiesText),
   businessRoleStatus:
     existingRole.status === "Disabled" ? "disabled" : "active",
@@ -172,7 +223,8 @@ export const roleManagementService = {
     const data = await apiClient.request<ApiBusinessRoleResponse[]>(
       "/api/admin/business-roles",
       {
-        defaultErrorMessage: "Unable to load marketplace role catalog.",
+        defaultErrorMessage:
+          "Không thể tải danh mục vai trò nghiệp vụ của marketplace.",
       },
     );
 
@@ -200,7 +252,8 @@ export const roleManagementService = {
       {
         method: "PUT",
         includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update marketplace role.",
+        defaultErrorMessage:
+          "Không thể cập nhật vai trò nghiệp vụ của marketplace.",
         body: JSON.stringify(mapFormToApiPayload(existingRole, formData)),
       },
     );
@@ -210,13 +263,22 @@ export const roleManagementService = {
 
   async syncDefaultRoles(): Promise<RoleManagementItem[]> {
     const existingRoles = await this.fetchRoles();
-    const existingByCode = new Map(
-      existingRoles.map((role) => [role.code, role]),
-    );
+    const existingByCode = new Map(existingRoles.map((role) => [role.code, role]));
 
     await Promise.all(
       defaultRoleCatalog.map(async (defaultRole) => {
         const matched = existingByCode.get(defaultRole.code);
+
+        const payload = {
+          businessRoleCode: defaultRole.code,
+          businessRoleTitle: defaultRole.title,
+          businessRoleAudienceGroup: defaultRole.audienceGroup,
+          businessRoleAccessScope: defaultRole.accessScope,
+          businessRoleSummary: defaultRole.summary,
+          businessRoleResponsibilities: defaultRole.responsibilities,
+          businessRoleCapabilities: defaultRole.capabilities,
+          businessRoleStatus: "active",
+        };
 
         if (matched) {
           await apiClient.request<ApiBusinessRoleResponse>(
@@ -224,17 +286,8 @@ export const roleManagementService = {
             {
               method: "PUT",
               includeJsonContentType: true,
-              defaultErrorMessage: `Unable to sync ${defaultRole.title}.`,
-              body: JSON.stringify({
-                businessRoleCode: defaultRole.code,
-                businessRoleTitle: defaultRole.title,
-                businessRoleAudienceGroup: defaultRole.audienceGroup,
-                businessRoleAccessScope: defaultRole.accessScope,
-                businessRoleSummary: defaultRole.summary,
-                businessRoleResponsibilities: defaultRole.responsibilities,
-                businessRoleCapabilities: defaultRole.capabilities,
-                businessRoleStatus: "active",
-              }),
+              defaultErrorMessage: `Không thể đồng bộ vai trò ${defaultRole.title}.`,
+              body: JSON.stringify(payload),
             },
           );
           return;
@@ -245,41 +298,13 @@ export const roleManagementService = {
           {
             method: "POST",
             includeJsonContentType: true,
-            defaultErrorMessage: `Unable to create ${defaultRole.title}.`,
-            body: JSON.stringify({
-              businessRoleCode: defaultRole.code,
-              businessRoleTitle: defaultRole.title,
-              businessRoleAudienceGroup: defaultRole.audienceGroup,
-              businessRoleAccessScope: defaultRole.accessScope,
-              businessRoleSummary: defaultRole.summary,
-              businessRoleResponsibilities: defaultRole.responsibilities,
-              businessRoleCapabilities: defaultRole.capabilities,
-              businessRoleStatus: "active",
-            }),
+            defaultErrorMessage: `Không thể tạo vai trò ${defaultRole.title}.`,
+            body: JSON.stringify(payload),
           },
         );
       }),
     );
 
     return this.fetchRoles();
-  },
-
-  async updateRoleStatus(
-    roleId: number,
-    status: RoleManagementItem["status"],
-  ): Promise<RoleManagementItem> {
-    const data = await apiClient.request<ApiBusinessRoleResponse>(
-      `/api/admin/business-roles/${roleId}/status`,
-      {
-        method: "PATCH",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Unable to update role status.",
-        body: JSON.stringify({
-          businessRoleStatus: status === "Disabled" ? "disabled" : "active",
-        }),
-      },
-    );
-
-    return mapApiRoleToUi(data);
   },
 };

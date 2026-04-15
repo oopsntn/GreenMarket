@@ -128,6 +128,37 @@ export {
   type PaymentTxn,
   type NewPaymentTxn,
 } from "./payment-txn.ts";
+export {
+  userPostingPlans,
+  type UserPostingPlan,
+  type NewUserPostingPlan,
+} from "./user-posting-plans.ts";
+export {
+  postingFeeLedger,
+  type PostingFeeLedger,
+  type NewPostingFeeLedger,
+} from "./posting-fee-ledger.ts";
+export { jobs, type Job, type NewJob } from "./jobs.ts";
+export {
+  jobDeliverables,
+  type JobDeliverable,
+  type NewJobDeliverable,
+} from "./job-deliverables.ts";
+export {
+  jobContactRequests,
+  type JobContactRequest,
+  type NewJobContactRequest,
+} from "./job-contact-requests.ts";
+export {
+  earningEntries,
+  type EarningEntry,
+  type NewEarningEntry,
+} from "./earning-entries.ts";
+export {
+  payoutRequests,
+  type PayoutRequest,
+  type NewPayoutRequest,
+} from "./payout-requests.ts";
 
 // Analytics
 export {
@@ -146,6 +177,50 @@ export {
   type NewAiInsight,
 } from "./ai-insights.ts";
 export { eventLogs, type EventLog, type NewEventLog } from "./event-logs.ts";
+
+// Manager & Operations
+export {
+  operationTasks,
+  type OperationTask,
+  type NewOperationTask,
+} from "./operation-tasks.ts";
+export {
+  taskReplies,
+  type TaskReply,
+  type NewTaskReply,
+} from "./task-replies.ts";
+export {
+  moderationFeedback,
+  type ModerationFeedback,
+  type NewModerationFeedback,
+} from "./moderation-feedback.ts";
+export {
+  escalations,
+  type Escalation,
+  type NewEscalation,
+} from "./escalations.ts";
+export {
+  systemNotifications,
+  type SystemNotification,
+  type NewSystemNotification,
+} from "./system-notifications.ts";
+
+// Host
+export {
+  hostContents,
+  type HostContent,
+  type NewHostContent,
+} from "./host-contents.ts";
+export {
+  hostEarnings,
+  type HostEarning,
+  type NewHostEarning,
+} from "./host-earnings.ts";
+export {
+  hostPayoutRequests,
+  type HostPayoutRequest,
+  type NewHostPayoutRequest,
+} from "./host-payout-requests.ts";
 
 // System
 export {
