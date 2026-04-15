@@ -161,7 +161,7 @@ const HomeScreen = () => {
             />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Text style={styles.placeholderText}>No Image</Text>
+              <Text style={styles.placeholderText}>Không có ảnh</Text>
             </View>
           )}
           <TouchableOpacity style={styles.favoriteButton}>

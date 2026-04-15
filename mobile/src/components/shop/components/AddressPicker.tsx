@@ -21,7 +21,7 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                CustomAlert('Notice', 'Location access was denied');
+                CustomAlert('Thông báo', 'Quyền truy cập vị trí bị từ chối');
                 return;
             }
 
@@ -56,7 +56,7 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
 
         } catch (error) {
             console.error(error);
-            CustomAlert('Error', 'Unable to get the current location');
+            CustomAlert('Lỗi', 'Không thể lấy vị trí hiện tại');
         } finally {
             setLoading(false);
         }
@@ -66,7 +66,7 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
         <View style={styles.container}>
             <Input
                 label={label}
-                placeholder="Enter an address or use the current location"
+                placeholder="Nhập địa chỉ hoặc dùng vị trí hiện tại"
                 value={address}
                 icon={<MapPin size={18} color="#666" />}
                 onChangeText={onAddressChange}
@@ -78,7 +78,7 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
             >
                 <Navigation size={14} color="#10b981" />
                 <Text style={styles.locationBtnText}>
-                    {loading ? 'Getting location...' : "Use the shop's current location"}
+                    {loading ? 'Đang lấy vị trí...' : "Sử dụng vị trí hiện tại của cửa hàng"}
                 </Text>
             </TouchableOpacity>
         </View>

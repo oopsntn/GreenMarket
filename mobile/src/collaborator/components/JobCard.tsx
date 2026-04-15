@@ -24,7 +24,7 @@ const JobCard = ({ job, onPress }: JobCardProps) => {
         <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
             <View style={styles.header}>
                 <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryText}>{job.category || 'General'}</Text>
+                    <Text style={styles.categoryText}>{job.category || 'Chung'}</Text>
                 </View>
                 <Text style={styles.priceText}>{formattedPrice}</Text>
             </View>
@@ -34,7 +34,7 @@ const JobCard = ({ job, onPress }: JobCardProps) => {
             <View style={styles.footer}>
                 <View style={styles.infoRow}>
                     <MapPin size={14} color="#64748B" />
-                    <Text style={styles.infoText} numberOfLines={1}>{job.location || 'Remote'}</Text>
+                    <Text style={styles.infoText} numberOfLines={1}>{job.location || 'Từ xa'}</Text>
                 </View>
                 <View style={styles.infoRow}>
                     <Calendar size={14} color="#64748B" />
@@ -45,9 +45,9 @@ const JobCard = ({ job, onPress }: JobCardProps) => {
             <View style={styles.customerRow}>
                 <View style={styles.customerInfo}>
                     <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>{job.customer.displayName?.charAt(0) || 'C'}</Text>
+                        <Text style={styles.avatarText}>{job.customer.displayName?.charAt(0) || 'K'}</Text>
                     </View>
-                    <Text style={styles.customerName}>{job.customer.displayName || 'Customer'}</Text>
+                    <Text style={styles.customerName}>{job.customer.displayName || 'Khách hàng'}</Text>
                 </View>
                 <ChevronRight size={18} color="#94A3B8" />
             </View>

@@ -20,6 +20,7 @@ import {
   AlertCircle,
   FileText
 } from 'lucide-react-native';
+import ReasonModal from '../components/ReasonModal';
 import ManagerService, { ShopModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
 
@@ -27,6 +28,7 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
   const { shopId } = route.params;
   const [shop, setShop] = useState<ShopModerationData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
 
   useEffect(() => {
     fetchShop();
@@ -39,7 +41,7 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
       setShop(data);
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Could not fetch shop details');
+      CustomAlert('Lỗi', 'Không thể tải chi tiết cửa hàng');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -47,17 +49,17 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
   };
 
   const handleVerify = () => {
-    CustomAlert('Verify Shop', 'Approve profile and allow shop to operate on the system?', [
-      { text: 'Cancel', style: 'cancel' },
+    CustomAlert('Xác minh cửa hàng', 'Duyệt hồ sơ và cho phép cửa hàng hoạt động?', [
+      { text: 'Hủy', style: 'cancel' },
       { 
-        text: 'Verify', 
+        text: 'Xác minh', 
         onPress: async () => {
           try {
             await ManagerService.verifyShop(shopId);
-            CustomAlert('Success', 'Shop has been activated');
+            CustomAlert('Thành công', 'Cửa hàng đã được kích hoạt');
             navigation.goBack();
           } catch (error) {
-            CustomAlert('Error', 'Could not verify shop');
+            CustomAlert('Lỗi', 'Không thể xác minh cửa hàng');
           }
         }
       },
@@ -65,21 +67,25 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
   };
 
   const handleReject = () => {
-    CustomAlert('Reject Profile', 'Request shop or update profile information?', [
-      { text: 'Cancel', style: 'cancel' },
-      { 
-        text: 'Reject', 
-        onPress: async () => {
-          try {
-            await ManagerService.updateShopStatus(shopId, 'Rejected');
-            CustomAlert('Notification Sent', 'Shop will receive a request to update profile');
-            navigation.goBack();
-          } catch (error) {
-            CustomAlert('Error', 'Action failed');
-          }
-        }
-      },
-    ]);
+    setIsRejectModalVisible(true);
+  };
+
+  const onSubmitReject = async (reason: string) => {
+    try {
+      await ManagerService.updateShopStatus(shopId, 'Rejected');
+      if (shop) {
+        await ManagerService.moderationFeedback({
+          targetType: 'shop',
+          targetId: shopId,
+          recipientUserId: shop.ownerUserId || shopId, // fallback if ownerUserId missing
+          message: `Hồ sơ cửa hàng của bạn đã bị từ chối. Lý do: ${reason}`
+        }).catch(() => console.log('Failed to send feedback, but shop was rejected.'));
+      }
+      CustomAlert('Đã gửi thông báo', `Đã từ chối cửa hàng. Lý do: ${reason}`);
+      navigation.goBack();
+    } catch (error) {
+      CustomAlert('Lỗi', 'Thao tác thất bại');
+    }
   };
 
   if (loading) {
@@ -103,7 +109,7 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
         >
           <ArrowLeft color="#1E293B" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shop Profile</Text>
+        <Text style={styles.headerTitle}>Hồ sơ cửa hàng</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -121,12 +127,12 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+          <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <User size={18} color="#64748B" />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Shop Owner</Text>
+                <Text style={styles.infoLabel}>Chủ cửa hàng</Text>
                 <Text style={styles.infoValue}>{shop.ownerName}</Text>
               </View>
             </View>
@@ -146,7 +152,7 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
             <View style={styles.infoRow}>
               <MapPin size={18} color="#64748B" />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Total Posts</Text>
+                <Text style={styles.infoLabel}>Tổng số tin đăng</Text>
                 <Text style={styles.infoValue}>{shop.totalPosts}</Text>
               </View>
             </View>
@@ -154,23 +160,23 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Registration Date</Text>
+          <Text style={styles.sectionTitle}>Ngày đăng ký</Text>
           <View style={styles.infoCard}>
             <Text style={styles.infoValue}>{shop.createdAt}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Introduction</Text>
+          <Text style={styles.sectionTitle}>Giới thiệu</Text>
           <View style={styles.descriptionCard}>
-            <Text style={styles.descriptionText}>{shop.description || 'No description provided'}</Text>
+            <Text style={styles.descriptionText}>{shop.description || 'Chưa có mô tả'}</Text>
           </View>
         </View>
 
         <View style={styles.warningBox}>
           <AlertCircle size={20} color="#F59E0B" />
           <Text style={styles.warningText}>
-            Note: Cross-check information of the shop owner before activation.
+            Lưu ý: Kiểm tra chéo thông tin của chủ cửa hàng trước khi kích hoạt.
           </Text>
         </View>
       </ScrollView>
@@ -180,7 +186,7 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
           style={[styles.btn, styles.rejectBtn]}
           onPress={handleReject}
         >
-          <Text style={styles.rejectBtnText}>Reject Profile</Text>
+          <Text style={styles.rejectBtnText}>Từ chối hồ sơ</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -188,9 +194,19 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
           onPress={handleVerify}
         >
           <ShieldCheck size={20} color="white" />
-          <Text style={styles.verifyBtnText}>Verify & Activate</Text>
+          <Text style={styles.verifyBtnText}>Duyệt & Kích hoạt</Text>
         </TouchableOpacity>
       </View>
+
+      <ReasonModal
+        visible={isRejectModalVisible}
+        onClose={() => setIsRejectModalVisible(false)}
+        onSubmit={onSubmitReject}
+        title="Lý do từ chối"
+        placeholder="Vd: Thông tin không rõ ràng, hồ sơ chưa đầy đủ..."
+        confirmLabel="Gửi lý do từ chối"
+        confirmColor="#F59E0B"
+      />
     </SafeAreaView>
   );
 };

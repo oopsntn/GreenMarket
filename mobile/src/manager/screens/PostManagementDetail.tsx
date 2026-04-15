@@ -44,7 +44,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
       setPost(data);
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Could not fetch post details');
+      CustomAlert('Lỗi', 'Không thể tải chi tiết tin');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -52,17 +52,17 @@ const PostManagementDetail = ({ route, navigation }: any) => {
   };
 
   const handleApprove = () => {
-    CustomAlert('Confirm Approval', 'Are you sure you want to approve this post?', [
-      { text: 'Cancel', style: 'cancel' },
+    CustomAlert('Xác nhận duyệt', 'Bạn có chắc chắn muốn duyệt tin này không?', [
+      { text: 'Hủy', style: 'cancel' },
       { 
-        text: 'Approve', 
+        text: 'Duyệt', 
         onPress: async () => {
           try {
             await ManagerService.updatePostStatus(postId, 'approved');
-            CustomAlert('Success', 'Post has been approved');
+            CustomAlert('Thành công', 'Đã duyệt tin');
             navigation.goBack();
           } catch (error) {
-            CustomAlert('Error', 'Could not approve post');
+            CustomAlert('Lỗi', 'Không thể duyệt tin');
           }
         }
       },
@@ -73,16 +73,24 @@ const PostManagementDetail = ({ route, navigation }: any) => {
     try {
       if (modalType === 'reject') {
         await ManagerService.updatePostStatus(postId, 'rejected', reason);
-        CustomAlert('Rejected', `Reason: ${reason}`);
+        if (post) {
+          await ManagerService.moderationFeedback({
+            targetType: 'post',
+            targetId: postId,
+            recipientUserId: post.postUserId || post.postShopId || 0,
+            message: `Tin đăng "${post.postTitle}" của bạn đã bị từ chối. Lý do: ${reason}`
+          }).catch(() => console.log('Failed to send feedback, but post was rejected.'));
+        }
+        CustomAlert('Đã từ chối', `Lý do: ${reason}`);
       } else if (modalType === 'delete') {
         // Need current user ID for adminId
         // For now using placeholder 'moderator-1'
         await ManagerService.deletePost(postId, 'manager-1', reason);
-        CustomAlert('Deleted', `Reason: ${reason}`);
+        CustomAlert('Đã xóa', `Lý do: ${reason}`);
       }
       navigation.goBack();
     } catch (error) {
-      CustomAlert('Error', 'Action failed');
+      CustomAlert('Lỗi', 'Thao tác thất bại');
     }
   };
 
@@ -107,7 +115,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
         >
           <ArrowLeft color="#1E293B" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Post Details</Text>
+        <Text style={styles.headerTitle}>Chi tiết tin đăng</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -138,9 +146,9 @@ const PostManagementDetail = ({ route, navigation }: any) => {
 
         <View style={styles.contentContainer}>
           <View style={styles.priceRow}>
-            <Text style={styles.price}>{post.postPrice.toLocaleString('en-US')} VND <Text style={styles.unit}>/ {post.postUnit || 'unit'}</Text></Text>
+            <Text style={styles.price}>{post.postPrice.toLocaleString('en-US')} VND <Text style={styles.unit}>/ {post.postUnit || 'sản phẩm'}</Text></Text>
             <View style={styles.stockBadge}>
-              <Text style={styles.stockText}>Stock: {post.postQuantity || 0}</Text>
+              <Text style={styles.stockText}>Số lượng: {post.postQuantity || 0}</Text>
             </View>
           </View>
 
@@ -149,7 +157,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
           <View style={styles.infoRow}>
             <View style={styles.infoItem}>
               <MapPin size={16} color="#64748B" />
-              <Text style={styles.infoLabel}>{post.postLocation || 'Unknown Location'}</Text>
+              <Text style={styles.infoLabel}>{post.postLocation || 'Không rõ địa chỉ'}</Text>
             </View>
             <View style={styles.infoItem}>
               <Calendar size={16} color="#64748B" />
@@ -160,29 +168,29 @@ const PostManagementDetail = ({ route, navigation }: any) => {
           <View style={styles.divider} />
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Shop Owner</Text>
+            <Text style={styles.sectionTitle}>Chủ cửa hàng</Text>
             <View style={styles.shopContainer}>
               <View style={styles.shopAvatar}>
                 <User color="#94A3B8" size={24} />
               </View>
               <View>
-                <Text style={styles.shopName}>Shop ID: {post.postShopId}</Text>
+                <Text style={styles.shopName}>Cửa hàng ID: {post.postShopId}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: '#F0FDF4' }]}>
-                  <Text style={[styles.statusText, { color: '#166534' }]}>Manager Review</Text>
+                  <Text style={[styles.statusText, { color: '#166534' }]}>Quản lý xét duyệt</Text>
                 </View>
               </View>
             </View>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Detailed Description</Text>
+            <Text style={styles.sectionTitle}>Mô tả chi tiết</Text>
             <Text style={styles.description}>{post.postDescription}</Text>
           </View>
 
           <View style={styles.warningBox}>
             <AlertCircle size={20} color="#94A3B8" />
             <Text style={styles.warningText}>
-              Please ensure the content and images do not violate GreenMarket policies before approving.
+              Vui lòng kiểm tra nội dung và hình ảnh không vi phạm chính sách của GreenMarket trước khi duyệt.
             </Text>
           </View>
         </View>
@@ -194,7 +202,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
           onPress={() => setModalType('delete')}
         >
           <Trash2 size={24} color="#EF4444" />
-          <Text style={[styles.modText, { color: '#EF4444' }]}>Delete</Text>
+          <Text style={[styles.modText, { color: '#EF4444' }]}>Xóa</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -202,7 +210,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
           onPress={() => setModalType('reject')}
         >
           <X size={24} color="#F59E0B" />
-          <Text style={[styles.modText, { color: '#F59E0B' }]}>Reject</Text>
+          <Text style={[styles.modText, { color: '#F59E0B' }]}>Từ chối</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
@@ -210,7 +218,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
           onPress={handleApprove}
         >
           <Check size={24} color="white" />
-          <Text style={[styles.modText, { color: 'white' }]}>Approve</Text>
+          <Text style={[styles.modText, { color: 'white' }]}>Duyệt</Text>
         </TouchableOpacity>
       </View>
 
@@ -218,9 +226,9 @@ const PostManagementDetail = ({ route, navigation }: any) => {
         visible={!!modalType}
         onClose={() => setModalType(null)}
         onSubmit={onSubmitModal}
-        title={modalType === 'reject' ? 'Reason for Rejection' : 'Reason for Deletion'}
-        placeholder={modalType === 'reject' ? 'e.g. Unclear images...' : 'e.g. Prohibited item...'}
-        confirmLabel={modalType === 'reject' ? 'Send Rejection' : 'Confirm Delete'}
+        title={modalType === 'reject' ? 'Lý do từ chối' : 'Lý do xóa'}
+        placeholder={modalType === 'reject' ? 'Vd: Hình ảnh không rõ ràng...' : 'Vd: Sản phẩm bị cấm...'}
+        confirmLabel={modalType === 'reject' ? 'Gửi lý do từ chối' : 'Xóa tin'}
         confirmColor={modalType === 'reject' ? '#F59E0B' : '#EF4444'}
       />
     </SafeAreaView>

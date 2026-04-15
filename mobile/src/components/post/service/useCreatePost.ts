@@ -38,10 +38,20 @@ const initialFormData: CreatePostFormData = {
     attributes: {},
 }
 
+export interface PostingPolicy {
+    effectivePolicyType: string;
+    allowedNewPostsPerDay: number;
+    usedNewPostsToday: number;
+    isLimitReached: boolean;
+    postCreationFee: number;
+}
+
 const useCreatePost = () => {
     const [categories, setCategories] = useState<Category[]>([])
     const [attributes, setAttributes] = useState<CategoryAttribute[]>([])
+    const [policy, setPolicy] = useState<PostingPolicy | null>(null)
     const [loadingInitialData, setLoadingInitialData] = useState(true)
+    const [loadingPolicy, setLoadingPolicy] = useState(true)
     const [loadingAttributes, setLoadingAttributes] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
@@ -55,13 +65,21 @@ const useCreatePost = () => {
     const fetchInitialData = async () => {
         try {
             setLoadingInitialData(true)
-            const res = await postService.getCategories()
-            setCategories(Array.isArray(res) ? res : [])
+            setLoadingPolicy(true)
+            const [resCategories, resPolicy] = await Promise.all([
+                postService.getCategories(),
+                postService.getPostingPolicy().catch(() => null)
+            ])
+            setCategories(Array.isArray(resCategories) ? resCategories : [])
+            if (resPolicy) {
+                setPolicy(resPolicy)
+            }
         } catch (error) {
             console.error('Error fetching initial data:', error)
-            CustomAlert('Error', 'Unable to load post categories.')
+            CustomAlert('Lỗi', 'Không thể tải danh mục tin đăng.')
         } finally {
             setLoadingInitialData(false)
+            setLoadingPolicy(false)
         }
     }
 
@@ -75,7 +93,7 @@ const useCreatePost = () => {
             setAttributes(Array.isArray(res) ? res : [])
         } catch (e) {
             console.error('Error fetching category attributes:', e)
-            CustomAlert('Error', 'Unable to load the attributes for the selected category.')
+            CustomAlert('Lỗi', 'Không thể tải thuộc tính cho danh mục đã chọn.')
         } finally {
             setLoadingAttributes(false)
         }
@@ -84,7 +102,7 @@ const useCreatePost = () => {
     const pickMedia = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (!permission.granted) {
-            CustomAlert('Permission required', 'Please grant photo library access to select media.')
+            CustomAlert('Yêu cầu quyền truy cập', 'Vui lòng cấp quyền truy cập thư viện ảnh để chọn ảnh.')
             return
         }
 
@@ -117,37 +135,37 @@ const useCreatePost = () => {
 
     const validateForm = () => {
         if (!formData.postTitle.trim()) {
-            CustomAlert('Missing information', 'Please enter the post title.')
+            CustomAlert('Thiếu thông tin', 'Vui lòng nhập tiêu đề tin đăng.')
             return false
         }
 
         if (!formData.categoryId) {
-            CustomAlert('Missing information', 'Please choose a category.')
+            CustomAlert('Thiếu thông tin', 'Vui lòng chọn danh mục.')
             return false
         }
 
         if (!formData.postPrice.trim() || Number.isNaN(Number(formData.postPrice)) || Number(formData.postPrice) < 0) {
-            CustomAlert('Invalid price', 'The selling price must be a number greater than or equal to 0.')
+            CustomAlert('Giá trị không hợp lệ', 'Giá bán phải là số lớn hơn hoặc bằng 0.')
             return false
         }
 
         if (formData.postTitle.length > 200) {
-            CustomAlert('Value too long', 'The post title cannot exceed 200 characters.')
+            CustomAlert('Giá trị quá dài', 'Tiêu đề không được vượt quá 200 ký tự.')
             return false
         }
 
         if (formData.postLocation && formData.postLocation.length > 255) {
-            CustomAlert('Value too long', 'The location cannot exceed 255 characters.')
+            CustomAlert('Giá trị quá dài', 'Địa chỉ không được vượt quá 255 ký tự.')
             return false
         }
 
         if (formData.postContactPhone && (formData.postContactPhone.length > 20 || !/^\+?[0-9\s-]+$/.test(formData.postContactPhone))) {
-            CustomAlert('Invalid phone', 'Please enter a valid contact phone number.')
+            CustomAlert('Giá trị không hợp lệ', 'Vui lòng nhập số điện thoại hợp lệ.')
             return false
         }
 
         if (media.length === 0) {
-            CustomAlert('Missing media', 'Please select at least one image.')
+            CustomAlert('Thiếu hình ảnh', 'Vui lòng chọn ít nhất một hình ảnh.')
             return false
         }
 
@@ -156,7 +174,7 @@ const useCreatePost = () => {
         )
 
         if (missingRequiredAttribute) {
-            CustomAlert('Missing attribute', `Please enter "${missingRequiredAttribute.attributeTitle}".`)
+            CustomAlert('Thiếu thuộc tính', `Vui lòng nhập "${missingRequiredAttribute.attributeTitle}".`)
             return false
         }
 
@@ -207,7 +225,7 @@ const useCreatePost = () => {
             resetForm()
         } catch (e) {
             console.error('Error submitting form:', e)
-            CustomAlert('Post creation failed', 'Something went wrong while creating the post. Please try again.')
+            CustomAlert('Đăng tin thất bại', 'Đã có lỗi xảy ra trong quá trình tạo bài đăng. Vui lòng thử lại.')
         } finally {
             setSubmitting(false)
         }
@@ -219,6 +237,8 @@ const useCreatePost = () => {
             attributes,
             loadingInitialData,
             loadingAttributes,
+            loadingPolicy,
+            policy,
             submitting,
             submitted,
             media,

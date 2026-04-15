@@ -36,24 +36,24 @@ const ShopManagementList = ({ navigation }: any) => {
       setShops(data.filter(s => s.status.toLowerCase() === 'pending'));
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Could not fetch shops');
+      CustomAlert('Lỗi', 'Không thể tải danh sách cửa hàng');
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerify = (id: number) => {
-    CustomAlert('Verify Shop', 'Confirm this shop is eligible to operate on the platform?', [
-      { text: 'Cancel', style: 'cancel' },
+    CustomAlert('Xác minh cửa hàng', 'Xác nhận cửa hàng này đủ điều kiện hoạt động?', [
+      { text: 'Hủy', style: 'cancel' },
       { 
-        text: 'Verify', 
+        text: 'Xác minh', 
         onPress: async () => {
           try {
             await ManagerService.verifyShop(id);
             setShops(shops.filter(s => s.id !== id));
-            CustomAlert('Success', 'Shop has been activated');
+            CustomAlert('Thành công', 'Cửa hàng đã được kích hoạt');
           } catch (error) {
-            CustomAlert('Error', 'Could not verify shop');
+            CustomAlert('Lỗi', 'Không thể xác minh cửa hàng');
           }
         }
       },
@@ -72,7 +72,7 @@ const ShopManagementList = ({ navigation }: any) => {
         </View>
         <View style={styles.shopInfo}>
           <Text style={styles.shopName}>{item.name}</Text>
-          <Text style={styles.ownerName}>Owner: {item.ownerName}</Text>
+          <Text style={styles.ownerName}>Chủ sở hữu: {item.ownerName}</Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
       </View>
@@ -95,7 +95,7 @@ const ShopManagementList = ({ navigation }: any) => {
           onPress={() => handleVerify(item.id)}
         >
           <ShieldCheck size={18} color="white" />
-          <Text style={styles.verifyBtnText}>Verify & Activate</Text>
+          <Text style={styles.verifyBtnText}>Duyệt & Kích hoạt</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -105,7 +105,7 @@ const ShopManagementList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>Shop Management</Text>
+        <Text style={styles.title}>Quản lý cửa hàng</Text>
         <TouchableOpacity onPress={fetchShops} style={styles.iconCircle}>
           <Search size={22} color="#64748B" />
         </TouchableOpacity>
@@ -127,7 +127,7 @@ const ShopManagementList = ({ navigation }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#CBD5E1" strokeWidth={1} />
-              <Text style={styles.emptyText}>All shops have been processed!</Text>
+              <Text style={styles.emptyText}>Tất cả cửa hàng đã được duyệt!</Text>
             </View>
           }
         />

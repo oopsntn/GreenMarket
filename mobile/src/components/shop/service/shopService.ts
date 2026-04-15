@@ -207,5 +207,10 @@ export const ShopService = {
     removePhone: async (phone: string) => {
         const response = await api.delete('/shops/phones', { data: { phone } })
         return response.data
+    },
+
+    recordShopContactClick: async (shopId: number) => {
+        const response = await api.post(`/shops/${shopId}/contact-click`)
+        return response.data
     }
 }

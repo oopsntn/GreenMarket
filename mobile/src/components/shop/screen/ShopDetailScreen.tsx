@@ -23,7 +23,7 @@ const ShoDetailScreen = () => {
 
     if (loading && !shop) {
         return (
-            <MobileLayout title="My Shop" backButton={handleBack}>
+            <MobileLayout title="Cửa hàng của tôi" backButton={handleBack}>
                 <ActivityIndicator style={{ marginTop: 80 }} color="#10b981" />
             </MobileLayout>
         )
@@ -31,7 +31,7 @@ const ShoDetailScreen = () => {
 
     return (
         <MobileLayout
-            title="My Shop"
+            title="Cửa hàng của tôi"
             backButton={handleBack}
             scrollEnabled={false}
             rightAction={
@@ -54,10 +54,10 @@ const ShoDetailScreen = () => {
         >
             {!shop ? (
                 <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyTitle}>You do not have a shop yet</Text>
-                    <Text style={styles.emptyText}>Create a shop profile to start posting on GreenMarket.</Text>
+                    <Text style={styles.emptyTitle}>Bạn chưa có cửa hàng nào</Text>
+                    <Text style={styles.emptyText}>Đăng ký thông tin cửa hàng để bắt đầu bán hàng trên GreenMarket.</Text>
                     <Button onPress={() => navigation.navigate('RegisterShop')} style={styles.primaryButton}>
-                        Open a shop now
+                        Mở cửa hàng ngay
                     </Button>
                 </View>
             ) : (
@@ -77,7 +77,7 @@ const ShoDetailScreen = () => {
                                     style={styles.outlineButton}
                                     textStyle={{ color: '#10b981' }}
                                 >
-                                    View dashboard
+                                    Xem thống kê
                                 </Button>
                                 <Button
                                     testID="my-shop-create-post-button"
@@ -86,19 +86,19 @@ const ShoDetailScreen = () => {
                                     style={styles.outlineButton}
                                     textStyle={{ color: '#10b981' }}
                                 >
-                                    Create new product post
+                                    Đăng tin mới
                                 </Button>
                                 <Button
                                     testID="my-shop-manage-posts-button"
                                     onPress={() => navigation.navigate('MyPost')}
                                     style={styles.primaryButton}
                                 >
-                                    Manage posts
+                                    Quản lý tin đăng
                                 </Button>
                             </View>
 
                             <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>Approved shop posts</Text>
+                                <Text style={styles.sectionTitle}>Các tin đang hoạt động</Text>
                             </View>
                         </View>
                     }
@@ -114,9 +114,9 @@ const ShoDetailScreen = () => {
                     )}
                     ListEmptyComponent={
                         <View style={styles.emptyList}>
-                            <Text style={styles.emptyText}>Your shop does not have any approved posts yet.</Text>
+                            <Text style={styles.emptyText}>Cửa hàng của bạn chưa có tin đăng nào được duyệt.</Text>
                             <Button onPress={() => navigation.navigate('CreatePost')} style={styles.primaryButton}>
-                                Create your first post
+                                Tạo tin đăng đầu tiên của bạn
                             </Button>
                         </View>
                     }

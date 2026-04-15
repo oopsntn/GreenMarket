@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigation } from '@react-navigation/native'
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { CheckCircle2, CircleDollarSign, ImagePlus, MapPin, Phone, Tag, X } from 'lucide-react-native'
+import { AlertCircle, CheckCircle2, CircleDollarSign, ImagePlus, MapPin, Phone, Tag, X } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Button from '../../Reused/Button/Button'
 import Card from '../../Reused/Card/Card'
@@ -17,22 +17,50 @@ const CreatePostLayout = () => {
 
     if (state.submitted) {
         return (
-            <MobileLayout title="Success">
+            <MobileLayout title="Thành công">
                 <View style={styles.successContainer}>
                     <CheckCircle2 size={80} color="#10b981" />
-                    <Text style={styles.successTitle}>Post created successfully</Text>
+                    <Text style={styles.successTitle}>Đăng tin thành công</Text>
                     <Text style={styles.successSubtitle}>
-                        Your post has been created successfully. You can review it in your post list.
+                        Tin đăng của bạn đã được tạo thành công. Bạn có thể xem lại trong danh sách tin.
                     </Text>
                     <Button onPress={() => navigation.navigate('MyPost')} style={styles.successButton}>
-                        View my posts
+                        Xem tin của tôi
                     </Button>
                     <Button
                         variant="outline"
                         onPress={() => actions.setSubmitted(false)}
                         style={styles.successButton}
                     >
-                        Create another post
+                        Tạo tin khác
+                    </Button>
+                </View>
+            </MobileLayout>
+        )
+    }
+
+    if (state.loadingPolicy || state.loadingInitialData) {
+        return (
+            <MobileLayout title="Đăng tin mới" backButton={() => navigation.goBack()}>
+                <ActivityIndicator style={{ marginTop: 80 }} color="#10b981" />
+            </MobileLayout>
+        )
+    }
+
+    if (state.policy?.isLimitReached) {
+        return (
+            <MobileLayout title="Đăng tin mới" backButton={() => navigation.goBack()}>
+                <View style={styles.limitContainer}>
+                    <AlertCircle size={60} color="#ef4444" style={{ marginBottom: 20 }} />
+                    <Text style={styles.limitTitle}>Đã đạt giới hạn đăng tin</Text>
+                    <Text style={styles.limitText}>
+                        Bạn đã đạt giới hạn {state.policy.allowedNewPostsPerDay} tin đăng mới trong ngày hôm nay.
+                    </Text>
+                    <Text style={styles.limitText}>
+                        Vui lòng quay lại vào ngày mai hoặc nâng cấp tài khoản để tiếp tục đăng tin.
+                    </Text>
+                    <Button onPress={() => navigation.goBack()} style={styles.primaryButton}>
+                        Quay lại
                     </Button>
                 </View>
             </MobileLayout>
@@ -40,17 +68,17 @@ const CreatePostLayout = () => {
     }
 
     return (
-        <MobileLayout title="Create New Post" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Đăng tin mới" backButton={() => navigation.goBack()}>
             <Card style={styles.card}>
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Images</Text>
-                    <Text style={styles.sectionHint}>Up to 10 images</Text>
+                    <Text style={styles.sectionTitle}>Hình ảnh</Text>
+                    <Text style={styles.sectionHint}>Tối đa 10 ảnh</Text>
                 </View>
 
                 <View style={styles.mediaGrid}>
                     <TouchableOpacity style={styles.uploadBtn} onPress={actions.pickMedia} disabled={state.submitting}>
                         <ImagePlus size={24} color="#10b981" />
-                        <Text style={styles.uploadText}>Add images</Text>
+                        <Text style={styles.uploadText}>Thêm ảnh</Text>
                     </TouchableOpacity>
 
                     {state.media.map((item, index) => (
@@ -68,14 +96,14 @@ const CreatePostLayout = () => {
             <Card style={styles.card}>
                 <Input
                     testID="create-post-title-input"
-                    label="Post title"
+                    label="Tiêu đề tin đăng"
                     value={state.formData.postTitle}
                     onChangeText={(txt) => actions.setFormData({ ...state.formData, postTitle: txt })}
                     icon={<Tag size={16} color="#10b981" />}
                     required
                 />
 
-                <Text style={styles.label}>Category *</Text>
+                <Text style={styles.label}>Danh mục *</Text>
                 {state.loadingInitialData ? (
                     <ActivityIndicator style={styles.loadingInline} color="#10b981" />
                 ) : (
@@ -105,7 +133,7 @@ const CreatePostLayout = () => {
 
                 <Input
                     testID="create-post-price-input"
-                    label="Price"
+                    label="Giá bán"
                     type="numeric"
                     value={state.formData.postPrice}
                     onChangeText={(txt) => actions.setFormData({ ...state.formData, postPrice: txt })}
@@ -117,11 +145,11 @@ const CreatePostLayout = () => {
                     <View style={styles.locationBlock}>
                         <Input
                             testID="create-post-location-input"
-                            label="Location"
+                            label="Địa chỉ"
                             value={state.formData.postLocation}
                             onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}
                             icon={<MapPin size={16} color="#10b981" />}
-                            placeholder="Shop address will be used for this post"
+                            placeholder="Địa chỉ cửa hàng sẽ dùng cho tin này"
                         />
                         <TouchableOpacity
                             style={styles.useShopLocationBtn}
@@ -132,29 +160,29 @@ const CreatePostLayout = () => {
                                 })
                             }
                         >
-                            <Text style={styles.useShopLocationText}>Use shop address</Text>
+                            <Text style={styles.useShopLocationText}>Dùng địa chỉ cửa hàng</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
                     <Input
                         testID="create-post-location-input"
-                        label="Location"
+                        label="Địa chỉ"
                         value={state.formData.postLocation}
                         onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}
                         icon={<MapPin size={16} color="#10b981" />}
-                        placeholder="Example: Cau Giay, Hanoi"
+                        placeholder="Ví dụ: Cầu Giấy, Hà Nội"
                     />
                 )}
                 {isShop && shop?.shopPhone ? (
                     <View style={styles.locationBlock}>
                         <Input
                             testID="create-post-contact-phone-input"
-                            label="Contact phone number"
+                            label="Số điện thoại liên hệ"
                             type="phone-pad"
                             value={state.formData.postContactPhone}
                             onChangeText={(txt) => actions.setFormData({ ...state.formData, postContactPhone: txt })}
                             icon={<Phone size={16} color="#10b981" />}
-                            placeholder="Leave blank to use the default number"
+                            placeholder="Để trống nếu dùng số mặc định"
                         />
                         <TouchableOpacity
                             style={styles.useShopLocationBtn}
@@ -165,18 +193,18 @@ const CreatePostLayout = () => {
                                 })
                             }
                         >
-                            <Text style={styles.useShopLocationText}>Use shop phone</Text>
+                            <Text style={styles.useShopLocationText}>Dùng số cửa hàng</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
                     <Input
                         testID="create-post-contact-phone-input"
-                        label="Contact phone number"
+                        label="Số điện thoại liên hệ"
                         type="phone-pad"
                         value={state.formData.postContactPhone}
                         onChangeText={(txt) => actions.setFormData({ ...state.formData, postContactPhone: txt })}
                         icon={<Phone size={16} color="#10b981" />}
-                        placeholder="Leave blank to use the default number"
+                        placeholder="Để trống nếu dùng số mặc định"
                     />
                 )}
 
@@ -186,7 +214,7 @@ const CreatePostLayout = () => {
                 <ActivityIndicator style={styles.attributeLoading} color="#10b981" />
             ) : state.attributes.length > 0 ? (
                 <Card style={styles.card}>
-                    <Text style={styles.sectionTitle}>Category attributes</Text>
+                    <Text style={styles.sectionTitle}>Thuộc tính danh mục</Text>
                     {state.attributes.map((attr) => (
                         <Input
                             key={attr.attributeId}
@@ -202,7 +230,7 @@ const CreatePostLayout = () => {
             ) : null}
 
             <Button testID="create-post-submit-button" onPress={actions.submitForm} disabled={state.submitting} style={styles.submitBtn}>
-                {state.submitting ? 'Submitting...' : 'Submit post'}
+                {state.submitting ? 'Đang gửi...' : 'Đăng tin'}
             </Button>
         </MobileLayout>
     )
@@ -351,7 +379,24 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
     },
-
+    limitContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 28,
+        paddingTop: 80,
+    },
+    limitTitle: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#ef4444',
+        marginBottom: 8,
+    },
+    limitText: {
+        textAlign: 'center',
+        color: '#64748b',
+        lineHeight: 20,
+        marginBottom: 10,
+    },
 })
 
 export default CreatePostLayout

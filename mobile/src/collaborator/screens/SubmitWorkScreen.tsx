@@ -36,7 +36,7 @@ const SubmitWorkScreen = () => {
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-            Alert.alert('Permission needed', 'We need access to your gallery to upload results.');
+            Alert.alert('Cần cấp quyền', 'Chúng tôi cần quyền truy cập thư viện ảnh để tải lên kết quả.');
             return;
         }
 
@@ -58,7 +58,7 @@ const SubmitWorkScreen = () => {
 
     const handleSubmit = async () => {
         if (images.length === 0) {
-            Alert.alert('Missing Info', 'Please upload at least one image of your work.');
+            Alert.alert('Thiếu thông tin', 'Vui lòng tải lên ít nhất một hình ảnh về kết quả công việc của bạn.');
             return;
         }
 
@@ -70,13 +70,13 @@ const SubmitWorkScreen = () => {
             await CollaboratorService.submitDeliverables(jobId, images, note);
             
             Alert.alert(
-                'Job Completed', 
-                'Your work has been submitted successfully!',
-                [{ text: 'Great!', onPress: () => navigation.navigate('MyWork') }]
+                'Hoàn thành công việc', 
+                'Kết quả công việc của bạn đã được nộp thành công!',
+                [{ text: 'Tuyệt vời!', onPress: () => navigation.navigate('MyWork') }]
             );
         } catch (error: any) {
             console.error('Submission error:', error);
-            Alert.alert('Error', error.response?.data?.error || 'Failed to submit deliverables.');
+            Alert.alert('Lỗi', error.response?.data?.error || 'Lỗi khi nộp kết quả công việc.');
         } finally {
             setLoading(false);
         }
@@ -92,22 +92,22 @@ const SubmitWorkScreen = () => {
                     <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                         <ArrowLeft color="#1E293B" size={24} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Submit Work</Text>
+                    <Text style={styles.headerTitle}>Nộp kết quả</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={styles.jobBox}>
-                        <Text style={styles.jobLabel}>SUBMITTING FOR</Text>
+                        <Text style={styles.jobLabel}>NỘP KẾT QUẢ CHO</Text>
                         <Text style={styles.jobTitle}>{title}</Text>
                     </View>
 
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Deliverables</Text>
+                            <Text style={styles.sectionTitle}>Tài liệu kết quả</Text>
                             <Text style={styles.sectionCount}>{images.length}/5</Text>
                         </View>
-                        <Text style={styles.sectionDesc}>Upload proofs, screenshots or result files.</Text>
+                        <Text style={styles.sectionDesc}>Tải lên bằng chứng, ảnh chụp màn hình hoặc file kết quả.</Text>
 
                         <View style={styles.imageGrid}>
                             {images.map((uri, index) => (
@@ -126,17 +126,17 @@ const SubmitWorkScreen = () => {
                             {images.length < 5 && (
                                 <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
                                     <Upload color="#16A34A" size={24} />
-                                    <Text style={styles.uploadText}>Add File</Text>
+                                    <Text style={styles.uploadText}>Thêm File</Text>
                                 </TouchableOpacity>
                             )}
                         </View>
                     </View>
 
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Completion Note</Text>
+                        <Text style={styles.sectionTitle}>Ghi chú hoàn thành</Text>
                         <TextInput
                             style={styles.noteInput}
-                            placeholder="Add any comments or instructions for the customer..."
+                            placeholder="Thêm nhận xét hoặc hướng dẫn cho khách hàng..."
                             placeholderTextColor="#94A3B8"
                             multiline
                             numberOfLines={4}
@@ -158,7 +158,7 @@ const SubmitWorkScreen = () => {
                         ) : (
                             <>
                                 <CheckCircle color="white" size={20} />
-                                <Text style={styles.submitBtnText}>Finish & Complete Job</Text>
+                                <Text style={styles.submitBtnText}>Hoàn thành & Kết thúc công việc</Text>
                             </>
                         )}
                     </TouchableOpacity>

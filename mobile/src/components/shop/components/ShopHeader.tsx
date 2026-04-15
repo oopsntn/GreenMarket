@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { FlatList, Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Camera, ExternalLink, MapPin, MessageCircle, Phone, Play, Store, User } from 'lucide-react-native'
+import { ShopService } from '../service/shopService'
 
 interface ShopHeaderProps {
     shop: any;
@@ -60,12 +61,18 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
     const makeCall = () => {
         if (primaryPhone) {
             Linking.openURL(`tel:${primaryPhone.replace(/\s+/g, '')}`)
+            if (!isOwner && shop?.shopId) {
+                ShopService.recordShopContactClick(shop.shopId).catch(console.error)
+            }
         }
     }
 
     const openZalo = () => {
         if (primaryPhone) {
             Linking.openURL(`https://zalo.me/${primaryPhone.replace(/\s+/g, '')}`)
+            if (!isOwner && shop?.shopId) {
+                ShopService.recordShopContactClick(shop.shopId).catch(console.error)
+            }
         }
     }
 
@@ -99,7 +106,7 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
                     <Text style={styles.shopName}>{shop.shopName}</Text>
                     <View style={styles.statusBadge}>
                         <Text style={styles.statusText}>
-                            {shop.shopStatus === 'active' ? 'ACTIVE' : 'PENDING APPROVAL'}
+                            {shop.shopStatus === 'active' ? 'HOẠT ĐỘNG' : 'CHỜ DUYỆT'}
                         </Text>
                     </View>
                 </View>
@@ -109,28 +116,28 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
                 <View style={styles.infoItem}>
                     <MapPin size={16} color="#10b981" />
                     <Text style={styles.infoText} numberOfLines={2}>
-                        {shop.shopLocation || 'Address not updated'}
+                        {shop.shopLocation || 'Chưa cập nhật địa chỉ'}
                     </Text>
                 </View>
 
                 <View style={styles.infoItem}>
                     <Phone size={16} color="#10b981" />
                     <Text style={styles.infoText}>
-                        {primaryPhone || 'No phone number yet'}
+                        {primaryPhone || 'Chưa có số điện thoại'}
                     </Text>
                 </View>
             </View>
 
             <View style={styles.descriptionBox}>
                 <Text style={styles.descriptionText}>
-                    {shop.shopDescription || 'This shop does not have a detailed description yet.'}
+                    {shop.shopDescription || 'Cửa hàng này chưa có mô tả chi tiết.'}
                 </Text>
             </View>
 
             {shop.shopLocation || (shop.shopLat && shop.shopLng) ? (
                 <TouchableOpacity style={styles.mapPreview} onPress={openMap}>
                     <ExternalLink size={16} color="#10b981" />
-                    <Text style={styles.mapLinkText}>Open location in maps</Text>
+                    <Text style={styles.mapLinkText}>Mở vị trí trên bản đồ</Text>
                 </TouchableOpacity>
             ) : null}
 
@@ -158,7 +165,7 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
                 <View style={styles.contactRow}>
                     <TouchableOpacity style={styles.callBtn} onPress={makeCall}>
                         <Phone size={18} color="#10b981" />
-                        <Text style={styles.callBtnText}>Call</Text>
+                        <Text style={styles.callBtnText}>Gọi điện</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.zaloBtn} onPress={openZalo}>
@@ -168,7 +175,7 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
                 </View>
             ) : (
                 <View style={styles.ownerNote}>
-                    <Text style={styles.ownerNoteText}>You are viewing this shop as the owner.</Text>
+                    <Text style={styles.ownerNoteText}>Bạn đang xem với tư cách chủ cửa hàng.</Text>
                 </View>
             )}
         </View>

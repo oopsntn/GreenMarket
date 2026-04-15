@@ -47,12 +47,14 @@ const ProfileScreen = () => {
     const { logout, user, updateUser, refreshShop, shop } = useAuth();
     const navigation = useNavigation<any>();
     const isCollaborator = user?.businessRoleCode === 'COLLABORATOR';
+    const isActiveShop = isShop && shop?.shopStatus === 'active';
+    const isPendingShop = isShop && shop?.shopStatus !== 'active';
 
     const handleUpdateAvatar = async (localUri: string) => {
         try {
             const uploadRes = await ProfileService.uploadAvatar(localUri);
             if (!uploadRes?.urls?.[0]) {
-                throw new Error('Invalid upload response');
+                throw new Error('Phản hồi tải lên không hợp lệ');
             }
 
             const serverImageUrl = uploadRes.urls[0];
@@ -66,17 +68,17 @@ const ProfileScreen = () => {
             }
 
             setFormData((prev) => ({ ...prev, avatarUrl: serverImageUrl }));
-            CustomAlert('Success', 'Profile photo updated successfully.');
+            CustomAlert('Thành công', 'Cập nhật ảnh đại diện thành công.');
         } catch (e) {
             console.error('Avatar update error: ', e);
-            CustomAlert('Error', 'Unable to save profile photo.');
+            CustomAlert('Lỗi', 'Không thể lưu ảnh đại diện.');
         }
     };
 
     const pickImage = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
-            CustomAlert('Notice', 'Please grant photo library access');
+            CustomAlert('Thông báo', 'Vui lòng cấp quyền truy cập thư viện ảnh');
             return;
         }
 
@@ -93,11 +95,11 @@ const ProfileScreen = () => {
 
     const handleLogout = () => {
         CustomAlert(
-            'Sign out',
-            'Are you sure you want to sign out?',
+            'Đăng xuất',
+            'Bạn có chắc chắn muốn đăng xuất không?',
             [
-                { text: 'Cancel' },
-                { text: 'Sign out', onPress: () => logout() }
+                { text: 'Hủy' },
+                { text: 'Đăng xuất', onPress: () => logout() }
             ]
         );
     };
@@ -112,7 +114,7 @@ const ProfileScreen = () => {
 
     const joinedDate = (user as any)?.userRegisteredAt
         ? new Date((user as any).userRegisteredAt).toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' })
-        : 'Nov 2023';
+        : 'Tháng 11 năm 2023';
 
     return (
         <SafeAreaView style={styles.container}>
@@ -125,12 +127,12 @@ const ProfileScreen = () => {
                 >
                     <View style={styles.headerRow}>
                         <View>
-                            <Text style={styles.headerTitle}>Profile</Text>
-                            <Text style={styles.headerSubtitle}>ACCOUNT MANAGEMENT</Text>
+                            <Text style={styles.headerTitle}>Hồ sơ</Text>
+                            <Text style={styles.headerSubtitle}>QUẢN LÝ TÀI KHOẢN</Text>
                         </View>
                         <TouchableOpacity
                             style={styles.settingsBtn}
-                            onPress={() => CustomAlert('Settings', 'Settings coming soon')}
+                            onPress={() => CustomAlert('Cài đặt', 'Tính năng cài đặt sắp ra mắt')}
                         >
                             <Settings color="white" size={20} />
                         </TouchableOpacity>
@@ -151,7 +153,7 @@ const ProfileScreen = () => {
                         </Text>
                         <View style={styles.verifiedRow}>
                             <ShieldCheck size={14} color="#10b981" fill="#ecfdf5" />
-                            <Text style={styles.verifiedText}>VERIFIED</Text>
+                            <Text style={styles.verifiedText}>ĐÃ XÁC THỰC</Text>
                         </View>
                     </View>
 
@@ -160,7 +162,7 @@ const ProfileScreen = () => {
                         <View style={styles.statItem}>
                             <Calendar size={18} color="#64748b" />
                             <View>
-                                <Text style={styles.statLabel}>Member since</Text>
+                                <Text style={styles.statLabel}>Thành viên từ</Text>
                                 <Text style={styles.statValB}>{joinedDate}</Text>
                             </View>
                         </View>
@@ -168,8 +170,8 @@ const ProfileScreen = () => {
                         <View style={styles.statItem}>
                             <Trophy size={18} color="#f59e0b" />
                             <View>
-                                <Text style={styles.statLabel}>Reputation</Text>
-                                <Text style={styles.statValB}>Excellent</Text>
+                                <Text style={styles.statLabel}>Độ uy tín</Text>
+                                <Text style={styles.statValB}>Tuyệt vời</Text>
                             </View>
                         </View>
                     </View>
@@ -181,7 +183,7 @@ const ProfileScreen = () => {
                             onPress={() => navigation.navigate('SavedPosts')}
                         >
                             <Heart color="#dc2626" size={20} />
-                            <Text style={styles.savedPostsText}>Saved Posts</Text>
+                            <Text style={styles.savedPostsText}>Bài đăng đã lưu</Text>
                         </TouchableOpacity>
 
                         {isCollaborator && (
@@ -199,22 +201,22 @@ const ProfileScreen = () => {
                                         <Briefcase color="#16a34a" size={24} />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={[styles.beShopTitle, { color: '#166534' }]}>Collaborator Mode</Text>
-                                        <Text style={[styles.beShopDesc, { color: '#15803d' }]}>Manage tasks and track your earnings</Text>
+                                        <Text style={[styles.beShopTitle, { color: '#166534' }]}>Chế độ Cộng tác viên</Text>
+                                        <Text style={[styles.beShopDesc, { color: '#15803d' }]}>Quản lý nhiệm vụ và theo dõi thu nhập</Text>
                                     </View>
                                     <ChevronRight color="#16a34a" size={20} />
                                 </LinearGradient>
                             </TouchableOpacity>
                         )}
 
-                        {isShop ? (
+                        {isActiveShop ? (
                             <View style={styles.shopActionsGrid}>
                                 <TouchableOpacity
                                     style={[styles.shopActionButton, { backgroundColor: '#10b981' }]}
                                     onPress={() => navigation.navigate('MyShop')}
                                 >
                                     <Store color="white" size={20} />
-                                    <Text style={styles.shopActionText}>My Shop</Text>
+                                    <Text style={styles.shopActionText}>Cửa hàng của tôi</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
@@ -222,9 +224,29 @@ const ProfileScreen = () => {
                                     onPress={() => navigation.navigate('MyPost')}
                                 >
                                     <FileText color="#10b981" size={20} />
-                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Manage Ads</Text>
+                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Quản lý tin đăng</Text>
                                 </TouchableOpacity>
                             </View>
+                        ) : isPendingShop ? (
+                            <TouchableOpacity
+                                style={[styles.beShopBanner, { borderColor: '#fef08a' }]}
+                                onPress={() => CustomAlert('Chờ duyệt', 'Hồ sơ cửa hàng của bạn đang được duyệt bởi ban quản trị.')}
+                            >
+                                <LinearGradient
+                                    colors={['#fff', '#fefce8']}
+                                    style={styles.beShopGrad}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                >
+                                    <View style={[styles.beShopIcon, { shadowColor: '#eab308' }]}>
+                                        <Store color="#eab308" size={24} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[styles.beShopTitle, { color: '#ca8a04' }]}>Đang chờ duyệt</Text>
+                                        <Text style={[styles.beShopDesc, { color: '#a16207' }]}>Hồ sơ cửa hàng đang được xét duyệt</Text>
+                                    </View>
+                                </LinearGradient>
+                            </TouchableOpacity>
                         ) : (
                             <TouchableOpacity
                                 style={styles.beShopBanner}
@@ -240,8 +262,8 @@ const ProfileScreen = () => {
                                         <Store color="#10b981" size={24} />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Text style={styles.beShopTitle}>Become a Seller!</Text>
-                                        <Text style={styles.beShopDesc}>Start business with your green products</Text>
+                                        <Text style={styles.beShopTitle}>Trở thành người bán!</Text>
+                                        <Text style={styles.beShopDesc}>Bắt đầu kinh doanh với các sản phẩm xanh</Text>
                                     </View>
                                     <ChevronRight color="#10b981" size={20} />
                                 </LinearGradient>
@@ -254,7 +276,7 @@ const ProfileScreen = () => {
                         <View style={styles.formHeaderRow}>
                             <View style={styles.emeraldPoint} />
                             <Text style={styles.formSectionTitle}>
-                                {isShop ? 'SHOP INFORMATION' : 'PERSONAL INFORMATION'}
+                                {isShop ? 'THÔNG TIN CỬA HÀNG' : 'THÔNG TIN CÁ NHÂN'}
                             </Text>
                         </View>
                         <ProfileForm formData={formData} setFormData={setFormData} isShop={isShop} />
@@ -269,7 +291,7 @@ const ProfileScreen = () => {
                         {saving ? (
                             <ActivityIndicator color="white" size="small" />
                         ) : (
-                            <Text style={styles.primaryBtnText}>SAVE CHANGES</Text>
+                            <Text style={styles.primaryBtnText}>LƯU THAY ĐỔI</Text>
                         )}
                     </TouchableOpacity>
 
@@ -278,7 +300,7 @@ const ProfileScreen = () => {
                         onPress={handleLogout}
                     >
                         <LogOut color="#ef4444" size={20} />
-                        <Text style={styles.logoutBtnText}>LOGOUT</Text>
+                        <Text style={styles.logoutBtnText}>ĐĂNG XUẤT</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>

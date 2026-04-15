@@ -57,18 +57,18 @@ const MyJobsScreen = () => {
 
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No {status} jobs found.</Text>
+            <Text style={styles.emptyText}>Không tìm thấy công việc nào trong mục này.</Text>
         </View>
     );
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>My Work</Text>
+                <Text style={styles.title}>Việc của tôi</Text>
                 <View style={styles.tabBar}>
-                    <StatusTab label="Active" value="accepted" />
-                    <StatusTab label="Completed" value="completed" />
-                    <StatusTab label="History" value="cancelled" />
+                    <StatusTab label="Đang làm" value="accepted" />
+                    <StatusTab label="Đã xong" value="completed" />
+                    <StatusTab label="Lịch sử" value="cancelled" />
                 </View>
             </View>
 
@@ -90,7 +90,7 @@ const MyJobsScreen = () => {
                                     style={styles.submitBtn}
                                     onPress={() => navigation.navigate('SubmitWork', { jobId: item.jobId, title: item.title })}
                                 >
-                                    <Text style={styles.submitBtnText}>Submit Deliverables</Text>
+                                    <Text style={styles.submitBtnText}>Nộp kết quả</Text>
                                 </TouchableOpacity>
                             )}
                         </View>

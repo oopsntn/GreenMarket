@@ -40,7 +40,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
     const pickImage = async (field: 'shopLogoUrl' | 'shopCoverUrl' | 'shopGalleryImages') => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (!permission.granted) {
-            CustomAlert('Notice', 'Please grant photo library access')
+            CustomAlert('Lỗi', 'Vui lòng cấp quyền truy cập thư viện ảnh')
             return
         }
 
@@ -75,7 +75,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
         } catch (e) {
             console.error('Error uploading shop image:', e)
-            CustomAlert('Upload error', 'Unable to upload the image. Please try again.')
+            CustomAlert('Lỗi tải lên', 'Không thể tải ảnh lên. Vui lòng thử lại.')
         } finally {
             setUploadingImage(false)
         }
@@ -94,27 +94,27 @@ const RegisterShopScreen = ({ navigation }: any) => {
         const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
 
         if (!formData.shopName.trim()) {
-            CustomAlert('Error', 'Please enter the shop name')
+            CustomAlert('Lỗi', 'Vui lòng nhập tên cửa hàng')
             return false
         }
 
         if (formData.shopPhone.trim() && !phoneRegex.test(formData.shopPhone.trim())) {
-            CustomAlert('Error', 'Invalid Vietnamese phone number format')
+            CustomAlert('Lỗi', 'Định dạng số điện thoại Việt Nam không hợp lệ')
             return false
         }
 
         if (formData.shopEmail.trim() && !emailRegex.test(formData.shopEmail.trim())) {
-            CustomAlert('Error', 'Invalid email address format')
+            CustomAlert('Lỗi', 'Định dạng email không hợp lệ')
             return false
         }
 
         if (!formData.shopLocation.trim()) {
-            CustomAlert('Error', 'Please enter or fetch the shop location')
+            CustomAlert('Lỗi', 'Vui lòng nhập hoặc chọn tọa độ cửa hàng')
             return false
         }
 
         if (!formData.shopLat || !formData.shopLng) {
-            CustomAlert('Error', 'Please get the shop coordinates')
+            CustomAlert('Lỗi', 'Vui lòng chọn tọa độ cửa hàng trên bản đồ')
             return false
         }
 
@@ -123,7 +123,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
     const handleSubmit = async () => {
         if (hasExistingShop) {
-            CustomAlert('Notice', 'This account already has a shop. Please manage your current shop instead.')
+            CustomAlert('Thông báo', 'Hệ thống xác nhận tài khoản này đã có cửa hàng.')
             return
         }
 
@@ -132,7 +132,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
         }
 
         if (uploadingImage) {
-            CustomAlert('Notice', 'Please wait until the image upload is complete before submitting')
+            CustomAlert('Thông báo', 'Vui lòng chờ tải ảnh lên hoàn tất trước khi đăng ký')
             return
         }
 
@@ -160,7 +160,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 shopInstagram: validateSocial(formData.shopInstagram).trim() || undefined,
                 shopYoutube: validateSocial(formData.shopYoutube).trim() || undefined,
             }
-            
+
             const res = await ShopService.createShop(cleanData)
             if (res) {
                 await refreshShop()
@@ -171,11 +171,11 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
             if (error.response?.data?.error === 'User already has a shop registered') {
                 await refreshShop()
-                CustomAlert('Notice', 'The system confirmed that this account already has a shop.')
+                CustomAlert('Thông báo', 'Hệ thống xác nhận tài khoản này đã có cửa hàng.')
                 return
             }
 
-            CustomAlert('Failed', errorMsg)
+            CustomAlert('Lỗi', errorMsg)
         } finally {
             setLoading(false)
         }
@@ -188,9 +188,9 @@ const RegisterShopScreen = ({ navigation }: any) => {
                     <View style={styles.iconCircle}>
                         <CheckCircle color="#10b981" size={40} />
                     </View>
-                    <Text style={styles.successTitle}>Registration successful!</Text>
+                    <Text style={styles.successTitle}>Đăng ký thành công!</Text>
                     <Text style={styles.successDesc}>
-                        Your shop profile is being reviewed. We will notify you as soon as possible.
+                        Hồ sơ cửa hàng đang được xét duyệt. Chúng tôi sẽ thông báo cho bạn sớm nhất có thể.
                     </Text>
                     <Button
                         fullWidth
@@ -198,7 +198,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         onPress={() => navigation.navigate('MyShop')}
                         style={styles.primaryAction}
                     >
-                        View my shop
+                        Xem cửa hàng của tôi
                     </Button>
                 </View>
             </View>
@@ -207,22 +207,22 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
     if (hasExistingShop) {
         return (
-            <MobileLayout title="Open Shop" backButton={() => navigation.goBack()}>
+            <MobileLayout title="Đăng ký cửa hàng" backButton={() => navigation.goBack()}>
                 <View style={styles.successContainer}>
                     <View style={styles.successCard}>
                         <View style={styles.iconCircle}>
                             <Store color="#10b981" size={40} />
                         </View>
-                        <Text style={styles.successTitle}>You already have a shop</Text>
+                        <Text style={styles.successTitle}>Bạn đã có cửa hàng</Text>
                         <Text style={styles.successDesc}>
-                            Each account can currently own only one shop. You can view or edit the existing profile.
+                            Mỗi tài khoản chỉ được phép có một cửa hàng duy nhất. Bạn có thể xem hoặc chỉnh sửa cửa hàng hiện tại.
                         </Text>
                         <Button
                             fullWidth
                             onPress={() => navigation.navigate('MyShop')}
                             style={styles.primaryAction}
                         >
-                            View my shop
+                            Xem cửa hàng của tôi
                         </Button>
                         <Button
                             fullWidth
@@ -231,7 +231,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             style={styles.secondaryAction}
                             textStyle={{ color: '#10b981' }}
                         >
-                            Edit information
+                            Sửa thông tin
                         </Button>
                     </View>
                 </View>
@@ -240,7 +240,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
     }
 
     return (
-        <MobileLayout title="Open Shop" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Đăng ký cửa hàng" backButton={() => navigation.goBack()}>
             <ScrollView
                 style={styles.container}
                 showsVerticalScrollIndicator={false}
@@ -248,14 +248,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
             >
                 <View style={styles.header}>
                     <Store color="#10b981" size={48} />
-                    <Text style={styles.title}>Start selling</Text>
-                    <Text style={styles.subtitle}>Fill in the information to create your shop</Text>
+                    <Text style={styles.title}>Bắt đầu kinh doanh</Text>
+                    <Text style={styles.subtitle}>Điền thông tin để tạo cửa hàng của bạn</Text>
                 </View>
 
                 <View style={styles.form}>
                     <Input
-                        label="Shop Name *"
-                        placeholder="Example: Green Bonsai Garden"
+                        label="Tên cửa hàng *"
+                        placeholder="Ví dụ: Cây Cảnh Xanh"
                         value={formData.shopName}
                         onChangeText={(txt) => setFormData({ ...formData, shopName: txt })}
                         required
@@ -272,7 +272,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             ) : (
                                 <View style={styles.pickerInner}>
                                     <ImageIcon color="#94a3b8" size={24} />
-                                    <Text style={styles.pickerText}>Square logo</Text>
+                                    <Text style={styles.pickerText}>Ảnh đại diện</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
@@ -287,15 +287,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             ) : (
                                 <View style={styles.pickerInner}>
                                     <Camera color="#94a3b8" size={24} />
-                                    <Text style={styles.pickerText}>Cover image</Text>
+                                    <Text style={styles.pickerText}>Ảnh bìa</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
                     </View>
 
 
-                    {/* Gallery Section */}
-                    <Text style={styles.label}>Shop Gallery (Max 4)</Text>
+                    <Text style={styles.label}>Hình ảnh cửa hàng (Tối đa 4 ảnh)</Text>
                     <View style={styles.galleryContainer}>
                         {formData.shopGalleryImages.map((url, index) => (
                             <View key={index} style={styles.galleryItem}>
@@ -319,37 +318,37 @@ const RegisterShopScreen = ({ navigation }: any) => {
                     </View>
 
                     <Text style={styles.helperText}>
-                        {uploadingImage ? 'Uploading image...' : 'Logo and cover image are optional, but recommended to make your shop look more professional.'}
+                        {uploadingImage ? 'Đang tải ảnh lên...' : 'Ảnh đại diện và ảnh bìa không bắt buộc nhưng sẽ làm cửa hàng chuyên nghiệp hơn.'}
                     </Text>
 
                     <Input
-                        label="Shop Email"
+                        label="Email cửa hàng"
                         type="email-address"
                         value={formData.shopEmail}
                         onChangeText={(txt) => setFormData({ ...formData, shopEmail: txt })}
-                        placeholder="Example: contact@greenmarket.com"
+                        placeholder="Ví dụ: contact@greengarden.com"
                     />
 
                     <Input
-                        label="Shop Phone Number"
+                        label="Số điện thoại cửa hàng"
                         type="phone-pad"
                         value={formData.shopPhone}
                         onChangeText={(txt) => setFormData({ ...formData, shopPhone: txt })}
-                        placeholder="Example: 0912345678"
+                        placeholder="Ví dụ: 0912345678"
                     />
 
                     <Input
-                        label="Shop Description"
+                        label="Mô tả cửa hàng"
                         multiline
                         numberOfLines={4}
                         value={formData.shopDescription}
                         onChangeText={(txt) => setFormData({ ...formData, shopDescription: txt })}
-                        placeholder="Describe your main products, garden style, contact hours..."
+                        placeholder="Mô tả chi tiết cửa hàng của bạn..."
                     />
 
                     <View style={{ marginBottom: 20 }}>
                         <AddressPicker
-                            label="Shop Location *"
+                            label="Địa chỉ cửa hàng *"
                             address={formData.shopLocation}
                             onAddressChange={handleAddressChange}
                             onLocationSelect={(addr, lat, lng) => {
@@ -397,7 +396,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         fullWidth
                         style={styles.submitBtn}
                     >
-                        Submit Registration
+                        Đăng ký cửa hàng
                     </Button>
                 </View>
             </ScrollView>

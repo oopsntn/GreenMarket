@@ -49,7 +49,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out this plant: ${post?.postTitle} on Bonsai App`,
+        message: `Xem thử tin này: ${post?.postTitle} trên GreenMarket`,
         url: `https://yourdomain.com/post/${post?.postSlug}`
       });
     } catch (error) {
@@ -105,8 +105,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     });
   }
 
-  if (loading) return <View style={styles.center}><Text>Loading...</Text></View>;
-  if (!post) return <View style={styles.center}><Text>Post not found or has been deleted.</Text></View>;
+  if (loading) return <View style={styles.center}><Text>Đang tải...</Text></View>;
+  if (!post) return <View style={styles.center}><Text>Không tìm thấy tin đăng hoặc đã bị xóa.</Text></View>;
 
   const media = [
     ...(post?.images || []).map((i: any) => {
@@ -148,7 +148,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
 
   return (
     <MobileLayout
-      title="Post Detail"
+      title="Chi tiết tin đăng"
       headerStyle="default"
       backButton={() => navigation.goBack()}
       rightAction={renderRightActions()}
@@ -174,7 +174,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               Linking.openURL(`tel:${contactPhone}`);
             }}
           >
-            Call now
+            Gọi ngay
           </Button>
         </View>
       }
@@ -190,11 +190,11 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           <View style={styles.badgeRow}>
             <View style={styles.verifyBadge}>
               <ShieldCheck size={14} color="#52c41a" />
-              <Text style={styles.verifyText}>Verified Seller</Text>
+              <Text style={styles.verifyText}>Đã xác thực</Text>
             </View>
             <View style={styles.metaBadge}>
               <Eye size={14} color="#8c8c8c" />
-              <Text style={styles.metaText}>{post?.postViewCount || 0} views</Text>
+              <Text style={styles.metaText}>{post?.postViewCount || 0} lượt xem</Text>
             </View>
           </View>
 
@@ -211,7 +211,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           <Card style={styles.sectionCard} shadow padding="medium">
             <View style={styles.sectionHeader}>
               <Maximize2 size={18} color="#52c41a" />
-              <Text style={styles.sectionTitle}>Specifications</Text>
+              <Text style={styles.sectionTitle}>Thông số kỹ thuật</Text>
             </View>
             <View style={styles.attrGrid}>
               {post?.attributes.map((attr: any, index: number) => (
@@ -236,7 +236,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.shopName}>{post?.shop?.shopName}</Text>
-              <Text style={styles.shopSub}>View seller details</Text>
+              <Text style={styles.shopSub}>Xem chi tiết người bán</Text>
             </View>
             <ExternalLink size={18} color="#bfbfbf" />
           </View>
@@ -246,7 +246,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
         <Card style={styles.sectionCard} padding="medium">
           <View style={styles.sectionHeader}>
             <MapPin size={18} color="#52c41a" />
-            <Text style={styles.sectionTitle}>Location</Text>
+            <Text style={styles.sectionTitle}>Vị trí</Text>
           </View>
           <Text style={styles.locationText}>{post?.shop?.shopLocation || post?.postLocation}</Text>
           <Button
@@ -256,7 +256,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
             textStyle={{ color: '#595959' }}
             onPress={openMap}
           >
-            Open in Google Maps
+            Mở trong bản đồ
           </Button>
         </Card>
 

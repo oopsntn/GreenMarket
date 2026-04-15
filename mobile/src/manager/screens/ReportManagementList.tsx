@@ -36,7 +36,7 @@ const ReportManagementList = ({ navigation }: any) => {
       setReports(data.filter(r => r.reportStatus === 'pending'));
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Could not fetch reports');
+      CustomAlert('Lỗi', 'Không thể tải danh sách báo cáo');
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ const ReportManagementList = ({ navigation }: any) => {
             <Text style={styles.reporteeName}>{item.reporterDisplayName}</Text>
           </View>
           <Text style={styles.targetName} numberOfLines={1}>
-            {item.postTitle ? `Post: ${item.postTitle}` : item.shopName ? `Shop: ${item.shopName}` : 'Unknown Target'}
+            {item.postTitle ? `Tin đăng: ${item.postTitle}` : item.shopName ? `Cửa hàng: ${item.shopName}` : 'Không rõ đối tượng'}
           </Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
@@ -81,7 +81,7 @@ const ReportManagementList = ({ navigation }: any) => {
           <Text style={styles.timeText}>{new Date(item.reportCreatedAt).toLocaleDateString()}</Text>
         </View>
         <TouchableOpacity style={styles.resolveBtn} onPress={() => navigation.navigate('ReportManagementDetail', { reportId: item.reportId })}>
-          <Text style={styles.resolveBtnText}>Process Now</Text>
+          <Text style={styles.resolveBtnText}>Xử lý ngay</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -91,7 +91,7 @@ const ReportManagementList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>Reports Management</Text>
+        <Text style={styles.title}>Quản lý báo cáo</Text>
         <TouchableOpacity onPress={fetchReports} style={styles.iconCircle}>
           <Search size={22} color="#64748B" />
         </TouchableOpacity>
@@ -113,7 +113,7 @@ const ReportManagementList = ({ navigation }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#22C55E" strokeWidth={1} />
-              <Text style={styles.emptyText}>All reports have been resolved!</Text>
+              <Text style={styles.emptyText}>Tất cả báo cáo đã được xử lý!</Text>
             </View>
           }
         />

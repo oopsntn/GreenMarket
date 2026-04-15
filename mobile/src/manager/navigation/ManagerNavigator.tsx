@@ -50,11 +50,11 @@ const ManagerTabs = () => {
         },
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Overview' }} />
-      <Tab.Screen name="Posts" component={PostManagementList} options={{ tabBarLabel: 'Review Posts', tabBarBadge: 5 }} />
-      <Tab.Screen name="Shops" component={ShopManagementList} options={{ tabBarLabel: 'Shops' }} />
-      <Tab.Screen name="Reports" component={ReportManagementList} options={{ tabBarLabel: 'Reports', tabBarBadge: 3 }} />
-      <Tab.Screen name="Settings" component={ManagerSettingsScreen} options={{ tabBarLabel: 'Settings' }} />
+      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Tổng quan' }} />
+      <Tab.Screen name="Posts" component={PostManagementList} options={{ tabBarLabel: 'Bài đăng', tabBarBadge: 5 }} />
+      <Tab.Screen name="Shops" component={ShopManagementList} options={{ tabBarLabel: 'Cửa hàng' }} />
+      <Tab.Screen name="Reports" component={ReportManagementList} options={{ tabBarLabel: 'Báo cáo', tabBarBadge: 3 }} />
+      <Tab.Screen name="Settings" component={ManagerSettingsScreen} options={{ tabBarLabel: 'Cài đặt' }} />
     </Tab.Navigator>
   );
 };

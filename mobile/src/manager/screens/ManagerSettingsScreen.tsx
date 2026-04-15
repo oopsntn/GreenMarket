@@ -9,12 +9,12 @@ const ManagerSettingsScreen = ({ navigation }: any) => {
 
   const handleLogout = () => {
     Alert.alert(
-      'Sign out',
-      'Are you sure you want to sign out?',
+      'Đăng xuất',
+      'Bạn có chắc chắn muốn đăng xuất không?',
       [
-        { text: 'Cancel', onPress: () => { } },
+        { text: 'Hủy', onPress: () => { } },
         {
-          text: 'Sign out',
+          text: 'Đăng xuất',
           onPress: async () => {
             await logout();
           },
@@ -26,7 +26,7 @@ const ManagerSettingsScreen = ({ navigation }: any) => {
 
   return (
     <MobileLayout
-      title="Settings"
+      title="Cài đặt"
       headerStyle="default"
     >
       <ScrollView style={styles.container}>
@@ -37,7 +37,7 @@ const ManagerSettingsScreen = ({ navigation }: any) => {
               <User size={32} color="#fff" />
             </View>
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>{user?.userDisplayName || 'Manager'}</Text>
+              <Text style={styles.userName}>{user?.userDisplayName || 'Quản trị viên'}</Text>
               <Text style={styles.userPhone}>{user?.userMobile}</Text>
             </View>
           </View>
@@ -46,7 +46,7 @@ const ManagerSettingsScreen = ({ navigation }: any) => {
         {/* Settings Options */}
         <View style={styles.section}>
           <View style={styles.sectionTitle}>
-            <Text style={styles.sectionTitleText}>Account</Text>
+            <Text style={styles.sectionTitleText}>Tài khoản</Text>
           </View>
 
           {/* Logout Button */}
@@ -55,9 +55,9 @@ const ManagerSettingsScreen = ({ navigation }: any) => {
             onPress={handleLogout}
           >
             <LogOut size={20} color="#ff4d4f" />
-            <Text style={styles.menuItemText}>Sign out</Text>
+            <Text style={styles.menuItemText}>Đăng xuất</Text>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemSubtext}>Your data is safe</Text>
+              <Text style={styles.menuItemSubtext}>Dữ liệu của bạn được an toàn</Text>
             </View>
           </TouchableOpacity>
         </View>

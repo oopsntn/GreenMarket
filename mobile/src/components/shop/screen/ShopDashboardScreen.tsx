@@ -46,16 +46,16 @@ const ShopDashboardScreen = () => {
     const shop = dashboard?.shop
 
     const statCards = [
-        { label: 'Total Posts', value: summary.totalPosts ?? 0, icon: <FileText size={18} color="#047857" /> },
-        { label: 'Approved', value: summary.approvedPosts ?? 0, icon: <Store size={18} color="#047857" /> },
-        { label: 'Views', value: summary.totalViews ?? 0, icon: <Eye size={18} color="#2563eb" /> },
-        { label: 'Contacts', value: summary.totalContacts ?? 0, icon: <MessageCircle size={18} color="#7c3aed" /> },
-        { label: 'Active Promotions', value: summary.activePromotions ?? 0, icon: <Rocket size={18} color="#ea580c" /> },
-        { label: 'Promotion Spend', value: `${new Intl.NumberFormat('en-US').format(Number(summary.totalPromotionSpend ?? 0))} VND`, icon: <Wallet size={18} color="#b91c1c" /> },
+        { label: 'Tổng tin', value: summary.totalPosts ?? 0, icon: <FileText size={18} color="#047857" /> },
+        { label: 'Tin đã duyệt', value: summary.approvedPosts ?? 0, icon: <Store size={18} color="#047857" /> },
+        { label: 'Lượt xem', value: summary.totalViews ?? 0, icon: <Eye size={18} color="#2563eb" /> },
+        { label: 'Lượt liên hệ', value: summary.totalContacts ?? 0, icon: <MessageCircle size={18} color="#7c3aed" /> },
+        { label: 'Tin đang chạy', value: summary.activePromotions ?? 0, icon: <Rocket size={18} color="#ea580c" /> },
+        { label: 'Chi phí gói', value: `${new Intl.NumberFormat('en-US').format(Number(summary.totalPromotionSpend ?? 0))} VND`, icon: <Wallet size={18} color="#b91c1c" /> },
     ]
 
     const formatDateTime = (value?: string) => {
-        if (!value) return 'N/A'
+        if (!value) return 'Không có'
         const date = new Date(value)
         if (Number.isNaN(date.getTime())) return 'N/A'
         return date.toLocaleString('en-US', {
@@ -85,17 +85,17 @@ const ShopDashboardScreen = () => {
                     {item.postTitle || `Post #${item.postId}`}
                 </Text>
                 <Text style={styles.listMeta}>
-                    {item.postStatus || 'unknown'} • {item.postViewCount ?? 0} views • {item.postContactCount ?? 0} contacts
+                    {item.postStatus || 'unknown'} • {item.postViewCount ?? 0} lượt xem • {item.postContactCount ?? 0} liên hệ
                 </Text>
                 <Text style={styles.listMeta}>
-                    Updated: {formatDateTime(item.postUpdatedAt)}
+                    Cập nhật: {formatDateTime(item.postUpdatedAt)}
                 </Text>
             </View>
 
             <View style={styles.listAside}>
                 {item.isPromoted ? (
                     <View style={styles.promotedBadge}>
-                        <Text style={styles.promotedText}>Promoted</Text>
+                        <Text style={styles.promotedText}>Đang đẩy</Text>
                     </View>
                 ) : null}
                 <ArrowRight size={16} color="#94a3b8" />
@@ -128,23 +128,23 @@ const ShopDashboardScreen = () => {
 
     if (loading && !dashboard) {
         return (
-            <MobileLayout title="Shop Dashboard" backButton={() => navigation.goBack()}>
+            <MobileLayout title="Thống kê cửa hàng" backButton={() => navigation.goBack()}>
                 <ActivityIndicator style={{ marginTop: 80 }} color="#10b981" />
             </MobileLayout>
         )
     }
 
     return (
-        <MobileLayout title="Shop Dashboard" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Thống kê cửa hàng" backButton={() => navigation.goBack()}>
             <ScrollView
                 contentContainerStyle={styles.container}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchDashboard(true)} />}
             >
                 {!dashboard ? (
                     <Card style={styles.emptyCard}>
-                        <Text style={styles.emptyTitle}>Dashboard unavailable</Text>
+                        <Text style={styles.emptyTitle}>Chưa có dữ liệu</Text>
                         <Text style={styles.emptyText}>
-                            Your shop dashboard is not ready yet. Please make sure your shop is active and try again.
+                            Bảng điều khiển của bạn chưa sẵn sàng. Vui lòng đảm bảo cửa hàng của bạn đang hoạt động.
                         </Text>
                     </Card>
                 ) : (
@@ -155,9 +155,9 @@ const ShopDashboardScreen = () => {
                                     <BarChart3 size={22} color="#047857" />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={styles.heroTitle}>{shop?.shopName || 'My Shop'}</Text>
+                                    <Text style={styles.heroTitle}>{shop?.shopName || 'Cửa hàng của tôi'}</Text>
                                     <Text style={styles.heroSubtitle}>
-                                        Status: {shop?.shopStatus || 'unknown'} • Contact rate: {summary.contactRate ?? 0}%
+                                        Trạng thái: {shop?.shopStatus || 'unknown'} • Tỷ lệ liên hệ: {summary.contactRate ?? 0}%
                                     </Text>
                                 </View>
                             </View>
@@ -169,13 +169,13 @@ const ShopDashboardScreen = () => {
                                     textStyle={{ color: '#10b981' }}
                                     onPress={() => navigation.navigate('MyPost')}
                                 >
-                                    Manage Posts
+                                    Quản lý tin
                                 </Button>
                                 <Button
                                     style={styles.heroButton}
                                     onPress={() => navigation.navigate('CreatePost')}
                                 >
-                                    Create Post
+                                    Đăng tin mới
                                 </Button>
                             </View>
                         </Card>
@@ -192,33 +192,33 @@ const ShopDashboardScreen = () => {
 
                         <Card style={styles.sectionCard}>
                             <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>Post Moderation Snapshot</Text>
+                                <Text style={styles.sectionTitle}>Tổng quan kiểm duyệt</Text>
                             </View>
                             <View style={styles.snapshotRow}>
                                 <View style={styles.snapshotItem}>
                                     <Text style={styles.snapshotValue}>{summary.pendingPosts ?? 0}</Text>
-                                    <Text style={styles.snapshotLabel}>Pending</Text>
+                                    <Text style={styles.snapshotLabel}>Đang chờ</Text>
                                 </View>
                                 <View style={styles.snapshotItem}>
                                     <Text style={styles.snapshotValue}>{summary.rejectedPosts ?? 0}</Text>
-                                    <Text style={styles.snapshotLabel}>Rejected</Text>
+                                    <Text style={styles.snapshotLabel}>Bị từ chối</Text>
                                 </View>
                                 <View style={styles.snapshotItem}>
                                     <Text style={styles.snapshotValue}>{summary.successfulPayments ?? 0}</Text>
-                                    <Text style={styles.snapshotLabel}>Paid Orders</Text>
+                                    <Text style={styles.snapshotLabel}>Giao dịch</Text>
                                 </View>
                             </View>
                         </Card>
 
                         <Card style={styles.sectionCard}>
                             <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>Top Posts</Text>
+                                <Text style={styles.sectionTitle}>Tin nổi bật</Text>
                                 <TouchableOpacity onPress={() => navigation.navigate('MyPost')}>
-                                    <Text style={styles.sectionLink}>See all</Text>
+                                    <Text style={styles.sectionLink}>Xem tất cả</Text>
                                 </TouchableOpacity>
                             </View>
                             {topPosts.length === 0 ? (
-                                <Text style={styles.emptyInline}>No post analytics yet.</Text>
+                                <Text style={styles.emptyInline}>Chưa có dữ liệu thống kê.</Text>
                             ) : (
                                 topPosts.map(renderTopPost)
                             )}
@@ -226,11 +226,11 @@ const ShopDashboardScreen = () => {
 
                         <Card style={styles.sectionCard}>
                             <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>Recent Payments</Text>
+                                <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
                                 <BadgeDollarSign size={18} color="#10b981" />
                             </View>
                             {recentPayments.length === 0 ? (
-                                <Text style={styles.emptyInline}>No payment records yet.</Text>
+                                <Text style={styles.emptyInline}>Không có lịch sử thanh toán.</Text>
                             ) : (
                                 recentPayments.map(renderPayment)
                             )}

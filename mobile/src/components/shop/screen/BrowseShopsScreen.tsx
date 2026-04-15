@@ -36,7 +36,7 @@ const BrowseShopsScreen = () => {
     }, [])
 
     return (
-        <MobileLayout scrollEnabled={false} title="Explore Shops" backButton={() => navigation.goBack()}>
+        <MobileLayout scrollEnabled={false} title="Khám phá cửa hàng" backButton={() => navigation.goBack()}>
             {loading ? (
                 <ActivityIndicator style={{ marginTop: 80 }} color="#10b981" />
             ) : (
@@ -61,10 +61,10 @@ const BrowseShopsScreen = () => {
                                     <View style={styles.info}>
                                         <Text style={styles.shopName}>{item.shopName}</Text>
                                         <Text style={styles.shopLocation} numberOfLines={1}>
-                                            {item.shopLocation || 'Address not updated'}
+                                            {item.shopLocation || 'Chưa cập nhật địa chỉ'}
                                         </Text>
                                         <Text style={styles.shopDescription} numberOfLines={2}>
-                                            {item.shopDescription || 'This shop does not have a description yet.'}
+                                            {item.shopDescription || 'Cửa hàng này chưa có mô tả chi tiết.'}
                                         </Text>
                                     </View>
 
@@ -72,15 +72,15 @@ const BrowseShopsScreen = () => {
                                 </View>
 
                                 <View style={styles.metaRow}>
-                                    <Text style={styles.postCountText}>{item.posts?.length || 0} products</Text>
+                                    <Text style={styles.postCountText}>{item.posts?.length || 0} sản phẩm</Text>
                                 </View>
                             </Card>
                         </TouchableOpacity>
                     )}
                     ListEmptyComponent={
                         <View style={styles.empty}>
-                            <Text style={styles.emptyTitle}>No active shops yet</Text>
-                            <Text style={styles.emptyText}>Approved and activated shops will appear here.</Text>
+                            <Text style={styles.emptyTitle}>Chưa có cửa hàng hoạt động</Text>
+                            <Text style={styles.emptyText}>Các cửa hàng đã được duyệt và kích hoạt sẽ hiển thị ở đây.</Text>
                         </View>
                     }
                 />

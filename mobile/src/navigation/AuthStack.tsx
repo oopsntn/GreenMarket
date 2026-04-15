@@ -33,7 +33,7 @@ const AuthStack = () => {
         <View style={styles.header}>
           <Text style={styles.appName}>GreenMarket</Text>
           <Text style={styles.appDescription}>
-            Sign in to continue your green shopping experience
+            Đăng nhập để tiếp tục trải nghiệm mua sắm xanh
           </Text>
         </View>
         <LoginScreen onLoginSuccess={handleLoginSuccess} />

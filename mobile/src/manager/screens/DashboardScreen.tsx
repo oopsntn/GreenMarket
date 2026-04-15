@@ -77,8 +77,8 @@ const DashboardScreen = ({ navigation }: any) => {
         >
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.welcomeText}>Manager Panel</Text>
-              <Text style={styles.dateText}>{new Date().toDateString()}</Text>
+              <Text style={styles.welcomeText}>Bảng điều khiển</Text>
+              <Text style={styles.dateText}>{new Date().toLocaleDateString('vi-VN')}</Text>
             </View>
             <TouchableOpacity style={styles.profileBtn}>
               <LayoutDashboard color="white" size={20} />
@@ -86,9 +86,9 @@ const DashboardScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.mainStatsContainer}>
-            <Text style={styles.summaryTitle}>{summary?.title || "Overview"}</Text>
+            <Text style={styles.summaryTitle}>{summary?.title || "Tổng quan"}</Text>
             <Text style={styles.summaryDesc}>
-              {summary?.description || "Loading latest activities..."}
+              {summary?.description || "Đang tải hoạt động mới nhất..."}
             </Text>
           </View>
         </LinearGradient>
@@ -106,7 +106,7 @@ const DashboardScreen = ({ navigation }: any) => {
             ))}
           </View>
 
-          <Text style={styles.sectionTitle}>Task Shortcuts</Text>
+          <Text style={styles.sectionTitle}>Phím tắt công việc</Text>
           
           <View style={styles.quickActions}>
             <TouchableOpacity 
@@ -116,7 +116,7 @@ const DashboardScreen = ({ navigation }: any) => {
               <View style={[styles.actionIcon, { backgroundColor: '#F0FDF4' }]}>
                 <ClipboardCheck color="#22C55E" size={24} />
               </View>
-              <Text style={styles.actionLabel}>Review Posts</Text>
+              <Text style={styles.actionLabel}>Kiểm duyệt tin</Text>
               <ChevronRight color="#CBD5E1" size={18} />
             </TouchableOpacity>
 
@@ -127,7 +127,7 @@ const DashboardScreen = ({ navigation }: any) => {
               <View style={[styles.actionIcon, { backgroundColor: '#EFF6FF' }]}>
                 <Store color="#3B82F6" size={24} />
               </View>
-              <Text style={styles.actionLabel}>Verify Shops</Text>
+              <Text style={styles.actionLabel}>Kiểm duyệt cửa hàng</Text>
               <ChevronRight color="#CBD5E1" size={18} />
             </TouchableOpacity>
 
@@ -138,7 +138,7 @@ const DashboardScreen = ({ navigation }: any) => {
               <View style={[styles.actionIcon, { backgroundColor: '#FEF2F2' }]}>
                 <AlertTriangle color="#EF4444" size={24} />
               </View>
-              <Text style={styles.actionLabel}>Activity Reports</Text>
+              <Text style={styles.actionLabel}>Quản lý báo cáo</Text>
               <ChevronRight color="#CBD5E1" size={18} />
             </TouchableOpacity>
           </View>
@@ -146,11 +146,11 @@ const DashboardScreen = ({ navigation }: any) => {
           <View style={styles.activityCard}>
             <View style={styles.activityHeader}>
               <TrendingUp size={18} color="#166534" />
-              <Text style={styles.activityTitle}>Pending Summary</Text>
+              <Text style={styles.activityTitle}>Tóm tắt công việc</Text>
             </View>
             <View style={styles.activityRow}>
               <Clock size={16} color="#64748B" />
-              <Text style={styles.activityText}>You have items awaiting your attention.</Text>
+              <Text style={styles.activityText}>Bạn có các mục đang chờ xử lý.</Text>
             </View>
           </View>
         </View>

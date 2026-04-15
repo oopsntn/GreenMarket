@@ -98,8 +98,8 @@ const DashboardScreen = () => {
                 <LinearGradient colors={['#064E3B', '#16A34A']} style={styles.header}>
                     <View style={styles.headerTop}>
                         <View>
-                            <Text style={styles.welcomeText}>Hello,</Text>
-                            <Text style={styles.nameText}>{profile.displayName || 'Collaborator'}</Text>
+                            <Text style={styles.welcomeText}>Xin chào,</Text>
+                            <Text style={styles.nameText}>{profile.displayName || 'Cộng tác viên'}</Text>
                         </View>
                         <TouchableOpacity style={styles.notificationBtn}>
                             <Bell color="white" size={24} />
@@ -109,13 +109,13 @@ const DashboardScreen = () => {
                     {/* Balance Card */}
                     <View style={styles.balanceCard}>
                         <View>
-                            <Text style={styles.balanceLabel}>Available Balance</Text>
+                            <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
                             <Text style={styles.balanceValue}>
                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(stats.availableBalance)}
                             </Text>
                         </View>
                         <TouchableOpacity style={styles.withdrawBtn}>
-                            <Text style={styles.withdrawBtnText}>Withdraw</Text>
+                            <Text style={styles.withdrawBtnText}>Rút tiền</Text>
                         </TouchableOpacity>
                     </View>
                 </LinearGradient>
@@ -125,7 +125,7 @@ const DashboardScreen = () => {
                     <View style={styles.section}>
                         <View style={styles.availabilityBox}>
                             <View style={styles.availabilityInfo}>
-                                <Text style={styles.sectionTitle}>Working Status</Text>
+                                <Text style={styles.sectionTitle}>Trạng thái làm việc</Text>
                                 <View style={styles.statusBadge}>
                                     <Circle
                                         size={10}
@@ -148,7 +148,7 @@ const DashboardScreen = () => {
                                     styles.toggleText,
                                     { color: profile.availabilityStatus === 'available' ? '#EF4444' : '#16A34A' }
                                 ]}>
-                                    {profile.availabilityStatus === 'available' ? 'Set Busy' : 'Go Online'}
+                                    {profile.availabilityStatus === 'available' ? 'Đặt bận' : 'Sẵn sàng'}
                                 </Text>
                             </TouchableOpacity>
                         </View>
@@ -157,13 +157,13 @@ const DashboardScreen = () => {
                     {/* Stats Grid */}
                     <View style={styles.statsGrid}>
                         <StatsCard
-                            title="Active Tasks"
+                            title="Đang làm"
                             value={stats.activeJobs}
                             icon={Briefcase}
                             color="#3B82F6"
                         />
                         <StatsCard
-                            title="Completed"
+                            title="Đã xong"
                             value={stats.completedJobs}
                             icon={CheckCircle2}
                             color="#10B981"
@@ -172,15 +172,15 @@ const DashboardScreen = () => {
 
                     {/* Quick Access */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Quick Access</Text>
+                        <Text style={styles.sectionTitle}>Truy cập nhanh</Text>
                         <View style={styles.menuList}>
                             <TouchableOpacity style={styles.menuItem}>
                                 <View style={styles.menuIconWrap}>
                                     <LayoutDashboard color="#16A34A" size={20} />
                                 </View>
                                 <View style={styles.menuContent}>
-                                    <Text style={styles.menuTitle}>Find New Jobs</Text>
-                                    <Text style={styles.menuDesc}>Explore available unassigned requests</Text>
+                                    <Text style={styles.menuTitle}>Tìm việc mới</Text>
+                                    <Text style={styles.menuDesc}>Khám phá các yêu cầu chưa có người nhận</Text>
                                 </View>
                                 <ChevronRight color="#94A3B8" size={20} />
                             </TouchableOpacity>
@@ -190,8 +190,8 @@ const DashboardScreen = () => {
                                     <Wallet color="#3B82F6" size={20} />
                                 </View>
                                 <View style={styles.menuContent}>
-                                    <Text style={styles.menuTitle}>Payout History</Text>
-                                    <Text style={styles.menuDesc}>View your transaction records</Text>
+                                    <Text style={styles.menuTitle}>Lịch sử rút tiền</Text>
+                                    <Text style={styles.menuDesc}>Xem lịch sử giao dịch của bạn</Text>
                                 </View>
                                 <ChevronRight color="#94A3B8" size={20} />
                             </TouchableOpacity>

@@ -48,7 +48,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
     const pickImage = async (field: 'shopLogoUrl' | 'shopCoverUrl' | 'shopGalleryImages') => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
-            CustomAlert('Notice', 'Please grant photo library access');
+            CustomAlert('Yêu cầu quyền truy cập', 'Vui lòng cấp quyền truy cập thư viện ảnh để chọn ảnh');
             return;
         }
 
@@ -79,7 +79,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                 }
 
             } catch (e) {
-                CustomAlert('Error', 'Unable to upload the image');
+                CustomAlert('Lỗi', 'Không thể tải ảnh lên');
             } finally {
                 setUpLoadingImage(false);
             }
@@ -90,11 +90,11 @@ const EditShopScreen = ({ route, navigation }: any) => {
         const phoneRegex = /^(0|84)(3|5|7|8|9)([0-9]{8})$/
         const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
 
-        if (!formData.shopName.trim()) return CustomAlert('Error', 'Shop name is required');
-        if (!formData.shopLat || !formData.shopLng) return CustomAlert('Error', 'Please update the shop location');
+        if (!formData.shopName.trim()) return CustomAlert('Lỗi', 'Vui lòng nhập tên cửa hàng');
+        if (!formData.shopLat || !formData.shopLng) return CustomAlert('Lỗi', 'Vui lòng cập nhật tọa độ cửa hàng');
 
         if (formData.shopEmail.trim() && !emailRegex.test(formData.shopEmail.trim())) {
-            return CustomAlert('Error', 'Invalid email address format');
+            return CustomAlert('Lỗi', 'Định dạng email không hợp lệ');
         }
 
         const validateSocial = (url: string) => {
@@ -105,7 +105,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
         };
 
         if (uploadingImage) {
-            return CustomAlert('Notice', 'Please wait until image upload is complete');
+            return CustomAlert('Thông báo', 'Vui lòng chờ tải ảnh lên hoàn tất');
         }
 
         setLoading(true);
@@ -128,15 +128,15 @@ const EditShopScreen = ({ route, navigation }: any) => {
             const res = await ShopService.updateShop(shop.shopId, dataToSubmit);
             if (res) {
                 await refreshShop();
-                CustomAlert('Success', 'Information updated successfully');
+                CustomAlert('Thành công', 'Thông tin đã được cập nhật');
                 navigation.goBack();
             }
         } catch (error: any) {
             console.error(error);
             if (error.response?.status === 403) {
-                CustomAlert('Yêu cầu xác thực', 'Cập nhật email thành công nhưng bạn cần xác thực lại email (Email change resets verification). Vui lòng xác thực Email của shop!');
+                CustomAlert('Yêu cầu xác thực', 'Cập nhật email thành công nhưng bạn cần xác thực lại email. Vui lòng xác thực Email của shop!');
             } else {
-                CustomAlert('Error', error.response?.data?.error || 'Update failed');
+                CustomAlert('Lỗi', error.response?.data?.error || 'Cập nhật thất bại');
             }
         } finally {
             setLoading(false);
@@ -144,10 +144,10 @@ const EditShopScreen = ({ route, navigation }: any) => {
     };
 
     return (
-        <MobileLayout title="Edit Shop" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Chỉnh sửa cửa hàng" backButton={() => navigation.goBack()}>
             <ScrollView style={styles.container}>
 
-                <Text style={styles.label}>Shop images</Text>
+                <Text style={styles.label}>Ảnh đại diện và bản đồ</Text>
                 <View style={styles.imagePickerRow}>
                     <TouchableOpacity onPress={() => pickImage('shopLogoUrl')} style={styles.pickerBox}>
                         {formData.shopLogoUrl ? (
@@ -155,7 +155,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                         ) : (
                             <View style={styles.pickerInner}>
                                 <ImageIcon color="#94a3b8" size={24} />
-                                <Text style={styles.pickerText}>Logo</Text>
+                                <Text style={styles.pickerText}>Ảnh đại diện</Text>
                             </View>
                         )}
                     </TouchableOpacity>
@@ -166,12 +166,12 @@ const EditShopScreen = ({ route, navigation }: any) => {
                         ) : (
                             <View style={styles.pickerInner}>
                                 <Camera color="#94a3b8" size={24} />
-                                <Text style={styles.pickerText}>Cover image</Text>
+                                <Text style={styles.pickerText}>Ảnh bìa</Text>
                             </View>
                         )}
                     </TouchableOpacity>
                 </View>
-                <Text style={styles.label}>Shop Gallery (Max 4)</Text>
+                <Text style={styles.label}>Hình ảnh cửa hàng (Tối đa 4 ảnh)</Text>
                 <View style={styles.galleryContainer}>
                     {formData.shopGalleryImages.map((url: string, index: number) => (
                         <View key={index} style={styles.galleryItem}>
@@ -194,21 +194,21 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     )}
                 </View>
                 <Input
-                    label="Shop name"
+                    label="Tên cửa hàng"
                     value={formData.shopName}
                     onChangeText={(txt) => setFormData({ ...formData, shopName: txt })}
                 />
 
                 <Input
-                    label="Shop Email"
+                    label="Email cửa hàng"
                     value={formData.shopEmail}
                     onChangeText={(txt) => setFormData({ ...formData, shopEmail: txt })}
                     type="email-address"
-                    placeholder="Example: contact@greenmarket.com"
+                    placeholder="Ví dụ: admin@greenmarket.com"
                 />
 
                 <Input
-                    label="Shop phone (Primary)"
+                    label="Số điện thoại chính"
                     value={formData.shopPhone}
                     onChangeText={(txt) => setFormData({ ...formData, shopPhone: txt })}
                     type="phone-pad"
@@ -221,21 +221,21 @@ const EditShopScreen = ({ route, navigation }: any) => {
                 >
                     <PhoneIcon size={16} color="#3b82f6" />
                     <Text style={styles.managePhoneText}>
-                        Manage secondary phones ({phones.length}/3)
+                        Quản lý các số điện thoại phụ ({phones.length}/3)
                     </Text>
                 </TouchableOpacity>
 
                 <Input
-                    label="Shop description"
+                    label="Mô tả cửa hàng"
                     value={formData.shopDescription}
                     multiline
                     numberOfLines={4}
                     onChangeText={(txt) => setFormData({ ...formData, shopDescription: txt })}
                 />
 
-                <Text style={styles.label}>Address & Location</Text>
+                <Text style={styles.label}>Địa chỉ & Bản đồ</Text>
                 <AddressPicker
-                    label="Shop address"
+                    label="Địa chỉ cửa hàng"
                     address={formData.shopLocation}
                     onAddressChange={(addr) => setFormData({ ...formData, shopLocation: addr })}
                     onLocationSelect={(addr, lat, lng) => {
@@ -269,7 +269,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     disabled={loading || uploadingImage}
                     style={styles.saveBtn}
                 >
-                    Save changes
+                    Lưu thay đổi
                 </Button>
             </ScrollView>
 

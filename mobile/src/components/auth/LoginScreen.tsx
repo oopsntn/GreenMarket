@@ -26,7 +26,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
 
   const handleRequestOtp = async (): Promise<void> => {
     if (!mobile.trim()) {
-      Alert.alert("Error", "Please enter your phone number");
+      Alert.alert("Lỗi", "Vui lòng nhập số điện thoại của bạn");
       return;
     }
 
@@ -40,17 +40,17 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
 
       if (!res.ok) {
         const errorData = await res.json();
-        Alert.alert("Error", errorData.message || "Action failed");
+        Alert.alert("Lỗi", errorData.message || "Thao tác thất bại");
         return;
       }
 
       await res.json();
-      Alert.alert("Success", "The OTP code has been sent to your phone number.");
+      Alert.alert("Thành công", "Mã OTP đã được gửi đến số điện thoại của bạn.");
       setStep("otp");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("OTP request error:", errorMessage);
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      Alert.alert("Lỗi", "Đã có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -58,7 +58,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
 
   const handleVerifyOtp = async (): Promise<void> => {
     if (otp.length !== 6) {
-      Alert.alert("Error", "Please enter the full 6-digit OTP");
+      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ 6 số OTP");
       return;
     }
 
@@ -71,18 +71,18 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
       });
 
       if (!res.ok) {
-        Alert.alert("Error", "The OTP code is incorrect or has expired.");
+        Alert.alert("Lỗi", "Mã OTP không đúng hoặc đã hết hạn.");
         return;
       }
 
       const data = await res.json();
-      Alert.alert("Success", "Signed in successfully!");
+      Alert.alert("Thành công", "Đăng nhập thành công!");
       login(data.token, data.user);
       onLoginSuccess(data.token);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("Verify OTP error:", errorMessage);
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      Alert.alert("Lỗi", "Đã có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -93,8 +93,8 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
       <View style={styles.cardBody}>
         {step === "mobile" ? (
           <>
-            <Text style={styles.title}>Sign in with phone number</Text>
-            <Text style={styles.subtitle}>Enter your phone number to receive an OTP code</Text>
+            <Text style={styles.title}>Đăng nhập bằng số điện thoại</Text>
+            <Text style={styles.subtitle}>Nhập số điện thoại để nhận mã OTP</Text>
 
             <TextInput
               testID="login-mobile-input"
@@ -114,14 +114,14 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.primaryButtonText}>Send OTP</Text>
+                <Text style={styles.primaryButtonText}>Gửi mã OTP</Text>
               )}
             </TouchableOpacity>
           </>
         ) : (
           <>
-            <Text style={styles.title}>Verify OTP</Text>
-            <Text style={styles.subtitle}>Enter the 6-digit OTP sent to {mobile}</Text>
+            <Text style={styles.title}>Xác thực OTP</Text>
+            <Text style={styles.subtitle}>Nhập 6 số OTP đã gửi đến {mobile}</Text>
 
             <TextInput
               testID="login-otp-input"
@@ -142,7 +142,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.primaryButtonText}>Confirm sign in</Text>
+                <Text style={styles.primaryButtonText}>Xác nhận đăng nhập</Text>
               )}
             </TouchableOpacity>
 
@@ -153,7 +153,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
                 setOtp("");
               }}
             >
-              <Text style={styles.secondaryButtonText}>Change phone number</Text>
+              <Text style={styles.secondaryButtonText}>Đổi số điện thoại</Text>
             </TouchableOpacity>
           </>
         )}

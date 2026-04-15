@@ -114,12 +114,12 @@ const EarningsScreen = () => {
                 {/* Balance Card Section */}
                 <LinearGradient colors={['#111827', '#1F2937']} style={styles.balanceHeader}>
                     <View style={styles.balanceInfo}>
-                        <Text style={styles.balanceTitle}>Available Balance</Text>
+                        <Text style={styles.balanceTitle}>Số dư khả dụng</Text>
                         <Text style={styles.balanceAmount}>{formatCurrency(stats.availableBalance)}</Text>
                         <View style={styles.totalEarningsRow}>
                             <TrendingUp color="#10B981" size={16} />
                             <Text style={styles.totalEarningsText}>
-                                Total Life Earnings: {formatCurrency(stats.totalEarnings)}
+                                Tổng thu nhập: {formatCurrency(stats.totalEarnings)}
                             </Text>
                         </View>
                     </View>
@@ -129,7 +129,7 @@ const EarningsScreen = () => {
                         onPress={() => navigation.navigate('PayoutRequest', { balance: stats.availableBalance })}
                     >
                         <ArrowUpRight color="black" size={20} />
-                        <Text style={styles.payoutBtnText}>Withdraw</Text>
+                        <Text style={styles.payoutBtnText}>Rút tiền</Text>
                     </TouchableOpacity>
                 </LinearGradient>
 
@@ -140,13 +140,13 @@ const EarningsScreen = () => {
                             style={[styles.tab, activeTab === 'earnings' && styles.activeTab]}
                             onPress={() => setActiveTab('earnings')}
                         >
-                            <Text style={[styles.tabText, activeTab === 'earnings' && styles.activeTabText]}>Earnings</Text>
+                            <Text style={[styles.tabText, activeTab === 'earnings' && styles.activeTabText]}>Thu nhập</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
                             style={[styles.tab, activeTab === 'payouts' && styles.activeTab]}
                             onPress={() => setActiveTab('payouts')}
                         >
-                            <Text style={[styles.tabText, activeTab === 'payouts' && styles.activeTabText]}>Payouts</Text>
+                            <Text style={[styles.tabText, activeTab === 'payouts' && styles.activeTabText]}>Rút tiền</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -154,7 +154,7 @@ const EarningsScreen = () => {
                     {activeTab === 'earnings' ? (
                         <View style={styles.listContainer}>
                             {earnings.length === 0 ? (
-                                <Text style={styles.emptyText}>No earnings yet.</Text>
+                                <Text style={styles.emptyText}>Chưa có giao dịch thu nhập nào.</Text>
                             ) : (
                                 earnings.map((item) => (
                                     <View key={item.earningEntryId} style={styles.historyItem}>
@@ -173,7 +173,7 @@ const EarningsScreen = () => {
                     ) : (
                         <View style={styles.listContainer}>
                             {payouts.length === 0 ? (
-                                <Text style={styles.emptyText}>No payout requests yet.</Text>
+                                <Text style={styles.emptyText}>Chưa có yêu cầu rút tiền nào.</Text>
                             ) : (
                                 payouts.map((item) => (
                                     <View key={item.payoutRequestId} style={styles.historyItem}>

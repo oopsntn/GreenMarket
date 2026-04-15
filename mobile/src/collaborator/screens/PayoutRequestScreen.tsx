@@ -38,20 +38,20 @@ const PayoutRequestScreen = () => {
         const payoutAmount = Number(amount);
 
         if (!payoutAmount || payoutAmount <= 0) {
-            Alert.alert('Invalid Amount', 'Please enter a valid amount.');
+            Alert.alert('Số tiền không hợp lệ', 'Vui lòng nhập số tiền hợp lệ.');
             return;
         }
 
         if (payoutAmount < MIN_PAYOUT_AMOUNT) {
             Alert.alert(
-                'Minimum Payout', 
-                `The minimum amount for a payout is ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(MIN_PAYOUT_AMOUNT)}.`
+                'Số tiền tối thiểu', 
+                `Số tiền rút tối thiểu là ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(MIN_PAYOUT_AMOUNT)}.`
             );
             return;
         }
 
         if (payoutAmount > balance) {
-            Alert.alert('Insufficient Balance', 'You cannot withdraw more than your current balance.');
+            Alert.alert('Số dư không đủ', 'Bạn không thể rút nhiều hơn số dư hiện tại.');
             return;
         }
 
@@ -64,13 +64,13 @@ const PayoutRequestScreen = () => {
             });
             
             Alert.alert(
-                'Success', 
-                'Your payout request has been submitted and is pending approval.',
+                'Thành công', 
+                'Yêu cầu rút tiền của bạn đã được gửi và đang chờ duyệt.',
                 [{ text: 'OK', onPress: () => navigation.goBack() }]
             );
         } catch (error: any) {
             console.error('Payout error:', error);
-            Alert.alert('Error', error.response?.data?.error || 'Failed to create payout request.');
+            Alert.alert('Lỗi', error.response?.data?.error || 'Không thể tạo yêu cầu rút tiền.');
         } finally {
             setLoading(false);
         }
@@ -94,20 +94,20 @@ const PayoutRequestScreen = () => {
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                     <ArrowLeft color="#1E293B" size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Create Payout Request</Text>
+                <Text style={styles.headerTitle}>Tạo yêu cầu rút tiền</Text>
                 <View style={{ width: 40 }} />
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.balanceBox}>
-                    <Text style={styles.balanceLabel}>CURRENT BALANCE</Text>
+                    <Text style={styles.balanceLabel}>SỐ DƯ HIỆN TẠI</Text>
                     <Text style={styles.balanceValue}>
                         {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balance)}
                     </Text>
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Withdraw Amount</Text>
+                    <Text style={styles.sectionTitle}>Số tiền rút</Text>
                     <View style={styles.inputContainer}>
                         <CircleDollarSign color="#16A34A" size={24} />
                         <TextInput
@@ -127,19 +127,19 @@ const PayoutRequestScreen = () => {
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Payout Method</Text>
+                    <Text style={styles.sectionTitle}>Phương thức rút tiền</Text>
                     <View style={styles.methodGrid}>
-                        <MethodBtn label="Bank Trans" value="bank" icon={Landmark} />
+                        <MethodBtn label="Chuyển khoản" value="bank" icon={Landmark} />
                         <MethodBtn label="Momo" value="momo" icon={Banknote} />
                         <MethodBtn label="VNPay" value="vnpay" icon={CheckCircle2} />
                     </View>
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Account Details / Note</Text>
+                    <Text style={styles.sectionTitle}>Chi tiết tài khoản / Ghi chú</Text>
                     <TextInput
                         style={styles.noteInput}
-                        placeholder="Enter your bank account number, bank name, or Momo phone number..."
+                        placeholder="Nhập số tài khoản ngân hàng, tên ngân hàng hoặc số điện thoại Momo..."
                         placeholderTextColor="#94A3B8"
                         multiline
                         numberOfLines={3}
@@ -156,13 +156,13 @@ const PayoutRequestScreen = () => {
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
-                        <Text style={styles.submitBtnText}>Submit Request</Text>
+                        <Text style={styles.submitBtnText}>Gửi yêu cầu</Text>
                     )}
                 </TouchableOpacity>
 
                 <Text style={styles.disclaimer}>
-                    Payout requests are typically processed within 24-48 business hours. 
-                    Approval is subject to verifying completed work.
+                    Yêu cầu rút tiền thường được xử lý trong vòng 24-48 giờ làm việc. 
+                    Việc duyệt phụ thuộc vào việc xác minh công việc đã hoàn thành.
                 </Text>
             </ScrollView>
         </SafeAreaView>

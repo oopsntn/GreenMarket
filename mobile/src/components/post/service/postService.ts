@@ -114,11 +114,8 @@ export const postService = {
             for (const uri of mediaUris) {
                 const { fileName, mimeType } = getFileInfo(uri)
 
-                //Fix uri cho ios
+                // Giữ nguyên URI cho React Native fetch
                 let normalizedUri = uri
-                if (Platform.OS === 'ios' && uri.startsWith('file://')) {
-                    normalizedUri = uri.replace('file://', '')
-                }
                 console.log(`uri: ${uri}, fileName: ${fileName}, mimeType: ${mimeType}`)
                 if (Platform.OS === 'web') {
                     const response = await fetch(uri)
@@ -165,6 +162,16 @@ export const postService = {
 
     getCategoryAttributes: async (categoryId: number) => {
         const response = await api.get(`/categories/${categoryId}/attributes`)
+        return response.data
+    },
+    
+    getPostingPolicy: async () => {
+        const response = await api.get('/posts/posting-policy')
+        return response.data
+    },
+
+    activateMockPlan: async (durationDays: number = 30) => {
+        const response = await api.post('/posts/personal-plan/mock-activate', { durationDays })
         return response.data
     }
 }

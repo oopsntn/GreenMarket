@@ -11,11 +11,11 @@ import {
     StatusBar,
     Image,
 } from 'react-native';
-import { 
-    MapPin, 
-    Calendar, 
-    CircleDollarSign, 
-    ArrowLeft, 
+import {
+    MapPin,
+    Calendar,
+    CircleDollarSign,
+    ArrowLeft,
     MessageSquare,
     CheckCircle,
     XCircle,
@@ -39,7 +39,7 @@ const JobDetailScreen = () => {
             setData(res);
         } catch (error) {
             console.error('Error fetching job detail:', error);
-            Alert.alert('Error', 'Unable to fetch job details.');
+            Alert.alert('Lỗi', 'Không thể tải chi tiết công việc.');
         } finally {
             setLoading(false);
         }
@@ -53,12 +53,12 @@ const JobDetailScreen = () => {
         if (decision === 'decline') {
             // In a real app, you might show a reason modal
             Alert.alert(
-                'Decline Job',
-                'Are you sure you want to decline this job?',
+                'Từ chối công việc',
+                'Bạn có chắc chắn muốn từ chối công việc này không?',
                 [
-                    { text: 'Cancel', style: 'cancel' },
-                    { 
-                        text: 'Yes, Decline', 
+                    { text: 'Hủy', style: 'cancel' },
+                    {
+                        text: 'Có, Từ chối',
                         style: 'destructive',
                         onPress: () => submitDecision('decline')
                     }
@@ -74,13 +74,13 @@ const JobDetailScreen = () => {
         try {
             await CollaboratorService.decideJob(jobId, decision, reason);
             Alert.alert(
-                'Success', 
-                decision === 'accept' ? 'Job accepted! You can now track it in My Jobs.' : 'Job declined.',
+                'Thành công',
+                decision === 'accept' ? 'Đã nhận việc! Bạn có thể theo dõi trong Việc của tôi.' : 'Đã từ chối công việc.',
                 [{ text: 'OK', onPress: () => navigation.goBack() }]
             );
         } catch (error: any) {
             console.error('Decision error:', error);
-            Alert.alert('Error', error.response?.data?.error || 'Action failed.');
+            Alert.alert('Lỗi', error.response?.data?.error || 'Thao tác thất bại.');
         } finally {
             setProcessing(false);
         }
@@ -110,7 +110,7 @@ const JobDetailScreen = () => {
                     <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                         <ArrowLeft color="#1E293B" size={24} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Job Details</Text>
+                    <Text style={styles.headerTitle}>Chi tiết công việc</Text>
                     <TouchableOpacity style={styles.actionBtn}>
                         <MessageSquare color="#16A34A" size={24} />
                     </TouchableOpacity>
@@ -121,15 +121,15 @@ const JobDetailScreen = () => {
                     <View style={styles.mainCard}>
                         <View style={styles.categoryRow}>
                             <View style={styles.categoryBadge}>
-                                <Text style={styles.categoryText}>{data.category || 'General'}</Text>
+                                <Text style={styles.categoryText}>{data.category || 'Chung'}</Text>
                             </View>
                             <Text style={styles.dateText}>
-                                Added {new Date(data.createdAt).toLocaleDateString()}
+                                Đã thêm {new Date(data.createdAt).toLocaleDateString()}
                             </Text>
                         </View>
-                        
+
                         <Text style={styles.title}>{data.title}</Text>
-                        
+
                         <View style={styles.priceContainer}>
                             <CircleDollarSign color="#16A34A" size={24} />
                             <Text style={styles.priceText}>{formattedPrice}</Text>
@@ -141,14 +141,14 @@ const JobDetailScreen = () => {
                             <View style={styles.infoBox}>
                                 <MapPin size={18} color="#64748B" />
                                 <View>
-                                    <Text style={styles.infoLabel}>Location</Text>
-                                    <Text style={styles.infoValue}>{data.location || 'Remote'}</Text>
+                                    <Text style={styles.infoLabel}>Địa điểm</Text>
+                                    <Text style={styles.infoValue}>{data.location || 'Từ xa'}</Text>
                                 </View>
                             </View>
                             <View style={styles.infoBox}>
                                 <Calendar size={18} color="#64748B" />
                                 <View>
-                                    <Text style={styles.infoLabel}>Deadline</Text>
+                                    <Text style={styles.infoLabel}>Hạn chót</Text>
                                     <Text style={styles.infoValue}>{new Date(data.deadline).toLocaleDateString()}</Text>
                                 </View>
                             </View>
@@ -157,14 +157,14 @@ const JobDetailScreen = () => {
 
                     {/* Section: Description */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Description</Text>
+                        <Text style={styles.sectionTitle}>Mô tả</Text>
                         <Text style={styles.descriptionText}>{data.description}</Text>
                     </View>
 
                     {/* Section: Requirements */}
                     {data.requirements && data.requirements.length > 0 && (
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Requirements</Text>
+                            <Text style={styles.sectionTitle}>Yêu cầu</Text>
                             {data.requirements.map((req, index) => (
                                 <View key={index} style={styles.requirementRow}>
                                     <CheckCircle size={16} color="#16A34A" />
@@ -176,18 +176,18 @@ const JobDetailScreen = () => {
 
                     {/* Section: Customer */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Customer Information</Text>
+                        <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
                         <View style={styles.customerCard}>
                             <View style={styles.customerAvatar}>
                                 <Text style={styles.avatarText}>{data.customer.displayName?.charAt(0)}</Text>
                             </View>
                             <View style={styles.customerInfo}>
                                 <Text style={styles.customerName}>{data.customer.displayName}</Text>
-                                <Text style={styles.customerLocation}>{data.customer.location || 'Verified Customer'}</Text>
+                                <Text style={styles.customerLocation}>{data.customer.location || 'Khách hàng đã xác thực'}</Text>
                             </View>
                         </View>
                     </View>
-                    
+
                     <View style={{ height: 100 }} />
                 </View>
             </ScrollView>
@@ -195,17 +195,17 @@ const JobDetailScreen = () => {
             {/* Bottom Actions */}
             {!data.isAssignedToMe && data.status === 'open' && (
                 <View style={styles.bottomBar}>
-                    <TouchableOpacity 
-                        style={styles.declineBtn} 
+                    <TouchableOpacity
+                        style={styles.declineBtn}
                         onPress={() => handleDecision('decline')}
                         disabled={processing}
                     >
                         <XCircle color="#EF4444" size={20} />
-                        <Text style={styles.declineText}>Decline</Text>
+                        <Text style={styles.declineText}>Từ chối</Text>
                     </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                        style={styles.acceptBtn} 
+
+                    <TouchableOpacity
+                        style={styles.acceptBtn}
                         onPress={() => handleDecision('accept')}
                         disabled={processing}
                     >
@@ -214,7 +214,7 @@ const JobDetailScreen = () => {
                         ) : (
                             <>
                                 <CheckCircle color="white" size={20} />
-                                <Text style={styles.acceptText}>Accept Job</Text>
+                                <Text style={styles.acceptText}>Nhận việc</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -225,7 +225,7 @@ const JobDetailScreen = () => {
                 <View style={styles.bottomBar}>
                     <View style={styles.assignedBadge}>
                         <Info color="#3B82F6" size={20} />
-                        <Text style={styles.assignedText}>You are currently working on this job</Text>
+                        <Text style={styles.assignedText}>Bạn đang thực hiện công việc này</Text>
                     </View>
                 </View>
             )}
@@ -391,6 +391,9 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '800',
         color: '#64748B',
+    },
+    customerInfo: {
+
     },
     customerName: {
         fontSize: 16,

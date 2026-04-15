@@ -29,7 +29,7 @@ const PromotePostScreen = ({ route }: any) => {
             setPackages(Array.isArray(res) ? res : []);
         } catch (error) {
             console.error('Error fetching packages:', error);
-            CustomAlert('Error', 'Unable to load promotion packages.');
+            CustomAlert('Lỗi', 'Không thể tải các gói đẩy tin.');
         } finally {
             setLoading(false);
         }
@@ -37,7 +37,7 @@ const PromotePostScreen = ({ route }: any) => {
 
     const handlePromote = async () => {
         if (!selectedPackage) {
-            CustomAlert('Selection required', 'Please select a promotion package first.');
+            CustomAlert('Yêu cầu chọn', 'Vui lòng chọn một gói đẩy tin trước.');
             return;
         }
 
@@ -49,8 +49,8 @@ const PromotePostScreen = ({ route }: any) => {
                 await WebBrowser.openBrowserAsync(res.paymentUrl);
                 
                 CustomAlert(
-                    'Payment Status',
-                    'Payment gateway has been opened. After you complete the payment, please review the latest payment and promotion status in your shop dashboard.',
+                    'Trạng thái thanh toán',
+                    'Cổng thanh toán đã được mở. Sau khi hoàn tất thanh toán, vui lòng kiểm tra trạng thái trong bảng điều khiển của cửa hàng.',
                     [
                         { 
                             text: 'OK', 
@@ -59,28 +59,28 @@ const PromotePostScreen = ({ route }: any) => {
                     ]
                 );
             } else {
-                CustomAlert('Error', 'Could not generate payment link.');
+                CustomAlert('Lỗi', 'Không thể tạo liên kết thanh toán.');
             }
         } catch (error: any) {
             console.error('Promotion error:', error);
-            CustomAlert('Error', error?.response?.data?.error || 'Something went wrong during the checkout process.');
+            CustomAlert('Lỗi', error?.response?.data?.error || 'Đã xảy ra lỗi trong quá trình thanh toán.');
         } finally {
             setProcessing(false);
         }
     };
 
     return (
-        <MobileLayout title="Promote Post" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Đẩy tin đăng" backButton={() => navigation.goBack()}>
             <View style={styles.container}>
                 <Card style={styles.postCard}>
                     <View style={styles.postHeader}>
                         <Rocket size={20} color="#8b5cf6" />
-                        <Text style={styles.postTitle} numberOfLines={1}>Promoting: {post.postTitle}</Text>
+                        <Text style={styles.postTitle} numberOfLines={1}>Đang đẩy: {post.postTitle}</Text>
                     </View>
-                    <Text style={styles.postDesc}>Boosting your post will place it at the top of the search results, increasing visibility and engagement.</Text>
+                    <Text style={styles.postDesc}>Đẩy tin sẽ giúp bài viết của bạn xuất hiện ở đầu kết quả tìm kiếm, tăng lượt xem và tương tác.</Text>
                 </Card>
 
-                <Text style={styles.sectionTitle}>Select a Package</Text>
+                <Text style={styles.sectionTitle}>Chọn một gói</Text>
 
                 {loading ? (
                     <ActivityIndicator color="#10b981" style={{ marginTop: 40 }} />
@@ -99,10 +99,10 @@ const PromotePostScreen = ({ route }: any) => {
                                     <View style={styles.packageInfo}>
                                         <View style={styles.pkgMain}>
                                             <Text style={styles.pkgTitle}>{pkg.promotionPackageTitle}</Text>
-                                            <Text style={styles.pkgDuration}>{pkg.promotionPackageDurationDays} Days Duration</Text>
+                                            <Text style={styles.pkgDuration}>Gói {pkg.promotionPackageDurationDays} ngày</Text>
                                             <Text style={styles.pkgMeta}>
-                                                {pkg.slotTitle || pkg.slotCode || 'Standard slot'}
-                                                {pkg.slotRules?.priority ? ` • Priority ${pkg.slotRules.priority}` : ''}
+                                                {pkg.slotTitle || pkg.slotCode || 'Vị trí tiêu chuẩn'}
+                                                {pkg.slotRules?.priority ? ` • Ưu tiên ${pkg.slotRules.priority}` : ''}
                                             </Text>
                                         </View>
                                         <Text style={styles.pkgPrice}>
@@ -121,7 +121,7 @@ const PromotePostScreen = ({ route }: any) => {
 
                         <View style={styles.guaranteeBox}>
                             <ShieldCheck size={16} color="#059669" />
-                            <Text style={styles.guaranteeText}>Secure payment handled by the configured payment gateway</Text>
+                            <Text style={styles.guaranteeText}>Thanh toán an toàn qua cổng tích hợp sẵn</Text>
                         </View>
                     </ScrollView>
                 )}
@@ -136,7 +136,7 @@ const PromotePostScreen = ({ route }: any) => {
                     onPress={handlePromote}
                     style={styles.payBtn}
                 >
-                    Proceed to Payment
+                    Tiến hành thanh toán
                 </Button>
             </View>
         </MobileLayout>

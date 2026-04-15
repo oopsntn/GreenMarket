@@ -63,11 +63,8 @@ export const ProfileService = {
                         ? 'image/webp'
                         : 'image/jpeg'
 
-            // 🔥 FIX QUAN TRỌNG
+            // React Native fetch uses file:// for both Android and iOS
             let normalizedUri = fileUri
-            if (Platform.OS === 'ios' && fileUri.startsWith('file://')) {
-                normalizedUri = fileUri.replace('file://', '')
-            }
 
             formData.append('media', {
                 uri: normalizedUri,

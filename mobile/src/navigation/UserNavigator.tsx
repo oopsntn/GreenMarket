@@ -43,6 +43,7 @@ const HomeStackNavigator = () => {
       <Stack.Screen name="EditShop" component={EditShopScreen} />
       <Stack.Screen name="CreateReport" component={CreateReportScreen} />
       <Stack.Screen name="PromotePost" component={PromotePostScreen} />
+      <Stack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
     </Stack.Navigator>
   );
 };
@@ -100,21 +101,21 @@ const UserNavigator = () => {
         name="HomeStack"
         component={HomeStackNavigator}
         options={{
-          tabBarLabel: 'Home',
+          tabBarLabel: 'Trang chủ',
         }}
       />
       <Tab.Screen
         name="CreatePost"
         component={CreatePostLayout}
         options={{
-          tabBarLabel: 'Create Post',
+          tabBarLabel: 'Đăng tin',
         }}
       />
       <Tab.Screen
         name="SettingsStack"
         component={SettingsStackNavigator}
         options={{
-          tabBarLabel: 'Settings',
+          tabBarLabel: 'Cài đặt',
         }}
       />
     </Tab.Navigator>

@@ -149,6 +149,23 @@ const ManagerService = {
         const response = await api.patch(`/manager/reports/${id}/resolve`, { status, resolution, note });
         return response.data;
     },
+
+    // Moderation Feedback & Communication
+    moderationFeedback: async (data: { targetType: string; targetId: number; recipientUserId: number; message: string; templateId?: number }) => {
+        const response = await api.post('/manager/moderation-feedback', data);
+        return response.data;
+    },
+
+    // History and Escalation
+    getHistory: async (params?: { from?: string; to?: string; actionType?: string; page?: number; limit?: number }) => {
+        const response = await api.get('/manager/history', { params });
+        return response.data;
+    },
+    
+    escalate: async (data: { targetType: string; targetId: number | string; severity: string; reason: string; evidenceUrls?: string[] }) => {
+        const response = await api.post('/manager/escalations', data);
+        return response.data;
+    },
 };
 
 export default ManagerService;

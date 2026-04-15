@@ -61,9 +61,9 @@ const AvailableJobsScreen = () => {
 
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No jobs available at the moment.</Text>
+            <Text style={styles.emptyText}>Hiện không có công việc nào.</Text>
             <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
-                <Text style={styles.refreshBtnText}>Tap to refresh</Text>
+                <Text style={styles.refreshBtnText}>Chạm để làm mới</Text>
             </TouchableOpacity>
         </View>
     );
@@ -71,12 +71,12 @@ const AvailableJobsScreen = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Find Work</Text>
+                <Text style={styles.title}>Tìm việc làm</Text>
                 <View style={styles.searchBar}>
                     <Search color="#94A3B8" size={20} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search by title or description..."
+                        placeholder="Tìm theo tiêu đề hoặc mô tả..."
                         value={search}
                         onChangeText={setSearch}
                         placeholderTextColor="#94A3B8"
