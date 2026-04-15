@@ -445,8 +445,10 @@ CREATE TABLE post_promotions (
     post_promotion_id SERIAL PRIMARY KEY,
     post_promotion_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
     post_promotion_buyer_id INTEGER NOT NULL,
-    post_promotion_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
+    post_promotion_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE RESTRICT,
     post_promotion_slot_id INTEGER NOT NULL REFERENCES placement_slots(placement_slot_id) ON DELETE CASCADE,
+    post_promotion_snapshot_title VARCHAR(255),
+    post_promotion_snapshot_priority INTEGER,
     post_promotion_start_at TIMESTAMP,
     post_promotion_end_at TIMESTAMP,
     post_promotion_status VARCHAR(20),
@@ -458,7 +460,7 @@ CREATE TABLE payment_txn (
     payment_txn_id       SERIAL PRIMARY KEY,
     payment_txn_user_id  INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     payment_txn_post_id  INTEGER REFERENCES posts(post_id),
-    payment_txn_package_id INTEGER NOT NULL REFERENCES promotion_packages(promotion_package_id) ON DELETE CASCADE,
+    payment_txn_package_id INTEGER REFERENCES promotion_packages(promotion_package_id) ON DELETE RESTRICT,
     payment_txn_price_id INTEGER REFERENCES promotion_package_prices(price_id) ON DELETE SET NULL, -- Snapshot bảng giá tại thời điểm mua
     payment_txn_amount   DECIMAL(15, 2),                  -- Số tiền thực thu (snapshot, không đổi dù giá gói thay đổi sau)
     payment_txn_provider VARCHAR(50),
@@ -1361,9 +1363,8 @@ INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favori
 -- PLACEMENT SLOTS & PROMOTION PACKAGES
 -- ============================================================
 INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_slot_title, placement_slot_capacity, placement_slot_rules, placement_slot_published) VALUES
-(1, 'HOME_TOP', 'Home Top', 200, '{"max_per_shop": 20, "min_post_status": "approved", "audience": "active-shop"}', true),
-(2, 'CATEGORY_TOP', 'Category Top', 120, '{"max_per_shop": 10, "min_post_status": "approved", "audience": "active-shop"}', true),
-(3, 'SEARCH_BOOST', 'Search Boost', 300, '{"max_per_shop": 15, "min_post_status": "approved", "audience": "active-shop"}', true);
+(1, 'BOOST_POST', 'Đẩy bài nhà vườn', 200, '{"max_per_shop": 20, "min_post_status": "approved", "audience": "active-shop"}', true),
+(2, 'SHOP_VIP', 'Nhà vườn VIP', 500, '{"max_per_shop": 1, "display_priority": "top", "audience": "active-shop"}', true);
 
 INSERT INTO promotion_packages (
     promotion_package_id,
@@ -1375,23 +1376,15 @@ INSERT INTO promotion_packages (
     promotion_package_description,
     promotion_package_published
 ) VALUES
-(1, 1, 'Gói Home Top 7 ngày', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng ở vị trí trang chủ trong 7 ngày.', true),
-(2, 1, 'Gói Home Top 30 ngày', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng ở vị trí trang chủ trong 30 ngày.', true),
-(3, 2, 'Gói Category Top 7 ngày', 7, 1, 26000, 'Ưu tiên hiển thị bài đăng ở danh mục nổi bật trong 7 ngày.', true),
-(4, 2, 'Gói Category Top 30 ngày', 30, 1, 140000, 'Ưu tiên hiển thị bài đăng ở danh mục nổi bật trong 30 ngày.', true),
-(5, 3, 'Gói Search Boost 7 ngày', 7, 1, 18000, 'Tăng hiển thị bài đăng ở khu vực tìm kiếm trong 7 ngày.', true),
-(6, 3, 'Gói Search Boost 30 ngày', 30, 1, 90000, 'Tăng hiển thị bài đăng ở khu vực tìm kiếm trong 30 ngày.', true);
+(1, 1, 'Gói đẩy bài theo tuần', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày cho nhà vườn active.', true),
+(2, 1, 'Gói đẩy bài theo tháng', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày cho nhà vườn active.', true),
+(3, 2, 'Gói nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên shop lên đầu danh sách nhà vườn và hiển thị viền VIP trong 90 ngày.', true);
 
 -- Promotion Package Prices
 INSERT INTO promotion_package_prices (price_id, package_id, price, effective_from, effective_to, note, created_by) VALUES
-(1, 1, 99000, now() - interval '120 days', now() - interval '45 days', 'Giá cũ của gói Home Top 7 ngày.', 1),
-(2, 1, 180000, now() - interval '45 days', NULL, 'Giá hiện hành của gói Home Top 7 ngày.', 1),
-(3, 2, 500000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Home Top 30 ngày.', 1),
-(4, 3, 80000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Category Top 7 ngày.', 1),
-(5, 3, 95000, now() - interval '150 days', now() - interval '90 days', 'Giá cũ của gói Category Top 7 ngày.', 1),
-(6, 4, 250000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Category Top 30 ngày.', 1),
-(7, 5, 50000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Search Boost 7 ngày.', 1),
-(8, 6, 150000, now() - interval '90 days', NULL, 'Giá hiện hành của gói Search Boost 30 ngày.', 1);
+(1, 1, 99000, now() - interval '45 days', NULL, 'Giá hiện hành của gói đẩy bài tuần.', 1),
+(2, 2, 299000, now() - interval '45 days', NULL, 'Giá hiện hành của gói đẩy bài tháng.', 1),
+(3, 3, 499000, now() - interval '45 days', NULL, 'Giá hiện hành của gói VIP 3 tháng.', 1);
 
 -- ============================================================
 -- POSTING PLANS (OWNER / PERSONAL)
@@ -1460,6 +1453,11 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('vnpay_sandbox', 'true', 1),
 ('contact_email', 'support@greenmarket.com', 1),
 ('contact_phone', '1900-xxxx', 1),
+('shop_registration_price', '250000', 1),
+('personal_monthly_price', '30000', 1),
+('owner_posting_policy', '{"planTitle": "Gói Chủ Vườn Vĩnh Viễn", "autoApprove": true, "dailyPostLimit": 20, "postFeeAmount": 20000, "freeEditQuota": 4, "editFeeAmount": 5000, "features": ["Đăng bài ngay, không qua chờ duyệt", "Giới hạn 20 bài viết mỗi ngày", "4 lượt sửa bài miễn phí", "Phí đăng tin lẻ cực thấp"]}', 1),
+('personal_posting_policy', '{"planTitle": "Gói Cá Nhân Theo Tháng", "autoApprove": true, "dailyPostLimit": 20, "postFeeAmount": 0, "freeEditQuota": 4, "editFeeAmount": 5000, "features": ["Dành cho người chơi nhỏ lẻ", "Đăng bài tự động duyệt trong chu kỳ", "Giới hạn 20 bài viết mỗi ngày", "4 lượt sửa bài miễn phí mỗi tháng"]}', 1),
+('shop_vip_policy', '{"planTitle": "Gói Nhà Vườn VIP", "features": ["Xếp đầu danh sách nhà vườn", "Huy hiệu VIP nổi bật trên trang chủ", "Hiển thị viền vàng sang trọng", "Ưu tiên hỗ trợ từ đội ngũ vận hành"]}', 1),
 ('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"Vietnamese"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true}}', 1),
 ('admin_template_builder_config', '{"templateName":"Mẫu đăng tin cây cảnh","categoryName":"Cây cảnh & Bonsai","usageNote":"Dùng để xem trước bố cục form đăng tin cho ngành cây cảnh trước khi đưa vào vận hành.","previewTitlePlaceholder":"Ví dụ: Sanh mini 8 năm tuổi, dáng trực","submitLabel":"Đăng tin cây cảnh (Xem trước)","fields":[{"id":"bonsai-style","type":"select","label":"Dáng cây (Thế cây)","placeholder":"Chọn dáng cây","helperText":"Giúp người đăng mô tả bố cục bonsai theo đúng cách gọi phổ biến.","required":true,"options":["Trực","Xiêu","Huyền","Hoành","Văn nhân"]},{"id":"pot-type","type":"select","label":"Loại chậu đi kèm","placeholder":"Chọn loại chậu","helperText":"Thể hiện tình trạng đi kèm chậu để người mua định giá rõ hơn.","required":true,"options":["Chậu gốm","Chậu đá","Bầu đất / túi ươm"]},{"id":"tree-age","type":"number","label":"Tuổi cây (ước lượng)","placeholder":"Ví dụ: 8","helperText":"Dùng để ước lượng độ trưởng thành của cây, hỗ trợ so sánh giá trị.","required":false,"options":[]}]}', 1),
 ('admin_ai_insight_settings', '{"autoDailySummary":true,"anomalyAlerts":true,"operatorDigest":false,"recommendationTone":"Balanced","confidenceThreshold":78,"promptVersion":"gm-admin-v1.4","reviewMode":"Required"}', 1);

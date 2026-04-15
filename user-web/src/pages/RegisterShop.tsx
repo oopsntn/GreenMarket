@@ -1,9 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { registerShop, updateShop, uploadImages, payShopRegistration } from '../services/api';
+import { registerShop, updateShop, uploadImages, payShopRegistration, getPricingConfig, type PricingConfig } from '../services/api';
 import { Store, CheckCircle, ArrowRight, UploadCloud, Image as ImageIcon, Loader2, Facebook, Instagram, Youtube } from 'lucide-react';
 import AddressPicker from '../components/AddressPicker';
 import { useAuth } from '../context/AuthContext';
+
+const formatVnd = (value: number | null | undefined) =>
+  new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 
 const RegisterShop: React.FC = () => {
   const navigate = useNavigate();
@@ -33,6 +40,13 @@ const RegisterShop: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
+
+  useEffect(() => {
+    getPricingConfig()
+      .then(res => setPricingConfig(res.data))
+      .catch(err => console.error('Failed to load pricing config:', err));
+  }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'shopLogoUrl' | 'shopGalleryImages') => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -155,7 +169,7 @@ const RegisterShop: React.FC = () => {
             {paymentLoading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Đang tạo thanh toán...</>
             ) : (
-              <>Tiếp tục thanh toán kích hoạt - 250.000đ</>
+              <>Tiếp tục thanh toán kích hoạt {pricingConfig?.ownerPolicy?.planTitle ? `- ${pricingConfig.ownerPolicy.planTitle}` : ''} - {formatVnd(pricingConfig?.shopRegistrationPrice || 250000)}</>
             )}
           </button>
         </div>
@@ -191,7 +205,9 @@ const RegisterShop: React.FC = () => {
         <div className="bg-emerald-50 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-emerald-100 shadow-sm transition-transform hover:rotate-3">
           <Store className="w-10 h-10 text-emerald-600" />
         </div>
-        <h1 className="text-4xl font-extrabold mb-4 text-slate-900 tracking-tight uppercase">Mở Nhà Vườn</h1>
+        <h1 className="text-4xl font-extrabold mb-4 text-slate-900 tracking-tight uppercase">
+          {pricingConfig?.ownerPolicy?.planTitle || 'Mở Nhà Vườn'}
+        </h1>
         <p className="text-slate-500 font-medium max-w-lg mx-auto">Trở thành đối tác tin cậy và bắt đầu kinh doanh cây cảnh chuyên nghiệp cùng cộng đồng GreenMarket.</p>
       </div>
 
@@ -348,7 +364,7 @@ const RegisterShop: React.FC = () => {
             ) : loading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Đang gửi hồ sơ...</>
             ) : (
-              <>Gửi Đăng Ký Nhà Vườn - 250.000đ</>
+              <>Đăng ký {pricingConfig?.ownerPolicy?.planTitle || 'Nhà Vườn'} - {formatVnd(pricingConfig?.shopRegistrationPrice || 250000)}</>
             )}
           </button>
           <p className="mt-6 text-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">

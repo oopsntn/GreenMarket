@@ -170,9 +170,12 @@ export const createPersonalPackagePayment = async (
 
 export const vnpayReturn = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log("vnpayReturn QUERY:", req.query);
     const result = await paymentService.processVNPayCallback(
       asRecord(req.query),
     );
+    console.log("vnpayReturn RESULT:", result);
+    
     const mapped = mapCallbackToFrontend(result);
 
     const redirectUrl = buildFrontendPaymentResultUrl({
@@ -251,7 +254,9 @@ export const vnpayMockExec = async (req: Request, res: Response): Promise<void> 
     const fullPayload = { ...mockParams, vnp_SecureHash: secureHash };
 
     // 2. Internally trigger IPN logic
-    await paymentService.processVNPayCallback(fullPayload);
+    console.log("vnpayMockExec MOCK PARAMS:", mockParams);
+    const mockResult = await paymentService.processVNPayCallback(fullPayload);
+    console.log("vnpayMockExec IPN RESULT:", mockResult);
 
     // 3. Redirect user to Return URL logic
     const returnUrl = `/api/payment/vnpay-return?${new URLSearchParams(fullPayload).toString()}`;
@@ -262,3 +267,18 @@ export const vnpayMockExec = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+export const getTransactionHistory = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const result = await paymentService.getUserTransactionHistory(userId);
+    res.json(result);
+  } catch (error) {
+    console.error("Get Transaction History Error:", error);
+    res.status(500).json({ error: "Lỗi hệ thống khi lấy lịch sử giao dịch." });
+  }
+};

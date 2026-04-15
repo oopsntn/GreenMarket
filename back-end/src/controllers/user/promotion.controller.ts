@@ -82,18 +82,10 @@ export const getEligiblePackages = async (
             .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
             .limit(1);
 
-        if (!activeShop) {
-            res.json({
-                audience: "individual",
-                reason: "ACTIVE_SHOP_REQUIRED",
-                packages: [],
-            });
-            return;
-        }
-
         const packages = await queryPublishedPackages([BOOST_POST_SLOT_CODE]);
+        
         res.json({
-            audience: "garden_owner",
+            audience: activeShop ? "garden_owner" : "individual",
             packages,
         });
     } catch (error) {
