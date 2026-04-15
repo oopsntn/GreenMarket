@@ -10,7 +10,7 @@ import type {
 export const promotionService = {
   async getPromotions(): Promise<Promotion[]> {
     return apiClient.request<PromotionApiResponse[]>("/api/admin/promotions", {
-      defaultErrorMessage: "Không thể tải danh sách chiến dịch quảng bá.",
+      defaultErrorMessage: "Không thể tải danh sách đơn quảng bá.",
     });
   },
 
@@ -24,8 +24,7 @@ export const promotionService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage:
-          "Không thể cập nhật trạng thái chiến dịch quảng bá.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái đơn quảng bá.",
         body: JSON.stringify({ status }),
       },
     );
@@ -51,6 +50,10 @@ export const promotionService = {
     );
   },
 
+  canChangePromotionPackage(promotion: Promotion) {
+    return promotion.paymentStatus !== "Paid";
+  },
+
   async changePromotionPackage(
     promotions: Promotion[],
     promotionId: number,
@@ -61,7 +64,7 @@ export const promotionService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Không thể đổi gói quảng bá.",
+        defaultErrorMessage: "Không thể đổi gói quảng bá cho đơn này.",
         body: JSON.stringify({
           packageId: payload.packageId,
           startDate: payload.startDate,
@@ -87,7 +90,7 @@ export const promotionService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage: "Không thể mở lại chiến dịch quảng bá.",
+        defaultErrorMessage: "Không thể mở lại đơn quảng bá đã hết hạn.",
         body: JSON.stringify({
           packageId: payload.packageId,
           startDate: payload.startDate,
@@ -109,18 +112,18 @@ export const promotionService = {
   ): string {
     if (action === "pause") {
       if (promotion.status !== "Active") {
-        return "Chỉ có thể tạm dừng chiến dịch đang chạy.";
+        return "Chỉ có thể tạm dừng đơn quảng bá đang chạy.";
       }
 
       return (
         promotion.pauseBlockedReason ??
-        "Chiến dịch này hiện chưa đủ điều kiện để tạm dừng."
+        "Đơn quảng bá này hiện chưa đủ điều kiện để tạm dừng."
       );
     }
 
     if (action === "reopen") {
       if (promotion.status !== "Expired") {
-        return "Chỉ có thể mở lại chiến dịch đã hết hạn.";
+        return "Chỉ có thể mở lại đơn quảng bá đã hết hạn.";
       }
 
       if (promotion.paymentStatus !== "Paid") {
@@ -129,18 +132,26 @@ export const promotionService = {
 
       return (
         promotion.reopenBlockedReason ??
-        "Chiến dịch này hiện chưa đủ điều kiện để mở lại."
+        "Đơn quảng bá này hiện chưa đủ điều kiện để mở lại."
       );
     }
 
     if (promotion.status !== "Paused") {
-      return "Chỉ có thể tiếp tục chiến dịch đang tạm dừng.";
+      return "Chỉ có thể tiếp tục đơn quảng bá đang tạm dừng.";
     }
 
     return (
       promotion.resumeBlockedReason ??
-      "Chiến dịch này hiện chưa đủ điều kiện để tiếp tục."
+      "Đơn quảng bá này hiện chưa đủ điều kiện để tiếp tục."
     );
+  },
+
+  getChangePackageBlockedReason(promotion: Promotion) {
+    if (promotion.paymentStatus === "Paid") {
+      return "Đơn quảng bá đã thanh toán không thể đổi gói hoặc chỉnh lại thời gian chạy. Chỉ đơn chưa thanh toán mới được phép cập nhật các thông tin này.";
+    }
+
+    return "Đơn quảng bá này hiện chưa đủ điều kiện để đổi gói.";
   },
 
   getSummaryCards(promotions: Promotion[]): PromotionSummaryCard[] {
@@ -153,30 +164,33 @@ export const promotionService = {
     const scheduledCount = promotions.filter(
       (promotion) => promotion.status === "Scheduled",
     ).length;
+    const completedCount = promotions.filter(
+      (promotion) => promotion.status === "Completed",
+    ).length;
     const expiredCount = promotions.filter(
       (promotion) => promotion.status === "Expired",
     ).length;
 
     return [
       {
-        title: "Tổng chiến dịch",
+        title: "Tổng đơn quảng bá",
         value: String(promotions.length),
-        subtitle: "Tất cả chiến dịch quảng bá đang theo dõi",
+        subtitle: "Tất cả đơn mua gói quảng bá đang được theo dõi",
       },
       {
         title: "Đang chạy",
         value: String(activeCount),
-        subtitle: "Đang sử dụng vị trí hiển thị",
+        subtitle: "Các đơn đang hiển thị trên vị trí quảng bá",
       },
       {
         title: "Tạm dừng",
         value: String(pausedCount),
-        subtitle: "Đã bị quản trị viên tạm dừng",
+        subtitle: "Các đơn đã bị tạm dừng bởi quản trị viên",
       },
       {
-        title: "Lên lịch / Hết hạn",
-        value: `${scheduledCount} / ${expiredCount}`,
-        subtitle: "Tương quan giữa chiến dịch sắp chạy và đã kết thúc",
+        title: "Lên lịch / Hoàn tất / Hết hạn",
+        value: `${scheduledCount} / ${completedCount} / ${expiredCount}`,
+        subtitle: "Tương quan giữa đơn sắp chạy, dùng hết quota và hết thời gian",
       },
     ];
   },

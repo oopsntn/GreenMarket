@@ -3,9 +3,6 @@ import type { AdminProfile } from "./adminSession";
 export const ADMIN_PORTAL_ROLE_CODES = [
   "ROLE_SUPER_ADMIN",
   "ROLE_ADMIN",
-  "ROLE_MODERATOR",
-  "ROLE_SUPPORT",
-  "ROLE_FINANCE",
 ];
 
 export type AdminModuleKey =
@@ -34,94 +31,218 @@ export type AdminModuleKey =
 
 export type AdminMenuItem = {
   label: string;
+  hint: string;
   path: string;
   moduleKey: AdminModuleKey;
 };
 
-const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
-  dashboard: ADMIN_PORTAL_ROLE_CODES,
-  users: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"],
-  activityLog: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"],
-  postsModeration: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"],
-  reportsModeration: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"],
-  rolesManagement: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  shops: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"],
-  categories: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  attributes: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  categoryMapping: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  templates: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  templateBuilder: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  settings: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  placementSlots: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  promotionPackages: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  boostedPosts: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  promotions: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  analytics: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  aiInsights: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"],
-  revenue: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_FINANCE"],
-  customerSpending: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_FINANCE"],
-  export: ["ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_FINANCE"],
+export type AdminMenuGroup = {
+  id: string;
+  label: string;
+  description: string;
+  items: AdminMenuItem[];
 };
 
-export const ADMIN_MENU_ITEMS: AdminMenuItem[] = [
-  { label: "Tổng quan", path: "/dashboard", moduleKey: "dashboard" },
-  { label: "Người dùng", path: "/users", moduleKey: "users" },
-  { label: "Nhật ký hoạt động", path: "/activity-log", moduleKey: "activityLog" },
+const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
+  dashboard: ADMIN_PORTAL_ROLE_CODES,
+  users: ADMIN_PORTAL_ROLE_CODES,
+  activityLog: ADMIN_PORTAL_ROLE_CODES,
+  postsModeration: ADMIN_PORTAL_ROLE_CODES,
+  reportsModeration: ADMIN_PORTAL_ROLE_CODES,
+  rolesManagement: ADMIN_PORTAL_ROLE_CODES,
+  shops: ADMIN_PORTAL_ROLE_CODES,
+  categories: ADMIN_PORTAL_ROLE_CODES,
+  attributes: ADMIN_PORTAL_ROLE_CODES,
+  categoryMapping: ADMIN_PORTAL_ROLE_CODES,
+  templates: ADMIN_PORTAL_ROLE_CODES,
+  templateBuilder: ADMIN_PORTAL_ROLE_CODES,
+  settings: ADMIN_PORTAL_ROLE_CODES,
+  placementSlots: ADMIN_PORTAL_ROLE_CODES,
+  promotionPackages: ADMIN_PORTAL_ROLE_CODES,
+  boostedPosts: ADMIN_PORTAL_ROLE_CODES,
+  promotions: ADMIN_PORTAL_ROLE_CODES,
+  analytics: ADMIN_PORTAL_ROLE_CODES,
+  aiInsights: ADMIN_PORTAL_ROLE_CODES,
+  revenue: ADMIN_PORTAL_ROLE_CODES,
+  customerSpending: ADMIN_PORTAL_ROLE_CODES,
+  export: ADMIN_PORTAL_ROLE_CODES,
+};
+
+export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
   {
-    label: "Kiểm duyệt bài đăng",
-    path: "/posts-moderation",
-    moduleKey: "postsModeration",
+    id: "overview",
+    label: "Tổng quan điều hành",
+    description: "Theo dõi vận hành chung và quản trị tài khoản.",
+    items: [
+      {
+        label: "Tổng quan hệ thống",
+        hint: "Chỉ số chính và tình trạng toàn sàn.",
+        path: "/dashboard",
+        moduleKey: "dashboard",
+      },
+      {
+        label: "Người dùng",
+        hint: "Tài khoản, vai trò và trạng thái truy cập.",
+        path: "/users",
+        moduleKey: "users",
+      },
+      {
+        label: "Cửa hàng",
+        hint: "Danh sách shop và hồ sơ kinh doanh.",
+        path: "/shops",
+        moduleKey: "shops",
+      },
+      {
+        label: "Nhật ký thao tác",
+        hint: "Ai làm gì và vào lúc nào.",
+        path: "/activity-log",
+        moduleKey: "activityLog",
+      },
+      {
+        label: "Vai trò hệ thống",
+        hint: "Quy ước vai trò dùng trong admin.",
+        path: "/roles-management",
+        moduleKey: "rolesManagement",
+      },
+    ],
   },
   {
-    label: "Kiểm duyệt báo cáo",
-    path: "/reports-moderation",
-    moduleKey: "reportsModeration",
+    id: "moderation",
+    label: "Kiểm duyệt nội dung",
+    description: "Xử lý bài đăng và báo cáo từ người dùng.",
+    items: [
+      {
+        label: "Duyệt bài đăng",
+        hint: "Phê duyệt, từ chối và theo dõi bài chờ.",
+        path: "/posts-moderation",
+        moduleKey: "postsModeration",
+      },
+      {
+        label: "Xử lý báo cáo",
+        hint: "Báo cáo vi phạm, bằng chứng và kết luận.",
+        path: "/reports-moderation",
+        moduleKey: "reportsModeration",
+      },
+    ],
   },
   {
-    label: "Quản lý vai trò",
-    path: "/roles-management",
-    moduleKey: "rolesManagement",
+    id: "catalog",
+    label: "Danh mục và biểu mẫu",
+    description: "Quản lý cấu trúc dữ liệu và mẫu hiển thị.",
+    items: [
+      {
+        label: "Danh mục sản phẩm",
+        hint: "Nhóm cây cảnh và cấu trúc phân loại.",
+        path: "/categories",
+        moduleKey: "categories",
+      },
+      {
+        label: "Thuộc tính dữ liệu",
+        hint: "Các trường thông tin dùng cho bài đăng.",
+        path: "/attributes",
+        moduleKey: "attributes",
+      },
+      {
+        label: "Ánh xạ danh mục",
+        hint: "Gắn thuộc tính vào từng danh mục.",
+        path: "/category-attributes",
+        moduleKey: "categoryMapping",
+      },
+      {
+        label: "Mẫu nội dung",
+        hint: "Các mẫu giao diện và mẫu nhập liệu.",
+        path: "/templates",
+        moduleKey: "templates",
+      },
+      {
+        label: "Thiết kế biểu mẫu",
+        hint: "Dựng nhanh form đăng bài và xem trước.",
+        path: "/template-builder",
+        moduleKey: "templateBuilder",
+      },
+    ],
   },
-  { label: "Cửa hàng", path: "/shops", moduleKey: "shops" },
-  { label: "Danh mục", path: "/categories", moduleKey: "categories" },
-  { label: "Thuộc tính", path: "/attributes", moduleKey: "attributes" },
   {
-    label: "Ánh xạ danh mục",
-    path: "/category-attributes",
-    moduleKey: "categoryMapping",
+    id: "promotion",
+    label: "Quảng bá và vận hành",
+    description: "Quản lý vị trí hiển thị, gói bán, đơn mua và chiến dịch.",
+    items: [
+      {
+        label: "Vị trí hiển thị",
+        hint: "Cấu hình slot quảng bá trên hệ thống.",
+        path: "/placement-slots",
+        moduleKey: "placementSlots",
+      },
+      {
+        label: "Gói quảng bá",
+        hint: "Giá bán, thời lượng và hạn mức hiển thị.",
+        path: "/promotion-packages",
+        moduleKey: "promotionPackages",
+      },
+      {
+        label: "Theo dõi quảng bá",
+        hint: "Quota, CTR và tình trạng chạy của các lượt quảng bá.",
+        path: "/boosted-posts",
+        moduleKey: "boostedPosts",
+      },
+      {
+        label: "Đơn quảng bá",
+        hint: "Thanh toán, lịch chạy, đổi gói và mở lại.",
+        path: "/promotions",
+        moduleKey: "promotions",
+      },
+    ],
   },
-  { label: "Mẫu nội dung", path: "/templates", moduleKey: "templates" },
   {
-    label: "Trình dựng mẫu",
-    path: "/template-builder",
-    moduleKey: "templateBuilder",
+    id: "reporting",
+    label: "Phân tích và doanh thu",
+    description: "Theo dõi hiệu quả, doanh thu và xuất báo cáo.",
+    items: [
+      {
+        label: "Phân tích hiệu quả",
+        hint: "Hiệu suất vị trí hiển thị và lưu lượng.",
+        path: "/analytics",
+        moduleKey: "analytics",
+      },
+      {
+        label: "Nhận định AI",
+        hint: "Tóm tắt xu hướng và gợi ý điều hành.",
+        path: "/ai-insights",
+        moduleKey: "aiInsights",
+      },
+      {
+        label: "Doanh thu",
+        hint: "Theo dõi doanh thu và giao dịch thành công.",
+        path: "/revenue",
+        moduleKey: "revenue",
+      },
+      {
+        label: "Chi tiêu khách hàng",
+        hint: "Mức chi tiêu và giá trị đơn theo khách.",
+        path: "/customer-spending",
+        moduleKey: "customerSpending",
+      },
+      {
+        label: "Xuất báo cáo",
+        hint: "Tạo file tổng hợp để đối soát và lưu trữ.",
+        path: "/export",
+        moduleKey: "export",
+      },
+    ],
   },
-  { label: "Thiết lập hệ thống", path: "/settings", moduleKey: "settings" },
   {
-    label: "Vị trí hiển thị",
-    path: "/placement-slots",
-    moduleKey: "placementSlots",
+    id: "system",
+    label: "Cấu hình hệ thống",
+    description: "Thiết lập tham số dùng chung cho admin web.",
+    items: [
+      {
+        label: "Thiết lập hệ thống",
+        hint: "Thông số vận hành và cấu hình chung.",
+        path: "/settings",
+        moduleKey: "settings",
+      },
+    ],
   },
-  {
-    label: "Gói quảng bá",
-    path: "/promotion-packages",
-    moduleKey: "promotionPackages",
-  },
-  {
-    label: "Chiến dịch quảng bá",
-    path: "/boosted-posts",
-    moduleKey: "boostedPosts",
-  },
-  { label: "Khuyến mãi", path: "/promotions", moduleKey: "promotions" },
-  { label: "Phân tích", path: "/analytics", moduleKey: "analytics" },
-  { label: "Phân tích AI", path: "/ai-insights", moduleKey: "aiInsights" },
-  { label: "Doanh thu", path: "/revenue", moduleKey: "revenue" },
-  {
-    label: "Chi tiêu khách hàng",
-    path: "/customer-spending",
-    moduleKey: "customerSpending",
-  },
-  { label: "Xuất dữ liệu", path: "/export", moduleKey: "export" },
 ];
 
 const getRoleCodes = (profile: AdminProfile | null) => profile?.roleCodes ?? [];
@@ -141,10 +262,17 @@ export const canAccessAdminModule = (
   );
 };
 
+export const getVisibleAdminMenuGroups = (profile: AdminProfile | null) => {
+  return ADMIN_MENU_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) =>
+      canAccessAdminModule(profile, item.moduleKey),
+    ),
+  })).filter((group) => group.items.length > 0);
+};
+
 export const getVisibleAdminMenuItems = (profile: AdminProfile | null) => {
-  return ADMIN_MENU_ITEMS.filter((item) =>
-    canAccessAdminModule(profile, item.moduleKey),
-  );
+  return getVisibleAdminMenuGroups(profile).flatMap((group) => group.items);
 };
 
 export const getDefaultAdminPath = (profile: AdminProfile | null) => {

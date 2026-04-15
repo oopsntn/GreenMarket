@@ -473,11 +473,11 @@ function ActivityLogPage() {
             <div className="activity-log-detail__panel">
               <label>ID liên quan</label>
               <div className="activity-log-detail__tags">
-                <span>User: {selectedLog.relatedIds.userId ?? "--"}</span>
-                <span>Post: {selectedLog.relatedIds.postId ?? "--"}</span>
-                <span>Shop: {selectedLog.relatedIds.shopId ?? "--"}</span>
-                <span>Slot: {selectedLog.relatedIds.slotId ?? "--"}</span>
-                <span>Category: {selectedLog.relatedIds.categoryId ?? "--"}</span>
+                <span>Người dùng: {selectedLog.relatedIds.userId ?? "--"}</span>
+                <span>Bài đăng: {selectedLog.relatedIds.postId ?? "--"}</span>
+                <span>Cửa hàng: {selectedLog.relatedIds.shopId ?? "--"}</span>
+                <span>Vị trí: {selectedLog.relatedIds.slotId ?? "--"}</span>
+                <span>Danh mục: {selectedLog.relatedIds.categoryId ?? "--"}</span>
               </div>
             </div>
           </div>

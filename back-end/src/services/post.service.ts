@@ -61,11 +61,14 @@ export class PostService {
                 postId: postPromotions.postPromotionPostId,
                 promotionPriority: sql<number>`
                     MAX(
-                        CASE
-                            WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$'
-                                THEN (${placementSlots.placementSlotRules} ->> 'priority')::int
-                            ELSE 1
-                        END
+                        COALESCE(
+                            ${postPromotions.postPromotionSnapshotPriority},
+                            CASE
+                                WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$'
+                                    THEN (${placementSlots.placementSlotRules} ->> 'priority')::int
+                                ELSE 1
+                            END
+                        )
                     )
                 `.as("promotionPriority"),
             })

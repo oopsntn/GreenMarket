@@ -32,7 +32,7 @@ const PAGE_SIZE = 5;
 const ATTRIBUTE_TYPE_LABELS: Record<MappingAttributeType, string> = {
   Text: "Văn bản",
   Number: "Số",
-  Select: "Danh sách chọn",
+  Select: "Danh sách lựa chọn",
   Boolean: "Đúng / Sai",
 };
 

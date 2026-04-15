@@ -35,9 +35,10 @@ export type AITrendScoreRow = {
   focus: AIInsightFocus;
   entity: string;
   score: number;
+  scoreNote: string;
   momentum: AITrendMomentum;
+  momentumNote: string;
   recommendation: string;
-  owner: string;
   updatedAt: string;
 };
 
@@ -46,6 +47,7 @@ export type AIInsightHistoryItem = {
   title: string;
   focus: AIInsightFocus;
   summary: string;
+  detail: string;
   generatedBy: string;
   generatedAt: string;
   status: AIInsightHistoryStatus;
@@ -79,6 +81,7 @@ export type AIInsightOverviewRow = {
 
 export type AIInsightOverview = {
   summaryCards: AIInsightOverviewCard[];
+  executiveSummary: string[];
   highlightCards: AIInsightOverviewBullet[];
   recommendations: AIInsightOverviewBullet[];
   topRows: AIInsightOverviewRow[];

@@ -43,6 +43,8 @@ export type EffectivePostingPolicy = BasePostingPolicy & {
 
 export type PostingPolicySnapshot = {
   policy: EffectivePostingPolicy;
+  shopVipExpiry: Date | null;
+  planExpiresAt: Date | null;
   usage: {
     dailyPostsUsed: number;
     dailyPostsRemaining: number | null;
@@ -56,6 +58,7 @@ export type PostingFeeRecord = {
   amount: number;
   createdAt: Date | null;
 };
+import { readSettingJson } from "../controllers/user/pricing-config.controller.ts";
 
 const OWNER_LIFETIME_DEFAULT_POLICY: BasePostingPolicy = {
   planCode: POSTING_PLAN_CODES.GARDEN_OWNER_LIFETIME,
@@ -67,6 +70,9 @@ const OWNER_LIFETIME_DEFAULT_POLICY: BasePostingPolicy = {
   editFeeAmount: 5000,
 };
 
+const getOwnerPolicy = async (): Promise<BasePostingPolicy> =>
+  readSettingJson("owner_posting_policy", OWNER_LIFETIME_DEFAULT_POLICY);
+
 const PERSONAL_MONTHLY_DEFAULT_POLICY: BasePostingPolicy = {
   planCode: POSTING_PLAN_CODES.PERSONAL_MONTHLY,
   planTitle: "Gói Cá Nhân Theo Tháng",
@@ -76,6 +82,9 @@ const PERSONAL_MONTHLY_DEFAULT_POLICY: BasePostingPolicy = {
   freeEditQuota: 4,
   editFeeAmount: 5000,
 };
+
+const getPersonalPolicy = async (): Promise<BasePostingPolicy> =>
+  readSettingJson("personal_posting_policy", PERSONAL_MONTHLY_DEFAULT_POLICY);
 
 const STANDARD_DEFAULT_POLICY: BasePostingPolicy = {
   planCode: POSTING_PLAN_CODES.STANDARD,
@@ -103,19 +112,20 @@ const getDateWindow = (referenceDate: Date) => {
 
 const buildPolicyFromSubscription = (
   row: typeof userPostingPlans.$inferSelect,
+  defaultPolicy: BasePostingPolicy,
 ): BasePostingPolicy => ({
   planCode: POSTING_PLAN_CODES.PERSONAL_MONTHLY,
-  planTitle: row.postingPlanTitle || PERSONAL_MONTHLY_DEFAULT_POLICY.planTitle,
+  planTitle: row.postingPlanTitle || defaultPolicy.planTitle,
   autoApprove:
     row.postingPlanAutoApprove ??
-    PERSONAL_MONTHLY_DEFAULT_POLICY.autoApprove,
+    defaultPolicy.autoApprove,
   dailyPostLimit:
     row.postingPlanDailyPostLimit ??
-    PERSONAL_MONTHLY_DEFAULT_POLICY.dailyPostLimit,
+    defaultPolicy.dailyPostLimit,
   postFeeAmount: toSafeNumber(row.postingPlanPostFeeAmount),
   freeEditQuota:
     row.postingPlanFreeEditQuota ??
-    PERSONAL_MONTHLY_DEFAULT_POLICY.freeEditQuota,
+    defaultPolicy.freeEditQuota,
   editFeeAmount: toSafeNumber(row.postingPlanEditFeeAmount),
 });
 
@@ -203,8 +213,9 @@ export const postingPolicyService = {
       .limit(1);
 
     if (activeShop) {
+      const ownerPolicy = await getOwnerPolicy();
       return {
-        ...OWNER_LIFETIME_DEFAULT_POLICY,
+        ...ownerPolicy,
         source: "shop",
         activePlanId: null,
       };
@@ -212,8 +223,9 @@ export const postingPolicyService = {
 
     const activePersonalPlan = await getActivePersonalMonthlyPlan(userId);
     if (activePersonalPlan) {
+      const personalPolicy = await getPersonalPolicy();
       return {
-        ...buildPolicyFromSubscription(activePersonalPlan),
+        ...buildPolicyFromSubscription(activePersonalPlan, personalPolicy),
         source: "subscription",
         activePlanId: activePersonalPlan.postingPlanId,
       };
@@ -235,8 +247,20 @@ export const postingPolicyService = {
         : Math.max(policy.dailyPostLimit - dailyPostsUsed, 0);
     const totalTrackedFees = await getTotalTrackedFees(userId);
 
+    // Fetch VIP status separately (for card UI)
+    const [shop] = await db
+      .select({ shopVipExpiresAt: shops.shopVipExpiresAt })
+      .from(shops)
+      .where(eq(shops.shopId, userId))
+      .limit(1);
+
+    // Fetch Personal plan expiry if active
+    const activePersonalPlan = await getActivePersonalMonthlyPlan(userId);
+
     return {
       policy,
+      shopVipExpiry: shop?.shopVipExpiresAt || null,
+      planExpiresAt: activePersonalPlan?.postingPlanExpiresAt || null,
       usage: {
         dailyPostsUsed,
         dailyPostsRemaining,
@@ -348,22 +372,23 @@ export const postingPolicyService = {
         ),
       );
 
+    const personalPolicy = await getPersonalPolicy();
     const [createdPlan] = await db
       .insert(userPostingPlans)
       .values({
         postingPlanUserId: userId,
         postingPlanCode: POSTING_PLAN_CODES.PERSONAL_MONTHLY,
-        postingPlanTitle: PERSONAL_MONTHLY_DEFAULT_POLICY.planTitle,
+        postingPlanTitle: personalPolicy.planTitle,
         postingPlanCycle: "monthly",
         postingPlanStatus: "active",
-        postingPlanAutoApprove: PERSONAL_MONTHLY_DEFAULT_POLICY.autoApprove,
-        postingPlanDailyPostLimit: PERSONAL_MONTHLY_DEFAULT_POLICY.dailyPostLimit,
+        postingPlanAutoApprove: personalPolicy.autoApprove,
+        postingPlanDailyPostLimit: personalPolicy.dailyPostLimit,
         postingPlanPostFeeAmount: String(
-          PERSONAL_MONTHLY_DEFAULT_POLICY.postFeeAmount,
+          personalPolicy.postFeeAmount,
         ),
-        postingPlanFreeEditQuota: PERSONAL_MONTHLY_DEFAULT_POLICY.freeEditQuota,
+        postingPlanFreeEditQuota: personalPolicy.freeEditQuota,
         postingPlanEditFeeAmount: String(
-          PERSONAL_MONTHLY_DEFAULT_POLICY.editFeeAmount,
+          personalPolicy.editFeeAmount,
         ),
         postingPlanStartedAt: now,
         postingPlanExpiresAt: expiresAt,
@@ -375,7 +400,7 @@ export const postingPolicyService = {
     return {
       plan: createdPlan,
       effectivePolicy: {
-        ...PERSONAL_MONTHLY_DEFAULT_POLICY,
+        ...personalPolicy,
         source: "subscription" as const,
         activePlanId: createdPlan?.postingPlanId ?? null,
       },

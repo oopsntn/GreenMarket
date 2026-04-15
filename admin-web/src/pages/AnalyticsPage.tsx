@@ -176,10 +176,10 @@ function AnalyticsPage() {
       .filter((slot) => activeSlots.has(slot));
 
     if (catalogOrderedSlots.length > 0) {
-      return catalogOrderedSlots;
+      return Array.from(new Set(catalogOrderedSlots));
     }
 
-    return placementChartRows.map((item) => item.slot);
+    return Array.from(new Set(placementChartRows.map((item) => item.slot)));
   }, [dailyTraffic, metricScope, placementChartRows, slotCatalog]);
 
   const chartSlotColorMap = useMemo(
@@ -192,13 +192,30 @@ function AnalyticsPage() {
   );
 
   const dailyTrafficPoints = useMemo(() => {
-    return dailyTraffic.map((point) => ({
-      ...point,
-      slots:
+    return dailyTraffic.map((point) => {
+      const filteredSlots =
         metricScope === ALL_PLACEMENTS_LABEL
           ? point.slots.filter((slot) => chartSlots.includes(slot.slot))
-          : point.slots.filter((slot) => slot.slot === metricScope),
-    }));
+          : point.slots.filter((slot) => slot.slot === metricScope);
+
+      const mergedSlots = filteredSlots.reduce<
+        Record<string, AnalyticsDailyTrafficPoint["slots"][number]>
+      >((accumulator, slot) => {
+        const existing = accumulator[slot.slot] ?? {
+          slot: slot.slot,
+          impressions: 0,
+        };
+
+        existing.impressions += slot.impressions;
+        accumulator[slot.slot] = existing;
+        return accumulator;
+      }, {});
+
+      return {
+        ...point,
+        slots: Object.values(mergedSlots),
+      };
+    });
   }, [chartSlots, dailyTraffic, metricScope]);
 
   const visibleDailyTrafficPoints = useMemo(() => {

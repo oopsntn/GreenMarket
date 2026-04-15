@@ -12,6 +12,7 @@ import type { PlacementSlot } from "../types/placementSlot";
 import type {
   PromotionPackage,
   PromotionPackageFormState,
+  PromotionPackageSlotOption,
   PromotionPackageSlot,
   PromotionPackageStatus,
 } from "../types/promotionPackage";
@@ -25,20 +26,7 @@ type ConfirmState = {
   action: ConfirmAction | null;
 };
 
-type SlotOption = {
-  id: number;
-  code: string;
-  label: PromotionPackageSlot;
-};
-
 const PAGE_SIZE = 5;
-
-const slotFilterOptions: Array<PromotionPackageSlot | "All"> = [
-  "All",
-  "Home Top",
-  "Category Top",
-  "Search Boost",
-];
 
 const statusFilterOptions: Array<PromotionPackageStatus | "All"> = [
   "All",
@@ -46,11 +34,12 @@ const statusFilterOptions: Array<PromotionPackageStatus | "All"> = [
   "Disabled",
 ];
 
-const slotLabelMap: Record<PromotionPackageSlot | "All", string> = {
-  All: "Tất cả",
-  "Home Top": "Trang chủ nổi bật",
-  "Category Top": "Danh mục nổi bật",
-  "Search Boost": "Tăng tìm kiếm",
+const getSlotLabel = (slot: PromotionPackageSlot | "All") => {
+  if (slot === "All") return "Tất cả";
+  if (slot === "Home Top") return "Trang chủ nổi bật";
+  if (slot === "Category Top") return "Danh mục nổi bật";
+  if (slot === "Search Boost") return "Tăng tìm kiếm";
+  return slot;
 };
 
 const statusLabelMap: Record<PromotionPackageStatus | "All", string> = {
@@ -67,16 +56,12 @@ const currencyToNumber = (value: string) => {
 const mapPlacementSlotToPackageSlot = (
   slot: Pick<PlacementSlot, "name" | "positionCode">,
 ): PromotionPackageSlot => {
-  const normalized = `${slot.positionCode} ${slot.name}`.toLowerCase();
-
-  if (normalized.includes("search")) return "Search Boost";
-  if (normalized.includes("category")) return "Category Top";
-  return "Home Top";
+  return slot.name?.trim() || slot.positionCode?.trim() || "Vị trí chưa đặt tên";
 };
 
 function PromotionPackagesPage() {
   const [packages, setPackages] = useState<PromotionPackage[]>([]);
-  const [slotOptions, setSlotOptions] = useState<SlotOption[]>([]);
+  const [slotOptions, setSlotOptions] = useState<PromotionPackageSlotOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,6 +97,16 @@ function PromotionPackagesPage() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const summaryCards = promotionPackageService.getSummaryCards(packages);
+  const slotFilterOptions = useMemo<Array<PromotionPackageSlot | "All">>(() => {
+    const dynamicSlots = Array.from(
+      new Set([
+        ...packages.map((item) => item.slot),
+        ...slotOptions.map((item) => item.label),
+      ]),
+    ).filter(Boolean);
+
+    return ["All", ...dynamicSlots];
+  }, [packages, slotOptions]);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -210,7 +205,10 @@ function PromotionPackagesPage() {
   const openAddModal = () => {
     setModalMode("add");
     setEditingPackageId(null);
-    setFormData(promotionPackageService.getEmptyForm());
+    setFormData({
+      ...promotionPackageService.getEmptyForm(),
+      slot: slotOptions[0]?.label ?? "",
+    });
     setFormError("");
     setIsFormModalOpen(true);
   };
@@ -235,7 +233,10 @@ function PromotionPackagesPage() {
     if (isSubmitting) return;
 
     setEditingPackageId(null);
-    setFormData(promotionPackageService.getEmptyForm());
+    setFormData({
+      ...promotionPackageService.getEmptyForm(),
+      slot: slotOptions[0]?.label ?? "",
+    });
     setFormError("");
     setIsFormModalOpen(false);
   };
@@ -445,7 +446,7 @@ function PromotionPackagesPage() {
             >
               {slotFilterOptions.map((slot) => (
                 <option key={slot} value={slot}>
-                  {slotLabelMap[slot]}
+                  {getSlotLabel(slot)}
                 </option>
               ))}
             </select>
@@ -514,7 +515,7 @@ function PromotionPackagesPage() {
                     <tr key={item.id}>
                       <td>#{item.id}</td>
                       <td>{item.name}</td>
-                      <td>{slotLabelMap[item.slot]}</td>
+                      <td>{getSlotLabel(item.slot)}</td>
                       <td>{item.durationDays} ngày</td>
                       <td>{item.price}</td>
                       <td>{item.maxPosts}</td>
@@ -610,7 +611,7 @@ function PromotionPackagesPage() {
             </div>
             <div>
               <span>Vị trí</span>
-              <strong>{slotLabelMap[selectedPackage.slot]}</strong>
+              <strong>{getSlotLabel(selectedPackage.slot)}</strong>
             </div>
             <div>
               <span>Thời lượng</span>
@@ -689,7 +690,7 @@ function PromotionPackagesPage() {
                 : ["Home Top", "Category Top", "Search Boost"]
               ).map((slot) => (
                 <option key={slot} value={slot}>
-                  {slotLabelMap[slot as PromotionPackageSlot]}
+                  {getSlotLabel(slot as PromotionPackageSlot)}
                 </option>
               ))}
             </select>

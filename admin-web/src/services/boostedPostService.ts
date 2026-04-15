@@ -15,17 +15,17 @@ const OPERATOR_LABELS: Record<string, string> = {
 
 const NOTE_LABELS: Record<string, string> = {
   "Campaign is actively delivering boosted impressions under operations monitoring.":
-    "Chiến dịch đang phân phối lượt hiển thị nổi bật và được đội vận hành theo dõi.",
+    "Bài đang được phân phối ở vị trí quảng bá và được đội vận hành theo dõi.",
   "Campaign is paused while the team reviews content and quota strategy.":
-    "Chiến dịch đang tạm dừng để đội vận hành rà soát nội dung và chiến lược quota.",
+    "Bài đang tạm dừng để đội vận hành rà soát nội dung và kế hoạch phân phối.",
   "Campaign is scheduled and waiting for the start time window.":
-    "Chiến dịch đã lên lịch và đang chờ tới khung giờ bắt đầu.",
+    "Bài đã được lên lịch và đang chờ tới thời gian bắt đầu phân phối.",
   "Campaign finished the purchased quota and closed successfully.":
-    "Chiến dịch đã dùng hết quota đã mua và kết thúc thành công.",
+    "Bài đã dùng hết quota quảng bá và kết thúc thành công.",
   "Campaign expired before additional payment or reopen confirmation.":
-    "Chiến dịch đã hết hạn trước khi có xác nhận thanh toán hoặc mở lại.",
+    "Bài đã hết hạn trước khi có thanh toán bổ sung hoặc xác nhận mở lại.",
   "Campaign was manually closed by the operations team.":
-    "Chiến dịch đã được đội vận hành đóng thủ công.",
+    "Bài đã được đội vận hành dừng hẳn khỏi hàng chờ phân phối.",
 };
 
 const translateOperator = (value: string) => OPERATOR_LABELS[value] || value;
@@ -63,7 +63,7 @@ export const boostedPostService = {
       "/api/admin/boosted-posts",
       {
         defaultErrorMessage:
-          "Không thể tải danh sách chiến dịch đẩy nổi bật.",
+          "Không thể tải danh sách gói quảng bá.",
       },
     );
 
@@ -86,30 +86,27 @@ export const boostedPostService = {
       {
         title: "Đang phân phối",
         value: String(activeCount),
-        subtitle:
-          "Chiến dịch đang hiển thị trên các vị trí đẩy nổi bật",
+        subtitle: "Số gói đang hiển thị tại các vị trí quảng bá",
       },
       {
         title: "Đã lên lịch",
         value: String(scheduledCount),
-        subtitle: "Chiến dịch sẵn sàng cho khung phân phối tiếp theo",
+        subtitle: "Gói đã được xếp lịch và chờ đến ngày chạy",
       },
       {
         title: "Cần rà soát",
         value: String(needsReviewCount),
-        subtitle: "Chiến dịch đang chờ kiểm tra nội dung hoặc vận hành",
+        subtitle: "Gói cần kiểm tra lại nội dung hoặc cách phân phối",
       },
       {
         title: "Có rủi ro",
         value: String(atRiskCount),
-        subtitle:
-          "Chiến dịch có chất lượng phân phối dưới ngưỡng an toàn",
+        subtitle: "Gói có tiến độ hiển thị thấp hơn mức an toàn",
       },
       {
         title: "CTR TB / Quota đã dùng",
         value: `${averageCtr} / ${deliveredQuota.toLocaleString("en-US")}`,
-        subtitle:
-          "Ảnh chụp nhanh hiệu quả vận hành trên toàn bộ chiến dịch",
+        subtitle: "Ảnh chụp nhanh hiệu quả quảng bá hiện tại",
       },
     ];
   },
@@ -125,7 +122,7 @@ export const boostedPostService = {
         method: "PATCH",
         includeJsonContentType: true,
         defaultErrorMessage:
-          "Không thể cập nhật trạng thái chiến dịch đẩy nổi bật.",
+          "Không thể cập nhật trạng thái bài đang quảng bá.",
         body: JSON.stringify({ status }),
       },
     );

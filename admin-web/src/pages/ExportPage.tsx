@@ -49,14 +49,14 @@ const generalModuleLabelMap: Record<GeneralExportModule, string> = {
   Categories: "Danh mục",
   Attributes: "Thuộc tính",
   Templates: "Mẫu nội dung",
-  Promotions: "Khuyến mãi",
+  Promotions: "Đơn quảng bá",
   Analytics: "Phân tích",
 };
 
 const financialReportLabelMap: Record<FinancialReportType, string> = {
   "Revenue Summary": "Tổng quan doanh thu",
   "Customer Spending Report": "Báo cáo chi tiêu khách hàng",
-  "Promotion Performance": "Hiệu quả khuyến mãi",
+  "Promotion Performance": "Hiệu quả đơn quảng bá",
 };
 
 const historyStatusLabelMap: Record<(typeof HISTORY_STATUS_OPTIONS)[number], string> = {

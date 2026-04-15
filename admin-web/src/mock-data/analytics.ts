@@ -1,35 +1,35 @@
 import type { AnalyticsKpiCard, TopPlacement } from "../types/analytics";
 
 export const analyticsKpiCards: AnalyticsKpiCard[] = [
-  { title: "Total Views", value: "128,450", change: "+12.4%" },
+  { title: "Tổng lượt hiển thị", value: "128,450", change: "Độ phủ tăng 12,4%" },
   { title: "CTR", value: "4.8%", change: "+0.9%" },
-  { title: "Conversions", value: "1,245", change: "+6.3%" },
-  { title: "Revenue", value: "$8,920", change: "+14.1%" },
+  { title: "Lượt chuyển đổi", value: "1,245", change: "Tăng 6,3%" },
+  { title: "Doanh thu quảng bá", value: "8,920,000 VND", change: "Tăng 14,1%" },
 ];
 
 export const topPlacements: TopPlacement[] = [
   {
     id: 1,
-    slot: "Home Top",
+    slot: "Trang chủ nổi bật",
     impressions: "48,200",
     clicks: "3,410",
     ctr: "7.1%",
-    revenue: "$3,200",
+    revenue: "3,200,000 VND",
   },
   {
     id: 2,
-    slot: "Category Top",
+    slot: "Danh mục nổi bật",
     impressions: "34,100",
     clicks: "1,620",
     ctr: "4.8%",
-    revenue: "$2,450",
+    revenue: "2,450,000 VND",
   },
   {
     id: 3,
-    slot: "Search Boost",
+    slot: "Tăng tìm kiếm",
     impressions: "22,800",
     clicks: "890",
     ctr: "3.9%",
-    revenue: "$1,780",
+    revenue: "1,780,000 VND",
   },
 ];

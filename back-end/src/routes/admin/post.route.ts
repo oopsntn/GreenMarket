@@ -4,10 +4,10 @@ import { requireRoles } from "../../middlewares/authMiddleware";
 
 const router = Router();
 
-router.get("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), getPosts);
-router.post("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), createPost);
-router.get("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), getPostById);
-router.patch("/:id/status", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), updatePostStatus);
-router.delete("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_MODERATOR"), deletePost);
+router.get("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), getPosts);
+router.post("/", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), createPost);
+router.get("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), getPostById);
+router.patch("/:id/status", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), updatePostStatus);
+router.delete("/:id", requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"), deletePost);
 
 export default router;

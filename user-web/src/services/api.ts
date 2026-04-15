@@ -165,7 +165,36 @@ export const buyPromotionPackage = (postId: number | string, packageId: number |
   api.post('/payment/buy-package', { postId, packageId });
 export const payShopRegistration = () => api.post<{ paymentUrl: string }>('/payment/register-shop');
 export const buyShopVipPackage = () => api.post<{ paymentUrl: string }>('/payment/buy-shop-vip');
+export interface PricingConfig {
+  shopRegistrationPrice: number;
+  personalMonthlyPrice: number;
+  ownerPolicy: {
+    planTitle: string;
+    autoApprove: boolean;
+    dailyPostLimit: number | null;
+    postFeeAmount: number;
+    freeEditQuota: number;
+    editFeeAmount: number;
+    features?: string[];
+  };
+  personalPolicy: {
+    planTitle: string;
+    autoApprove: boolean;
+    dailyPostLimit: number | null;
+    postFeeAmount: number;
+    freeEditQuota: number;
+    editFeeAmount: number;
+    features?: string[];
+  };
+  shopVipPolicy: {
+    planTitle: string;
+    features?: string[];
+  };
+}
+
+export const getPricingConfig = () => api.get<PricingConfig>('/pricing-config');
 export const buyPersonalPackage = () => api.post<{ paymentUrl: string }>('/payment/buy-personal');
+export const getPaymentHistory = () => api.get('/payment/history');
 
 // Profile APIs
 export const getProfile = () => api.get('/profile');

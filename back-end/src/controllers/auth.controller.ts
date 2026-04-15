@@ -98,6 +98,7 @@ export const adminLogin = async (
       {
         id: admin.adminId,
         email: admin.adminEmail,
+        name: admin.adminFullName,
         role: "admin",
         roleCodes: roleCodes.length > 0 ? roleCodes : ["ROLE_ADMIN"],
       },

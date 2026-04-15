@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
     eventLogs,
@@ -11,7 +11,11 @@ import {
     shops,
     users,
 } from "../models/schema/index.ts";
-import { mapPlacementSlotLabel } from "./adminPlacementSlotCatalog.service.ts";
+import {
+    mapPlacementSlotLabel,
+    mapPlacementSlotScope,
+    type AdminPlacementSlotScope,
+} from "./adminPlacementSlotCatalog.service.ts";
 
 type RawPromotionRow = {
     promotionId: number;
@@ -55,17 +59,19 @@ type PromotionLifecycleStatus =
     | "Expired"
     | "Closed";
 
+const BONSAI_CATEGORY_IDS = [1, 11, 12, 13, 14, 15];
+
 export type AdminPromotionResponse = {
     id: number;
     postId: number;
     postTitle: string;
     owner: string;
     packageId: number;
-    slot: "Home Top" | "Category Top" | "Search Boost";
+    slot: string;
     packageName: string;
     startDate: string;
     endDate: string;
-    status: "Scheduled" | "Active" | "Paused" | "Expired";
+    status: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired";
     budget: string;
     note: string;
     paymentStatus: "Paid" | "Pending Verification";
@@ -84,7 +90,7 @@ export type AdminBoostedPostResponse = {
     campaignCode: string;
     postTitle: string;
     ownerName: string;
-    slot: "Home Top" | "Category Top" | "Search Boost";
+    slot: string;
     packageName: string;
     startDate: string;
     endDate: string;
@@ -139,6 +145,43 @@ const formatDateTime = (value: Date | null) => {
 const parseDateInput = (value: string) => {
     const parsed = new Date(`${value}T00:00:00`);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getStartOfToday = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+};
+
+const calculateExpectedEndAt = (startAt: Date, durationDays: number) => {
+    const next = new Date(startAt);
+    next.setDate(next.getDate() + Math.max(durationDays - 1, 0));
+    return next;
+};
+
+const validatePromotionActionDates = (
+    startAt: Date | null,
+    endAt: Date | null,
+    durationDays: number | null | undefined,
+) => {
+    if (!startAt || !endAt) {
+        throw new Error("Vui lòng chọn ngày bắt đầu và ngày kết thúc.");
+    }
+
+    if (startAt.getTime() < getStartOfToday().getTime()) {
+        throw new Error("Ngày bắt đầu phải từ ngày hiện tại trở đi.");
+    }
+
+    if (endAt.getTime() < startAt.getTime()) {
+        throw new Error("Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.");
+    }
+
+    const packageDuration = Math.max(Number(durationDays ?? 0), 1);
+    const expectedEndAt = calculateExpectedEndAt(startAt, packageDuration);
+
+    if (endAt.getTime() !== expectedEndAt.getTime()) {
+        throw new Error(`Khoảng thời gian chạy phải đúng ${packageDuration} ngày theo gói đã chọn.`);
+    }
 };
 
 const toNumber = (value: string | number | null | undefined) => {
@@ -214,7 +257,7 @@ const rangesOverlap = (
     endA: Date | null,
     startB: Date | null,
     endB: Date | null,
-) => {
+ ) => {
     if (!startA || !endA || !startB || !endB) {
         return false;
     }
@@ -267,20 +310,30 @@ const buildBlockedReason = (
 
 const buildPromotionNote = (
     item: RawPromotionRow,
-    lifecycleStatus: PromotionLifecycleStatus,
+    promotionStatus: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired",
     paymentStatus: "Paid" | "Pending Verification",
 ) => {
-    if (lifecycleStatus === "Paused") {
+    const lifecycleStatus = promotionStatus as PromotionLifecycleStatus;
+
+    if (promotionStatus === "Paused") {
         return "Chiến dịch đang tạm dừng và chưa phân phối lượt hiển thị.";
     }
 
-    if (lifecycleStatus === "Scheduled") {
+    if (promotionStatus === "Scheduled") {
         return paymentStatus === "Paid"
             ? "Chiến dịch đã được lên lịch cho đợt hiển thị sắp tới."
             : "Chiến dịch đã lên lịch nhưng còn chờ xác nhận thanh toán.";
     }
 
-    if (lifecycleStatus === "Expired") {
+    if (promotionStatus === "Completed") {
+        return "Chi\u1ebfn d\u1ecbch \u0111\u00e3 d\u00f9ng h\u1ebft quota v\u00e0 ho\u00e0n t\u1ea5t tr\u01b0\u1edbc khi h\u1ebft th\u1eddi gian ch\u1ea1y.";
+    }
+
+    if (false && promotionStatus === "Completed") {
+        return "Chiáº¿n dá»‹ch Ä‘Ã£ dÃ¹ng háº¿t quota vÃ  hoÃ n táº¥t trÆ°á»›c khi háº¿t thá»i gian cháº¡y.";
+    }
+
+    if (promotionStatus === "Expired") {
         return "Chiến dịch đã hết thời gian chạy và không còn hoạt động.";
     }
 
@@ -289,6 +342,34 @@ const buildPromotionNote = (
     }
 
     return `Chiến dịch đang sử dụng vị trí hiển thị của gói ${item.packageTitle ?? "đã chọn"}.`;
+};
+
+const getPromotionStatus = (
+    lifecycleStatus: PromotionLifecycleStatus,
+    totalQuota: number,
+    usedQuota: number,
+): "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" => {
+    if (lifecycleStatus === "Closed") {
+        return "Expired";
+    }
+
+    if (lifecycleStatus === "Paused") {
+        return "Paused";
+    }
+
+    if (lifecycleStatus === "Scheduled") {
+        return "Scheduled";
+    }
+
+    if (usedQuota >= totalQuota) {
+        return "Completed";
+    }
+
+    if (lifecycleStatus === "Expired") {
+        return "Expired";
+    }
+
+    return "Active";
 };
 
 const getHandledBy = (
@@ -311,6 +392,18 @@ const getOperatorName = (slot: "Home Top" | "Category Top" | "Search Boost") => 
     }
 
     return "Nhóm vận hành C";
+};
+
+const getOperatorNameByScope = (scope: AdminPlacementSlotScope) => {
+    if (scope === "Homepage") {
+        return "Ops Team A";
+    }
+
+    if (scope === "Category") {
+        return "Ops Team B";
+    }
+
+    return "Ops Team C";
 };
 
 const getReviewStatus = (
@@ -385,37 +478,47 @@ const getBoostedStatus = (
         return "Scheduled";
     }
 
+    if (usedQuota >= totalQuota) {
+        return "Completed";
+    }
+
     if (lifecycleStatus === "Expired") {
-        return usedQuota >= totalQuota ? "Completed" : "Expired";
+        return "Expired";
     }
 
     return "Active";
 };
 
-const getDeliveryHealth = (
-    boostedStatus: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed",
-    totalQuota: number,
-    usedQuota: number,
-    elapsedRatio: number,
-): "Healthy" | "Watch" | "At Risk" => {
-    if (boostedStatus === "Completed") {
-        return "Healthy";
+const getCtrRate = (clicks: number, impressions: number) => {
+    if (impressions <= 0) {
+        return 0;
     }
 
+    return clicks / impressions;
+};
+
+const getDeliveryHealth = (
+    boostedStatus: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed",
+    ctrRate: number,
+    averageCtrRate: number,
+): "Healthy" | "Watch" | "At Risk" => {
     if (boostedStatus === "Scheduled" || boostedStatus === "Paused") {
         return "Watch";
     }
 
-    if (boostedStatus === "Closed" || boostedStatus === "Expired") {
+    if (boostedStatus === "Closed") {
         return "At Risk";
     }
 
-    const expectedUsage = totalQuota * Math.max(0.2, elapsedRatio);
-    if (usedQuota < expectedUsage * 0.7) {
+    if (averageCtrRate <= 0) {
+        return ctrRate > 0 ? "Healthy" : "Watch";
+    }
+
+    if (ctrRate < averageCtrRate * 0.75) {
         return "At Risk";
     }
 
-    if (usedQuota < expectedUsage * 0.95) {
+    if (ctrRate < averageCtrRate * 0.95) {
         return "Watch";
     }
 
@@ -503,6 +606,7 @@ const selectPromotionRows = async (): Promise<RawPromotionRow[]> => {
             placementSlots,
             eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId),
         )
+        .where(inArray(posts.categoryId, BONSAI_CATEGORY_IDS))
         .orderBy(desc(postPromotions.postPromotionCreatedAt));
 };
 
@@ -663,6 +767,17 @@ const mapRecordToPromotion = (
         "reopen",
     );
     const warnings = buildPromotionWarnings(item, allItems);
+    const totalQuota = Math.max(
+        1,
+        toNumber(item.packageQuota) || toNumber(item.slotCapacity) || 1,
+    );
+    const elapsedRatio = getElapsedRatio(item.startAt, item.endAt);
+    const usedQuota = getUsedQuota(totalQuota, lifecycleStatus, elapsedRatio);
+    const promotionStatus = getPromotionStatus(
+        lifecycleStatus,
+        totalQuota,
+        usedQuota,
+    );
 
     return {
         id: item.promotionId,
@@ -674,9 +789,9 @@ const mapRecordToPromotion = (
         packageName: item.packageTitle?.trim() || "Gói chưa xác định",
         startDate: formatDate(item.startAt),
         endDate: formatDate(item.endAt),
-        status: lifecycleStatus === "Closed" ? "Expired" : lifecycleStatus,
+        status: promotionStatus,
         budget: formatCurrencyLabel(item.latestPayment?.paymentTxnAmount ?? item.packagePrice),
-        note: buildPromotionNote(item, lifecycleStatus, paymentStatus),
+        note: buildPromotionNote(item, promotionStatus, paymentStatus),
         paymentStatus,
         handledBy: getHandledBy(lifecycleStatus),
         reopenEligible: !reopenBlockedReason,
@@ -693,6 +808,7 @@ const mapRecordToBoostedPost = (
     item: RawPromotionRow & { latestPayment: LatestPaymentRecord | null },
 ): AdminBoostedPostResponse => {
     const slot = mapPlacementSlotLabel(item.slotCode, item.slotTitle);
+    const slotScope = mapPlacementSlotScope(item.slotCode, item.slotTitle);
     const lifecycleStatus = getLifecycleStatus(item);
     const totalQuota = Math.max(
         1,
@@ -702,15 +818,10 @@ const mapRecordToBoostedPost = (
     const usedQuota = getUsedQuota(totalQuota, lifecycleStatus, elapsedRatio);
     const boostedStatus = getBoostedStatus(lifecycleStatus, totalQuota, usedQuota);
     const reviewStatus = getReviewStatus(item.postStatus);
-    const deliveryHealth = getDeliveryHealth(
-        boostedStatus,
-        totalQuota,
-        usedQuota,
-        elapsedRatio,
-    );
     const slotCode = (item.slotCode ?? "slot").replace(/[^a-z0-9]/gi, "").toUpperCase();
     const impressions = usedQuota;
-    const ctrBase = slot === "Home Top" ? 0.029 : slot === "Category Top" ? 0.024 : 0.02;
+    const ctrBase =
+        slotScope === "Homepage" ? 0.029 : slotScope === "Category" ? 0.024 : 0.02;
     const ctrMultiplier =
         boostedStatus === "Active"
             ? 1
@@ -731,9 +842,9 @@ const mapRecordToBoostedPost = (
         startDate: formatDate(item.startAt),
         endDate: formatDate(item.endAt),
         status: boostedStatus,
-        deliveryHealth,
+        deliveryHealth: "Watch",
         reviewStatus,
-        assignedOperator: getOperatorName(slot),
+        assignedOperator: getOperatorNameByScope(slotScope),
         totalQuota,
         usedQuota,
         impressions,
@@ -741,6 +852,41 @@ const mapRecordToBoostedPost = (
         lastOptimizedAt: formatDateTime(item.postUpdatedAt ?? item.createdAt),
         notes: buildBoostedNotes(boostedStatus, reviewStatus),
     };
+};
+
+const applyBoostedPostDeliveryHealth = (
+    posts: AdminBoostedPostResponse[],
+): AdminBoostedPostResponse[] => {
+    const averageCtrBySlot = new Map<string, number>();
+
+    for (const slot of Array.from(new Set(posts.map((item) => item.slot)))) {
+        const comparablePosts = posts.filter(
+            (item) =>
+                item.slot === slot &&
+                item.impressions > 0 &&
+                item.status !== "Scheduled" &&
+                item.status !== "Paused",
+        );
+
+        const averageCtr =
+            comparablePosts.length === 0
+                ? 0
+                : comparablePosts.reduce(
+                    (sum, item) => sum + getCtrRate(item.clicks, item.impressions),
+                    0,
+                ) / comparablePosts.length;
+
+        averageCtrBySlot.set(slot, averageCtr);
+    }
+
+    return posts.map((item) => ({
+        ...item,
+        deliveryHealth: getDeliveryHealth(
+            item.status,
+            getCtrRate(item.clicks, item.impressions),
+            averageCtrBySlot.get(item.slot) ?? 0,
+        ),
+    }));
 };
 
 const ensurePromotionPackage = async (packageId: number) => {
@@ -902,6 +1048,12 @@ export const adminPromotionService = {
             return null;
         }
 
+        if (getPaymentStatus(current.latestPayment) === "Paid") {
+            throw new Error(
+                "Đơn quảng bá đã thanh toán không thể đổi gói hoặc chỉnh lại thời gian chạy. Chỉ đơn chưa thanh toán mới được phép cập nhật các thông tin này.",
+            );
+        }
+
         const packageRecord = await ensurePromotionPackage(payload.packageId);
         if (!packageRecord) {
             throw new Error("Không tìm thấy gói quảng bá.");
@@ -909,14 +1061,11 @@ export const adminPromotionService = {
 
         const startAt = parseDateInput(payload.startDate);
         const endAt = parseDateInput(payload.endDate);
-
-        if (!startAt || !endAt) {
-            throw new Error("Vui lòng chọn ngày bắt đầu và ngày kết thúc.");
-        }
-
-        if (endAt.getTime() < startAt.getTime()) {
-            throw new Error("Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.");
-        }
+        validatePromotionActionDates(
+            startAt,
+            endAt,
+            packageRecord.promotionPackageDurationDays,
+        );
 
         if (!packageRecord.promotionPackagePublished) {
             throw new Error("Gói quảng bá đã chọn hiện không còn hoạt động.");
@@ -937,7 +1086,7 @@ export const adminPromotionService = {
         }
 
         const nextRawStatus = getPersistedStatus(
-            startAt,
+            startAt!,
             current.rawStatus?.toLowerCase() === "paused" ? "paused" : "active",
         );
 
@@ -946,8 +1095,8 @@ export const adminPromotionService = {
             .set({
                 postPromotionPackageId: packageRecord.promotionPackageId,
                 postPromotionSlotId: packageRecord.promotionPackageSlotId,
-                postPromotionStartAt: startAt,
-                postPromotionEndAt: endAt,
+                postPromotionStartAt: startAt!,
+                postPromotionEndAt: endAt!,
                 postPromotionStatus: nextRawStatus,
             })
             .where(eq(postPromotions.postPromotionId, promotionId))
@@ -998,14 +1147,11 @@ export const adminPromotionService = {
 
         const startAt = parseDateInput(payload.startDate);
         const endAt = parseDateInput(payload.endDate);
-
-        if (!startAt || !endAt) {
-            throw new Error("Vui lòng chọn ngày bắt đầu và ngày kết thúc.");
-        }
-
-        if (endAt.getTime() < startAt.getTime()) {
-            throw new Error("Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.");
-        }
+        validatePromotionActionDates(
+            startAt,
+            endAt,
+            packageRecord.promotionPackageDurationDays,
+        );
 
         if (!packageRecord.promotionPackagePublished) {
             throw new Error("Gói quảng bá đã chọn hiện không còn hoạt động.");
@@ -1030,9 +1176,9 @@ export const adminPromotionService = {
             .set({
                 postPromotionPackageId: packageRecord.promotionPackageId,
                 postPromotionSlotId: packageRecord.promotionPackageSlotId,
-                postPromotionStartAt: startAt,
-                postPromotionEndAt: endAt,
-                postPromotionStatus: getPersistedStatus(startAt, "active"),
+                postPromotionStartAt: startAt!,
+                postPromotionEndAt: endAt!,
+                postPromotionStatus: getPersistedStatus(startAt!, "active"),
             })
             .where(eq(postPromotions.postPromotionId, promotionId))
             .returning({ id: postPromotions.postPromotionId });
@@ -1063,14 +1209,25 @@ export const adminPromotionService = {
 
     async getBoostedPosts(): Promise<AdminBoostedPostResponse[]> {
         const records = await getPromotionRecords();
-        return records.map(mapRecordToBoostedPost);
+        return applyBoostedPostDeliveryHealth(records.map(mapRecordToBoostedPost));
     },
 
     async getBoostedPostById(
         promotionId: number,
     ): Promise<AdminBoostedPostResponse | null> {
         const record = await getPromotionRecordById(promotionId);
-        return record ? mapRecordToBoostedPost(record) : null;
+        if (!record) {
+            return null;
+        }
+
+        const records = await getPromotionRecords();
+        const refreshedRecords = records.map(mapRecordToBoostedPost);
+
+        return (
+            applyBoostedPostDeliveryHealth(refreshedRecords).find(
+                (item) => item.id === promotionId,
+            ) ?? null
+        );
     },
 
     async updateBoostedPostStatus(

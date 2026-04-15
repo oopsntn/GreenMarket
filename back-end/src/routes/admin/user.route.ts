@@ -11,17 +11,17 @@ const router = Router();
 
 router.get(
   "/",
-  requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"),
+  requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
   getUsers,
 );
 router.get(
   "/:id",
-  requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"),
+  requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
   getUserById,
 );
 router.patch(
   "/:id/status",
-  requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN", "ROLE_SUPPORT"),
+  requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
   updateUserStatus,
 );
 router.patch(

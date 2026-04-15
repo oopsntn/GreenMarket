@@ -327,6 +327,12 @@
   resize: none;
 }
 
+.promotions-modal__hint {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6f8375;
+}
+
 .promotions-package-form {
   display: flex;
   flex-direction: column;
@@ -353,7 +359,8 @@
 .promotions-modal__close,
 .promotions-modal__change,
 .promotions-modal__pause,
-.promotions-modal__resume {
+.promotions-modal__resume,
+.promotions-modal__reopen {
   height: 44px;
   padding: 0 18px;
   border: none;

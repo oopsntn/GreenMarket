@@ -259,26 +259,15 @@ const MyPosts: React.FC = () => {
   };
 
   const openBoostModal = async (post: any) => {
-    if (!shop || shop.shopStatus !== 'active') {
-      alert('Goi uu tien hien thi chi danh cho chu vuon da kich hoat.');
-      return;
-    }
-
     setBoostingPost(post);
     setBoostLoading(true);
     try {
       const res = await getPromotionPackages();
       const payload = res.data;
-      if (payload?.audience === 'individual') {
-        alert('Tai khoan hien tai chua du dieu kien mua goi uu tien hien thi.');
-        setBoostingPost(null);
-        setBoostPackages([]);
-        return;
-      }
-
+      
       const packageList = sortPromotionPackages(payload?.packages || []);
       if (packageList.length === 0) {
-        alert('Hien khong co goi phu hop voi tai khoan chu vuon.');
+        alert('Hiện không có gói phù hợp với tài khoản của bạn.');
         setBoostingPost(null);
         setBoostPackages([]);
         return;
@@ -287,7 +276,7 @@ const MyPosts: React.FC = () => {
       setBoostPackages(packageList);
     } catch (error) {
       console.error('Failed to load boost packages:', error);
-      alert('Khong the tai goi uu tien hien thi. Vui long thu lai.');
+      alert('Không thể tải gói ưu tiên hiển thị. Vui lòng thử lại.');
       setBoostingPost(null);
     } finally {
       setBoostLoading(false);
@@ -561,18 +550,18 @@ const MyPosts: React.FC = () => {
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
-                    {post.postStatus === 'approved' &&
-                      shop &&
-                      shop.shopStatus === 'active' &&
-                      post.postShopId === shop.shopId && (
-                        <button
-                          title="Quảng bá bài viết"
-                          onClick={() => openBoostModal(post)}
-                          className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 hover:text-white hover:bg-emerald-600 transition-all hover:scale-110 active:scale-95 shadow-sm"
-                        >
-                          <Zap className="w-5 h-5 fill-emerald-600 group-hover:fill-white" />
-                        </button>
-                      )}
+                    {post.postStatus === 'approved' && (
+                      (shop && shop.shopStatus === 'active' && post.postShopId === shop.shopId) ||
+                      (post.postShopId === null)
+                    ) && (
+                      <button
+                        title="Quảng bá bài viết"
+                        onClick={() => openBoostModal(post)}
+                        className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 hover:text-white hover:bg-emerald-600 transition-all hover:scale-110 active:scale-95 shadow-sm"
+                      >
+                        <Zap className="w-5 h-5 fill-emerald-600 group-hover:fill-white" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

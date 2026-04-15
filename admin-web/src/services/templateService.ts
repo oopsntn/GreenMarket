@@ -13,6 +13,7 @@ type TemplateApiItem = {
   templateName: string;
   templateType: TemplateType;
   templateContent: string;
+  previewText?: string;
   status: TemplateStatus;
   description?: string;
   usageNote?: string;
@@ -37,6 +38,7 @@ type TemplatePayload = {
   templateName: string;
   templateType: TemplateType;
   templateContent: string;
+  previewText: string;
   description: string;
   usageNote: string;
   status: TemplateStatus;
@@ -51,12 +53,18 @@ const TEMPLATE_NAME_LABELS: Record<string, string> = {
   "Notification - Export Completed": "Thông báo - Xuất dữ liệu hoàn tất",
   "Post Rejection - Invalid Content": "Từ chối bài đăng - Nội dung không hợp lệ",
   "Post Rejection - Missing Information": "Từ chối bài đăng - Thiếu thông tin",
+  "Report Reason - Spam Content": "Lý do báo cáo - Nội dung spam",
+  "Report Reason - Suspicious Pricing": "Lý do báo cáo - Giá bán bất thường",
 };
 
 const TEXT_REPLACEMENTS: Array<[string, string]> = [
   [
     "This case has been escalated to the moderation lead for manual review because it affects promotion delivery quality or moderation integrity.",
     "Trường hợp này đã được chuyển lên đầu mối kiểm duyệt để rà soát thủ công vì ảnh hưởng tới chất lượng quảng bá hoặc tính toàn vẹn của quy trình kiểm duyệt.",
+  ],
+  [
+    "This case has been escalated to the moderation lead for manual review because it affects promotion delivery quality or marketplace safety.",
+    "Trường hợp này đã được chuyển lên đầu mối kiểm duyệt để rà soát thủ công vì ảnh hưởng đến chất lượng phân phối quảng bá hoặc mức độ an toàn của sàn.",
   ],
   [
     "Your expired promotion has been reopened after payment verification. Delivery resumes immediately in the assigned placement slot.",
@@ -67,6 +75,10 @@ const TEXT_REPLACEMENTS: Array<[string, string]> = [
     "GreenMarket đã nhận xác nhận chuyển khoản. Quản trị viên đang kiểm tra thanh toán trước khi mở lại hoặc cập nhật chiến dịch của bạn.",
   ],
   [
+    "We received your transfer confirmation. GreenMarket admin is verifying the payment before reopening or updating your promotion package.",
+    "GreenMarket đã nhận xác nhận chuyển khoản. Quản trị viên đang kiểm tra thanh toán trước khi mở lại hoặc cập nhật gói quảng bá của bạn.",
+  ],
+  [
     "Your requested admin export has finished successfully. Download the generated report from the export history screen.",
     "Yêu cầu xuất dữ liệu quản trị đã hoàn tất thành công. Hãy tải báo cáo tại màn lịch sử xuất dữ liệu.",
   ],
@@ -75,8 +87,24 @@ const TEXT_REPLACEMENTS: Array<[string, string]> = [
     "Bài đăng của bạn vi phạm chính sách nội dung của GreenMarket vì hình ảnh hoặc video tải lên không khớp với thông tin niêm yết. Vui lòng chỉnh sửa rồi gửi lại.",
   ],
   [
+    "Your post violates GreenMarket content policy because the uploaded media does not match the listing details. Please revise the content and submit again.",
+    "Bài đăng của bạn vi phạm chính sách nội dung của GreenMarket vì hình ảnh hoặc video tải lên không khớp với thông tin niêm yết. Vui lòng chỉnh sửa nội dung rồi gửi lại.",
+  ],
+  [
     "Your post is missing required information such as care notes, product condition, or delivery scope. Please complete the missing fields and submit again.",
     "Bài đăng của bạn đang thiếu thông tin bắt buộc như ghi chú chăm sóc, tình trạng sản phẩm hoặc phạm vi giao hàng. Vui lòng bổ sung rồi gửi lại.",
+  ],
+  [
+    "Your post is missing required information such as care notes, product size, or accurate pricing. Please complete the details before resubmitting.",
+    "Bài đăng của bạn đang thiếu thông tin bắt buộc như hướng dẫn chăm sóc, kích thước sản phẩm hoặc giá bán chính xác. Vui lòng bổ sung đầy đủ trước khi gửi lại.",
+  ],
+  [
+    "This listing appears to contain repetitive promotional messaging, external contact spam, or misleading attention bait.",
+    "Bài đăng này có dấu hiệu lặp lại nội dung quảng bá, chèn thông tin liên hệ ngoài hệ thống hoặc sử dụng câu chữ gây hiểu nhầm để thu hút chú ý.",
+  ],
+  [
+    "This listing price deviates significantly from comparable marketplace items and should be reviewed manually by the moderation team.",
+    "Mức giá của bài đăng này chênh lệch đáng kể so với các bài tương tự trên sàn và cần được đội kiểm duyệt xem xét thủ công.",
   ],
   [
     "Used for system notifications, reminders, or generic status updates.",
@@ -111,6 +139,25 @@ const normalizeDate = (value?: string, label?: string) => {
   });
 };
 
+const buildPreviewFallback = (
+  previewText: string | null | undefined,
+  content: string,
+) => {
+  const normalizedPreview = previewText?.trim();
+  if (normalizedPreview) {
+    return normalizedPreview;
+  }
+
+  const normalizedContent = content.trim();
+  if (!normalizedContent) {
+    return "--";
+  }
+
+  return normalizedContent.length > 180
+    ? `${normalizedContent.slice(0, 180).trim()}...`
+    : normalizedContent;
+};
+
 const translateText = (value: string | null | undefined, fallback: string) => {
   const normalized = value?.trim();
   if (!normalized) {
@@ -133,15 +180,13 @@ const mapTemplate = (item: TemplateApiItem): Template => ({
   name: translateText(item.templateName, "Mẫu chưa đặt tên"),
   type: item.templateType,
   content: translateText(item.templateContent, ""),
+  previewText: translateText(
+    buildPreviewFallback(item.previewText, item.templateContent),
+    buildPreviewFallback(item.previewText, item.templateContent),
+  ),
   status: item.status,
-  description: translateText(
-    item.description,
-    "Chưa có mô tả ngắn.",
-  ),
-  usageNote: translateText(
-    item.usageNote,
-    "Chưa có hướng dẫn sử dụng.",
-  ),
+  description: translateText(item.description, "Chưa có mô tả ngắn."),
+  usageNote: translateText(item.usageNote, "Chưa có hướng dẫn sử dụng."),
   updatedAt: normalizeDate(item.updatedAt, item.updatedLabel),
 });
 
@@ -156,6 +201,7 @@ const resolveApiError = (error: unknown, fallbackMessage: string) => {
 const buildTemplatePayload = (payload: TemplateFormState): TemplatePayload => {
   const name = payload.name.trim();
   const content = payload.content.trim();
+  const previewText = payload.previewText.trim();
   const description = payload.description.trim();
   const usageNote = payload.usageNote.trim();
 
@@ -175,10 +221,15 @@ const buildTemplatePayload = (payload: TemplateFormState): TemplatePayload => {
     throw new Error("Hướng dẫn sử dụng là bắt buộc.");
   }
 
+  if (!previewText) {
+    throw new Error("Nội dung xem trước nhanh là bắt buộc.");
+  }
+
   return {
     templateName: name,
     templateType: payload.type,
     templateContent: content,
+    previewText,
     description,
     usageNote,
     status: payload.status,

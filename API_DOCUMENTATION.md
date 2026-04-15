@@ -1,4 +1,4 @@
-﻿# GreenMarket API Documentation
+# GreenMarket API Documentation
 
 Last updated: 2026-04-11
 
@@ -194,6 +194,18 @@ Auth rules for all endpoints below:
 |---|---|---|---|---|
 | POST | `/api/reports` | No | Submit report for post | required: `postId`, `reportReason`; optional: `reporterId` |
 
+### Monetization Config
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/pricing-config` | No | Get global pricing for account registration and posting policies |
+
+**Response fields:**
+- `shopRegistrationPrice`: number (VND)
+- `personalMonthlyPrice`: number (VND)
+- `ownerPolicy`: object (snapshot of garden owner posting terms)
+- `personalPolicy`: object (snapshot of personal member posting terms)
+
 ### Promotion (User)
 
 | Method | Endpoint | Auth | Description | Main request fields |
@@ -212,23 +224,24 @@ Auth rules for all endpoints below:
   - `audience = individual`, `reason = ACTIVE_SHOP_REQUIRED`, `packages = []` for non-owner accounts.
 
 **Promotion ranking behavior:**
-- `/api/posts/browse` prioritizes promoted posts by `slotRules.priority` (descending)
+- `/api/posts/browse` prioritizes promoted posts by `snapshot_priority` (from buying time) or fallback to `slotRules.priority`.
 - If slot priority is missing/invalid, fallback priority is `1`
 
-### Payment (User, MoMo)
+### Payment (User, VNPay)
 
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
-| POST | `/api/payment/buy-package` | User token | Create MoMo payment intent URL for promotion package | `postId`, `packageId` |
-| GET | `/api/payment/momo-return` | No | MoMo redirect callback, then backend redirects to frontend payment result | query params from MoMo |
-| POST | `/api/payment/momo-ipn` | No | MoMo IPN callback for server-to-server payment update | callback payload from MoMo |
-| GET | `/api/payment/mock-gate` | No | Development mock gateway screen (when `MOMO_MOCK=true`) | query: `orderId`, `amount`, `orderInfo`, `requestId`, `extraData` |
-| POST | `/api/payment/mock-gate-process` | No | Development mock approve/cancel action | form fields from mock gateway |
+| POST | `/api/payment/buy-package` | User token | Create VNPay payment intent URL for promotion package | `postId`, `packageId` |
+| POST | `/api/payment/buy-personal` | User token | Create VNPay payment intent URL for personal monthly plan | none |
+| POST | `/api/payment/shop-registration` | User token | Create VNPay payment intent URL for shop registration fee | none |
+| POST | `/api/payment/buy-shop-vip` | User token | Create VNPay payment intent URL for Shop VIP package | none |
+| GET | `/api/payment/vnpay-return` | No | VNPay redirect callback | query params from VNPay |
+| POST | `/api/payment/vnpay-ipn` | No | VNPay IPN callback | callback payload from VNPay |
 
 **Payment behavior notes:**
-- `buy-package` validates post ownership, post approval status, active shop ownership, package publish status, and slot availability before creating payment intent.
-- If seller has active shop but post is missing `postShopId`, backend auto-links post to seller shop before creating payment.
-- Callback handling (`momo-return` + `momo-ipn`) is idempotent by transaction state to avoid duplicate promotion activation.
+- `buy-package` validates post ownership, post approval status, active shop ownership, package publish status, and slot availability.
+- All payments use **VND**.
+- On success, the backend snapshots the package benefits (title, priority) into the promotion record.
 - Common error shape: `{ error, code, ...details }`.
 
 ## Admin APIs

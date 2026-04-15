@@ -50,7 +50,7 @@ const typeLabels: Record<AttributeType | "All", string> = {
   All: "Tất cả kiểu dữ liệu",
   Text: "Văn bản",
   Number: "Số",
-  Select: "Chọn sẵn",
+  Select: "Danh sách lựa chọn",
   Boolean: "Đúng / Sai",
 };
 

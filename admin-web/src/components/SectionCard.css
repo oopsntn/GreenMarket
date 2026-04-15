@@ -1,8 +1,8 @@
 .section-card {
   background-color: #ffffff;
-  border: 1px solid #edf2e8;
-  border-radius: 20px;
-  box-shadow: 0 6px 20px rgba(27, 67, 50, 0.06);
+  border: 1px solid #e6eee1;
+  border-radius: 22px;
+  box-shadow: 0 12px 28px rgba(27, 67, 50, 0.08);
   overflow: hidden;
 }
 
@@ -11,9 +11,10 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px 24px;
+  padding: 18px 22px;
   border-bottom: 1px solid #eef3ea;
-  background-color: #fcfefb;
+  background:
+    linear-gradient(180deg, #fcfefb 0%, #f8fbf7 100%);
 }
 
 .section-card__heading {
@@ -23,15 +24,17 @@
 }
 
 .section-card__heading h3 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   color: #1b4332;
+  letter-spacing: -0.01em;
 }
 
 .section-card__heading p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #6b7b6d;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #728375;
+  max-width: 62ch;
 }
 
 .section-card__actions {
@@ -41,7 +44,7 @@
 }
 
 .section-card__body {
-  padding: 24px;
+  padding: 22px;
 }
 
 .section-card__body--flush {

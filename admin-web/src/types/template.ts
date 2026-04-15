@@ -10,6 +10,7 @@ export type Template = {
   name: string;
   type: TemplateType;
   content: string;
+  previewText: string;
   status: TemplateStatus;
   description: string;
   usageNote: string;
@@ -20,6 +21,7 @@ export type TemplateFormState = {
   name: string;
   type: TemplateType;
   content: string;
+  previewText: string;
   description: string;
   usageNote: string;
   status: TemplateStatus;

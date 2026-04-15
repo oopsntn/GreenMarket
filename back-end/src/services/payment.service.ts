@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, lte, or } from "drizzle-orm";
+import { and, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
   paymentTxn,
@@ -17,9 +17,9 @@ import {
 } from "../utils/vnpay.ts";
 import {
   BOOST_POST_SLOT_CODE,
-  SHOP_VIP_DURATION_DAYS,
   SHOP_VIP_SLOT_CODE,
 } from "../constants/promotion.ts";
+import { readSettingNumber } from "../controllers/user/pricing-config.controller.ts";
 import { postingPolicyService } from "./posting-policy.service.ts";
 
 export class PaymentServiceError extends Error {
@@ -83,8 +83,20 @@ const activatePromotionForTransaction = async (
       promotionPackageId: promotionPackages.promotionPackageId,
       promotionPackageSlotId: promotionPackages.promotionPackageSlotId,
       promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+      promotionPackageTitle: promotionPackages.promotionPackageTitle,
+      priority: sql<number>`
+        CASE 
+          WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$' 
+            THEN (${placementSlots.placementSlotRules} ->> 'priority')::int 
+          ELSE 1 
+        END
+      `,
     })
     .from(promotionPackages)
+    .innerJoin(
+      placementSlots,
+      eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
+    )
     .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId!))
     .limit(1);
 
@@ -105,6 +117,8 @@ const activatePromotionForTransaction = async (
     postPromotionBuyerId: txn.paymentTxnUserId,
     postPromotionPackageId: txn.paymentTxnPackageId,
     postPromotionSlotId: pkg.promotionPackageSlotId,
+    postPromotionSnapshotTitle: pkg.promotionPackageTitle,
+    postPromotionSnapshotPriority: pkg.priority,
     postPromotionStartAt: startAt,
     postPromotionEndAt: endAt,
     postPromotionStatus: "active",
@@ -151,14 +165,6 @@ const activateShopVipForTransaction = async (
       500,
       "SHOP_VIP_DURATION_INVALID",
       "Shop VIP package duration is invalid.",
-    );
-  }
-
-  if (durationDays !== SHOP_VIP_DURATION_DAYS) {
-    throw new PaymentServiceError(
-      500,
-      "SHOP_VIP_DURATION_UNSUPPORTED",
-      "Shop VIP package must use a fixed 90-day duration.",
     );
   }
 
@@ -386,7 +392,7 @@ export const paymentService = {
     if (!shop) throw new PaymentServiceError(404, "SHOP_NOT_FOUND", "Thong tin shop khong ton tai.");
     if (shop.shopStatus === "active") throw new PaymentServiceError(400, "SHOP_ALREADY_ACTIVE", "Shop da duoc kich hoat tien trinh dang ky.");
 
-    const finalAmount = 250000;
+    const finalAmount = await readSettingNumber("shop_registration_price", 250000);
     const orderId = createOrderId();
     const orderInfo = `PayShopReg${userId}`;
 
@@ -418,7 +424,7 @@ export const paymentService = {
       throw new PaymentServiceError(400, "ALREADY_GARDEN_OWNER", "Shop owner cannot buy personal plan.");
     }
 
-    const finalAmount = 30000;
+    const finalAmount = await readSettingNumber("personal_monthly_price", 30000);
     const orderId = createOrderId();
     const orderInfo = `PayPersonalPkg${userId}`;
 
@@ -486,11 +492,11 @@ export const paymentService = {
     }
 
     const vipDurationDays = Number(vipPackage.promotionPackageDurationDays || 0);
-    if (vipDurationDays !== SHOP_VIP_DURATION_DAYS) {
+    if (!Number.isFinite(vipDurationDays) || vipDurationDays <= 0) {
       throw new PaymentServiceError(
         500,
-        "SHOP_VIP_DURATION_UNSUPPORTED",
-        "Goi Nha Vuon VIP phai co chu ky 90 ngay.",
+        "SHOP_VIP_DURATION_INVALID",
+        "Goi Nha Vuon VIP co thoi luong khong hop le.",
       );
     }
 
@@ -510,7 +516,7 @@ export const paymentService = {
       finalAmount,
       orderId,
       orderInfo,
-      orderId,
+      ipAddr,
     );
 
     await db.insert(paymentTxn).values({
@@ -581,39 +587,8 @@ export const paymentService = {
       );
     }
 
-    const [activeShop] = await db
-      .select({
-        shopId: shops.shopId,
-      })
-      .from(shops)
-      .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
-      .limit(1);
-
-    if (!activeShop) {
-      throw new PaymentServiceError(
-        403,
-        "BOOST_OWNER_REQUIRED",
-        "Boost packages are available only for active garden-owner accounts.",
-      );
-    }
-
-    if (post.postShopId !== activeShop.shopId) {
-      if (post.postShopId === null) {
-        await db
-          .update(posts)
-          .set({
-            postShopId: activeShop.shopId,
-            postUpdatedAt: new Date(),
-          })
-          .where(eq(posts.postId, parsedPostId));
-      } else {
-        throw new PaymentServiceError(
-          403,
-          "POST_NOT_LINKED_TO_OWNER_SHOP",
-          "This post is not linked to your active shop.",
-        );
-      }
-    }
+    // No longer forcing personal posts to become shop posts when promoted.
+    // Garden owners can keep personal posts if they want.
 
     const now = new Date();
     const [pkg] = await db
@@ -718,5 +693,52 @@ export const paymentService = {
     }
 
     return processVerifiedCallback(body);
+  },
+
+  async getUserTransactionHistory(userId: number) {
+    const transactionsResult = await db
+      .select({
+        id: paymentTxn.paymentTxnId,
+        amount: paymentTxn.paymentTxnAmount,
+        status: paymentTxn.paymentTxnStatus,
+        createdAt: paymentTxn.paymentTxnCreatedAt,
+        packageId: paymentTxn.paymentTxnPackageId,
+        postId: paymentTxn.paymentTxnPostId,
+        packageTitle: promotionPackages.promotionPackageTitle,
+        postTitle: posts.postTitle,
+        postShopId: posts.postShopId,
+      })
+      .from(paymentTxn)
+      .leftJoin(promotionPackages, eq(paymentTxn.paymentTxnPackageId, promotionPackages.promotionPackageId))
+      .leftJoin(posts, eq(paymentTxn.paymentTxnPostId, posts.postId))
+      .where(eq(paymentTxn.paymentTxnUserId, userId))
+      .orderBy(sql`${paymentTxn.paymentTxnCreatedAt} DESC`)
+      .limit(50);
+
+    const activePromotionsResult = await db
+      .select({
+        promotionId: postPromotions.postPromotionId,
+        postId: postPromotions.postPromotionPostId,
+        postTitle: posts.postTitle,
+        packageTitle: promotionPackages.promotionPackageTitle,
+        startAt: postPromotions.postPromotionStartAt,
+        endAt: postPromotions.postPromotionEndAt,
+        status: postPromotions.postPromotionStatus,
+      })
+      .from(postPromotions)
+      .innerJoin(posts, eq(postPromotions.postPromotionPostId, posts.postId))
+      .innerJoin(promotionPackages, eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId))
+      .where(
+        and(
+          eq(posts.postAuthorId, userId),
+          or(eq(postPromotions.postPromotionStatus, "active"), eq(postPromotions.postPromotionStatus, "pending"))
+        )
+      )
+      .orderBy(sql`${postPromotions.postPromotionStartAt} DESC`);
+
+    return { 
+      transactions: transactionsResult, 
+      activePromotions: activePromotionsResult 
+    };
   },
 };

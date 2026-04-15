@@ -4,11 +4,13 @@ import { db } from "../config/db.ts";
 import {
     attributes,
     categories,
+    categoryAttributes,
     eventLogs,
     paymentTxn,
     posts,
     promotionPackages,
     reports,
+    shops,
     users,
 } from "../models/schema/index.ts";
 import {
@@ -25,6 +27,14 @@ type DateRange = {
 type DashboardStatCard = {
     title: string;
     value: string;
+    note?: string;
+};
+
+type DashboardAlert = {
+    id: string;
+    level: "critical" | "warning" | "info";
+    title: string;
+    detail: string;
 };
 
 type DashboardSummary = {
@@ -136,6 +146,12 @@ type AnalyticsSummaryResponse = {
     slotCatalog: ReportingSlotCatalogItem[];
 };
 
+type DashboardOverviewResponse = {
+    statCards: DashboardStatCard[];
+    alerts: DashboardAlert[];
+    summary: DashboardSummary;
+};
+
 type RevenueSummaryResponse = {
     summaryCards: RevenueCard[];
     rows: RevenueRow[];
@@ -177,6 +193,23 @@ const isDateInRange = (value: Date | null, range: DateRange) => {
     }
 
     return true;
+};
+
+const differenceInDays = (target: Date, base: Date) =>
+    Math.ceil((target.getTime() - base.getTime()) / (1000 * 60 * 60 * 24));
+
+const isSevereReport = (reasonCode: string | null, reason: string | null) => {
+    const normalizedCode = (reasonCode ?? "").trim().toLowerCase();
+    const normalizedReason = (reason ?? "").trim().toLowerCase();
+
+    return (
+        ["fraud", "scam", "counterfeit", "illegal", "violence", "harassment"].includes(
+            normalizedCode,
+        ) ||
+        ["lừa đảo", "giả mạo", "hàng cấm", "vi phạm nghiêm trọng", "quấy rối"].some(
+            (keyword) => normalizedReason.includes(keyword),
+        )
+    );
 };
 
 const doesRangeOverlap = (startDate: string, endDate: string, range: DateRange) => {
@@ -384,7 +417,7 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
             packageName: item.packageTitle?.trim() || "Chưa xác định gói",
             slot:
                 slotNameById.get(slotByPackageId.get(item.packageId ?? -1) ?? -1) ||
-                "Home Top",
+                "Vị trí chưa xác định",
             amount: Number(item.paymentTxnAmount ?? 0),
             createdAt: item.paymentTxnCreatedAt,
         }));
@@ -517,16 +550,24 @@ export const adminReportingService = {
             placementMap.set(slot, current);
         });
 
-        const activeSlotLabels = slotCatalog
-            .map((item) => item.label)
-            .filter((label) => placementMap.has(label));
-        const activeTrafficSlotLabels = slotCatalog
-            .map((item) => item.label)
-            .filter((label) =>
-                filteredBoostedPosts.some(
-                    (item) => item.slot === label && item.impressions > 0,
-                ),
-            );
+        const activeSlotLabels = Array.from(
+            new Set(
+                slotCatalog
+                    .map((item) => item.label)
+                    .filter((label) => placementMap.has(label)),
+            ),
+        );
+        const activeTrafficSlotLabels = Array.from(
+            new Set(
+                slotCatalog
+                    .map((item) => item.label)
+                    .filter((label) =>
+                        filteredBoostedPosts.some(
+                            (item) => item.slot === label && item.impressions > 0,
+                        ),
+                    ),
+            ),
+        );
 
         const topPlacements: TopPlacement[] = activeSlotLabels.map((slot, index) => {
             const item = placementMap.get(slot) ?? { impressions: 0, clicks: 0, revenue: 0 };
@@ -636,10 +677,26 @@ export const adminReportingService = {
         });
 
         const kpiCards: AnalyticsKpiCard[] = [
-            { title: "Total Views", value: formatNumber(totalViews), change: "Live delivery reach" },
-            { title: "CTR", value: formatPercent(ctr), change: "Across boosted campaigns" },
-            { title: "Conversions", value: formatNumber(conversions), change: "Successful package purchases" },
-            { title: "Revenue", value: formatCurrency(revenue), change: "Paid promotion revenue" },
+            {
+                title: "Tổng lượt hiển thị",
+                value: formatNumber(totalViews),
+                change: "Độ phủ phân phối thực tế",
+            },
+            {
+                title: "CTR",
+                value: formatPercent(ctr),
+                change: "Tỷ lệ nhấp trên các chiến dịch quảng bá",
+            },
+            {
+                title: "Lượt chuyển đổi",
+                value: formatNumber(conversions),
+                change: "Giao dịch mua gói thành công",
+            },
+            {
+                title: "Doanh thu quảng bá",
+                value: formatCurrency(revenue),
+                change: "Doanh thu từ các gói quảng bá đã thanh toán",
+            },
         ];
 
         return { kpiCards, topPlacements, dailyTraffic, slotCatalog };
@@ -689,24 +746,26 @@ export const adminReportingService = {
 
         const summaryCards: RevenueCard[] = [
             {
-                title: "Total Revenue",
+                title: "Tổng doanh thu",
                 value: formatCurrency(totalRevenue),
-                note: `${filteredPayments.length} successful order(s) in period`,
+                note: `${filteredPayments.length} đơn hàng thanh toán thành công trong kỳ`,
             },
             {
-                title: "Active Packages",
+                title: "Gói có phát sinh doanh thu",
                 value: formatNumber(packageNames.size),
-                note: "Packages with paid orders in period",
+                note: "Các gói có đơn thanh toán thành công trong kỳ",
             },
             {
-                title: "Avg. Order Value",
+                title: "Giá trị đơn hàng trung bình",
                 value: formatCurrency(avgOrderValue),
-                note: "Average successful package payment",
+                note: "Giá trị trung bình của một giao dịch thành công",
             },
             {
-                title: "Top Slot Revenue",
+                title: "Vị trí có doanh thu cao nhất",
                 value: topSlot?.[0] ?? "Chưa có dữ liệu",
-                note: topSlot ? formatCurrency(topSlot[1]) : "Chưa có đơn thanh toán thành công trong kỳ",
+                note: topSlot
+                    ? formatCurrency(topSlot[1])
+                    : "Chưa có đơn thanh toán thành công trong kỳ",
             },
         ];
 
@@ -765,10 +824,26 @@ export const adminReportingService = {
         const topSpend = rows.length > 0 ? Number(rows[0].totalSpent.replace(/[^\d]/g, "")) : 0;
 
         const summaryCards: CustomerSpendingCard[] = [
-            { title: "Total Customers", value: formatNumber(totalCustomers), note: "Customers with paid orders in period" },
-            { title: "Total Spending", value: formatCurrency(totalSpent), note: "Successful promotion purchases" },
-            { title: "Avg. Spend / Customer", value: formatCurrency(avgSpend), note: "Average paid spend per customer" },
-            { title: "Top Customer Spend", value: formatCurrency(topSpend), note: "Highest customer spend in period" },
+            {
+                title: "Tổng khách hàng chi tiêu",
+                value: formatNumber(totalCustomers),
+                note: "Khách hàng có giao dịch thanh toán thành công trong kỳ",
+            },
+            {
+                title: "Tổng chi tiêu",
+                value: formatCurrency(totalSpent),
+                note: "Tổng chi tiêu từ các giao dịch mua gói thành công",
+            },
+            {
+                title: "Chi tiêu trung bình / khách",
+                value: formatCurrency(avgSpend),
+                note: "Mức chi tiêu trung bình của mỗi khách hàng phát sinh giao dịch",
+            },
+            {
+                title: "Khách chi tiêu cao nhất",
+                value: formatCurrency(topSpend),
+                note: "Mức chi tiêu cao nhất của một khách hàng trong kỳ",
+            },
         ];
 
         return { summaryCards, rows };

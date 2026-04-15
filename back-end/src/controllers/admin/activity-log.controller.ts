@@ -308,7 +308,11 @@ const resolveActorRole = (rowUserId: number | null, meta: EventLogMeta | null) =
     return meta.actorRole.trim();
   }
 
-  return rowUserId ? "Quản trị viên" : "Hệ thống";
+  if (meta?.performedBy?.trim() || meta?.generatedBy?.trim()) {
+    return "Quản trị viên";
+  }
+
+  return rowUserId ? "Người dùng" : "Hệ thống";
 };
 
 const resolveTarget = (
