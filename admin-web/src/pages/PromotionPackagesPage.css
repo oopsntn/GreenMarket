@@ -86,37 +86,37 @@
 
 .promotion-packages-table {
   width: 100%;
-  border-collapse: collapse;
   min-width: 1020px;
-}
-
-.promotion-packages-table thead {
-  background-color: #f6faf5;
 }
 
 .promotion-packages-table th,
 .promotion-packages-table td {
-  padding: 16px 14px;
-  border-bottom: 1px solid #eef3ea;
-  font-size: 14px;
-  text-align: center;
+  text-align: left;
   vertical-align: middle;
 }
 
-.promotion-packages-table th {
-  color: #486150;
-  font-weight: 700;
+.promotion-packages-table th:nth-child(1),
+.promotion-packages-table td:nth-child(1) {
+  width: 78px;
 }
 
-.promotion-packages-table td {
-  color: #223127;
-  line-height: 1.5;
+.promotion-packages-table th:nth-child(4),
+.promotion-packages-table td:nth-child(4),
+.promotion-packages-table th:nth-child(5),
+.promotion-packages-table td:nth-child(5),
+.promotion-packages-table th:nth-child(6),
+.promotion-packages-table td:nth-child(6),
+.promotion-packages-table th:nth-child(7),
+.promotion-packages-table td:nth-child(7),
+.promotion-packages-table th:nth-child(8),
+.promotion-packages-table td:nth-child(8) {
+  white-space: nowrap;
 }
 
 .promotion-packages-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
 }
 
@@ -187,16 +187,65 @@
   opacity: 0.55;
 }
 
-.promotion-packages-form {
-  display: flex;
-  flex-direction: column;
+.promotion-package-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
 
-.promotion-packages-form__error {
+.promotion-packages-form__error,
+.promotion-packages-form-error {
   color: #c62828;
   font-size: 14px;
   font-weight: 600;
+}
+
+.promotion-package-form > label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.promotion-package-form > label span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.promotion-package-form > label input,
+.promotion-package-form > label select,
+.promotion-package-form > label textarea {
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+  font-family: inherit;
+}
+
+.promotion-package-form > label input,
+.promotion-package-form > label select {
+  height: 46px;
+}
+
+.promotion-package-form > label textarea {
+  min-height: 124px;
+  resize: vertical;
+}
+
+.promotion-package-form > label input:focus,
+.promotion-package-form > label select:focus,
+.promotion-package-form > label textarea:focus {
+  border-color: #7eb58a;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.14);
+}
+
+.promotion-package-form-description,
+.promotion-packages-form-error,
+.promotion-packages-form-actions {
+  grid-column: 1 / -1;
 }
 
 .promotion-packages-modal__content {
@@ -360,6 +409,10 @@
 
 @media (max-width: 1024px) {
   .promotion-packages-modal__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .promotion-package-form {
     grid-template-columns: 1fr;
   }
 
