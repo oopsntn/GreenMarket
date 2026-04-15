@@ -63,7 +63,7 @@ const MyPostLayout = () => {
         )
     }
     return (
-        <MobileLayout title='Manage My Posts' backButton={() => navigation.goBack()}
+        <MobileLayout title='Manage My Posts' backButton={() => navigation.goBack()} scrollEnabled={false}
             rightAction={
                 <TouchableOpacity testID="my-post-create-button" onPress={() => navigation.navigate('CreatePost')}>
                     <Plus color='#10b981' size={24} />

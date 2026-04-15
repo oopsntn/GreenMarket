@@ -66,7 +66,6 @@ const ShoDetailScreen = () => {
                     keyExtractor={(item) => item.postId.toString()}
                     onRefresh={actions.refresh}
                     refreshing={loading}
-                    nestedScrollEnabled={true}
                     ListHeaderComponent={
                         <View>
                             <ShopHeader shop={shop} isOwner={true} />

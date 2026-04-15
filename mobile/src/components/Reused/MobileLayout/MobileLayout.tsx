@@ -36,7 +36,8 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     leftAction,
     rightAction,
     headerStyle = 'default',
-    containerStyle
+    containerStyle,
+    scrollEnabled = false
 }) => {
 
     const navigation = useNavigation<any>();

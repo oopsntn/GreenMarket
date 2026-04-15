@@ -30,7 +30,7 @@ const SavedPostsScreen = () => {
     }, [navigation])
 
     return (
-        <MobileLayout title="Saved Posts" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Saved Posts" backButton={() => navigation.goBack()} scrollEnabled={false}>
             {loading ? (
                 <ActivityIndicator style={{ marginTop: 50 }} color="#10b981" />
             ) : (
