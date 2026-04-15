@@ -1,30 +1,42 @@
 import { api } from '../../config/api';
 
+export type ModerationPriority = 'low' | 'medium' | 'high' | 'critical';
+export type QueueType = 'post' | 'shop' | 'report';
+
+type ModerationQueueRow = {
+    queueId: string;
+    type: QueueType;
+    targetId: number;
+    status: string;
+    priority: ModerationPriority;
+    title: string;
+    subtitle: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+};
+
 export interface PostModerationData {
+    queueId: string;
     postId: number;
     postTitle: string;
-    postShopId?: number | null;
-    postPrice: number | string;
     postStatus: string;
-    postCreatedAt?: string;
-    postUpdatedAt?: string;
-    postRejectedReason?: string | null;
-    postLocation?: string | null;
-    images?: { imageUrl: string }[];
-    attributes?: any[];
-    [key: string]: any;
+    priority: ModerationPriority;
+    postCreatedAt?: string | null;
+    postUpdatedAt?: string | null;
+    authorName?: string | null;
+    summary?: string | null;
 }
 
 export interface ShopModerationData {
+    queueId: string;
     id: number;
     name: string;
-    ownerName: string;
-    ownerEmail: string;
-    totalPosts: number;
+    ownerName: string | null;
     status: string;
-    createdAt: string;
-    description: string;
-    [key: string]: any;
+    priority: ModerationPriority;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+    subtitle?: string | null;
 }
 
 export interface ReportModerationData {
@@ -33,14 +45,16 @@ export interface ReportModerationData {
     reporterDisplayName?: string | null;
     postId?: number | null;
     reportShopId?: number | null;
-    postTitle?: string;
-    shopName?: string;
+    postTitle?: string | null;
+    shopName?: string | null;
     reportReason?: string | null;
+    reportReasonCode?: string | null;
     reportNote?: string | null;
     reportStatus: string;
-    reportCreatedAt?: string;
+    reportCreatedAt?: string | null;
+    reportUpdatedAt?: string | null;
     adminNote?: string | null;
-    [key: string]: any;
+    severity?: ModerationPriority;
 }
 
 type DashboardOverview = {
@@ -48,124 +62,195 @@ type DashboardOverview = {
     summary?: { title: string; description: string };
 }
 
-const normalizePost = (post: any): PostModerationData => ({
-    ...post,
-    postStatus: String(post?.postStatus || '').toLowerCase(),
-})
+const normalizeStatus = (value: unknown) => String(value || '').toLowerCase();
 
-const normalizeShop = (shop: any): ShopModerationData => ({
-    ...shop,
-    status: String(shop?.status || ''),
-})
+const parseSubtitleValue = (subtitle: string | null | undefined, prefix: string) => {
+    if (!subtitle) return null;
+    if (subtitle.startsWith(prefix)) {
+        return subtitle.slice(prefix.length).trim();
+    }
+    return subtitle;
+};
+
+const normalizePost = (item: ModerationQueueRow): PostModerationData => ({
+    queueId: item.queueId,
+    postId: item.targetId,
+    postTitle: item.title,
+    postStatus: normalizeStatus(item.status),
+    priority: item.priority,
+    postCreatedAt: item.createdAt,
+    postUpdatedAt: item.updatedAt,
+    authorName: parseSubtitleValue(item.subtitle, 'Author:'),
+    summary: item.subtitle,
+});
+
+const normalizeShop = (item: ModerationQueueRow): ShopModerationData => ({
+    queueId: item.queueId,
+    id: item.targetId,
+    name: item.title,
+    ownerName: parseSubtitleValue(item.subtitle, 'Owner:'),
+    status: normalizeStatus(item.status),
+    priority: item.priority,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    subtitle: item.subtitle,
+});
 
 const normalizeReport = (report: any): ReportModerationData => ({
-    ...report,
-    reportStatus: String(report?.reportStatus || '').toLowerCase(),
-})
+    reportId: report.reportId,
+    reporterId: report.reporterId ?? null,
+    reporterDisplayName: report.reporterName ?? null,
+    postId: report.postId ?? null,
+    reportShopId: report.reportShopId ?? null,
+    postTitle: report.postTitle ?? null,
+    shopName: report.shopName ?? null,
+    reportReason: report.reportReason ?? null,
+    reportReasonCode: report.reportReasonCode ?? null,
+    reportNote: report.reportNote ?? null,
+    reportStatus: normalizeStatus(report.reportStatus),
+    reportCreatedAt: report.reportCreatedAt ?? null,
+    reportUpdatedAt: report.reportUpdatedAt ?? null,
+    adminNote: report.adminNote ?? null,
+    severity: report.severity ?? 'medium',
+});
 
-const ManagerService = {
-    // Posts Moderation
+const fetchAllQueueItems = async (type: QueueType) => {
+    let page = 1;
+    let totalPages = 1;
+    const rows: ModerationQueueRow[] = [];
+
+    while (page <= totalPages) {
+        const response = await api.get('/manager/moderation/queue', {
+            params: { type, page, limit: 100 },
+        });
+
+        const data = Array.isArray(response.data?.data) ? response.data.data : [];
+        rows.push(...data);
+
+        totalPages = Number(response.data?.meta?.totalPages || 1);
+        page += 1;
+    }
+
+    return rows;
+};
+
+const fetchAllReports = async () => {
+    let page = 1;
+    let totalPages = 1;
+    const rows: any[] = [];
+
+    while (page <= totalPages) {
+        const response = await api.get('/manager/reports', {
+            params: { page, limit: 100 },
+        });
+
+        const data = Array.isArray(response.data?.data) ? response.data.data : [];
+        rows.push(...data);
+
+        totalPages = Number(response.data?.meta?.totalPages || 1);
+        page += 1;
+    }
+
+    return rows;
+};
+
+const managerService = {
     getPosts: async (): Promise<PostModerationData[]> => {
-        // Use manager queue filtered by post
-        const response = await api.get('/manager/moderation/queue', { params: { type: 'post' } });
-        const items = response.data?.data || [];
-        return items.map((item: any) => normalizePost({
-            postId: item.targetId,
-            postTitle: item.title,
-            postStatus: item.status,
-            postCreatedAt: item.createdAt,
-            postUpdatedAt: item.updatedAt,
-            authorName: item.subtitle,
-        }));
+        const rows = await fetchAllQueueItems('post');
+        return rows.map(normalizePost);
     },
+
     getPostById: async (id: number | string): Promise<PostModerationData> => {
-        // Fallback to admin if manager detail not available
-        const response = await api.get(`/admin/posts/${id}`);
-        return normalizePost(response.data);
+        const rows = await fetchAllQueueItems('post');
+        const item = rows.find((row) => Number(row.targetId) === Number(id));
+        if (!item) {
+            throw new Error('Post not found');
+        }
+        return normalizePost(item);
     },
-    updatePostStatus: async (id: number | string, status: string, reason?: string) => {
-        const response = await api.patch(`/manager/posts/${id}/status`, { status, reason });
-        return response.data;
-    },
-    deletePost: async (id: number | string, adminId: number | string, reason?: string) => {
-        const response = await api.delete(`/admin/posts/${id}`, { data: { adminId, reason } });
+
+    updatePostStatus: async (id: number | string, status: 'approved' | 'rejected' | 'hidden', reason?: string, note?: string) => {
+        const response = await api.patch(`/manager/posts/${id}/status`, { status, reason, note });
         return response.data;
     },
 
-    // Shops Moderation
+    deletePost: async (id: number | string, reason?: string) => {
+        return managerService.updatePostStatus(id, 'hidden', reason);
+    },
+
     getShops: async (): Promise<ShopModerationData[]> => {
-        const response = await api.get('/manager/moderation/queue', { params: { type: 'shop' } });
-        const items = response.data?.data || [];
-        return items.map((item: any) => normalizeShop({
-            id: item.targetId,
-            name: item.title,
-            status: item.status,
-            createdAt: item.createdAt,
-            ownerName: item.subtitle,
-        }));
+        const rows = await fetchAllQueueItems('shop');
+        return rows.map(normalizeShop);
     },
+
     getShopById: async (id: number | string): Promise<ShopModerationData> => {
-        // Fallback to admin if manager detail not available
-        const response = await api.get(`/admin/shops/${id}`);
-        return normalizeShop(response.data);
+        const rows = await fetchAllQueueItems('shop');
+        const item = rows.find((row) => Number(row.targetId) === Number(id));
+        if (!item) {
+            throw new Error('Shop not found');
+        }
+        return normalizeShop(item);
     },
-    updateShopStatus: async (id: number | string, status: string) => {
-        const response = await api.patch(`/manager/shops/${id}/status`, { status });
-        return response.data;
-    },
-    verifyShop: async (id: number | string) => {
-        const response = await api.patch(`/admin/shops/${id}/verify`);
+
+    updateShopStatus: async (id: number | string, status: 'active' | 'blocked', reason?: string, note?: string) => {
+        const response = await api.patch(`/manager/shops/${id}/status`, { status, reason, note });
         return response.data;
     },
 
-    // Dashboard
+    verifyShop: async (id: number | string) => {
+        return managerService.updateShopStatus(id, 'active');
+    },
+
     getDashboardOverview: async (fromDate?: string, toDate?: string): Promise<DashboardOverview> => {
         const response = await api.get('/manager/statistics', { params: { from: fromDate, to: toDate } });
         const kpi = response.data?.kpi || {};
         return {
             statCards: [
                 { title: 'Pending Posts', value: String(kpi.pendingPosts || 0) },
+                { title: 'Pending Shops', value: String(kpi.pendingShops || 0) },
                 { title: 'Pending Reports', value: String(kpi.pendingReports || 0) },
                 { title: 'Total Actions', value: String(kpi.totalActions || 0) },
             ],
             summary: {
-                title: 'Moderation Health',
-                description: `There are ${kpi.openQueueItems || 0} items waiting in the queue.`,
+                title: 'Moderation Overview',
+                description: `There are ${kpi.openQueueItems || 0} items currently waiting in the moderation queue.`,
             }
         };
     },
 
-    // Reports Moderation
     getReports: async (): Promise<ReportModerationData[]> => {
-        const response = await api.get('/manager/reports');
-        const rows = response.data?.data || [];
+        const rows = await fetchAllReports();
         return rows.map(normalizeReport);
     },
+
     getReportById: async (id: number | string): Promise<ReportModerationData> => {
-        const response = await api.get(`/admin/reports/${id}`);
-        return normalizeReport(response.data);
+        const rows = await fetchAllReports();
+        const item = rows.find((row) => Number(row.reportId) === Number(id));
+        if (!item) {
+            throw new Error('Report not found');
+        }
+        return normalizeReport(item);
     },
-    resolveReport: async (id: number | string, status: string, resolution: string, note?: string) => {
+
+    resolveReport: async (id: number | string, status: 'resolved' | 'dismissed', resolution: string, note?: string) => {
         const response = await api.patch(`/manager/reports/${id}/resolve`, { status, resolution, note });
         return response.data;
     },
 
-    // Moderation Feedback & Communication
     moderationFeedback: async (data: { targetType: string; targetId: number; recipientUserId: number; message: string; templateId?: number }) => {
         const response = await api.post('/manager/moderation-feedback', data);
         return response.data;
     },
 
-    // History and Escalation
     getHistory: async (params?: { from?: string; to?: string; actionType?: string; page?: number; limit?: number }) => {
         const response = await api.get('/manager/history', { params });
         return response.data;
     },
-    
+
     escalate: async (data: { targetType: string; targetId: number | string; severity: string; reason: string; evidenceUrls?: string[] }) => {
         const response = await api.post('/manager/escalations', data);
         return response.data;
     },
 };
 
-export default ManagerService;
+export default managerService;

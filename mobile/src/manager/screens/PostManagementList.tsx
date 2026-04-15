@@ -1,26 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   FlatList,
   TouchableOpacity,
-  Image,
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import {
-  Check,
-  X,
-  Clock,
-  ChevronRight,
-  Filter,
-  Search,
-  CheckCircle2
-} from 'lucide-react-native';
+import { Check, X, Clock, ChevronRight, CheckCircle2 } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
-import ManagerService, { PostModerationData } from '../services/ManagerService';
+import managerService, { PostModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
 
 const PostManagementList = ({ navigation }: any) => {
@@ -36,30 +27,28 @@ const PostManagementList = ({ navigation }: any) => {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const data = await ManagerService.getPosts();
-      // Filter only pending posts for this view if needed, 
-      // or show all. The API seems to return all.
-      setPosts(data.filter(p => p.postStatus === 'pending' || p.postStatus === 'Pending'));
+      const data = await managerService.getPosts();
+      setPosts(data.filter((p) => p.postStatus === 'pending'));
     } catch (error) {
       console.error(error);
-      CustomAlert('Lỗi', 'Không thể tải danh sách tin');
+      CustomAlert('Error', 'Unable to load posts awaiting moderation.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = (id: number) => {
-    CustomAlert('Xác nhận duyệt', 'Bạn có chắc chắn muốn duyệt tin này không?', [
-      { text: 'Hủy', style: 'cancel' },
+    CustomAlert('Approve post', 'Do you want to approve this post?', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Duyệt',
+        text: 'Approve',
         onPress: async () => {
           try {
-            await ManagerService.updatePostStatus(id, 'approved');
-            setPosts(posts.filter(p => p.postId !== id));
-            CustomAlert('Thành công', 'Đã duyệt tin');
+            await managerService.updatePostStatus(id, 'approved');
+            setPosts((current) => current.filter((p) => p.postId !== id));
+            CustomAlert('Success', 'The post has been approved.');
           } catch (error) {
-            CustomAlert('Lỗi', 'Không thể duyệt tin');
+            CustomAlert('Error', 'Unable to approve this post.');
           }
         }
       },
@@ -72,14 +61,14 @@ const PostManagementList = ({ navigation }: any) => {
   };
 
   const onSubmitReject = async (reason: string) => {
-    if (selectedPost) {
-      try {
-        await ManagerService.updatePostStatus(selectedPost.postId, 'rejected', reason);
-        setPosts(posts.filter(p => p.postId !== selectedPost.postId));
-        CustomAlert('Thành công', `Đã từ chối tin "${selectedPost.postTitle}".`);
-      } catch (error) {
-        CustomAlert('Lỗi', 'Không thể từ chối tin');
-      }
+    if (!selectedPost) return;
+
+    try {
+      await managerService.updatePostStatus(selectedPost.postId, 'rejected', reason);
+      setPosts((current) => current.filter((p) => p.postId !== selectedPost.postId));
+      CustomAlert('Success', `The post "${selectedPost.postTitle}" has been rejected.`);
+    } catch (error) {
+      CustomAlert('Error', 'Unable to reject this post.');
     }
   };
 
@@ -90,40 +79,30 @@ const PostManagementList = ({ navigation }: any) => {
       activeOpacity={0.7}
     >
       <View style={styles.cardTop}>
-        <Image
-          source={{ uri: item.images?.[0]?.imageUrl || 'https://via.placeholder.com/150' }}
-          style={styles.postImage}
-        />
         <View style={styles.postInfo}>
           <View style={styles.badgeContainer}>
             <View style={styles.pendingBadge}>
               <Clock size={12} color="#D97706" />
-              <Text style={styles.pendingText}>Chờ duyệt</Text>
+              <Text style={styles.pendingText}>Pending</Text>
             </View>
-            <Text style={styles.timeText}>{new Date(item.postCreatedAt || '').toLocaleDateString()}</Text>
+            <Text style={styles.timeText}>{item.postCreatedAt ? new Date(item.postCreatedAt).toLocaleDateString() : 'No date'}</Text>
           </View>
           <Text style={styles.postTitle} numberOfLines={2}>{item.postTitle}</Text>
-          <Text style={styles.shopName}>Cửa hàng ID: {item.postShopId}</Text>
-          <Text style={styles.price}>{item.postPrice.toLocaleString('en-US')} VND</Text>
+          <Text style={styles.metaText}>{item.authorName || item.summary || 'No author information'}</Text>
+          <Text style={styles.priorityText}>Priority: {item.priority}</Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
       </View>
 
       <View style={styles.cardActions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.rejectBtn]}
-          onPress={() => handleReject(item)}
-        >
+        <TouchableOpacity style={[styles.actionButton, styles.rejectBtn]} onPress={() => handleReject(item)}>
           <X size={18} color="#EF4444" />
-          <Text style={[styles.actionText, styles.rejectText]}>Từ chối</Text>
+          <Text style={[styles.actionText, styles.rejectText]}>Reject</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.approveBtn]}
-          onPress={() => handleApprove(item.postId)}
-        >
+        <TouchableOpacity style={[styles.actionButton, styles.approveBtn]} onPress={() => handleApprove(item.postId)}>
           <Check size={18} color="#22C55E" />
-          <Text style={[styles.actionText, styles.approveText]}>Duyệt</Text>
+          <Text style={[styles.actionText, styles.approveText]}>Approve</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -133,9 +112,9 @@ const PostManagementList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>Quản lý tin đăng</Text>
+        <Text style={styles.title}>Post Moderation</Text>
         <TouchableOpacity onPress={fetchPosts} style={styles.iconCircle}>
-          <Search size={22} color="#64748B" />
+          <Clock size={22} color="#64748B" />
         </TouchableOpacity>
       </View>
 
@@ -147,7 +126,7 @@ const PostManagementList = ({ navigation }: any) => {
         <FlatList
           data={posts}
           renderItem={renderItem}
-          keyExtractor={item => item.postId.toString()}
+          keyExtractor={(item) => item.postId.toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           onRefresh={fetchPosts}
@@ -155,7 +134,7 @@ const PostManagementList = ({ navigation }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#CBD5E1" strokeWidth={1} />
-              <Text style={styles.emptyText}>Tuyệt vời! Không còn tin nào đang chờ duyệt.</Text>
+              <Text style={styles.emptyText}>Nice work. There are no posts waiting for review.</Text>
             </View>
           }
         />
@@ -165,24 +144,17 @@ const PostManagementList = ({ navigation }: any) => {
         visible={rejectModalVisible}
         onClose={() => setRejectModalVisible(false)}
         onSubmit={onSubmitReject}
-        title="Lý do từ chối"
-        placeholder="Giải thích lý do từ chối (Vd: Hình ảnh mờ, Hàng cấm...)"
-        confirmLabel="Từ chối tin đăng"
+        title="Reason for rejection"
+        placeholder="Explain why this post is being rejected..."
+        confirmLabel="Reject post"
       />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -193,11 +165,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0F172A',
-  },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
   iconCircle: {
     width: 40,
     height: 40,
@@ -206,10 +174,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listContent: {
-    padding: 16,
-    paddingBottom: 30,
-  },
+  listContent: { padding: 16, paddingBottom: 30 },
   postCard: {
     backgroundColor: 'white',
     borderRadius: 20,
@@ -221,21 +186,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  postImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    marginRight: 16,
-    backgroundColor: '#F1F5F9',
-  },
-  postInfo: {
-    flex: 1,
-  },
+  cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  postInfo: { flex: 1 },
   badgeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -251,31 +203,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     gap: 4,
   },
-  pendingText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#D97706',
-  },
-  timeText: {
-    fontSize: 11,
-    color: '#94A3B8',
-  },
-  postTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  shopName: {
-    fontSize: 13,
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  price: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#10B981',
-  },
+  pendingText: { fontSize: 11, fontWeight: '700', color: '#D97706' },
+  timeText: { fontSize: 11, color: '#94A3B8' },
+  postTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B', marginBottom: 6 },
+  metaText: { fontSize: 13, color: '#64748B', marginBottom: 4 },
+  priorityText: { fontSize: 12, color: '#475569', textTransform: 'capitalize' },
   cardActions: {
     flexDirection: 'row',
     borderTopWidth: 1,
@@ -292,34 +224,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  rejectBtn: {
-    backgroundColor: '#FEF2F2',
-  },
-  approveBtn: {
-    backgroundColor: '#F0FDF4',
-  },
-  actionText: {
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  rejectText: {
-    color: '#EF4444',
-  },
-  approveText: {
-    color: '#22C55E',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-  },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#94A3B8',
-    textAlign: 'center',
-    width: '80%',
-  },
+  rejectBtn: { backgroundColor: '#FEF2F2' },
+  approveBtn: { backgroundColor: '#F0FDF4' },
+  actionText: { fontWeight: 'bold', fontSize: 14 },
+  rejectText: { color: '#EF4444' },
+  approveText: { color: '#22C55E' },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
+  emptyText: { marginTop: 16, fontSize: 16, color: '#94A3B8', textAlign: 'center', width: '80%' },
 });
 
 export default PostManagementList;

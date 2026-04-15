@@ -4,17 +4,17 @@ import { LogOut, User } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import MobileLayout from '../../components/Reused/MobileLayout/MobileLayout';
 
-const ManagerSettingsScreen = ({ navigation }: any) => {
+const ManagerSettingsScreen = () => {
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
     Alert.alert(
-      'Đăng xuất',
-      'Bạn có chắc chắn muốn đăng xuất không?',
+      'Sign out',
+      'Are you sure you want to sign out?',
       [
-        { text: 'Hủy', onPress: () => { } },
+        { text: 'Cancel', onPress: () => {} },
         {
-          text: 'Đăng xuất',
+          text: 'Sign out',
           onPress: async () => {
             await logout();
           },
@@ -25,47 +25,37 @@ const ManagerSettingsScreen = ({ navigation }: any) => {
   };
 
   return (
-    <MobileLayout
-      title="Cài đặt"
-      headerStyle="default"
-    >
+    <MobileLayout title="Settings" headerStyle="default">
       <ScrollView style={styles.container}>
-        {/* User Info */}
         <View style={styles.section}>
           <View style={styles.userInfo}>
             <View style={styles.avatar}>
               <User size={32} color="#fff" />
             </View>
             <View style={styles.userDetails}>
-              <Text style={styles.userName}>{user?.userDisplayName || 'Quản trị viên'}</Text>
+              <Text style={styles.userName}>{user?.userDisplayName || 'Manager'}</Text>
               <Text style={styles.userPhone}>{user?.userMobile}</Text>
             </View>
           </View>
         </View>
 
-        {/* Settings Options */}
         <View style={styles.section}>
           <View style={styles.sectionTitle}>
-            <Text style={styles.sectionTitleText}>Tài khoản</Text>
+            <Text style={styles.sectionTitleText}>Account</Text>
           </View>
 
-          {/* Logout Button */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleLogout}
-          >
+          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
             <LogOut size={20} color="#ff4d4f" />
-            <Text style={styles.menuItemText}>Đăng xuất</Text>
+            <Text style={styles.menuItemText}>Sign out</Text>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemSubtext}>Dữ liệu của bạn được an toàn</Text>
+              <Text style={styles.menuItemSubtext}>Your data stays safe</Text>
             </View>
           </TouchableOpacity>
         </View>
 
-        {/* App info */}
         <View style={[styles.section, styles.footer]}>
           <Text style={styles.appVersion}>GreenMarket Manager v1.0.0</Text>
-          <Text style={styles.copyright}>© 2024 GreenMarket. All rights reserved.</Text>
+          <Text style={styles.copyright}>� 2024 GreenMarket. All rights reserved.</Text>
         </View>
       </ScrollView>
     </MobileLayout>

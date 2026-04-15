@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,15 +9,8 @@ import {
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import { 
-  Store, 
-  CheckCircle2, 
-  Clock, 
-  ChevronRight,
-  ShieldCheck,
-  Search
-} from 'lucide-react-native';
-import ManagerService, { ShopModerationData } from '../services/ManagerService';
+import { Store, CheckCircle2, Clock, ChevronRight, ShieldCheck } from 'lucide-react-native';
+import managerService, { ShopModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
 
 const ShopManagementList = ({ navigation }: any) => {
@@ -31,29 +24,28 @@ const ShopManagementList = ({ navigation }: any) => {
   const fetchShops = async () => {
     try {
       setLoading(true);
-      const data = await ManagerService.getShops();
-      // Show only pending
-      setShops(data.filter(s => s.status.toLowerCase() === 'pending'));
+      const data = await managerService.getShops();
+      setShops(data.filter((s) => s.status === 'pending'));
     } catch (error) {
       console.error(error);
-      CustomAlert('Lỗi', 'Không thể tải danh sách cửa hàng');
+      CustomAlert('Error', 'Unable to load shops awaiting moderation.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerify = (id: number) => {
-    CustomAlert('Xác minh cửa hàng', 'Xác nhận cửa hàng này đủ điều kiện hoạt động?', [
-      { text: 'Hủy', style: 'cancel' },
-      { 
-        text: 'Xác minh', 
+    CustomAlert('Approve shop', 'Approve this shop and activate it?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Approve',
         onPress: async () => {
           try {
-            await ManagerService.verifyShop(id);
-            setShops(shops.filter(s => s.id !== id));
-            CustomAlert('Thành công', 'Cửa hàng đã được kích hoạt');
+            await managerService.verifyShop(id);
+            setShops((current) => current.filter((s) => s.id !== id));
+            CustomAlert('Success', 'The shop has been activated.');
           } catch (error) {
-            CustomAlert('Lỗi', 'Không thể xác minh cửa hàng');
+            CustomAlert('Error', 'Unable to activate this shop.');
           }
         }
       },
@@ -61,7 +53,7 @@ const ShopManagementList = ({ navigation }: any) => {
   };
 
   const renderItem = ({ item }: { item: ShopModerationData }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.card}
       onPress={() => navigation.navigate('ShopManagementDetail', { shopId: item.id })}
       activeOpacity={0.7}
@@ -72,14 +64,14 @@ const ShopManagementList = ({ navigation }: any) => {
         </View>
         <View style={styles.shopInfo}>
           <Text style={styles.shopName}>{item.name}</Text>
-          <Text style={styles.ownerName}>Chủ sở hữu: {item.ownerName}</Text>
+          <Text style={styles.ownerName}>Owner: {item.ownerName || 'Unknown'}</Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
       </View>
 
       <View style={styles.addressRow}>
-        <Text style={styles.addressText} numberOfLines={1}>{item.ownerEmail}</Text>
-        <Text style={styles.timeText}>{item.createdAt}</Text>
+        <Text style={styles.addressText} numberOfLines={1}>Priority: {item.priority}</Text>
+        <Text style={styles.timeText}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'No date'}</Text>
       </View>
 
       <View style={styles.divider} />
@@ -89,13 +81,10 @@ const ShopManagementList = ({ navigation }: any) => {
           <Clock size={14} color="#D97706" />
           <Text style={styles.pendingText}>{item.status}</Text>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.verifyBtn}
-          onPress={() => handleVerify(item.id)}
-        >
+
+        <TouchableOpacity style={styles.verifyBtn} onPress={() => handleVerify(item.id)}>
           <ShieldCheck size={18} color="white" />
-          <Text style={styles.verifyBtnText}>Duyệt & Kích hoạt</Text>
+          <Text style={styles.verifyBtnText}>Approve & Activate</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -105,9 +94,9 @@ const ShopManagementList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>Quản lý cửa hàng</Text>
+        <Text style={styles.title}>Shop Moderation</Text>
         <TouchableOpacity onPress={fetchShops} style={styles.iconCircle}>
-          <Search size={22} color="#64748B" />
+          <Clock size={22} color="#64748B" />
         </TouchableOpacity>
       </View>
 
@@ -119,7 +108,7 @@ const ShopManagementList = ({ navigation }: any) => {
         <FlatList
           data={shops}
           renderItem={renderItem}
-          keyExtractor={item => item.id.toString()}
+          keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           onRefresh={fetchShops}
@@ -127,7 +116,7 @@ const ShopManagementList = ({ navigation }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#CBD5E1" strokeWidth={1} />
-              <Text style={styles.emptyText}>Tất cả cửa hàng đã được duyệt!</Text>
+              <Text style={styles.emptyText}>All shops have already been processed.</Text>
             </View>
           }
         />
@@ -137,15 +126,8 @@ const ShopManagementList = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -156,11 +138,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0F172A',
-  },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
   iconCircle: {
     width: 40,
     height: 40,
@@ -169,10 +147,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  listContent: {
-    padding: 16,
-    paddingBottom: 30,
-  },
+  listContent: { padding: 16, paddingBottom: 30 },
   card: {
     backgroundColor: 'white',
     borderRadius: 20,
@@ -184,11 +159,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   shopIconContainer: {
     width: 48,
     height: 48,
@@ -198,44 +169,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  shopInfo: {
-    flex: 1,
-  },
-  shopName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  ownerName: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  addressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  addressText: {
-    fontSize: 13,
-    color: '#94A3B8',
-    flex: 1,
-    marginRight: 20,
-  },
-  timeText: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginBottom: 12,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
+  shopInfo: { flex: 1 },
+  shopName: { fontSize: 16, fontWeight: 'bold', color: '#1E293B', marginBottom: 2 },
+  ownerName: { fontSize: 13, color: '#64748B' },
+  addressRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  addressText: { fontSize: 13, color: '#94A3B8', flex: 1, marginRight: 20 },
+  timeText: { fontSize: 12, color: '#94A3B8' },
+  divider: { height: 1, backgroundColor: '#F1F5F9', marginBottom: 12 },
+  cardActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   pendingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -245,11 +186,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 6,
   },
-  pendingText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#D97706',
-  },
+  pendingText: { fontSize: 12, fontWeight: '700', color: '#D97706', textTransform: 'capitalize' },
   verifyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -259,22 +196,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 6,
   },
-  verifyBtnText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-  },
-  emptyText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#94A3B8',
-    textAlign: 'center',
-  },
+  verifyBtnText: { color: 'white', fontWeight: 'bold', fontSize: 13 },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
+  emptyText: { marginTop: 16, fontSize: 16, color: '#94A3B8', textAlign: 'center' },
 });
 
 export default ShopManagementList;

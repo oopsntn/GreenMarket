@@ -1,37 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
-  Image,
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { 
-  ArrowLeft, 
-  Check, 
-  X, 
-  Trash2, 
-  MapPin, 
-  User, 
-  Calendar,
-  AlertCircle
-} from 'lucide-react-native';
+import { ArrowLeft, Check, X, EyeOff, Calendar, User, AlertCircle, Clock3 } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
-import ManagerService, { PostModerationData } from '../services/ManagerService';
+import managerService, { PostModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
-
-const { width } = Dimensions.get('window');
 
 const PostManagementDetail = ({ route, navigation }: any) => {
   const { postId } = route.params;
   const [post, setPost] = useState<PostModerationData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [modalType, setModalType] = useState<'reject' | 'delete' | null>(null);
+  const [modalType, setModalType] = useState<'reject' | 'hide' | null>(null);
 
   useEffect(() => {
     fetchPost();
@@ -40,11 +27,11 @@ const PostManagementDetail = ({ route, navigation }: any) => {
   const fetchPost = async () => {
     try {
       setLoading(true);
-      const data = await ManagerService.getPostById(postId);
+      const data = await managerService.getPostById(postId);
       setPost(data);
     } catch (error) {
       console.error(error);
-      CustomAlert('Lỗi', 'Không thể tải chi tiết tin');
+      CustomAlert('Error', 'Unable to load post details.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -52,17 +39,17 @@ const PostManagementDetail = ({ route, navigation }: any) => {
   };
 
   const handleApprove = () => {
-    CustomAlert('Xác nhận duyệt', 'Bạn có chắc chắn muốn duyệt tin này không?', [
-      { text: 'Hủy', style: 'cancel' },
-      { 
-        text: 'Duyệt', 
+    CustomAlert('Approve post', 'Do you want to approve this post?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Approve',
         onPress: async () => {
           try {
-            await ManagerService.updatePostStatus(postId, 'approved');
-            CustomAlert('Thành công', 'Đã duyệt tin');
+            await managerService.updatePostStatus(postId, 'approved');
+            CustomAlert('Success', 'The post has been approved.');
             navigation.goBack();
           } catch (error) {
-            CustomAlert('Lỗi', 'Không thể duyệt tin');
+            CustomAlert('Error', 'Unable to approve this post.');
           }
         }
       },
@@ -72,25 +59,15 @@ const PostManagementDetail = ({ route, navigation }: any) => {
   const onSubmitModal = async (reason: string) => {
     try {
       if (modalType === 'reject') {
-        await ManagerService.updatePostStatus(postId, 'rejected', reason);
-        if (post) {
-          await ManagerService.moderationFeedback({
-            targetType: 'post',
-            targetId: postId,
-            recipientUserId: post.postUserId || post.postShopId || 0,
-            message: `Tin đăng "${post.postTitle}" của bạn đã bị từ chối. Lý do: ${reason}`
-          }).catch(() => console.log('Failed to send feedback, but post was rejected.'));
-        }
-        CustomAlert('Đã từ chối', `Lý do: ${reason}`);
-      } else if (modalType === 'delete') {
-        // Need current user ID for adminId
-        // For now using placeholder 'moderator-1'
-        await ManagerService.deletePost(postId, 'manager-1', reason);
-        CustomAlert('Đã xóa', `Lý do: ${reason}`);
+        await managerService.updatePostStatus(postId, 'rejected', reason);
+        CustomAlert('Rejected', `Reason saved: ${reason}`);
+      } else if (modalType === 'hide') {
+        await managerService.deletePost(postId, reason);
+        CustomAlert('Hidden', `The post has been hidden. Reason: ${reason}`);
       }
       navigation.goBack();
     } catch (error) {
-      CustomAlert('Lỗi', 'Thao tác thất bại');
+      CustomAlert('Error', 'The action could not be completed.');
     }
   };
 
@@ -107,118 +84,83 @@ const PostManagementDetail = ({ route, navigation }: any) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <ArrowLeft color="#1E293B" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chi tiết tin đăng</Text>
+        <Text style={styles.headerTitle}>Post Details</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <ScrollView 
-          horizontal 
-          pagingEnabled 
-          showsHorizontalScrollIndicator={false}
-          style={styles.imageSlider}
-        >
-          {post.images && post.images.length > 0 ? (
-            post.images.map((img, index) => (
-              <Image 
-                key={index} 
-                source={{ uri: img.imageUrl }} 
-                style={styles.postImage} 
-                resizeMode="cover"
-              />
-            ))
-          ) : (
-            <Image 
-              source={{ uri: 'https://via.placeholder.com/600' }} 
-              style={styles.postImage} 
-              resizeMode="cover"
-            />
-          )}
-        </ScrollView>
-
-        <View style={styles.contentContainer}>
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>{post.postPrice.toLocaleString('en-US')} VND <Text style={styles.unit}>/ {post.postUnit || 'sản phẩm'}</Text></Text>
-            <View style={styles.stockBadge}>
-              <Text style={styles.stockText}>Số lượng: {post.postQuantity || 0}</Text>
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        <View style={styles.heroCard}>
+          <View style={styles.statusRow}>
+            <View style={styles.statusBadge}>
+              <Clock3 size={14} color="#D97706" />
+              <Text style={styles.statusText}>{post.postStatus || 'unknown'}</Text>
             </View>
+            <Text style={styles.priorityText}>Priority: {post.priority}</Text>
           </View>
-
           <Text style={styles.title}>{post.postTitle}</Text>
-          
-          <View style={styles.infoRow}>
-            <View style={styles.infoItem}>
-              <MapPin size={16} color="#64748B" />
-              <Text style={styles.infoLabel}>{post.postLocation || 'Không rõ địa chỉ'}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Calendar size={16} color="#64748B" />
-              <Text style={styles.infoLabel}>{new Date(post.postCreatedAt).toLocaleDateString()}</Text>
-            </View>
-          </View>
+          <Text style={styles.subtitle}>{post.summary || 'No additional summary available.'}</Text>
+        </View>
 
-          <View style={styles.divider} />
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Chủ cửa hàng</Text>
-            <View style={styles.shopContainer}>
-              <View style={styles.shopAvatar}>
-                <User color="#94A3B8" size={24} />
-              </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Moderation Context</Text>
+          <View style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <User size={18} color="#64748B" />
               <View>
-                <Text style={styles.shopName}>Cửa hàng ID: {post.postShopId}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: '#F0FDF4' }]}>
-                  <Text style={[styles.statusText, { color: '#166534' }]}>Quản lý xét duyệt</Text>
-                </View>
+                <Text style={styles.infoLabel}>Author</Text>
+                <Text style={styles.infoValue}>{post.authorName || 'Unknown author'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Calendar size={18} color="#64748B" />
+              <View>
+                <Text style={styles.infoLabel}>Created at</Text>
+                <Text style={styles.infoValue}>{post.postCreatedAt ? new Date(post.postCreatedAt).toLocaleString() : 'Not available'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Calendar size={18} color="#64748B" />
+              <View>
+                <Text style={styles.infoLabel}>Updated at</Text>
+                <Text style={styles.infoValue}>{post.postUpdatedAt ? new Date(post.postUpdatedAt).toLocaleString() : 'Not available'}</Text>
               </View>
             </View>
           </View>
+        </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Mô tả chi tiết</Text>
-            <Text style={styles.description}>{post.postDescription}</Text>
-          </View>
-
-          <View style={styles.warningBox}>
-            <AlertCircle size={20} color="#94A3B8" />
-            <Text style={styles.warningText}>
-              Vui lòng kiểm tra nội dung và hình ảnh không vi phạm chính sách của GreenMarket trước khi duyệt.
-            </Text>
-          </View>
+        <View style={styles.warningBox}>
+          <AlertCircle size={20} color="#94A3B8" />
+          <Text style={styles.warningText}>
+            This manager workflow only exposes moderation queue data. If a post needs stronger action, hide or reject it from here and escalate separately when needed.
+          </Text>
         </View>
       </ScrollView>
 
       <View style={styles.moderationBar}>
-        <TouchableOpacity 
-          style={[styles.modButton, styles.deleteBtn]}
-          onPress={() => setModalType('delete')}
-        >
-          <Trash2 size={24} color="#EF4444" />
-          <Text style={[styles.modText, { color: '#EF4444' }]}>Xóa</Text>
+        <TouchableOpacity style={[styles.modButton, styles.hideBtn]} onPress={() => setModalType('hide')}>
+          <EyeOff size={22} color="#EF4444" />
+          <Text style={[styles.modText, { color: '#EF4444' }]}>Hide</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.modButton, styles.rejectBtn]}
-          onPress={() => setModalType('reject')}
-        >
-          <X size={24} color="#F59E0B" />
-          <Text style={[styles.modText, { color: '#F59E0B' }]}>Từ chối</Text>
+        <TouchableOpacity style={[styles.modButton, styles.rejectBtn]} onPress={() => setModalType('reject')}>
+          <X size={22} color="#F59E0B" />
+          <Text style={[styles.modText, { color: '#F59E0B' }]}>Reject</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.modButton, styles.approveBtn]}
-          onPress={handleApprove}
-        >
-          <Check size={24} color="white" />
-          <Text style={[styles.modText, { color: 'white' }]}>Duyệt</Text>
+        <TouchableOpacity style={[styles.modButton, styles.approveBtn]} onPress={handleApprove}>
+          <Check size={22} color="white" />
+          <Text style={[styles.modText, { color: 'white' }]}>Approve</Text>
         </TouchableOpacity>
       </View>
 
@@ -226,9 +168,9 @@ const PostManagementDetail = ({ route, navigation }: any) => {
         visible={!!modalType}
         onClose={() => setModalType(null)}
         onSubmit={onSubmitModal}
-        title={modalType === 'reject' ? 'Lý do từ chối' : 'Lý do xóa'}
-        placeholder={modalType === 'reject' ? 'Vd: Hình ảnh không rõ ràng...' : 'Vd: Sản phẩm bị cấm...'}
-        confirmLabel={modalType === 'reject' ? 'Gửi lý do từ chối' : 'Xóa tin'}
+        title={modalType === 'reject' ? 'Reason for rejection' : 'Reason for hiding'}
+        placeholder={modalType === 'reject' ? 'Explain why this post is being rejected...' : 'Explain why this post is being hidden...'}
+        confirmLabel={modalType === 'reject' ? 'Reject post' : 'Hide post'}
         confirmColor={modalType === 'reject' ? '#F59E0B' : '#EF4444'}
       />
     </SafeAreaView>
@@ -236,15 +178,8 @@ const PostManagementDetail = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'white',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: 'white' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     height: 56,
     flexDirection: 'row',
@@ -261,180 +196,78 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F8FAFC',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1E293B',
-  },
-  imageSlider: {
-    height: width * 0.75,
-  },
-  postImage: {
-    width: width,
-    height: width * 0.75,
-  },
-  contentContainer: {
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
+  contentContainer: { padding: 20, paddingBottom: 100 },
+  heroCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
     padding: 20,
-    paddingBottom: 100,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  price: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#10B981',
-  },
-  unit: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: 'normal',
-  },
-  stockBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  stockText: {
-    fontSize: 12,
-    color: '#475569',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    lineHeight: 30,
-    marginBottom: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    gap: 16,
     marginBottom: 20,
   },
-  infoItem: {
+  statusRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
-  infoLabel: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 20,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    marginBottom: 12,
-  },
-  shopContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    backgroundColor: '#F8FAFC',
+  statusText: { fontSize: 12, fontWeight: '700', color: '#D97706', textTransform: 'capitalize' },
+  priorityText: { fontSize: 12, color: '#475569', textTransform: 'capitalize' },
+  title: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 8 },
+  subtitle: { fontSize: 14, color: '#475569', lineHeight: 22 },
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B', marginBottom: 12 },
+  infoCard: {
+    backgroundColor: '#fff',
     borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
-  shopAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E2E8F0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shopName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  description: {
-    fontSize: 16,
-    color: '#475569',
-    lineHeight: 24,
-  },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  infoLabel: { fontSize: 12, color: '#94A3B8', marginBottom: 2 },
+  infoValue: { fontSize: 15, color: '#1E293B', fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 14 },
   warningBox: {
     flexDirection: 'row',
     gap: 12,
     padding: 16,
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
-    marginTop: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  warningText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#64748B',
-    fontStyle: 'italic',
-  },
+  warningText: { flex: 1, color: '#475569', lineHeight: 20 },
   moderationBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
+    height: 84,
     backgroundColor: 'white',
     flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
+    alignItems: 'center',
     gap: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    elevation: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
   },
   modButton: {
-    height: 50,
+    flex: 1,
+    height: 48,
     borderRadius: 14,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    alignItems: 'center',
+    gap: 8,
   },
-  deleteBtn: {
-    width: 80,
-    backgroundColor: '#FEF2F2',
-  },
-  rejectBtn: {
-    flex: 1.5,
-    backgroundColor: '#FFFBEB',
-  },
-  approveBtn: {
-    flex: 2,
-    backgroundColor: '#22C55E',
-  },
-  modText: {
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
+  hideBtn: { backgroundColor: '#FEF2F2' },
+  rejectBtn: { backgroundColor: '#FFFBEB' },
+  approveBtn: { backgroundColor: '#22C55E' },
+  modText: { fontWeight: '700', fontSize: 14 },
 });
 
 export default PostManagementDetail;

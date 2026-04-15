@@ -1,34 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
-  Image,
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import { 
-  ArrowLeft, 
-  Store, 
-  User, 
-  Phone, 
-  MapPin, 
-  ShieldCheck, 
-  AlertCircle,
-  FileText
-} from 'lucide-react-native';
+import { ArrowLeft, Store, User, Calendar, ShieldCheck, AlertCircle, Ban } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
-import ManagerService, { ShopModerationData } from '../services/ManagerService';
+import managerService, { ShopModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
 
 const ShopManagementDetail = ({ route, navigation }: any) => {
   const { shopId } = route.params;
   const [shop, setShop] = useState<ShopModerationData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
+  const [isBlockModalVisible, setIsBlockModalVisible] = useState(false);
 
   useEffect(() => {
     fetchShop();
@@ -37,11 +27,11 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
   const fetchShop = async () => {
     try {
       setLoading(true);
-      const data = await ManagerService.getShopById(shopId);
+      const data = await managerService.getShopById(shopId);
       setShop(data);
     } catch (error) {
       console.error(error);
-      CustomAlert('Lỗi', 'Không thể tải chi tiết cửa hàng');
+      CustomAlert('Error', 'Unable to load shop details.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -49,42 +39,30 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
   };
 
   const handleVerify = () => {
-    CustomAlert('Xác minh cửa hàng', 'Duyệt hồ sơ và cho phép cửa hàng hoạt động?', [
-      { text: 'Hủy', style: 'cancel' },
-      { 
-        text: 'Xác minh', 
+    CustomAlert('Approve shop', 'Approve this shop and allow it to operate?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Approve',
         onPress: async () => {
           try {
-            await ManagerService.verifyShop(shopId);
-            CustomAlert('Thành công', 'Cửa hàng đã được kích hoạt');
+            await managerService.verifyShop(shopId);
+            CustomAlert('Success', 'The shop has been activated.');
             navigation.goBack();
           } catch (error) {
-            CustomAlert('Lỗi', 'Không thể xác minh cửa hàng');
+            CustomAlert('Error', 'Unable to activate this shop.');
           }
         }
       },
     ]);
   };
 
-  const handleReject = () => {
-    setIsRejectModalVisible(true);
-  };
-
-  const onSubmitReject = async (reason: string) => {
+  const onSubmitBlock = async (reason: string) => {
     try {
-      await ManagerService.updateShopStatus(shopId, 'Rejected');
-      if (shop) {
-        await ManagerService.moderationFeedback({
-          targetType: 'shop',
-          targetId: shopId,
-          recipientUserId: shop.ownerUserId || shopId, // fallback if ownerUserId missing
-          message: `Hồ sơ cửa hàng của bạn đã bị từ chối. Lý do: ${reason}`
-        }).catch(() => console.log('Failed to send feedback, but shop was rejected.'));
-      }
-      CustomAlert('Đã gửi thông báo', `Đã từ chối cửa hàng. Lý do: ${reason}`);
+      await managerService.updateShopStatus(shopId, 'blocked', reason);
+      CustomAlert('Blocked', `The shop has been blocked. Reason: ${reason}`);
       navigation.goBack();
     } catch (error) {
-      CustomAlert('Lỗi', 'Thao tác thất bại');
+      CustomAlert('Error', 'The action could not be completed.');
     }
   };
 
@@ -101,15 +79,12 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <ArrowLeft color="#1E293B" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Hồ sơ cửa hàng</Text>
+        <Text style={styles.headerTitle}>Shop Profile</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -127,84 +102,73 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
+          <Text style={styles.sectionTitle}>Basic Information</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <User size={18} color="#64748B" />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Chủ cửa hàng</Text>
-                <Text style={styles.infoValue}>{shop.ownerName}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.divider} />
-            
-            <View style={styles.infoRow}>
-              <Phone size={18} color="#64748B" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>{shop.ownerEmail}</Text>
+                <Text style={styles.infoLabel}>Owner</Text>
+                <Text style={styles.infoValue}>{shop.ownerName || 'Unknown owner'}</Text>
               </View>
             </View>
 
             <View style={styles.divider} />
-            
+
             <View style={styles.infoRow}>
-              <MapPin size={18} color="#64748B" />
+              <Calendar size={18} color="#64748B" />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Tổng số tin đăng</Text>
-                <Text style={styles.infoValue}>{shop.totalPosts}</Text>
+                <Text style={styles.infoLabel}>Created at</Text>
+                <Text style={styles.infoValue}>{shop.createdAt ? new Date(shop.createdAt).toLocaleString() : 'Not available'}</Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.infoRow}>
+              <Calendar size={18} color="#64748B" />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Updated at</Text>
+                <Text style={styles.infoValue}>{shop.updatedAt ? new Date(shop.updatedAt).toLocaleString() : 'Not available'}</Text>
               </View>
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ngày đăng ký</Text>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoValue}>{shop.createdAt}</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Giới thiệu</Text>
+          <Text style={styles.sectionTitle}>Queue Context</Text>
           <View style={styles.descriptionCard}>
-            <Text style={styles.descriptionText}>{shop.description || 'Chưa có mô tả'}</Text>
+            <Text style={styles.descriptionText}>{shop.subtitle || 'No extra moderation note available.'}</Text>
+            <Text style={styles.priorityText}>Priority: {shop.priority}</Text>
           </View>
         </View>
 
         <View style={styles.warningBox}>
           <AlertCircle size={20} color="#F59E0B" />
           <Text style={styles.warningText}>
-            Lưu ý: Kiểm tra chéo thông tin của chủ cửa hàng trước khi kích hoạt.
+            The manager API exposes moderation queue information for shops. Use activate or block here, and escalate separately if the case needs a stronger workflow.
           </Text>
         </View>
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity 
-          style={[styles.btn, styles.rejectBtn]}
-          onPress={handleReject}
-        >
-          <Text style={styles.rejectBtnText}>Từ chối hồ sơ</Text>
+        <TouchableOpacity style={[styles.btn, styles.rejectBtn]} onPress={() => setIsBlockModalVisible(true)}>
+          <Ban size={20} color="#F59E0B" />
+          <Text style={styles.rejectBtnText}>Block Shop</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.btn, styles.verifyBtn]}
-          onPress={handleVerify}
-        >
+        <TouchableOpacity style={[styles.btn, styles.verifyBtn]} onPress={handleVerify}>
           <ShieldCheck size={20} color="white" />
-          <Text style={styles.verifyBtnText}>Duyệt & Kích hoạt</Text>
+          <Text style={styles.verifyBtnText}>Approve & Activate</Text>
         </TouchableOpacity>
       </View>
 
       <ReasonModal
-        visible={isRejectModalVisible}
-        onClose={() => setIsRejectModalVisible(false)}
-        onSubmit={onSubmitReject}
-        title="Lý do từ chối"
-        placeholder="Vd: Thông tin không rõ ràng, hồ sơ chưa đầy đủ..."
-        confirmLabel="Gửi lý do từ chối"
+        visible={isBlockModalVisible}
+        onClose={() => setIsBlockModalVisible(false)}
+        onSubmit={onSubmitBlock}
+        title="Reason for blocking"
+        placeholder="Explain why this shop is being blocked..."
+        confirmLabel="Block shop"
         confirmColor="#F59E0B"
       />
     </SafeAreaView>
@@ -212,15 +176,8 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     height: 56,
     flexDirection: 'row',
@@ -239,15 +196,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F1F5F9',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0F172A',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
-  },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0F172A' },
+  scrollContent: { padding: 20, paddingBottom: 100 },
   shopBriefCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -270,15 +220,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-  shopBriefInfo: {
-    flex: 1,
-  },
-  shopName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
+  shopBriefInfo: { flex: 1 },
+  shopName: { fontSize: 18, fontWeight: 'bold', color: '#1E293B', marginBottom: 4 },
   pendingBadge: {
     alignSelf: 'flex-start',
     backgroundColor: '#FFFBEB',
@@ -286,14 +229,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  pendingText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#D97706',
-  },
-  section: {
-    marginBottom: 24,
-  },
+  pendingText: { fontSize: 12, fontWeight: 'bold', color: '#D97706', textTransform: 'capitalize' },
+  section: { marginBottom: 24 },
   sectionTitle: {
     fontSize: 15,
     fontWeight: 'bold',
@@ -311,28 +248,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  infoTextContainer: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: 15,
-    color: '#1E293B',
-    fontWeight: '500',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-  },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  infoTextContainer: { flex: 1 },
+  infoLabel: { fontSize: 12, color: '#94A3B8', marginBottom: 2 },
+  infoValue: { fontSize: 15, color: '#1E293B', fontWeight: '500' },
+  divider: { height: 1, backgroundColor: '#F1F5F9' },
   descriptionCard: {
     backgroundColor: 'white',
     borderRadius: 16,
@@ -340,11 +260,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  descriptionText: {
-    fontSize: 15,
-    color: '#475569',
-    lineHeight: 22,
-  },
+  descriptionText: { fontSize: 15, color: '#475569', lineHeight: 22, marginBottom: 12 },
+  priorityText: { fontSize: 13, color: '#64748B', textTransform: 'capitalize' },
   warningBox: {
     flexDirection: 'row',
     gap: 12,
@@ -355,12 +272,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FEF3C7',
   },
-  warningText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#92400E',
-    lineHeight: 18,
-  },
+  warningText: { flex: 1, color: '#92400E', lineHeight: 20 },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -377,27 +289,17 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    height: 50,
-    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
   },
-  rejectBtn: {
-    backgroundColor: '#F1F5F9',
-  },
-  rejectBtnText: {
-    color: '#475569',
-    fontWeight: 'bold',
-  },
-  verifyBtn: {
-    backgroundColor: '#3B82F6',
-  },
-  verifyBtnText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
+  rejectBtn: { backgroundColor: '#FFFBEB' },
+  rejectBtnText: { color: '#F59E0B', fontWeight: '700' },
+  verifyBtn: { backgroundColor: '#3B82F6' },
+  verifyBtnText: { color: 'white', fontWeight: '700' },
 });
 
 export default ShopManagementDetail;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,18 +9,18 @@ import {
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import { 
-  ArrowLeft, 
-  Flag, 
-  User, 
-  MessageSquare, 
+import {
+  ArrowLeft,
+  Flag,
+  User,
+  MessageSquare,
   ShieldAlert,
   CheckCircle,
   XCircle,
   ExternalLink
 } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
-import ManagerService, { ReportModerationData } from '../services/ManagerService';
+import managerService, { ReportModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
 
 const ReportManagementDetail = ({ route, navigation }: any) => {
@@ -37,11 +37,11 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
   const fetchReport = async () => {
     try {
       setLoading(true);
-      const data = await ManagerService.getReportById(reportId);
+      const data = await managerService.getReportById(reportId);
       setReport(data);
     } catch (error) {
       console.error(error);
-      CustomAlert('Lỗi', 'Không thể tải chi tiết báo cáo');
+      CustomAlert('Error', 'Unable to load report details.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -54,26 +54,32 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
   };
 
   const onSubmitNote = async (note: string) => {
-    if (actionType) {
-      try {
-        if (actionType === 'escalated') {
-          await ManagerService.escalate({
-              targetType: 'report',
-              targetId: reportId,
-              severity: 'high',
-              reason: note
-          });
-        } else {
-          await ManagerService.resolveReport(reportId, actionType, 'Fixed', note);
-        }
+    if (!actionType) return;
+
+    try {
+      if (actionType === 'escalated') {
+        await managerService.escalate({
+          targetType: 'report',
+          targetId: reportId,
+          severity: 'high',
+          reason: note
+        });
+        CustomAlert('Escalated', `The report has been escalated. Reason: ${note}`);
+      } else {
+        await managerService.resolveReport(
+          reportId,
+          actionType,
+          actionType === 'resolved' ? 'Report reviewed and resolved' : 'Report reviewed and dismissed',
+          note
+        );
         CustomAlert(
-          actionType === 'resolved' ? 'Đã giải quyết' : actionType === 'escalated' ? 'Đã chuyển tiếp' : 'Đã bỏ qua',
-          actionType === 'escalated' ? `Đã chuyển tiếp kèm lý do: ${note}` : `Đã lưu ghi chú: ${note}`,
+          actionType === 'resolved' ? 'Resolved' : 'Dismissed',
+          `The action has been saved with note: ${note}`,
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
-      } catch (error) {
-        CustomAlert('Lỗi', 'Không thể xử lý báo cáo');
       }
+    } catch (error) {
+      CustomAlert('Error', 'Unable to process this report.');
     }
   };
 
@@ -90,15 +96,12 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      
+
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <ArrowLeft color="#1E293B" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chi tiết báo cáo</Text>
+        <Text style={styles.headerTitle}>Report Details</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -108,20 +111,20 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
             <ShieldAlert size={16} color="#EF4444" />
             <Text style={styles.statusText}>{report.reportStatus}</Text>
           </View>
-          <Text style={styles.createdAt}>{new Date(report.reportCreatedAt).toLocaleString()}</Text>
+          <Text style={styles.createdAt}>{report.reportCreatedAt ? new Date(report.reportCreatedAt).toLocaleString() : 'No date'}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Người báo cáo</Text>
+          <Text style={styles.label}>Reporter</Text>
           <View style={styles.infoBox}>
             <User size={20} color="#64748B" />
-            <Text style={styles.infoText}>{report.reporterDisplayName}</Text>
+            <Text style={styles.infoText}>{report.reporterDisplayName || 'Unknown reporter'}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Nội dung bị báo cáo</Text>
-          <TouchableOpacity 
+          <Text style={styles.label}>Reported Target</Text>
+          <TouchableOpacity
             style={styles.targetBox}
             onPress={() => {
               if (report.postId) navigation.navigate('PostManagementDetail', { postId: report.postId });
@@ -129,60 +132,58 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
             }}
           >
             <View style={styles.targetInfo}>
-              <Text style={styles.targetType}>{report.postId ? 'Tin đăng' : 'Cửa hàng'}</Text>
-              <Text style={styles.targetTitle}>{report.postTitle || report.shopName || 'Không rõ tiêu đề'}</Text>
+              <Text style={styles.targetType}>{report.postId ? 'Post' : 'Shop'}</Text>
+              <Text style={styles.targetTitle}>{report.postTitle || report.shopName || 'Unknown target'}</Text>
             </View>
             <ExternalLink size={20} color="#3B82F6" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Lý do báo cáo</Text>
+          <Text style={styles.label}>Report Reason</Text>
           <View style={styles.reasonBox}>
             <Flag size={20} color="#EF4444" style={{ marginTop: 2 }} />
-            <Text style={styles.reasonText}>{report.reportReason || report.reportNote}</Text>
+            <Text style={styles.reasonText}>{report.reportReason || report.reportReasonCode || 'No reason provided'}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Ghi chú của quản trị viên</Text>
+          <Text style={styles.label}>Reporter Note</Text>
           <View style={styles.infoBox}>
-            <Text style={styles.infoText}>{report.adminNote || 'Chưa có ghi chú'}</Text>
+            <Text style={styles.infoText}>{report.reportNote || 'No note provided'}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Lịch sử xử lý</Text>
+          <Text style={styles.label}>Manager Note</Text>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>{report.adminNote || 'No manager note yet'}</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Processing Context</Text>
           <View style={styles.chatPlaceholder}>
             <MessageSquare size={32} color="#CBD5E1" />
-            <Text style={styles.placeholderText}>Chưa có tương tác nào với các bên liên quan</Text>
+            <Text style={styles.placeholderText}>Severity: {report.severity || 'medium'}</Text>
           </View>
         </View>
       </ScrollView>
 
       <View style={styles.bottomActions}>
-        <TouchableOpacity 
-          style={[styles.btn, styles.dismissBtn]}
-          onPress={() => handleAction('dismissed')}
-        >
+        <TouchableOpacity style={[styles.btn, styles.dismissBtn]} onPress={() => handleAction('dismissed')}>
           <XCircle size={20} color="#64748B" />
-          <Text style={[styles.btnText, styles.dismissBtnText]}>Bỏ qua</Text>
+          <Text style={[styles.btnText, styles.dismissBtnText]}>Dismiss</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.btn, styles.escalateBtn]}
-          onPress={() => handleAction('escalated')}
-        >
+        <TouchableOpacity style={[styles.btn, styles.escalateBtn]} onPress={() => handleAction('escalated')}>
           <Flag size={20} color="white" />
-          <Text style={[styles.btnText, styles.escalateBtnText]}>Chuyển tiếp</Text>
+          <Text style={[styles.btnText, styles.escalateBtnText]}>Escalate</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.btn, styles.resolveBtn]}
-          onPress={() => handleAction('resolved')}
-        >
+        <TouchableOpacity style={[styles.btn, styles.resolveBtn]} onPress={() => handleAction('resolved')}>
           <CheckCircle size={20} color="white" />
-          <Text style={[styles.btnText, styles.resolveBtnText]}>Giải quyết</Text>
+          <Text style={[styles.btnText, styles.resolveBtnText]}>Resolve</Text>
         </TouchableOpacity>
       </View>
 
@@ -190,9 +191,9 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         visible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
         onSubmit={onSubmitNote}
-        title={actionType === 'resolved' ? 'Giải quyết báo cáo' : actionType === 'escalated' ? 'Chuyển tiếp báo cáo' : 'Bỏ qua báo cáo'}
-        placeholder={actionType === 'escalated' ? 'Nhập lý do chuyển tiếp...' : 'Nhập ghi chú xử lý (sẽ được lưu vào hệ thống)...'}
-        confirmLabel={actionType === 'resolved' ? 'Xác nhận giải quyết' : actionType === 'escalated' ? 'Xác nhận chuyển tiếp' : 'Xác nhận bỏ qua'}
+        title={actionType === 'resolved' ? 'Resolve report' : actionType === 'escalated' ? 'Escalate report' : 'Dismiss report'}
+        placeholder={actionType === 'escalated' ? 'Enter the escalation reason...' : 'Enter a processing note...'}
+        confirmLabel={actionType === 'resolved' ? 'Resolve' : actionType === 'escalated' ? 'Escalate' : 'Dismiss'}
         confirmColor={actionType === 'resolved' ? '#22C55E' : actionType === 'escalated' ? '#F59E0B' : '#94A3B8'}
       />
     </SafeAreaView>
@@ -200,15 +201,8 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     height: 56,
     flexDirection: 'row',
@@ -227,21 +221,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#F1F5F9',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0F172A',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  statusSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0F172A' },
+  scrollContent: { padding: 20, paddingBottom: 100 },
+  statusSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,18 +233,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
   },
-  statusText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#EF4444',
-  },
-  createdAt: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  section: {
-    marginBottom: 24,
-  },
+  statusText: { fontSize: 13, fontWeight: 'bold', color: '#EF4444', textTransform: 'capitalize' },
+  createdAt: { fontSize: 12, color: '#94A3B8' },
+  section: { marginBottom: 24 },
   label: {
     fontSize: 14,
     fontWeight: '600',
@@ -281,11 +254,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  infoText: {
-    fontSize: 16,
-    color: '#1E293B',
-    fontWeight: '500',
-  },
+  infoText: { fontSize: 16, color: '#1E293B', fontWeight: '500', flex: 1 },
   targetBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -296,9 +265,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DBEAFE',
   },
-  targetInfo: {
-    flex: 1,
-  },
+  targetInfo: { flex: 1 },
   targetType: {
     fontSize: 12,
     color: '#3B82F6',
@@ -306,11 +273,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 4,
   },
-  targetTitle: {
-    fontSize: 16,
-    color: '#1E293B',
-    fontWeight: 'bold',
-  },
+  targetTitle: { fontSize: 16, color: '#1E293B', fontWeight: 'bold' },
   reasonBox: {
     flexDirection: 'row',
     gap: 12,
@@ -320,12 +283,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  reasonText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#1E293B',
-    lineHeight: 22,
-  },
+  reasonText: { flex: 1, fontSize: 15, color: '#1E293B', lineHeight: 22 },
   chatPlaceholder: {
     alignItems: 'center',
     paddingVertical: 30,
@@ -336,11 +294,7 @@ const styles = StyleSheet.create({
     borderColor: '#CBD5E1',
     gap: 12,
   },
-  placeholderText: {
-    fontSize: 13,
-    color: '#94A3B8',
-    textAlign: 'center',
-  },
+  placeholderText: { fontSize: 13, color: '#94A3B8', textAlign: 'center' },
   bottomActions: {
     position: 'absolute',
     bottom: 0,
@@ -357,35 +311,20 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    height: 50,
-    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
   },
-  btnText: {
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  dismissBtn: {
-    backgroundColor: '#F1F5F9',
-  },
-  dismissBtnText: {
-    color: '#475569',
-  },
-  escalateBtn: {
-    backgroundColor: '#F59E0B',
-  },
-  escalateBtnText: {
-    color: 'white',
-  },
-  resolveBtn: {
-    backgroundColor: '#22C55E',
-  },
-  resolveBtnText: {
-    color: 'white',
-  },
+  btnText: { fontWeight: '700' },
+  dismissBtn: { backgroundColor: '#F1F5F9' },
+  dismissBtnText: { color: '#64748B' },
+  escalateBtn: { backgroundColor: '#F59E0B' },
+  escalateBtnText: { color: 'white' },
+  resolveBtn: { backgroundColor: '#22C55E' },
+  resolveBtnText: { color: 'white' },
 });
 
 export default ReportManagementDetail;

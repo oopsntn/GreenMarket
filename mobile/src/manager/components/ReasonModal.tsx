@@ -25,8 +25,8 @@ const ReasonModal: React.FC<ReasonModalProps> = ({
   onClose,
   onSubmit,
   title,
-  placeholder = 'Nhập lý do tại đây...',
-  confirmLabel = 'Xác nhận',
+  placeholder = 'Enter your reason here...',
+  confirmLabel = 'Confirm',
   confirmColor = '#FF4D4D',
 }) => {
   const [reason, setReason] = useState('');
@@ -52,7 +52,7 @@ const ReasonModal: React.FC<ReasonModalProps> = ({
       >
         <View style={styles.modalView}>
           <Text style={styles.modalTitle}>{title}</Text>
-          
+
           <TextInput
             style={styles.input}
             multiline
@@ -68,9 +68,9 @@ const ReasonModal: React.FC<ReasonModalProps> = ({
               style={[styles.button, styles.cancelButton]}
               onPress={onClose}
             >
-              <Text style={styles.cancelButtonText}>Hủy</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.button, styles.confirmButton, { backgroundColor: confirmColor }]}
               onPress={handleConfirm}
