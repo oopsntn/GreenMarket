@@ -46,6 +46,7 @@ const emptyForm: TemplateFormState = {
   name: "",
   type: "Rejection Reason",
   content: "",
+  previewText: "",
   description: "",
   usageNote: "",
   status: "Active",
@@ -156,6 +157,7 @@ export default function TemplatesPage() {
           mode === "clone" ? `${template.name} (Bản sao dự thảo)` : template.name,
         type: template.type,
         content: template.content,
+        previewText: template.previewText,
         description: template.description,
         usageNote: template.usageNote,
         status: mode === "clone" ? "Disabled" : template.status,
@@ -342,7 +344,7 @@ export default function TemplatesPage() {
                     <td>{template.usageNote}</td>
                     <td>
                       <div className="templates-content-preview">
-                        {truncateText(template.content)}
+                        {truncateText(template.previewText)}
                       </div>
                     </td>
                     <td>
@@ -515,6 +517,25 @@ export default function TemplatesPage() {
                   />
                 </div>
 
+                <div className="templates-modal__field templates-modal__field--full">
+                  <label htmlFor="template-preview-text">Xem trước nhanh</label>
+                  <textarea
+                    id="template-preview-text"
+                    value={formState.previewText}
+                    onChange={(event) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        previewText: event.target.value,
+                      }))
+                    }
+                    placeholder="Nhập đoạn ngắn sẽ hiển thị ở danh sách mẫu để admin nhìn là hiểu nhanh"
+                    disabled={modalMode === "view" || isSubmitting}
+                  />
+                  <small>
+                    Đoạn này dùng cho cột xem trước và phần nhận diện nhanh trong danh sách mẫu.
+                  </small>
+                </div>
+
                 <div className="templates-modal__field">
                   <label htmlFor="template-status">Trạng thái</label>
                   <select
@@ -535,8 +556,8 @@ export default function TemplatesPage() {
               </div>
 
               <div className="templates-modal__preview">
-                <strong>Xem trước nhanh</strong>
-                <p>{truncateText(formState.content, 220)}</p>
+                <strong>Bản hiển thị trong danh sách</strong>
+                <p>{truncateText(formState.previewText || formState.content, 220)}</p>
               </div>
 
               {formError ? (

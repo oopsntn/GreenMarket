@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import "./PageHeader.css";
 
 type PageHeaderProps = {
@@ -6,6 +7,7 @@ type PageHeaderProps = {
   actionLabel?: string;
   onActionClick?: () => void;
   actionType?: "button" | "submit";
+  actions?: ReactNode;
 };
 
 function PageHeader({
@@ -14,6 +16,7 @@ function PageHeader({
   actionLabel,
   onActionClick,
   actionType = "button",
+  actions,
 }: PageHeaderProps) {
   return (
     <div className="page-header">
@@ -22,15 +25,19 @@ function PageHeader({
         <p>{description}</p>
       </div>
 
-      {actionLabel && (
-        <button
-          className="page-header__action-btn"
-          type={actionType}
-          onClick={onActionClick}
-        >
-          {actionLabel}
-        </button>
-      )}
+      {actions ? (
+        <div className="page-header__actions">{actions}</div>
+      ) : actionLabel ? (
+        <div className="page-header__actions">
+          <button
+            className="page-header__action-btn"
+            type={actionType}
+            onClick={onActionClick}
+          >
+            {actionLabel}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

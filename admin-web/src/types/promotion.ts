@@ -1,5 +1,10 @@
 export type PromotionSlot = string;
-export type PromotionStatus = "Scheduled" | "Active" | "Paused" | "Expired";
+export type PromotionStatus =
+  | "Scheduled"
+  | "Active"
+  | "Paused"
+  | "Completed"
+  | "Expired";
 export type PromotionPaymentStatus = "Paid" | "Pending Verification";
 export type PromotionHandledBy = "Manager" | "Admin";
 

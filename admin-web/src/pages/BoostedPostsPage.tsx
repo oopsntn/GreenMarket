@@ -18,7 +18,7 @@ import type {
 } from "../types/boostedPost";
 import "./BoostedPostsPage.css";
 
-type ConfirmAction = "pause" | "resume" | "close";
+type ConfirmAction = "pause" | "resume";
 
 type ConfirmState = {
   isOpen: boolean;
@@ -156,7 +156,7 @@ function BoostedPostsPage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Không thể tải danh sách chiến dịch.",
+            : "Không thể tải danh sách quảng bá.",
         );
       } finally {
         setIsLoading(false);
@@ -287,15 +287,8 @@ function BoostedPostsPage() {
       return;
     }
 
-    let nextStatus: BoostedPostStatus;
-
-    if (confirmState.action === "pause") {
-      nextStatus = "Paused";
-    } else if (confirmState.action === "resume") {
-      nextStatus = "Active";
-    } else {
-      nextStatus = "Closed";
-    }
+    const nextStatus: BoostedPostStatus =
+      confirmState.action === "pause" ? "Paused" : "Active";
 
     try {
       setIsStatusUpdating(postId);
@@ -314,17 +307,9 @@ function BoostedPostsPage() {
       }
 
       if (confirmState.action === "pause") {
-        showToast(
-          `${targetPost.campaignCode} đã được tạm dừng.`,
-          "info",
-        );
-      } else if (confirmState.action === "resume") {
-        showToast(`${targetPost.campaignCode} đã được tiếp tục.`);
+        showToast(`${targetPost.campaignCode} đã được tạm dừng.`, "info");
       } else {
-        showToast(
-          `${targetPost.campaignCode} đã được đóng.`,
-          "info",
-        );
+        showToast(`${targetPost.campaignCode} đã được tiếp tục.`);
       }
 
       closeConfirmDialog();
@@ -332,7 +317,7 @@ function BoostedPostsPage() {
       showToast(
         error instanceof Error
           ? error.message
-          : "Không thể cập nhật trạng thái chiến dịch.",
+          : "Không thể cập nhật trạng thái bài đang quảng bá.",
         "error",
       );
     } finally {
@@ -341,28 +326,24 @@ function BoostedPostsPage() {
   };
 
   const confirmTitleMap: Record<ConfirmAction, string> = {
-    pause: "Tạm dừng chiến dịch",
-    resume: "Tiếp tục chiến dịch",
-    close: "Đóng chiến dịch",
+    pause: "Tạm dừng quảng bá",
+    resume: "Tiếp tục quảng bá",
   };
 
   const confirmMessageMap: Record<ConfirmAction, string> = {
     pause: `Bạn chắc chắn muốn tạm dừng ${
-      confirmPost?.campaignCode ?? "chiến dịch này"
+      confirmPost?.campaignCode ?? "bài này"
     }? Việc phân phối sẽ dừng cho đến khi được mở lại.`,
     resume: `Bạn chắc chắn muốn tiếp tục ${
-      confirmPost?.campaignCode ?? "chiến dịch này"
-    }? Chiến dịch sẽ chạy theo slot và quota hiện tại.`,
-    close: `Bạn chắc chắn muốn đóng ${
-      confirmPost?.campaignCode ?? "chiến dịch này"
-    }? Chiến dịch sẽ bị loại khỏi hàng chờ phân phối.`,
+      confirmPost?.campaignCode ?? "bài này"
+    }? Bài sẽ chạy lại theo vị trí hiển thị và quota hiện tại.`,
   };
 
   return (
     <div className="boosted-posts-page">
       <PageHeader
-        title="Quản lý bài viết đẩy nổi bật"
-        description="Theo dõi chiến dịch đẩy nổi bật, mức dùng quota, chất lượng vận hành và phân công xử lý."
+        title="Theo dõi quảng bá"
+        description="Theo dõi mã quảng bá, trạng thái chạy, CTR và đội phụ trách của từng lượt quảng bá. Việc đóng hẳn chỉ được xử lý ở luồng báo cáo."
       />
 
       <div className="boosted-posts-summary-grid">
@@ -377,11 +358,11 @@ function BoostedPostsPage() {
       </div>
 
       <SearchToolbar
-        placeholder="Tìm theo mã chiến dịch, bài đăng, chủ sở hữu hoặc nhân sự vận hành"
+        placeholder="Tìm theo mã quảng bá, tên cây, chủ sở hữu hoặc đội phụ trách"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
-        filterLabel="Lọc theo vị trí hiển thị, trạng thái, duyệt và chất lượng"
+        filterLabel="Lọc theo vị trí hiển thị, trạng thái chạy, duyệt và mức đánh giá"
         filterSummaryItems={[
           getSlotLabel(selectedSlotFilter),
           statusLabelMap[selectedStatusFilter],
@@ -392,8 +373,8 @@ function BoostedPostsPage() {
 
       {showFilters && (
         <SectionCard
-          title="Bộ lọc chiến dịch"
-          description="Lọc theo vị trí hiển thị, trạng thái chạy, trạng thái duyệt và sức khỏe chiến dịch."
+          title="Bộ lọc quảng bá"
+          description="Lọc theo vị trí hiển thị, trạng thái chạy, trạng thái duyệt và mức đánh giá."
         >
           <div className="boosted-posts-filters">
             <div className="boosted-posts-filters__field">
@@ -416,7 +397,7 @@ function BoostedPostsPage() {
             </div>
 
             <div className="boosted-posts-filters__field">
-              <label htmlFor="boosted-post-status-filter">Trạng thái chiến dịch</label>
+              <label htmlFor="boosted-post-status-filter">Trạng thái chạy</label>
               <select
                 id="boosted-post-status-filter"
                 value={selectedStatusFilter}
@@ -454,7 +435,7 @@ function BoostedPostsPage() {
             </div>
 
             <div className="boosted-posts-filters__field">
-              <label htmlFor="boosted-post-health-filter">Sức khỏe vận hành</label>
+              <label htmlFor="boosted-post-health-filter">Đánh giá</label>
               <select
                 id="boosted-post-health-filter"
                 value={selectedHealthFilter}
@@ -476,20 +457,23 @@ function BoostedPostsPage() {
       )}
 
       <SectionCard
-        title="Danh sách chiến dịch đẩy nổi bật"
-        description="Theo dõi trạng thái vận hành, quota đã dùng, nhân sự phụ trách và hoạt động tối ưu."
+        title="Danh sách quảng bá"
+        description="Theo dõi CTR, quota đã dùng, đội phụ trách và mức độ thu hút của từng lượt quảng bá."
       >
         {isLoading ? (
           <EmptyState
-            title="Đang tải chiến dịch"
-            description="Đang lấy dữ liệu chiến dịch từ hệ thống quản trị."
+            title="Đang tải danh sách quảng bá"
+            description="Đang lấy dữ liệu quảng bá từ hệ thống quản trị."
           />
         ) : pageError ? (
-          <EmptyState title="Không thể tải chiến dịch" description={pageError} />
+          <EmptyState
+            title="Không thể tải danh sách quảng bá"
+            description={pageError}
+          />
         ) : filteredPosts.length === 0 ? (
           <EmptyState
-            title="Không có chiến dịch phù hợp"
-            description="Không có chiến dịch nào khớp với bộ lọc hiện tại."
+            title="Không có quảng bá phù hợp"
+            description="Không có lượt quảng bá nào khớp với bộ lọc hiện tại."
           />
         ) : (
           <>
@@ -497,15 +481,15 @@ function BoostedPostsPage() {
               <table className="boosted-posts-table">
                 <thead>
                   <tr>
-                    <th>Chiến dịch</th>
+                    <th>Mã quảng bá</th>
                     <th>Bài đăng</th>
                     <th>Chủ sở hữu</th>
                     <th>Vị trí</th>
-                    <th>Vận hành</th>
+                    <th>Đánh giá</th>
                     <th>Duyệt</th>
                     <th>CTR</th>
                     <th>Quota đã dùng</th>
-                    <th>Nhân sự</th>
+                    <th>Đội phụ trách</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -580,19 +564,6 @@ function BoostedPostsPage() {
                               Tiếp tục
                             </button>
                           )}
-
-                          {(item.status === "Scheduled" ||
-                            item.status === "Active" ||
-                            item.status === "Paused") && (
-                            <button
-                              type="button"
-                              className="boosted-posts-actions__close"
-                              onClick={() => openConfirmDialog(item.id, "close")}
-                              disabled={isStatusUpdating === item.id}
-                            >
-                              Đóng
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -631,8 +602,8 @@ function BoostedPostsPage() {
 
       <BaseModal
         isOpen={isViewModalOpen}
-        title="Chi tiết chiến dịch đẩy nổi bật"
-        description="Theo dõi chỉ số vận hành, phân công tối ưu và ghi chú chiến dịch."
+        title="Chi tiết quảng bá"
+        description="Theo dõi chỉ số chạy, đội phụ trách và ghi chú vận hành của lượt quảng bá."
         onClose={closeViewModal}
         maxWidth="760px"
       >
@@ -640,7 +611,7 @@ function BoostedPostsPage() {
           <div className="boosted-posts-modal__content">
             <div className="boosted-posts-modal__grid">
               <div className="boosted-posts-modal__field">
-                <label>Mã chiến dịch</label>
+                <label>Mã quảng bá</label>
                 <input type="text" value={selectedPost.campaignCode} disabled />
               </div>
 
@@ -655,7 +626,7 @@ function BoostedPostsPage() {
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Nhân sự phụ trách</label>
+                <label>Đội phụ trách</label>
                 <input
                   type="text"
                   value={selectedPost.assignedOperator}
@@ -669,12 +640,12 @@ function BoostedPostsPage() {
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Trạng thái chiến dịch</label>
+                <label>Trạng thái chạy</label>
                 <input type="text" value={statusLabelMap[selectedPost.status]} disabled />
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Sức khỏe vận hành</label>
+                <label>Đánh giá</label>
                 <input
                   type="text"
                   value={healthLabelMap[selectedPost.deliveryHealth]}
@@ -718,7 +689,7 @@ function BoostedPostsPage() {
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>CTR</label>
+                <label>Tỷ lệ nhấp (CTR)</label>
                 <input
                   type="text"
                   value={formatCtr(
@@ -739,7 +710,7 @@ function BoostedPostsPage() {
               </div>
 
               <div className="boosted-posts-modal__field">
-                <label>Lượt nhấp</label>
+                <label>Lượt nhấp thực tế</label>
                 <input
                   type="text"
                   value={selectedPost.clicks.toLocaleString("en-US")}
@@ -789,18 +760,14 @@ function BoostedPostsPage() {
         }
         confirmText={
           confirmState.action === "pause"
-            ? "Tạm dừng chiến dịch"
-            : confirmState.action === "resume"
-              ? "Tiếp tục chiến dịch"
-              : "Đóng chiến dịch"
+            ? "Tạm dừng quảng bá"
+            : "Tiếp tục quảng bá"
         }
         cancelText="Hủy"
         tone={
           confirmState.action === "resume"
             ? "success"
-            : confirmState.action === "pause"
-              ? "neutral"
-              : "danger"
+            : "neutral"
         }
         onConfirm={handleConfirmAction}
         onCancel={closeConfirmDialog}

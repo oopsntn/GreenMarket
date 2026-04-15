@@ -27,6 +27,7 @@ type TemplatePayload = {
   templateName?: string;
   templateType?: string;
   templateContent?: string;
+  previewText?: string;
   status?: string;
   templateStatus?: string;
   description?: string;
@@ -36,6 +37,7 @@ type TemplatePayload = {
 type TemplateMetadata = {
   description: string;
   usageNote: string;
+  previewText: string;
 };
 
 type TemplateMetadataMap = Record<string, TemplateMetadata>;
@@ -87,6 +89,22 @@ const normalizeString = (value: unknown, fallback = "") => {
   return typeof value === "string" ? value.trim() || fallback : fallback;
 };
 
+const buildPreviewFallback = (previewText: string, templateContent: string) => {
+  const normalizedPreview = normalizeString(previewText);
+  if (normalizedPreview) {
+    return normalizedPreview;
+  }
+
+  const normalizedContent = normalizeString(templateContent);
+  if (!normalizedContent) {
+    return "--";
+  }
+
+  return normalizedContent.length > 180
+    ? `${normalizedContent.slice(0, 180).trim()}...`
+    : normalizedContent;
+};
+
 const normalizeTemplateType = (value: unknown): TemplateType => {
   return templateTypes.includes(value as TemplateType)
     ? (value as TemplateType)
@@ -110,6 +128,9 @@ const getDefaultMetadata = (
           templateName || "Mẫu từ chối dùng cho các trường hợp bài đăng không đạt yêu cầu kiểm duyệt.",
         usageNote:
           "Dùng khi admin cần trả về lý do từ chối rõ ràng để người dùng sửa và gửi lại.",
+        previewText:
+          templateName ||
+          "Mẫu từ chối dành cho bài đăng cần bổ sung thông tin trước khi duyệt lại.",
       };
     case "Report Reason":
       return {
@@ -117,6 +138,8 @@ const getDefaultMetadata = (
           templateName || "Mẫu dùng trong quy trình xử lý báo cáo và giải thích hướng xử lý.",
         usageNote:
           "Dùng khi admin hoặc điều phối viên cần ghi chú lý do xử lý một báo cáo cụ thể.",
+        previewText:
+          templateName || "Mẫu ghi chú nhanh cho các trường hợp báo cáo cần admin xem lại.",
       };
     default:
       return {
@@ -124,6 +147,8 @@ const getDefaultMetadata = (
           templateName || "Mẫu thông báo dùng để gửi cập nhật ngắn tới người dùng hoặc nội bộ.",
         usageNote:
           "Dùng cho các thông báo hệ thống, nhắc việc hoặc cập nhật trạng thái chung.",
+        previewText:
+          templateName || "Mẫu thông báo ngắn để gửi cập nhật nhanh cho người dùng hoặc nội bộ.",
       };
   }
 };
@@ -132,8 +157,9 @@ const normalizeMetadata = (
   templateId: number,
   templateType: TemplateType,
   templateName: string,
+  templateContent: string,
   metadataMap: TemplateMetadataMap,
-  payload?: Pick<TemplatePayload, "description" | "usageNote">,
+  payload?: Pick<TemplatePayload, "description" | "usageNote" | "previewText">,
 ): TemplateMetadata => {
   const current = metadataMap[String(templateId)];
   const fallback = getDefaultMetadata(templateType, templateName);
@@ -146,6 +172,10 @@ const normalizeMetadata = (
     usageNote: normalizeString(
       payload?.usageNote,
       current?.usageNote || fallback.usageNote,
+    ),
+    previewText: buildPreviewFallback(
+      payload?.previewText ?? current?.previewText ?? fallback.previewText,
+      templateContent,
     ),
   };
 };
@@ -172,6 +202,7 @@ const buildTemplateResponse = (
     template.templateId,
     templateType,
     templateName,
+    normalizeString(template.templateContent),
     metadataMap,
   );
 
@@ -180,6 +211,7 @@ const buildTemplateResponse = (
     templateName,
     templateType,
     templateContent: normalizeString(template.templateContent),
+    previewText: metadata.previewText,
     status: normalizeTemplateStatus(template.templateStatus),
     description: metadata.description,
     usageNote: metadata.usageNote,
@@ -197,6 +229,7 @@ const validateTemplatePayload = (
   const templateContent = normalizeString(payload.templateContent);
   const templateType = normalizeTemplateType(payload.templateType);
   const nextStatus = normalizeTemplateStatus(payload.status ?? payload.templateStatus);
+  const previewText = normalizeString(payload.previewText);
   const description = normalizeString(payload.description);
   const usageNote = normalizeString(payload.usageNote);
 
@@ -217,6 +250,7 @@ const validateTemplatePayload = (
     templateType,
     templateContent,
     nextStatus,
+    previewText: buildPreviewFallback(previewText, templateContent),
     description,
     usageNote,
   };
@@ -261,6 +295,7 @@ const ensureSeedTemplates = async () => {
     metadataMap[String(template.templateId)] = {
       description: seedTemplates[index].description,
       usageNote: seedTemplates[index].usageNote,
+      previewText: buildPreviewFallback("", seedTemplates[index].templateContent),
     };
   });
 
@@ -346,6 +381,7 @@ export const getTemplates = async (
         template.templateName.toLowerCase().includes(search.toLowerCase()) ||
         template.templateType.toLowerCase().includes(search.toLowerCase()) ||
         template.templateContent.toLowerCase().includes(search.toLowerCase()) ||
+        template.previewText.toLowerCase().includes(search.toLowerCase()) ||
         template.description.toLowerCase().includes(search.toLowerCase()) ||
         template.usageNote.toLowerCase().includes(search.toLowerCase());
 
@@ -395,10 +431,12 @@ export const createTemplate = async (
       newTemplate.templateId,
       validated.templateType,
       validated.templateName,
+      validated.templateContent,
       metadataMap,
       {
         description: validated.description,
         usageNote: validated.usageNote,
+        previewText: validated.previewText,
       },
     );
     await saveMetadataMap(metadataMap, req.user?.id);
@@ -457,10 +495,12 @@ export const updateTemplate = async (
       updatedTemplate.templateId,
       validated.templateType,
       validated.templateName,
+      validated.templateContent,
       metadataMap,
       {
         description: validated.description,
         usageNote: validated.usageNote,
+        previewText: validated.previewText,
       },
     );
     await saveMetadataMap(metadataMap, req.user?.id);
@@ -524,12 +564,14 @@ export const cloneTemplate = async (
       sourceTemplate.templateId,
       normalizeTemplateType(sourceTemplate.templateType),
       sourceTemplate.templateName,
+      sourceTemplate.templateContent,
       metadataMap,
     );
 
     metadataMap[String(clonedTemplate.templateId)] = {
       description: sourceMetadata.description,
       usageNote: sourceMetadata.usageNote,
+      previewText: sourceMetadata.previewText,
     };
     await saveMetadataMap(metadataMap, req.user?.id);
 

@@ -58,6 +58,13 @@
   line-height: 1.6;
 }
 
+.templates-modal__field small {
+  display: block;
+  margin-top: 8px;
+  color: #69816f;
+  line-height: 1.5;
+}
+
 .templates-page__state {
   border: 1px dashed #dbe8da;
   border-radius: 18px;

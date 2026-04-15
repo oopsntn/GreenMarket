@@ -43,6 +43,7 @@ const statusFilterOptions: Array<PromotionStatus | "All"> = [
   "Scheduled",
   "Active",
   "Paused",
+  "Completed",
   "Expired",
 ];
 
@@ -65,6 +66,7 @@ const statusLabelMap: Record<PromotionStatus | "All", string> = {
   Scheduled: "Đã lên lịch",
   Active: "Đang chạy",
   Paused: "Tạm dừng",
+  Completed: "Hoàn tất",
   Expired: "Hết hạn",
 };
 
@@ -74,7 +76,6 @@ const paymentLabelMap: Record<PromotionPaymentStatus | "All", string> = {
   "Pending Verification": "Chờ xác nhận",
 };
 
-const DEFAULT_REOPEN_START_DATE = "2026-04-01";
 const PAGE_SIZE = 5;
 
 const formatDateInput = (value: Date) => {
@@ -82,6 +83,12 @@ const formatDateInput = (value: Date) => {
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+
+const getTodayDateInput = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return formatDateInput(today);
 };
 
 const calculateEndDate = (startDate: string, durationDays: number) => {
@@ -94,7 +101,19 @@ const calculateEndDate = (startDate: string, durationDays: number) => {
   return formatDateInput(date);
 };
 
+const calculateDurationDays = (startDate: string, endDate: string) => {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return null;
+  }
+
+  return Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+};
+
 function PromotionsPage() {
+  const todayDateInput = getTodayDateInput();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [activePackages, setActivePackages] = useState(
     [] as ReturnType<typeof promotionPackageService.getActivePromotionPackages>,
@@ -191,7 +210,7 @@ function PromotionsPage() {
         setPageError(
           error instanceof Error
             ? error.message
-            : "Không thể tải danh sách khuyến mãi.",
+            : "Không thể tải danh sách đơn quảng bá.",
         );
       } finally {
         setIsLoading(false);
@@ -242,19 +261,31 @@ function PromotionsPage() {
   };
 
   const openChangePackageModal = (promotion: Promotion) => {
+    if (!promotionService.canChangePromotionPackage(promotion)) {
+      showToast(
+        promotionService.getChangePackageBlockedReason(promotion),
+        "error",
+      );
+      return;
+    }
+
     const preferredPackage = getPreferredPackage(promotion);
     if (!preferredPackage) {
-      showToast("Hiện chưa có gói khuyến mãi nào đang hoạt động.", "error");
+      showToast("Hiện chưa có gói quảng bá nào đang hoạt động.", "error");
       return;
     }
 
     setActionPromotionId(promotion.id);
     setActionModalMode("change");
+    const nextStartDate =
+      promotion.startDate && promotion.startDate >= todayDateInput
+        ? promotion.startDate
+        : todayDateInput;
     setActionFormData({
       slot: preferredPackage.slot,
       packageId: String(preferredPackage.id),
-      startDate: promotion.startDate,
-      endDate: promotion.endDate,
+      startDate: nextStartDate,
+      endDate: calculateEndDate(nextStartDate, preferredPackage.durationDays),
       paymentStatus: promotion.paymentStatus,
       adminNote: promotion.note,
     });
@@ -272,20 +303,18 @@ function PromotionsPage() {
 
     const preferredPackage = getPreferredPackage(promotion);
     if (!preferredPackage) {
-      showToast("Hiện chưa có gói khuyến mãi nào đang hoạt động.", "error");
+      showToast("Hiện chưa có gói quảng bá nào đang hoạt động.", "error");
       return;
     }
 
     setActionPromotionId(promotion.id);
     setActionModalMode("reopen");
+    const nextStartDate = todayDateInput;
     setActionFormData({
       slot: preferredPackage.slot,
       packageId: String(preferredPackage.id),
-      startDate: DEFAULT_REOPEN_START_DATE,
-      endDate: calculateEndDate(
-        DEFAULT_REOPEN_START_DATE,
-        preferredPackage.durationDays,
-      ),
+      startDate: nextStartDate,
+      endDate: calculateEndDate(nextStartDate, preferredPackage.durationDays),
       paymentStatus: "Paid",
       adminNote: `Admin mở lại gói sau khi xác nhận thanh toán từ ${promotion.owner}.`,
     });
@@ -392,16 +421,16 @@ function PromotionsPage() {
         null)
       : null;
 
-  const promotionLabel = confirmPromotion?.postTitle ?? "khuyến mãi này";
+  const promotionLabel = confirmPromotion?.postTitle ?? "đơn quảng bá này";
 
   const confirmTitleMap: Record<ConfirmAction, string> = {
-    pause: "Tạm dừng khuyến mãi",
-    resume: "Tiếp tục khuyến mãi",
+    pause: "Tạm dừng đơn quảng bá",
+    resume: "Tiếp tục đơn quảng bá",
   };
 
   const confirmMessageMap: Record<ConfirmAction, string> = {
-    pause: `Bạn chắc chắn muốn tạm dừng ${promotionLabel}? Khuyến mãi sẽ dừng cho đến khi được mở lại.`,
-    resume: `Bạn chắc chắn muốn tiếp tục ${promotionLabel}? Khuyến mãi sẽ chạy lại.`,
+    pause: `Bạn chắc chắn muốn tạm dừng ${promotionLabel}? Đơn quảng bá sẽ dừng hiển thị cho đến khi được mở lại.`,
+    resume: `Bạn chắc chắn muốn tiếp tục ${promotionLabel}? Đơn quảng bá sẽ chạy lại theo lịch hiện tại.`,
   };
 
   const confirmButtonMap: Record<ConfirmAction, string> = {
@@ -439,6 +468,30 @@ function PromotionsPage() {
     }
 
     openConfirmDialog(promotion.id, action);
+  };
+
+  const renderChangePackageButton = (promotion: Promotion) => {
+    const canChangePackage = promotionService.canChangePromotionPackage(promotion);
+
+    return (
+      <button
+        type="button"
+        className={
+          canChangePackage
+            ? "promotions-actions__change"
+            : "promotions-actions__disabled"
+        }
+        onClick={() => openChangePackageModal(promotion)}
+        disabled={!canChangePackage}
+        title={
+          canChangePackage
+            ? "Đổi gói hoặc cập nhật lịch chạy cho đơn chưa thanh toán"
+            : promotionService.getChangePackageBlockedReason(promotion)
+        }
+      >
+        Đổi gói
+      </button>
+    );
   };
 
   const handleConfirmAction = async () => {
@@ -517,7 +570,7 @@ function PromotionsPage() {
       showToast(
         error instanceof Error
           ? error.message
-          : "Không thể cập nhật trạng thái khuyến mãi.",
+          : "Không thể cập nhật trạng thái đơn quảng bá.",
         "error",
       );
     } finally {
@@ -587,6 +640,37 @@ function PromotionsPage() {
       return;
     }
 
+    if (!actionFormData.startDate || !actionFormData.endDate) {
+      showToast("Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc.", "error");
+      return;
+    }
+
+    if (actionFormData.startDate < todayDateInput) {
+      showToast(
+        "Ngày bắt đầu phải từ ngày hiện tại trở đi.",
+        "error",
+      );
+      return;
+    }
+
+    const selectedDuration = calculateDurationDays(
+      actionFormData.startDate,
+      actionFormData.endDate,
+    );
+
+    if (selectedDuration === null) {
+      showToast("Khoảng thời gian chạy của gói không hợp lệ.", "error");
+      return;
+    }
+
+    if (selectedDuration !== selectedActionPackage.durationDays) {
+      showToast(
+        `Gói ${selectedActionPackage.name} phải chạy đúng ${selectedActionPackage.durationDays} ngày.`,
+        "error",
+      );
+      return;
+    }
+
     if (actionModalMode === "reopen" && actionFormData.paymentStatus !== "Paid") {
       showToast(
         "Chỉ mở lại gói đã hết hạn sau khi xác nhận thanh toán.",
@@ -642,7 +726,7 @@ function PromotionsPage() {
       showToast(
         error instanceof Error
           ? error.message
-          : "Không thể cập nhật gói khuyến mãi.",
+          : "Không thể cập nhật gói quảng bá cho đơn này.",
         "error",
       );
     } finally {
@@ -654,8 +738,8 @@ function PromotionsPage() {
   return (
     <div className="promotions-page">
       <PageHeader
-        title="Quản lý khuyến mãi"
-        description="Quản lý gói khuyến mãi đã mua, xác nhận thanh toán, đổi gói và mở lại gói hết hạn khi admin xác nhận."
+        title="Quản lý đơn quảng bá"
+        description="Theo dõi từng đơn mua gói quảng bá, trạng thái thanh toán, lịch chạy, đổi gói và mở lại khi admin xác nhận."
       />
 
       <div className="promotions-summary-grid">
@@ -686,8 +770,8 @@ function PromotionsPage() {
 
       {showFilters && (
         <SectionCard
-          title="Bộ lọc khuyến mãi"
-          description="Lọc theo vị trí hiển thị, trạng thái vận hành, thanh toán và khoảng ngày chạy."
+          title="Bộ lọc đơn quảng bá"
+          description="Lọc theo vị trí hiển thị, trạng thái chạy, thanh toán và khoảng ngày của đơn."
         >
           <div className="promotions-filters">
             <div className="promotions-filters__field">
@@ -771,20 +855,23 @@ function PromotionsPage() {
       )}
 
       <SectionCard
-        title="Danh sách chiến dịch quảng bá"
-        description="Theo dõi bài đăng, chủ sở hữu, gói áp dụng, vị trí hiển thị, thanh toán, lịch chạy và cảnh báo vận hành."
+        title="Danh sách đơn quảng bá"
+        description="Theo dõi bài đăng, chủ sở hữu, gói đã mua, vị trí hiển thị, thanh toán, lịch chạy và cảnh báo vận hành."
       >
         {isLoading ? (
           <EmptyState
-            title="Đang tải khuyến mãi"
-            description="Đang lấy dữ liệu khuyến mãi từ hệ thống quản trị."
+            title="Đang tải đơn quảng bá"
+            description="Đang lấy dữ liệu đơn quảng bá từ hệ thống quản trị."
           />
         ) : pageError ? (
-          <EmptyState title="Không thể tải khuyến mãi" description={pageError} />
+          <EmptyState
+            title="Không thể tải đơn quảng bá"
+            description={pageError}
+          />
         ) : filteredPromotions.length === 0 ? (
           <EmptyState
-            title="Không có khuyến mãi phù hợp"
-            description="Không có khuyến mãi nào khớp bộ lọc hiện tại. Hãy thử điều kiện khác."
+            title="Không có đơn quảng bá phù hợp"
+            description="Không có đơn quảng bá nào khớp bộ lọc hiện tại. Hãy thử điều kiện khác."
           />
         ) : (
           <div className="promotions-directory">
@@ -840,18 +927,20 @@ function PromotionsPage() {
                         </div>
                       </td>
                       <td>
-                        <StatusBadge
-                          label={statusLabelMap[promotion.status]}
-                          variant={
-                            promotion.status === "Active"
-                              ? "active"
+                          <StatusBadge
+                            label={statusLabelMap[promotion.status]}
+                            variant={
+                              promotion.status === "Active"
+                                ? "active"
                               : promotion.status === "Paused"
                                 ? "paused"
+                              : promotion.status === "Completed"
+                                ? "success"
                                 : promotion.status === "Scheduled"
                                   ? "pending"
                                   : "expired"
-                          }
-                        />
+                            }
+                          />
                       </td>
                       <td>
                         <div className="promotions-cell promotions-cell--note">
@@ -889,13 +978,7 @@ function PromotionsPage() {
                               >
                                 Tạm dừng
                               </button>
-                              <button
-                                type="button"
-                                className="promotions-actions__change"
-                                onClick={() => openChangePackageModal(promotion)}
-                              >
-                                Đổi gói
-                              </button>
+                              {renderChangePackageButton(promotion)}
                             </>
                           ) : promotion.status === "Paused" ? (
                             <>
@@ -909,33 +992,21 @@ function PromotionsPage() {
                               >
                                 Tiếp tục
                               </button>
-                              <button
-                                type="button"
-                                className="promotions-actions__change"
-                                onClick={() => openChangePackageModal(promotion)}
-                              >
-                                Đổi gói
-                              </button>
+                              {renderChangePackageButton(promotion)}
                             </>
                           ) : promotion.status === "Scheduled" ? (
                             <>
-                              <button
-                                type="button"
-                                className="promotions-actions__change"
-                                onClick={() => openChangePackageModal(promotion)}
-                              >
-                                Đổi gói
-                              </button>
+                              {renderChangePackageButton(promotion)}
                               <button
                                 type="button"
                                 className="promotions-actions__disabled"
                                 disabled
-                                title="Khuyến mãi đã lên lịch nhưng chưa bắt đầu."
+                                title="Đơn quảng bá đã lên lịch nhưng chưa bắt đầu."
                               >
                                 Sắp chạy
                               </button>
                             </>
-                          ) : (
+                          ) : promotion.status === "Expired" ? (
                             <button
                               type="button"
                               className={
@@ -953,10 +1024,19 @@ function PromotionsPage() {
                                       promotion,
                                       "reopen",
                                     )
-                                  : "Mở lại khuyến mãi đã hết hạn"
+                                  : "Mở lại đơn quảng bá đã hết hạn"
                               }
                             >
                               Mở lại
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="promotions-actions__disabled"
+                              disabled
+                              title="Đơn quảng bá đã dùng hết quota trước thời hạn."
+                            >
+                              Hoàn tất
                             </button>
                           )}
                         </div>
@@ -997,8 +1077,8 @@ function PromotionsPage() {
 
       <BaseModal
         isOpen={isModalOpen}
-        title="Chi tiết khuyến mãi"
-        description="Xem cấu hình gói, lịch chạy, xác nhận thanh toán và trạng thái vận hành."
+        title="Chi tiết đơn quảng bá"
+        description="Xem cấu hình gói, lịch chạy, thanh toán và trạng thái vận hành của đơn."
         onClose={closeModal}
         maxWidth="820px"
       >
@@ -1133,6 +1213,17 @@ function PromotionsPage() {
                 </div>
               )}
 
+            {(selectedPromotion.status === "Active" ||
+              selectedPromotion.status === "Paused" ||
+              selectedPromotion.status === "Scheduled") &&
+              !promotionService.canChangePromotionPackage(selectedPromotion) && (
+                <div className="promotions-modal__notice">
+                  {promotionService.getChangePackageBlockedReason(
+                    selectedPromotion,
+                  )}
+                </div>
+              )}
+
             <div className="promotions-modal__actions">
               <button
                 type="button"
@@ -1146,8 +1237,28 @@ function PromotionsPage() {
                 <>
                   <button
                     type="button"
-                    className="promotions-modal__change"
+                    className={
+                      promotionService.canChangePromotionPackage(
+                        selectedPromotion,
+                      )
+                        ? "promotions-modal__change"
+                        : "promotions-modal__close"
+                    }
                     onClick={() => openChangePackageModal(selectedPromotion)}
+                    disabled={
+                      !promotionService.canChangePromotionPackage(
+                        selectedPromotion,
+                      )
+                    }
+                    title={
+                      !promotionService.canChangePromotionPackage(
+                        selectedPromotion,
+                      )
+                        ? promotionService.getChangePackageBlockedReason(
+                            selectedPromotion,
+                          )
+                        : "Đổi gói quảng bá"
+                    }
                   >
                     Đổi gói
                   </button>
@@ -1164,7 +1275,7 @@ function PromotionsPage() {
                             selectedPromotion,
                             "pause",
                           )
-                        : "Tạm dừng khuyến mãi này"
+                        : "Tạm dừng đơn quảng bá này"
                     }
                   >
                     Tạm dừng
@@ -1174,8 +1285,28 @@ function PromotionsPage() {
                 <>
                   <button
                     type="button"
-                    className="promotions-modal__change"
+                    className={
+                      promotionService.canChangePromotionPackage(
+                        selectedPromotion,
+                      )
+                        ? "promotions-modal__change"
+                        : "promotions-modal__close"
+                    }
                     onClick={() => openChangePackageModal(selectedPromotion)}
+                    disabled={
+                      !promotionService.canChangePromotionPackage(
+                        selectedPromotion,
+                      )
+                    }
+                    title={
+                      !promotionService.canChangePromotionPackage(
+                        selectedPromotion,
+                      )
+                        ? promotionService.getChangePackageBlockedReason(
+                            selectedPromotion,
+                          )
+                        : "Đổi gói quảng bá"
+                    }
                   >
                     Đổi gói
                   </button>
@@ -1192,7 +1323,7 @@ function PromotionsPage() {
                             selectedPromotion,
                             "resume",
                           )
-                        : "Tiếp tục khuyến mãi này"
+                        : "Tiếp tục đơn quảng bá này"
                     }
                   >
                     Tiếp tục
@@ -1201,12 +1332,30 @@ function PromotionsPage() {
               ) : selectedPromotion.status === "Scheduled" ? (
                 <button
                   type="button"
-                  className="promotions-modal__change"
+                  className={
+                    promotionService.canChangePromotionPackage(selectedPromotion)
+                      ? "promotions-modal__change"
+                      : "promotions-modal__close"
+                  }
                   onClick={() => openChangePackageModal(selectedPromotion)}
+                  disabled={
+                    !promotionService.canChangePromotionPackage(
+                      selectedPromotion,
+                    )
+                  }
+                  title={
+                    !promotionService.canChangePromotionPackage(
+                      selectedPromotion,
+                    )
+                      ? promotionService.getChangePackageBlockedReason(
+                          selectedPromotion,
+                        )
+                      : "Đổi gói quảng bá"
+                  }
                 >
                   Đổi gói
                 </button>
-              ) : (
+              ) : selectedPromotion.status === "Expired" ? (
                 <button
                   type="button"
                   className="promotions-modal__reopen"
@@ -1220,10 +1369,19 @@ function PromotionsPage() {
                           selectedPromotion,
                           "reopen",
                         )
-                      : "Mở lại khuyến mãi đã hết hạn"
+                      : "Mở lại đơn quảng bá đã hết hạn"
                   }
                 >
                   Mở lại gói
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="promotions-modal__close"
+                  disabled
+                  title="Đơn quảng bá đã dùng hết quota trước thời hạn."
+                >
+                  Hoàn tất
                 </button>
               )}
             </div>
@@ -1236,7 +1394,7 @@ function PromotionsPage() {
         title={
           actionModalMode === "reopen"
             ? "Mở lại gói đã hết hạn"
-            : "Đổi gói khuyến mãi"
+            : "Đổi gói quảng bá"
         }
         description={
           actionModalMode === "reopen"
@@ -1290,6 +1448,7 @@ function PromotionsPage() {
                   id="startDate"
                   name="startDate"
                   type="date"
+                  min={todayDateInput}
                   value={actionFormData.startDate}
                   onChange={handlePackageActionChange}
                 />
@@ -1301,9 +1460,13 @@ function PromotionsPage() {
                   id="endDate"
                   name="endDate"
                   type="date"
+                  min={actionFormData.startDate || todayDateInput}
                   value={actionFormData.endDate}
-                  onChange={handlePackageActionChange}
+                  disabled
                 />
+                <span className="promotions-modal__hint">
+                  Ngày kết thúc được tính tự động theo thời lượng của gói đã chọn.
+                </span>
               </div>
 
               <div className="promotions-modal__field">
@@ -1313,6 +1476,7 @@ function PromotionsPage() {
                   name="paymentStatus"
                   value={actionFormData.paymentStatus}
                   onChange={handlePackageActionChange}
+                  disabled={actionModalMode === "reopen"}
                 >
                   <option value="Paid">Đã thanh toán</option>
                   <option value="Pending Verification">Chờ xác nhận</option>
