@@ -11,17 +11,17 @@ import {
   RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  ClipboardCheck, 
-  Store, 
-  AlertTriangle, 
+import {
+  ClipboardCheck,
+  Store,
+  AlertTriangle,
   Users,
   ChevronRight,
   TrendingUp,
   Clock,
   LayoutDashboard
 } from 'lucide-react-native';
-import ManagerService from '../services/ManagerService';
+import managerService from '../services/ManagerService';
 
 const DashboardScreen = ({ navigation }: any) => {
   const [stats, setStats] = useState<any[]>([]);
@@ -35,9 +35,9 @@ const DashboardScreen = ({ navigation }: any) => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const data = await ManagerService.getDashboardOverview();
-      setStats(data.statCards);
-      setSummary(data.summary);
+      const data = await managerService.getDashboardOverview();
+      setStats(data.statCards ?? []);
+      setSummary(data.summary ?? []);
     } catch (error) {
       console.error(error);
     } finally {
@@ -64,8 +64,8 @@ const DashboardScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
-      <ScrollView 
+
+      <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={fetchDashboardData} tintColor="#22C55E" />
@@ -107,9 +107,9 @@ const DashboardScreen = ({ navigation }: any) => {
           </View>
 
           <Text style={styles.sectionTitle}>Phím tắt công việc</Text>
-          
+
           <View style={styles.quickActions}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionCard}
               onPress={() => navigation.navigate('Posts')}
             >
@@ -120,7 +120,7 @@ const DashboardScreen = ({ navigation }: any) => {
               <ChevronRight color="#CBD5E1" size={18} />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionCard}
               onPress={() => navigation.navigate('Shops')}
             >
@@ -131,7 +131,7 @@ const DashboardScreen = ({ navigation }: any) => {
               <ChevronRight color="#CBD5E1" size={18} />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionCard}
               onPress={() => navigation.navigate('Reports')}
             >

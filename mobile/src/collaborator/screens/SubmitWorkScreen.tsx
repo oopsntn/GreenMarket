@@ -30,6 +30,7 @@ const SubmitWorkScreen = () => {
     const { jobId, title } = route.params;
 
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [images, setImages] = useState<string[]>([]);
     const [note, setNote] = useState('');
 
@@ -63,21 +64,27 @@ const SubmitWorkScreen = () => {
         }
 
         setLoading(true);
+        setUploading(true);
         try {
-            // In a real app, you would upload the local URIs to a server first 
-            // to get permanent URLs. Here we simulate that by using the local URIs 
-            // as the fileUrls for the mock backend.
-            await CollaboratorService.submitDeliverables(jobId, images, note);
+            const uploadRes = await CollaboratorService.uploadDeliverables(images);
+            const uploadedUrls = Array.isArray(uploadRes?.urls) ? uploadRes.urls : [];
+
+            if (uploadedUrls.length !== images.length) {
+                throw new Error('Some files failed to upload.');
+            }
+
+            await CollaboratorService.submitDeliverables(jobId, uploadedUrls, note);
             
             Alert.alert(
                 'Hoàn thành công việc', 
                 'Kết quả công việc của bạn đã được nộp thành công!',
-                [{ text: 'Tuyệt vời!', onPress: () => navigation.navigate('MyWork') }]
+                [{ text: 'Tuyệt vời!', onPress: () => navigation.navigate('CollaboratorMain', { screen: 'MyWork' }) }]
             );
         } catch (error: any) {
             console.error('Submission error:', error);
             Alert.alert('Lỗi', error.response?.data?.error || 'Lỗi khi nộp kết quả công việc.');
         } finally {
+            setUploading(false);
             setLoading(false);
         }
     };
@@ -149,11 +156,11 @@ const SubmitWorkScreen = () => {
 
                 <View style={styles.footer}>
                     <TouchableOpacity 
-                        style={[styles.submitBtn, loading && styles.disabledBtn]} 
+                        style={[styles.submitBtn, (loading || uploading) && styles.disabledBtn]}
                         onPress={handleSubmit}
-                        disabled={loading}
+                        disabled={loading || uploading}
                     >
-                        {loading ? (
+                        {loading || uploading ? (
                             <ActivityIndicator color="white" />
                         ) : (
                             <>

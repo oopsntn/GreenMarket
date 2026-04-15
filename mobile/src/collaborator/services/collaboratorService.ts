@@ -1,4 +1,6 @@
-import { api } from "../../config/api";
+import { Platform } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { api, API_BASE_URL } from '../../config/api'
 
 export interface CollaboratorProfile {
     userId: number;
@@ -53,10 +55,11 @@ export interface JobDetail extends Job {
 
 export interface EarningEntry {
     earningEntryId: number;
-    earningEntryAmount: string | number;
-    earningEntryType: string;
-    earningEntryDescription: string | null;
-    earningEntryCreatedAt: string;
+    jobId?: number | null;
+    jobTitle?: string | null;
+    amount: string | number;
+    type: string;
+    createdAt: string;
 }
 
 export interface PayoutRequest {
@@ -66,6 +69,39 @@ export interface PayoutRequest {
     payoutRequestStatus: 'pending' | 'approved' | 'rejected';
     payoutRequestNote: string | null;
     payoutRequestCreatedAt: string;
+}
+
+export interface CollaboratorEarningsResponse {
+    data: EarningEntry[];
+    summary?: {
+        totalTransactions?: number;
+        averageIncomePerTransaction?: number;
+        [key: string]: any;
+    };
+    [key: string]: any;
+}
+
+type UploadResponse = {
+    urls: string[];
+}
+
+const MIME_MAP: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    heic: 'image/heic',
+    heif: 'image/heif',
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+}
+
+const getFileInfo = (uri: string) => {
+    const cleanUri = uri.split('?')[0]
+    const fileName = cleanUri.split('/').pop() || `upload_${Date.now()}.jpg`
+    const ext = fileName.split('.').pop()?.toLowerCase() || 'jpg'
+    const mimeType = MIME_MAP[ext] || 'application/octet-stream'
+    return { fileName, mimeType }
 }
 
 export const CollaboratorService = {
@@ -109,7 +145,44 @@ export const CollaboratorService = {
         return response.data;
     },
 
-    getEarnings: async (params?: { from?: string; to?: string }) => {
+    uploadDeliverables: async (fileUris: string[] = []): Promise<UploadResponse> => {
+        const formData = new FormData()
+
+        for (const uri of fileUris) {
+            const { fileName, mimeType } = getFileInfo(uri)
+
+            if (Platform.OS === 'web') {
+                const response = await fetch(uri)
+                const blob = await response.blob()
+                const file = new File([blob], fileName, { type: blob.type || mimeType })
+                formData.append('media', file)
+            } else {
+                formData.append('media', {
+                    uri,
+                    name: fileName,
+                    type: mimeType,
+                } as any)
+            }
+        }
+
+        const token = await AsyncStorage.getItem('token')
+        const response = await fetch(`${API_BASE_URL}/upload`, {
+            method: 'POST',
+            headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: formData,
+        })
+
+        const data = await response.json()
+        if (!data?.urls || !Array.isArray(data.urls)) {
+            throw new Error('Invalid upload response')
+        }
+
+        return data
+    },
+
+    getEarnings: async (params?: { from?: string; to?: string }): Promise<CollaboratorEarningsResponse> => {
         const response = await api.get('/collaborator/earnings', { params });
         return response.data;
     },

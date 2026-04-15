@@ -19,13 +19,16 @@ const MyJobsScreen = () => {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [status, setStatus] = useState<'accepted' | 'completed' | 'cancelled'>('accepted');
+    const [error, setError] = useState<string | null>(null);
 
     const fetchMyJobs = async (isRefresh = false) => {
         try {
+            setError(null);
             const res = await CollaboratorService.getMyJobs({ status });
             setJobs(res.data);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching my jobs:', error);
+            setError(error?.response?.data?.error || 'Unable to load your jobs.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -57,7 +60,12 @@ const MyJobsScreen = () => {
 
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Không tìm thấy công việc nào trong mục này.</Text>
+            <Text style={styles.emptyText}>{error || 'No jobs found in this section.'}</Text>
+            {error ? (
+                <TouchableOpacity style={styles.retryBtn} onPress={onRefresh}>
+                    <Text style={styles.retryBtnText}>Retry</Text>
+                </TouchableOpacity>
+            ) : null}
         </View>
     );
 
@@ -71,6 +79,12 @@ const MyJobsScreen = () => {
                     <StatusTab label="Lịch sử" value="cancelled" />
                 </View>
             </View>
+
+            {error && jobs.length > 0 ? (
+                <View style={styles.inlineError}>
+                    <Text style={styles.inlineErrorText}>{error}</Text>
+                </View>
+            ) : null}
 
             {loading ? (
                 <View style={styles.center}>
@@ -178,6 +192,17 @@ const styles = StyleSheet.create({
         color: '#64748B',
         fontWeight: '500',
     },
+    retryBtn: {
+        marginTop: 16,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        backgroundColor: '#111827',
+        borderRadius: 12,
+    },
+    retryBtnText: {
+        color: 'white',
+        fontWeight: '700',
+    },
     submitBtn: {
         backgroundColor: '#16A34A',
         paddingVertical: 12,
@@ -190,7 +215,22 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: '700',
         fontSize: 14,
-    }
+    },
+    inlineError: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        marginHorizontal: 24,
+        marginTop: 16,
+    },
+    inlineErrorText: {
+        color: '#B91C1C',
+        fontSize: 13,
+        fontWeight: '600',
+    },
 });
 
 export default MyJobsScreen;

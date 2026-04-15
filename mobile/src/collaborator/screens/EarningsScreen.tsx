@@ -22,7 +22,7 @@ import {
     AlertCircle
 } from 'lucide-react-native';
 import { CollaboratorService, EarningEntry, PayoutRequest } from '../services/collaboratorService';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const StatusBadge = ({ status }: { status: string }) => {
@@ -54,9 +54,11 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 const EarningsScreen = () => {
     const navigation = useNavigation<any>();
+    const route = useRoute<any>();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'earnings' | 'payouts'>('earnings');
+    const [activeTab, setActiveTab] = useState<'earnings' | 'payouts'>(route.params?.initialTab === 'payouts' ? 'payouts' : 'earnings');
+    const [error, setError] = useState<string | null>(null);
     
     const [earnings, setEarnings] = useState<EarningEntry[]>([]);
     const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
@@ -64,6 +66,7 @@ const EarningsScreen = () => {
 
     const fetchData = async () => {
         try {
+            setError(null);
             const [profileRes, earningsRes, payoutsRes] = await Promise.all([
                 CollaboratorService.getProfile(),
                 CollaboratorService.getEarnings(),
@@ -73,8 +76,9 @@ const EarningsScreen = () => {
             setStats(profileRes.stats);
             setEarnings(earningsRes.data || []);
             setPayouts(payoutsRes.data || []);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching earnings data:', error);
+            setError(error?.response?.data?.error || 'Unable to load wallet data right now.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -84,6 +88,12 @@ const EarningsScreen = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (route.params?.initialTab === 'earnings' || route.params?.initialTab === 'payouts') {
+            setActiveTab(route.params.initialTab);
+        }
+    }, [route.params?.initialTab]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -102,6 +112,19 @@ const EarningsScreen = () => {
             <View style={styles.center}>
                 <ActivityIndicator size="large" color="#16A34A" />
             </View>
+        );
+    }
+
+    if (error && earnings.length === 0 && payouts.length === 0) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.center}>
+                    <Text style={styles.errorText}>{error}</Text>
+                    <TouchableOpacity style={styles.retryBtn} onPress={fetchData}>
+                        <Text style={styles.retryBtnText}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
         );
     }
 
@@ -134,6 +157,11 @@ const EarningsScreen = () => {
                 </LinearGradient>
 
                 <View style={styles.content}>
+                    {error ? (
+                        <View style={styles.inlineError}>
+                            <Text style={styles.inlineErrorText}>{error}</Text>
+                        </View>
+                    ) : null}
                     {/* Tabs */}
                     <View style={styles.tabContainer}>
                         <TouchableOpacity 
@@ -162,10 +190,12 @@ const EarningsScreen = () => {
                                             <ArrowDownLeft color="#10B981" size={20} />
                                         </View>
                                         <View style={styles.historyInfo}>
-                                            <Text style={styles.historyTitle}>{item.earningEntryType}</Text>
-                                            <Text style={styles.historyDate}>{new Date(item.earningEntryCreatedAt).toLocaleDateString()}</Text>
+                                            <Text style={styles.historyTitle}>{item.jobTitle || item.type}</Text>
+                                            <Text style={styles.historyDate}>
+                                                {item.jobTitle ? `${item.type} · ` : ''}{new Date(item.createdAt).toLocaleDateString()}
+                                            </Text>
                                         </View>
-                                        <Text style={styles.earningsAmount}>+{formatCurrency(item.earningEntryAmount)}</Text>
+                                        <Text style={styles.earningsAmount}>+{formatCurrency(item.amount)}</Text>
                                     </View>
                                 ))
                             )}
@@ -358,7 +388,38 @@ const styles = StyleSheet.create({
         paddingVertical: 40,
         color: '#94A3B8',
         fontSize: 14,
-    }
+    },
+    errorText: {
+        fontSize: 14,
+        color: '#B91C1C',
+        textAlign: 'center',
+        marginBottom: 16,
+        paddingHorizontal: 24,
+    },
+    retryBtn: {
+        backgroundColor: '#111827',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    retryBtnText: {
+        color: 'white',
+        fontWeight: '700',
+    },
+    inlineError: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        marginBottom: 16,
+    },
+    inlineErrorText: {
+        color: '#B91C1C',
+        fontSize: 13,
+        fontWeight: '600',
+    },
 });
 
 export default EarningsScreen;

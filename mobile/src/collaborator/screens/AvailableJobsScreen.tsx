@@ -22,9 +22,11 @@ const AvailableJobsScreen = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
     const [meta, setMeta] = useState({ page: 1, totalPages: 1 });
+    const [error, setError] = useState<string | null>(null);
 
     const fetchJobs = async (page = 1, isRefresh = false) => {
         try {
+            setError(null);
             const res = await CollaboratorService.getAvailableJobs({ 
                 keyword: search, 
                 page, 
@@ -36,8 +38,9 @@ const AvailableJobsScreen = () => {
                 setJobs(prev => [...prev, ...res.data]);
             }
             setMeta(res.meta);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching available jobs:', error);
+            setError(error?.response?.data?.error || 'Unable to load available jobs.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -61,9 +64,9 @@ const AvailableJobsScreen = () => {
 
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Hiện không có công việc nào.</Text>
+            <Text style={styles.emptyText}>{error || 'No jobs available right now.'}</Text>
             <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
-                <Text style={styles.refreshBtnText}>Chạm để làm mới</Text>
+                <Text style={styles.refreshBtnText}>{error ? 'Retry' : 'Refresh'}</Text>
             </TouchableOpacity>
         </View>
     );
@@ -86,6 +89,12 @@ const AvailableJobsScreen = () => {
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {error && jobs.length > 0 ? (
+                <View style={styles.inlineError}>
+                    <Text style={styles.inlineErrorText}>{error}</Text>
+                </View>
+            ) : null}
 
             {loading && jobs.length === 0 ? (
                 <View style={styles.center}>
@@ -189,7 +198,22 @@ const styles = StyleSheet.create({
     refreshBtnText: {
         color: '#16A34A',
         fontWeight: '700',
-    }
+    },
+    inlineError: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        marginHorizontal: 24,
+        marginTop: 16,
+    },
+    inlineErrorText: {
+        color: '#B91C1C',
+        fontSize: 13,
+        fontWeight: '600',
+    },
 });
 
 export default AvailableJobsScreen;
