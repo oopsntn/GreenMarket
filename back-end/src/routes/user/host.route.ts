@@ -9,15 +9,27 @@ import {
   updateContent,
   deleteContent,
   trackContentClick,
+  getPublicContents,
+  getPublicContentDetail,
+  toggleFavoriteContent,
+  getMyFavoriteContents,
+  checkIsContentSaved,
 } from "../../controllers/user/host.controller.ts";
 import { verifyToken, requireBusinessRole } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
 
-// Public Tracking (no auth required to click a link)
+// Public APIs (no auth required)
 router.get("/tracking/:id", trackContentClick);
+router.get("/public/contents", getPublicContents);
+router.get("/public/contents/:id", getPublicContentDetail);
 
-// Protected Host APIs
+// Authenticated user APIs (any logged-in user, not just HOST)
+router.get("/favorites", verifyToken, getMyFavoriteContents);
+router.get("/favorites/:id/check", verifyToken, checkIsContentSaved);
+router.post("/favorites/:id", verifyToken, toggleFavoriteContent);
+
+// Protected Host APIs (HOST role only)
 router.use(verifyToken);
 router.use(requireBusinessRole("HOST"));
 

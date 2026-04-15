@@ -18,6 +18,8 @@ import OwnerDashboard from './pages/OwnerDashboard';
 import Packages from './pages/Packages';
 import PersonalDashboard from './pages/PersonalDashboard';
 import ScrollToTop from './components/ScrollToTop';
+import News from './pages/News';
+import NewsBookmarks from './pages/NewsBookmarks';
 
 /**
  * AppContent handles the conditional rendering of the Navbar
@@ -35,6 +37,7 @@ const AppContent: React.FC = () => {
         <Route path="/home" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/shops" element={<ShopList />} />
+        <Route path="/news" element={<News />} />
         <Route path="/packages" element={<Packages />} />
         <Route path="/payment-result" element={<PaymentResult />} />
         <Route path="/detail/:slug" element={<PostDetail />} />
@@ -74,6 +77,11 @@ const AppContent: React.FC = () => {
         <Route path="/saved-posts" element={
           <ProtectedRoute>
             <SavedPosts />
+          </ProtectedRoute>
+        } />
+        <Route path="/news/bookmarks" element={
+          <ProtectedRoute>
+            <NewsBookmarks />
           </ProtectedRoute>
         } />
         <Route path="/posts/detail/:slug" element={<PostDetail />} />

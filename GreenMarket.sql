@@ -760,6 +760,14 @@ CREATE TABLE host_payout_requests (
     host_payout_created_at TIMESTAMP DEFAULT now()
 );
 
+-- Favorite Contents (Bookmarks)
+CREATE TABLE favorite_contents (
+    favorite_content_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    favorite_content_id INTEGER NOT NULL REFERENCES host_contents(host_content_id) ON DELETE CASCADE,
+    favorite_content_created_at TIMESTAMP DEFAULT now(),
+    PRIMARY KEY (favorite_content_user_id, favorite_content_id)
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -1334,6 +1342,30 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'cay-bonsai-test-0987654321',
     1500000, 'Hà Nội', 'approved', '0987654321', 10, 2, true, now() - interval '1 days', now() - interval '1 days');
 
+-- Additional sample posts
+INSERT INTO posts (
+    post_id,
+    post_author_id,
+    post_shop_id,
+    category_id,
+    post_title,
+    post_slug,
+    post_price,
+    post_location,
+    post_status,
+    post_contact_phone,
+    post_view_count,
+    post_contact_count,
+    post_published,
+    post_submitted_at,
+    post_published_at
+) VALUES
+(17, 1, 1, 12, 'Linh Sam Da Mini Tron Bo Re Dep', 'linh-sam-da-mini-tron-bo-re-dep', 5900000, 'Yen Phong, Bac Ninh', 'approved', '0978195419', 214, 13, true, now() - interval '4 days', now() - interval '4 days'),
+(18, 3, 3, 13, 'Sung Canh Co Thu Tan Rong', 'sung-canh-co-thu-tan-rong', 32000000, 'Nam Truc, Nam Dinh', 'approved', '0123456789', 178, 6, true, now() - interval '3 days', now() - interval '3 days'),
+(19, 4, 3, 15, 'Oc Thanh Mai Bonsai Hoa Tim', 'oc-thanh-mai-bonsai-hoa-tim', 7800000, 'Cho Lach, Ben Tre', 'approved', '0912345678', 95, 4, true, now() - interval '2 days', now() - interval '2 days'),
+(20, 6, 4, 21, 'Keo Cat Canh Mini Canh Cong', 'keo-cat-canh-mini-canh-cong', 450000, 'Dong Anh, Ha Noi', 'approved', '0935112233', 88, 9, true, now() - interval '2 days', now() - interval '2 days'),
+(21, 6, 4, 25, 'Bo Tuoi Nho Giot 8 Dau Phun', 'bo-tuoi-nho-giot-8-dau-phun', 690000, 'Dong Anh, Ha Noi', 'approved', '0935112233', 76, 7, true, now() - interval '1 day', now() - interval '1 day');
+
 -- Post Attribute Values
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
 -- Post 1: Sanh Mini
@@ -1367,6 +1399,30 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 -- Post 15: Bình Phun Sương
 (15, 6, 'Đồng Thau'),     (15, 8, 'Nhật Bản');
 
+-- Additional sample post attributes
+INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
+(17, 1, 'Dang Truc'),
+(17, 2, '32'),
+(17, 3, '18'),
+(17, 4, '7'),
+(17, 5, 'Ben Tre'),
+(18, 1, 'Dang Hoanh'),
+(18, 2, '140'),
+(18, 3, '65'),
+(18, 4, '25'),
+(18, 5, 'Nam Dinh'),
+(19, 1, 'Dang Huyen'),
+(19, 2, '55'),
+(19, 3, '26'),
+(19, 4, '9'),
+(19, 5, 'Ben Tre'),
+(20, 6, 'Thep Khong Gi (Inox)'),
+(20, 7, 'Bonsai Pro'),
+(20, 8, 'Viet Nam'),
+(21, 6, 'Nhua PP'),
+(21, 7, 'Bonsai Pro'),
+(21, 8, 'Viet Nam');
+
 -- Post Images
 INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
 (1,  '/uploads/sanh-nam-dien-mini-1.jpg', 0),
@@ -1393,6 +1449,16 @@ INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
 (14, '/uploads/day-nhom-uon-1.jpg', 0),
 (15, '/uploads/binh-phun-suong-1.jpg', 0);
 
+-- Additional sample post images
+INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
+(17, '/uploads/linh-sam-da-mini-1.jpg', 0),
+(17, '/uploads/linh-sam-da-mini-2.jpg', 1),
+(18, '/uploads/sung-co-thu-1.jpg', 0),
+(19, '/uploads/oc-thanh-mai-1.jpg', 0),
+(19, '/uploads/oc-thanh-mai-2.jpg', 1),
+(20, '/uploads/keo-cat-canh-mini-1.jpg', 0),
+(21, '/uploads/bo-tuoi-nho-giot-1.jpg', 0);
+
 -- Favorite Posts (Bookmarks)
 INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favorite_post_created_at) VALUES
 (5, 1, now() - interval '20 days'),
@@ -1402,6 +1468,11 @@ INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favori
 (7, 5, now() - interval '10 days'),
 (7, 13, now() - interval '8 days'),
 (2, 9, now() - interval '3 days');
+
+-- Additional sample favorite posts
+INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favorite_post_created_at) VALUES
+(5, 18, now() - interval '2 days'),
+(7, 20, now() - interval '1 day');
 
 -- ============================================================
 -- PLACEMENT SLOTS & PROMOTION PACKAGES
@@ -1784,4 +1855,3 @@ SELECT setval('system_notifications_notification_id_seq', (SELECT COALESCE(MAX(n
 SELECT setval('host_contents_host_content_id_seq', (SELECT COALESCE(MAX(host_content_id), 1) FROM host_contents));
 SELECT setval('host_earnings_host_earning_id_seq', (SELECT COALESCE(MAX(host_earning_id), 1) FROM host_earnings));
 SELECT setval('host_payout_requests_host_payout_id_seq', (SELECT COALESCE(MAX(host_payout_id), 1) FROM host_payout_requests));
-

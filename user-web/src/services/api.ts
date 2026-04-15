@@ -229,4 +229,71 @@ export const checkIsSaved = (postId: number | string) => api.get(`/posts/${postI
 export const toggleFavoritePost = (postId: number | string) => api.post(`/posts/${postId}/favorite`);
 export const getFavoritePosts = () => api.get('/profile/favorites');
 
+// Host content public APIs
+export interface HostPublicContent {
+  hostContentId: number;
+  hostContentTitle: string;
+  hostContentDescription: string | null;
+  hostContentTargetType: string | null;
+  hostContentTargetId: number | null;
+  hostContentMediaUrls: string[] | null;
+  hostContentViewCount: number | null;
+  hostContentClickCount: number | null;
+  hostContentCreatedAt: string | null;
+  authorId: number | null;
+  authorName: string | null;
+  authorAvatar: string | null;
+}
+
+export interface HostPublicContentsResponse {
+  data: HostPublicContent[];
+  meta: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+export interface HostFavoriteContent {
+  favoriteCreatedAt: string | null;
+  hostContentId: number;
+  hostContentTitle: string;
+  hostContentDescription: string | null;
+  hostContentTargetType: string | null;
+  hostContentMediaUrls: string[] | null;
+  hostContentViewCount: number | null;
+  hostContentCreatedAt: string | null;
+  authorName: string | null;
+  authorAvatar: string | null;
+}
+
+export interface HostFavoriteContentsResponse {
+  data: HostFavoriteContent[];
+  meta: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+export const getHostPublicContents = (params?: {
+  search?: string;
+  targetType?: "post" | "shop";
+  page?: number;
+  limit?: number;
+}) => api.get<HostPublicContentsResponse>('/host/public/contents', { params });
+
+export const toggleFavoriteHostContent = (contentId: number | string) =>
+  api.post<{ message: string; isSaved: boolean }>(`/host/favorites/${contentId}`);
+
+export const checkHostContentSaved = (contentId: number | string) =>
+  api.get<{ isSaved: boolean }>(`/host/favorites/${contentId}/check`);
+
+export const getMyFavoriteHostContents = (params?: {
+  page?: number;
+  limit?: number;
+}) => api.get<HostFavoriteContentsResponse>('/host/favorites', { params });
+
 export default api;
