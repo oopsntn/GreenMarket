@@ -647,6 +647,43 @@ export const restorePost = async (req: AuthRequest, res: Response): Promise<void
     }
 };
 
+export const togglePostVisibility = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const postId = parseId(req.params.id as string);
+        const userId = req.user?.id;
+        if (!postId || !userId) {
+            res.status(400).json({ error: "Post ID is required" });
+            return;
+        }
+
+        const [existingPost] = await db.select().from(posts).where(eq(posts.postId, postId)).limit(1);
+        if (!existingPost) {
+            res.status(404).json({ error: "Post not found" });
+            return;
+        }
+        if (existingPost.postAuthorId !== userId) {
+            res.status(403).json({ error: "Unauthorized to update this post" });
+            return;
+        }
+
+        const [updatedPost] = await db.update(posts)
+            .set({
+                postPublished: !existingPost.postPublished,
+                postUpdatedAt: new Date()
+            })
+            .where(eq(posts.postId, postId))
+            .returning();
+
+        res.json({
+            message: updatedPost.postPublished ? "Post is now visible" : "Post is now hidden",
+            post: updatedPost
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
 // --- Buyer / Public Flow ---
 
 import { PostService } from "../../services/post.service.ts";

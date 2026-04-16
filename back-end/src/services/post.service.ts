@@ -8,7 +8,10 @@ import { postLifecycleService } from "./postLifecycle.service.ts";
 export class PostService {
     static async getPublicPosts(query: GetPostsQueryDto) {
         await postLifecycleService.syncAutoExpiredPosts();
-        const conditions: SQL[] = [eq(posts.postStatus, "approved")];
+        const conditions: SQL[] = [
+            eq(posts.postStatus, "approved"),
+            eq(posts.postPublished, true)
+        ];
 
         if (query.search) {
             conditions.push(sql`to_tsvector('simple', ${posts.postTitle}) @@ websearch_to_tsquery('simple', ${query.search})`);

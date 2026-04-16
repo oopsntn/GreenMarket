@@ -1,6 +1,6 @@
 # GreenMarket API Documentation
 
-Last updated: 2026-04-11
+Last updated: 2026-04-16
 
 This document lists APIs that are already implemented in `back-end/src/routes`.
 It is intended for `mobile`, `user-web`, and `admin-web` teams.
@@ -153,6 +153,7 @@ Auth rules for all endpoints below:
 | GET | `/api/posts/posting-policy` | User token | Get effective posting plan, daily usage, and tracked posting fees | none |
 | POST | `/api/posts/personal-plan/mock-activate` | User token | Activate monthly personal plan (development/mock) | optional: `durationDays` (7-365) |
 | PATCH | `/api/posts/:id` | User token | Update user post | path `id` (post owner only) |
+| PATCH | `/api/posts/:id/toggle-visibility` | User token | Toggle public visibility (`postPublished`) | path `id` (post owner only) |
 | DELETE | `/api/posts/:id` | User token | Soft delete user post | path `id` (post owner only) |
 | GET | `/api/posts/:id/favorite` | User token | Check if a post is favorited by current user | path `id` |
 | POST | `/api/posts/:id/favorite` | User token | Toggle (add/remove) favorite post | path `id` |
@@ -231,18 +232,19 @@ Auth rules for all endpoints below:
 
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
-| POST | `/api/payment/buy-package` | User token | Create VNPay payment intent URL for promotion package | `postId`, `packageId` |
+| POST | `/api/payment/buy-package` | User token | Create VNPay payment intent URL for post boost package | `postId`, `packageId` |
 | POST | `/api/payment/buy-personal` | User token | Create VNPay payment intent URL for personal monthly plan | none |
-| POST | `/api/payment/shop-registration` | User token | Create VNPay payment intent URL for shop registration fee | none |
+| POST | `/api/payment/register-shop` | User token | Create VNPay payment intent URL for garden owner registration | none |
 | POST | `/api/payment/buy-shop-vip` | User token | Create VNPay payment intent URL for Shop VIP package | none |
 | GET | `/api/payment/vnpay-return` | No | VNPay redirect callback | query params from VNPay |
 | POST | `/api/payment/vnpay-ipn` | No | VNPay IPN callback | callback payload from VNPay |
 
 **Payment behavior notes:**
 - `buy-package` validates post ownership, post approval status, active shop ownership, package publish status, and slot availability.
-- All payments use **VND**.
-- On success, the backend snapshots the package benefits (title, priority) into the promotion record.
+- All payment types (Boost, Registration, Personal Plan, VIP) are now linked to formal `promotion_packages` records in the database for unified auditing.
+- Payment intents fetch prices directly from the promotion package catalog, which syncs with system settings.
 - Common error shape: `{ error, code, ...details }`.
+- Static uploaded files are served at `/uploads/<filename>`.
 
 ## Admin APIs
 

@@ -1,7 +1,8 @@
-import { and, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
   paymentTxn,
+  type PaymentTxn,
   placementSlots,
   postPromotions,
   posts,
@@ -19,6 +20,8 @@ import {
   BOOST_POST_SLOT_PREFIX,
   SHOP_VIP_SLOT_CODE,
   isBoostPostSlotCode,
+  SHOP_REGISTRATION_SLOT_CODE,
+  PERSONAL_PLAN_SLOT_CODE,
 } from "../constants/promotion.ts";
 import { readSettingNumber } from "../controllers/user/pricing-config.controller.ts";
 import { postingPolicyService } from "./posting-policy.service.ts";
@@ -188,7 +191,6 @@ const activatePromotionForTransaction = async (
   const startAt = new Date();
   const durationDays = Number(pkg.promotionPackageDurationDays || 0);
   const endAt = new Date(startAt.getTime() + durationDays * 24 * 60 * 60 * 1000);
-
   await tx.insert(postPromotions).values({
     postPromotionPostId: txn.paymentTxnPostId,
     postPromotionBuyerId: txn.paymentTxnUserId,
@@ -204,7 +206,7 @@ const activatePromotionForTransaction = async (
 
 const activateShopVipForTransaction = async (
   tx: any,
-  txn: typeof paymentTxn.$inferSelect,
+  txn: PaymentTxn,
 ) => {
   if (!txn.paymentTxnPackageId || txn.paymentTxnPostId) {
     throw new PaymentServiceError(
@@ -273,21 +275,77 @@ const activateShopVipForTransaction = async (
   }
 
   const now = new Date();
-  const hasActiveVip =
-    shop.shopVipExpiresAt instanceof Date && shop.shopVipExpiresAt > now;
-  const vipBaseAt = hasActiveVip ? shop.shopVipExpiresAt! : now;
-  const vipExpiresAt = new Date(
-    vipBaseAt.getTime() + durationDays * 24 * 60 * 60 * 1000,
+  const currentExpiresAt = shop.shopVipExpiresAt ? new Date(shop.shopVipExpiresAt) : null;
+  const isCurrentlyVip = currentExpiresAt && currentExpiresAt > now;
+
+  const newStartAt = isCurrentlyVip
+    ? shop.shopVipStartedAt
+      ? new Date(shop.shopVipStartedAt)
+      : now
+    : now;
+  const baseDate = isCurrentlyVip ? currentExpiresAt : now;
+  const newExpiresAt = new Date(
+    baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000,
   );
 
   await tx
     .update(shops)
     .set({
-      shopVipStartedAt: hasActiveVip ? shop.shopVipStartedAt ?? now : now,
-      shopVipExpiresAt: vipExpiresAt,
-      shopUpdatedAt: new Date(),
+      shopVipStartedAt: newStartAt,
+      shopVipExpiresAt: newExpiresAt,
+      shopUpdatedAt: now,
     })
     .where(eq(shops.shopId, txn.paymentTxnUserId));
+};
+
+const activateRegistrationForTransaction = async (tx: any, userId: number) => {
+  await tx
+    .update(shops)
+    .set({ shopStatus: "active", shopUpdatedAt: new Date() })
+    .where(eq(shops.shopId, userId));
+
+  // Migrate all existing posts of this author to the shop profile
+  await tx
+    .update(posts)
+    .set({
+      postShopId: userId,
+      postUpdatedAt: new Date(),
+    })
+    .where(eq(posts.postAuthorId, userId));
+};
+
+const handleNonPostPackageActivation = async (
+  tx: any,
+  txn: PaymentTxn,
+) => {
+  const [pkg] = await tx
+    .select({
+      slotCode: placementSlots.placementSlotCode,
+    })
+    .from(promotionPackages)
+    .innerJoin(
+      placementSlots,
+      eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
+    )
+    .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId!))
+    .limit(1);
+
+  if (!pkg) return;
+
+  switch (pkg.slotCode) {
+    case SHOP_VIP_SLOT_CODE:
+      await activateShopVipForTransaction(tx, txn);
+      break;
+    case SHOP_REGISTRATION_SLOT_CODE:
+      await activateRegistrationForTransaction(tx, txn.paymentTxnUserId);
+      break;
+    case PERSONAL_PLAN_SLOT_CODE:
+      await postingPolicyService.activatePersonalMonthlyPlan({
+        userId: txn.paymentTxnUserId,
+        durationDays: 30,
+      });
+      break;
+  }
 };
 
 const processVerifiedCallback = async (
@@ -376,11 +434,14 @@ const processVerifiedCallback = async (
         return { status: "failed", txnRef, responseCode };
       }
 
-      if (updatedTxn.paymentTxnPackageId && updatedTxn.paymentTxnPostId) {
-        await activatePromotionForTransaction(tx, updatedTxn);
-      } else if (updatedTxn.paymentTxnPackageId && !updatedTxn.paymentTxnPostId) {
-        await activateShopVipForTransaction(tx, updatedTxn);
-      } else if (!updatedTxn.paymentTxnPackageId && !updatedTxn.paymentTxnPostId) {
+      if (updatedTxn.paymentTxnPackageId) {
+        if (updatedTxn.paymentTxnPostId) {
+          await activatePromotionForTransaction(tx, updatedTxn);
+        } else {
+          await handleNonPostPackageActivation(tx, updatedTxn);
+        }
+      } else {
+        // Fallback for legacy transactions (missing packageId)
         const orderInfo = String(body.vnp_OrderInfo || "");
         if (orderInfo.startsWith("PayPersonalPkg")) {
           await postingPolicyService.activatePersonalMonthlyPlan({
@@ -388,8 +449,7 @@ const processVerifiedCallback = async (
             durationDays: 30,
           });
         } else {
-          // It's a shop registration activation
-          await tx.update(shops).set({ shopStatus: "active", shopUpdatedAt: new Date() }).where(eq(shops.shopId, updatedTxn.paymentTxnUserId));
+          await activateRegistrationForTransaction(tx, updatedTxn.paymentTxnUserId);
         }
       }
       return { status: "success", txnRef, responseCode };
@@ -469,7 +529,10 @@ export const paymentService = {
     if (!shop) throw new PaymentServiceError(404, "SHOP_NOT_FOUND", "Thong tin shop khong ton tai.");
     if (shop.shopStatus === "active") throw new PaymentServiceError(400, "SHOP_ALREADY_ACTIVE", "Shop da duoc kich hoat tien trinh dang ky.");
 
-    const finalAmount = await readSettingNumber("shop_registration_price", 250000);
+    const pkg = await findPublishedPackageBySlotCode(SHOP_REGISTRATION_SLOT_CODE);
+    if (!pkg) throw new PaymentServiceError(404, "SHOP_REG_PACKAGE_NOT_FOUND", "Goi dang ky nha vuon chua duoc cau hinh.");
+
+    const finalAmount = toSafeIntegerAmount(pkg.promotionPackagePrice);
     const orderId = createOrderId();
     const orderInfo = `PayShopReg${userId}`;
 
@@ -477,6 +540,8 @@ export const paymentService = {
 
     await db.insert(paymentTxn).values({
       paymentTxnUserId: userId,
+      paymentTxnPackageId: pkg.promotionPackageId,
+      paymentTxnPriceId: pkg.promotionPackagePriceId ?? null,
       paymentTxnAmount: String(finalAmount),
       paymentTxnProvider: "VNPAY",
       paymentTxnProviderTxnId: orderId,
@@ -501,7 +566,10 @@ export const paymentService = {
       throw new PaymentServiceError(400, "ALREADY_GARDEN_OWNER", "Shop owner cannot buy personal plan.");
     }
 
-    const finalAmount = await readSettingNumber("personal_monthly_price", 30000);
+    const pkg = await findPublishedPackageBySlotCode(PERSONAL_PLAN_SLOT_CODE);
+    if (!pkg) throw new PaymentServiceError(404, "PERSONAL_PLAN_PACKAGE_NOT_FOUND", "Goi ca nhan chua duoc cau hinh.");
+
+    const finalAmount = toSafeIntegerAmount(pkg.promotionPackagePrice);
     const orderId = createOrderId();
     const orderInfo = `PayPersonalPkg${userId}`;
 
@@ -509,6 +577,8 @@ export const paymentService = {
 
     await db.insert(paymentTxn).values({
       paymentTxnUserId: userId,
+      paymentTxnPackageId: pkg.promotionPackageId,
+      paymentTxnPriceId: pkg.promotionPackagePriceId ?? null,
       paymentTxnAmount: String(finalAmount),
       paymentTxnProvider: "VNPAY",
       paymentTxnProviderTxnId: orderId,

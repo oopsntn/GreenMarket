@@ -5,6 +5,11 @@ import { getCategories, getCategoryAttributes, createPost, uploadMedia, getPubli
 import { useAuth } from '../context/AuthContext';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
+const MAX_IMAGES_PER_POST = 10;
+const MAX_IMAGE_SIZE_MB = 3;
+const MAX_VIDEO_SIZE_MB = 50;
+const ENABLE_IMAGE_COMPRESSION = true;
+
 const CreatePost: React.FC = () => {
     const navigate = useNavigate();
 
@@ -17,9 +22,10 @@ const CreatePost: React.FC = () => {
     const [submitted, setSubmitted] = useState(false);
     const [systemSettings, setSystemSettings] = useState({
         media: {
-            maxImagesPerPost: 10,
-            maxFileSizeMb: 5,
-            enableImageCompression: true,
+            maxImagesPerPost: MAX_IMAGES_PER_POST,
+            maxImageSizeMb: MAX_IMAGE_SIZE_MB,
+            maxVideoSizeMb: MAX_VIDEO_SIZE_MB,
+            enableImageCompression: ENABLE_IMAGE_COMPRESSION,
         },
         postLifecycle: {
             postRateLimitPerHour: 10,
@@ -55,9 +61,10 @@ const CreatePost: React.FC = () => {
                 const response = await getPublicSystemSettings();
                 setSystemSettings({
                     media: {
-                        maxImagesPerPost: Number(response.data?.media?.maxImagesPerPost || 10),
-                        maxFileSizeMb: Number(response.data?.media?.maxFileSizeMb || 5),
-                        enableImageCompression: Boolean(response.data?.media?.enableImageCompression ?? true),
+                        maxImagesPerPost: MAX_IMAGES_PER_POST,
+                        maxImageSizeMb: MAX_IMAGE_SIZE_MB,
+                        maxVideoSizeMb: MAX_VIDEO_SIZE_MB,
+                        enableImageCompression: ENABLE_IMAGE_COMPRESSION,
                     },
                     postLifecycle: {
                         postRateLimitPerHour: Number(response.data?.postLifecycle?.postRateLimitPerHour || 10),
@@ -108,25 +115,33 @@ const CreatePost: React.FC = () => {
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
         const selectedFiles = Array.from(e.target.files);
-        const maxFileSizeBytes = systemSettings.media.maxFileSizeMb * 1024 * 1024;
 
         const newImages: File[] = [];
         const newVideos: File[] = [];
         const newPreviews: { url: string, type: 'image' | 'video' }[] = [];
 
         for (const file of selectedFiles) {
-            if (file.size > maxFileSizeBytes) {
-                alert(`Tệp "${file.name}" vượt quá giới hạn ${systemSettings.media.maxFileSizeMb}MB.`);
-                return;
-            }
-
             const url = URL.createObjectURL(file);
             if (file.type.startsWith('image/')) {
+                const maxImageSizeBytes = systemSettings.media.maxImageSizeMb * 1024 * 1024;
+                if (file.size > maxImageSizeBytes) {
+                    URL.revokeObjectURL(url);
+                    alert(`Ảnh "${file.name}" vượt quá giới hạn ${systemSettings.media.maxImageSizeMb}MB.`);
+                    return;
+                }
                 newImages.push(file);
                 newPreviews.push({ url, type: 'image' });
             } else if (file.type.startsWith('video/')) {
+                const maxVideoSizeBytes = systemSettings.media.maxVideoSizeMb * 1024 * 1024;
+                if (file.size > maxVideoSizeBytes) {
+                    URL.revokeObjectURL(url);
+                    alert(`Video "${file.name}" vượt quá giới hạn ${systemSettings.media.maxVideoSizeMb}MB.`);
+                    return;
+                }
                 newVideos.push(file);
                 newPreviews.push({ url, type: 'video' });
+            } else {
+                URL.revokeObjectURL(url);
             }
         }
 
@@ -421,7 +436,7 @@ const CreatePost: React.FC = () => {
                         <ul className="text-xs text-slate-500 space-y-1 font-medium">
                             <li>• Nên chọn ảnh rõ nét, ánh sáng tốt.</li>
                             <li>• Tối đa {systemSettings.media.maxImagesPerPost} ảnh cho mỗi bài đăng.</li>
-                            <li>• Ảnh hoặc video tải lên không vượt quá {systemSettings.media.maxFileSizeMb}MB mỗi tệp.</li>
+                            <li>• Ảnh tối đa {systemSettings.media.maxImageSizeMb}MB, video tối đa {systemSettings.media.maxVideoSizeMb}MB cho mỗi tệp.</li>
                             <li>• Hệ thống giới hạn tối đa {systemSettings.postLifecycle.postRateLimitPerHour} bài trong 1 giờ cho mỗi tài khoản.</li>
                             {systemSettings.media.enableImageCompression ? (
                                 <li>• Ảnh tải lên sẽ được nén tự động trước khi gửi để tối ưu tốc độ.</li>

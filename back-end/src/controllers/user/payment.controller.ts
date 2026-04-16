@@ -3,7 +3,6 @@ import { AuthRequest } from "../../dtos/auth.ts";
 import {
   buildFrontendPaymentResultUrl,
   getVNPayConfig,
-  signVNPayResponse,
 } from "../../utils/vnpay.ts";
 import {
   VNPayCallbackResult,
@@ -224,48 +223,6 @@ export const vnpayIpn = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const vnpayMockExec = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const txnRef = asString(req.query.vnp_TxnRef);
-    const amount = asString(req.query.vnp_Amount);
-    const orderInfo = asString(req.query.vnp_OrderInfo);
-
-    if (!txnRef) {
-      res.status(400).send("Missing vnp_TxnRef");
-      return;
-    }
-
-    // 1. Prepare Success Payload
-    const mockParams: Record<string, string> = {
-      vnp_Amount: String(Number(amount) * 100), // VNPAY amount is x100
-      vnp_BankCode: "NCB",
-      vnp_BankTranNo: "VNP12345678",
-      vnp_CardType: "ATM",
-      vnp_OrderInfo: orderInfo,
-      vnp_PayDate: new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14),
-      vnp_ResponseCode: "00",
-      vnp_TmnCode: getVNPayConfig().tmnCode,
-      vnp_TransactionNo: "12345678",
-      vnp_TransactionStatus: "00",
-      vnp_TxnRef: txnRef,
-    };
-
-    const secureHash = signVNPayResponse(mockParams);
-    const fullPayload = { ...mockParams, vnp_SecureHash: secureHash };
-
-    // 2. Internally trigger IPN logic
-    console.log("vnpayMockExec MOCK PARAMS:", mockParams);
-    const mockResult = await paymentService.processVNPayCallback(fullPayload);
-    console.log("vnpayMockExec IPN RESULT:", mockResult);
-
-    // 3. Redirect user to Return URL logic
-    const returnUrl = `/api/payment/vnpay-return?${new URLSearchParams(fullPayload).toString()}`;
-    res.redirect(302, returnUrl);
-  } catch (error) {
-    console.error("VNPay Mock Exec Error:", error);
-    res.status(500).send("VNPay Mock Exec failed");
-  }
-};
 
 export const getTransactionHistory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {

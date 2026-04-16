@@ -31,6 +31,7 @@ export const getPostingPolicy = () => api.get('/posts/posting-policy');
 export const activatePersonalMonthlyPlanMock = (durationDays = 30) =>
   api.post('/posts/personal-plan/mock-activate', { durationDays });
 export const updateUserPost = (postId: number, data: any) => api.patch(`/posts/${postId}`, data);
+export const togglePostVisibility = (postId: number | string) => api.patch(`/posts/${postId}/toggle-visibility`);
 export const deleteUserPost = (postId: number) => api.delete(`/posts/${postId}`);
 export const restoreUserPost = (postId: number) => api.post(`/posts/${postId}/restore`);
 
@@ -124,6 +125,9 @@ export const updateShop = (shopId: number, data: {
   shopInstagram?: string;
   shopYoutube?: string;
 }) => api.patch(`/shops/${shopId}`, data);
+
+export const deletePendingShop = () => api.delete('/shops/pending');
+
 
 export const requestShopVerificationOTP = (data: { target: string; type: 'email' | 'phone' }) => api.post('/shops/verify/request', data);
 export const verifyShopEmailOTP = (data: { email: string; otp: string }) => api.post('/shops/verify/email', data);
@@ -229,17 +233,8 @@ export const updateProfile = (data: {
 // Create Post
 export const createPost = (data: any) => api.post("/posts", data);
 
-let cachedPublicSettings: PublicSystemSettings | null = null;
-
-const getUploadSettings = async (): Promise<PublicSystemSettings> => {
-  if (cachedPublicSettings) {
-    return cachedPublicSettings;
-  }
-
-  const response = await getPublicSystemSettings();
-  cachedPublicSettings = response.data;
-  return response.data;
-};
+const HARD_MAX_IMAGE_SIZE_MB = 3;
+const HARD_ENABLE_IMAGE_COMPRESSION = true;
 
 const loadImageElement = (file: File) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
@@ -329,13 +324,12 @@ const compressImageFile = async (file: File, maxFileSizeMb: number) => {
 };
 
 const prepareUploadFiles = async (files: File[]) => {
-  const settings = await getUploadSettings();
-  if (!settings.media.enableImageCompression) {
+  if (!HARD_ENABLE_IMAGE_COMPRESSION) {
     return files;
   }
 
   return Promise.all(
-    files.map((file) => compressImageFile(file, settings.media.maxFileSizeMb).catch(() => file)),
+    files.map((file) => compressImageFile(file, HARD_MAX_IMAGE_SIZE_MB).catch(() => file)),
   );
 };
 
