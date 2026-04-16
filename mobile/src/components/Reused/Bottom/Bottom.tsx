@@ -25,7 +25,7 @@ const Bottom: React.FC<BottomProps> = ({ currentRoute, onNavigate }) => {
                     onPress={() => onNavigate('home')}
                 >
                     <Home size={22} color={currentRoute === 'home' ? '#52c41a' : '#8c8c8c'} />
-                    <Text style={[styles.label, currentRoute === 'home' && styles.activeLabel]}>Home</Text>
+                    <Text style={[styles.label, currentRoute === 'home' && styles.activeLabel]}>Trang chủ</Text>
                 </TouchableOpacity>
 
                 {/* Search */}
@@ -34,7 +34,7 @@ const Bottom: React.FC<BottomProps> = ({ currentRoute, onNavigate }) => {
                     onPress={() => onNavigate('search')}
                 >
                     <Search size={22} color={currentRoute === 'search' ? '#52c41a' : '#8c8c8c'} />
-                    <Text style={[styles.label, currentRoute === 'search' && styles.activeLabel]}>Search</Text>
+                    <Text style={[styles.label, currentRoute === 'search' && styles.activeLabel]}>Tìm kiếm</Text>
                 </TouchableOpacity>
 
                 {/* Center Plus Button */}
@@ -54,7 +54,7 @@ const Bottom: React.FC<BottomProps> = ({ currentRoute, onNavigate }) => {
                     onPress={() => onNavigate('favorites')}
                 >
                     <Heart size={22} color={currentRoute === 'favorites' ? '#52c41a' : '#8c8c8c'} />
-                    <Text style={[styles.label, currentRoute === 'favorites' && styles.activeLabel]}>Saved</Text>
+                    <Text style={[styles.label, currentRoute === 'favorites' && styles.activeLabel]}>Đã lưu</Text>
                 </TouchableOpacity>
 
                 {/* Profile */}
@@ -63,7 +63,7 @@ const Bottom: React.FC<BottomProps> = ({ currentRoute, onNavigate }) => {
                     onPress={() => onNavigate('profile')}
                 >
                     <User size={22} color={currentRoute === 'profile' ? '#52c41a' : '#8c8c8c'} />
-                    <Text style={[styles.label, currentRoute === 'profile' && styles.activeLabel]}>Profile</Text>
+                    <Text style={[styles.label, currentRoute === 'profile' && styles.activeLabel]}>Cá nhân</Text>
                 </TouchableOpacity>
 
             </View>

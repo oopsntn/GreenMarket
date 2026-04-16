@@ -11,7 +11,8 @@ import {
     ViewStyle,
     KeyboardAvoidingView
 } from 'react-native';
-import { ChevronLeft } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { ChevronLeft, Home } from 'lucide-react-native';
 // Nếu dùng Expo: npx expo install expo-linear-gradient
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -36,8 +37,10 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     rightAction,
     headerStyle = 'default',
     containerStyle,
-    scrollEnabled = true,
+    scrollEnabled = false
 }) => {
+
+    const navigation = useNavigation<any>();
 
     // Tach phan noi dung ben trong Header ra de dung chung
     const renderHeaderContent = () => (
@@ -61,7 +64,12 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
             </Text>
 
             <View style={styles.rightAction}>
-                {rightAction || <View style={{ width: 28 }} />}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    {rightAction}
+                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                        <Home size={24} color={headerStyle === 'default' ? '#fff' : '#333'} />
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
 
@@ -114,14 +122,18 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
                 {title && renderHeader()}
 
                 {/* Body: Kiem soat Scroll dua tren prop scrollEnabled */}
-                <ScrollView
+                {scrollEnabled ? (<ScrollView
                     scrollEnabled={scrollEnabled}
                     style={[styles.body, containerStyle]}
                     contentContainerStyle={{ flexGrow: 1 }}
                     showsVerticalScrollIndicator={false}
                 >
                     {children}
-                </ScrollView>
+                </ScrollView>) : (
+                    <View style={{ flex: 1 }}>
+                        {children}
+                    </View>
+                )}
 
                 {/* Bottom Navigation / Footer */}
                 {bottom && <View style={styles.bottomWrapper}>{bottom}</View>}
@@ -143,7 +155,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         zIndex: 10,
         ...Platform.select({
-            android: { paddingTop: 12 }, // Android bù đắp thêm chút padding
+            android: { paddingTop: 12 }, 
         }),
     },
     headerDefault: {

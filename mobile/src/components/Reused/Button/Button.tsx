@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, TextStyle, TouchableOpacity, View, ViewStyle, Text, KeyboardTypeOptions, ActivityIndicator } from 'react-native';
+import { StyleSheet, TextStyle, TouchableOpacity, View, ViewStyle, Text, ActivityIndicator, StyleProp } from 'react-native';
 
 interface ButtonProps {
     children: React.ReactNode;
@@ -10,8 +10,9 @@ interface ButtonProps {
     fullWidth?: boolean;
     size?: 'small' | 'medium' | 'large';
     icon?: React.ReactNode;
-    style?: ViewStyle;
-    textStyle?: TextStyle;
+    style?: StyleProp<ViewStyle>;
+    textStyle?: StyleProp<TextStyle>;
+    testID?: string;
 }
 const Button: React.FC<ButtonProps> = ({
     children,
@@ -24,10 +25,12 @@ const Button: React.FC<ButtonProps> = ({
     icon = null,
     style,
     textStyle,
+    testID,
 }) => {
     const isDisabled = disabled || loading;
     return (
         <TouchableOpacity
+            testID={testID}
             onPress={onPress}
             disabled={disabled}
             activeOpacity={0.7}

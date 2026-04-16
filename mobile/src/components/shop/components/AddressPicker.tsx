@@ -9,7 +9,7 @@ import CustomAlert from '../../../utils/AlertHelper';
 interface AddressPickerProps {
     address: string;
     onAddressChange: (addr: string) => void;
-    onLocationSelect: (lat: number, lng: number) => void;
+    onLocationSelect: (addr: string, lat: number, lng: number) => void;
     label: string;
 }
 
@@ -21,7 +21,7 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                CustomAlert('Notice', 'Location access was denied');
+                CustomAlert('Thông báo', 'Quyền truy cập vị trí bị từ chối');
                 return;
             }
 
@@ -29,29 +29,34 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
                 accuracy: Location.Accuracy.High,
             });
 
+
             const { latitude, longitude } = location.coords;
-            onLocationSelect(latitude, longitude);
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+                {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'User-Agent': 'GreenMarketApp' // Nominatim yêu cầu User-Agent
+                    }
+                }
+            );
+            const data = await response.json();
 
-            const addressResult = await Location.reverseGeocodeAsync({
-                latitude,
-                longitude,
-            });
+            if (data && data.display_name) {
+                const formattedAddr = data.display_name; // Địa chỉ đầy đủ từ OSM
 
-            if (addressResult.length > 0) {
-                const addr = addressResult[0];
-                const formattedAddr = [
-                    addr.streetNumber,
-                    addr.street,
-                    addr.district,
-                    addr.subregion,
-                    addr.region
-                ].filter(Boolean).join(', ');
-
+                // Cập nhật state
+                onLocationSelect(formattedAddr, latitude, longitude);
                 onAddressChange(formattedAddr);
+            } else {
+                // Nếu không lấy được địa chỉ, ít nhất vẫn lấy được tọa độ
+                onLocationSelect("Custom Location", latitude, longitude);
             }
+
         } catch (error) {
             console.error(error);
-            CustomAlert('Error', 'Unable to get the current location');
+            CustomAlert('Lỗi', 'Không thể lấy vị trí hiện tại');
         } finally {
             setLoading(false);
         }
@@ -61,7 +66,7 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
         <View style={styles.container}>
             <Input
                 label={label}
-                placeholder="Enter an address or use the current location"
+                placeholder="Nhập địa chỉ hoặc dùng vị trí hiện tại"
                 value={address}
                 icon={<MapPin size={18} color="#666" />}
                 onChangeText={onAddressChange}
@@ -73,7 +78,7 @@ const AddressPicker = ({ address, onAddressChange, onLocationSelect, label }: Ad
             >
                 <Navigation size={14} color="#10b981" />
                 <Text style={styles.locationBtnText}>
-                    {loading ? 'Getting location...' : "Use the shop's current location"}
+                    {loading ? 'Đang lấy vị trí...' : "Sử dụng vị trí hiện tại của cửa hàng"}
                 </Text>
             </TouchableOpacity>
         </View>

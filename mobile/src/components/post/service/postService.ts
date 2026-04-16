@@ -1,5 +1,6 @@
 import { Platform } from 'react-native'
-import { api } from '../../../config/api'
+import { api, API_BASE_URL } from '../../../config/api'
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface BrowsePostsParams {
     page?: number;
@@ -23,6 +24,36 @@ export interface PostPayload {
         attributeId: number;
         value: string;
     }>;
+}
+
+type UploadOptions = {
+    onProgress?: (progress: number) => void
+    retries?: number
+    timeout?: number
+}
+
+type UploadResponse = {
+    urls: string[]
+}
+
+const MIME_MAP: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    webp: 'image/webp',
+    heic: 'image/heic',
+    heif: 'image/heif',
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+}
+
+const getFileInfo = (uri: string) => {
+    const cleanUri = uri.split('?')[0]
+    const fileName = cleanUri.split('/').pop() || `upload_${Date.now()}.jpg`
+    const ext = fileName.split('.').pop()?.toLowerCase() || 'jpg'
+
+    const mimeType = MIME_MAP[ext] || 'application/octet-stream'
+    return { fileName, mimeType }
 }
 
 export const postService = {
@@ -76,42 +107,52 @@ export const postService = {
         return response.data
     },
 
-    uploadMedia: async (mediaUris: string[]) => {
-        const formData = new FormData()
+    uploadMedia: async (mediaUris: string[] = []): Promise<UploadResponse> => {
+        try {
+            const formData = new FormData()
 
-        for (const uri of mediaUris) {
-            const cleanUri = uri.split('?')[0]
-            const fileName = cleanUri.split('/').pop() || 'upload.jpg'
-            const extension = fileName.split('.').pop()?.toLowerCase()
+            for (const uri of mediaUris) {
+                const { fileName, mimeType } = getFileInfo(uri)
 
-            let type = ''
-            if (['jpg', 'jpeg', 'png', 'webp'].includes(extension!)) {
-                type = `image/${extension === 'jpg' ? 'jpeg' : extension}`
-            } else if (['mp4', 'mov', 'm4x', 'avi'].includes(extension!)) {
-                type = `video/${extension === 'mov' ? 'quicktime' : extension}`
-            } else {
-                type = 'application/octet-stream'
+                // Giữ nguyên URI cho React Native fetch
+                let normalizedUri = uri
+                console.log(`uri: ${uri}, fileName: ${fileName}, mimeType: ${mimeType}`)
+                if (Platform.OS === 'web') {
+                    const response = await fetch(uri)
+                    const blob = await response.blob()
+                    const file = new File([blob], fileName, { type: blob.type || mimeType })
+                    formData.append('media', file)
+                } else {
+                    formData.append('media', {
+                        uri: normalizedUri,
+                        name: fileName,
+                        type: mimeType,
+                    } as any)
+                }
             }
-
-            if (Platform.OS === 'web') {
-                const response = await fetch(uri)
-                const blob = await response.blob()
-                const file = new File([blob], fileName, { type: blob.type || type })
-                formData.append('media', file)
-            } else {
-                formData.append('media', {
-                    uri,
-                    name: fileName,
-                    type,
-                } as any)
+            const token = await AsyncStorage.getItem('token')
+            const response = await fetch(`${API_BASE_URL}/upload`, {
+                method: 'POST',
+                headers: {
+                    // KHÔNG set Content-Type — fetch tự set multipart boundary
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: formData,
+            })
+            console.log('Upload status:', response.status)
+            const data = await response.json()
+            if (!data?.urls) {
+                throw new Error('Invalid upload response')
             }
+            return data
+        } catch (error: any) {
+            console.error('uploadMedia failed:', {
+                message: error?.message,
+                status: error?.response?.status,
+                data: error?.response?.data,
+            })
+            throw error
         }
-
-        const response = await api.post('/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        })
-
-        return response.data
     },
 
     getCategories: async () => {
@@ -121,6 +162,16 @@ export const postService = {
 
     getCategoryAttributes: async (categoryId: number) => {
         const response = await api.get(`/categories/${categoryId}/attributes`)
+        return response.data
+    },
+    
+    getPostingPolicy: async () => {
+        const response = await api.get('/posts/posting-policy')
+        return response.data
+    },
+
+    activateMockPlan: async (durationDays: number = 30) => {
+        const response = await api.post('/posts/personal-plan/mock-activate', { durationDays })
         return response.data
     }
 }

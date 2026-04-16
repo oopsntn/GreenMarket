@@ -52,7 +52,7 @@ export const useProfile = () => {
                 location: data.userLocation || '',
                 bio: data.userBio || '',
                 shopName: shop?.shopName || '',
-                shopPhone: shop?.shopPhone || '',
+                shopPhone: shop?.shopPhone || shop?.phones?.[0] || '',
                 shopLocation: shop?.shopLocation || '',
                 shopDescription: shop?.shopDescription || '',
             })
@@ -87,10 +87,6 @@ export const useProfile = () => {
                 Alert.alert('Missing information', 'Shop name is required')
                 return
             }
-            if (!normalizedData.shopPhone) {
-                Alert.alert('Missing information', 'Shop phone number is required')
-                return
-            }
             if (!normalizedData.shopLocation) {
                 Alert.alert('Missing information', 'Shop address is required')
                 return
@@ -109,7 +105,6 @@ export const useProfile = () => {
 
                 await ProfileService.updateShop(shop.shopId, {
                     shopName: normalizedData.shopName,
-                    shopPhone: normalizedData.shopPhone,
                     shopLocation: normalizedData.shopLocation,
                     shopDescription: normalizedData.shopDescription,
                 })

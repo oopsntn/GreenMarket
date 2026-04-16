@@ -31,22 +31,19 @@ const PublicShopDetailScreen = ({ route }: any) => {
 
     if (loading && !shop) {
         return (
-            <MobileLayout title="Shop Details" backButton={() => navigation.goBack()}>
+            <MobileLayout title="Chi tiết cửa hàng" backButton={() => navigation.goBack()}>
                 <ActivityIndicator style={{ marginTop: 80 }} color="#10b981" />
             </MobileLayout>
         )
     }
 
-    const navigatePostDetail = () => {
-        navigation.navigate('PostDetail', { slug: shop.posts[0].postSlug })
-    }
 
     return (
-        <MobileLayout title="Shop Details" backButton={() => navigation.goBack()}>
+        <MobileLayout scrollEnabled={false} title="Chi tiết cửa hàng" backButton={() => navigation.goBack()}>
             {!shop ? (
                 <View style={styles.empty}>
-                    <Text style={styles.emptyTitle}>Shop not found</Text>
-                    <Text style={styles.emptyText}>This shop may have been removed or is not ready for public display.</Text>
+                    <Text style={styles.emptyTitle}>Không tìm thấy cửa hàng</Text>
+                    <Text style={styles.emptyText}>Cửa hàng này có thể đã bị xóa hoặc chưa sẵn sàng hiển thị công khai.</Text>
                 </View>
             ) : (
                 <FlatList
@@ -57,17 +54,17 @@ const PublicShopDetailScreen = ({ route }: any) => {
                     ListHeaderComponent={<ShopHeader shop={shop} isOwner={false} />}
                     contentContainerStyle={{ paddingBottom: 100 }}
                     renderItem={({ item }) => (
-                        <Card onClick={navigatePostDetail} style={styles.postCard}>
+                        <Card onClick={() => navigation.navigate('PostDetail', { slug: item.postSlug })} style={styles.postCard}>
                             <Text style={styles.postTitle}>{item.postTitle}</Text>
                             <Text style={styles.postPrice}>
                                 {new Intl.NumberFormat('en-US').format(Number(item.postPrice || 0))} VND
                             </Text>
-                            <Text style={styles.postMeta}>Status: {item.postStatus || 'approved'}</Text>
+                            <Text style={styles.postMeta}>Trạng thái: {item.postStatus || 'đã duyệt'}</Text>
                         </Card>
                     )}
                     ListEmptyComponent={
                         <View style={styles.emptyList}>
-                            <Text style={styles.emptyText}>This shop does not have any approved posts yet.</Text>
+                            <Text style={styles.emptyText}>Cửa hàng này chưa có tin đăng nào được duyệt.</Text>
                         </View>
                     }
                 />

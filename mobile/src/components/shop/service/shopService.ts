@@ -13,10 +13,15 @@ export interface ShopDetail {
     shopName: string;
     shopStatus: string;
     shopPhone?: string;
+    shopEmail?: string;
     shopLocation?: string;
     shopDescription?: string;
     shopLogoUrl?: string;
     shopCoverUrl?: string;
+    shopGalleryImages?: string[] | string;
+    shopFacebook?: string;
+    shopInstagram?: string;
+    shopYoutube?: string;
     shopLat?: number;
     shopLng?: number;
     phones?: string[];
@@ -41,11 +46,63 @@ export interface ShopPayload {
     shopYoutube?: string;
 }
 
+export interface ShopDashboardSummary {
+    totalPosts?: number;
+    approvedPosts?: number;
+    pendingPosts?: number;
+    rejectedPosts?: number;
+    totalViews?: number;
+    totalContacts?: number;
+    totalShopViews?: number;
+    totalShopContactClicks?: number;
+    contactRate?: number;
+    totalPromotionSpend?: number;
+    successfulPayments?: number;
+    activePromotions?: number;
+}
+
+export interface ShopDashboardTopPost {
+    postId: number;
+    postSlug?: string;
+    postTitle?: string;
+    postStatus?: string;
+    postViewCount?: number;
+    postContactCount?: number;
+    isPromoted?: boolean;
+    postUpdatedAt?: string;
+}
+
+export interface ShopDashboardPayment {
+    paymentId?: number;
+    paymentStatus?: string;
+    amount?: number | string;
+    createdAt?: string;
+    updatedAt?: string;
+    packageTitle?: string;
+    promotionPackageTitle?: string;
+    postTitle?: string;
+    orderId?: string;
+    transactionId?: string;
+}
+
+export interface ShopDashboardResponse {
+    shop?: Pick<ShopDetail, 'shopId' | 'shopName' | 'shopStatus'>;
+    summary?: ShopDashboardSummary;
+    topPosts?: ShopDashboardTopPost[];
+    recentPayments?: ShopDashboardPayment[];
+}
+
 const normalizeShopCoordinates = (shop: ShopDetail | null) => {
     if (!shop) return null
 
+    const phoneList = typeof shop.shopPhone === 'string'
+        ? shop.shopPhone.split('|').map((item) => item.trim()).filter(Boolean)
+        : []
+
     return {
         ...shop,
+        shopPhone: phoneList[0] || shop.shopPhone,
+        phones: phoneList,
         shopLat: shop.shopLat !== null && shop.shopLat !== undefined ? Number(shop.shopLat) : undefined,
         shopLng: shop.shopLng !== null && shop.shopLng !== undefined ? Number(shop.shopLng) : undefined,
     }
@@ -97,6 +154,11 @@ export const ShopService = {
         }
     },
 
+    getDashboard: async (): Promise<ShopDashboardResponse> => {
+        const response = await api.get('/shops/dashboard')
+        return response.data
+    },
+
     createShop: async (data: ShopPayload) => {
         try {
             const payload = {
@@ -144,6 +206,11 @@ export const ShopService = {
 
     removePhone: async (phone: string) => {
         const response = await api.delete('/shops/phones', { data: { phone } })
+        return response.data
+    },
+
+    recordShopContactClick: async (shopId: number) => {
+        const response = await api.post(`/shops/${shopId}/contact-click`)
         return response.data
     }
 }
