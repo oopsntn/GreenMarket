@@ -6,7 +6,7 @@ import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Button from '../../Reused/Button/Button'
 import Card from '../../Reused/Card/Card'
 import Input from '../../Reused/Input/Input'
-import useCreatePost from '../service/useCreatePost'
+import useCreatePost from '../service/useCreatePostStable'
 import { useAuth } from '../../../context/AuthContext'
 
 const CreatePostLayout = () => {
@@ -49,7 +49,7 @@ const CreatePostLayout = () => {
 
     if (state.policy?.isLimitReached) {
         return (
-            <MobileLayout title="Đăng tin mới" backButton={() => navigation.goBack()}>
+            <MobileLayout title="Đăng tin mới" scrollEnabled={true} backButton={() => navigation.goBack()}>
                 <View style={styles.limitContainer}>
                     <AlertCircle size={60} color="#ef4444" style={{ marginBottom: 20 }} />
                     <Text style={styles.limitTitle}>Đã đạt giới hạn đăng tin</Text>
@@ -68,7 +68,7 @@ const CreatePostLayout = () => {
     }
 
     return (
-        <MobileLayout title="Đăng tin mới" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Đăng tin mới" scrollEnabled={true} backButton={() => navigation.goBack()}>
             <Card style={styles.card}>
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Hình ảnh</Text>
@@ -262,6 +262,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 10,
+    },
+    primaryButton: {
+        
     },
     uploadBtn: {
         width: 96,
