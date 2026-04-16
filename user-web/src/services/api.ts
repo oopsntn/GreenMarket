@@ -125,6 +125,9 @@ export const updateShop = (shopId: number, data: {
   shopYoutube?: string;
 }) => api.patch(`/shops/${shopId}`, data);
 
+export const deletePendingShop = () => api.delete('/shops/pending');
+
+
 export const requestShopVerificationOTP = (data: { target: string; type: 'email' | 'phone' }) => api.post('/shops/verify/request', data);
 export const verifyShopEmailOTP = (data: { email: string; otp: string }) => api.post('/shops/verify/email', data);
 export const addShopPhoneOTP = (data: { phone: string; otp: string }) => api.post('/shops/phones', data);

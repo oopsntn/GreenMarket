@@ -173,8 +173,11 @@ export const ownerDashboardService = {
       .orderBy(desc(paymentTxn.paymentTxnCreatedAt));
 
     const shopPayments = paymentRows.filter((item) => {
-      if (item.postId === null) return false;
-      return postIdSet.has(item.postId);
+      // Include if it belongs to a post in this shop
+      if (item.postId !== null && postIdSet.has(item.postId)) return true;
+      // Include shop-level/account-level transactions (where postId is null)
+      if (item.postId === null) return true;
+      return false;
     });
 
     const successfulPaymentRows = shopPayments.filter(
@@ -279,7 +282,7 @@ export const ownerDashboardService = {
         postId: item.postId,
         postTitle: item.postTitle,
         packageId: item.packageId,
-        packageTitle: item.packageTitle,
+        packageTitle: item.packageTitle || (item.packageId === null ? "Đăng ký nhà vườn" : "Nâng cấp tài khoản"),
       })),
     };
   },

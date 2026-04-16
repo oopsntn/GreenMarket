@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { registerShop, updateShop, uploadImages, payShopRegistration, getPricingConfig, type PricingConfig } from '../services/api';
+import { registerShop, uploadImages, payShopRegistration, getPricingConfig, type PricingConfig, deletePendingShop } from '../services/api';
 import { Store, CheckCircle, ArrowRight, UploadCloud, Image as ImageIcon, Loader2, Facebook, Instagram, Youtube, AlertCircle, X as CloseIcon } from 'lucide-react';
 import AddressPicker from '../components/AddressPicker';
 import { useAuth } from '../context/AuthContext';
@@ -14,7 +14,7 @@ const formatVnd = (value: number | null | undefined) =>
 
 const RegisterShop: React.FC = () => {
   const navigate = useNavigate();
-  const { shop } = useAuth();
+  const { shop, refreshShop } = useAuth();
 
   useEffect(() => {
     if (shop?.shopStatus === 'active') {
@@ -40,7 +40,10 @@ const RegisterShop: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const [customAlert, setCustomAlert] = useState<{ type: 'error' | 'success', message: string | string[] } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
 
@@ -50,18 +53,61 @@ const RegisterShop: React.FC = () => {
       .catch(err => console.error('Failed to load pricing config:', err));
   }, []);
 
+  // Manage logo preview URL
+  useEffect(() => {
+    if (!logoFile) {
+      setLogoPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(logoFile);
+    setLogoPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [logoFile]);
+
+  // Manage gallery preview URLs
+  useEffect(() => {
+    const urls = galleryFiles.map(file => URL.createObjectURL(file));
+    setGalleryPreviews(urls);
+    return () => urls.forEach(url => URL.revokeObjectURL(url));
+  }, [galleryFiles]);
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'shopLogoUrl' | 'shopGalleryImages') => {
     if (!e.target.files || e.target.files.length === 0) return;
+
+    const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3MB
+    const files = Array.from(e.target.files);
+    const oversized = files.filter(f => f.size > MAX_FILE_SIZE);
+
+    if (oversized.length > 0) {
+      setCustomAlert({
+        type: 'error',
+        message: `Ảnh "${oversized[0].name}" vượt quá giới hạn 3MB. Vui lòng giảm dung lượng ảnh hoặc chọn ảnh khác.`
+      });
+      return;
+    }
 
     // Clear error for this field when file selected
     setFieldErrors(prev => ({ ...prev, [field]: false }));
 
     if (field === 'shopGalleryImages') {
-      const files = Array.from(e.target.files);
       setGalleryFiles(prev => [...prev, ...files]);
     } else {
       setLogoFile(e.target.files[0]);
     }
+    // Reset the input value so the same file can be selected again if removed
+    e.target.value = '';
+  };
+
+  const removeLogo = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setLogoFile(null);
+  };
+
+  const removeGalleryImage = (e: React.MouseEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setGalleryFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,75 +152,66 @@ const RegisterShop: React.FC = () => {
     setCustomAlert(null);
     setLoading(true);
     try {
-      const registerRes = await registerShop({
+      let finalLogoUrl = '';
+      let finalGalleryImages: string[] = [];
+
+      // Step 1: Upload Images first
+      setUploading(true);
+      try {
+        if (logoFile) {
+          const logoResp = await uploadImages([logoFile]);
+          if (logoResp.data.urls?.[0]) {
+            finalLogoUrl = logoResp.data.urls[0];
+          }
+        }
+
+        if (galleryFiles.length > 0) {
+          const galleryResp = await uploadImages(galleryFiles);
+          if (galleryResp.data.urls?.length > 0) {
+            finalGalleryImages = galleryResp.data.urls;
+          }
+        }
+      } catch (uploadError: any) {
+        console.error("Image upload failed:", uploadError);
+        const serverError = uploadError.response?.data?.error || uploadError.message;
+        setCustomAlert({
+          type: 'error',
+          message: serverError ? `Lỗi tải ảnh: ${serverError}` : "Không thể tải ảnh lên. Vui lòng kiểm tra lại kết nối mạng hoặc định dạng ảnh."
+        });
+        setLoading(false);
+        setUploading(false);
+        return;
+      } finally {
+        setUploading(false);
+      }
+
+      // Step 2: Register Shop with image URLs
+      await registerShop({
         shopName: formData.shopName.trim(),
         shopLocation: formData.shopLocation.trim(),
         shopDescription: formData.shopDescription.trim(),
         shopLat: formData.shopLat,
         shopLng: formData.shopLng,
+        shopLogoUrl: finalLogoUrl,
+        shopGalleryImages: finalGalleryImages,
         shopFacebook: formData.shopFacebook.trim(),
         shopInstagram: formData.shopInstagram.trim(),
         shopYoutube: formData.shopYoutube.trim(),
       });
 
-      const createdShopId = Number(registerRes.data?.shopId);
-      const hasImagesToUpload = Boolean(logoFile) || galleryFiles.length > 0;
-
-      if (hasImagesToUpload) {
-        if (!Number.isFinite(createdShopId) || createdShopId <= 0) {
-          setCustomAlert({
-            type: 'error',
-            message: "Shop đã tạo nhưng chưa lấy được mã shop để lưu ảnh. Bạn có thể cập nhật ảnh sau trong trang quản lý shop."
-          });
-        } else {
-          setUploading(true);
-          try {
-            let finalLogoUrl: string | undefined;
-            let finalGalleryImages: string[] = [];
-
-            if (logoFile) {
-              const logoResp = await uploadImages([logoFile]);
-              if (logoResp.data.urls && logoResp.data.urls.length > 0) {
-                finalLogoUrl = logoResp.data.urls[0];
-              }
-            }
-
-            if (galleryFiles.length > 0) {
-              const galleryResp = await uploadImages(galleryFiles);
-              if (galleryResp.data.urls && galleryResp.data.urls.length > 0) {
-                finalGalleryImages = galleryResp.data.urls;
-              }
-            }
-
-            if (finalLogoUrl || finalGalleryImages.length > 0) {
-              await updateShop(createdShopId, {
-                shopLogoUrl: finalLogoUrl,
-                shopGalleryImages: finalGalleryImages.length > 0 ? finalGalleryImages : undefined
-              });
-            }
-          } catch (uploadSyncError) {
-            console.error("Shop created but image upload/update failed:", uploadSyncError);
-            setCustomAlert({
-              type: 'error',
-              message: "Shop đã tạo thành công nhưng lưu ảnh chưa hoàn tất. Bạn có thể cập nhật ảnh sau trong trang quản lý shop."
-            });
-          } finally {
-            setUploading(false);
-          }
-        }
-      }
-
+      // Step 3: Handle Payment
       const payRes = await payShopRegistration();
       if (payRes.data.paymentUrl) {
         window.location.href = payRes.data.paymentUrl;
       } else {
         setSubmitted(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to register shop:", error);
+      const serverError = error.response?.data?.error || error.response?.data?.message;
       setCustomAlert({
         type: 'error',
-        message: "Đăng ký không thành công. Bạn có thể đã đăng ký shop rồi hoặc có lỗi xảy ra!"
+        message: serverError || "Đăng ký không thành công. Bạn hãy thử đăng nhập lại hoặc kiểm tra lại thông tin!"
       });
     } finally {
       setLoading(false);
@@ -200,8 +237,22 @@ const RegisterShop: React.FC = () => {
     }
   };
 
-  const logoPreview = logoFile ? URL.createObjectURL(logoFile) : null;
-  const galleryPreviews = galleryFiles.map(f => URL.createObjectURL(f));
+  const handleCancelRegistration = async () => {
+    if (!confirm("Bạn có chắc chắn muốn hủy yêu cầu đăng ký này và làm lại từ đầu không? Thông tin shop hiện tại sẽ bị xóa.")) return;
+
+    setCancelling(true);
+    try {
+      await deletePendingShop();
+      await refreshShop();
+      setCustomAlert({ type: 'success', message: 'Đã hủy yêu cầu. Bạn có thể đăng ký lại ngay bây giờ.' });
+    } catch (error) {
+      console.error("Failed to cancel registration:", error);
+      setCustomAlert({ type: 'error', message: 'Không thể hủy yêu cầu. Vui lòng thử lại sau.' });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
 
   if (shop && shop.shopStatus !== 'active') {
     return (
@@ -216,8 +267,8 @@ const RegisterShop: React.FC = () => {
           </p>
           <button
             onClick={handleContinuePayment}
-            disabled={paymentLoading}
-            className="w-full bg-emerald-700 py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 transition-all uppercase tracking-wider text-sm"
+            disabled={paymentLoading || cancelling}
+            className="w-full bg-emerald-700 py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 transition-all uppercase tracking-wider text-sm mb-4"
           >
             {paymentLoading ? (
               <><Loader2 className="w-5 h-5 animate-spin" /> Đang tạo thanh toán...</>
@@ -225,6 +276,15 @@ const RegisterShop: React.FC = () => {
               <>Tiếp tục thanh toán kích hoạt {pricingConfig?.ownerPolicy?.planTitle ? `- ${pricingConfig.ownerPolicy.planTitle}` : ''} - {formatVnd(pricingConfig?.shopRegistrationPrice || 250000)}</>
             )}
           </button>
+
+          <button
+            onClick={handleCancelRegistration}
+            disabled={paymentLoading || cancelling}
+            className="w-full bg-slate-100 py-4 rounded-2xl font-black text-slate-600 flex items-center justify-center gap-2 hover:bg-rose-50 hover:text-rose-600 disabled:bg-slate-50 disabled:text-slate-300 transition-all uppercase tracking-wider text-[11px]"
+          >
+            {cancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Hủy yêu cầu và đăng ký lại'}
+          </button>
+
         </div>
       </div>
     );
@@ -320,13 +380,23 @@ const RegisterShop: React.FC = () => {
                 disabled={uploading}
               />
               {logoPreview ? (
-                <img src={logoPreview} alt="Avatar" className="mx-auto h-24 w-24 object-cover rounded-3xl shadow-md border-2 border-white" />
+                <div className="relative mx-auto h-24 w-24 group/preview">
+                  <img src={logoPreview} alt="Avatar" className="h-full w-full object-cover rounded-3xl shadow-md border-2 border-white" />
+                  <button
+                    type="button"
+                    onClick={removeLogo}
+                    className="absolute -top-2 -right-2 w-7 h-7 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-rose-600 transition-all z-20 hover:scale-110 active:scale-90"
+                  >
+                    <CloseIcon className="w-4 h-4" />
+                  </button>
+                </div>
               ) : (
                 <div className="flex flex-col items-center">
                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform">
                     <ImageIcon className="w-6 h-6 text-slate-400" />
                   </div>
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tải lên Ảnh đại diện</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tải Ảnh đại diện</span>
+                  <span className="text-[10px] text-slate-400 font-bold mt-1">Tối đa 3MB</span>
                 </div>
               )}
             </div>
@@ -345,9 +415,18 @@ const RegisterShop: React.FC = () => {
                 disabled={uploading}
               />
               {galleryPreviews.length > 0 ? (
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-wrap gap-3 justify-center relative z-20 p-2">
                   {galleryPreviews.map((url, idx) => (
-                    <img key={idx} src={url} alt="Shop Gallery" className="h-16 w-16 object-cover rounded-lg shadow-sm border-2 border-white" />
+                    <div key={idx} className="relative group/gal">
+                      <img src={url} alt="Shop Gallery" className="h-16 w-16 object-cover rounded-lg shadow-sm border-2 border-white" />
+                      <button
+                        type="button"
+                        onClick={(e) => removeGalleryImage(e, idx)}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-rose-600 transition-all opacity-0 group-hover/gal:opacity-100 scale-75 group-hover/gal:scale-100"
+                      >
+                        <CloseIcon className="w-3 h-3" />
+                      </button>
+                    </div>
                   ))}
                   <div className="h-16 w-16 flex items-center justify-center bg-white rounded-lg border border-slate-200">
                     <UploadCloud className="w-4 h-4 text-slate-400" />
@@ -358,7 +437,8 @@ const RegisterShop: React.FC = () => {
                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform">
                     <UploadCloud className="w-6 h-6 text-slate-400" />
                   </div>
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tải lên một hoặc nhiều ảnh</span>
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-tight">Tải lên ảnh mô tả</span>
+                  <span className="text-[10px] text-slate-400 font-bold mt-1">Ít nhất 3 ảnh - Tối đa 3MB/ảnh</span>
                 </div>
               )}
             </div>
