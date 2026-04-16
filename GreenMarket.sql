@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- GreenMarket Database Backup (Full Schema)
 -- PostgreSQL 18.x | Generated: 2026-04-08
 -- Tables: 34 | Synced from Drizzle ORM schema
@@ -725,6 +725,7 @@ CREATE TABLE host_contents (
     host_content_author_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     host_content_title VARCHAR(255) NOT NULL,
     host_content_description TEXT,
+    host_content_body TEXT,
     host_content_target_type VARCHAR(50) NOT NULL, -- post | shop | external
     host_content_target_id INTEGER, -- linked post_id or shop_id
     host_content_tracking_url TEXT,
@@ -1040,19 +1041,15 @@ INSERT INTO users (
 (1, '0978195419', 'Nguyễn Thành Nam', 'nguyenthanhnamidol@gmail.com', 'Yên Phong, Bắc Ninh', 'Marketplace account used for general buyer and seller demo flows.', 'active', 2),
 (2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'Hoàng Mai, Hà Nội', 'Shop owner account used to demonstrate host storefront behaviour.', 'active', 2),
 (3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'Nam Trực, Nam Định', 'Marketplace user account with host permissions for additional shop demo content.', 'active', 2),
-(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Collaborator demo account for mobile job and earnings scenarios.', 'active', 2),
+(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Collaborator demo account for mobile job and earnings scenarios.', 'active', 3),
 (5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
-(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 2),
+(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 5),
 (7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1),
 (8, '0987654321', 'Người Dùng Test 0987654321', 'test.0987654321@gmail.com', 'Hà Nội', 'Test account for 0987654321', 'active', 1),
-(9, '0909000003', 'Seed Collaborator Account', 'seed.collaborator@greenmarket.local', 'Ha Noi', 'Seed account for collaborator-role API testing and mobile login.', 'active', 3),
-(10, '0909000004', 'Seed Manager Account', 'seed.manager@greenmarket.local', 'Ha Noi', 'Seed account for manager-role API testing and moderation workflows.', 'active', 4),
-(136, '0998887776', 'Seed Host Account', 'seed.host@greenmarket.local', 'Ha Noi', 'Seed account for host-role API testing and content management.', 'active', 2),
-(137, '0997776665', 'Seed Operation Account', 'seed.operation@greenmarket.local', 'Ha Noi', 'Seed account for operations-staff-role testing and task handling.', 'active', 5);
-
--- Align demo accounts to business roles used in collaborator APIs
-UPDATE users SET user_business_role_id = 3 WHERE user_id = 4;
-UPDATE users SET user_business_role_id = 5 WHERE user_id = 6;
+(9, '0909000003', 'Collaborator Pro', 'collaborator@greenmarket.local', 'Ha Noi', 'Seed account for collaborator-role API testing and mobile login.', 'active', 3),
+(10, '0909000004', 'Manager Pro', 'manager@greenmarket.local', 'Ha Noi', 'Seed account for manager-role API testing and moderation workflows.', 'active', 4),
+(136, '0998887776', 'Host Pro', 'host@greenmarket.local', 'Ha Noi', 'Seed account for host-role API testing and content management.', 'active', 2),
+(137, '0997776665', 'Operation Pro', 'operation@greenmarket.local', 'Ha Noi', 'Seed account for operations-staff-role testing and task handling.', 'active', 5);
 
 -- Collaborator availability profile (mock)
 UPDATE users
@@ -1147,20 +1144,20 @@ INSERT INTO payout_requests (
 (1, 4, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
 
 -- Host Contents (Mock)
-INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_target_type, host_content_target_id, host_content_tracking_url, host_content_status, host_content_view_count, host_content_click_count) VALUES
-(1, 1, 'Top 5 loại Tùng La Hán đẹp nhất 2026', 'shop', 3, '/api/host/tracking/1', 'published', 1250, 45),
-(2, 1, 'Review bộ kéo cắt tỉa cây cảnh của Shop A', 'post', 1, '/api/host/tracking/2', 'published', 890, 12),
-(3, 2, 'Kỹ thuật chăm sóc Mai Chiếu Thủy mùa mưa', 'external', NULL, 'https://external-blog.com/care-guide', 'published', 450, 5);
+INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_description, host_content_body, host_content_target_type, host_content_target_id, host_content_tracking_url, host_content_status, host_content_view_count, host_content_click_count) VALUES
+(1, 136, 'Top 5 loại Tùng La Hán đẹp nhất 2026', 'Khám phá danh sách những giống Tùng La Hán được giới chơi cây cảnh săn đón nhất trong năm tới.', 'Tùng La Hán (Vạn Niên Tùng) từ lâu đã là biểu tượng của sự trường thọ và thịnh vượng. Trong năm 2026, xu hướng chơi Tùng đang chuyển dịch sang các dòng có lá nhỏ, mịn và khả năng chịu hạn tốt.\n\n1. Tùng La Hán Kim Thanh (Đài Loan): Đặc điểm lá cực nhỏ, dày và xanh đậm. Dễ tạo dáng nghệ thuật.\n2. Tùng La Hán Lá Ri (Việt Nam): Phù hợp với khí hậu nhiệt đới, thân dẻo dễ uốn.\n3. Tùng La Hán Kim Xà: Có bộ lá uốn lượn như vảy rồng, mang ý nghĩa phong thủy cực cao.\n\nĐể biết thêm chi tiết về cách chọn phôi và chăm sóc, mời bạn nhấn vào liên kết bên dưới để xem các sản phẩm Tùng đang có mặt tại hệ thống của chúng tôi.', 'shop', 1, '/api/host/tracking/1', 'published', 1250, 45),
+(2, 136, 'Review bộ kéo cắt tỉa cây cảnh của Shop A', 'Đánh giá chi tiết bộ dụng cụ bonsal chuyên dụng dành cho người mới bắt đầu.', 'Sau 1 tháng sử dụng bộ kéo cắt tỉa từ Vườn Bonsai Phố Huyện, tôi thực sự ấn tượng với độ sắc bén và cảm giác cầm nắm chắc chắn.\n\nBộ sản phẩm bao gồm:\n- Kéo tỉa dăm: Lưỡi mảnh, bén, lách sâu vào các khe nhỏ.\n- Kéo cắt cành lớn: Lực cắt mạnh, không làm dập thớ gỗ.\n- Kìm cạp tròn: Giúp xử lý các nốt sần trên thân cây một cách thẩm mỹ.\n\nĐây là lựa chọn tuyệt vời cho các bạn mới tập tành chơi Bonsai vì giá thành hợp lý và độ bền cao.', 'post', 1, '/api/host/tracking/2', 'published', 890, 12),
+(3, 136, 'Kỹ thuật chăm sóc Mai Chiếu Thủy mùa mưa', 'Những lưu ý quan trọng để tránh úng rễ và sâu bệnh cho Mai Chiếu Thủy khi vào mùa mưa.', 'Mùa mưa mang lại nguồn nước dồi dào nhưng cũng tiềm ẩn nguy cơ thối rễ cho Mai Chiếu Thủy nếu không được thoát nước tốt.\n\nMẹo nhỏ dành cho bạn:\n- Kê cao chậu để tránh tiếp xúc trực tiếp với mặt đất ẩm.\n- Kiểm tra lỗ thoát nước định kỳ.\n- Phun thuốc phòng ngừa nấm bệnh định kỳ 2 tuần/lần.\n\nTham khảo thêm các bài viết kỹ thuật khác trên trang cộng tác viên của GreenMarket.', 'external', NULL, 'https://external-blog.com/care-guide', 'published', 450, 5);
 
 -- Host Earnings (Mock)
 INSERT INTO host_earnings (host_earning_id, host_earning_host_id, host_earning_amount, host_earning_status, host_earning_source_type, host_earning_source_id) VALUES
-(1, 1, 225000, 'available', 'click', 1),
-(2, 1, 60000, 'pending', 'view', 1),
-(3, 1, 500000, 'available', 'bonus', NULL);
+(1, 136, 225000, 'available', 'click', 1),
+(2, 136, 60000, 'pending', 'view', 1),
+(3, 136, 500000, 'available', 'bonus', NULL);
 
 -- Host Payout Requests (Mock)
 INSERT INTO host_payout_requests (host_payout_id, host_payout_host_id, host_payout_amount, host_payout_method, host_payout_status, host_payout_note) VALUES
-(1, 1, 600000, 'Momo', 'completed', 'Thanh toán đợt 1 tháng 4.');
+(1, 136, 600000, 'Momo', 'completed', 'Thanh toán đợt 1 tháng 4.');
 
 -- Shops
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_vip_started_at, shop_vip_expires_at, shop_lat, shop_lng) VALUES
@@ -1374,7 +1371,9 @@ INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_s
 (1, 'BOOST_POST', 'Vị trí 1 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 1, "notes": "Vị trí đầu tiên dành cho bài đẩy trên trang chủ."}', true),
 (2, 'SHOP_VIP', 'Gói tài khoản', 500, '{"audience": "active-shop", "target": "shop-list", "priority": 1, "notes": "Dùng cho gói tài khoản / shop và ưu tiên hiển thị ở danh sách nhà vườn."}', true),
 (3, 'BOOST_POST_2', 'Vị trí 2 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 2, "notes": "Vị trí thứ hai dành cho bài đẩy trên trang chủ."}', true),
-(4, 'BOOST_POST_3', 'Vị trí 3 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 3, "notes": "Vị trí thứ ba dành cho bài đẩy trên trang chủ."}', true);
+(4, 'BOOST_POST_3', 'Vị trí 3 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 3, "notes": "Vị trí thứ ba dành cho bài đẩy trên trang chủ."}', true),
+(5, 'SHOP_REGISTRATION', 'Đăng ký nhà vườn', 0, NULL, true),
+(6, 'PERSONAL_PLAN', 'Nâng cấp cá nhân tháng', 0, NULL, true);
 
 INSERT INTO promotion_packages (
     promotion_package_id,
@@ -1389,14 +1388,18 @@ INSERT INTO promotion_packages (
 (1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 30, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 2 trang chủ.', true),
 (2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 1 trang chủ.', true),
 (3, 2, 'Gói nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên shop lên đầu danh sách nhà vườn và tăng nhận diện VIP trong 90 ngày.', true),
-(4, 4, 'Gói đẩy bài theo tháng vị trí 3 trang chủ', 30, 1, 5000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 3 trang chủ.', true);
+(4, 4, 'Gói đẩy bài theo tháng vị trí 3 trang chủ', 30, 1, 5000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 3 trang chủ.', true),
+(5, 5, 'Gói Lên Nhà Vườn (Vĩnh viễn)', 36500, 1, 0, 'Nâng cấp tài khoản cá nhân lên tài khoản nhà vườn chuyên nghiệp.', true),
+(6, 6, 'Gói Cá Nhân (30 ngày)', 30, 1, 0, 'Gói đăng tin ưu tiên cho cá nhân trong 30 ngày.', true);
 
 -- Promotion Package Prices
 INSERT INTO promotion_package_prices (price_id, package_id, price, effective_from, effective_to, note, created_by) VALUES
 (1, 1, 99000, now() - interval '45 days', NULL, 'Giá hiện hành của gói vị trí 2 trang chủ.', 1),
 (2, 2, 299000, now() - interval '45 days', NULL, 'Giá hiện hành của gói vị trí 1 trang chủ.', 1),
 (3, 3, 499000, now() - interval '45 days', NULL, 'Giá hiện hành của gói VIP 3 tháng.', 1),
-(4, 4, 29000, now() - interval '45 days', NULL, 'Giá hiện hành của gói vị trí 3 trang chủ.', 1);
+(4, 4, 29000, now() - interval '45 days', NULL, 'Giá hiện hành của gói vị trí 3 trang chủ.', 1),
+(5, 5, 250000, now() - interval '45 days', NULL, 'Giá chuẩn cho đăng ký nhà vườn.', 1),
+(6, 6, 30000, now() - interval '45 days', NULL, 'Giá chuẩn cho gói cá nhân tháng.', 1);
 
 -- ============================================================
 -- POSTING PLANS (OWNER / PERSONAL)
@@ -1418,9 +1421,9 @@ INSERT INTO user_posting_plans (
     posting_plan_created_at,
     posting_plan_updated_at
 ) VALUES
-(1, 1, 'GARDEN_OWNER_LIFETIME', 'Goi Chu Vuon Vinh Vien', 'lifetime', 'active', true, 20, 20000, 4, 5000, now() - interval '120 days', NULL, now() - interval '120 days', now() - interval '120 days'),
-(2, 2, 'PERSONAL_MONTHLY',      'Goi Ca Nhan Theo Thang', 'monthly',  'active', true, 20,     0, 4, 5000, now() - interval '12 days',  now() + interval '18 days', now() - interval '12 days', now() - interval '12 days'),
-(3, 7, 'PERSONAL_MONTHLY',      'Goi Ca Nhan Theo Thang', 'monthly',  'expired', true, 20,    0, 4, 5000, now() - interval '65 days', now() - interval '35 days', now() - interval '65 days', now() - interval '35 days');
+(1, 1, 'GARDEN_OWNER_LIFETIME', 'Gói chủ vườn vĩnh viễn', 'lifetime', 'active', true, 20, 20000, 4, 5000, now() - interval '120 days', NULL, now() - interval '120 days', now() - interval '120 days'),
+(2, 2, 'PERSONAL_MONTHLY',      'Gói cá nhân theo tháng', 'monthly',  'active', true, 20,     0, 4, 5000, now() - interval '12 days',  now() + interval '18 days', now() - interval '12 days', now() - interval '12 days'),
+(3, 7, 'PERSONAL_MONTHLY',      'Gói cá nhân theo tháng', 'monthly',  'expired', true, 20,    0, 4, 5000, now() - interval '65 days', now() - interval '35 days', now() - interval '65 days', now() - interval '35 days');
 
 -- Fee ledger demo for posting-plan billing (tracking only)
 INSERT INTO posting_fee_ledger (

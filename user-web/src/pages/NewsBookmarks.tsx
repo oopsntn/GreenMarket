@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   getMyFavoriteHostContents,
   toggleFavoriteHostContent,
@@ -9,20 +10,21 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
-  Heart,
+  Eye,
   Loader2,
+  ArrowRight,
 } from "lucide-react";
 import { resolveImageUrl } from "../utils/resolveImageUrl";
 
 const PAGE_LIMIT = 9;
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const formatDate = (isoDate: string | null) => {
   if (!isoDate) return "N/A";
   const parsed = new Date(isoDate);
   if (Number.isNaN(parsed.getTime())) return "N/A";
   return new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -38,6 +40,7 @@ const getCoverImage = (item: HostFavoriteContent) => {
 };
 
 const NewsBookmarks: React.FC = () => {
+  const { user } = useAuth();
   const [items, setItems] = useState<HostFavoriteContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -119,76 +122,76 @@ const NewsBookmarks: React.FC = () => {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-8">
           {items.map((item) => {
             const coverImage = getCoverImage(item);
-            const trackingUrl = `${API_BASE}/host/tracking/${item.hostContentId}`;
-            const isUpdating = updatingId === item.hostContentId;
 
             return (
               <article
                 key={item.hostContentId}
-                className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all"
+                className="group bg-white border border-slate-200 rounded-[1.5rem] overflow-hidden shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all duration-500"
               >
-                <div className="h-52 bg-slate-100 border-b border-slate-200 overflow-hidden">
-                  {coverImage ? (
-                    <img
-                      src={coverImage}
-                      alt={item.hostContentTitle}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400 font-semibold">
-                      No image
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-5">
-                  <div className="flex items-center justify-between gap-4 mb-3">
-                    <span className="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full uppercase tracking-wide">
-                      Saved
-                    </span>
-                    <button
-                      onClick={() => handleRemoveBookmark(item.hostContentId)}
-                      disabled={isUpdating}
-                      className="p-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-500 hover:bg-rose-100 transition-all"
-                      title="Bỏ bookmark"
-                    >
-                      {isUpdating ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Heart className="w-4 h-4 fill-rose-500" />
-                      )}
-                    </button>
-                  </div>
-
-                  <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight line-clamp-2 mb-3">
-                    {item.hostContentTitle}
-                  </h2>
-
-                  <p className="text-sm text-slate-600 line-clamp-3 min-h-[60px]">
-                    {item.hostContentDescription || "Không có mô tả"}
-                  </p>
-
-                  <div className="mt-4 space-y-1 text-xs text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="w-3.5 h-3.5" />
-                      <span>Đã lưu: {formatDate(item.favoriteCreatedAt)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="w-3.5 h-3.5" />
-                      <span>Đã đăng: {formatDate(item.hostContentCreatedAt)}</span>
+                <div className="flex flex-col md:flex-row h-full">
+                  {/* Image Section */}
+                  <div className="md:w-64 w-full h-48 md:h-auto shrink-0 relative overflow-hidden bg-slate-100">
+                    {coverImage ? (
+                      <img
+                        src={coverImage}
+                        alt={item.hostContentTitle}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 font-semibold bg-slate-50 text-xs">
+                        No image
+                      </div>
+                    )}
+                    <div className="absolute top-3 left-3">
+                      <span className="text-[9px] font-black text-rose-600 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg border border-rose-100">
+                        Đã lưu
+                      </span>
                     </div>
                   </div>
 
-                  <a
-                    href={trackingUrl}
-                    className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-700 text-white text-xs font-black uppercase tracking-wide hover:bg-emerald-600 transition-colors"
-                  >
-                    Xem bài viết
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
+                  {/* Content Section */}
+                  <div className="flex-1 p-4 md:p-5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                        <CalendarDays className="w-3 h-3" />
+                        Đã đăng: {formatDate(item.hostContentCreatedAt)}
+                      </div>
+
+                      <Link to={`/news/detail/${item.hostContentId}`} className="block group/title">
+                        <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-tight mb-2 group-hover/title:text-emerald-700 transition-colors line-clamp-1">
+                          {item.hostContentTitle}
+                        </h2>
+                      </Link>
+
+                      <p className="text-sm text-slate-500 font-medium leading-relaxed line-clamp-2 mb-4">
+                        {item.hostContentDescription || "Không có mô tả chi tiết."}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                      <div className="flex items-center gap-6">
+                        {user?.id === item.authorId && (
+                          <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
+                            <span className="flex items-center gap-1.5">
+                              <Eye className="w-3.5 h-3.5 text-slate-300" />
+                              {item.hostContentViewCount || 0}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <Link
+                        to={`/news/detail/${item.hostContentId}`}
+                        className="inline-flex items-center gap-2 h-8 px-4 rounded-xl bg-slate-100 text-slate-900 font-black uppercase text-[9px] tracking-widest hover:bg-emerald-700 hover:text-white transition-all shadow-sm"
+                      >
+                        Đọc tiếp
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               </article>
             );

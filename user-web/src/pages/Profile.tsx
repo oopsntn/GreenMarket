@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings, Heart, Wallet, LayoutDashboard } from 'lucide-react';
+import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings, Wallet, LayoutDashboard, Bookmark } from 'lucide-react';
 import { updateProfile, updateShop, getProfile, uploadImages, requestShopVerificationOTP, verifyShopEmailOTP, addShopPhoneOTP, deleteShopPhone } from '../services/api';
 import clsx from 'clsx';
 import AddressPicker from '../components/AddressPicker';
@@ -388,10 +388,21 @@ const Profile: React.FC = () => {
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
             >
               <div className="flex items-center gap-2 mb-1">
-                <Heart className="w-4 h-4 text-emerald-600" />
-                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Bài đã lưu</p>
+                <Bookmark className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Sản phẩm đã lưu</p>
               </div>
-              <p className="text-xs text-slate-500">Mở lại nhanh các bài bạn đã đánh dấu.</p>
+              <p className="text-xs text-slate-500">Mở lại nhanh các sản phẩm bạn đã đánh dấu.</p>
+            </Link>
+
+            <Link
+              to="/news/bookmarks"
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Bookmark className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Tin tức đã lưu</p>
+              </div>
+              <p className="text-xs text-slate-500">Xem lại các bài báo và kiến thức đã lưu.</p>
             </Link>
 
             <Link
@@ -434,9 +445,9 @@ const Profile: React.FC = () => {
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Store className="w-4 h-4 text-emerald-600" />
-                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Lên shop</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">{shop ? "Hoàn tất đăng ký" : "Mở nhà vườn"}</p>
                 </div>
-                <p className="text-xs text-slate-500">Đăng ký nhà vườn để mở thêm quyền bán hàng.</p>
+                <p className="text-xs text-slate-500">{shop ? "Tiếp tục hoàn thiện thông tin nhà vườn của bạn." : "Đăng ký nhà vườn để mở thêm quyền bán hàng."}</p>
               </Link>
             )}
           </div>

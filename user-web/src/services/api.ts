@@ -135,8 +135,13 @@ export const addShopPhoneOTP = (data: { phone: string; otp: string }) => api.pos
 export const deleteShopPhone = (data: { phone: string }) => api.delete('/shops/phones', { data });
 
 // Report API
-export const submitReport = (data: { postId: number; reportReason: string; reporterId?: number }) =>
-  api.post('/reports', data);
+export const submitReport = (data: {
+  postId: number;
+  reportReason: string;
+  reportReasonCode?: string;
+  reportNote?: string;
+  evidenceUrls?: string[];
+}) => api.post('/reports', data);
 
 // --- Metadata (Categories & Attributes) ---
 export const getCategories = () => api.get('/categories');
@@ -360,6 +365,7 @@ export interface HostPublicContent {
   hostContentId: number;
   hostContentTitle: string;
   hostContentDescription: string | null;
+  hostContentBody: string | null;
   hostContentTargetType: string | null;
   hostContentTargetId: number | null;
   hostContentMediaUrls: string[] | null;
@@ -369,6 +375,14 @@ export interface HostPublicContent {
   authorId: number | null;
   authorName: string | null;
   authorAvatar: string | null;
+  target?: {
+    postId?: number;
+    postTitle?: string;
+    postSlug?: string;
+    shopId?: number;
+    shopName?: string;
+    shopLogoUrl?: string;
+  } | null;
 }
 
 export interface HostPublicContentsResponse {
@@ -392,6 +406,7 @@ export interface HostFavoriteContent {
   hostContentCreatedAt: string | null;
   authorName: string | null;
   authorAvatar: string | null;
+  authorId: number | null;
 }
 
 export interface HostFavoriteContentsResponse {
@@ -421,5 +436,8 @@ export const getMyFavoriteHostContents = (params?: {
   page?: number;
   limit?: number;
 }) => api.get<HostFavoriteContentsResponse>('/host/favorites', { params });
+
+export const getHostPublicContentDetail = (id: number | string) =>
+  api.get<HostPublicContent>(`/host/public/contents/${id}`);
 
 export default api;

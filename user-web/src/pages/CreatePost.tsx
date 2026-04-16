@@ -178,10 +178,9 @@ const CreatePost: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (imageFiles.length === 0) {
-            alert("Vui lÃ²ng chá»n Ã­t nháº¥t má»™t áº£nh sáº£n pháº©m!");
+            alert("Vui lòng chọn ít nhất 1 ảnh về sản phẩm!");
             return;
         }
-
 
         if (imageFiles.length > systemSettings.media.maxImagesPerPost) {
             alert(`Mỗi bài chỉ được tối đa ${systemSettings.media.maxImagesPerPost} ảnh.`);
@@ -228,7 +227,7 @@ const CreatePost: React.FC = () => {
             setSubmitted(true);
         } catch (error: any) {
             console.error("Failed to create post:", error);
-            alert(error?.response?.data?.error || "ÄÃ£ cÃ³ lá»—i xáº£y ra khi táº¡o bÃ i Ä‘Äƒng. Vui lÃ²ng thá»­ láº¡i!");
+            alert(error?.response?.data?.error || "Đã có lỗi xảy ra khi tạo bài đăng. Vui lòng thử lại!");
         } finally {
             setSubmitting(false);
         }
@@ -241,14 +240,14 @@ const CreatePost: React.FC = () => {
                     <div className="bg-emerald-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100">
                         <CheckCircle className="w-10 h-10 text-emerald-600" />
                     </div>
-                    <h2 className="text-3xl font-bold mb-4 text-slate-900">ÄÄƒng tin thÃ nh cÃ´ng!</h2>
+                    <h2 className="text-3xl font-bold mb-4 text-slate-900">Đăng tin thành công!</h2>
                     <p className="text-slate-500 mb-8 leading-relaxed">
                         {submissionMeta?.autoApprove
-                            ? "BÃ i Ä‘Äƒng cá»§a báº¡n Ä‘Ã£ hiá»ƒn thá»‹ ngay trÃªn sÃ n. Báº¡n cÃ³ thá»ƒ theo dÃµi hiá»‡u quáº£ táº¡i má»¥c Tin cá»§a tÃ´i."
-                            : "BÃ i Ä‘Äƒng cá»§a báº¡n Ä‘Ã£ Ä‘Æ°á»£c gá»­i vÃ  Ä‘ang chá» Admin phÃª duyá»‡t. Báº¡n cÃ³ thá»ƒ theo dÃµi tráº¡ng thÃ¡i táº¡i má»¥c Tin cá»§a tÃ´i."}
-                        {submissionMeta?.planTitle ? ` (GÃ³i Ã¡p dá»¥ng: ${submissionMeta.planTitle})` : ""}
+                            ? "Bài đăng của bạn đã hiển thị ngay trên sàn. Bạn có thể theo dõi hiệu quả tại mục Tin của tôi."
+                            : "Bài đăng của bạn đã được gửi và đang chờ Admin phê duyệt. Bạn có thể theo dõi trạng thái tại mục Tin của tôi."}
+                        {submissionMeta?.planTitle ? ` (Gói áp dụng: ${submissionMeta.planTitle})` : ""}
                         {submissionMeta?.chargedAmount
-                            ? ` PhÃ­ phÃ¡t sinh: ${Number(submissionMeta.chargedAmount).toLocaleString("vi-VN")}Ä‘.`
+                            ? ` Phí phát sinh: ${Number(submissionMeta.chargedAmount).toLocaleString("vi-VN")}đ.`
                             : ""}
                     </p>
                     <div className="space-y-4">
@@ -256,13 +255,13 @@ const CreatePost: React.FC = () => {
                             onClick={() => navigate('/my-posts')}
                             className="w-full bg-emerald-700 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-600 text-white transition-all shadow-lg shadow-emerald-200/50"
                         >
-                            Xem tin cá»§a tÃ´i <ArrowRight className="w-5 h-5" />
+                            Xem tin của tôi <ArrowRight className="w-5 h-5" />
                         </button>
                         <button
                             onClick={() => window.location.reload()}
                             className="w-full bg-slate-100 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 text-slate-700 transition-all border border-slate-200"
                         >
-                            ÄÄƒng thÃªm tin má»›i
+                            Đăng thêm tin mới
                         </button>
                     </div>
                 </div>
@@ -274,24 +273,24 @@ const CreatePost: React.FC = () => {
         <div className="max-w-4xl mx-auto px-6 py-12">
             <div className="mb-10">
                 <h1 className="text-4xl font-bold mb-2 flex items-center gap-3 text-slate-900">
-                    <PlusCircle className="text-emerald-600" /> ÄÄƒng tin rao váº·t
+                    <PlusCircle className="text-emerald-600" /> Đăng tin rao vặt
                 </h1>
-                <p className="text-slate-500 font-medium">Chia sáº» tÃ¡c pháº©m nghá»‡ thuáº­t xanh cá»§a báº¡n tá»›i hÃ ng nghÃ¬n ngÆ°á»i yÃªu cÃ¢y.</p>
+                <p className="text-slate-500 font-medium">Chia sẻ tác phẩm nghệ thuật xanh của bạn tới hàng nghìn người yêu cây.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-10">
                 {/* Basic Info */}
                 <section className="bg-white p-8 rounded-3xl space-y-6 border border-slate-200 shadow-xl">
-                    <h2 className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900 uppercase tracking-tight">ThÃ´ng tin cÆ¡ báº£n</h2>
+                    <h2 className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900 uppercase tracking-tight">Thông tin cơ bản</h2>
 
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
-                            <Tag className="w-4 h-4 text-emerald-600" /> TiÃªu Ä‘á» tin *
+                            <Tag className="w-4 h-4 text-emerald-600" /> Tiêu đề tin *
                         </label>
                         <input
                             required
                             type="text"
-                            placeholder="VÃ­ dá»¥: TÃ¹ng la hÃ¡n dÃ¡ng vÄƒn nhÃ¢n cá»‘t cháº­u 10 nÄƒm"
+                            placeholder="Vd: Tùng la hán dáng văn nhân cốt chậu 10 năm"
                             className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
                             value={formData.postTitle}
                             onChange={(e) => setFormData({ ...formData, postTitle: e.target.value })}
@@ -300,14 +299,14 @@ const CreatePost: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] ml-1">Danh má»¥c *</label>
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] ml-1">Danh mục *</label>
                             <select
                                 required
                                 className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all appearance-none text-slate-900 text-sm font-medium"
                                 value={formData.categoryId}
                                 onChange={(e) => handleCategoryChange(e.target.value)}
                             >
-                                <option value="">Chá»n danh má»¥c</option>
+                                <option value="">Chọn danh mục</option>
                                 {categories.map(cat => (
                                     <option key={cat.categoryId} value={cat.categoryId}>{cat.categoryTitle}</option>
                                 ))}
@@ -315,7 +314,7 @@ const CreatePost: React.FC = () => {
                         </div>
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
-                                <CircleDollarSign className="w-4 h-4 text-emerald-600" /> GiÃ¡ bÃ¡n (Ä‘) *
+                                <CircleDollarSign className="w-4 h-4 text-emerald-600" /> Giá bán (đ) *
                             </label>
                             <input
                                 required
@@ -333,11 +332,11 @@ const CreatePost: React.FC = () => {
                     {!isGardenOwner && (
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
-                                <MapPin className="w-4 h-4 text-emerald-600" /> Khu vá»±c giao dá»‹ch
+                                <MapPin className="w-4 h-4 text-emerald-600" /> Khu vực giao dịch
                             </label>
                             <input
                                 type="text"
-                                placeholder="VÃ­ dá»¥: Tháº¡ch Tháº¥t, HÃ  Ná»™i"
+                                placeholder="Vd: Thạch Thất, Hà Nội"
                                 className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
                                 value={formData.postLocation}
                                 onChange={(e) => setFormData({ ...formData, postLocation: e.target.value })}
@@ -349,7 +348,7 @@ const CreatePost: React.FC = () => {
                 {/* Dynamic Attributes */}
                 {attributes.length > 0 && (
                     <section className="bg-white p-8 rounded-3xl space-y-6 border border-slate-200 shadow-xl">
-                        <h2 className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900 uppercase tracking-tight">ThÃ´ng sá»‘ chi tiáº¿t</h2>
+                        <h2 className="text-xl font-bold border-b border-slate-100 pb-4 text-slate-900 uppercase tracking-tight">Thông số chi tiết</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {attributes.map(attr => (
                                 <div key={attr.attributeId} className="space-y-2">
@@ -363,7 +362,7 @@ const CreatePost: React.FC = () => {
                                             value={formData.attributes[attr.attributeId] || ''}
                                             onChange={(e) => handleAttributeChange(attr.attributeId, e.target.value)}
                                         >
-                                            <option value="">Chá»n {attr.attributeTitle}</option>
+                                            <option value="">Chọn {attr.attributeTitle}</option>
                                             {attr.attributeOptions.map((opt: string) => (
                                                 <option key={opt} value={opt}>{opt}</option>
                                             ))}
@@ -372,7 +371,7 @@ const CreatePost: React.FC = () => {
                                         <input
                                             required={attr.required}
                                             type={attr.attributeDataType === 'number' ? 'number' : 'text'}
-                                            placeholder={`Nháº­p ${attr.attributeTitle}`}
+                                            placeholder={`Nhập ${attr.attributeTitle}`}
                                             className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
                                             value={formData.attributes[attr.attributeId] || ''}
                                             onChange={(e) => handleAttributeChange(attr.attributeId, e.target.value)}
@@ -390,7 +389,7 @@ const CreatePost: React.FC = () => {
                 <section className="bg-white p-8 rounded-3xl space-y-6 border border-slate-200 shadow-xl">
                     <div className="flex justify-between items-center border-b border-slate-100 pb-4">
                         <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900 uppercase tracking-tight">
-                            <ImageIcon className="w-5 h-5 text-emerald-600" /> HÃ¬nh áº£nh & Video sáº£n pháº©m
+                            <ImageIcon className="w-5 h-5 text-emerald-600" /> Hình ảnh & Video sản phẩm
                         </h2>
                     </div>
 
@@ -421,7 +420,7 @@ const CreatePost: React.FC = () => {
 
                         <label className="border-2 border-dashed border-slate-200 rounded-2xl aspect-square flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-50 transition-all group">
                             <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-emerald-600 transition-colors" />
-                            <span className="text-xs font-bold text-slate-400 group-hover:text-emerald-600 uppercase tracking-tight">Táº£i tá»‡p lÃªn</span>
+                            <span className="text-xs font-bold text-slate-400 group-hover:text-emerald-600 uppercase tracking-tight">Tải tập lên</span>
                             <input
                                 type="file"
                                 multiple
@@ -452,7 +451,7 @@ const CreatePost: React.FC = () => {
                         disabled={submitting}
                         className="w-full bg-emerald-700 py-6 rounded-3xl font-bold text-xl hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-emerald-200/50"
                     >
-                        {submitting ? "Äang xá»­ lÃ½..." : "ÄÄƒng Tin Ngay"}
+                        {submitting ? "Đang xử lý..." : "Đăng Tin Ngay"}
                     </button>
                 </div>
             </form>
