@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { registerShop, updateShop, uploadImages, payShopRegistration, getPricingConfig, type PricingConfig } from '../services/api';
-import { Store, CheckCircle, ArrowRight, UploadCloud, Image as ImageIcon, Loader2, Facebook, Instagram, Youtube } from 'lucide-react';
+import { Store, CheckCircle, ArrowRight, UploadCloud, Image as ImageIcon, Loader2, Facebook, Instagram, Youtube, AlertCircle, X as CloseIcon } from 'lucide-react';
 import AddressPicker from '../components/AddressPicker';
 import { useAuth } from '../context/AuthContext';
 
@@ -41,6 +41,8 @@ const RegisterShop: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
+  const [customAlert, setCustomAlert] = useState<{ type: 'error' | 'success', message: string | string[] } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     getPricingConfig()
@@ -50,7 +52,10 @@ const RegisterShop: React.FC = () => {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'shopLogoUrl' | 'shopGalleryImages') => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
+
+    // Clear error for this field when file selected
+    setFieldErrors(prev => ({ ...prev, [field]: false }));
+
     if (field === 'shopGalleryImages') {
       const files = Array.from(e.target.files);
       setGalleryFiles(prev => [...prev, ...files]);
@@ -61,17 +66,55 @@ const RegisterShop: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const errors: string[] = [];
+    const newFieldErrors: Record<string, boolean> = {};
+
+    if (!formData.shopName.trim()) {
+      errors.push("Tên nhà vườn không được để trống.");
+      newFieldErrors.shopName = true;
+    }
+    if (!logoFile) {
+      errors.push("Ảnh đại diện nhà vườn (Logo) là bắt buộc.");
+      newFieldErrors.shopLogoUrl = true;
+    }
+    if (galleryFiles.length < 3) {
+      errors.push("Vui lòng tải lên ít nhất 3 ảnh chi tiết về nhà vườn.");
+      newFieldErrors.shopGalleryImages = true;
+    }
+    if (!formData.shopLocation.trim()) {
+      errors.push("Vui lòng chọn địa chỉ nhà vườn.");
+      newFieldErrors.shopLocation = true;
+    }
+    if (!formData.shopDescription.trim()) {
+      errors.push("Mô tả về nhà vườn không được để trống.");
+      newFieldErrors.shopDescription = true;
+    }
+    if (!formData.shopLat || !formData.shopLng) {
+      errors.push("Không thể xác định vị trí bản đồ (Lat/Lng). Hãy ghim vị trí hoặc chọn địa chỉ.");
+      newFieldErrors.shopLocation = true;
+    }
+
+    if (errors.length > 0) {
+      setFieldErrors(newFieldErrors);
+      setCustomAlert({ type: 'error', message: errors });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setFieldErrors({});
+    setCustomAlert(null);
     setLoading(true);
     try {
       const registerRes = await registerShop({
-        shopName: formData.shopName,
-        shopLocation: formData.shopLocation,
-        shopDescription: formData.shopDescription,
+        shopName: formData.shopName.trim(),
+        shopLocation: formData.shopLocation.trim(),
+        shopDescription: formData.shopDescription.trim(),
         shopLat: formData.shopLat,
         shopLng: formData.shopLng,
-        shopFacebook: formData.shopFacebook,
-        shopInstagram: formData.shopInstagram,
-        shopYoutube: formData.shopYoutube,
+        shopFacebook: formData.shopFacebook.trim(),
+        shopInstagram: formData.shopInstagram.trim(),
+        shopYoutube: formData.shopYoutube.trim(),
       });
 
       const createdShopId = Number(registerRes.data?.shopId);
@@ -79,7 +122,10 @@ const RegisterShop: React.FC = () => {
 
       if (hasImagesToUpload) {
         if (!Number.isFinite(createdShopId) || createdShopId <= 0) {
-          alert("Shop đã tạo nhưng chưa lấy được mã shop để lưu ảnh. Bạn có thể cập nhật ảnh sau trong trang quản lý shop.");
+          setCustomAlert({
+            type: 'error',
+            message: "Shop đã tạo nhưng chưa lấy được mã shop để lưu ảnh. Bạn có thể cập nhật ảnh sau trong trang quản lý shop."
+          });
         } else {
           setUploading(true);
           try {
@@ -108,7 +154,10 @@ const RegisterShop: React.FC = () => {
             }
           } catch (uploadSyncError) {
             console.error("Shop created but image upload/update failed:", uploadSyncError);
-            alert("Shop đã tạo thành công nhưng lưu ảnh chưa hoàn tất. Bạn có thể cập nhật ảnh sau trong trang quản lý shop.");
+            setCustomAlert({
+              type: 'error',
+              message: "Shop đã tạo thành công nhưng lưu ảnh chưa hoàn tất. Bạn có thể cập nhật ảnh sau trong trang quản lý shop."
+            });
           } finally {
             setUploading(false);
           }
@@ -123,7 +172,10 @@ const RegisterShop: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to register shop:", error);
-      alert("Đăng ký không thành công. Bạn có thể đã đăng ký shop rồi hoặc có lỗi xảy ra!");
+      setCustomAlert({
+        type: 'error',
+        message: "Đăng ký không thành công. Bạn có thể đã đăng ký shop rồi hoặc có lỗi xảy ra!"
+      });
     } finally {
       setLoading(false);
       setUploading(false);
@@ -131,6 +183,7 @@ const RegisterShop: React.FC = () => {
   };
 
   const handleContinuePayment = async () => {
+    setCustomAlert(null);
     setPaymentLoading(true);
     try {
       const payRes = await payShopRegistration();
@@ -138,10 +191,10 @@ const RegisterShop: React.FC = () => {
         window.location.href = payRes.data.paymentUrl;
         return;
       }
-      alert("Không tạo được link thanh toán. Vui lòng thử lại.");
+      setCustomAlert({ type: 'error', message: "Không tạo được link thanh toán. Vui lòng thử lại." });
     } catch (error) {
       console.error("Failed to create shop payment:", error);
-      alert("Không tạo được link thanh toán. Vui lòng thử lại.");
+      setCustomAlert({ type: 'error', message: "Không tạo được link thanh toán. Vui lòng thử lại." });
     } finally {
       setPaymentLoading(false);
     }
@@ -211,29 +264,58 @@ const RegisterShop: React.FC = () => {
         <p className="text-slate-500 font-medium max-w-lg mx-auto">Trở thành đối tác tin cậy và bắt đầu kinh doanh cây cảnh chuyên nghiệp cùng cộng đồng GreenMarket.</p>
       </div>
 
+      {customAlert && (
+        <div className={`mb-8 p-5 rounded-2xl border flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-300 ${customAlert.type === 'error' ? 'bg-red-50 border-red-100 text-red-800' : 'bg-emerald-50 border-emerald-100 text-emerald-800'
+          }`}>
+          <div className={`mt-0.5 p-1.5 rounded-lg ${customAlert.type === 'error' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+            {customAlert.type === 'error' ? <AlertCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
+          </div>
+          <div className="flex-1">
+            <h4 className="font-black uppercase tracking-widest text-[10px] mb-1 opacity-70">
+              {customAlert.type === 'error' ? 'Lỗi' : 'Thành công'}
+            </h4>
+            <div className="text-sm font-bold leading-relaxed">
+              {Array.isArray(customAlert.message) ? (
+                <ul className="list-disc list-inside space-y-1">
+                  {customAlert.message.map((msg, i) => <li key={i}>{msg}</li>)}
+                </ul>
+              ) : (
+                customAlert.message
+              )}
+            </div>
+          </div>
+          <button onClick={() => setCustomAlert(null)} className="p-1 hover:bg-black/5 rounded-lg transition-colors">
+            <CloseIcon className="w-5 h-5 opacity-40 hover:opacity-100" />
+          </button>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-8 bg-white p-8 md:p-12 rounded-4xl border border-slate-200 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-3xl -mr-16 -mt-16"></div>
-        
+
         <div className="space-y-2">
           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Tên Nhà Vườn *</label>
           <input
-            required
-            type="text"
-            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 font-bold"
+            className={`w-full bg-slate-50 border p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 font-bold ${fieldErrors.shopName ? 'border-red-500 animate-shake' : 'border-slate-200'
+              }`}
             placeholder="Ví dụ: Vườn Bonsai Hữu Tình"
             value={formData.shopName}
-            onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, shopName: e.target.value });
+              if (fieldErrors.shopName) setFieldErrors(prev => ({ ...prev, shopName: false }));
+            }}
           />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ảnh Đại Diện Nhà Vườn</label>
-            <div className="relative border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-emerald-500/50 transition-all bg-slate-50 group">
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={(e) => handleFileUpload(e, 'shopLogoUrl')} 
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ảnh Đại Diện Nhà Vườn *</label>
+            <div className={`relative border-2 border-dashed rounded-2xl p-6 text-center hover:border-emerald-500/50 transition-all bg-slate-50 group ${fieldErrors.shopLogoUrl ? 'border-red-500 bg-red-50/30' : 'border-slate-200'
+              }`}>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileUpload(e, 'shopLogoUrl')}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 disabled={uploading}
               />
@@ -249,15 +331,16 @@ const RegisterShop: React.FC = () => {
               )}
             </div>
           </div>
-          
+
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ảnh Nhà Vườn (Nhiều ảnh)</label>
-            <div className="relative border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center hover:border-emerald-500/50 transition-all bg-slate-50 group min-h-[148px] flex items-center justify-center">
-              <input 
-                type="file" 
+            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ảnh Nhà Vườn (Nhiều ảnh) *</label>
+            <div className={`relative border-2 border-dashed rounded-2xl p-6 text-center hover:border-emerald-500/50 transition-all bg-slate-50 group min-h-[148px] flex items-center justify-center ${fieldErrors.shopGalleryImages ? 'border-red-500 bg-red-50/30' : 'border-slate-200'
+              }`}>
+              <input
+                type="file"
                 accept="image/*"
                 multiple
-                onChange={(e) => handleFileUpload(e, 'shopGalleryImages')} 
+                onChange={(e) => handleFileUpload(e, 'shopGalleryImages')}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 disabled={uploading}
               />
@@ -286,9 +369,13 @@ const RegisterShop: React.FC = () => {
           <div className="space-y-4 md:col-span-2">
             <div className="pt-2">
               <AddressPicker
-                onAddressChange={(addr) => setFormData(prev => ({ ...prev, shopLocation: addr }))}
+                onAddressChange={(addr) => {
+                  setFormData(prev => ({ ...prev, shopLocation: addr }));
+                  if (fieldErrors.shopLocation) setFieldErrors(prev => ({ ...prev, shopLocation: false }));
+                }}
                 onLocationSelect={(lat, lng) => setFormData(prev => ({ ...prev, shopLat: lat, shopLng: lng }))}
-                label="Địa chỉ nhà vườn"
+                onError={(msg) => setCustomAlert({ type: 'error', message: msg })}
+                label="Địa chỉ nhà vườn *"
               />
               {formData.shopLat && formData.shopLng && (
                 <div className="mt-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-between">
@@ -343,13 +430,17 @@ const RegisterShop: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Mô tả về Nhà Vườn</label>
+          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Mô tả về Nhà Vườn *</label>
           <textarea
             rows={4}
-            className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 font-medium"
+            className={`w-full bg-slate-50 border p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 font-medium ${fieldErrors.shopDescription ? 'border-red-500 animate-shake' : 'border-slate-200'
+              }`}
             placeholder="Chia sẻ về kinh nghiệm, các loại cây thế mạnh của bạn..."
             value={formData.shopDescription}
-            onChange={(e) => setFormData({ ...formData, shopDescription: e.target.value })}
+            onChange={(e) => {
+              setFormData({ ...formData, shopDescription: e.target.value });
+              if (fieldErrors.shopDescription) setFieldErrors(prev => ({ ...prev, shopDescription: false }));
+            }}
           />
         </div>
 

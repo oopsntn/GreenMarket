@@ -49,6 +49,9 @@ const ALLOWED_VIDEO_EXTENSIONS = new Set([
     ".mpg",
 ]);
 
+export const MAX_IMAGE_SIZE = 3 * 1024 * 1024; // 3MB
+export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+
 const createFileFilter = (allowVideos: boolean) => {
     return (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
         const mimeType = String(file.mimetype || "").toLowerCase();
@@ -74,13 +77,42 @@ const createFileFilter = (allowVideos: boolean) => {
     };
 };
 
-const createUploadMiddleware = (allowVideos: boolean) => multer({
+const createUploadMiddleware = (allowVideos: boolean, maxFileSize: number) => multer({
     storage: storage,
     limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB limit
+        fileSize: maxFileSize,
     },
     fileFilter: createFileFilter(allowVideos)
 });
 
-export const upload = createUploadMiddleware(true);
-export const uploadImagesOnly = createUploadMiddleware(false);
+export const upload = createUploadMiddleware(true, MAX_VIDEO_SIZE);
+export const uploadImagesOnly = createUploadMiddleware(false, MAX_IMAGE_SIZE);
+
+/**
+ * Secondary validation middleware to enforce different size limits for images vs videos
+ * in mixed upload requests.
+ */
+export const validateFileSizes = (req: any, res: any, next: any) => {
+    if (!req.files) return next();
+
+    const files = Array.isArray(req.files) ? req.files : Object.values(req.files).flat();
+    
+    for (const file of (files as Express.Multer.File[])) {
+        const mimeType = String(file.mimetype || "").toLowerCase();
+        const isVideo = mimeType.startsWith("video/") || ALLOWED_VIDEO_MIME_TYPES.has(mimeType);
+
+        if (isVideo) {
+            if (file.size > MAX_VIDEO_SIZE) {
+                return res.status(400).json({ error: `Video file "${file.originalname}" exceeds the 50MB limit.` });
+            }
+        } else {
+            // Assume it's an image if it passed the fileFilter
+            if (file.size > MAX_IMAGE_SIZE) {
+                return res.status(400).json({ error: `Image file "${file.originalname}" exceeds the 3MB limit.` });
+            }
+        }
+    }
+
+    next();
+};
+

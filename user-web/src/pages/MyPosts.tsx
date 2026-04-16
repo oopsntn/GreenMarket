@@ -4,6 +4,7 @@ import {
   getMyPosts,
   deleteUserPost,
   updateUserPost,
+  togglePostVisibility,
   getPromotionPackages,
   buyPromotionPackage,
   getCategories,
@@ -11,7 +12,7 @@ import {
   getOwnerDashboard,
   type PromotionPackageItem,
 } from '../services/api';
-import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User } from 'lucide-react';
+import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
@@ -135,6 +136,19 @@ const MyPosts: React.FC = () => {
         console.error('Failed to delete post', error);
         alert('Có lỗi xảy ra khi xóa bài đăng.');
       }
+    }
+  };
+
+  const handleToggleVisibility = async (postId: number) => {
+    if (!user?.id) return;
+    try {
+      const res = await togglePostVisibility(postId);
+      alert(res.data.message);
+      // Update local state
+      setPosts(posts.map(p => p.postId === postId ? { ...p, postPublished: res.data.post.postPublished } : p));
+    } catch (error) {
+      console.error('Failed to toggle post visibility', error);
+      alert('Có lỗi xảy ra khi thay đổi trạng thái hiển thị.');
     }
   };
 
@@ -500,6 +514,11 @@ const MyPosts: React.FC = () => {
                       <h3 className="text-base font-black text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors uppercase tracking-tight leading-tight">{post.postTitle}</h3>
                       <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                         {getStatusBadge(post.postStatus)}
+                        {!post.postPublished && post.postStatus === 'approved' && (
+                          <span className="bg-slate-50 text-slate-500 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-slate-200 shadow-sm">
+                            <EyeOff className="w-3 h-3" /> Đã ẩn
+                          </span>
+                        )}
                         {post.activePromotion && (
                           <span className="bg-indigo-50 text-indigo-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-indigo-100 shadow-sm animate-pulse-slow">
                             <Zap className="w-3 h-3 fill-indigo-600" /> Đang đẩy tin
@@ -528,9 +547,22 @@ const MyPosts: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <button
-                      title="Xem chi tiết"
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {post.postStatus === 'approved' && (
+                        <button
+                          title={post.postPublished ? "Ẩn bài đăng" : "Hiện bài đăng"}
+                          onClick={() => handleToggleVisibility(post.postId)}
+                          className={`p-3 rounded-xl transition-all hover:scale-105 active:scale-95 border ${
+                            post.postPublished 
+                              ? "bg-slate-50 border-slate-100 text-slate-400 hover:text-white hover:bg-slate-600" 
+                              : "bg-emerald-50 border-emerald-100 text-emerald-600 hover:text-white hover:bg-emerald-600 shadow-md animate-pulse-slow"
+                          }`}
+                        >
+                          {post.postPublished ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                        </button>
+                      )}
+                      <button
+                        title="Xem chi tiết"
                       onClick={() => navigate(`/posts/detail/${post.postSlug}`)}
                       className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-blue-600 transition-all hover:scale-105 active:scale-95"
                     >

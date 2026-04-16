@@ -253,7 +253,11 @@ const ShopDetail: React.FC = () => {
                 <Link
                   key={post.postId}
                   to={`/posts/detail/${post.postSlug}`}
-                  className="group bg-white rounded-4xl overflow-hidden hover:shadow-2xl hover:shadow-emerald-200/20 transition-all duration-500 border border-slate-200 hover:border-emerald-500/30 block"
+                  className={`group rounded-4xl overflow-hidden transition-all duration-500 border ${
+                    post.isPromoted 
+                      ? "bg-amber-50/50 border-amber-200 hover:shadow-amber-500/20 hover:border-amber-400 shadow-amber-100" 
+                      : "bg-white border-slate-200 hover:shadow-2xl hover:shadow-emerald-200/20 hover:border-emerald-500/30"
+                  } block`}
                 >
                   <div className="aspect-square bg-slate-900 overflow-hidden relative">
                     {post.images && post.images.length > 0 ? (
@@ -267,6 +271,20 @@ const ShopDetail: React.FC = () => {
                         <ShoppingBag className="w-12 h-12" />
                       </div>
                     )}
+                    
+                    {/* Promoted Badge */}
+                    {post.isPromoted && (
+                      <div className="absolute top-4 left-4 z-10">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30">
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                          </span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-white">HOT</span>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="absolute top-4 right-4 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[10px] font-bold text-white uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                       Chi tiết
                     </div>

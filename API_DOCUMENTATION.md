@@ -1,6 +1,6 @@
 # GreenMarket API Documentation
 
-Last updated: 2026-04-11
+Last updated: 2026-04-16
 
 This document lists APIs that are already implemented in `back-end/src/routes`.
 It is intended for `mobile`, `user-web`, and `admin-web` teams.
@@ -153,6 +153,7 @@ Auth rules for all endpoints below:
 | GET | `/api/posts/posting-policy` | User token | Get effective posting plan, daily usage, and tracked posting fees | none |
 | POST | `/api/posts/personal-plan/mock-activate` | User token | Activate monthly personal plan (development/mock) | optional: `durationDays` (7-365) |
 | PATCH | `/api/posts/:id` | User token | Update user post | path `id` (post owner only) |
+| PATCH | `/api/posts/:id/toggle-visibility` | User token | Toggle public visibility (`postPublished`) | path `id` (post owner only) |
 | DELETE | `/api/posts/:id` | User token | Soft delete user post | path `id` (post owner only) |
 | GET | `/api/posts/:id/favorite` | User token | Check if a post is favorited by current user | path `id` |
 | POST | `/api/posts/:id/favorite` | User token | Toggle (add/remove) favorite post | path `id` |
