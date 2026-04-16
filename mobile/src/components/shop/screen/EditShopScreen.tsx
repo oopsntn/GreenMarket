@@ -11,6 +11,7 @@ import { ProfileService } from '../../profile/service/ProfileService';
 import * as ImagePicker from 'expo-image-picker'
 import { Camera, ImageIcon, Play, Plus, User, X, Phone as PhoneIcon } from 'lucide-react-native';
 import PhoneManagementModal from '../components/PhoneManagementModal';
+import { resolveImageUrl } from '../../../utils/resolveImageUrl';
 
 const EditShopScreen = ({ route, navigation }: any) => {
     const { shop } = route.params;
@@ -151,7 +152,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                 <View style={styles.imagePickerRow}>
                     <TouchableOpacity onPress={() => pickImage('shopLogoUrl')} style={styles.pickerBox}>
                         {formData.shopLogoUrl ? (
-                            <Image source={{ uri: formData.shopLogoUrl }} style={styles.previewLogo} />
+                            <Image source={{ uri: resolveImageUrl(formData.shopLogoUrl) }} style={styles.previewLogo} />
                         ) : (
                             <View style={styles.pickerInner}>
                                 <ImageIcon color="#94a3b8" size={24} />
@@ -162,7 +163,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
 
                     <TouchableOpacity onPress={() => pickImage('shopCoverUrl')} style={styles.pickerBoxCover}>
                         {formData.shopCoverUrl ? (
-                            <Image source={{ uri: formData.shopCoverUrl }} style={styles.previewCover} />
+                            <Image source={{ uri: resolveImageUrl(formData.shopCoverUrl) }} style={styles.previewCover} />
                         ) : (
                             <View style={styles.pickerInner}>
                                 <Camera color="#94a3b8" size={24} />
@@ -175,7 +176,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                 <View style={styles.galleryContainer}>
                     {formData.shopGalleryImages.map((url: string, index: number) => (
                         <View key={index} style={styles.galleryItem}>
-                            <Image source={{ uri: url }} style={styles.galleryImage} />
+                            <Image source={{ uri: resolveImageUrl(url) }} style={styles.galleryImage} />
                             <TouchableOpacity
                                 style={styles.removeBadge}
                                 onPress={() => removeGalleryImage(index)}

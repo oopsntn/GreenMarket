@@ -44,5 +44,10 @@ export const paymentService = {
     buyPersonalPackage: async () => {
         const response = await api.post('/payment/buy-personal');
         return response.data;
+    },
+
+    createShopPaymentIntent: async () => {
+        const response = await api.post('/payment/register-shop');
+        return response.data;
     }
 };

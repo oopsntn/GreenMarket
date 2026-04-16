@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { ArrowRight, Camera, CheckCircle, Image as ImageIcon, Play, Plus, Store, User, X } from 'lucide-react-native'
 import * as ImagePicker from 'expo-image-picker'
+import * as WebBrowser from 'expo-web-browser'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Input from '../../Reused/Input/Input'
 import Button from '../../Reused/Button/Button'
@@ -10,6 +11,8 @@ import CustomAlert from '../../../utils/AlertHelper'
 import { ProfileService } from '../../profile/service/ProfileService'
 import AddressPicker from '../components/AddressPicker'
 import { useAuth } from '../../../context/AuthContext'
+import { resolveImageUrl } from '../../../utils/resolveImageUrl'
+import { paymentService } from '../../payment/service/paymentService'
 
 const RegisterShopScreen = ({ navigation }: any) => {
     const { refreshShop, shop } = useAuth()
@@ -33,7 +36,12 @@ const RegisterShopScreen = ({ navigation }: any) => {
     const [submitted, setSubmitted] = useState(false)
 
     const hasExistingShop = useMemo(
-        () => !!shop?.shopId,
+        () => !!shop?.shopId && shop.shopStatus === 'active',
+        [shop]
+    )
+
+    const isPendingShop = useMemo(
+        () => !!shop?.shopId && shop.shopStatus !== 'active',
         [shop]
     )
 
@@ -91,10 +99,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
     const validateForm = () => {
         const phoneRegex = /^(0|84)(3|5|7|8|9)([0-9]{8})$/
-        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/
+        const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/
 
         if (!formData.shopName.trim()) {
             CustomAlert('Lỗi', 'Vui lòng nhập tên cửa hàng')
+            return false
+        }
+        if (formData.shopName.trim().length < 3) {
+            CustomAlert('Lỗi', 'Tên cửa hàng phải có ít nhất 3 ký tự')
             return false
         }
 
@@ -108,8 +120,13 @@ const RegisterShopScreen = ({ navigation }: any) => {
             return false
         }
 
-        if (!formData.shopLocation.trim()) {
-            CustomAlert('Lỗi', 'Vui lòng nhập hoặc chọn tọa độ cửa hàng')
+        if (formData.shopDescription.trim() && formData.shopDescription.trim().length < 10) {
+            CustomAlert('Lỗi', 'Mô tả cửa hàng quá ngắn (Cần ít nhất 10 ký tự)')
+            return false
+        }
+
+        if (!formData.shopLocation.trim() || formData.shopLocation.trim().length < 5) {
+            CustomAlert('Lỗi', 'Vui lòng nhập định vị địa chỉ rõ ràng cho cửa hàng')
             return false
         }
 
@@ -146,7 +163,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
         try {
             const cleanData = {
                 shopName: formData.shopName.trim(),
-                shopPhone: formData.shopPhone.trim(),
+                shopPhone: formData.shopPhone.trim() || undefined,
                 shopEmail: formData.shopEmail.trim() || undefined,
                 shopLocation: formData.shopLocation.trim(),
                 shopDescription: formData.shopDescription.trim(),
@@ -156,13 +173,24 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 shopCoverUrl: formData.shopCoverUrl || undefined,
                 // Gửi mảng ảnh, BE sẽ tự xử lý join "|"
                 shopGalleryImages: formData.shopGalleryImages,
-                shopFacebook: validateSocial(formData.shopFacebook).trim() || undefined,
-                shopInstagram: validateSocial(formData.shopInstagram).trim() || undefined,
-                shopYoutube: validateSocial(formData.shopYoutube).trim() || undefined,
+                shopFacebook: validateSocial(formData.shopFacebook.trim()) || undefined,
+                shopInstagram: validateSocial(formData.shopInstagram.trim()) || undefined,
+                shopYoutube: validateSocial(formData.shopYoutube.trim()) || undefined,
             }
 
             const res = await ShopService.createShop(cleanData)
             if (res) {
+                // Call VNPay Payment here immediately!
+                try {
+                    const paymentRes = await paymentService.createShopPaymentIntent()
+                    if (paymentRes.paymentUrl) {
+                        await WebBrowser.openBrowserAsync(paymentRes.paymentUrl)
+                        // Callback refetch 
+                    }
+                } catch (paymentErr: any) {
+                    CustomAlert('Thanh toán thất bại', paymentErr.message || 'Không thể tạo phiên thanh toán lúc này. Bạn có thể thanh toán sau.')
+                }
+
                 await refreshShop()
                 setSubmitted(true)
             }
@@ -176,6 +204,22 @@ const RegisterShopScreen = ({ navigation }: any) => {
             }
 
             CustomAlert('Lỗi', errorMsg)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleContinuePayment = async () => {
+        try {
+            setLoading(true)
+            const paymentRes = await paymentService.createShopPaymentIntent()
+            if (paymentRes.paymentUrl) {
+                await WebBrowser.openBrowserAsync(paymentRes.paymentUrl)
+            }
+            await refreshShop()
+            setSubmitted(true)
+        } catch (error: any) {
+             CustomAlert('Lỗi thanh toán', error?.response?.data?.error || 'Không thể khởi tạo thanh toán VNPAY.')
         } finally {
             setLoading(false)
         }
@@ -202,6 +246,41 @@ const RegisterShopScreen = ({ navigation }: any) => {
                     </Button>
                 </View>
             </View>
+        )
+    }
+
+    if (isPendingShop) {
+        return (
+            <MobileLayout title="Đăng ký cửa hàng" backButton={() => navigation.goBack()}>
+                <View style={styles.successContainer}>
+                    <View style={styles.successCard}>
+                        <View style={[styles.iconCircle, { backgroundColor: '#fef3c7' }]}>
+                            <Store color="#d97706" size={40} />
+                        </View>
+                        <Text style={[styles.successTitle, { color: '#92400e' }]}>Cửa hàng chờ kích hoạt</Text>
+                        <Text style={styles.successDesc}>
+                            Cửa hàng của bạn đã được tạo tuy nhiên chưa thanh toán phí đóng quầy. Bạn cần hoàn tất thanh toán để có thể sử dụng tất cả tính năng của chủ vườn.
+                        </Text>
+                        <Button
+                            loading={loading}
+                            disabled={loading}
+                            fullWidth
+                            onPress={handleContinuePayment}
+                            style={{ backgroundColor: '#111827', marginTop: 8 }}
+                        >
+                            Tiếp tục thanh toán kích hoạt
+                        </Button>
+                        <Button
+                            fullWidth
+                            variant="outline"
+                            onPress={() => refreshShop()}
+                            style={[styles.secondaryAction, { marginTop: 16 }]}
+                        >
+                            Đã thanh toán? Tải lại ngay
+                        </Button>
+                    </View>
+                </View>
+            </MobileLayout>
         )
     }
 
@@ -268,7 +347,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             disabled={loading || uploadingImage}
                         >
                             {formData.shopLogoUrl ? (
-                                <Image source={{ uri: formData.shopLogoUrl }} style={styles.previewLogo} />
+                                <Image source={{ uri: resolveImageUrl(formData.shopLogoUrl) }} style={styles.previewLogo} />
                             ) : (
                                 <View style={styles.pickerInner}>
                                     <ImageIcon color="#94a3b8" size={24} />
@@ -283,7 +362,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             disabled={loading || uploadingImage}
                         >
                             {formData.shopCoverUrl ? (
-                                <Image source={{ uri: formData.shopCoverUrl }} style={styles.previewCover} />
+                                <Image source={{ uri: resolveImageUrl(formData.shopCoverUrl) }} style={styles.previewCover} />
                             ) : (
                                 <View style={styles.pickerInner}>
                                     <Camera color="#94a3b8" size={24} />
@@ -298,7 +377,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                     <View style={styles.galleryContainer}>
                         {formData.shopGalleryImages.map((url, index) => (
                             <View key={index} style={styles.galleryItem}>
-                                <Image source={{ uri: url }} style={styles.galleryImage} />
+                                <Image source={{ uri: resolveImageUrl(url) }} style={styles.galleryImage} />
                                 <TouchableOpacity
                                     style={styles.removeBadge}
                                     onPress={() => {

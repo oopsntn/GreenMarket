@@ -13,7 +13,7 @@ import { paymentService, PromotionPackage } from '../../payment/service/paymentS
 
 const PackagesScreen = () => {
     const navigation = useNavigation<any>();
-    const { shop, isAuthenticated } = useAuth();
+    const { shop, isAuthenticated, refreshShop } = useAuth();
     const isOwner = !!shop && shop.shopStatus === 'active';
 
     const [loading, setLoading] = useState(true);
@@ -59,7 +59,9 @@ const PackagesScreen = () => {
             const res = await paymentService.buyShopVipPackage();
             if (res.paymentUrl) {
                 await WebBrowser.openBrowserAsync(res.paymentUrl);
-                CustomAlert('Thanh toán', 'Vui lòng kiểm tra lại trạng thái thanh toán.');
+                // When browser closes, refresh auth and pricing data
+                await refreshShop();
+                await fetchData();
             }
         } catch (error: any) {
             CustomAlert('Lỗi', error?.response?.data?.error || 'Đã xảy ra lỗi.');
@@ -74,7 +76,9 @@ const PackagesScreen = () => {
             const res = await paymentService.buyPersonalPackage();
             if (res.paymentUrl) {
                 await WebBrowser.openBrowserAsync(res.paymentUrl);
-                CustomAlert('Thanh toán', 'Vui lòng kiểm tra lại trạng thái thanh toán.');
+                // When browser closes, refresh auth and pricing data
+                await refreshShop();
+                await fetchData();
             }
         } catch (error: any) {
             CustomAlert('Lỗi', error?.response?.data?.error || 'Đã xảy ra lỗi.');
@@ -98,7 +102,7 @@ const PackagesScreen = () => {
     return (
         <MobileLayout title="Các gói dịch vụ" backButton={() => navigation.goBack()}>
             <ScrollView contentContainerStyle={styles.container}>
-                
+
                 {/* Gói Mở Cửa Hàng (Owner) */}
                 <Card style={[styles.card, { borderColor: '#d1fae5', backgroundColor: '#f0fdf4' }]}>
                     <View style={styles.cardHeader}>
@@ -111,10 +115,10 @@ const PackagesScreen = () => {
                     </View>
                     <Text style={styles.price}>{formatPrice(pricingConfig?.shopRegistrationPrice)}</Text>
                     <Text style={styles.desc}>Nâng cấp tài khoản lên chủ vườn, phù hợp người bán chuyên nghiệp.</Text>
-                    
+
                     <View style={styles.featureList}>
-                         <View style={styles.featureItem}><CheckCircle2 size={16} color="#10b981" /><Text style={styles.featureText}>Đăng bài không chờ duyệt</Text></View>
-                         <View style={styles.featureItem}><CheckCircle2 size={16} color="#10b981" /><Text style={styles.featureText}>Tính năng Shop nâng cao</Text></View>
+                        <View style={styles.featureItem}><CheckCircle2 size={16} color="#10b981" /><Text style={styles.featureText}>Đăng bài không chờ duyệt</Text></View>
+                        <View style={styles.featureItem}><CheckCircle2 size={16} color="#10b981" /><Text style={styles.featureText}>Tính năng Shop nâng cao</Text></View>
                     </View>
 
                     {isOwner ? (
@@ -129,24 +133,24 @@ const PackagesScreen = () => {
                 {/* Gói Nhà Vườn VIP */}
                 <Card style={[styles.card, { borderColor: '#fde68a', backgroundColor: '#fffbeb' }]}>
                     <View style={styles.cardHeader}>
-                        <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                             <Crown size={20} color="#d97706" />
-                            <Text style={[styles.cardTitle, {color: '#92400e'}]}>Nhà vườn VIP</Text>
+                            <Text style={[styles.cardTitle, { color: '#92400e' }]}>Nhà vườn VIP</Text>
                         </View>
                         {isVipActive && (
-                            <View style={[styles.badge, {backgroundColor: '#fef3c7'}]}>
-                                <Text style={[styles.badgeText, {color: '#b45309'}]}>VIP Kích Hoạt</Text>
+                            <View style={[styles.badge, { backgroundColor: '#fef3c7' }]}>
+                                <Text style={[styles.badgeText, { color: '#b45309' }]}>VIP Kích Hoạt</Text>
                             </View>
                         )}
                     </View>
-                    <Text style={[styles.price, {color: '#b45309'}]}>{formatPrice(vipPackage?.promotionPackagePrice)}</Text>
+                    <Text style={[styles.price, { color: '#b45309' }]}>{formatPrice(vipPackage?.promotionPackagePrice)}</Text>
                     <Text style={styles.desc}>Gói {vipPackage?.promotionPackageDurationDays || 90} ngày. Ưu tiên hiển thị và nhận diện đặc biệt dành cho nhà vườn chuyên nghiệp.</Text>
 
                     {isOwner ? (
                         isVipActive ? (
-                             <Button disabled style={{backgroundColor: '#fbbf24'}}>ĐANG SỬ DỤNG</Button>
+                            <Button disabled style={{ backgroundColor: '#fbbf24' }}>ĐANG SỬ DỤNG</Button>
                         ) : (
-                             <Button loading={processing} disabled={processing} onPress={handleBuyVip} style={{backgroundColor: '#111827'}}>Kích hoạt VIP</Button>
+                            <Button loading={processing} disabled={processing} onPress={handleBuyVip} style={{ backgroundColor: '#111827' }}>Kích hoạt VIP</Button>
                         )
                     ) : (
                         <Button variant="outline" onPress={() => navigation.navigate('RegisterShop')}>Mở Shop để mua VIP</Button>
@@ -164,17 +168,17 @@ const PackagesScreen = () => {
                                 </View>
                             )}
                         </View>
-                        <Text style={styles.price}>{formatPrice(pricingConfig?.personalMonthlyPrice)} <Text style={{fontSize: 14, fontWeight: '400', color: '#64748b'}}>/ tháng</Text></Text>
+                        <Text style={styles.price}>{formatPrice(pricingConfig?.personalMonthlyPrice)} <Text style={{ fontSize: 14, fontWeight: '400', color: '#64748b' }}>/ tháng</Text></Text>
                         <Text style={styles.desc}>Dành cho người chơi cây nhỏ lẻ nhưng đăng bài thường xuyên.</Text>
 
                         {isAuthenticated ? (
                             isPersonalActive ? (
                                 <Button disabled variant="outline">Đang kích hoạt</Button>
                             ) : (
-                                <Button loading={processing} disabled={processing} onPress={handleBuyPersonal} style={{backgroundColor: '#111827'}}>Đăng ký gói</Button>
+                                <Button loading={processing} disabled={processing} onPress={handleBuyPersonal} style={{ backgroundColor: '#111827' }}>Đăng ký gói</Button>
                             )
                         ) : (
-                             <Button onPress={() => CustomAlert('Yêu cầu', 'Vui lòng đăng nhập.')}>Đăng nhập để mua</Button>
+                            <Button onPress={() => CustomAlert('Yêu cầu', 'Vui lòng đăng nhập.')}>Đăng nhập để mua</Button>
                         )}
                     </Card>
                 )}
