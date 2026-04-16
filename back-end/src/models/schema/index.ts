@@ -212,6 +212,11 @@ export {
   type NewHostContent,
 } from "./host-contents.ts";
 export {
+  favoriteContents,
+  type FavoriteContent,
+  type NewFavoriteContent,
+} from "./favorite-contents.ts";
+export {
   hostEarnings,
   type HostEarning,
   type NewHostEarning,

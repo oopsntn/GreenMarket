@@ -1,9 +1,11 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import {
   and,
   desc,
   eq,
   sql,
+  ilike,
+  or,
 } from "drizzle-orm";
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
@@ -11,6 +13,7 @@ import {
   hostContents,
   hostEarnings,
   hostPayoutRequests,
+  favoriteContents,
   users,
   posts,
   shops,
@@ -21,10 +24,21 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const MIN_PAYOUT_AMOUNT = 500_000;
+const PUBLIC_CONTENT_TARGET_TYPES = new Set(["post", "shop"]);
 
 const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
-  const page = Number(queryPage) || DEFAULT_PAGE;
-  const limit = Math.min(Number(queryLimit) || DEFAULT_LIMIT, MAX_LIMIT);
+  const parsedPage = Number(queryPage);
+  const parsedLimit = Number(queryLimit);
+
+  const page =
+    Number.isFinite(parsedPage) && parsedPage > 0
+      ? Math.floor(parsedPage)
+      : DEFAULT_PAGE;
+  const limit =
+    Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(Math.floor(parsedLimit), MAX_LIMIT)
+      : DEFAULT_LIMIT;
+
   const offset = (page - 1) * limit;
   return { page, limit, offset };
 };
@@ -434,5 +448,310 @@ export const trackContentClick = async (req: AuthRequest, res: Response): Promis
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// --- Public Content APIs ---
+export const getPublicContents = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
+    const search = (req.query.search as string) || "";
+    const targetType = (req.query.targetType as string) || "";
+    const normalizedTargetType = targetType.trim().toLowerCase();
+
+    const conditions = [
+      eq(hostContents.hostContentStatus, "published"),
+      sql`${hostContents.hostContentDeletedAt} IS NULL`,
+    ];
+
+    if (search.trim()) {
+      conditions.push(
+        or(
+          ilike(hostContents.hostContentTitle, `%${search.trim()}%`),
+          ilike(hostContents.hostContentDescription, `%${search.trim()}%`)
+        )!
+      );
+    }
+
+    if (normalizedTargetType) {
+      if (!PUBLIC_CONTENT_TARGET_TYPES.has(normalizedTargetType)) {
+        res.status(400).json({ error: "targetType must be one of: post, shop" });
+        return;
+      }
+
+      conditions.push(eq(hostContents.hostContentTargetType, normalizedTargetType));
+    }
+
+    const rows = await db
+      .select({
+        hostContentId: hostContents.hostContentId,
+        hostContentTitle: hostContents.hostContentTitle,
+        hostContentDescription: hostContents.hostContentDescription,
+        hostContentTargetType: hostContents.hostContentTargetType,
+        hostContentTargetId: hostContents.hostContentTargetId,
+        hostContentMediaUrls: hostContents.hostContentMediaUrls,
+        hostContentViewCount: hostContents.hostContentViewCount,
+        hostContentClickCount: hostContents.hostContentClickCount,
+        hostContentCreatedAt: hostContents.hostContentCreatedAt,
+        authorId: users.userId,
+        authorName: users.userDisplayName,
+        authorAvatar: users.userAvatarUrl,
+      })
+      .from(hostContents)
+      .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
+      .where(and(...conditions))
+      .orderBy(desc(hostContents.hostContentCreatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(hostContents)
+      .where(and(...conditions));
+
+    res.json({
+      data: rows,
+      meta: {
+        page,
+        limit,
+        totalItems: Number(countResult?.count ?? 0),
+        totalPages: Math.ceil(Number(countResult?.count ?? 0) / limit),
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getPublicContentDetail = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+  try {
+    const contentId = parseId(req.params.id as string);
+    if (!contentId) {
+      res.status(400).json({ error: "Invalid content ID" });
+      return;
+    }
+
+    const [content] = await db
+      .select({
+        hostContentId: hostContents.hostContentId,
+        hostContentTitle: hostContents.hostContentTitle,
+        hostContentDescription: hostContents.hostContentDescription,
+        hostContentTargetType: hostContents.hostContentTargetType,
+        hostContentTargetId: hostContents.hostContentTargetId,
+        hostContentTrackingUrl: hostContents.hostContentTrackingUrl,
+        hostContentMediaUrls: hostContents.hostContentMediaUrls,
+        hostContentViewCount: hostContents.hostContentViewCount,
+        hostContentClickCount: hostContents.hostContentClickCount,
+        hostContentCreatedAt: hostContents.hostContentCreatedAt,
+        hostContentUpdatedAt: hostContents.hostContentUpdatedAt,
+        authorId: users.userId,
+        authorName: users.userDisplayName,
+        authorAvatar: users.userAvatarUrl,
+      })
+      .from(hostContents)
+      .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
+      .where(
+        and(
+          eq(hostContents.hostContentId, contentId),
+          eq(hostContents.hostContentStatus, "published"),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`
+        )
+      )
+      .limit(1);
+
+    if (!content) {
+      res.status(404).json({ error: "Content not found" });
+      return;
+    }
+
+    // Increment view count
+    await db
+      .update(hostContents)
+      .set({
+        hostContentViewCount: sql`COALESCE(${hostContents.hostContentViewCount}, 0) + 1`,
+      })
+      .where(eq(hostContents.hostContentId, contentId));
+
+    // Fetch linked target details
+    let target: any = null;
+    if (content.hostContentTargetType === "post" && content.hostContentTargetId) {
+      const [post] = await db
+        .select({ postId: posts.postId, postTitle: posts.postTitle, postSlug: posts.postSlug })
+        .from(posts)
+        .where(eq(posts.postId, content.hostContentTargetId))
+        .limit(1);
+      target = post || null;
+    } else if (content.hostContentTargetType === "shop" && content.hostContentTargetId) {
+      const [shop] = await db
+        .select({ shopId: shops.shopId, shopName: shops.shopName, shopLogoUrl: shops.shopLogoUrl })
+        .from(shops)
+        .where(eq(shops.shopId, content.hostContentTargetId))
+        .limit(1);
+      target = shop || null;
+    }
+
+    res.json({
+      ...content,
+      hostContentViewCount: (content.hostContentViewCount || 0) + 1,
+      target,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// --- Favorite Content APIs ---
+export const toggleFavoriteContent = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const contentId = parseId(req.params.id as string);
+
+    if (!userId || !contentId) {
+      res.status(400).json({ error: "Invalid user or content ID" });
+      return;
+    }
+
+    // Verify content exists and is published
+    const [content] = await db
+      .select({ hostContentId: hostContents.hostContentId })
+      .from(hostContents)
+      .where(
+        and(
+          eq(hostContents.hostContentId, contentId),
+          eq(hostContents.hostContentStatus, "published"),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`
+        )
+      )
+      .limit(1);
+
+    if (!content) {
+      res.status(404).json({ error: "Content not found" });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(favoriteContents)
+      .where(
+        and(
+          eq(favoriteContents.favoriteContentUserId, userId),
+          eq(favoriteContents.favoriteContentId, contentId)
+        )
+      )
+      .limit(1);
+
+    if (existing) {
+      await db
+        .delete(favoriteContents)
+        .where(
+          and(
+            eq(favoriteContents.favoriteContentUserId, userId),
+            eq(favoriteContents.favoriteContentId, contentId)
+          )
+        );
+      res.json({ message: "Content removed from bookmarks", isSaved: false });
+    } else {
+      await db.insert(favoriteContents).values({
+        favoriteContentUserId: userId,
+        favoriteContentId: contentId,
+      });
+      res.json({ message: "Content added to bookmarks", isSaved: true });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getMyFavoriteContents = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
+
+    const rows = await db
+      .select({
+        favoriteCreatedAt: favoriteContents.favoriteContentCreatedAt,
+        hostContentId: hostContents.hostContentId,
+        hostContentTitle: hostContents.hostContentTitle,
+        hostContentDescription: hostContents.hostContentDescription,
+        hostContentTargetType: hostContents.hostContentTargetType,
+        hostContentMediaUrls: hostContents.hostContentMediaUrls,
+        hostContentViewCount: hostContents.hostContentViewCount,
+        hostContentCreatedAt: hostContents.hostContentCreatedAt,
+        authorName: users.userDisplayName,
+        authorAvatar: users.userAvatarUrl,
+      })
+      .from(favoriteContents)
+      .innerJoin(hostContents, eq(favoriteContents.favoriteContentId, hostContents.hostContentId))
+      .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
+      .where(
+        and(
+          eq(favoriteContents.favoriteContentUserId, userId),
+          eq(hostContents.hostContentStatus, "published"),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`
+        )
+      )
+      .orderBy(desc(favoriteContents.favoriteContentCreatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(favoriteContents)
+      .innerJoin(hostContents, eq(favoriteContents.favoriteContentId, hostContents.hostContentId))
+      .where(
+        and(
+          eq(favoriteContents.favoriteContentUserId, userId),
+          eq(hostContents.hostContentStatus, "published"),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`
+        )
+      );
+
+    res.json({
+      data: rows,
+      meta: {
+        page,
+        limit,
+        totalItems: Number(countResult?.count ?? 0),
+        totalPages: Math.ceil(Number(countResult?.count ?? 0) / limit),
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const checkIsContentSaved = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const contentId = parseId(req.params.id as string);
+    if (!userId || !contentId) {
+      res.json({ isSaved: false });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(favoriteContents)
+      .where(
+        and(
+          eq(favoriteContents.favoriteContentUserId, userId),
+          eq(favoriteContents.favoriteContentId, contentId)
+        )
+      )
+      .limit(1);
+
+    res.json({ isSaved: !!existing });
+  } catch (error) {
+    console.error(error);
+    res.json({ isSaved: false });
   }
 };
