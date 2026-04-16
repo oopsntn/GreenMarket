@@ -186,6 +186,14 @@ const ProfileScreen = () => {
                             <Text style={styles.savedPostsText}>Bài đăng đã lưu</Text>
                         </TouchableOpacity>
 
+                        <TouchableOpacity
+                            style={[styles.savedPostsButton, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', marginTop: 12 }]}
+                            onPress={() => navigation.navigate('Packages')}
+                        >
+                            <LayoutDashboard color="#16a34a" size={20} />
+                            <Text style={[styles.savedPostsText, { color: '#16a34a' }]}>Cửa hàng tính năng</Text>
+                        </TouchableOpacity>
+
                         {isCollaborator && (
                             <TouchableOpacity
                                 style={[styles.beShopBanner, { marginBottom: 16, borderColor: '#dcfce7' }]}

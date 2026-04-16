@@ -144,7 +144,8 @@ const useCreatePost = () => {
             return false
         }
 
-        if (!formData.postPrice.trim() || Number.isNaN(Number(formData.postPrice)) || Number(formData.postPrice) < 0) {
+        const priceStr = formData.postPrice.trim()
+        if (!priceStr || Number.isNaN(Number(priceStr)) || Number(priceStr) < 0) {
             CustomAlert('Giá trị không hợp lệ', 'Giá bán phải là số lớn hơn hoặc bằng 0.')
             return false
         }
@@ -159,9 +160,12 @@ const useCreatePost = () => {
             return false
         }
 
-        if (formData.postContactPhone && (formData.postContactPhone.length > 20 || !/^\+?[0-9\s-]+$/.test(formData.postContactPhone))) {
-            CustomAlert('Giá trị không hợp lệ', 'Vui lòng nhập số điện thoại hợp lệ.')
-            return false
+        if (formData.postContactPhone) {
+            const cleanPhone = formData.postContactPhone.trim();
+            if (cleanPhone.length < 9 || cleanPhone.length > 20 || !/^\+?[0-9\s-]+$/.test(cleanPhone)) {
+                CustomAlert('Giá trị không hợp lệ', 'Vui lòng nhập số điện thoại hợp lệ (ít nhất 9 số).')
+                return false
+            }
         }
 
         if (media.length === 0) {

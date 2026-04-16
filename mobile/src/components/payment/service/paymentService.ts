@@ -25,4 +25,24 @@ export const paymentService = {
         });
         return response.data;
     },
+
+    getShopVipPackage: async (): Promise<PromotionPackage> => {
+        const response = await api.get('/promotions/packages/shop-vip');
+        return response.data;
+    },
+
+    getPricingConfig: async () => {
+        const response = await api.get('/pricing-config');
+        return response.data;
+    },
+
+    buyShopVipPackage: async () => {
+        const response = await api.post('/payment/buy-shop-vip');
+        return response.data;
+    },
+
+    buyPersonalPackage: async () => {
+        const response = await api.post('/payment/buy-personal');
+        return response.data;
+    }
 };

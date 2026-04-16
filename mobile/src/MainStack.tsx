@@ -12,6 +12,7 @@ import CreatePostLayout from './components/post/screen/CreatePostScreen'
 import CreateReportScreen from './components/report/screen/CreateReportService'
 import BrowseShopsScreen from './components/shop/screen/BrowseShopsScreen'
 import PublicShopDetailScreen from './components/shop/screen/PublicShopDetailScreen'
+import PackagesScreen from './components/shop/screen/PackagesScreen'
 import PostDetailScreen from './components/post/screen/PostDetailScreen'
 import SavedPostsScreen from './components/post/screen/SavedPostsScreen'
 import PromotePostScreen from './components/payment/screen/PromotePostScreen'
@@ -32,6 +33,7 @@ const MainStack = () => {
             <Stack.Screen name="MyShop" component={ShoDetailScreen} />
             <Stack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
             <Stack.Screen name="EditShop" component={EditShopScreen} />
+            <Stack.Screen name="Packages" component={PackagesScreen} />
             <Stack.Screen name="BrowseShops" component={BrowseShopsScreen} />
             <Stack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} />
 

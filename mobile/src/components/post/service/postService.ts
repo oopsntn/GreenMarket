@@ -164,7 +164,7 @@ export const postService = {
         const response = await api.get(`/categories/${categoryId}/attributes`)
         return response.data
     },
-    
+
     getPostingPolicy: async () => {
         const response = await api.get('/posts/posting-policy')
         return response.data
