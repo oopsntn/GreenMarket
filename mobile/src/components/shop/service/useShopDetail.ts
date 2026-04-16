@@ -15,6 +15,10 @@ export const useShopDetail = () => {
         try {
             setLoading(true)
             const res = await ShopService.getMyShop()
+            if (!res) {
+                setLoading(false)
+                return
+            }
             setShop(res)
         } catch (e) {
             console.error('Error fetching shop detail:', e);

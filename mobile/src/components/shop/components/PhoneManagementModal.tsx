@@ -23,38 +23,38 @@ const PhoneManagementModal: React.FC<PhoneManagementModalProps> = ({ visible, on
 
     const handleRequestOtp = async () => {
         const trimmed = newPhone.trim();
-        if (!trimmed) return CustomAlert('Error', 'Please enter a phone number');
-        if (!phoneRegex.test(trimmed)) return CustomAlert('Error', 'Invalid phone number format');
-        if (phones.includes(trimmed)) return CustomAlert('Error', 'Phone number already exists in your list');
-        if (phones.length >= 3) return CustomAlert('Error', 'You can only add up to 3 secondary phone numbers');
+        if (!trimmed) return CustomAlert('Lỗi', 'Vui lòng nhập số điện thoại');
+        if (!phoneRegex.test(trimmed)) return CustomAlert('Lỗi', 'Định dạng số điện thoại không hợp lệ');
+        if (phones.includes(trimmed)) return CustomAlert('Lỗi', 'Số điện thoại đã tồn tại trong danh sách');
+        if (phones.length >= 3) return CustomAlert('Lỗi', 'Chỉ có thể thêm tối đa 3 số điện thoại phụ');
 
         setLoading(true);
         try {
             await ShopService.requestVerifyOTP(trimmed, 'phone');
-            CustomAlert('Success', 'OTP has been sent to your phone number');
+            CustomAlert('Thành công', 'Mã OTP đã được gửi đến số điện thoại');
             setStep('OTP');
         } catch (error: any) {
             console.error(error);
-            CustomAlert('Error', error.response?.data?.error || 'Failed to request OTP');
+            CustomAlert('Lỗi', error.response?.data?.error || 'Yêu cầu OTP thất bại');
         } finally {
             setLoading(false);
         }
     };
 
     const handleVerifyOtp = async () => {
-        if (!otp.trim()) return CustomAlert('Error', 'Please enter the OTP');
+        if (!otp.trim()) return CustomAlert('Lỗi', 'Vui lòng nhập mã OTP');
 
         setLoading(true);
         try {
             await ShopService.addPhone(newPhone.trim(), otp.trim());
-            CustomAlert('Success', 'Phone number added successfully');
+            CustomAlert('Thành công', 'Đã thêm số điện thoại thành công');
             onPhonesChange([...phones, newPhone.trim()]);
             setNewPhone('');
             setOtp('');
             setStep('IDLE');
         } catch (error: any) {
             console.error(error);
-            CustomAlert('Error', error.response?.data?.error || 'Failed to verify OTP');
+            CustomAlert('Lỗi', error.response?.data?.error || 'Xác thực OTP thất bại');
         } finally {
             setLoading(false);
         }
@@ -62,22 +62,22 @@ const PhoneManagementModal: React.FC<PhoneManagementModalProps> = ({ visible, on
 
     const handleRemovePhone = async (phone: string) => {
         Alert.alert(
-            "Remove Phone",
-            `Are you sure you want to remove ${phone}?`,
+            "Xóa số điện thoại",
+            `Bạn có chắc chắn muốn xóa số ${phone}?`,
             [
-                { text: "Cancel", style: "cancel" },
+                { text: "Hủy", style: "cancel" },
                 {
-                    text: "Remove",
+                    text: "Xóa",
                     style: "destructive",
                     onPress: async () => {
                         setLoading(true);
                         try {
                             await ShopService.removePhone(phone);
-                            CustomAlert('Success', 'Phone number removed');
+                            CustomAlert('Thành công', 'Đã xóa số điện thoại');
                             onPhonesChange(phones.filter(p => p !== phone));
                         } catch (error: any) {
                             console.error(error);
-                            CustomAlert('Error', error.response?.data?.error || 'Failed to remove phone');
+                            CustomAlert('Lỗi', error.response?.data?.error || 'Xóa số điện thoại thất bại');
                         } finally {
                             setLoading(false);
                         }
@@ -98,19 +98,19 @@ const PhoneManagementModal: React.FC<PhoneManagementModalProps> = ({ visible, on
             <View style={styles.overlay}>
                 <View style={styles.modalContent}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Manage Secondary Phones</Text>
+                        <Text style={styles.title}>Quản lý điện thoại phụ</Text>
                         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                             <X size={20} color="#64748b" />
                         </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.subtitle}>You can add up to 3 secondary phone numbers to help buyers contact you.</Text>
+                    <Text style={styles.subtitle}>Bạn có thể thêm tối đa 3 số điện thoại phụ để khách hàng dễ liên hệ hơn.</Text>
 
                     <View style={styles.listContainer}>
                         {phones.length === 0 ? (
-                            <Text style={styles.emptyText}>No secondary phones added yet.</Text>
+                            <Text style={styles.emptyText}>Chưa có số điện thoại phụ.</Text>
                         ) : (
-                            phones.map((p, idx) => (
+                            phones.map((p: string, idx: number) => (
                                 <View key={idx} style={styles.phoneItem}>
                                     <View style={styles.phoneInfo}>
                                         <ShieldCheck size={18} color="#10b981" style={{marginRight: 8}}/>
@@ -127,7 +127,7 @@ const PhoneManagementModal: React.FC<PhoneManagementModalProps> = ({ visible, on
                     {phones.length < 3 && step === 'IDLE' && (
                         <View style={styles.addSection}>
                             <Input
-                                label="Add new phone number"
+                                label="Thêm số điện thoại mới"
                                 placeholder="09xxxx..."
                                 value={newPhone}
                                 onChangeText={setNewPhone}
@@ -139,17 +139,17 @@ const PhoneManagementModal: React.FC<PhoneManagementModalProps> = ({ visible, on
                                 disabled={loading || !newPhone.trim()}
                                 icon={<Plus size={16} color="#fff" />}
                             >
-                                Get OTP
+                                Lấy mã OTP
                             </Button>
                         </View>
                     )}
 
                     {step === 'OTP' && (
                         <View style={styles.addSection}>
-                            <Text style={styles.infoText}>Enter the OTP sent to {newPhone}</Text>
+                            <Text style={styles.infoText}>Nhập mã OTP đã được gửi đến {newPhone}</Text>
                             <Input
-                                label="OTP Code"
-                                placeholder="Enter 6-digit OTP"
+                                label="Mã OTP"
+                                placeholder="Nhập mã 6 số"
                                 value={otp}
                                 onChangeText={setOtp}
                                 type="number-pad"
@@ -161,7 +161,7 @@ const PhoneManagementModal: React.FC<PhoneManagementModalProps> = ({ visible, on
                                     style={{ flex: 1, marginRight: 8 }}
                                     disabled={loading}
                                 >
-                                    Cancel
+                                    Hủy
                                 </Button>
                                 <Button 
                                     onPress={handleVerifyOtp} 
@@ -169,7 +169,7 @@ const PhoneManagementModal: React.FC<PhoneManagementModalProps> = ({ visible, on
                                     disabled={loading || !otp.trim()}
                                     style={{ flex: 1 }}
                                 >
-                                    Verify
+                                    Xác nhận
                                 </Button>
                             </View>
                         </View>

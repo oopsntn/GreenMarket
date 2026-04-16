@@ -14,7 +14,7 @@ const SavedPostsScreen = () => {
         try {
             setLoading(true)
             const res = await postService.getFavoritePosts()
-            setPosts(Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []))
+            setPosts(Array.isArray(res?.posts) ? res.posts : [])
         } catch (e) {
             console.error('Error fetching saved:', e)
         } finally {
@@ -30,7 +30,7 @@ const SavedPostsScreen = () => {
     }, [navigation])
 
     return (
-        <MobileLayout title="Saved Posts" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Saved Posts" backButton={() => navigation.goBack()} scrollEnabled={false}>
             {loading ? (
                 <ActivityIndicator style={{ marginTop: 50 }} color="#10b981" />
             ) : (

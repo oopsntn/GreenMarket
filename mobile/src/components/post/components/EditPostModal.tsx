@@ -1,71 +1,198 @@
 import React from 'react'
-import { Modal, Text, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../Reused/Card/Card';
 import Input from '../../Reused/Input/Input';
 import Button from '../../Reused/Button/Button';
 
+interface EditData {
+    title: string;
+    price: string;
+    categoryId: number;
+    content: string;
+    location: string;
+    contactPhone: string;
+}
+
 interface ModalProps {
-  visible: boolean;
-  editingPost: any;
-  editData: { title: string, price: string };
-  setEditData: (data: { title: string; price: string }) => void;
-  onClose: () => void;
-  onSave: (postId: number, data: any) => void;
-  saving?: boolean;
-  styles: any;
+    visible: boolean;
+    editingPost: any;
+    editData: EditData;
+    setEditData: (data: EditData) => void;
+    onClose: () => void;
+    onSave: (postId: number, data: any) => void;
+    categories: any[];
+    saving?: boolean;
+    styles: any;
 }
 
 const EditPostModal = ({
-  visible, editingPost, editData, setEditData, onClose, onSave, saving = false, styles
+    visible, editingPost, editData, setEditData, onClose, onSave, categories, saving = false, styles: parentStyles
 }: ModalProps) => {
-  if (!editingPost) return null
+    if (!editingPost) return null
 
-  return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.modalOverlay}>
-        <Card style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Edit post</Text>
+    return (
+        <Modal visible={visible} transparent animationType="slide">
+            <View style={styles.modalOverlay}>
+                <Card style={styles.modalCard}>
+                    <Text style={styles.modalTitle}>Update Post Details</Text>
 
-          <Input
-            label="Title"
-            value={editData.title}
-            onChangeText={(t) => setEditData({ ...editData, title: t })}
-          />
+                    <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 500 }}>
+                        <Input
+                            label="Post Title"
+                            value={editData.title}
+                            onChangeText={(t) => setEditData({ ...editData, title: t })}
+                            placeholder="e.g. Rare Bonsai Tree"
+                        />
 
-          <Input
-            label="Price"
-            type="numeric"
-            value={editData.price}
-            onChangeText={(t) => setEditData({ ...editData, price: t })}
-          />
+                        <Text style={styles.label}>Category</Text>
+                        <View style={styles.categoryWrap}>
+                            {categories.map((cat) => (
+                                <TouchableOpacity
+                                    key={cat.categoryId}
+                                    style={[
+                                        styles.catItem,
+                                        editData.categoryId === cat.categoryId && styles.catActive
+                                    ]}
+                                    onPress={() => setEditData({ ...editData, categoryId: cat.categoryId })}
+                                >
+                                    <Text style={[
+                                        styles.catText,
+                                        editData.categoryId === cat.categoryId && styles.catTextActive
+                                    ]}>
+                                        {cat.categoryTitle}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
 
-          <View style={styles.modalButtons}>
-            <Button
-              style={{ flex: 1, backgroundColor: '#666' }}
-              onPress={onClose}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
+                        <Input
+                            label="Price (VND)"
+                            type="numeric"
+                            value={editData.price}
+                            onChangeText={(t) => setEditData({ ...editData, price: t })}
+                            placeholder="0"
+                        />
 
-            <View style={{ width: 10 }} />
+                        <Input
+                            label="Location"
+                            value={editData.location}
+                            onChangeText={(t) => setEditData({ ...editData, location: t })}
+                            placeholder="e.g. Dist 1, HCM"
+                        />
 
-            <Button
-              style={{ flex: 1 }}
-              loading={saving}
-              disabled={saving}
-              onPress={() => onSave(editingPost.postId, {
-                postTitle: editData.title,
-                postPrice: editData.price
-              })}
-            >
-              Save
-            </Button>
-          </View>
-        </Card>
-      </View>
-    </Modal>
-  )
+                        <Input
+                            label="Contact Phone"
+                            type="phone-pad"
+                            value={editData.contactPhone}
+                            onChangeText={(t) => setEditData({ ...editData, contactPhone: t })}
+                            placeholder="Leave blank for default"
+                        />
+
+                        <Input
+                            label="Description"
+                            value={editData.content}
+                            onChangeText={(t) => setEditData({ ...editData, content: t })}
+                            multiline
+                            numberOfLines={4}
+                            placeholder="Describe your plant..."
+                        />
+                    </ScrollView>
+
+                    <View style={styles.modalButtons}>
+                        <Button
+                            style={{ flex: 1, backgroundColor: '#f1f1f1' }}
+                            textStyle={{ color: '#666' }}
+                            onPress={onClose}
+                            disabled={saving}
+                        >
+                            Cancel
+                        </Button>
+
+                        <View style={{ width: 12 }} />
+
+                        <Button
+                            style={{ flex: 1 }}
+                            loading={saving}
+                            disabled={saving}
+                            onPress={() => onSave(editingPost.postId, {
+                                postTitle: editData.title,
+                                postPrice: editData.price,
+                                categoryId: editData.categoryId,
+                                postContent: editData.content,
+                                postLocation: editData.location,
+                                postContactPhone: editData.contactPhone
+                            })}
+                        >
+                            Save Changes
+                        </Button>
+                    </View>
+                </Card>
+            </View>
+        </Modal>
+    )
 }
 
+const styles = StyleSheet.create({
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        padding: 20
+    },
+    modalCard: {
+        padding: 20,
+        borderRadius: 20,
+        backgroundColor: '#fff'
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        marginBottom: 20,
+        textAlign: 'center',
+        color: '#111827'
+    },
+    label: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#4b5563',
+        marginBottom: 8,
+        marginTop: 10
+    },
+    categoryWrap: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 16
+    },
+    catItem: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        backgroundColor: '#f3f4f6',
+        borderWidth: 1,
+        borderColor: 'transparent'
+    },
+    catActive: {
+        backgroundColor: '#e8f5e9',
+        borderColor: '#10b981'
+    },
+    catText: {
+        fontSize: 12,
+        color: '#6b7280',
+        fontWeight: '500'
+    },
+    catTextActive: {
+        color: '#10b981',
+        fontWeight: '700'
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        marginTop: 24,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#f3f4f6'
+    }
+})
+
 export default EditPostModal
+
