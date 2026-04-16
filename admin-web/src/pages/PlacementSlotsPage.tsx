@@ -10,7 +10,6 @@ import { placementSlotService } from "../services/placementSlotService";
 import type {
   PlacementSlot,
   PlacementSlotFormState,
-  PlacementSlotScope,
   PlacementSlotStatus,
 } from "../types/placementSlot";
 import "./PlacementSlotsPage.css";
@@ -23,12 +22,7 @@ type ConfirmState = {
   action: ConfirmAction | null;
 };
 
-const scopeFilterOptions: Array<PlacementSlotScope | "All"> = [
-  "All",
-  "Homepage",
-  "Category",
-  "Search",
-];
+const PAGE_SIZE = 5;
 
 const statusFilterOptions: Array<PlacementSlotStatus | "All"> = [
   "All",
@@ -36,38 +30,14 @@ const statusFilterOptions: Array<PlacementSlotStatus | "All"> = [
   "Disabled",
 ];
 
-const PAGE_SIZE = 5;
-
-const scopeLabels: Record<PlacementSlotScope | "All", string> = {
-  All: "Tất cả",
-  Homepage: "Trang chủ",
-  Category: "Danh mục",
-  Search: "Tìm kiếm",
-};
-
 const statusLabels: Record<PlacementSlotStatus | "All", string> = {
   All: "Tất cả",
   Active: "Đang bật",
   Disabled: "Đã tắt",
 };
 
-const displayRuleLabels: Record<string, string> = {
-  "Round Robin": "Luân phiên",
-  "First Purchased First Served": "Mua trước hiển thị trước",
-  Random: "Ngẫu nhiên",
-  "Priority Score": "Theo điểm ưu tiên",
-};
-
-function getScopeLabel(scope: PlacementSlotScope) {
-  return scopeLabels[scope];
-}
-
 function getStatusLabel(status: PlacementSlotStatus) {
   return statusLabels[status];
-}
-
-function getDisplayRuleLabel(rule: string) {
-  return displayRuleLabels[rule] ?? rule;
 }
 
 function PlacementSlotsPage() {
@@ -77,9 +47,6 @@ function PlacementSlotsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isStatusUpdating, setIsStatusUpdating] = useState<number | null>(null);
   const [searchKeyword, setSearchKeyword] = useState("");
-  const [selectedScopeFilter, setSelectedScopeFilter] = useState<
-    PlacementSlotScope | "All"
-  >("All");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<
     PlacementSlotStatus | "All"
   >("All");
@@ -102,19 +69,7 @@ function PlacementSlotsPage() {
 
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const summaryCards = placementSlotService.getSummaryCards(slots).map((card) => ({
-    ...card,
-    title:
-      card.title === "Total Slots"
-        ? "Tổng vị trí"
-        : card.title === "Active Slots"
-          ? "Vị trí đang bật"
-          : card.title === "Disabled Slots"
-            ? "Vị trí đã tắt"
-            : card.title === "Total Capacity"
-              ? "Tổng sức chứa"
-              : card.title,
-  }));
+  const summaryCards = placementSlotService.getSummaryCards(slots);
 
   useEffect(() => {
     const loadPlacementSlots = async () => {
@@ -158,18 +113,14 @@ function PlacementSlotsPage() {
       const matchesKeyword =
         !keyword ||
         slot.name.toLowerCase().includes(keyword) ||
-        slot.positionCode.toLowerCase().includes(keyword) ||
-        slot.displayRule.toLowerCase().includes(keyword);
-
-      const matchesScope =
-        selectedScopeFilter === "All" || slot.scope === selectedScopeFilter;
+        slot.positionCode.toLowerCase().includes(keyword);
 
       const matchesStatus =
         selectedStatusFilter === "All" || slot.status === selectedStatusFilter;
 
-      return matchesKeyword && matchesScope && matchesStatus;
+      return matchesKeyword && matchesStatus;
     });
-  }, [slots, searchKeyword, selectedScopeFilter, selectedStatusFilter]);
+  }, [slots, searchKeyword, selectedStatusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSlots.length / PAGE_SIZE));
 
@@ -180,7 +131,7 @@ function PlacementSlotsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchKeyword, selectedScopeFilter, selectedStatusFilter]);
+  }, [searchKeyword, selectedStatusFilter]);
 
   useEffect(() => {
     if (page > totalPages) {
@@ -211,7 +162,7 @@ function PlacementSlotsPage() {
     setSelectedSlot(slot);
     setFormData({
       name: slot.name,
-      scope: slot.scope,
+      scope: "Homepage",
       positionCode: slot.positionCode,
       capacity: slot.capacity,
       displayRule: slot.displayRule,
@@ -251,6 +202,7 @@ function PlacementSlotsPage() {
 
     try {
       setIsSubmitting(true);
+
       if (modalMode === "add") {
         const nextSlots = await placementSlotService.createPlacementSlot(
           slots,
@@ -332,11 +284,12 @@ function PlacementSlotsPage() {
         );
       }
 
-      if (confirmState.action === "disable") {
-        showToast(`Đã tắt vị trí ${targetSlot.name}.`, "info");
-      } else {
-        showToast(`Đã bật lại vị trí ${targetSlot.name}.`);
-      }
+      showToast(
+        confirmState.action === "disable"
+          ? `Đã tắt vị trí ${targetSlot.name}.`
+          : `Đã bật lại vị trí ${targetSlot.name}.`,
+        confirmState.action === "disable" ? "info" : "success",
+      );
 
       closeConfirmDialog();
     } catch (error) {
@@ -360,16 +313,16 @@ function PlacementSlotsPage() {
     confirmState.action === "disable"
       ? `Bạn có chắc muốn tắt ${
           confirmSlot?.name ?? "vị trí hiển thị này"
-        }? Vị trí này sẽ không còn được dùng để phân bổ bài đẩy nữa.`
+        }? Vị trí này sẽ không còn được dùng để gắn gói đẩy bài nữa.`
       : `Bạn có chắc muốn bật lại ${
           confirmSlot?.name ?? "vị trí hiển thị này"
-        }? Vị trí này sẽ được phép dùng lại cho các gói quảng bá.`;
+        }? Vị trí này sẽ được dùng lại cho các gói đẩy bài.`;
 
   return (
     <div className="placement-slots-page">
       <PageHeader
-        title="Quản lý vị trí hiển thị"
-        description="Quản lý các vị trí ưu tiên dùng cho bài đẩy ở trang chủ, danh mục và khu vực tìm kiếm."
+        title="Vị trí hiển thị"
+        description="Quản lý các vị trí bài đẩy trên trang chủ để cấu hình gói quảng bá và sắp thứ tự hiển thị."
         actionLabel="+ Thêm vị trí"
         onActionClick={openAddModal}
       />
@@ -392,7 +345,7 @@ function PlacementSlotsPage() {
 
       <SectionCard
         title="Bộ lọc vị trí"
-        description="Tìm kiếm và lọc vị trí theo phạm vi hiển thị và trạng thái sử dụng."
+        description="Tìm nhanh vị trí trang chủ theo tên, mã và trạng thái hiện tại."
       >
         <div className="placement-slots-filters">
           <div className="placement-slots-filters__field placement-slots-filters__field--search">
@@ -402,27 +355,8 @@ function PlacementSlotsPage() {
               type="text"
               value={searchKeyword}
               onChange={(event) => setSearchKeyword(event.target.value)}
-              placeholder="Tìm theo tên vị trí, mã kỹ thuật hoặc quy tắc hiển thị"
+              placeholder="Tìm theo tên vị trí hoặc mã vị trí"
             />
-          </div>
-
-          <div className="placement-slots-filters__field">
-            <label htmlFor="slot-scope-filter">Phạm vi</label>
-            <select
-              id="slot-scope-filter"
-              value={selectedScopeFilter}
-              onChange={(event) =>
-                setSelectedScopeFilter(
-                  event.target.value as PlacementSlotScope | "All",
-                )
-              }
-            >
-              {scopeFilterOptions.map((scope) => (
-                <option key={scope} value={scope}>
-                  {scopeLabels[scope]}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="placement-slots-filters__field">
@@ -447,58 +381,8 @@ function PlacementSlotsPage() {
       </SectionCard>
 
       <SectionCard
-        title="Giải thích trường dữ liệu"
-        description="Các định nghĩa này giúp bạn đọc dữ liệu vị trí hiển thị nhất quán giữa gói quảng bá, khuyến mại và báo cáo."
-      >
-        <div className="placement-slot-guide">
-          <div className="placement-slot-guide__item">
-            <strong>Phạm vi</strong>
-            <span>
-              Vị trí này xuất hiện ở đâu: trang chủ, trang danh mục hoặc khu vực
-              tìm kiếm.
-            </span>
-          </div>
-          <div className="placement-slot-guide__item">
-            <strong>Mã vị trí</strong>
-            <span>
-              Mã kỹ thuật duy nhất được dùng chung giữa gói quảng bá, API quản
-              trị và báo cáo phân tích.
-            </span>
-          </div>
-          <div className="placement-slot-guide__item">
-            <strong>Sức chứa</strong>
-            <span>
-              Số chiến dịch hoặc bài đẩy có thể cùng sử dụng vị trí này trong
-              một thời điểm.
-            </span>
-          </div>
-          <div className="placement-slot-guide__item">
-            <strong>Quy tắc hiển thị</strong>
-            <span>
-              Cách hệ thống sắp thứ tự khi có nhiều chiến dịch đủ điều kiện cùng
-              tranh một vị trí.
-            </span>
-          </div>
-          <div className="placement-slot-guide__item">
-            <strong>Ưu tiên</strong>
-            <span>
-              Trọng số xếp hạng dùng khi quy tắc hiển thị phụ thuộc vào thứ tự
-              thủ công hoặc điểm ưu tiên.
-            </span>
-          </div>
-          <div className="placement-slot-guide__item">
-            <strong>Ghi chú</strong>
-            <span>
-              Ghi chú nội bộ để quản trị viên theo dõi ngoại lệ, lưu ý vận hành
-              hoặc nhắc việc xử lý chiến dịch.
-            </span>
-          </div>
-        </div>
-      </SectionCard>
-
-      <SectionCard
         title="Danh sách vị trí hiển thị"
-        description="Theo dõi phạm vi, sức chứa, quy tắc hiển thị, mức ưu tiên và trạng thái hiện tại. Màn Analytics chỉ vẽ biểu đồ cho các vị trí thực sự phát sinh lưu lượng trong khoảng ngày đã chọn."
+        description="Theo dõi sức chứa, thứ tự hiển thị và trạng thái của các vị trí bài đẩy trên trang chủ."
       >
         {isLoading ? (
           <EmptyState
@@ -512,8 +396,8 @@ function PlacementSlotsPage() {
           />
         ) : filteredSlots.length === 0 ? (
           <EmptyState
-            title="Không tìm thấy vị trí hiển thị"
-            description="Không có vị trí nào khớp với điều kiện tìm kiếm hoặc bộ lọc hiện tại."
+            title="Chưa có vị trí hiển thị"
+            description="Hiện chưa có vị trí nào cho bài đẩy trên trang chủ hoặc chưa có vị trí khớp bộ lọc đang chọn."
           />
         ) : (
           <>
@@ -523,11 +407,9 @@ function PlacementSlotsPage() {
                   <tr>
                     <th>ID</th>
                     <th>Tên vị trí</th>
-                    <th>Phạm vi</th>
                     <th>Mã vị trí</th>
                     <th>Sức chứa</th>
-                    <th>Quy tắc hiển thị</th>
-                    <th>Ưu tiên</th>
+                    <th>Thứ tự hiển thị</th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
                   </tr>
@@ -538,10 +420,8 @@ function PlacementSlotsPage() {
                     <tr key={slot.id}>
                       <td>#{slot.id}</td>
                       <td>{slot.name}</td>
-                      <td>{getScopeLabel(slot.scope)}</td>
                       <td>{slot.positionCode}</td>
                       <td>{slot.capacity}</td>
-                      <td>{getDisplayRuleLabel(slot.displayRule)}</td>
                       <td>{slot.priority}</td>
                       <td>
                         <StatusBadge
@@ -627,7 +507,7 @@ function PlacementSlotsPage() {
       <BaseModal
         isOpen={isViewModalOpen}
         title="Chi tiết vị trí hiển thị"
-        description="Xem cấu hình, quy tắc hiển thị và ghi chú vận hành của vị trí."
+        description="Xem nhanh sức chứa, thứ tự hiển thị và ghi chú vận hành của vị trí."
         onClose={closeViewModal}
         maxWidth="720px"
       >
@@ -637,11 +517,6 @@ function PlacementSlotsPage() {
               <div className="placement-slots-modal__field">
                 <label>Tên vị trí</label>
                 <input type="text" value={selectedSlot.name} disabled />
-              </div>
-
-              <div className="placement-slots-modal__field">
-                <label>Phạm vi</label>
-                <input type="text" value={getScopeLabel(selectedSlot.scope)} disabled />
               </div>
 
               <div className="placement-slots-modal__field">
@@ -655,16 +530,7 @@ function PlacementSlotsPage() {
               </div>
 
               <div className="placement-slots-modal__field">
-                <label>Quy tắc hiển thị</label>
-                <input
-                  type="text"
-                  value={getDisplayRuleLabel(selectedSlot.displayRule)}
-                  disabled
-                />
-              </div>
-
-              <div className="placement-slots-modal__field">
-                <label>Ưu tiên</label>
+                <label>Thứ tự hiển thị</label>
                 <input type="text" value={String(selectedSlot.priority)} disabled />
               </div>
 
@@ -699,27 +565,13 @@ function PlacementSlotsPage() {
         }
         description={
           modalMode === "add"
-            ? "Tạo vị trí mới với phạm vi, sức chứa, quy tắc hiển thị và mức ưu tiên."
-            : "Cập nhật cấu hình và cách hiển thị của vị trí."
+            ? "Tạo vị trí mới trên trang chủ với sức chứa và thứ tự hiển thị phù hợp."
+            : "Cập nhật cấu hình và thứ tự hiển thị của vị trí trên trang chủ."
         }
         onClose={closeFormModal}
         maxWidth="720px"
       >
         <form className="placement-slots-form" onSubmit={handleSubmit}>
-          <div className="placement-slots-form__guide">
-            <p>
-              <strong>Phạm vi</strong> quyết định vị trí này xuất hiện ở đâu.
-            </p>
-            <p>
-              <strong>Sức chứa</strong> quyết định số chiến dịch có thể hiển thị
-              song song.
-            </p>
-            <p>
-              <strong>Quy tắc hiển thị</strong> và <strong>ưu tiên</strong> quyết
-              định cách xếp thứ tự các chiến dịch đó.
-            </p>
-          </div>
-
           <div className="placement-slots-modal__grid">
             <div className="placement-slots-modal__field">
               <label htmlFor="name">Tên vị trí</label>
@@ -730,23 +582,8 @@ function PlacementSlotsPage() {
                 value={formData.name}
                 onChange={handleChange}
                 disabled={isSubmitting}
-                placeholder="Nhập tên vị trí"
+                placeholder="Ví dụ: Vị trí 1 trang chủ"
               />
-            </div>
-
-            <div className="placement-slots-modal__field">
-              <label htmlFor="scope">Phạm vi</label>
-              <select
-                id="scope"
-                name="scope"
-                value={formData.scope}
-                onChange={handleChange}
-                disabled={isSubmitting}
-              >
-                <option value="Homepage">Trang chủ</option>
-                <option value="Category">Danh mục</option>
-                <option value="Search">Tìm kiếm</option>
-              </select>
             </div>
 
             <div className="placement-slots-modal__field">
@@ -758,7 +595,7 @@ function PlacementSlotsPage() {
                 value={formData.positionCode}
                 onChange={handleChange}
                 disabled={isSubmitting}
-                placeholder="Nhập mã vị trí duy nhất"
+                placeholder="Ví dụ: BOOST_POST_2"
               />
             </div>
 
@@ -776,25 +613,7 @@ function PlacementSlotsPage() {
             </div>
 
             <div className="placement-slots-modal__field">
-              <label htmlFor="displayRule">Quy tắc hiển thị</label>
-              <select
-                id="displayRule"
-                name="displayRule"
-                value={formData.displayRule}
-                onChange={handleChange}
-                disabled={isSubmitting}
-              >
-                <option value="Round Robin">Luân phiên</option>
-                <option value="First Purchased First Served">
-                  Mua trước hiển thị trước
-                </option>
-                <option value="Random">Ngẫu nhiên</option>
-                <option value="Priority Score">Theo điểm ưu tiên</option>
-              </select>
-            </div>
-
-            <div className="placement-slots-modal__field">
-              <label htmlFor="priority">Ưu tiên</label>
+              <label htmlFor="priority">Thứ tự hiển thị</label>
               <input
                 id="priority"
                 name="priority"
@@ -803,6 +622,7 @@ function PlacementSlotsPage() {
                 value={formData.priority}
                 onChange={handleChange}
                 disabled={isSubmitting}
+                placeholder="1 là vị trí hiển thị đầu tiên"
               />
             </div>
           </div>

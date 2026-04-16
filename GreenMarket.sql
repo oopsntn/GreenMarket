@@ -1434,8 +1434,10 @@ INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favori
 -- PLACEMENT SLOTS & PROMOTION PACKAGES
 -- ============================================================
 INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_slot_title, placement_slot_capacity, placement_slot_rules, placement_slot_published) VALUES
-(1, 'BOOST_POST', 'Đẩy bài nhà vườn', 200, '{"max_per_shop": 20, "min_post_status": "approved", "audience": "active-shop"}', true),
-(2, 'SHOP_VIP', 'Nhà vườn VIP', 500, '{"max_per_shop": 1, "display_priority": "top", "audience": "active-shop"}', true);
+(1, 'BOOST_POST', 'Vị trí 1 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 1, "notes": "Vị trí đầu tiên dành cho bài đẩy trên trang chủ."}', true),
+(2, 'SHOP_VIP', 'Gói tài khoản', 500, '{"audience": "active-shop", "target": "shop-list", "priority": 1, "notes": "Dùng cho gói tài khoản / shop và ưu tiên hiển thị ở danh sách nhà vườn."}', true),
+(3, 'BOOST_POST_2', 'Vị trí 2 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 2, "notes": "Vị trí thứ hai dành cho bài đẩy trên trang chủ."}', true),
+(4, 'BOOST_POST_3', 'Vị trí 3 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 3, "notes": "Vị trí thứ ba dành cho bài đẩy trên trang chủ."}', true);
 
 INSERT INTO promotion_packages (
     promotion_package_id,
@@ -1447,15 +1449,17 @@ INSERT INTO promotion_packages (
     promotion_package_description,
     promotion_package_published
 ) VALUES
-(1, 1, 'Gói đẩy bài theo tuần', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày cho nhà vườn active.', true),
-(2, 1, 'Gói đẩy bài theo tháng', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày cho nhà vườn active.', true),
-(3, 2, 'Gói nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên shop lên đầu danh sách nhà vườn và hiển thị viền VIP trong 90 ngày.', true);
+(1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 30, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 2 trang chủ.', true),
+(2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 1 trang chủ.', true),
+(3, 2, 'Gói nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên shop lên đầu danh sách nhà vườn và tăng nhận diện VIP trong 90 ngày.', true),
+(4, 4, 'Gói đẩy bài theo tháng vị trí 3 trang chủ', 30, 1, 5000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 3 trang chủ.', true);
 
 -- Promotion Package Prices
 INSERT INTO promotion_package_prices (price_id, package_id, price, effective_from, effective_to, note, created_by) VALUES
-(1, 1, 99000, now() - interval '45 days', NULL, 'Giá hiện hành của gói đẩy bài tuần.', 1),
-(2, 2, 299000, now() - interval '45 days', NULL, 'Giá hiện hành của gói đẩy bài tháng.', 1),
-(3, 3, 499000, now() - interval '45 days', NULL, 'Giá hiện hành của gói VIP 3 tháng.', 1);
+(1, 1, 99000, now() - interval '45 days', NULL, 'Giá hiện hành của gói vị trí 2 trang chủ.', 1),
+(2, 2, 299000, now() - interval '45 days', NULL, 'Giá hiện hành của gói vị trí 1 trang chủ.', 1),
+(3, 3, 499000, now() - interval '45 days', NULL, 'Giá hiện hành của gói VIP 3 tháng.', 1),
+(4, 4, 29000, now() - interval '45 days', NULL, 'Giá hiện hành của gói vị trí 3 trang chủ.', 1);
 
 -- ============================================================
 -- POSTING PLANS (OWNER / PERSONAL)
@@ -1528,7 +1532,7 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('personal_monthly_price', '30000', 1),
 ('owner_posting_policy', '{"planTitle": "Gói Chủ Vườn Vĩnh Viễn", "autoApprove": true, "dailyPostLimit": 20, "postFeeAmount": 20000, "freeEditQuota": 4, "editFeeAmount": 5000, "features": ["Đăng bài ngay, không qua chờ duyệt", "Giới hạn 20 bài viết mỗi ngày", "4 lượt sửa bài miễn phí", "Phí đăng tin lẻ cực thấp"]}', 1),
 ('personal_posting_policy', '{"planTitle": "Gói Cá Nhân Theo Tháng", "autoApprove": true, "dailyPostLimit": 20, "postFeeAmount": 0, "freeEditQuota": 4, "editFeeAmount": 5000, "features": ["Dành cho người chơi nhỏ lẻ", "Đăng bài tự động duyệt trong chu kỳ", "Giới hạn 20 bài viết mỗi ngày", "4 lượt sửa bài miễn phí mỗi tháng"]}', 1),
-('shop_vip_policy', '{"planTitle": "Gói Nhà Vườn VIP", "features": ["Xếp đầu danh sách nhà vườn", "Huy hiệu VIP nổi bật trên trang chủ", "Hiển thị viền vàng sang trọng", "Ưu tiên hỗ trợ từ đội ngũ vận hành"]}', 1),
+('shop_vip_policy', '{"planTitle": "Gói Nhà Vườn VIP", "features": ["Xếp đầu danh sách nhà vườn", "Gắn nhãn VIP nổi bật trong danh sách nhà vườn", "Hiển thị viền vàng sang trọng cho shop", "Ưu tiên hỗ trợ từ đội ngũ vận hành"]}', 1),
 ('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"Vietnamese"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true}}', 1),
 ('admin_template_builder_config', '{"templateName":"Mẫu đăng tin cây cảnh","categoryName":"Cây cảnh & Bonsai","usageNote":"Dùng để xem trước bố cục form đăng tin cho ngành cây cảnh trước khi đưa vào vận hành.","previewTitlePlaceholder":"Ví dụ: Sanh mini 8 năm tuổi, dáng trực","submitLabel":"Đăng tin cây cảnh (Xem trước)","fields":[{"id":"bonsai-style","type":"select","label":"Dáng cây (Thế cây)","placeholder":"Chọn dáng cây","helperText":"Giúp người đăng mô tả bố cục bonsai theo đúng cách gọi phổ biến.","required":true,"options":["Trực","Xiêu","Huyền","Hoành","Văn nhân"]},{"id":"pot-type","type":"select","label":"Loại chậu đi kèm","placeholder":"Chọn loại chậu","helperText":"Thể hiện tình trạng đi kèm chậu để người mua định giá rõ hơn.","required":true,"options":["Chậu gốm","Chậu đá","Bầu đất / túi ươm"]},{"id":"tree-age","type":"number","label":"Tuổi cây (ước lượng)","placeholder":"Ví dụ: 8","helperText":"Dùng để ước lượng độ trưởng thành của cây, hỗ trợ so sánh giá trị.","required":false,"options":[]}]}', 1),
 ('admin_ai_insight_settings', '{"autoDailySummary":true,"anomalyAlerts":true,"operatorDigest":false,"recommendationTone":"Balanced","confidenceThreshold":78,"promptVersion":"gm-admin-v1.4","reviewMode":"Required"}', 1);
@@ -1570,23 +1574,21 @@ INSERT INTO post_promotions (
     post_promotion_buyer_id,
     post_promotion_package_id,
     post_promotion_slot_id,
+    post_promotion_snapshot_title,
+    post_promotion_snapshot_priority,
     post_promotion_start_at,
     post_promotion_end_at,
     post_promotion_status,
     post_promotion_created_at
 ) VALUES
-(1, 1, 1, 1, 1, '2026-03-05 08:00:00', '2026-03-11 23:59:00', 'expired',  '2026-03-04 16:00:00'),
-(2, 4, 3, 2, 1, '2026-03-12 08:00:00', '2026-04-10 23:59:00', 'active',   '2026-03-11 14:20:00'),
-(3, 2, 1, 2, 2, '2026-03-08 08:00:00', '2026-03-14 23:59:00', 'paused',   '2026-03-07 17:30:00'),
-(5, 3, 1, 1, 1, '2026-03-20 08:00:00', '2026-03-26 23:59:00', 'expired',  '2026-03-19 11:00:00'),
-(6, 6, 1, 2, 1, '2026-03-25 08:00:00', '2026-04-23 23:59:00', 'active',   '2026-03-24 15:45:00'),
-(7, 7, 1, 1, 1, '2026-04-05 08:00:00', '2026-04-11 23:59:00', 'active',   '2026-04-04 09:10:00'),
-(8, 11, 1, 3, 2, '2026-04-02 08:00:00', '2026-07-02 23:59:00', 'active',  '2026-04-01 12:05:00'),
-(9, 12, 1, 3, 2, '2026-04-01 08:00:00', '2026-06-30 23:59:00', 'active',  '2026-03-31 18:00:00'),
-(10, 9, 1, 2, 1, '2026-04-11 08:00:00', '2026-05-10 23:59:00', 'scheduled','2026-04-09 08:30:00'),
-(11, 10, 1, 1, 1, '2026-04-12 08:00:00', '2026-05-12 23:59:00', 'scheduled','2026-04-10 08:35:00'),
-(12, 13, 1, 1, 2, '2026-03-28 08:00:00', '2026-04-26 23:59:00', 'active',  '2026-03-27 15:10:00'),
-(13, 14, 1, 1, 1, '2026-03-29 08:00:00', '2026-04-27 23:59:00', 'active',  '2026-03-28 10:45:00');
+(1, 1, 1, 2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 1, '2026-03-05 08:00:00', '2026-04-03 23:59:00', 'expired',  '2026-03-04 16:00:00'),
+(2, 4, 3, 1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 2, '2026-03-12 08:00:00', '2026-04-10 23:59:00', 'expired',  '2026-03-11 14:20:00'),
+(3, 2, 3, 4, 4, 'Gói đẩy bài theo tháng vị trí 3 trang chủ', 3, '2026-03-08 08:00:00', '2026-04-06 23:59:00', 'expired',  '2026-03-07 17:30:00'),
+(5, 12, 6, 1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 2, '2026-03-28 08:00:00', '2026-04-26 23:59:00', 'paused',   '2026-03-27 15:10:00'),
+(6, 9, 3, 2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 1, '2026-04-11 08:00:00', '2026-05-10 23:59:00', 'scheduled','2026-04-09 08:30:00'),
+(7, 15, 1, 2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 1, '2026-04-16 08:00:00', '2026-05-15 23:59:00', 'active',   '2026-04-16 07:40:00'),
+(8, 7, 1, 1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 2, '2026-04-16 08:05:00', '2026-05-15 23:59:00', 'active',   '2026-04-16 07:45:00'),
+(9, 1, 1, 4, 4, 'Gói đẩy bài theo tháng vị trí 3 trang chủ', 3, '2026-04-16 08:10:00', '2026-05-15 23:59:00', 'active',   '2026-04-16 07:50:00');
 
 -- ============================================================
 -- PAYMENT TRANSACTIONS
@@ -1603,18 +1605,19 @@ INSERT INTO payment_txn (
     payment_txn_status,
     payment_txn_created_at
 ) VALUES
-(1, 1, 1, 1, 1, 99000,  'bank_transfer', 'GM-TXN-20260304-001', 'success', '2026-03-04 15:30:00'),
-(2, 3, 2, 4, 2, 299000, 'bank_transfer', 'GM-TXN-20260311-002', 'success', '2026-03-11 13:40:00'),
-(3, 4, 1, 2, 1, 99000,  'bank_transfer', 'GM-TXN-20260307-003', 'success', '2026-03-07 18:00:00'),
-(5, 2, 1, 3, 1, 99000,  'bank_transfer', 'GM-TXN-20260319-005', 'success', '2026-03-19 10:20:00'),
-(6, 1, 2, 6, 2, 299000, 'bank_transfer', 'GM-TXN-20260324-006', 'pending', '2026-03-24 14:30:00'),
-(8, 6, 3, 14, 3, 499000, 'bank_transfer', 'GM-TXN-20260328-008', 'success', '2026-03-28 11:00:00'),
-(9, 1, 1, 7, 1, 99000,  'bank_transfer', 'GM-TXN-20260404-009', 'success', '2026-04-04 09:20:00'),
-(10, 6, 3, 11, 3, 499000, 'bank_transfer', 'GM-TXN-20260401-010', 'pending', '2026-04-01 11:25:00'),
-(11, 6, 1, 12, 1, 99000,  'bank_transfer', 'GM-TXN-20260331-011', 'failed', '2026-03-31 19:15:00'),
-(12, 3, 2, 9, 2, 299000, 'bank_transfer', 'GM-TXN-20260409-012', 'success', '2026-04-09 08:50:00'),
-(13, 1, 2, 10, 2, 299000, 'bank_transfer', 'GM-TXN-20260410-013', 'pending', '2026-04-10 08:55:00'),
-(14, 5, 1, 15, 1, 99000,  'bank_transfer', 'GM-TXN-20260326-014', 'success', '2026-03-26 17:40:00');
+(1, 1, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260101-001', 'success', '2026-01-01 09:00:00'),
+(2, 3, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260103-002', 'success', '2026-01-03 10:00:00'),
+(3, 4, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260105-003', 'success', '2026-01-05 11:00:00'),
+(4, 6, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260107-004', 'success', '2026-01-07 11:30:00'),
+(5, 2, NULL, NULL, NULL, 30000,  'bank_transfer', 'GM-TXN-20260403-005', 'success', '2026-04-03 18:58:00'),
+(6, 1, 3, NULL, 3, 499000, 'bank_transfer', 'GM-TXN-20260316-006', 'success', '2026-03-16 18:58:00'),
+(7, 1, 2, 1, 2, 299000, 'bank_transfer', 'GM-TXN-20260304-007', 'success', '2026-03-04 15:30:00'),
+(8, 3, 1, 4, 1, 99000,  'bank_transfer', 'GM-TXN-20260311-008', 'success', '2026-03-11 13:40:00'),
+(9, 3, 2, 9, 2, 299000, 'bank_transfer', 'GM-TXN-20260409-009', 'success', '2026-04-09 08:50:00'),
+(10, 6, 1, 12, 1, 99000,  'bank_transfer', 'GM-TXN-20260327-010', 'success', '2026-03-27 15:10:00'),
+(11, 1, 2, 15, 2, 299000, 'bank_transfer', 'GM-TXN-20260416-011', 'success', '2026-04-16 07:40:00'),
+(12, 1, 1, 7, 1, 99000,  'bank_transfer', 'GM-TXN-20260416-012', 'success', '2026-04-16 07:45:00'),
+(13, 1, 4, 1, 4, 29000,  'bank_transfer', 'GM-TXN-20260416-013', 'success', '2026-04-16 07:50:00');
 
 INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_reason_code, report_reason, report_note, report_status, admin_note, report_created_at, report_updated_at) VALUES
 (1, 5, 1, 1, 'MISLEADING_INFO', 'Post title and product details are not consistent with the attached listing photos.', 'The seller describes a different bonsai shape in the text than in the gallery.', 'pending', NULL, '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
@@ -1651,8 +1654,8 @@ INSERT INTO event_logs (
 (8, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:25:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV tổng quan phân tích.","generatedBy":"Quản trị viên hệ thống","reportName":"Tổng quan phân tích - 2026-03-29","status":"Completed"}'),
 (9, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:33:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV vận hành khuyến mãi.","generatedBy":"Quản trị viên hệ thống","reportName":"Vận hành khuyến mãi - 2026-03-29","status":"Completed"}'),
 (10, 1, NULL, NULL, NULL, NULL, 'admin_export',      '2026-03-29 12:44:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV bài đang quảng bá.","generatedBy":"Quản trị viên hệ thống","reportName":"Bài đang quảng bá - 2026-03-29","status":"Completed"}'),
-(11, 2, 2, 3, 2, 11, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Tiếp tục chiến dịch quảng bá","detail":"Chiến dịch Danh mục nổi bật đã được tiếp tục sau khi cập nhật nội dung.","performedBy":"Quản trị viên hệ thống"}'),
-(12, 1, 3, 2, 3, 12, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Mở lại chiến dịch quảng bá","detail":"Chiến dịch Tăng tìm kiếm đã hết hạn được mở lại sau khi xác nhận thanh toán.","performedBy":"Quản trị viên hệ thống"}');
+(11, 2, 2, 3, 3, 11, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Tiếp tục chiến dịch quảng bá","detail":"Chiến dịch vị trí 2 trang chủ đã được tiếp tục sau khi cập nhật nội dung.","performedBy":"Quản trị viên hệ thống"}'),
+(12, 1, 3, 2, 4, 12, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Mở lại chiến dịch quảng bá","detail":"Chiến dịch vị trí 3 trang chủ đã hết hạn được mở lại sau khi xác nhận thanh toán.","performedBy":"Quản trị viên hệ thống"}');
 
 -- ============================================================
 -- DAILY PLACEMENT METRICS
@@ -1672,25 +1675,25 @@ INSERT INTO daily_placement_metrics (
 (1,  '2026-03-05', 1, 11, 3300, 96, 41, 9, 2.91, '2026-03-05 23:59:00'),
 (2,  '2026-03-06', 1, 11, 3100, 89, 38, 8, 2.87, '2026-03-06 23:59:00'),
 (3,  '2026-03-07', 1, 11, 3400, 101, 43, 10, 2.97, '2026-03-07 23:59:00'),
-(4,  '2026-03-08', 2, 11, 1800, 37, 18, 4, 2.06, '2026-03-08 23:59:00'),
-(5,  '2026-03-09', 2, 11, 1850, 39, 19, 4, 2.11, '2026-03-09 23:59:00'),
+(4,  '2026-03-08', 3, 11, 1800, 37, 18, 4, 2.06, '2026-03-08 23:59:00'),
+(5,  '2026-03-09', 3, 11, 1850, 39, 19, 4, 2.11, '2026-03-09 23:59:00'),
 (6,  '2026-03-10', 1, 11, 3200, 95, 40, 9, 2.97, '2026-03-10 23:59:00'),
 (7,  '2026-03-11', 1, 11, 3350, 98, 42, 9, 2.93, '2026-03-11 23:59:00'),
 (8,  '2026-03-12', 1, 11, 3450, 103, 46, 10, 2.99, '2026-03-12 23:59:00'),
 (9,  '2026-03-13', 1, 11, 3600, 108, 48, 11, 3.00, '2026-03-13 23:59:00'),
-(10, '2026-03-14', 2, 11, 1900, 41, 20, 5, 2.16, '2026-03-14 23:59:00'),
+(10, '2026-03-14', 4, 11, 1900, 41, 20, 5, 2.16, '2026-03-14 23:59:00'),
 (11, '2026-03-20', 1, 12, 7200, 104, 51, 13, 1.44, '2026-03-20 23:59:00'),
 (12, '2026-03-21', 1, 12, 7100, 102, 50, 12, 1.44, '2026-03-21 23:59:00'),
 (13, '2026-03-22', 1, 12, 7250, 108, 53, 14, 1.49, '2026-03-22 23:59:00'),
 (14, '2026-03-23', 1, 12, 7050, 101, 49, 12, 1.43, '2026-03-23 23:59:00'),
 (15, '2026-03-24', 1, 12, 7300, 111, 55, 14, 1.52, '2026-03-24 23:59:00'),
-(16, '2026-03-25', 2, 11, 7600, 182, 88, 20, 2.39, '2026-03-25 23:59:00'),
+(16, '2026-03-25', 3, 11, 7600, 182, 88, 20, 2.39, '2026-03-25 23:59:00'),
 (17, '2026-03-26', 1, 12, 7400, 106, 54, 13, 1.43, '2026-03-26 23:59:00'),
-(18, '2026-03-27', 2, 11, 7550, 180, 86, 20, 2.38, '2026-03-27 23:59:00'),
-(19, '2026-03-28', 2, 11, 7480, 177, 85, 19, 2.37, '2026-03-28 23:59:00'),
-(20, '2026-03-29', 2, 11, 7620, 183, 89, 20, 2.40, '2026-03-29 23:59:00'),
-(21, '2026-03-30', 2, 11, 7500, 181, 87, 19, 2.41, '2026-03-30 23:59:00'),
-(22, '2026-03-31', 2, 11, 7580, 184, 90, 21, 2.43, '2026-03-31 23:59:00');
+(18, '2026-03-27', 3, 11, 7550, 180, 86, 20, 2.38, '2026-03-27 23:59:00'),
+(19, '2026-03-28', 3, 11, 7480, 177, 85, 19, 2.37, '2026-03-28 23:59:00'),
+(20, '2026-03-29', 3, 11, 7620, 183, 89, 20, 2.40, '2026-03-29 23:59:00'),
+(21, '2026-03-30', 4, 11, 7500, 181, 87, 19, 2.41, '2026-03-30 23:59:00'),
+(22, '2026-03-31', 4, 11, 7580, 184, 90, 21, 2.43, '2026-03-31 23:59:00');
 
 -- ============================================================
 -- AI TREND SCORES
@@ -1704,14 +1707,14 @@ INSERT INTO trend_scores (
     trend_score_created_at
 ) VALUES
 (1,  '2026-03-05', 1, 82.5, '{"traffic":82,"revenue":76,"operations":88}', '2026-03-05 23:59:00'),
-(2,  '2026-03-08', 2, 68.0, '{"traffic":64,"revenue":66,"operations":74}', '2026-03-08 23:59:00'),
+(2,  '2026-03-08', 3, 68.0, '{"traffic":64,"revenue":66,"operations":74}', '2026-03-08 23:59:00'),
 (3,  '2026-03-11', 1, 84.0, '{"traffic":83,"revenue":79,"operations":86}', '2026-03-11 23:59:00'),
-(4,  '2026-03-14', 2, 71.0, '{"traffic":69,"revenue":67,"operations":77}', '2026-03-14 23:59:00'),
+(4,  '2026-03-14', 4, 71.0, '{"traffic":69,"revenue":67,"operations":77}', '2026-03-14 23:59:00'),
 (5,  '2026-03-20', 1, 63.0, '{"traffic":61,"revenue":65,"operations":63}', '2026-03-20 23:59:00'),
 (6,  '2026-03-22', 1, 66.0, '{"traffic":64,"revenue":68,"operations":66}', '2026-03-22 23:59:00'),
-(7,  '2026-03-25', 2, 87.0, '{"traffic":88,"revenue":83,"operations":90}', '2026-03-25 23:59:00'),
+(7,  '2026-03-25', 3, 87.0, '{"traffic":88,"revenue":83,"operations":90}', '2026-03-25 23:59:00'),
 (8,  '2026-03-27', 1, 72.0, '{"traffic":70,"revenue":73,"operations":73}', '2026-03-27 23:59:00'),
-(9,  '2026-03-29', 2, 89.0, '{"traffic":90,"revenue":86,"operations":91}', '2026-03-29 23:59:00'),
+(9,  '2026-03-29', 4, 89.0, '{"traffic":90,"revenue":86,"operations":91}', '2026-03-29 23:59:00'),
 (10, '2026-03-31', 1, 74.0, '{"traffic":72,"revenue":75,"operations":75}', '2026-03-31 23:59:00');
 
 -- ============================================================
@@ -1726,12 +1729,12 @@ INSERT INTO ai_insights (
     ai_insight_provider,
     ai_insight_created_at
 ) VALUES
-(1, 1, 'Placement Performance', '{"title":"Tóm tắt hiệu quả vị trí hiển thị","focus":"Placement Performance","status":"Generated","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Lưu lượng trang chủ giữ ở mức ổn định, trong khi Danh mục nổi bật vượt kỳ vọng doanh thu ở tuần cuối tháng 3. Nên tiếp tục duy trì vị trí Danh mục nổi bật vì đây là slot chuyển đổi tốt nhất trong các slot đang hoạt động.', 'Gemini gemini-2.0-flash', '2026-03-25 10:00:00'),
-(2, 1, 'Promotion Watchlist',   '{"title":"Tóm tắt khuyến mãi cần theo dõi","focus":"Promotion Watchlist","status":"Needs Review","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Các chiến dịch Tăng tìm kiếm hết hạn vào ngày 2026-03-26 vẫn cho thấy tín hiệu nhu cầu. Cần rà soát xem trường hợp nào đủ điều kiện để mở lại sau khi xác nhận thanh toán.', 'Gemini gemini-2.0-flash', '2026-03-26 09:45:00'),
-(3, 1, 'Revenue Signals',       '{"title":"Tóm tắt tín hiệu doanh thu","focus":"Revenue Signals","status":"Generated","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Doanh thu tháng 3 tập trung chủ yếu ở các gói Trang chủ nổi bật và Danh mục nổi bật. Tăng tìm kiếm tăng về số lượng ở cuối tháng nhưng đóng góp doanh thu vẫn thấp hơn các vị trí cao cấp.', 'Gemini gemini-2.0-flash', '2026-03-27 14:15:00'),
-(4, 1, 'Operator Load',         '{"title":"Tóm tắt khối lượng vận hành","focus":"Operator Load","status":"Generated","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Nhóm vận hành B đang xử lý nhiều chiến dịch danh mục nhất. Khối lượng hiện tại vẫn trong ngưỡng chấp nhận, nhưng các ca leo thang mới nên được phân bổ thêm cho Nhóm vận hành A ở chu kỳ tiếp theo.', 'Gemini gemini-2.0-flash', '2026-03-28 08:40:00'),
+(1, 1, 'Placement Performance', '{"title":"Tóm tắt hiệu quả vị trí hiển thị","focus":"Placement Performance","status":"Generated","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Lưu lượng trang chủ giữ ở mức ổn định, trong khi vị trí 2 trang chủ vượt kỳ vọng doanh thu ở tuần cuối tháng 3. Nên tiếp tục duy trì slot vị trí 2 vì đây là điểm chuyển đổi tốt trong nhóm bài đẩy đang hoạt động.', 'Gemini gemini-2.0-flash', '2026-03-25 10:00:00'),
+(2, 1, 'Promotion Watchlist',   '{"title":"Tóm tắt khuyến mãi cần theo dõi","focus":"Promotion Watchlist","status":"Needs Review","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Các chiến dịch vị trí 3 trang chủ hết hạn vào ngày 2026-03-26 vẫn cho thấy tín hiệu nhu cầu. Cần rà soát xem trường hợp nào đủ điều kiện để mở lại sau khi xác nhận thanh toán.', 'Gemini gemini-2.0-flash', '2026-03-26 09:45:00'),
+(3, 1, 'Revenue Signals',       '{"title":"Tóm tắt tín hiệu doanh thu","focus":"Revenue Signals","status":"Generated","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Doanh thu tháng 3 tập trung chủ yếu ở các gói vị trí 1 và vị trí 2 trang chủ. Gói vị trí 3 tăng về số lượng ở cuối tháng nhưng đóng góp doanh thu vẫn thấp hơn các vị trí cao cấp.', 'Gemini gemini-2.0-flash', '2026-03-27 14:15:00'),
+(4, 1, 'Operator Load',         '{"title":"Tóm tắt khối lượng vận hành","focus":"Operator Load","status":"Generated","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Nhóm vận hành B đang xử lý nhiều chiến dịch vị trí 2 nhất. Khối lượng hiện tại vẫn trong ngưỡng chấp nhận, nhưng các ca leo thang mới nên được phân bổ thêm cho Nhóm vận hành A ở chu kỳ tiếp theo.', 'Gemini gemini-2.0-flash', '2026-03-28 08:40:00'),
 (5, 1, 'Placement Performance', '{"title":"Tóm tắt hiệu quả vị trí hiển thị","focus":"Placement Performance","status":"Archived","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Lượt hiển thị trang chủ đầu tháng 3 ở mức tốt nhưng giảm dần trước khi gói cao cấp 30 ngày được kích hoạt. Cần rà soát lại độ mới của nội dung quảng bá dành cho khách mua vị trí trang chủ.', 'Gemini gemini-2.0-flash', '2026-03-29 16:25:00'),
-(6, 1, 'Revenue Signals',       '{"title":"Tóm tắt tín hiệu doanh thu","focus":"Revenue Signals","status":"Needs Review","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Giá trị đơn hàng trung bình hiện được giữ bởi các gói trang chủ cao cấp, trong khi các gói tìm kiếm nhỏ đang kéo số lượng đơn. Nên tiếp tục theo dõi đồng thời cả hai tầng gói trong phân tích giá.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
+(6, 1, 'Revenue Signals',       '{"title":"Tóm tắt tín hiệu doanh thu","focus":"Revenue Signals","status":"Needs Review","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Giá trị đơn hàng trung bình hiện được giữ bởi các gói vị trí 1 trang chủ, trong khi các gói vị trí 3 đang kéo số lượng đơn. Nên tiếp tục theo dõi đồng thời cả hai tầng gói trong phân tích giá.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
 
 -- ============================================================
 -- RESET SEQUENCES

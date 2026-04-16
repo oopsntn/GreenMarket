@@ -16,8 +16,9 @@ import {
   verifyVNPaySignature,
 } from "../utils/vnpay.ts";
 import {
-  BOOST_POST_SLOT_CODE,
+  BOOST_POST_SLOT_PREFIX,
   SHOP_VIP_SLOT_CODE,
+  isBoostPostSlotCode,
 } from "../constants/promotion.ts";
 import { readSettingNumber } from "../controllers/user/pricing-config.controller.ts";
 import { postingPolicyService } from "./posting-policy.service.ts";
@@ -66,6 +67,17 @@ const createOrderId = () => {
   return `GM${Date.now()}${randomPart}`;
 };
 
+const getLivePromotionCondition = () =>
+  and(
+    sql`${postPromotions.postPromotionEndAt} > NOW()`,
+    or(
+      eq(postPromotions.postPromotionStatus, "active"),
+      eq(postPromotions.postPromotionStatus, "scheduled"),
+      eq(postPromotions.postPromotionStatus, "paused"),
+      eq(postPromotions.postPromotionStatus, "pending"),
+    ),
+  );
+
 const activatePromotionForTransaction = async (
   tx: any,
   txn: typeof paymentTxn.$inferSelect,
@@ -83,7 +95,9 @@ const activatePromotionForTransaction = async (
       promotionPackageId: promotionPackages.promotionPackageId,
       promotionPackageSlotId: promotionPackages.promotionPackageSlotId,
       promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+      promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
       promotionPackageTitle: promotionPackages.promotionPackageTitle,
+      slotCapacity: placementSlots.placementSlotCapacity,
       priority: sql<number>`
         CASE 
           WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$' 
@@ -106,6 +120,69 @@ const activatePromotionForTransaction = async (
       "PROMOTION_PACKAGE_NOT_FOUND",
       "Promotion package linked to payment does not exist.",
     );
+  }
+
+  const livePromotionCondition = getLivePromotionCondition();
+
+  const [existingPostPromotion] = await tx
+    .select({ promotionId: postPromotions.postPromotionId })
+    .from(postPromotions)
+    .where(
+      and(
+        eq(postPromotions.postPromotionPostId, txn.paymentTxnPostId),
+        livePromotionCondition,
+      ),
+    )
+    .limit(1);
+
+  if (existingPostPromotion) {
+    throw new PaymentServiceError(
+      409,
+      "POST_ALREADY_PROMOTED",
+      "Bài viết này đang có gói quảng bá còn hiệu lực.",
+    );
+  }
+
+  const slotCapacity = Number(pkg.slotCapacity ?? 0);
+  if (slotCapacity > 0) {
+    const [slotUsage] = await tx
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(postPromotions)
+      .where(
+        and(
+          eq(postPromotions.postPromotionSlotId, pkg.promotionPackageSlotId),
+          livePromotionCondition,
+        ),
+      );
+
+    if (Number(slotUsage?.count ?? 0) >= slotCapacity) {
+      throw new PaymentServiceError(
+        409,
+        "PLACEMENT_SLOT_FULL",
+        "Vị trí hiển thị này đã đủ sức chứa trong thời gian hiện tại.",
+      );
+    }
+  }
+
+  const packageMaxPosts = Number(pkg.promotionPackageMaxPosts ?? 0);
+  if (packageMaxPosts > 0) {
+    const [packageUsage] = await tx
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(postPromotions)
+      .where(
+        and(
+          eq(postPromotions.postPromotionPackageId, txn.paymentTxnPackageId),
+          livePromotionCondition,
+        ),
+      );
+
+    if (Number(packageUsage?.count ?? 0) >= packageMaxPosts) {
+      throw new PaymentServiceError(
+        409,
+        "PROMOTION_PACKAGE_SOLD_OUT",
+        "Gói quảng bá này đã hết số lượng bài có thể áp dụng.",
+      );
+    }
   }
 
   const startAt = new Date();
@@ -597,6 +674,7 @@ export const paymentService = {
         promotionPackagePublished: promotionPackages.promotionPackagePublished,
         promotionPackageSlotId: promotionPackages.promotionPackageSlotId,
         promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+        promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
         promotionPackagePriceId: promotionPackagePrices.priceId,
         promotionPackagePrice: promotionPackagePrices.price,
       })
@@ -631,6 +709,7 @@ export const paymentService = {
         placementSlotId: placementSlots.placementSlotId,
         placementSlotPublished: placementSlots.placementSlotPublished,
         placementSlotCode: placementSlots.placementSlotCode,
+        placementSlotCapacity: placementSlots.placementSlotCapacity,
       })
       .from(placementSlots)
       .where(eq(placementSlots.placementSlotId, pkg.promotionPackageSlotId))
@@ -644,12 +723,75 @@ export const paymentService = {
       );
     }
 
-    if (slot.placementSlotCode !== BOOST_POST_SLOT_CODE) {
+    if (!isBoostPostSlotCode(slot.placementSlotCode)) {
       throw new PaymentServiceError(
         400,
         "BOOST_PACKAGE_TYPE_INVALID",
         "This package is not available for post boost purchases.",
       );
+    }
+
+    const livePromotionCondition = getLivePromotionCondition();
+
+    const [existingPromotion] = await db
+      .select({ promotionId: postPromotions.postPromotionId })
+      .from(postPromotions)
+      .where(
+        and(
+          eq(postPromotions.postPromotionPostId, parsedPostId),
+          livePromotionCondition,
+        ),
+      )
+      .limit(1);
+
+    if (existingPromotion) {
+      throw new PaymentServiceError(
+        409,
+        "POST_ALREADY_PROMOTED",
+        "Bài viết này đã có gói quảng bá còn hiệu lực, không thể mua thêm gói khác.",
+      );
+    }
+
+    const slotCapacity = Number(slot.placementSlotCapacity ?? 0);
+    if (slotCapacity > 0) {
+      const [slotUsage] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(postPromotions)
+        .where(
+          and(
+            eq(postPromotions.postPromotionSlotId, slot.placementSlotId),
+            livePromotionCondition,
+          ),
+        );
+
+      if (Number(slotUsage?.count ?? 0) >= slotCapacity) {
+        throw new PaymentServiceError(
+          409,
+          "PLACEMENT_SLOT_FULL",
+          "Vị trí hiển thị này đã đủ sức chứa. Hãy chọn gói ở vị trí khác hoặc chờ gói hiện tại hết hạn.",
+        );
+      }
+    }
+
+    const packageMaxPosts = Number(pkg.promotionPackageMaxPosts ?? 0);
+    if (packageMaxPosts > 0) {
+      const [packageUsage] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(postPromotions)
+        .where(
+          and(
+            eq(postPromotions.postPromotionPackageId, parsedPackageId),
+            livePromotionCondition,
+          ),
+        );
+
+      if (Number(packageUsage?.count ?? 0) >= packageMaxPosts) {
+        throw new PaymentServiceError(
+          409,
+          "PROMOTION_PACKAGE_SOLD_OUT",
+          "Gói quảng bá này đã đạt số bài tối đa cho phép và hiện không thể mua thêm.",
+        );
+      }
     }
 
     const finalAmount = toSafeIntegerAmount(pkg.promotionPackagePrice);
@@ -728,10 +870,12 @@ export const paymentService = {
       .from(postPromotions)
       .innerJoin(posts, eq(postPromotions.postPromotionPostId, posts.postId))
       .innerJoin(promotionPackages, eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId))
+      .innerJoin(placementSlots, eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId))
       .where(
         and(
           eq(posts.postAuthorId, userId),
-          or(eq(postPromotions.postPromotionStatus, "active"), eq(postPromotions.postPromotionStatus, "pending"))
+          or(eq(postPromotions.postPromotionStatus, "active"), eq(postPromotions.postPromotionStatus, "pending")),
+          sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`
         )
       )
       .orderBy(sql`${postPromotions.postPromotionStartAt} DESC`);

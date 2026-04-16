@@ -44,8 +44,8 @@ const DEFAULTS = {
     planTitle: "Gói Nhà Vườn VIP",
     features: [
       "Xếp đầu danh sách nhà vườn",
-      "Huy hiệu VIP nổi bật trên trang chủ",
-      "Hiển thị viền vàng sang trọng",
+      "Gắn nhãn VIP nổi bật trong danh sách nhà vườn",
+      "Hiển thị viền vàng sang trọng cho shop",
       "Ưu tiên hỗ trợ từ đội ngũ vận hành",
     ],
   },
@@ -91,20 +91,25 @@ export const getPricingConfig = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const [shopRegPrice, personalPrice, ownerPolicy, personalPolicy, shopVipPolicy] =
-      await Promise.all([
-        readSettingNumber(
-          "shop_registration_price",
-          DEFAULTS.shop_registration_price,
-        ),
-        readSettingNumber(
-          "personal_monthly_price",
-          DEFAULTS.personal_monthly_price,
-        ),
-        readSettingJson("owner_posting_policy", DEFAULTS.owner_policy),
-        readSettingJson("personal_posting_policy", DEFAULTS.personal_policy),
-        readSettingJson("shop_vip_policy", DEFAULTS.shop_vip_policy),
-      ]);
+    const [
+      shopRegPrice,
+      personalPrice,
+      ownerPolicy,
+      personalPolicy,
+      shopVipPolicy,
+    ] = await Promise.all([
+      readSettingNumber(
+        "shop_registration_price",
+        DEFAULTS.shop_registration_price,
+      ),
+      readSettingNumber(
+        "personal_monthly_price",
+        DEFAULTS.personal_monthly_price,
+      ),
+      readSettingJson("owner_posting_policy", DEFAULTS.owner_policy),
+      readSettingJson("personal_posting_policy", DEFAULTS.personal_policy),
+      readSettingJson("shop_vip_policy", DEFAULTS.shop_vip_policy),
+    ]);
 
     res.json({
       shopRegistrationPrice: shopRegPrice,
