@@ -1,7 +1,8 @@
-import { and, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
   paymentTxn,
+  type PaymentTxn,
   placementSlots,
   postPromotions,
   posts,
@@ -110,10 +111,44 @@ const activatePromotionForTransaction = async (
     );
   }
 
-  const startAt = new Date();
-  const durationDays = Number(pkg.promotionPackageDurationDays || 0);
-  const endAt = new Date(startAt.getTime() + durationDays * 24 * 60 * 60 * 1000);
+  const now = new Date();
 
+  // 1. Check for existing active promotion in the same slot to extend
+  const [existingPromo] = await tx
+    .select()
+    .from(postPromotions)
+    .where(
+      and(
+        eq(postPromotions.postPromotionPostId, txn.paymentTxnPostId),
+        eq(postPromotions.postPromotionSlotId, pkg.promotionPackageSlotId),
+        eq(postPromotions.postPromotionStatus, "active"),
+      ),
+    )
+    .orderBy(desc(postPromotions.postPromotionEndAt))
+    .limit(1);
+
+  const baseDate =
+    existingPromo?.postPromotionEndAt &&
+    new Date(existingPromo.postPromotionEndAt) > now
+      ? new Date(existingPromo.postPromotionEndAt)
+      : now;
+
+  const durationDays = Number(pkg.promotionPackageDurationDays || 0);
+  const endAt = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+  // 2. Mark old promotions as expired/superseded
+  await tx
+    .update(postPromotions)
+    .set({ postPromotionStatus: "expired" })
+    .where(
+      and(
+        eq(postPromotions.postPromotionPostId, txn.paymentTxnPostId),
+        eq(postPromotions.postPromotionSlotId, pkg.promotionPackageSlotId),
+        eq(postPromotions.postPromotionStatus, "active"),
+      ),
+    );
+
+  // 3. Insert new cumulative promotion
   await tx.insert(postPromotions).values({
     postPromotionPostId: txn.paymentTxnPostId,
     postPromotionBuyerId: txn.paymentTxnUserId,
@@ -121,7 +156,7 @@ const activatePromotionForTransaction = async (
     postPromotionSlotId: pkg.promotionPackageSlotId,
     postPromotionSnapshotTitle: pkg.promotionPackageTitle,
     postPromotionSnapshotPriority: pkg.priority,
-    postPromotionStartAt: startAt,
+    postPromotionStartAt: now,
     postPromotionEndAt: endAt,
     postPromotionStatus: "active",
   });
@@ -129,7 +164,7 @@ const activatePromotionForTransaction = async (
 
 const activateShopVipForTransaction = async (
   tx: any,
-  txn: typeof paymentTxn.$inferSelect,
+  txn: PaymentTxn,
 ) => {
   if (!txn.paymentTxnPackageId || txn.paymentTxnPostId) {
     throw new PaymentServiceError(
@@ -196,7 +231,27 @@ const activateShopVipForTransaction = async (
       "Only active shops can be upgraded to VIP.",
     );
   }
+  const now = new Date();
+  const currentExpiresAt = shop.shopVipExpiresAt ? new Date(shop.shopVipExpiresAt) : null;
+  const isCurrentlyVip = currentExpiresAt && currentExpiresAt > now;
 
+  const newStartAt = isCurrentlyVip
+    ? shop.shopVipStartedAt
+      ? new Date(shop.shopVipStartedAt)
+      : now
+    : now;
+  const baseDate = isCurrentlyVip ? currentExpiresAt : now;
+  const newExpiresAt = new Date(
+    baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000,
+  );
+
+  await tx
+    .update(shops)
+    .set({
+      shopVipStartedAt: newStartAt,
+      shopVipExpiresAt: newExpiresAt,
+      shopUpdatedAt: now,
+    })
     .where(eq(shops.shopId, txn.paymentTxnUserId));
 };
 
@@ -216,7 +271,10 @@ const activateRegistrationForTransaction = async (tx: any, userId: number) => {
     .where(eq(posts.postAuthorId, userId));
 };
 
-const handleNonPostPackageActivation = async (tx: any, txn: PaymentTxn) => {
+const handleNonPostPackageActivation = async (
+  tx: any,
+  txn: PaymentTxn,
+) => {
   const [pkg] = await tx
     .select({
       slotCode: placementSlots.placementSlotCode,
@@ -226,7 +284,7 @@ const handleNonPostPackageActivation = async (tx: any, txn: PaymentTxn) => {
       placementSlots,
       eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
     )
-    .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId))
+    .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId!))
     .limit(1);
 
   if (!pkg) return;
