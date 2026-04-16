@@ -1,5 +1,7 @@
 import multer from "multer";
 import path from "path";
+import { NextFunction, Request, Response } from "express";
+import { adminWebSettingsService } from "../services/adminWebSettings.service.ts";
 
 // We use memory storage because our IStorageService handles the persistence
 // This allows us to easily swap to Cloudinary/S3 later
@@ -74,13 +76,24 @@ const createFileFilter = (allowVideos: boolean) => {
     };
 };
 
-const createUploadMiddleware = (allowVideos: boolean) => multer({
-    storage: storage,
-    limits: {
-        fileSize: 50 * 1024 * 1024, // 50MB limit
-    },
-    fileFilter: createFileFilter(allowVideos)
-});
+const createUploadMiddleware = (allowVideos: boolean) =>
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const settings = await adminWebSettingsService.getSettings();
+            const maxFileSizeMb = Math.max(1, Number(settings.media.maxFileSizeMb || 0));
+            const middleware = multer({
+                storage,
+                limits: {
+                    fileSize: maxFileSizeMb * 1024 * 1024,
+                },
+                fileFilter: createFileFilter(allowVideos),
+            }).array("media", 10);
+
+            middleware(req, res, next);
+        } catch (error) {
+            next(error);
+        }
+    };
 
 export const upload = createUploadMiddleware(true);
 export const uploadImagesOnly = createUploadMiddleware(false);

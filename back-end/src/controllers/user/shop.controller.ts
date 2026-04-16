@@ -11,6 +11,7 @@ import {
     OwnerDashboardError,
     ownerDashboardService,
 } from "../../services/owner-dashboard.service.ts";
+import { postLifecycleService } from "../../services/postLifecycle.service.ts";
 
 const SHOP_GALLERY_DELIMITER = "|";
 const SHOP_EVENT_VIEW = "shop_view";
@@ -192,6 +193,7 @@ export const getOwnerDashboard = async (
     res: Response,
 ): Promise<void> => {
     try {
+        await postLifecycleService.syncAutoExpiredPosts();
         const userId = req.user?.id;
         if (!userId) {
             res.status(401).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
@@ -217,6 +219,7 @@ export const getOwnerDashboard = async (
 
 export const getPublicShopById = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
+        await postLifecycleService.syncAutoExpiredPosts();
         const id = parseId(req.params.id as string);
         if (!id) {
             res.status(400).json({ error: "Invalid Shop ID" });
@@ -391,6 +394,7 @@ export const updateShop = async (req: AuthRequest, res: Response): Promise<void>
 
 export const getAllShops = async (req: Request, res: Response): Promise<void> => {
     try {
+        await postLifecycleService.syncAutoExpiredPosts();
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 20;
         const offset = (page - 1) * limit;

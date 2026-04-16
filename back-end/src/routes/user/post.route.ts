@@ -8,6 +8,7 @@ import {
   getPublicPostBySlug,
   getPublicPosts,
   recordContactClick,
+  restorePost,
   softDeletePost,
   toggleFavoritePost,
   updatePost,
@@ -28,6 +29,7 @@ router.get("/posting-policy", verifyToken, getPostingPolicy);
 router.post("/personal-plan/mock-activate", verifyToken, activatePersonalMonthlyPlanMock);
 router.patch("/:id", verifyToken, updatePost);
 router.delete("/:id", verifyToken, softDeletePost);
+router.post("/:id/restore", verifyToken, restorePost);
 
 router.get("/:id/favorite", verifyToken, checkIsSaved);
 router.post("/:id/favorite", verifyToken, toggleFavoritePost);

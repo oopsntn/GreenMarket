@@ -17,9 +17,9 @@ const runUpload = (middleware: any) => {
 };
 
 // Handle mixed media uploads (images/videos)
-router.post("/", runUpload(upload.array("media", 10)), uploadMedia);
+router.post("/", runUpload(upload), uploadMedia);
 
 // Handle image-only uploads
-router.post("/images", runUpload(uploadImagesOnly.array("media", 10)), uploadMedia);
+router.post("/images", runUpload(uploadImagesOnly), uploadMedia);
 
 export default router;

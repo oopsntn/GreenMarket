@@ -11,7 +11,6 @@ const DEFAULT_SETTINGS: SettingsState = {
     platformName: "GreenMarket",
     supportEmail: "support@greenmarket.vn",
     defaultLanguage: "Tiếng Việt",
-    otpSandboxEnabled: true,
   },
   moderation: {
     autoModeration: true,
@@ -344,24 +343,6 @@ function SettingsPage() {
               <small>Admin web hiện chỉ hỗ trợ tiếng Việt và không cho phép đổi sang ngôn ngữ khác.</small>
             </div>
 
-            <div className="settings-toggle">
-              <div>
-                <strong>Chế độ OTP sandbox</strong>
-                <span>Bật khi cần test OTP nội bộ mà không gửi SMS thật ra ngoài.</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.general.otpSandboxEnabled}
-                onChange={(event) =>
-                  handleInputChange(
-                    "general",
-                    "otpSandboxEnabled",
-                    event.target.checked,
-                  )
-                }
-                disabled={isLoading || isSaving}
-              />
-            </div>
           </div>
         </SectionCard>
 

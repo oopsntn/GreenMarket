@@ -4,7 +4,6 @@ export type GeneralSettings = {
   platformName: string;
   supportEmail: string;
   defaultLanguage: SupportedLanguage;
-  otpSandboxEnabled: boolean;
 };
 
 export type ModerationSettings = {
