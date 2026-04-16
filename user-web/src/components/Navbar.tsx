@@ -54,9 +54,12 @@ const Navbar: React.FC = () => {
       : [
           ...baseNavItems,
           { label: "Bookmarks", path: "/news/bookmarks", icon: Bookmark },
-          ...(!shop ? [{ label: "Mo nha vuon", path: "/register-shop", icon: Store }] : []),
-          { label: "Ca nhan", path: "/my-posts", icon: User },
+          ...(!shop || shop.shopStatus === "pending"
+            ? [{ label: shop ? "Hoàn tất đăng ký" : "Mở nhà vườn", path: "/register-shop", icon: Store }]
+            : []),
+          { label: "Cá nhân", path: "/my-posts", icon: User },
         ];
+
 
   return (
     <nav className="sticky top-0 z-50 glass border-b border-slate-200/50 px-6 py-4">

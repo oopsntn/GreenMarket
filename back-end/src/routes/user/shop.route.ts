@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { 
     registerShop, getMyShop, getOwnerDashboard, getPublicShopById, recordShopContactClick, updateShop, getAllShops,
-    requestVerificationOTP, verifyShopEmail, addShopPhone, deleteShopPhone
+    requestVerificationOTP, verifyShopEmail, addShopPhone, deleteShopPhone, deletePendingShop
 } from "../../controllers/user/shop.controller.ts";
 import { optionalVerifyToken, verifyToken } from "../../middlewares/authMiddleware.ts";
 
@@ -13,7 +13,9 @@ router.get("/browse", getAllShops);
 // Protected routes (JWT required)
 router.post("/register", verifyToken, registerShop);
 router.get("/my-shop", verifyToken, getMyShop);
+router.delete("/pending", verifyToken, deletePendingShop);
 router.get("/dashboard", verifyToken, getOwnerDashboard);
+
 
 // Verification & Phone routes
 router.post("/verify/request", verifyToken, requestVerificationOTP);

@@ -204,6 +204,34 @@ export const getMyShop = async (req: AuthRequest, res: Response): Promise<void> 
     }
 };
 
+export const deletePendingShop = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const [existingShop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!existingShop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        if (existingShop.shopStatus !== "pending") {
+            res.status(400).json({ error: "Only pending shops can be deleted" });
+            return;
+        }
+
+        await db.delete(shops).where(eq(shops.shopId, userId));
+        res.json({ message: "Shop registration cancelled successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+
 export const getOwnerDashboard = async (
     req: AuthRequest,
     res: Response,

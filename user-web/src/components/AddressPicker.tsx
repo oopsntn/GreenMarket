@@ -85,12 +85,6 @@ const AddressPicker: React.FC<AddressPickerProps> = ({ initialValue, onAddressCh
         if (onLocationSelect) {
             onLocationSelect(pos.lat, pos.lng);
         }
-        setGeoLoading(true);
-        const result = await reverseGeocode(pos.lat, pos.lng);
-        if (result) {
-          matchAndSetAddress(result);
-        }
-        setGeoLoading(false);
         setShowMap(false);
       };
     }, 100);
@@ -128,34 +122,7 @@ const AddressPicker: React.FC<AddressPickerProps> = ({ initialValue, onAddressCh
     return n1 === n2 || n1.includes(n2) || n2.includes(n1);
   };
 
-  const matchAndSetAddress = async (result: any) => {
-    let specAddr = specificAddress;
-    if (result.specific) {
-      setSpecificAddress(result.specific);
-      specAddr = result.specific;
-    }
-
-    const foundP = provinces.find(p => isLocationMatch(p.name, result.province));
-    if (foundP) {
-      setSelectedP(foundP.code);
-      setLoading(true);
-      const ds = await getDistricts(foundP.code);
-      setDistricts(ds);
-      const foundD = ds.find(d => isLocationMatch(d.name, result.district));
-      if (foundD) {
-        setSelectedD(foundD.code);
-        const ws = await getWards(foundD.code);
-        setWards(ws);
-        const foundW = ws.find(w => isLocationMatch(w.name, result.ward));
-        if (foundW) {
-          setSelectedW(foundW.code);
-          const finalAddr = `${specAddr ? specAddr + ', ' : ''}${foundW.name}, ${foundD.name}, ${foundP.name}`;
-          onAddressChange(finalAddr);
-        }
-      }
-      setLoading(false);
-    }
-  };
+[]
 
   useEffect(() => {
     const init = async () => {
@@ -321,26 +288,8 @@ const AddressPicker: React.FC<AddressPickerProps> = ({ initialValue, onAddressCh
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-end mb-1">
+      <div className="mb-1">
         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">{label || 'Địa chỉ (Tỉnh / Quận / Xã)'}</label>
-        <div className="flex gap-2">
-            <button 
-                type="button"
-                onClick={() => setShowMap(true)}
-                className="text-[10px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors bg-blue-500/5 px-3 py-1.5 rounded-lg border border-blue-500/10"
-            >
-                <MapIcon className="w-3 h-3" />
-                Bản đồ
-            </button>
-            <button 
-                type="button"
-                onClick={handleGetCurrentLocation}
-                className="text-[10px] font-black uppercase tracking-widest text-emerald-500 hover:text-emerald-400 flex items-center gap-1.5 transition-colors bg-emerald-500/5 px-3 py-1.5 rounded-lg border border-emerald-500/10"
-            >
-                {geoLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Navigation className="w-3 h-3" />}
-                GPS
-            </button>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -384,16 +333,38 @@ const AddressPicker: React.FC<AddressPickerProps> = ({ initialValue, onAddressCh
         </div>
       </div>
 
-      {/* Row 2: Specific Address */}
-      <div className="relative group">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 flex items-center justify-center font-bold text-[10px]">#</div>
-          <input 
-              type="text"
-              placeholder="Địa chỉ cụ thể (Số nhà, tên đường, thôn/xóm...)"
-              className="w-full bg-surface border border-white/10 pl-11 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 outline-none transition-all text-sm font-medium"
-              value={specificAddress}
-              onChange={(e) => handleSpecificChange(e.target.value)}
-          />
+      {/* Row 2: Specific Address & Map/GPS buttons */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative group flex-1">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 flex items-center justify-center font-bold text-[10px]">#</div>
+            <input 
+                type="text"
+                placeholder="Địa chỉ cụ thể (Số nhà, tên đường...)"
+                className="w-full bg-surface border border-white/10 pl-11 pr-4 py-3.5 rounded-2xl focus:border-emerald-500 outline-none transition-all text-sm font-medium"
+                value={specificAddress}
+                onChange={(e) => handleSpecificChange(e.target.value)}
+            />
+        </div>
+        <div className="flex gap-2">
+            <button 
+                type="button"
+                onClick={() => setShowMap(true)}
+                className="px-4 py-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 transition-all flex items-center gap-2 group"
+                title="Chọn vị trí trên bản đồ"
+            >
+                <MapIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">Bản đồ</span>
+            </button>
+            <button 
+                type="button"
+                onClick={handleGetCurrentLocation}
+                className="px-4 py-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20 transition-all flex items-center gap-2 group"
+                title="Sử dụng GPS"
+            >
+                {geoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4 group-hover:scale-110 transition-transform" />}
+                <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">GPS</span>
+            </button>
+        </div>
       </div>
       
       {loading && (
