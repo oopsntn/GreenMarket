@@ -1319,8 +1319,8 @@ INSERT INTO posts (
 (17, 1, 1, 12, 'Linh Sam Da Mini Tron Bo Re Dep', 'linh-sam-da-mini-tron-bo-re-dep', 5900000, 'Yen Phong, Bac Ninh', 'approved', '0978195419', 214, 13, true, now() - interval '4 days', now() - interval '4 days'),
 (18, 3, 3, 13, 'Sung Canh Co Thu Tan Rong', 'sung-canh-co-thu-tan-rong', 32000000, 'Nam Truc, Nam Dinh', 'approved', '0123456789', 178, 6, true, now() - interval '3 days', now() - interval '3 days'),
 (19, 4, 3, 15, 'Oc Thanh Mai Bonsai Hoa Tim', 'oc-thanh-mai-bonsai-hoa-tim', 7800000, 'Cho Lach, Ben Tre', 'approved', '0912345678', 95, 4, true, now() - interval '2 days', now() - interval '2 days'),
-(20, 6, 4, 21, 'Keo Cat Canh Mini Canh Cong', 'keo-cat-canh-mini-canh-cong', 450000, 'Dong Anh, Ha Noi', 'approved', '0935112233', 88, 9, true, now() - interval '2 days', now() - interval '2 days'),
-(21, 6, 4, 25, 'Bo Tuoi Nho Giot 8 Dau Phun', 'bo-tuoi-nho-giot-8-dau-phun', 690000, 'Dong Anh, Ha Noi', 'approved', '0935112233', 76, 7, true, now() - interval '1 day', now() - interval '1 day');
+(20, 6, 4, 11, 'Keo Cat Canh Mini Canh Cong', 'keo-cat-canh-mini-canh-cong', 450000, 'Dong Anh, Ha Noi', 'approved', '0935112233', 88, 9, true, now() - interval '2 days', now() - interval '2 days'),
+(21, 6, 4, 11, 'Bo Tuoi Nho Giot 8 Dau Phun', 'bo-tuoi-nho-giot-8-dau-phun', 690000, 'Dong Anh, Ha Noi', 'approved', '0935112233', 76, 7, true, now() - interval '1 day', now() - interval '1 day');
 
 -- Post Attribute Values
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
@@ -1371,13 +1371,7 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 (19, 2, '55'),
 (19, 3, '26'),
 (19, 4, '9'),
-(19, 5, 'Ben Tre'),
-(20, 6, 'Thep Khong Gi (Inox)'),
-(20, 7, 'Bonsai Pro'),
-(20, 8, 'Viet Nam'),
-(21, 6, 'Nhua PP'),
-(21, 7, 'Bonsai Pro'),
-(21, 8, 'Viet Nam');
+(19, 5, 'Ben Tre');
 
 -- Post Images
 INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
