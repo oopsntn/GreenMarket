@@ -2,6 +2,13 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+let unauthorizedHandler = null;
+let isHandlingUnauthorized = false;
+
+export const setUnauthorizedHandler = (handler) => {
+  unauthorizedHandler = typeof handler === 'function' ? handler : null;
+};
+
 // Lấy IP từ environment variable (.env.local)
 const getApiBaseUrl = () => {
   const API_IP = process.env.EXPO_PUBLIC_API_IP || "14.170.9.64";
@@ -52,11 +59,20 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      // Xử lý lỗi 401 Unauthorized (ví dụ: token hết hạn)
-      await AsyncStorage.removeItem('token')
-      // Có thể thêm logic chuyển hướng người dùng đến màn hình đăng nhập nếu cần
-
+    if (error.response?.status === 401 && !isHandlingUnauthorized) {
+      isHandlingUnauthorized = true
+      try {
+        if (unauthorizedHandler) {
+          await Promise.resolve(unauthorizedHandler(error))
+        } else {
+          await AsyncStorage.multiRemove(['token', 'user'])
+        }
+      } catch (handlerError) {
+        console.error('[API] Unauthorized handler error:', handlerError)
+        await AsyncStorage.multiRemove(['token', 'user'])
+      } finally {
+        isHandlingUnauthorized = false
+      }
     }
     return Promise.reject(error)
   }

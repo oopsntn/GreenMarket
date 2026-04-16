@@ -14,15 +14,16 @@ import RegisterShopScreen from '../components/shop/screen/RegisterShop';
 import EditShopScreen from '../components/shop/screen/EditShopScreen';
 import BrowseShopsScreen from '../components/shop/screen/BrowseShopsScreen';
 import PublicShopDetailScreen from '../components/shop/screen/PublicShopDetailScreen';
+import PackagesScreen from '../components/shop/screen/PackagesScreen';
 import PostDetailScreen from '../components/post/screen/PostDetailScreen';
 import SavedPostsScreen from '../components/post/screen/SavedPostsScreen';
 import PromotePostScreen from '../components/payment/screen/PromotePostScreen';
 import CreateReportScreen from '../components/report/screen/CreateReportService';
 import ShopDashboardScreen from '@/components/shop/screen/ShopDashboardScreen';
+import CollaboratorNavigator from '../collaborator/navigation/CollaboratorNavigator';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
-const RootStack = createNativeStackNavigator();
 
 // Home Stack
 const HomeStackNavigator = () => {
@@ -41,9 +42,11 @@ const HomeStackNavigator = () => {
       <Stack.Screen name="BrowseShops" component={BrowseShopsScreen} />
       <Stack.Screen name="RegisterShop" component={RegisterShopScreen} />
       <Stack.Screen name="EditShop" component={EditShopScreen} />
+      <Stack.Screen name="Packages" component={PackagesScreen} />
       <Stack.Screen name="CreateReport" component={CreateReportScreen} />
       <Stack.Screen name="PromotePost" component={PromotePostScreen} />
       <Stack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
+      <Stack.Screen name="CollaboratorRoot" component={CollaboratorNavigator} />
     </Stack.Navigator>
   );
 };
@@ -60,9 +63,11 @@ const SettingsStackNavigator = () => {
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="RegisterShop" component={RegisterShopScreen} />
       <Stack.Screen name="EditShop" component={EditShopScreen} />
+      <Stack.Screen name="Packages" component={PackagesScreen} />
       <Stack.Screen name="MyShop" component={ShoDetailScreen} />
       <Stack.Screen name="SavedPosts" component={SavedPostsScreen} />
       <Stack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
+      <Stack.Screen name="CollaboratorRoot" component={CollaboratorNavigator} />
     </Stack.Navigator>
   );
 };
