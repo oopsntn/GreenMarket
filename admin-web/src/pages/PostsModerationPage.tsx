@@ -66,6 +66,22 @@ const getActionLabel = (action: ModerationAction) => {
   }
 };
 
+const getAvailableActions = (status: PostModerationStatus) => {
+  switch (status) {
+    case "Pending":
+      return { canApprove: true, canReject: true, canHide: true };
+    case "Approved":
+      return { canApprove: false, canReject: false, canHide: true };
+    case "Rejected":
+      return { canApprove: true, canReject: false, canHide: true };
+    case "Hidden":
+      return { canApprove: true, canReject: false, canHide: false };
+    case "Draft":
+    default:
+      return { canApprove: true, canReject: true, canHide: true };
+  }
+};
+
 function PostsModerationPage() {
   const [posts, setPosts] = useState<PostModerationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -110,7 +126,7 @@ function PostsModerationPage() {
       setPosts(nextPosts);
 
       if (showSuccessToast) {
-        showToast("Đã làm mới hàng chờ kiểm duyệt bài đăng.");
+        showToast("Đã làm mới danh sách bài đăng kiểm duyệt.");
       }
     } catch (err) {
       const message =
@@ -279,8 +295,8 @@ function PostsModerationPage() {
     <div className="posts-moderation-page">
       <PageHeader
         title="Kiểm duyệt bài đăng"
-        description="Rà soát bài đăng trên sàn, xem chi tiết kiểm duyệt và thực hiện duyệt hoặc từ chối."
-        actionLabel="Làm mới hàng chờ"
+        description="Rà soát bài đăng trên sàn, xem chi tiết kiểm duyệt và thực hiện duyệt hoặc từ chối theo đúng trạng thái hiện tại."
+        actionLabel="Làm mới danh sách"
         onActionClick={() => void loadPosts(true)}
       />
 
@@ -288,7 +304,7 @@ function PostsModerationPage() {
         <StatCard
           title="Tổng bài đăng"
           value={String(posts.length)}
-          subtitle="Bài đăng hiện có trong hàng chờ quản trị"
+          subtitle="Bài đăng hiện có trong danh sách quản trị"
         />
         <StatCard
           title="Chờ duyệt"
@@ -343,12 +359,12 @@ function PostsModerationPage() {
       ) : null}
 
       <SectionCard
-        title="Danh sách bài đăng chờ xử lý"
-        description="Kiểm tra thông tin bài đăng, trạng thái hiện tại và thao tác kiểm duyệt."
+        title="Danh sách bài đăng kiểm duyệt"
+        description="Kiểm tra thông tin bài đăng, trạng thái hiện tại và chỉ hiển thị thao tác phù hợp với từng trạng thái."
       >
         {isLoading ? (
           <EmptyState
-            title="Đang tải hàng chờ kiểm duyệt"
+            title="Đang tải bài đăng"
             description="Hệ thống đang lấy danh sách bài đăng từ API quản trị."
           />
         ) : error ? (
@@ -373,98 +389,106 @@ function PostsModerationPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedPosts.map((post) => (
-                    <tr key={post.id}>
-                      <td>
-                        <div className="posts-moderation-cell">
-                          <strong>{post.title}</strong>
-                          <span>{post.categoryLabel}</span>
-                          <small>{post.location}</small>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="posts-moderation-cell">
-                          <strong>{post.authorLabel}</strong>
-                          <span>{post.shopLabel}</span>
-                          <small>{post.contactPhone}</small>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="posts-moderation-status">
-                          <StatusBadge
-                            label={getStatusLabel(post.status)}
-                            variant={
-                              post.status === "Approved"
-                                ? "active"
-                                : post.status === "Rejected"
-                                  ? "locked"
-                                  : post.status === "Hidden"
-                                    ? "type"
-                                    : "processing"
-                            }
-                          />
-                          <small>{post.publishedLabel}</small>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="posts-moderation-metrics">
-                          <strong>
-                            {post.views.toLocaleString("vi-VN")} lượt xem
-                          </strong>
-                          <span>
-                            {post.contacts.toLocaleString("vi-VN")} liên hệ
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="posts-moderation-cell">
-                          <strong>Gửi: {post.submittedAt}</strong>
-                          <small>Duyệt: {post.moderatedAt}</small>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="posts-moderation-actions">
-                          <button
-                            type="button"
-                            className="posts-moderation-actions__view"
-                            onClick={() => void openDetailModal(post)}
-                          >
-                            Xem
-                          </button>
+                  {paginatedPosts.map((post) => {
+                    const actions = getAvailableActions(post.status);
 
-                          {post.status !== "Approved" ? (
+                    return (
+                      <tr key={post.id}>
+                        <td>
+                          <div className="posts-moderation-cell">
+                            <strong>{post.title}</strong>
+                            <span>{post.categoryLabel}</span>
+                            <small>{post.location}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="posts-moderation-cell">
+                            <strong>{post.authorLabel}</strong>
+                            <span>{post.shopLabel}</span>
+                            <small>{post.contactPhone}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="posts-moderation-status">
+                            <StatusBadge
+                              label={getStatusLabel(post.status)}
+                              variant={
+                                post.status === "Approved"
+                                  ? "active"
+                                  : post.status === "Rejected"
+                                    ? "locked"
+                                    : post.status === "Hidden"
+                                      ? "type"
+                                      : "processing"
+                              }
+                            />
+                            <small>{post.publishedLabel}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="posts-moderation-metrics">
+                            <strong>
+                              {post.views.toLocaleString("vi-VN")} lượt xem
+                            </strong>
+                            <span>
+                              {post.contacts.toLocaleString("vi-VN")} liên hệ
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="posts-moderation-cell">
+                            <strong>Gửi: {post.submittedAt}</strong>
+                            <small>Duyệt: {post.moderatedAt}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="posts-moderation-actions">
                             <button
                               type="button"
-                              className="posts-moderation-actions__approve"
-                              onClick={() => openModerationModal(post, "approve")}
+                              className="posts-moderation-actions__view"
+                              onClick={() => void openDetailModal(post)}
                             >
-                              Duyệt
+                              Xem
                             </button>
-                          ) : null}
 
-                          {post.status !== "Rejected" ? (
-                            <button
-                              type="button"
-                              className="posts-moderation-actions__reject"
-                              onClick={() => openModerationModal(post, "reject")}
-                            >
-                              Từ chối
-                            </button>
-                          ) : null}
+                            {actions.canApprove ? (
+                              <button
+                                type="button"
+                                className="posts-moderation-actions__approve"
+                                onClick={() =>
+                                  openModerationModal(post, "approve")
+                                }
+                              >
+                                Duyệt
+                              </button>
+                            ) : null}
 
-                          {post.status !== "Hidden" ? (
-                            <button
-                              type="button"
-                              className="posts-moderation-actions__hide"
-                              onClick={() => openModerationModal(post, "hide")}
-                            >
-                              Ẩn
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {actions.canReject ? (
+                              <button
+                                type="button"
+                                className="posts-moderation-actions__reject"
+                                onClick={() =>
+                                  openModerationModal(post, "reject")
+                                }
+                              >
+                                Từ chối
+                              </button>
+                            ) : null}
+
+                            {actions.canHide ? (
+                              <button
+                                type="button"
+                                className="posts-moderation-actions__hide"
+                                onClick={() => openModerationModal(post, "hide")}
+                              >
+                                Ẩn
+                              </button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

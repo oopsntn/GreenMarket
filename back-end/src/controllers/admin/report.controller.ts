@@ -131,7 +131,7 @@ export const getReports = async (
       .from(reports)
       .leftJoin(users, eq(reports.reporterId, users.userId))
       .leftJoin(posts, eq(reports.postId, posts.postId))
-      .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
+      .leftJoin(shops, eq(posts.postShopId, shops.shopId))
       .orderBy(desc(reports.reportCreatedAt), desc(reports.reportId));
 
     res.json(await attachEvidenceToReports(allReports));
@@ -157,7 +157,7 @@ export const getReportById = async (
       .from(reports)
       .leftJoin(users, eq(reports.reporterId, users.userId))
       .leftJoin(posts, eq(reports.postId, posts.postId))
-      .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
+      .leftJoin(shops, eq(posts.postShopId, shops.shopId))
       .where(eq(reports.reportId, idNumber))
       .limit(1);
 
@@ -226,7 +226,7 @@ export const resolveReport = async (
       .from(reports)
       .leftJoin(users, eq(reports.reporterId, users.userId))
       .leftJoin(posts, eq(reports.postId, posts.postId))
-      .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
+      .leftJoin(shops, eq(posts.postShopId, shops.shopId))
       .where(eq(reports.reportId, updatedReport.reportId))
       .limit(1);
 
