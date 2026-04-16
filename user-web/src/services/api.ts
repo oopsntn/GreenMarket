@@ -31,6 +31,7 @@ export const getPostingPolicy = () => api.get('/posts/posting-policy');
 export const activatePersonalMonthlyPlanMock = (durationDays = 30) =>
   api.post('/posts/personal-plan/mock-activate', { durationDays });
 export const updateUserPost = (postId: number, data: any) => api.patch(`/posts/${postId}`, data);
+export const togglePostVisibility = (postId: number | string) => api.patch(`/posts/${postId}/toggle-visibility`);
 export const deleteUserPost = (postId: number) => api.delete(`/posts/${postId}`);
 
 // Shop APIs
@@ -123,6 +124,9 @@ export const updateShop = (shopId: number, data: {
   shopInstagram?: string;
   shopYoutube?: string;
 }) => api.patch(`/shops/${shopId}`, data);
+
+export const deletePendingShop = () => api.delete('/shops/pending');
+
 
 export const requestShopVerificationOTP = (data: { target: string; type: 'email' | 'phone' }) => api.post('/shops/verify/request', data);
 export const verifyShopEmailOTP = (data: { email: string; otp: string }) => api.post('/shops/verify/email', data);

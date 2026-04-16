@@ -41,9 +41,10 @@ export const reverseGeocode = async (lat: number, lon: number) => {
     });
     const addr = res.data.address;
     return {
-      province: addr.city || addr.state || addr.province || '',
-      district: addr.district || addr.suburb || addr.city_district || addr.county || '',
-      ward: addr.ward || addr.quarter || addr.suburb || addr.village || '',
+      province: addr.province || addr.city || addr.state || '',
+      district: addr.district || addr.town || addr.city_district || addr.county || addr.suburb || '',
+      ward: addr.ward || addr.village || addr.town || addr.quarter || addr.suburb || addr.suburb || '',
+      specific: addr.house_number ? `${addr.house_number} ${addr.road || ''}`.trim() : (addr.road || ''),
       full: res.data.display_name
     };
   } catch (error) {

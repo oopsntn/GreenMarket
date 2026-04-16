@@ -353,22 +353,27 @@ export const postingPolicyService = {
     const { userId } = params;
     const durationDays = Math.min(Math.max(Math.floor(params.durationDays), 7), 365);
     const now = new Date();
-    const expiresAt = new Date(now);
-    expiresAt.setDate(expiresAt.getDate() + durationDays);
 
+    // 1. Check for existing active plan to extend
+    const activePlan = await getActivePersonalMonthlyPlan(userId);
+    const baseDate = activePlan?.postingPlanExpiresAt && new Date(activePlan.postingPlanExpiresAt) > now
+      ? new Date(activePlan.postingPlanExpiresAt)
+      : now;
+    
+    const expiresAt = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+    // 2. Mark previous active plans as superseded/expired (audit trail remains via createdAt)
     await db
       .update(userPostingPlans)
       .set({
         postingPlanStatus: "expired",
         postingPlanUpdatedAt: now,
-        postingPlanExpiresAt: now,
       })
       .where(
         and(
           eq(userPostingPlans.postingPlanUserId, userId),
           eq(userPostingPlans.postingPlanCode, POSTING_PLAN_CODES.PERSONAL_MONTHLY),
           eq(userPostingPlans.postingPlanStatus, "active"),
-          orPlanNotExpired(now),
         ),
       );
 
