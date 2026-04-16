@@ -1,13 +1,14 @@
 import { Request, Response } from "express";
-import { db } from "../../config/db";
 import { eq } from "drizzle-orm";
-import { posts, type NewPost } from "../../models/schema/posts";
-import { postImages } from "../../models/schema/post-images";
-import { postAttributeValues } from "../../models/schema/post-attribute-values";
+import { db } from "../../config/db";
+import { AuthRequest } from "../../dtos/auth.ts";
 import { eventLogs, moderationActions } from "../../models/schema/index.ts";
+import { postAttributeValues } from "../../models/schema/post-attribute-values";
+import { postImages } from "../../models/schema/post-images";
+import { posts, type NewPost } from "../../models/schema/posts";
 import { parseId } from "../../utils/parseId";
 import { slugify } from "../../utils/slugify";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { postLifecycleService } from "../../services/postLifecycle.service.ts";
 
 const getPostActionLabel = (status: string) => {
     switch (status.toLowerCase()) {
@@ -41,8 +42,17 @@ const getPostEventType = (status: string) => {
     }
 };
 
-export const getPosts = async (req: Request, res: Response): Promise<void> => {
+const ALLOWED_POST_STATUS_TRANSITIONS: Record<string, string[]> = {
+    pending: ["approved", "rejected", "hidden"],
+    approved: ["hidden"],
+    rejected: ["approved", "hidden"],
+    hidden: ["approved"],
+    draft: ["approved", "rejected", "hidden"],
+};
+
+export const getPosts = async (_req: Request, res: Response): Promise<void> => {
     try {
+        await postLifecycleService.syncAutoExpiredPosts();
         const allPosts = await db.select().from(posts);
         res.json(allPosts);
     } catch (error) {
@@ -51,37 +61,47 @@ export const getPosts = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-export const createPost = async (req: Request<{}, {}, NewPost & { images?: string[], attributes?: { id: number, value: string }[] }>, res: Response): Promise<void> => {
+export const createPost = async (
+    req: Request<
+        {},
+        {},
+        NewPost & {
+            images?: string[];
+            attributes?: { id: number; value: string }[];
+        }
+    >,
+    res: Response,
+): Promise<void> => {
     try {
         const { images, attributes: attrValues, ...postData } = req.body;
-        
-        // Auto-generate slug
+
         const finalSlug = postData.postSlug || slugify(postData.postTitle);
 
-        const [newPost] = await db.insert(posts).values({
-            ...postData,
-            postSlug: finalSlug,
-        }).returning();
+        const [newPost] = await db
+            .insert(posts)
+            .values({
+                ...postData,
+                postSlug: finalSlug,
+            })
+            .returning();
 
-        // Save images if provided
         if (images && images.length > 0) {
             await db.insert(postImages).values(
                 images.map((url, index) => ({
                     postId: newPost.postId,
                     imageUrl: url,
                     imageSortOrder: index,
-                }))
+                })),
             );
         }
 
-        // Save attribute values if provided (e.g., Age: 5 years)
         if (attrValues && attrValues.length > 0) {
             await db.insert(postAttributeValues).values(
-                attrValues.map(attr => ({
+                attrValues.map((attr) => ({
                     postId: newPost.postId,
                     attributeId: attr.id,
                     attributeValue: attr.value,
-                }))
+                })),
             );
         }
 
@@ -92,23 +112,37 @@ export const createPost = async (req: Request<{}, {}, NewPost & { images?: strin
     }
 };
 
-export const getPostById = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+export const getPostById = async (
+    req: Request<{ id: string }>,
+    res: Response,
+): Promise<void> => {
     try {
+        await postLifecycleService.syncAutoExpiredPosts();
         const idNumber = parseId(req.params.id);
         if (idNumber === null) {
             res.status(400).json({ error: "Mã bài đăng không hợp lệ" });
             return;
         }
 
-        const [post] = await db.select().from(posts).where(eq(posts.postId, idNumber)).limit(1);
+        const [post] = await db
+            .select()
+            .from(posts)
+            .where(eq(posts.postId, idNumber))
+            .limit(1);
+
         if (!post) {
             res.status(404).json({ error: "Không tìm thấy bài đăng" });
             return;
         }
 
-        // Fetch related images and attributes
-        const images = await db.select().from(postImages).where(eq(postImages.postId, idNumber));
-        const attrValues = await db.select().from(postAttributeValues).where(eq(postAttributeValues.postId, idNumber));
+        const images = await db
+            .select()
+            .from(postImages)
+            .where(eq(postImages.postId, idNumber));
+        const attrValues = await db
+            .select()
+            .from(postAttributeValues)
+            .where(eq(postAttributeValues.postId, idNumber));
 
         res.json({
             ...post,
@@ -122,7 +156,12 @@ export const getPostById = async (req: Request<{ id: string }>, res: Response): 
 };
 
 export const updatePostStatus = async (
-    req: AuthRequest & Request<{ id: string }, {}, { status: string, reason?: string, adminName?: string }>,
+    req: AuthRequest &
+        Request<
+            { id: string },
+            {},
+            { status: string; reason?: string; adminName?: string }
+        >,
     res: Response,
 ): Promise<void> => {
     try {
@@ -133,24 +172,68 @@ export const updatePostStatus = async (
         }
 
         const { status, reason } = req.body;
+        const normalizedStatus = status?.trim().toLowerCase();
         const performedBy =
             req.user?.name?.trim() ||
             req.user?.email?.trim() ||
             "Quản trị viên hệ thống";
 
-        const [updatedPost] = await db.update(posts)
-            .set({ 
-                postStatus: status as any, 
-                postRejectedReason: reason,
+        if (!normalizedStatus) {
+            res.status(400).json({ error: "Trạng thái bài đăng là bắt buộc" });
+            return;
+        }
+
+        const [currentPost] = await db
+            .select()
+            .from(posts)
+            .where(eq(posts.postId, idNumber))
+            .limit(1);
+
+        if (!currentPost) {
+            res.status(404).json({ error: "Không tìm thấy bài đăng" });
+            return;
+        }
+
+        const currentStatus = currentPost.postStatus.trim().toLowerCase();
+        const allowedTransitions =
+            ALLOWED_POST_STATUS_TRANSITIONS[currentStatus] ?? [];
+
+        if (!allowedTransitions.includes(normalizedStatus)) {
+            res.status(400).json({
+                error: `Không thể chuyển bài đăng từ trạng thái ${currentStatus} sang ${normalizedStatus}.`,
+            });
+            return;
+        }
+
+        const shouldPublish = normalizedStatus === "approved";
+        const nextRejectedReason =
+            normalizedStatus === "rejected" || normalizedStatus === "hidden"
+                ? reason?.trim() || null
+                : null;
+
+        const [updatedPost] = await db
+            .update(posts)
+            .set({
+                postStatus: normalizedStatus as NewPost["postStatus"],
+                postRejectedReason: nextRejectedReason,
+                postPublished: shouldPublish,
+                postPublishedAt: shouldPublish
+                    ? currentPost.postPublishedAt ?? new Date()
+                    : null,
                 postModeratedAt: new Date(),
-                postUpdatedAt: new Date()
+                postUpdatedAt: new Date(),
             })
             .where(eq(posts.postId, idNumber))
             .returning();
 
-        if (!updatedPost) {
-            res.status(404).json({ error: "Không tìm thấy bài đăng" });
-            return;
+        if (typeof req.user?.id === "number" && Number.isFinite(req.user.id)) {
+            await db.insert(moderationActions).values({
+                moderationActionActionBy: req.user.id,
+                moderationActionPostId: updatedPost.postId,
+                moderationActionAction: normalizedStatus,
+                moderationActionNote:
+                    nextRejectedReason || getPostActionLabel(normalizedStatus),
+            });
         }
 
         await db.insert(eventLogs).values({
@@ -158,16 +241,16 @@ export const updatePostStatus = async (
             eventLogPostId: updatedPost.postId,
             eventLogShopId: updatedPost.postShopId,
             eventLogCategoryId: updatedPost.categoryId,
-            eventLogEventType: getPostEventType(status),
+            eventLogEventType: getPostEventType(normalizedStatus),
             eventLogEventTime: new Date(),
             eventLogMeta: {
-                action: getPostActionLabel(status),
-                detail: reason?.trim()
-                    ? `Bài đăng "${updatedPost.postTitle}" được cập nhật sang trạng thái ${status.toLowerCase()}. Ghi chú: ${reason.trim()}`
-                    : `Bài đăng "${updatedPost.postTitle}" được cập nhật sang trạng thái ${status.toLowerCase()}.`,
+                action: getPostActionLabel(normalizedStatus),
+                detail: nextRejectedReason
+                    ? `Bài đăng "${updatedPost.postTitle}" được cập nhật sang trạng thái ${normalizedStatus}. Ghi chú: ${nextRejectedReason}`
+                    : `Bài đăng "${updatedPost.postTitle}" được cập nhật sang trạng thái ${normalizedStatus}.`,
                 performedBy,
                 actorRole: "Quản trị viên",
-                status: status.toLowerCase(),
+                status: normalizedStatus,
             },
         });
 
@@ -178,7 +261,10 @@ export const updatePostStatus = async (
     }
 };
 
-export const deletePost = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+export const deletePost = async (
+    req: Request<{ id: string }>,
+    res: Response,
+): Promise<void> => {
     try {
         const idNumber = parseId(req.params.id);
         const authReq = req as AuthRequest;
@@ -193,22 +279,23 @@ export const deletePost = async (req: Request<{ id: string }>, res: Response): P
             return;
         }
 
-        // Soft delete the post
-        const [deletedPost] = await db.update(posts)
-            .set({ 
-                postStatus: 'hidden', 
+        const [deletedPost] = await db
+            .update(posts)
+            .set({
+                postStatus: "hidden",
                 postDeletedAt: new Date(),
-                postUpdatedAt: new Date()
+                postUpdatedAt: new Date(),
+                postPublished: false,
+                postPublishedAt: null,
             })
             .where(eq(posts.postId, idNumber))
             .returning();
-            
+
         if (!deletedPost) {
             res.status(404).json({ error: "Không tìm thấy bài đăng" });
             return;
         }
 
-        // Log the moderation action when the admin id is available.
         if (typeof adminId === "number" && Number.isFinite(adminId)) {
             await db.insert(moderationActions).values({
                 moderationActionActionBy: adminId,

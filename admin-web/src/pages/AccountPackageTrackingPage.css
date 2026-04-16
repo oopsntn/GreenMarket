@@ -1,0 +1,256 @@
+.account-package-tracking-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.account-package-tracking-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.account-package-tracking-summary-card {
+  background: #ffffff;
+  border: 1px solid #e7efe6;
+  border-radius: 20px;
+  padding: 22px 20px 20px;
+  box-shadow: 0 10px 24px rgba(27, 94, 32, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 156px;
+}
+
+.account-package-tracking-summary-card__label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #5d7263;
+}
+
+.account-package-tracking-summary-card__value {
+  font-size: 34px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #1b4332;
+}
+
+.account-package-tracking-summary-card__subtitle {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.account-package-tracking-explainer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  padding: 24px;
+}
+
+.account-package-tracking-explainer__item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 20px;
+  border: 1px solid #e6f0e6;
+  border-radius: 18px;
+  background: #fbfefb;
+}
+
+.account-package-tracking-explainer__item strong {
+  font-size: 16px;
+  color: #1f4d34;
+}
+
+.account-package-tracking-explainer__item span {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #66756a;
+}
+
+.account-package-tracking-filters {
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 18px;
+  align-items: end;
+}
+
+.account-package-tracking-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-package-tracking-filters__field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2f4f3a;
+}
+
+.account-package-tracking-filters__field input,
+.account-package-tracking-filters__field select {
+  height: 46px;
+  border: 1px solid #d7e6d9;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background-color: #fcfffc;
+  color: #223127;
+  font-family: inherit;
+}
+
+.account-package-tracking-table-wrapper {
+  overflow-x: auto;
+}
+
+.account-package-tracking-table {
+  width: 100%;
+  min-width: 1140px;
+}
+
+.account-package-tracking-table th,
+.account-package-tracking-table td {
+  text-align: left;
+  vertical-align: middle;
+}
+
+.account-package-tracking-table th:nth-child(3),
+.account-package-tracking-table td:nth-child(3),
+.account-package-tracking-table th:nth-child(4),
+.account-package-tracking-table td:nth-child(4),
+.account-package-tracking-table th:nth-child(5),
+.account-package-tracking-table td:nth-child(5),
+.account-package-tracking-table th:nth-child(7),
+.account-package-tracking-table td:nth-child(7),
+.account-package-tracking-table th:nth-child(8),
+.account-package-tracking-table td:nth-child(8) {
+  white-space: nowrap;
+}
+
+.account-package-tracking-table__primary,
+.account-package-tracking-table__payment {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-package-tracking-table__primary strong,
+.account-package-tracking-table__payment strong {
+  font-size: 14px;
+  color: #213228;
+}
+
+.account-package-tracking-table__primary span,
+.account-package-tracking-table__payment span {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #67766c;
+}
+
+.account-package-tracking-table__view {
+  min-width: 82px;
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 12px;
+  background-color: #edf7ee;
+  color: #1b5e20;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-package-tracking-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px 24px;
+}
+
+.account-package-tracking-pagination__info {
+  font-size: 14px;
+  color: #6b7b6d;
+}
+
+.account-package-tracking-pagination__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-package-tracking-pagination__actions button {
+  height: 38px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 12px;
+  background-color: #f3f7f1;
+  color: #486150;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-package-tracking-pagination__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.account-package-tracking-modal {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.account-package-tracking-modal > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #d7e6d9;
+  border-radius: 14px;
+  padding: 14px 16px;
+  background-color: #fbfdfb;
+}
+
+.account-package-tracking-modal > div span {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2f4f3a;
+}
+
+.account-package-tracking-modal > div strong,
+.account-package-tracking-modal > div p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #223127;
+  margin: 0;
+}
+
+.account-package-tracking-modal__wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1280px) {
+  .account-package-tracking-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .account-package-tracking-summary-grid,
+  .account-package-tracking-explainer,
+  .account-package-tracking-filters,
+  .account-package-tracking-modal {
+    grid-template-columns: 1fr;
+  }
+
+  .account-package-tracking-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0 20px 20px;
+  }
+}

@@ -55,9 +55,9 @@ const paymentFilterOptions: Array<PromotionPaymentStatus | "All"> = [
 
 const getSlotLabel = (slot: PromotionSlot | "All") => {
   if (slot === "All") return "Tất cả";
-  if (slot === "Home Top") return "Trang chủ nổi bật";
-  if (slot === "Category Top") return "Danh mục nổi bật";
-  if (slot === "Search Boost") return "Tăng tìm kiếm";
+  if (slot === "Home Top") return "Vị trí 1 trang chủ";
+  if (slot === "Category Top") return "Vị trí 2 trang chủ";
+  if (slot === "Search Boost") return "Vị trí 3 trang chủ";
   return slot;
 };
 

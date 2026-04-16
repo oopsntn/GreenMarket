@@ -12,12 +12,6 @@ import "./ActivityLogPage.css";
 
 const PAGE_SIZE = 8;
 
-const getSeverityVariant = (severity: ActivityLogItem["severity"]) => {
-  if (severity === "cao") return "locked";
-  if (severity === "trung bình") return "pending";
-  return "active";
-};
-
 const getResultVariant = (result: string) => {
   const normalized = result.toLowerCase();
 
@@ -170,7 +164,9 @@ function ActivityLogPage() {
   const todayCount = activityLogs.filter((item) =>
     (item.occurredAt || "").startsWith(todayPrefix),
   ).length;
-  const highSeverityCount = activityLogs.filter((item) => item.severity === "cao").length;
+  const promotionOperationCount = activityLogs.filter((item) =>
+    item.moduleLabel.toLowerCase().includes("quảng bá"),
+  ).length;
   const settingsAndTemplateCount = activityLogs.filter((item) =>
     ["Thiết lập hệ thống", "Mẫu nội dung"].includes(item.moduleLabel),
   ).length;
@@ -196,12 +192,12 @@ function ActivityLogPage() {
           subtitle="Số bản ghi phát sinh trong ngày hiện tại"
         />
         <StatCard
-          title="Mức cao"
-          value={String(highSeverityCount)}
-          subtitle="Những thao tác cần chú ý hơn khi rà soát"
+          title="Nhật ký quảng bá"
+          value={String(promotionOperationCount)}
+          subtitle="Các thao tác phát sinh ở nhóm quảng bá và chiến dịch"
         />
         <StatCard
-          title="Settings + Template"
+          title="Cấu hình & mẫu"
           value={String(settingsAndTemplateCount)}
           subtitle="Các thay đổi ở thiết lập hệ thống và mẫu nội dung"
         />
@@ -300,7 +296,7 @@ function ActivityLogPage() {
 
       <SectionCard
         title="Danh sách hoạt động"
-        description="Mỗi bản ghi cho biết rõ thời gian, người thực hiện, vai trò, nhóm chức năng, hành động, đối tượng tác động, kết quả và mức độ ưu tiên."
+        description="Mỗi bản ghi cho biết rõ thời gian, người thực hiện, vai trò, màn quản lý, hành động, đối tượng tác động và kết quả xử lý."
       >
         {isLoading ? (
           <EmptyState
@@ -322,11 +318,10 @@ function ActivityLogPage() {
                   <tr>
                     <th>Thời gian</th>
                     <th>Người thực hiện</th>
-                    <th>Nhóm chức năng</th>
+                    <th>Màn quản lý</th>
                     <th>Hành động</th>
-                    <th>Đối tượng tác động</th>
+                    <th>Đối tượng</th>
                     <th>Kết quả</th>
-                    <th>Mức độ</th>
                     <th>Chi tiết</th>
                   </tr>
                 </thead>
@@ -357,12 +352,6 @@ function ActivityLogPage() {
                       </td>
                       <td>
                         <StatusBadge label={item.result} variant={getResultVariant(item.result)} />
-                      </td>
-                      <td>
-                        <StatusBadge
-                          label={`Mức ${item.severity}`}
-                          variant={getSeverityVariant(item.severity)}
-                        />
                       </td>
                       <td>
                         <button
@@ -432,7 +421,7 @@ function ActivityLogPage() {
                 <strong>{selectedLog.actorRole}</strong>
               </div>
               <div className="activity-log-detail__field">
-                <label>Nhóm chức năng</label>
+                <label>Màn quản lý</label>
                 <strong>{selectedLog.moduleLabel}</strong>
               </div>
               <div className="activity-log-detail__field">
@@ -454,10 +443,6 @@ function ActivityLogPage() {
               <div className="activity-log-detail__field">
                 <label>Mã đối tượng</label>
                 <strong>{selectedLog.targetCode || "--"}</strong>
-              </div>
-              <div className="activity-log-detail__field">
-                <label>Mức độ</label>
-                <strong>{`Mức ${selectedLog.severity}`}</strong>
               </div>
               <div className="activity-log-detail__field">
                 <label>Loại đối tượng</label>

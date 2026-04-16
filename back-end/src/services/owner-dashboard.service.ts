@@ -3,11 +3,13 @@ import { db } from "../config/db.ts";
 import {
   eventLogs,
   paymentTxn,
+  placementSlots,
   postPromotions,
   posts,
   promotionPackages,
   shops,
 } from "../models/schema/index.ts";
+import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion.ts";
 
 const SHOP_EVENT_VIEW = "shop_view";
 const SHOP_EVENT_CONTACT_CLICK = "shop_contact_click";
@@ -135,7 +137,16 @@ export const ownerDashboardService = {
         postPromotionEndAt: postPromotions.postPromotionEndAt,
       })
       .from(postPromotions)
-      .where(eq(postPromotions.postPromotionBuyerId, userId));
+      .innerJoin(
+        placementSlots,
+        eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId),
+      )
+      .where(
+        and(
+          eq(postPromotions.postPromotionBuyerId, userId),
+          sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`,
+        ),
+      );
 
     const activePromotionPostIds = new Set<number>();
     let activePromotions = 0;

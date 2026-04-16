@@ -38,14 +38,16 @@ const REPORT_NAME_LABELS: Record<string, string> = {
   "Promotion Performance": "Hiệu quả chiến dịch quảng bá",
   "Users Export": "Xuất danh sách người dùng",
   "Analytics Overview": "Tổng quan phân tích",
-  "Promotion Operations": "Vận hành khuyến mãi",
+  "Promotion Operations": "Theo dõi quảng bá",
   "Boosted Campaigns": "Chiến dịch đẩy nổi bật",
   Users: "Danh sách người dùng",
   Categories: "Danh sách danh mục",
   Attributes: "Danh sách thuộc tính",
   Templates: "Mẫu nội dung",
-  Promotions: "Chiến dịch quảng bá",
+  Promotions: "Theo dõi quảng bá",
   Analytics: "Phân tích hiệu quả",
+  "Khuyến mãi": "Theo dõi quảng bá",
+  "Vận hành khuyến mãi": "Theo dõi quảng bá",
 };
 
 const TARGET_CODE_LABELS: Record<string, string> = {
@@ -85,11 +87,11 @@ const DETAIL_REPLACEMENTS: Array<[string, string]> = [
   ["Boosted campaigns CSV export completed.", "Đã hoàn tất xuất CSV chiến dịch đẩy nổi bật."],
   [
     "Category Top campaign resumed after content update.",
-    "Chiến dịch Danh mục nổi bật đã được tiếp tục sau khi cập nhật nội dung.",
+    "Chiến dịch vị trí 2 trang chủ đã được tiếp tục sau khi cập nhật nội dung.",
   ],
   [
     "Expired Search Boost campaign reopened after payment confirmation.",
-    "Chiến dịch Tăng tìm kiếm đã hết hạn được mở lại sau khi xác nhận thanh toán.",
+    "Chiến dịch vị trí 3 trang chủ đã hết hạn được mở lại sau khi xác nhận thanh toán.",
   ],
 ];
 

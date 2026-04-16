@@ -10,7 +10,7 @@ export const analyticsKpiCards: AnalyticsKpiCard[] = [
 export const topPlacements: TopPlacement[] = [
   {
     id: 1,
-    slot: "Trang chủ nổi bật",
+    slot: "Vị trí 1 trang chủ",
     impressions: "48,200",
     clicks: "3,410",
     ctr: "7.1%",
@@ -18,7 +18,7 @@ export const topPlacements: TopPlacement[] = [
   },
   {
     id: 2,
-    slot: "Danh mục nổi bật",
+    slot: "Vị trí 2 trang chủ",
     impressions: "34,100",
     clicks: "1,620",
     ctr: "4.8%",
@@ -26,7 +26,7 @@ export const topPlacements: TopPlacement[] = [
   },
   {
     id: 3,
-    slot: "Tăng tìm kiếm",
+    slot: "Vị trí 3 trang chủ",
     impressions: "22,800",
     clicks: "890",
     ctr: "3.9%",

@@ -11,7 +11,6 @@ const DEFAULT_SETTINGS: SettingsState = {
     platformName: "GreenMarket",
     supportEmail: "support@greenmarket.vn",
     defaultLanguage: "Tiếng Việt",
-    otpSandboxEnabled: true,
   },
   moderation: {
     autoModeration: true,
@@ -99,13 +98,6 @@ const validateSettings = (settings: SettingsState) => {
     throw new Error("Giới hạn số bài đăng mỗi giờ phải từ 1 trở lên.");
   }
 
-  if (settings.media.maxImagesPerPost < 1) {
-    throw new Error("Số ảnh tối đa mỗi bài phải từ 1 trở lên.");
-  }
-
-  if (settings.media.maxFileSizeMb < 1) {
-    throw new Error("Dung lượng tệp tối đa phải từ 1 MB trở lên.");
-  }
 };
 
 function SettingsPage() {
@@ -344,24 +336,6 @@ function SettingsPage() {
               <small>Admin web hiện chỉ hỗ trợ tiếng Việt và không cho phép đổi sang ngôn ngữ khác.</small>
             </div>
 
-            <div className="settings-toggle">
-              <div>
-                <strong>Chế độ OTP sandbox</strong>
-                <span>Bật khi cần test OTP nội bộ mà không gửi SMS thật ra ngoài.</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.general.otpSandboxEnabled}
-                onChange={(event) =>
-                  handleInputChange(
-                    "general",
-                    "otpSandboxEnabled",
-                    event.target.checked,
-                  )
-                }
-                disabled={isLoading || isSaving}
-              />
-            </div>
           </div>
         </SectionCard>
 
@@ -529,69 +503,6 @@ function SettingsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard
-          title="Media và giới hạn tải lên"
-          description="Quản lý số ảnh, dung lượng tệp và tối ưu hóa media khi tải lên."
-        >
-          <div className="settings-form settings-form--padded">
-            <div className="settings-field">
-              <label htmlFor="max-images-per-post">Số ảnh tối đa mỗi bài</label>
-              <input
-                id="max-images-per-post"
-                type="number"
-                min={1}
-                value={settings.media.maxImagesPerPost}
-                onChange={(event) =>
-                  handleInputChange(
-                    "media",
-                    "maxImagesPerPost",
-                    Number(event.target.value),
-                  )
-                }
-                disabled={isLoading || isSaving}
-              />
-              <small>Giới hạn số lượng ảnh mà người dùng có thể đính kèm trong một bài đăng.</small>
-            </div>
-
-            <div className="settings-field">
-              <label htmlFor="max-file-size-mb">Dung lượng tệp tối đa (MB)</label>
-              <input
-                id="max-file-size-mb"
-                type="number"
-                min={1}
-                value={settings.media.maxFileSizeMb}
-                onChange={(event) =>
-                  handleInputChange(
-                    "media",
-                    "maxFileSizeMb",
-                    Number(event.target.value),
-                  )
-                }
-                disabled={isLoading || isSaving}
-              />
-              <small>Áp dụng cho ảnh tải lên từ phía người dùng trên các nền tảng web và mobile.</small>
-            </div>
-
-            <div className="settings-toggle">
-              <div>
-                <strong>Bật nén ảnh</strong>
-                <span>Giảm dung lượng ảnh trước khi lưu để tối ưu hiệu năng tải trang.</span>
-              </div>
-              <input
-                type="checkbox"
-                checked={settings.media.enableImageCompression}
-                onChange={(event) =>
-                  handleInputChange(
-                    "media",
-                    "enableImageCompression",
-                    event.target.checked,
-                  )
-                }
-                disabled={isLoading || isSaving}
-              />
-            </div>
-          </div>
-        </SectionCard>
       </div>
 
       <ToastContainer toasts={toasts} onClose={removeToast} />

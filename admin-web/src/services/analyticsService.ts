@@ -21,9 +21,9 @@ const KPI_CHANGE_LABELS: Record<string, string> = {
 };
 
 const SLOT_LABELS: Record<string, string> = {
-  "Home Top": "Trang chủ nổi bật",
-  "Category Top": "Danh mục nổi bật",
-  "Search Boost": "Tăng tìm kiếm",
+  "Home Top": "Vị trí 1 trang chủ",
+  "Category Top": "Vị trí 2 trang chủ",
+  "Search Boost": "Vị trí 3 trang chủ",
 };
 
 const buildQuery = (fromDate: string, toDate: string) => {

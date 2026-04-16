@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db";
-import { eq, and, lte, or, isNull, gt, inArray } from "drizzle-orm";
+import { eq, and, lte, or, isNull, gt, inArray, sql } from "drizzle-orm";
 import { promotionPackages } from "../../models/schema/promotion-packages";
 import { placementSlots } from "../../models/schema/placement-slots";
 import { promotionPackagePrices } from "../../models/schema/promotion-package-prices";
@@ -8,9 +8,12 @@ import { shops } from "../../models/schema/shops";
 import { type PromotionPackageParams } from "../../dtos/promotion";
 import { parseId } from "../../utils/parseId";
 import { type AuthRequest } from "../../dtos/auth";
-import { BOOST_POST_SLOT_CODE, SHOP_VIP_SLOT_CODE } from "../../constants/promotion";
+import {
+    SHOP_VIP_SLOT_CODE,
+    BOOST_POST_SLOT_PREFIX,
+} from "../../constants/promotion";
 
-const queryPublishedPackages = async (slotCodes: string[]) => {
+const queryPublishedPackages = async (slotType: "boost" | "shop_vip") => {
     const now = new Date();
     return db
         .select({
@@ -43,10 +46,15 @@ const queryPublishedPackages = async (slotCodes: string[]) => {
             and(
                 eq(promotionPackages.promotionPackagePublished, true),
                 eq(placementSlots.placementSlotPublished, true),
-                inArray(placementSlots.placementSlotCode, slotCodes)
+                slotType === "shop_vip"
+                    ? inArray(placementSlots.placementSlotCode, [SHOP_VIP_SLOT_CODE])
+                    : sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`
             )
         )
-        .orderBy(promotionPackages.promotionPackageDurationDays);
+        .orderBy(
+            placementSlots.placementSlotTitle,
+            promotionPackages.promotionPackageDurationDays,
+        );
 };
 
 export const getPublishedPackages = async (
@@ -54,7 +62,7 @@ export const getPublishedPackages = async (
     res: Response
 ): Promise<void> => {
     try {
-        const packages = await queryPublishedPackages([BOOST_POST_SLOT_CODE]);
+        const packages = await queryPublishedPackages("boost");
 
         res.json(packages);
     } catch (error) {
@@ -82,7 +90,7 @@ export const getEligiblePackages = async (
             .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
             .limit(1);
 
-        const packages = await queryPublishedPackages([BOOST_POST_SLOT_CODE]);
+        const packages = await queryPublishedPackages("boost");
         
         res.json({
             audience: activeShop ? "garden_owner" : "individual",
@@ -139,7 +147,7 @@ export const getPublishedPackageById = async (
                     eq(promotionPackages.promotionPackageId, idNumber),
                     eq(promotionPackages.promotionPackagePublished, true),
                     eq(placementSlots.placementSlotPublished, true),
-                    eq(placementSlots.placementSlotCode, BOOST_POST_SLOT_CODE)
+                    sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`
                 )
             )
             .limit(1);
@@ -161,7 +169,7 @@ export const getShopVipPackage = async (
     res: Response,
 ): Promise<void> => {
     try {
-        const [vipPackage] = await queryPublishedPackages([SHOP_VIP_SLOT_CODE]);
+        const [vipPackage] = await queryPublishedPackages("shop_vip");
 
         if (!vipPackage) {
             res.status(404).json({ error: "Shop VIP package not found" });

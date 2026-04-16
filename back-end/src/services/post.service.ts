@@ -2,9 +2,12 @@ import { db } from "../config/db.ts";
 import { posts, postImages, postPromotions, placementSlots } from "../models/schema/index.ts";
 import { eq, and, or, ilike, gte, lte, sql, SQL, inArray, getTableColumns } from "drizzle-orm";
 import { GetPostsQueryDto } from "../dtos/post.ts";
+import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion.ts";
+import { postLifecycleService } from "./postLifecycle.service.ts";
 
 export class PostService {
     static async getPublicPosts(query: GetPostsQueryDto) {
+        await postLifecycleService.syncAutoExpiredPosts();
         const conditions: SQL[] = [
             eq(posts.postStatus, "approved"),
             eq(posts.postPublished, true)
@@ -57,23 +60,43 @@ export class PostService {
             }
         }
 
-        // Aggregate active promotions per post so one post stays one row (avoid duplicate rows
-        // when users buy multiple packages for the same post).
-        const activePromotions = db
+        // Rank live boost promotions inside each slot so the public feed only renders
+        // up to the configured slot capacity. If old data exceeds capacity, newer
+        // promotions win and older overflow rows are hidden from the homepage feed.
+        const rankedPromotions = db
             .select({
+                promotionId: postPromotions.postPromotionId,
                 postId: postPromotions.postPromotionPostId,
+                slotId: postPromotions.postPromotionSlotId,
+                slotCapacity: sql<number>`
+                    COALESCE(${placementSlots.placementSlotCapacity}, 1)
+                `.as("slotCapacity"),
                 promotionPriority: sql<number>`
-                    MAX(
-                        COALESCE(
-                            ${postPromotions.postPromotionSnapshotPriority},
-                            CASE
-                                WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$'
-                                    THEN (${placementSlots.placementSlotRules} ->> 'priority')::int
-                                ELSE 1
-                            END
-                        )
+                    COALESCE(
+                        ${postPromotions.postPromotionSnapshotPriority},
+                        CASE
+                            WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$'
+                                THEN (${placementSlots.placementSlotRules} ->> 'priority')::int
+                            ELSE 1
+                        END
                     )
                 `.as("promotionPriority"),
+                slotRank: sql<number>`
+                    ROW_NUMBER() OVER (
+                        PARTITION BY ${postPromotions.postPromotionSlotId}
+                        ORDER BY
+                            COALESCE(
+                                ${postPromotions.postPromotionSnapshotPriority},
+                                CASE
+                                    WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$'
+                                        THEN (${placementSlots.placementSlotRules} ->> 'priority')::int
+                                    ELSE 1
+                                END
+                            ) ASC,
+                            ${postPromotions.postPromotionCreatedAt} DESC,
+                            ${postPromotions.postPromotionId} DESC
+                    )
+                `.as("slotRank"),
             })
             .from(postPromotions)
             .leftJoin(
@@ -83,10 +106,21 @@ export class PostService {
             .where(
                 and(
                     eq(postPromotions.postPromotionStatus, "active"),
-                    sql`${postPromotions.postPromotionEndAt} > NOW()`
+                    sql`${postPromotions.postPromotionEndAt} > NOW()`,
+                    sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`
                 )
             )
-            .groupBy(postPromotions.postPromotionPostId)
+            .as("rankedPromotions");
+
+        // Aggregate eligible promotions per post after applying slot capacity.
+        const activePromotions = db
+            .select({
+                postId: rankedPromotions.postId,
+                promotionPriority: sql<number>`MIN(${rankedPromotions.promotionPriority})`.as("promotionPriority"),
+            })
+            .from(rankedPromotions)
+            .where(sql`${rankedPromotions.slotRank} <= ${rankedPromotions.slotCapacity}`)
+            .groupBy(rankedPromotions.postId)
             .as("activePromotions");
 
         const queryBuilder = db.select({
@@ -105,7 +139,8 @@ export class PostService {
             .limit(limit)
             .offset(offset)
             .orderBy(
-                sql`COALESCE(${activePromotions.promotionPriority}, 0) DESC`,
+                sql`CASE WHEN ${activePromotions.postId} IS NOT NULL THEN 0 ELSE 1 END ASC`,
+                sql`COALESCE(${activePromotions.promotionPriority}, 999999) ASC`,
                 sql`${posts.postCreatedAt} DESC`
             );
 

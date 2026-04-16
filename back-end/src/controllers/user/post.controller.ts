@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, and, ne, sql, inArray } from "drizzle-orm";
-import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts, postPromotions, promotionPackages } from "../../models/schema/index.ts";
+import { eq, and, sql, inArray } from "drizzle-orm";
+import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts, postPromotions, promotionPackages, placementSlots } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
@@ -9,6 +9,9 @@ import {
     PostingPolicyError,
     postingPolicyService,
 } from "../../services/posting-policy.service.ts";
+import { adminWebSettingsService } from "../../services/adminWebSettings.service.ts";
+import { postLifecycleService } from "../../services/postLifecycle.service.ts";
+import { BOOST_POST_SLOT_PREFIX } from "../../constants/promotion.ts";
 
 const actionCache = new Set<string>();
 const SHOP_GALLERY_DELIMITER = "|";
@@ -44,6 +47,17 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
+        const settings = await adminWebSettingsService.getSettings();
+        await adminWebSettingsService.assertPostRateLimit(userId, settings);
+
+        if (Array.isArray(images) && images.length > settings.media.maxImagesPerPost) {
+            res.status(400).json({
+                error: `Mỗi bài chỉ được tối đa ${settings.media.maxImagesPerPost} ảnh.`,
+                code: "MAX_IMAGES_PER_POST_EXCEEDED",
+            });
+            return;
+        }
+
         const policySnapshot = await postingPolicyService.assertCanCreatePost(userId);
 
         // Check if user has an active shop (used to bind post -> shop profile)
@@ -53,7 +67,20 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             .limit(1);
 
         const now = new Date();
-        const canAutoApprove = policySnapshot.policy.autoApprove;
+        const matchedKeywords = adminWebSettingsService.findMatchedKeywords(
+            [
+                postTitle,
+                postLocation,
+                ...(Array.isArray(attrValues)
+                    ? attrValues.map((item: any) => String(item?.value ?? ""))
+                    : []),
+            ],
+            settings,
+        );
+        const shouldFlagForModeration =
+            settings.moderation.autoModeration && matchedKeywords.length > 0;
+        const canAutoApprove =
+            policySnapshot.policy.autoApprove && !shouldFlagForModeration;
         const finalSlug = slugify(postTitle) + "-" + Date.now().toString().slice(-4);
 
         const [newPost] = await db.insert(posts).values({
@@ -69,6 +96,9 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             postPublished: canAutoApprove,
             postSubmittedAt: now,
             postPublishedAt: canAutoApprove ? now : null,
+            postRejectedReason: shouldFlagForModeration
+                ? `Cần kiểm duyệt thủ công do trùng từ khóa: ${matchedKeywords.join(", ")}`
+                : null,
             postCreatedAt: now,
             postUpdatedAt: now,
         }).returning();
@@ -117,6 +147,8 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
                 planCode: policySnapshot.policy.planCode,
                 planTitle: policySnapshot.policy.planTitle,
                 autoApprove: policySnapshot.policy.autoApprove,
+                flaggedBySettings: shouldFlagForModeration,
+                matchedKeywords,
                 dailyPostLimit,
                 dailyPostsUsed: nextDailyUsage,
                 dailyPostsRemaining:
@@ -140,6 +172,18 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
+        const errorWithStatus = error as Error & {
+            statusCode?: number;
+            code?: string;
+        };
+        if (errorWithStatus.statusCode) {
+            res.status(errorWithStatus.statusCode).json({
+                error: errorWithStatus.message,
+                code: errorWithStatus.code,
+            });
+            return;
+        }
+
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
     }
@@ -153,12 +197,10 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const userPosts = await db.select().from(posts).where(
-            and(
-                eq(posts.postAuthorId, userId),
-                ne(posts.postStatus, "hidden")
-            )
-        );
+        const settings = await adminWebSettingsService.getSettings();
+        await postLifecycleService.syncAutoExpiredPosts(settings);
+
+        const userPosts = await db.select().from(posts).where(eq(posts.postAuthorId, userId));
 
         if (userPosts.length === 0) {
             res.json([]);
@@ -275,11 +317,13 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
         })
         .from(postPromotions)
         .innerJoin(promotionPackages, eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId))
+        .innerJoin(placementSlots, eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId))
         .where(
             and(
                 inArray(postPromotions.postPromotionPostId, postIds),
                 eq(postPromotions.postPromotionStatus, "active"),
-                sql`post_promotion_end_at > now()`
+                sql`post_promotion_end_at > now()`,
+                sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`
             )
         ) : [];
 
@@ -292,6 +336,7 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
 
         const response = userPosts.map((post) => {
             const postImagesData = imagesByPostId.get(post.postId) || [];
+            const lifecycle = postLifecycleService.getPostLifecycleMeta(post, settings);
 
             return {
                 ...post,
@@ -301,6 +346,7 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
                 author: author || null,
                 shop: post.postShopId ? (shopById.get(post.postShopId) || null) : null,
                 activePromotion: promotionsByPostId.get(post.postId) || null,
+                lifecycle,
             };
         });
 
@@ -387,6 +433,7 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         }
 
         const effectivePolicy = await postingPolicyService.getEffectivePolicy(userId);
+        const settings = await adminWebSettingsService.getSettings();
 
         // Keep linking post -> shop when user already has an active shop.
         const [activeShop] = await db.select()
@@ -395,7 +442,19 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             .limit(1);
 
         const now = new Date();
-        const canAutoApprove = effectivePolicy.autoApprove;
+        const matchedKeywords = adminWebSettingsService.findMatchedKeywords(
+            [
+                postTitle ?? existingPost.postTitle,
+                postLocation ?? existingPost.postLocation,
+                ...(Array.isArray(updatedAttributes)
+                    ? updatedAttributes.map((item: any) => String(item?.value ?? ""))
+                    : []),
+            ],
+            settings,
+        );
+        const shouldFlagForModeration =
+            settings.moderation.autoModeration && matchedKeywords.length > 0;
+        const canAutoApprove = effectivePolicy.autoApprove && !shouldFlagForModeration;
         const currentEditCount = Number(existingPost.postEditCount || 0);
         const currentPaidEditCount = Number(existingPost.postPaidEditCount || 0);
         const editPricing = postingPolicyService.getEditPricing(
@@ -406,6 +465,9 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         const postUpdatePayload: Record<string, any> = {
             postUpdatedAt: now,
             postStatus: canAutoApprove ? "approved" : "pending",
+            postRejectedReason: shouldFlagForModeration
+                ? `Cần kiểm duyệt thủ công do trùng từ khóa: ${matchedKeywords.join(", ")}`
+                : null,
             postEditCount: editPricing.nextEditCount,
             postPaidEditCount:
                 editPricing.chargeAmount > 0
@@ -465,6 +527,8 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
                 planCode: effectivePolicy.planCode,
                 planTitle: effectivePolicy.planTitle,
                 autoApprove: effectivePolicy.autoApprove,
+                flaggedBySettings: shouldFlagForModeration,
+                matchedKeywords,
                 freeEditQuota: effectivePolicy.freeEditQuota,
                 editFeeAmount: effectivePolicy.editFeeAmount,
                 remainingFreeEdits: editPricing.remainingFreeEdits,
@@ -481,6 +545,18 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
                 error: error.message,
                 code: error.code,
                 ...(error.details || {}),
+            });
+            return;
+        }
+
+        const errorWithStatus = error as Error & {
+            statusCode?: number;
+            code?: string;
+        };
+        if (errorWithStatus.statusCode) {
+            res.status(errorWithStatus.statusCode).json({
+                error: errorWithStatus.message,
+                code: errorWithStatus.code,
             });
             return;
         }
@@ -514,6 +590,7 @@ export const softDeletePost = async (req: AuthRequest, res: Response): Promise<v
         const [deletedPost] = await db.update(posts)
             .set({
                 postStatus: "hidden",
+                postRejectedReason: postLifecycleService.buildUserTrashPayload(existingPost),
                 postDeletedAt: new Date(),
                 postUpdatedAt: new Date()
             })
@@ -521,6 +598,49 @@ export const softDeletePost = async (req: AuthRequest, res: Response): Promise<v
             .returning();
 
         res.json({ message: "Post deleted successfully", post: deletedPost });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const restorePost = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const postId = parseId(req.params.id as string);
+        const userId = req.user?.id;
+        if (!postId || !userId) {
+            res.status(400).json({ error: "Post ID is required" });
+            return;
+        }
+
+        const [existingPost] = await db.select().from(posts).where(eq(posts.postId, postId)).limit(1);
+        if (!existingPost) {
+            res.status(404).json({ error: "Post not found" });
+            return;
+        }
+        if (existingPost.postAuthorId !== userId) {
+            res.status(403).json({ error: "Unauthorized to restore this post" });
+            return;
+        }
+
+        const settings = await adminWebSettingsService.getSettings();
+        const restoreMeta = postLifecycleService.getRestoreMeta(existingPost, settings);
+        const restorePayload = postLifecycleService.buildRestorePayload(existingPost);
+
+        if (!restoreMeta.canRestore || !restorePayload) {
+            res.status(400).json({
+                error: "Bài đăng này đã quá hạn khôi phục hoặc không thuộc thùng rác do bạn xóa.",
+                code: "RESTORE_WINDOW_EXPIRED",
+            });
+            return;
+        }
+
+        const [restoredPost] = await db.update(posts)
+            .set(restorePayload)
+            .where(eq(posts.postId, postId))
+            .returning();
+
+        res.json({ message: "Post restored successfully", post: restoredPost });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
@@ -536,7 +656,6 @@ export const togglePostVisibility = async (req: AuthRequest, res: Response): Pro
             return;
         }
 
-        // Ensure user owns the post
         const [existingPost] = await db.select().from(posts).where(eq(posts.postId, postId)).limit(1);
         if (!existingPost) {
             res.status(404).json({ error: "Post not found" });
@@ -547,7 +666,6 @@ export const togglePostVisibility = async (req: AuthRequest, res: Response): Pro
             return;
         }
 
-        // Toggle published state
         const [updatedPost] = await db.update(posts)
             .set({
                 postPublished: !existingPost.postPublished,
@@ -556,9 +674,9 @@ export const togglePostVisibility = async (req: AuthRequest, res: Response): Pro
             .where(eq(posts.postId, postId))
             .returning();
 
-        res.json({ 
-            message: updatedPost.postPublished ? "Post is now visible" : "Post is now hidden", 
-            post: updatedPost 
+        res.json({
+            message: updatedPost.postPublished ? "Post is now visible" : "Post is now hidden",
+            post: updatedPost
         });
     } catch (error) {
         console.error(error);
@@ -584,6 +702,7 @@ export const getPublicPosts = async (req: Request, res: Response): Promise<void>
 
 export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: Response): Promise<void> => {
     try {
+        await postLifecycleService.syncAutoExpiredPosts();
         const { slug } = req.params;
 
         const [post] = await db.select().from(posts).where(eq(posts.postSlug, slug)).limit(1);
