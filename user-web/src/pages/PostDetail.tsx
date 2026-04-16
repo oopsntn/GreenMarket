@@ -308,7 +308,18 @@ const PostDetail: React.FC = () => {
 
                             <div className="space-y-6 relative z-10">
                                 <div className="space-y-4">
-                                    <h1 className="text-4xl font-black text-slate-900 leading-tight uppercase tracking-tight group-hover:text-emerald-700 transition-colors">{post.postTitle}</h1>
+                                    <h1 className="text-4xl font-black text-slate-900 leading-tight uppercase tracking-tight transition-colors flex items-center flex-wrap gap-3">
+                                        {post.postTitle}
+                                        {post.isPromoted && (
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/20 text-[10px] font-black tracking-widest align-middle">
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                                </span>
+                                                HOT
+                                            </span>
+                                        )}
+                                    </h1>
                                     <div className="flex flex-wrap items-center gap-4">
                                         <div className="px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                                             <ShieldCheck className="w-3.5 h-3.5" /> Xác minh

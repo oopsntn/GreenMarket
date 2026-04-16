@@ -31,6 +31,7 @@ export const getPostingPolicy = () => api.get('/posts/posting-policy');
 export const activatePersonalMonthlyPlanMock = (durationDays = 30) =>
   api.post('/posts/personal-plan/mock-activate', { durationDays });
 export const updateUserPost = (postId: number, data: any) => api.patch(`/posts/${postId}`, data);
+export const togglePostVisibility = (postId: number | string) => api.patch(`/posts/${postId}/toggle-visibility`);
 export const deleteUserPost = (postId: number) => api.delete(`/posts/${postId}`);
 
 // Shop APIs

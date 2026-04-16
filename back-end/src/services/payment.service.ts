@@ -312,7 +312,19 @@ const processVerifiedCallback = async (
           });
         } else {
           // It's a shop registration activation
-          await tx.update(shops).set({ shopStatus: "active", shopUpdatedAt: new Date() }).where(eq(shops.shopId, updatedTxn.paymentTxnUserId));
+          await tx
+            .update(shops)
+            .set({ shopStatus: "active", shopUpdatedAt: new Date() })
+            .where(eq(shops.shopId, updatedTxn.paymentTxnUserId));
+
+          // UC: Migrate all existing posts of this author to the shop profile
+          await tx
+            .update(posts)
+            .set({
+              postShopId: updatedTxn.paymentTxnUserId,
+              postUpdatedAt: new Date(),
+            })
+            .where(eq(posts.postAuthorId, updatedTxn.paymentTxnUserId));
         }
       }
       return { status: "success", txnRef, responseCode };

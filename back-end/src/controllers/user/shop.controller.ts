@@ -106,8 +106,25 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             shopFacebook, shopInstagram, shopYoutube
         } = req.body;
 
-        if (!shopName) {
-            res.status(400).json({ error: "Shop Name is required" });
+        // Validation
+        const errors: string[] = [];
+        if (!shopName?.trim()) errors.push("Shop Name is required");
+        if (!shopLocation?.trim()) errors.push("Shop Location is required");
+        if (!shopDescription?.trim()) errors.push("Shop Description is required");
+        if (shopLat === undefined || shopLat === null || String(shopLat).trim() === "") errors.push("Shop Latitude is required");
+        if (shopLng === undefined || shopLng === null || String(shopLng).trim() === "") errors.push("Shop Longitude is required");
+        
+        if (!shopLogoUrl?.trim()) {
+            errors.push("Shop Avatar (Logo) is required");
+        }
+
+        const galleryArray = Array.isArray(shopGalleryImages) ? shopGalleryImages : [];
+        if (galleryArray.length < 3) {
+            errors.push("At least 3 detailed images (Gallery) are required");
+        }
+
+        if (errors.length > 0) {
+            res.status(400).json({ error: errors.join(", ") });
             return;
         }
 

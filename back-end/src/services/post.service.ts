@@ -5,7 +5,10 @@ import { GetPostsQueryDto } from "../dtos/post.ts";
 
 export class PostService {
     static async getPublicPosts(query: GetPostsQueryDto) {
-        const conditions: SQL[] = [eq(posts.postStatus, "approved")];
+        const conditions: SQL[] = [
+            eq(posts.postStatus, "approved"),
+            eq(posts.postPublished, true)
+        ];
 
         if (query.search) {
             conditions.push(sql`to_tsvector('simple', ${posts.postTitle}) @@ websearch_to_tsquery('simple', ${query.search})`);
