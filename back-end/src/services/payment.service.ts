@@ -231,6 +231,7 @@ const activateShopVipForTransaction = async (
       "Only active shops can be upgraded to VIP.",
     );
   }
+
   const now = new Date();
   const currentExpiresAt = shop.shopVipExpiresAt ? new Date(shop.shopVipExpiresAt) : null;
   const isCurrentlyVip = currentExpiresAt && currentExpiresAt > now;
