@@ -45,7 +45,7 @@ const ACTIVITY_DETAIL_LABELS: Record<string, string> = {
   "User profile information was adjusted by an administrator.":
     "Thông tin hồ sơ đã được quản trị viên điều chỉnh.",
   "Expired Search Boost campaign reopened after payment confirmation.":
-    "Chiến dịch Tăng tìm kiếm hết hạn đã được mở lại sau khi xác nhận thanh toán.",
+    "Chiến dịch vị trí 3 trang chủ hết hạn đã được mở lại sau khi xác nhận thanh toán.",
   "Boosted campaigns CSV export completed.":
     "Đã hoàn tất xuất CSV danh sách chiến dịch đẩy nổi bật.",
   "Promotion operations CSV export completed.":
