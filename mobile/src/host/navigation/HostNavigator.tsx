@@ -13,6 +13,7 @@ import HostDashboardScreen from '../screens/HostDashboardScreen';
 import CreatePromotionalContentScreen from '../screens/CreatePromotionalContentScreen';
 import HostEarningsScreen from '../screens/HostEarningsScreen';
 import HostPayoutScreen from '../screens/HostPayoutScreen';
+import HostNewsDetailScreen from '../screens/HostNewsDetailScreen';
 
 // Marketplace (same browsing experience as User)
 import HomeScreen from '../../components/Home/screen/HomeScreen';
@@ -118,6 +119,11 @@ const HostNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HostMain" component={HostTabs} />
+      <Stack.Screen
+        name="HostNewsDetail"
+        component={HostNewsDetailScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
     </Stack.Navigator>
   );
 };

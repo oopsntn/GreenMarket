@@ -1,34 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
+  ActivityIndicator,
   FlatList,
-  TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Check, X, Clock, ChevronRight, CheckCircle2 } from 'lucide-react-native';
+import { Check, ChevronRight, Clock, X, CheckCircle2 } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
-import managerService, { PostModerationData } from '../services/ManagerService';
+import managerService, { HostContentModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+import { API_BASE_URL } from '../../config/api';
 
-const PostManagementList = ({ navigation }: any) => {
-  const [posts, setPosts] = useState<PostModerationData[]>([]);
+const HostContentModerationList = ({ navigation }: any) => {
+  const [items, setItems] = useState<HostContentModerationData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPost, setSelectedPost] = useState<PostModerationData | null>(null);
+  const [selected, setSelected] = useState<HostContentModerationData | null>(null);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
 
   useEffect(() => {
-    fetchPosts();
+    fetchItems();
   }, []);
 
-  const fetchPosts = async () => {
+  const fetchItems = async () => {
     try {
       setLoading(true);
-      const data = await managerService.getPosts();
-      setPosts(data.filter((p) => p.postStatus === 'pending'));
+      const data = await managerService.getPendingHostContents();
+      setItems(data.filter((x) => String(x.hostContentStatus || '').toLowerCase() === 'pending'));
     } catch (error) {
       console.error(error);
       const status =
@@ -38,9 +39,19 @@ const PostManagementList = ({ navigation }: any) => {
         typeof (error as any).response?.status === 'number'
           ? (error as any).response.status
           : null;
+      const serverMessage =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as any).response?.data?.error === 'string'
+          ? (error as any).response.data.error
+          : null;
+
       CustomAlert(
         'Lỗi',
-        status ? `Không thể tải danh sách tin chờ duyệt. (HTTP ${status})` : 'Không thể tải danh sách tin chờ duyệt.',
+        status
+          ? `Không thể tải danh sách nội dung host chờ duyệt. (HTTP ${status})\nURL: ${API_BASE_URL}/manager/host-contents/pending${serverMessage ? `\n${serverMessage}` : ''}`
+          : `Không thể tải danh sách nội dung host chờ duyệt.\nURL: ${API_BASE_URL}/manager/host-contents/pending${serverMessage ? `\n${serverMessage}` : ''}`,
       );
     } finally {
       setLoading(false);
@@ -48,69 +59,71 @@ const PostManagementList = ({ navigation }: any) => {
   };
 
   const handleApprove = (id: number) => {
-    CustomAlert('Duyệt tin', 'Bạn có muốn duyệt tin này không?', [
+    CustomAlert('Duyệt nội dung', 'Bạn có muốn duyệt nội dung này không?', [
       { text: 'Hủy', style: 'cancel' },
       {
         text: 'Duyệt',
         onPress: async () => {
           try {
-            await managerService.updatePostStatus(id, 'approved');
-            setPosts((current) => current.filter((p) => p.postId !== id));
-            CustomAlert('Thành công', 'Tin đăng đã được duyệt.');
+            await managerService.updateHostContentStatus(id, 'approved');
+            setItems((current) => current.filter((p) => p.hostContentId !== id));
+            CustomAlert('Thành công', 'Nội dung host đã được duyệt.');
           } catch (error) {
-            CustomAlert('Lỗi', 'Không thể duyệt tin này.');
+            CustomAlert('Lỗi', 'Không thể duyệt nội dung này.');
           }
-        }
+        },
       },
     ]);
   };
 
-  const handleReject = (post: PostModerationData) => {
-    setSelectedPost(post);
+  const handleReject = (item: HostContentModerationData) => {
+    setSelected(item);
     setRejectModalVisible(true);
   };
 
   const onSubmitReject = async (reason: string) => {
-    if (!selectedPost) return;
-
+    if (!selected) return;
     try {
-      await managerService.updatePostStatus(selectedPost.postId, 'rejected', reason);
-      setPosts((current) => current.filter((p) => p.postId !== selectedPost.postId));
-      CustomAlert('Thành công', `Tin đăng "${selectedPost.postTitle}" đã bị từ chối.`);
+      await managerService.updateHostContentStatus(selected.hostContentId, 'rejected', reason);
+      setItems((current) => current.filter((p) => p.hostContentId !== selected.hostContentId));
+      CustomAlert('Thành công', `Nội dung "${selected.hostContentTitle}" đã bị từ chối.`);
     } catch (error) {
-      CustomAlert('Lỗi', 'Không thể từ chối tin này.');
+      CustomAlert('Lỗi', 'Không thể từ chối nội dung này.');
     }
   };
 
-  const renderItem = ({ item }: { item: PostModerationData }) => (
+  const renderItem = ({ item }: { item: HostContentModerationData }) => (
     <TouchableOpacity
-      style={styles.postCard}
-      onPress={() => navigation.navigate('PostManagementDetail', { postId: item.postId })}
+      style={styles.card}
+      onPress={() => navigation.navigate('HostContentModerationDetail', { hostContentId: item.hostContentId })}
       activeOpacity={0.7}
     >
       <View style={styles.cardTop}>
-        <View style={styles.postInfo}>
+        <View style={styles.info}>
           <View style={styles.badgeContainer}>
             <View style={styles.pendingBadge}>
               <Clock size={12} color="#D97706" />
               <Text style={styles.pendingText}>Chờ duyệt</Text>
             </View>
-            <Text style={styles.timeText}>{item.postCreatedAt ? new Date(item.postCreatedAt).toLocaleDateString() : 'No date'}</Text>
+            <Text style={styles.timeText}>
+              {item.hostContentCreatedAt ? new Date(item.hostContentCreatedAt).toLocaleDateString() : 'No date'}
+            </Text>
           </View>
-          <Text style={styles.postTitle} numberOfLines={2}>{item.postTitle}</Text>
-          <Text style={styles.metaText}>{item.authorName || item.summary || 'Không có thông tin tác giả'}</Text>
-          <Text style={styles.priorityText}>Độ ưu tiên: {item.priority}</Text>
+          <Text style={styles.title} numberOfLines={2}>{item.hostContentTitle}</Text>
+          <Text style={styles.metaText} numberOfLines={1}>
+            {item.authorName ? `Host: ${item.authorName}` : 'Không có thông tin host'}
+          </Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
       </View>
 
-      <View style={styles.cardActions}>
+      <View style={styles.actions}>
         <TouchableOpacity style={[styles.actionButton, styles.rejectBtn]} onPress={() => handleReject(item)}>
           <X size={18} color="#EF4444" />
           <Text style={[styles.actionText, styles.rejectText]}>Từ chối</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.actionButton, styles.approveBtn]} onPress={() => handleApprove(item.postId)}>
+        <TouchableOpacity style={[styles.actionButton, styles.approveBtn]} onPress={() => handleApprove(item.hostContentId)}>
           <Check size={18} color="#22C55E" />
           <Text style={[styles.actionText, styles.approveText]}>Duyệt</Text>
         </TouchableOpacity>
@@ -122,8 +135,8 @@ const PostManagementList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>Kiểm duyệt tin đăng</Text>
-        <TouchableOpacity onPress={fetchPosts} style={styles.iconCircle}>
+        <Text style={styles.headerTitle}>Duyệt nội dung Host</Text>
+        <TouchableOpacity onPress={fetchItems} style={styles.iconCircle}>
           <Clock size={22} color="#64748B" />
         </TouchableOpacity>
       </View>
@@ -134,17 +147,17 @@ const PostManagementList = ({ navigation }: any) => {
         </View>
       ) : (
         <FlatList
-          data={posts}
+          data={items}
           renderItem={renderItem}
-          keyExtractor={(item) => item.postId.toString()}
+          keyExtractor={(item) => item.hostContentId.toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onRefresh={fetchPosts}
+          onRefresh={fetchItems}
           refreshing={loading}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#CBD5E1" strokeWidth={1} />
-              <Text style={styles.emptyText}>Tuyệt vời! Không có tin nào chờ duyệt.</Text>
+              <Text style={styles.emptyText}>Tuyệt vời! Không có nội dung host nào chờ duyệt.</Text>
             </View>
           }
         />
@@ -155,8 +168,8 @@ const PostManagementList = ({ navigation }: any) => {
         onClose={() => setRejectModalVisible(false)}
         onSubmit={onSubmitReject}
         title="Lý do từ chối"
-        placeholder="Giải thích lý do từ chối tin đăng này..."
-        confirmLabel="Từ chối tin"
+        placeholder="Giải thích lý do từ chối nội dung host..."
+        confirmLabel="Từ chối"
       />
     </SafeAreaView>
   );
@@ -175,7 +188,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
+  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
   iconCircle: {
     width: 40,
     height: 40,
@@ -185,7 +198,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContent: { padding: 16, paddingBottom: 30 },
-  postCard: {
+  card: {
     backgroundColor: 'white',
     borderRadius: 20,
     padding: 16,
@@ -197,7 +210,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  postInfo: { flex: 1 },
+  info: { flex: 1 },
   badgeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -215,10 +228,9 @@ const styles = StyleSheet.create({
   },
   pendingText: { fontSize: 11, fontWeight: '700', color: '#D97706' },
   timeText: { fontSize: 11, color: '#94A3B8' },
-  postTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B', marginBottom: 6 },
+  title: { fontSize: 16, fontWeight: 'bold', color: '#1E293B', marginBottom: 6 },
   metaText: { fontSize: 13, color: '#64748B', marginBottom: 4 },
-  priorityText: { fontSize: 12, color: '#475569', textTransform: 'capitalize' },
-  cardActions: {
+  actions: {
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
@@ -243,4 +255,5 @@ const styles = StyleSheet.create({
   emptyText: { marginTop: 16, fontSize: 16, color: '#94A3B8', textAlign: 'center', width: '80%' },
 });
 
-export default PostManagementList;
+export default HostContentModerationList;
+

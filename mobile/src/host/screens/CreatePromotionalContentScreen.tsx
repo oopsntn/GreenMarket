@@ -126,7 +126,7 @@ const CreatePromotionalContentScreen = () => {
         mediaUrls: uploaded.urls,
       });
 
-      CustomAlert('Thành công', 'Đã tạo nội dung quảng bá mới.', [
+      CustomAlert('Đã gửi kiểm duyệt', 'Nội dung của bạn đang chờ manager duyệt. Sau khi duyệt, bài sẽ hiển thị trên dashboard.', [
         {
           text: 'OK',
           onPress: () => {

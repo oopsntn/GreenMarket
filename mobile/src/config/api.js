@@ -1,6 +1,7 @@
 
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 let unauthorizedHandler = null;
 let isHandlingUnauthorized = false;
@@ -17,7 +18,14 @@ const getApiBaseUrl = () => {
   const DEV_API_URL = `http://10.0.2.2:${API_PORT}/api`; // Android Emulator
   const DEVICE_API_URL = `http://${API_IP}:${API_PORT}/api`; // Physical Android Device
 
-  return DEVICE_API_URL; // Dùng cho Physical Device
+  // Heuristic:
+  // - In development, if API_IP is not explicitly set (still default), prefer emulator URL on Android.
+  // - Otherwise keep using DEVICE_API_URL for physical devices / configured hosts.
+  if (__DEV__ && Platform.OS === 'android' && !process.env.EXPO_PUBLIC_API_IP) {
+    return DEV_API_URL;
+  }
+
+  return DEVICE_API_URL;
 };
 
 export const API_BASE_URL = getApiBaseUrl();

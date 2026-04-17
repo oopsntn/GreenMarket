@@ -24,7 +24,7 @@ export interface HostContent {
   hostContentTargetId: number | null;
   hostContentTrackingUrl: string | null;
   hostContentMediaUrls: string[];
-  hostContentStatus: string;
+  hostContentStatus: 'draft' | 'pending' | 'approved' | 'rejected' | string;
   hostContentViewCount: number;
   hostContentClickCount: number;
   hostContentCreatedAt: string | null;
@@ -60,6 +60,36 @@ export interface PaginatedResponse<T> {
     totalItems: number;
     totalPages?: number;
   };
+}
+
+export type HostPublicContentTargetType = HostContentTargetType;
+
+export interface HostPublicContentTarget {
+  postId?: number;
+  postTitle?: string;
+  postSlug?: string;
+  shopId?: number;
+  shopName?: string;
+  shopLogoUrl?: string;
+}
+
+export interface HostPublicContentDetail {
+  hostContentId: number;
+  hostContentTitle: string;
+  hostContentDescription: string | null;
+  hostContentBody: string | null;
+  hostContentTargetType: HostPublicContentTargetType;
+  hostContentTargetId: number | null;
+  hostContentTrackingUrl: string | null;
+  hostContentMediaUrls: string[];
+  hostContentViewCount: number;
+  hostContentClickCount: number;
+  hostContentCreatedAt: string | null;
+  hostContentUpdatedAt: string | null;
+  authorId: number | null;
+  authorName: string | null;
+  authorAvatar: string | null;
+  target?: HostPublicContentTarget | null;
 }
 
 export interface CreateHostContentPayload {
@@ -151,6 +181,17 @@ export const hostService = {
   createContent: async (payload: CreateHostContentPayload): Promise<HostContent> => {
     const response = await api.post<HostContent>('/host/contents', payload);
     return normalizeContent(response.data);
+  },
+
+  getPublicContentDetail: async (id: number | string): Promise<HostPublicContentDetail> => {
+    const response = await api.get<HostPublicContentDetail>(`/host/public/contents/${id}`);
+    const row = response.data as any;
+    return {
+      ...row,
+      hostContentMediaUrls: normalizeMediaUrls(row?.hostContentMediaUrls),
+      hostContentViewCount: Number(row?.hostContentViewCount || 0),
+      hostContentClickCount: Number(row?.hostContentClickCount || 0),
+    };
   },
 
   getEarnings: async (page = 1, limit = 20): Promise<PaginatedResponse<HostEarning>> => {

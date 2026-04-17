@@ -119,6 +119,7 @@ const HostDashboardScreen = () => {
 
   const recentContents = useMemo(() => {
     return [...contents]
+      .filter((item) => ['approved', 'published'].includes(String(item.hostContentStatus || '').toLowerCase()))
       .sort((a, b) => {
         const dateA = a.hostContentCreatedAt ? new Date(a.hostContentCreatedAt).getTime() : 0;
         const dateB = b.hostContentCreatedAt ? new Date(b.hostContentCreatedAt).getTime() : 0;
@@ -126,6 +127,10 @@ const HostDashboardScreen = () => {
       })
       .slice(0, 6);
   }, [contents]);
+
+  const openContentTarget = (item: HostContent) => {
+    navigation.navigate('HostNewsDetail', { hostContentId: item.hostContentId });
+  };
 
   if (loading) {
     return (
@@ -237,14 +242,19 @@ const HostDashboardScreen = () => {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Hiệu suất nội dung gần đây</Text>
+            <Text style={styles.sectionTitle}>Tin tức đã đăng</Text>
             {recentContents.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Text style={styles.emptyText}>Bạn chưa có nội dung quảng bá nào.</Text>
               </View>
             ) : (
               recentContents.map((item) => (
-                <View key={item.hostContentId} style={styles.contentRow}>
+                <TouchableOpacity
+                  key={item.hostContentId}
+                  style={styles.contentRow}
+                  onPress={() => openContentTarget(item)}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.contentMeta}>
                     <Text style={styles.contentTitle} numberOfLines={1}>
                       {item.hostContentTitle}
@@ -262,7 +272,7 @@ const HostDashboardScreen = () => {
                       <Text style={styles.metricText}>{item.hostContentClickCount}</Text>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))
             )}
           </View>

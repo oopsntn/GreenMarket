@@ -57,6 +57,23 @@ export interface ReportModerationData {
     severity?: ModerationPriority;
 }
 
+export type HostContentModerationStatus = 'pending' | 'approved' | 'rejected' | string;
+
+export interface HostContentModerationData {
+    hostContentId: number;
+    hostContentTitle: string;
+    hostContentDescription?: string | null;
+    hostContentBody?: string | null;
+    hostContentTargetType?: string | null;
+    hostContentTargetId?: number | null;
+    hostContentMediaUrls?: any;
+    hostContentStatus: HostContentModerationStatus;
+    hostContentCreatedAt?: string | null;
+    hostContentUpdatedAt?: string | null;
+    authorId?: number | null;
+    authorName?: string | null;
+}
+
 type DashboardOverview = {
     statCards?: Array<{ title: string; value: string }>;
     summary?: { title: string; description: string };
@@ -249,6 +266,65 @@ const managerService = {
 
     escalate: async (data: { targetType: string; targetId: number | string; severity: string; reason: string; evidenceUrls?: string[] }) => {
         const response = await api.post('/manager/escalations', data);
+        return response.data;
+    },
+
+    getPendingHostContents: async (): Promise<HostContentModerationData[]> => {
+        let page = 1;
+        let totalPages = 1;
+        const rows: HostContentModerationData[] = [];
+
+        while (page <= totalPages) {
+            const response = await api.get('/manager/host-contents/pending', {
+                params: { page, limit: 100 },
+            });
+
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            rows.push(...data);
+
+            totalPages = Number(response.data?.meta?.totalPages || 1);
+            page += 1;
+        }
+
+        return rows.map((item: any) => ({
+            hostContentId: item.hostContentId,
+            hostContentTitle: item.hostContentTitle,
+            hostContentDescription: item.hostContentDescription ?? null,
+            hostContentTargetType: item.hostContentTargetType ?? null,
+            hostContentTargetId: item.hostContentTargetId ?? null,
+            hostContentMediaUrls: item.hostContentMediaUrls,
+            hostContentStatus: normalizeStatus(item.hostContentStatus) || 'pending',
+            hostContentCreatedAt: item.hostContentCreatedAt ?? null,
+            hostContentUpdatedAt: item.hostContentUpdatedAt ?? null,
+            authorId: item.authorId ?? null,
+            authorName: item.authorName ?? null,
+        }));
+    },
+
+    getHostContentById: async (id: number | string): Promise<HostContentModerationData> => {
+        const response = await api.get(`/manager/host-contents/${id}`);
+        const row = response.data?.data;
+        if (!row) {
+            throw new Error('Host content not found');
+        }
+        return {
+            hostContentId: row.hostContentId,
+            hostContentTitle: row.hostContentTitle,
+            hostContentDescription: row.hostContentDescription ?? null,
+            hostContentBody: row.hostContentBody ?? null,
+            hostContentTargetType: row.hostContentTargetType ?? null,
+            hostContentTargetId: row.hostContentTargetId ?? null,
+            hostContentMediaUrls: row.hostContentMediaUrls,
+            hostContentStatus: normalizeStatus(row.hostContentStatus) || 'pending',
+            hostContentCreatedAt: row.hostContentCreatedAt ?? null,
+            hostContentUpdatedAt: row.hostContentUpdatedAt ?? null,
+            authorId: row.authorId ?? null,
+            authorName: row.authorName ?? null,
+        };
+    },
+
+    updateHostContentStatus: async (id: number | string, status: 'approved' | 'rejected', reason?: string, note?: string) => {
+        const response = await api.patch(`/manager/host-contents/${id}/status`, { status, reason, note });
         return response.data;
     },
 };
