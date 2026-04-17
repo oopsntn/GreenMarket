@@ -5,6 +5,7 @@ import { ChevronRight, Store } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Card from '../../Reused/Card/Card'
 import { ShopService } from '../service/shopService'
+import { resolveImageUrl } from '@/utils/resolveImageUrl'
 
 const BrowseShopsScreen = () => {
     const navigation = useNavigation<any>()
@@ -52,7 +53,7 @@ const BrowseShopsScreen = () => {
                                 <View style={styles.cardRow}>
                                     <View style={styles.logoWrap}>
                                         {item.shopLogoUrl ? (
-                                            <Image source={{ uri: item.shopLogoUrl }} style={styles.logo} />
+                                            <Image source={{ uri: resolveImageUrl(item.shopLogoUrl) }} style={styles.logo} />
                                         ) : (
                                             <Store color="#10b981" size={28} />
                                         )}

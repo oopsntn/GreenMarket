@@ -4,6 +4,7 @@ import Card from '../../Reused/Card/Card'
 import { Edit, PackageOpen, Rocket, Trash2 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import CustomAlert from '../../../utils/AlertHelper';
+import { resolveImageUrl } from '@/utils/resolveImageUrl';
 
 interface PostItemProps {
     item: any;
@@ -39,7 +40,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                 <View style={styles.imgPlaceholder}>
                     {item.images && item.images.length > 0 ? (
                         <Image
-                            source={{ uri: item.images[0].imageUrl }}
+                            source={{ uri: resolveImageUrl(item.images[0].imageUrl) }}
                             style={{ width: '100%', height: '100%' }}
                         />
                     ) : (

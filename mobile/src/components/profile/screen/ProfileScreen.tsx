@@ -32,6 +32,7 @@ import { useProfile } from '../service/useProfile';
 import { useAuth } from '../../../context/AuthContext';
 import CustomAlert from '../../../utils/AlertHelper';
 import { ProfileService } from '../service/ProfileService';
+import { resolveImageUrl } from '@/utils/resolveImageUrl';
 
 const { width } = Dimensions.get('window');
 
@@ -49,6 +50,7 @@ const ProfileScreen = () => {
     const isCollaborator = user?.businessRoleCode === 'COLLABORATOR';
     const isActiveShop = isShop && shop?.shopStatus === 'active';
     const isPendingShop = isShop && shop?.shopStatus !== 'active';
+    const hasNoShop = !shop?.shopId
 
     const handleUpdateAvatar = async (localUri: string) => {
         try {
@@ -67,7 +69,7 @@ const ProfileScreen = () => {
                 await updateUser({ userAvatarUrl: serverImageUrl });
             }
 
-            setFormData((prev) => ({ ...prev, avatarUrl: serverImageUrl }));
+            setFormData((prev) => ({ ...prev, avatarUrl: resolveImageUrl(serverImageUrl) }));
             CustomAlert('Thành công', 'Cập nhật ảnh đại diện thành công.');
         } catch (e) {
             console.error('Avatar update error: ', e);
@@ -236,47 +238,67 @@ const ProfileScreen = () => {
                                 </TouchableOpacity>
                             </View>
                         ) : isPendingShop ? (
-                            <TouchableOpacity
-                                style={[styles.beShopBanner, { borderColor: '#fef08a' }]}
-                                onPress={() => CustomAlert('Chờ duyệt', 'Hồ sơ cửa hàng của bạn đang được duyệt bởi ban quản trị.')}
-                            >
-                                <LinearGradient
-                                    colors={['#fff', '#fefce8']}
-                                    style={styles.beShopGrad}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
+                            <>
+                                <TouchableOpacity
+                                    style={[styles.beShopBanner, { borderColor: '#fef08a' }]}
+                                    onPress={() => CustomAlert('Chờ duyệt', 'Hồ sơ cửa hàng của bạn đang được duyệt bởi ban quản trị.')}
                                 >
-                                    <View style={[styles.beShopIcon, { shadowColor: '#eab308' }]}>
-                                        <Store color="#eab308" size={24} />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={[styles.beShopTitle, { color: '#ca8a04' }]}>Đang chờ duyệt</Text>
-                                        <Text style={[styles.beShopDesc, { color: '#a16207' }]}>Hồ sơ cửa hàng đang được xét duyệt</Text>
-                                    </View>
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity
-                                style={styles.beShopBanner}
-                                onPress={() => navigation.navigate('RegisterShop')}
-                            >
-                                <LinearGradient
-                                    colors={['#fff', '#f0fdf4']}
-                                    style={styles.beShopGrad}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
+                                    <LinearGradient
+                                        colors={['#fff', '#fefce8']}
+                                        style={styles.beShopGrad}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                    >
+                                        <View style={[styles.beShopIcon, { shadowColor: '#eab308' }]}>
+                                            <Store color="#eab308" size={24} />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={[styles.beShopTitle, { color: '#ca8a04' }]}>Đang chờ duyệt</Text>
+                                            <Text style={[styles.beShopDesc, { color: '#a16207' }]}>Hồ sơ cửa hàng đang được xét duyệt</Text>
+                                        </View>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.shopActionButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#10b981' }]}
+                                    onPress={() => navigation.navigate('MyPost')}
                                 >
-                                    <View style={styles.beShopIcon}>
-                                        <Store color="#10b981" size={24} />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.beShopTitle}>Trở thành người bán!</Text>
-                                        <Text style={styles.beShopDesc}>Bắt đầu kinh doanh với các sản phẩm xanh</Text>
-                                    </View>
-                                    <ChevronRight color="#10b981" size={20} />
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        )}
+                                    <FileText color="#10b981" size={20} />
+                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Quản lý tin đăng</Text>
+                                </TouchableOpacity>
+                            </>
+                        ) : hasNoShop ? (
+                            <>
+                                <TouchableOpacity
+                                    style={styles.beShopBanner}
+                                    onPress={() => navigation.navigate('RegisterShop')}
+                                >
+                                    <LinearGradient
+                                        colors={['#fff', '#f0fdf4']}
+                                        style={styles.beShopGrad}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                    >
+                                        <View style={styles.beShopIcon}>
+                                            <Store color="#10b981" size={24} />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.beShopTitle}>Trở thành người bán!</Text>
+                                            <Text style={styles.beShopDesc}>Bắt đầu kinh doanh với các sản phẩm xanh</Text>
+                                        </View>
+                                        <ChevronRight color="#10b981" size={20} />
+                                    </LinearGradient>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.shopActionButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#10b981' }]}
+                                    onPress={() => navigation.navigate('MyPost')}
+                                >
+                                    <FileText color="#10b981" size={20} />
+                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Quản lý tin đăng</Text>
+                                </TouchableOpacity>
+                            </>
+
+                        ) : null}
                     </View>
 
                     {/* 5. Main Form Card */}

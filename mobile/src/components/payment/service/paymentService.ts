@@ -46,8 +46,8 @@ export const paymentService = {
         return response.data;
     },
 
-    createShopPaymentIntent: async () => {
-        const response = await api.post('/payment/register-shop');
+    createShopPaymentIntent: async (): Promise<{ paymentUrl: string }> => {
+        const response = await api.post<{ paymentUrl: string }>('/payment/register-shop');
         return response.data;
     }
 };
