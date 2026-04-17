@@ -24,7 +24,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const MIN_PAYOUT_AMOUNT = 500_000;
-const PUBLIC_CONTENT_TARGET_TYPES = new Set(["post", "shop"]);
+const PUBLIC_CONTENT_TARGET_TYPES = new Set(["post", "shop", "external"]);
 
 const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
   const parsedPage = Number(queryPage);
@@ -287,7 +287,7 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const { title, description, targetType, targetId, mediaUrls } = req.body;
+    const { title, description, body, targetType, targetId, mediaUrls } = req.body;
 
     if (!title || !targetType) {
       res.status(400).json({ error: "Title and targetType are required" });
@@ -300,6 +300,7 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
         hostContentAuthorId: userId,
         hostContentTitle: title,
         hostContentDescription: description,
+        hostContentBody: body,
         hostContentTargetType: targetType,
         hostContentTargetId: targetId,
         hostContentMediaUrls: mediaUrls || [],
@@ -487,6 +488,7 @@ export const getPublicContents = async (req: Request, res: Response): Promise<vo
         hostContentId: hostContents.hostContentId,
         hostContentTitle: hostContents.hostContentTitle,
         hostContentDescription: hostContents.hostContentDescription,
+        hostContentBody: hostContents.hostContentBody,
         hostContentTargetType: hostContents.hostContentTargetType,
         hostContentTargetId: hostContents.hostContentTargetId,
         hostContentMediaUrls: hostContents.hostContentMediaUrls,
@@ -537,6 +539,7 @@ export const getPublicContentDetail = async (req: Request<{ id: string }>, res: 
         hostContentId: hostContents.hostContentId,
         hostContentTitle: hostContents.hostContentTitle,
         hostContentDescription: hostContents.hostContentDescription,
+        hostContentBody: hostContents.hostContentBody,
         hostContentTargetType: hostContents.hostContentTargetType,
         hostContentTargetId: hostContents.hostContentTargetId,
         hostContentTrackingUrl: hostContents.hostContentTrackingUrl,
@@ -687,6 +690,7 @@ export const getMyFavoriteContents = async (req: AuthRequest, res: Response): Pr
         hostContentCreatedAt: hostContents.hostContentCreatedAt,
         authorName: users.userDisplayName,
         authorAvatar: users.userAvatarUrl,
+        authorId: users.userId,
       })
       .from(favoriteContents)
       .innerJoin(hostContents, eq(favoriteContents.favoriteContentId, hostContents.hostContentId))

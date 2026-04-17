@@ -218,7 +218,7 @@ const useCreatePost = () => {
             await postService.createPost({
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
-                postPrice: formData.postPrice.trim(),
+                postPrice: Number(formData.postPrice.trim()),
                 postLocation: formData.postLocation.trim() || undefined,
                 postContactPhone: formData.postContactPhone.replace(/\s+/g, '') || undefined,
                 images,
@@ -227,9 +227,17 @@ const useCreatePost = () => {
 
             setSubmitted(true)
             resetForm()
-        } catch (e) {
-            console.error('Error submitting form:', e)
-            CustomAlert('Đăng tin thất bại', 'Đã có lỗi xảy ra trong quá trình tạo bài đăng. Vui lòng thử lại.')
+        } catch (e: any) {
+            console.error('Error submitting form:', {
+                status: e?.response?.status,
+                data: e?.response?.data,
+                message: e?.message,
+            })
+            const serverMessage = e?.response?.data?.error || e?.response?.data?.message
+            CustomAlert(
+                'Dang tin that bai',
+                serverMessage || 'Da co loi xay ra trong qua trinh tao bai dang. Vui long thu lai.'
+            )
         } finally {
             setSubmitting(false)
         }

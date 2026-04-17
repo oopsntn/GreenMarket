@@ -145,6 +145,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       headerStyle="default"
       backButton={() => navigation.goBack()}
       rightAction={renderRightActions()}
+      scrollEnabled={true}
       bottom={
         <View style={styles.bottomActions}>
           <Button

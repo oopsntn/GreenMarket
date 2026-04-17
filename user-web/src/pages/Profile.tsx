@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings, Heart, Wallet, LayoutDashboard } from 'lucide-react';
+import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings, Wallet, LayoutDashboard, Bookmark } from 'lucide-react';
 import { updateProfile, updateShop, getProfile, uploadImages, requestShopVerificationOTP, verifyShopEmailOTP, addShopPhoneOTP, deleteShopPhone } from '../services/api';
 import clsx from 'clsx';
 import AddressPicker from '../components/AddressPicker';
@@ -258,7 +258,7 @@ const Profile: React.FC = () => {
         <div>
           <h1 className="text-2xl font-black text-slate-900 group">
             <span className="bg-emerald-500 w-1.5 h-6 inline-block mr-3 rounded-full align-middle group-hover:scale-y-125 transition-transform" />
-            {shop ? 'Thông tin Nhà Vườn' : 'Hồ sơ cá nhân'}
+            {isGardenOwner ? 'Thông tin Nhà Vườn' : 'Hồ sơ cá nhân'}
           </h1>
           <p className="text-sm text-slate-500 mt-1 uppercase tracking-widest font-bold">Trạng thái: <span className="text-emerald-600">Đã xác minh</span></p>
         </div>
@@ -283,13 +283,13 @@ const Profile: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Họ & Tên</span>
-              <p className="text-base font-black text-slate-900">{shop ? shopName : displayName}</p>
+              <p className="text-base font-black text-slate-900">{isGardenOwner ? shopName : displayName}</p>
             </div>
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
               <p className="text-base font-black text-slate-900 flex items-center gap-2">
-                {shop ? shopEmail : email}
-                {shop && shopEmailVerified && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                {isGardenOwner ? shopEmail : email}
+                {isGardenOwner && shopEmailVerified && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
               </p>
             </div>
             <div className="space-y-1">
@@ -299,14 +299,14 @@ const Profile: React.FC = () => {
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Số điện thoại</span>
               <p className="text-base font-black text-slate-900">
-                {shop ? (shopPhones.join(', ') || 'Chưa cập nhật') : (mobile || 'Chưa cập nhật')}
+                {isGardenOwner ? (shopPhones.join(', ') || 'Chưa cập nhật') : (mobile || 'Chưa cập nhật')}
               </p>
             </div>
           </div>
         </div>
 
         {/* Gallery Preview */}
-        {shop && (
+        {isGardenOwner && (
           <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm space-y-6">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
               <div className="p-2.5 bg-emerald-50 rounded-xl">
@@ -331,7 +331,7 @@ const Profile: React.FC = () => {
         )}
 
         {/* Social Links */}
-        {shop && (shopFacebook || shopInstagram || shopYoutube) && (
+        {isGardenOwner && (shopFacebook || shopInstagram || shopYoutube) && (
           <div className="bg-white p-8 rounded-4xl border border-slate-200 shadow-sm space-y-6">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
               <div className="p-2.5 bg-emerald-50 rounded-xl">
@@ -388,10 +388,21 @@ const Profile: React.FC = () => {
               className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
             >
               <div className="flex items-center gap-2 mb-1">
-                <Heart className="w-4 h-4 text-emerald-600" />
-                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Bài đã lưu</p>
+                <Bookmark className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Sản phẩm đã lưu</p>
               </div>
-              <p className="text-xs text-slate-500">Mở lại nhanh các bài bạn đã đánh dấu.</p>
+              <p className="text-xs text-slate-500">Mở lại nhanh các sản phẩm bạn đã đánh dấu.</p>
+            </Link>
+
+            <Link
+              to="/news/bookmarks"
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <Bookmark className="w-4 h-4 text-emerald-600" />
+                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Tin tức đã lưu</p>
+              </div>
+              <p className="text-xs text-slate-500">Xem lại các bài báo và kiến thức đã lưu.</p>
             </Link>
 
             <Link
@@ -434,9 +445,9 @@ const Profile: React.FC = () => {
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Store className="w-4 h-4 text-emerald-600" />
-                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Lên shop</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">{shop ? "Hoàn tất đăng ký" : "Mở nhà vườn"}</p>
                 </div>
-                <p className="text-xs text-slate-500">Đăng ký nhà vườn để mở thêm quyền bán hàng.</p>
+                <p className="text-xs text-slate-500">{shop ? "Tiếp tục hoàn thiện thông tin nhà vườn của bạn." : "Đăng ký nhà vườn để mở thêm quyền bán hàng."}</p>
               </Link>
             )}
           </div>
@@ -455,7 +466,7 @@ const Profile: React.FC = () => {
               <Settings className="w-6 h-6 text-emerald-600" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{shop ? 'Chỉnh sửa hồ sơ vườn' : 'Chỉnh sửa cá nhân'}</h2>
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{isGardenOwner ? 'Chỉnh sửa hồ sơ vườn' : 'Chỉnh sửa cá nhân'}</h2>
               <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Cập nhật thông tin để hiển thị trên hệ thống</p>
             </div>
           </div>
@@ -539,7 +550,7 @@ const Profile: React.FC = () => {
               </div>
             </div>
 
-            {shop && (
+            {isGardenOwner && (
               <div className="space-y-4">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
                   Thư viện ảnh nhà vườn ({shopGalleryImages.length}/4)

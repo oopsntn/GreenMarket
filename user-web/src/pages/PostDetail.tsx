@@ -4,10 +4,12 @@ import { getPostDetail, recordContactClick, recordShopContactClick, submitReport
 import { useAuth } from '../context/AuthContext';
 import {
     Phone, Calendar, ChevronLeft, ChevronRight,
-    Store, ShieldCheck, Share2, Heart, MessageCircle,
-    Play, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn, Settings, Check
+    Store, ShieldCheck, Share2, MessageCircle,
+    Play, ShoppingBag, Eye, AlertCircle, Map as MapIcon, ExternalLink, ZoomIn, Settings, Check,
+    Bookmark
 } from 'lucide-react';
 import ImageModal from '../components/ImageModal';
+import ReportModal from '../components/ReportModal';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 const PostDetail: React.FC = () => {
@@ -21,6 +23,7 @@ const PostDetail: React.FC = () => {
     const [contactRevealed, setContactRevealed] = useState(false);
     const [previewImageIndex, setPreviewImageIndex] = useState<number | null>(null);
     const [copied, setCopied] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
     const isOwner = Boolean(user && post && (user.id === post.postAuthorId || user.id === post.postShopId));
 
@@ -38,17 +41,13 @@ const PostDetail: React.FC = () => {
         }
     };
 
-    const handleReport = async () => {
-        const reason = window.prompt("Nhập lý do báo cáo bài đăng này:");
-        if (reason && post?.postId) {
-            try {
-                await submitReport({ postId: post.postId, reportReason: reason });
-                alert("Cảm ơn bạn! Báo cáo của bạn đã được gửi tới quản trị viên.");
-            } catch (error) {
-                console.error("Failed to submit report", error);
-                alert("Có lỗi xảy ra khi gửi báo cáo.");
-            }
+    const handleReport = () => {
+        if (!user) {
+            alert("Vui lòng đăng nhập để báo cáo bài đăng này.");
+            navigate('/login');
+            return;
         }
+        setIsReportModalOpen(true);
     };
 
     const handleToggleSave = async () => {
@@ -172,10 +171,10 @@ const PostDetail: React.FC = () => {
                             <>
                                 <button
                                     onClick={handleToggleSave}
-                                    className={`p-2.5 rounded-xl border transition-all ${isSaved ? 'bg-rose-50 border-rose-200 text-rose-500 shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200'}`}
+                                    className={`p-2.5 rounded-xl border transition-all ${isSaved ? 'bg-emerald-50 border-emerald-200 text-emerald-600 shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-200'}`}
                                     title={isSaved ? "Bỏ lưu bài" : "Lưu bài"}
                                 >
-                                    <Heart className={`w-5 h-5 ${isSaved ? 'fill-rose-500' : ''}`} />
+                                    <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-emerald-600' : ''}`} />
                                 </button>
                                 <button
                                     onClick={handleReport}
@@ -308,7 +307,18 @@ const PostDetail: React.FC = () => {
 
                             <div className="space-y-6 relative z-10">
                                 <div className="space-y-4">
-                                    <h1 className="text-4xl font-black text-slate-900 leading-tight uppercase tracking-tight group-hover:text-emerald-700 transition-colors">{post.postTitle}</h1>
+                                    <h1 className="text-4xl font-black text-slate-900 leading-tight uppercase tracking-tight transition-colors flex items-center flex-wrap gap-3">
+                                        {post.postTitle}
+                                        {post.isPromoted && (
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/20 text-[10px] font-black tracking-widest align-middle">
+                                                <span className="relative flex h-2 w-2">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                                </span>
+                                                HOT
+                                            </span>
+                                        )}
+                                    </h1>
                                     <div className="flex flex-wrap items-center gap-4">
                                         <div className="px-4 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                                             <ShieldCheck className="w-3.5 h-3.5" /> Xác minh
@@ -469,6 +479,13 @@ const PostDetail: React.FC = () => {
                 initialIndex={previewImageIndex || 0}
                 onClose={() => setPreviewImageIndex(null)}
                 alt={post.postTitle}
+            />
+
+            <ReportModal
+                isOpen={isReportModalOpen}
+                onClose={() => setIsReportModalOpen(false)}
+                postId={post.postId}
+                postTitle={post.postTitle}
             />
         </div>
     );

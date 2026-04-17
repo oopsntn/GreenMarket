@@ -8,12 +8,11 @@ import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { placementSlotService } from "../services/placementSlotService";
 import { promotionPackageService } from "../services/promotionPackageService";
-import type { PlacementSlot } from "../types/placementSlot";
 import type {
   PromotionPackage,
   PromotionPackageFormState,
-  PromotionPackageSlotOption,
   PromotionPackageSlot,
+  PromotionPackageSlotOption,
   PromotionPackageStatus,
 } from "../types/promotionPackage";
 import "./PromotionPackagesPage.css";
@@ -34,14 +33,6 @@ const statusFilterOptions: Array<PromotionPackageStatus | "All"> = [
   "Disabled",
 ];
 
-const getSlotLabel = (slot: PromotionPackageSlot | "All") => {
-  if (slot === "All") return "Tất cả";
-  if (slot === "Home Top") return "Trang chủ nổi bật";
-  if (slot === "Category Top") return "Danh mục nổi bật";
-  if (slot === "Search Boost") return "Tăng tìm kiếm";
-  return slot;
-};
-
 const statusLabelMap: Record<PromotionPackageStatus | "All", string> = {
   All: "Tất cả",
   Active: "Đang bật",
@@ -53,11 +44,8 @@ const currencyToNumber = (value: string) => {
   return Number.isFinite(normalized) ? normalized : 0;
 };
 
-const mapPlacementSlotToPackageSlot = (
-  slot: Pick<PlacementSlot, "name" | "positionCode">,
-): PromotionPackageSlot => {
-  return slot.name?.trim() || slot.positionCode?.trim() || "Vị trí chưa đặt tên";
-};
+const getSlotLabel = (slot: PromotionPackageSlot | "All") =>
+  slot === "All" ? "Tất cả vị trí" : slot;
 
 function PromotionPackagesPage() {
   const [packages, setPackages] = useState<PromotionPackage[]>([]);
@@ -98,14 +86,13 @@ function PromotionPackagesPage() {
 
   const summaryCards = promotionPackageService.getSummaryCards(packages);
   const slotFilterOptions = useMemo<Array<PromotionPackageSlot | "All">>(() => {
-    const dynamicSlots = Array.from(
-      new Set([
-        ...packages.map((item) => item.slot),
-        ...slotOptions.map((item) => item.label),
-      ]),
+    const preferredOrder = slotOptions.map((item) => item.label);
+    const currentPackageSlots = packages.map((item) => item.slot);
+    const uniqueSlots = Array.from(
+      new Set([...preferredOrder, ...currentPackageSlots]),
     ).filter(Boolean);
 
-    return ["All", ...dynamicSlots];
+    return ["All", ...uniqueSlots];
   }, [packages, slotOptions]);
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
@@ -138,7 +125,7 @@ function PromotionPackagesPage() {
           nextSlots.map((slot) => ({
             id: slot.id,
             code: slot.positionCode,
-            label: mapPlacementSlotToPackageSlot(slot),
+            label: slot.name,
           })),
         );
       } catch (error) {
@@ -203,6 +190,14 @@ function PromotionPackagesPage() {
   };
 
   const openAddModal = () => {
+    if (slotOptions.length === 0) {
+      showToast(
+        "Bạn cần tạo ít nhất một vị trí hiển thị trên trang chủ trước khi thêm gói quảng bá.",
+        "error",
+      );
+      return;
+    }
+
     setModalMode("add");
     setEditingPackageId(null);
     setFormData({
@@ -396,7 +391,7 @@ function PromotionPackagesPage() {
     <div className="promotion-packages-page">
       <PageHeader
         title="Gói quảng bá"
-        description="Quản lý các gói quảng bá theo vị trí hiển thị, thời lượng, hạn mức và trạng thái kinh doanh."
+        description="Quản lý các gói đẩy bài gắn với từng vị trí trên trang chủ. Các gói tài khoản và Nhà vườn VIP được quản lý ở màn riêng."
         actionLabel="+ Thêm gói"
         onActionClick={openAddModal}
       />
@@ -419,7 +414,7 @@ function PromotionPackagesPage() {
 
       <SectionCard
         title="Bộ lọc gói quảng bá"
-        description="Tìm kiếm và thu hẹp danh sách gói theo vị trí hiển thị và trạng thái."
+        description="Tìm kiếm và thu hẹp danh sách gói đẩy bài theo vị trí trên trang chủ và trạng thái đang bán."
       >
         <div className="promotion-packages-filters">
           <div className="promotion-packages-filters__field promotion-packages-filters__field--search">
@@ -475,7 +470,7 @@ function PromotionPackagesPage() {
 
       <SectionCard
         title="Danh sách gói quảng bá"
-        description="Theo dõi giá bán, quota hiển thị, số bài tối đa và trạng thái kinh doanh của từng gói."
+        description="Theo dõi giá bán, quota hiển thị, số bài tối đa và vị trí trang chủ của từng gói đẩy bài."
       >
         {isLoading ? (
           <EmptyState
@@ -487,10 +482,15 @@ function PromotionPackagesPage() {
             title="Không thể tải gói quảng bá"
             description={pageError}
           />
+        ) : slotOptions.length === 0 ? (
+          <EmptyState
+            title="Chưa có vị trí cho gói quảng bá"
+            description="Hãy tạo ít nhất một vị trí hiển thị trên trang chủ trước khi cấu hình gói đẩy bài."
+          />
         ) : filteredPackages.length === 0 ? (
           <EmptyState
             title="Không tìm thấy gói quảng bá"
-            description="Không có gói nào khớp với điều kiện tìm kiếm hiện tại."
+            description="Không có gói đẩy bài nào khớp với điều kiện tìm kiếm hiện tại."
           />
         ) : (
           <>
@@ -515,11 +515,11 @@ function PromotionPackagesPage() {
                     <tr key={item.id}>
                       <td>#{item.id}</td>
                       <td>{item.name}</td>
-                      <td>{getSlotLabel(item.slot)}</td>
+                      <td>{item.slot}</td>
                       <td>{item.durationDays} ngày</td>
                       <td>{item.price}</td>
                       <td>{item.maxPosts}</td>
-                      <td>{item.displayQuota.toLocaleString("en-US")}</td>
+                      <td>{item.displayQuota.toLocaleString("vi-VN")}</td>
                       <td>
                         <StatusBadge
                           label={statusLabelMap[item.status]}
@@ -599,7 +599,7 @@ function PromotionPackagesPage() {
       <BaseModal
         isOpen={isViewModalOpen}
         title="Chi tiết gói quảng bá"
-        description="Xem cấu hình chi tiết, giá bán và trạng thái hiện tại của gói."
+        description="Xem cấu hình chi tiết, giá bán và vị trí áp dụng của gói đẩy bài."
         onClose={closeViewModal}
         maxWidth="720px"
       >
@@ -611,7 +611,7 @@ function PromotionPackagesPage() {
             </div>
             <div>
               <span>Vị trí</span>
-              <strong>{getSlotLabel(selectedPackage.slot)}</strong>
+              <strong>{selectedPackage.slot}</strong>
             </div>
             <div>
               <span>Thời lượng</span>
@@ -627,7 +627,9 @@ function PromotionPackagesPage() {
             </div>
             <div>
               <span>Quota hiển thị</span>
-              <strong>{selectedPackage.displayQuota.toLocaleString("en-US")}</strong>
+              <strong>
+                {selectedPackage.displayQuota.toLocaleString("vi-VN")}
+              </strong>
             </div>
             <div>
               <span>Trạng thái</span>
@@ -658,8 +660,8 @@ function PromotionPackagesPage() {
         }
         description={
           modalMode === "add"
-            ? "Tạo gói quảng bá mới với vị trí hiển thị, giá bán và quota phù hợp."
-            : "Cập nhật thông tin kinh doanh và hạn mức của gói quảng bá."
+            ? "Tạo gói đẩy bài mới và gắn với một vị trí trên trang chủ."
+            : "Cập nhật thông tin kinh doanh của gói đẩy bài."
         }
         onClose={closeFormModal}
         maxWidth="760px"
@@ -685,12 +687,9 @@ function PromotionPackagesPage() {
               onChange={handleFormChange}
               disabled={isSubmitting}
             >
-              {(slotOptions.length > 0
-                ? Array.from(new Set(slotOptions.map((item) => item.label)))
-                : ["Home Top", "Category Top", "Search Boost"]
-              ).map((slot) => (
-                <option key={slot} value={slot}>
-                  {getSlotLabel(slot as PromotionPackageSlot)}
+              {slotOptions.map((slot) => (
+                <option key={slot.code} value={slot.label}>
+                  {slot.label}
                 </option>
               ))}
             </select>

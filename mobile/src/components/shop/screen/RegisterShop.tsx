@@ -41,7 +41,12 @@ const RegisterShopScreen = ({ navigation }: any) => {
     )
 
     const isPendingShop = useMemo(
-        () => !!shop?.shopId && shop.shopStatus !== 'active',
+        () => !!shop?.shopId && shop.shopStatus === 'pending',
+        [shop]
+    )
+
+    const isBlockedOrOtherShopState = useMemo(
+        () => !!shop?.shopId && !['pending', 'active'].includes(shop.shopStatus),
         [shop]
     )
 
@@ -110,6 +115,28 @@ const RegisterShopScreen = ({ navigation }: any) => {
             return false
         }
 
+        // Đồng nhất với user-web: logo là bắt buộc
+        if (!formData.shopLogoUrl) {
+            CustomAlert('Lỗi', 'Vui lòng tải lên ảnh đại diện cho cửa hàng')
+            return false
+        }
+
+        // Đồng nhất với user-web: tối thiểu 3 ảnh gallery
+        if (formData.shopGalleryImages.length < 3) {
+            CustomAlert('Lỗi', 'Vui lòng tải lên ít nhất 3 ảnh mô tả cửa hàng')
+            return false
+        }
+
+        // Mô tả bắt buộc (đồng nhất với user-web)
+        if (!formData.shopDescription.trim()) {
+            CustomAlert('Lỗi', 'Vui lòng nhập mô tả cho cửa hàng')
+            return false
+        }
+        if (formData.shopDescription.trim().length < 10) {
+            CustomAlert('Lỗi', 'Mô tả cửa hàng quá ngắn (cần ít nhất 10 ký tự)')
+            return false
+        }
+
         if (formData.shopPhone.trim() && !phoneRegex.test(formData.shopPhone.trim())) {
             CustomAlert('Lỗi', 'Định dạng số điện thoại Việt Nam không hợp lệ')
             return false
@@ -117,11 +144,6 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
         if (formData.shopEmail.trim() && !emailRegex.test(formData.shopEmail.trim())) {
             CustomAlert('Lỗi', 'Định dạng email không hợp lệ')
-            return false
-        }
-
-        if (formData.shopDescription.trim() && formData.shopDescription.trim().length < 10) {
-            CustomAlert('Lỗi', 'Mô tả cửa hàng quá ngắn (Cần ít nhất 10 ký tự)')
             return false
         }
 
@@ -138,6 +160,45 @@ const RegisterShopScreen = ({ navigation }: any) => {
         return true
     }
 
+    const normalizeSocialUrl = (url: string) => {
+        const value = url.trim()
+        if (!value) return undefined
+        return value.startsWith('http') ? value : `https://${value}`
+    }
+
+    /**
+     * Poll shop status sau khi browser đóng.
+     * VNPAY IPN (webhook) có thể chậm vài giây → cần thử lại nhiều lần
+     * thay vì chỉ refresh 1 lần ngay lập tức.
+     */
+    const pollShopActivation = async (maxRetries = 6, delayMs = 2500) => {
+        for (let i = 0; i < maxRetries; i++) {
+            await new Promise(resolve => setTimeout(resolve, delayMs))
+            await refreshShop()
+            // AuthContext sẽ cập nhật shop state; component tự re-render
+            // nếu status đổi thành 'active'. Không cần kiểm tra ở đây.
+        }
+    }
+
+    const openPaymentBrowser = async () => {
+        const paymentRes = await paymentService.createShopPaymentIntent()
+        console.log('[Payment] createShopPaymentIntent response:', paymentRes)
+
+        // Backend chỉ trả { paymentUrl } — không fallback field khác
+        const paymentUrl = paymentRes?.paymentUrl
+
+        if (!paymentUrl) {
+            console.error('[Payment] Unexpected response shape:', paymentRes)
+            throw new Error('Không nhận được link thanh toán từ hệ thống')
+        }
+
+        const result = await WebBrowser.openBrowserAsync(paymentUrl)
+        console.log('[Payment] Browser closed, result:', result)
+
+        // Bắt đầu poll để bắt kịp IPN VNPAY (có thể chậm vài giây)
+        await pollShopActivation()
+    }
+
     const handleSubmit = async () => {
         if (hasExistingShop) {
             CustomAlert('Thông báo', 'Hệ thống xác nhận tài khoản này đã có cửa hàng.')
@@ -145,6 +206,19 @@ const RegisterShopScreen = ({ navigation }: any) => {
         }
 
         if (!validateForm()) {
+            return
+        }
+
+        if (isBlockedOrOtherShopState) {
+            CustomAlert(
+                'Tài khoản bị hạn chế',
+                'Cửa hàng của bạn đang bị hạn chế hoặc đã bị từ chối. Vui lòng liên hệ bộ phận hỗ trợ để được giải quyết.'
+            )
+            return
+        }
+
+        if (isPendingShop) {
+            CustomAlert('Thông báo', 'Cửa hàng của bạn đang chờ kích hoạt. Vui lòng hoàn tất thanh toán để bắt đầu sử dụng.')
             return
         }
 
@@ -178,25 +252,33 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 shopYoutube: validateSocial(formData.shopYoutube.trim()) || undefined,
             }
 
-            const res = await ShopService.createShop(cleanData)
-            if (res) {
-                // Call VNPay Payment here immediately!
-                try {
-                    const paymentRes = await paymentService.createShopPaymentIntent()
-                    if (paymentRes.paymentUrl) {
-                        await WebBrowser.openBrowserAsync(paymentRes.paymentUrl)
-                        // Callback refetch 
-                    }
-                } catch (paymentErr: any) {
-                    CustomAlert('Thanh toán thất bại', paymentErr.message || 'Không thể tạo phiên thanh toán lúc này. Bạn có thể thanh toán sau.')
-                }
+            const createdShop = await ShopService.createShop(cleanData)
+            console.log('[Shop] createShop response:', createdShop)
 
+            // QUAN TRỌNG: KHÔNG refreshShop() ở đây.
+            // Nếu refresh trước khi mở browser → isPendingShop = true
+            // → component re-render sang view "pending" TRƯỚC KHI cổng thanh toán mở.
+            // refreshShop chỉ được gọi BÊN TRONG openPaymentBrowser/pollShopActivation.
+
+            // Mở cổng thanh toán ngay sau khi tạo shop thành công
+            try {
+                await openPaymentBrowser()
+            } catch (paymentErr: any) {
+                console.error('[Payment] Failed to open payment after register:', paymentErr)
+                // Fallback: refresh shop để UI phản ánh trạng thái pending
                 await refreshShop()
-                setSubmitted(true)
+                CustomAlert(
+                    'Chưa mở được thanh toán',
+                    paymentErr?.response?.data?.error ||
+                    paymentErr?.message ||
+                    'Đã tạo cửa hàng nhưng chưa thể mở VNPAY. Bạn có thể tiếp tục thanh toán sau.'
+                )
             }
-        } catch (error: any) {
-            const errorMsg = `Register shop error: ${error.response?.data?.error}` || 'Unknown error'
 
+        } catch (error: any) {
+            // Lấy message từ backend response trước, mới fallback về default
+            const errorMsg = error.response?.data?.error || 'Không thể đăng ký cửa hàng'
+            console.error('[Shop] Register shop error:', error)
             if (error.response?.data?.error === 'User already has a shop registered') {
                 await refreshShop()
                 CustomAlert('Thông báo', 'Hệ thống xác nhận tài khoản này đã có cửa hàng.')
@@ -212,14 +294,10 @@ const RegisterShopScreen = ({ navigation }: any) => {
     const handleContinuePayment = async () => {
         try {
             setLoading(true)
-            const paymentRes = await paymentService.createShopPaymentIntent()
-            if (paymentRes.paymentUrl) {
-                await WebBrowser.openBrowserAsync(paymentRes.paymentUrl)
-            }
-            await refreshShop()
-            setSubmitted(true)
+            await openPaymentBrowser()
+            // pollShopActivation() đã được gọi bên trong openPaymentBrowser
         } catch (error: any) {
-             CustomAlert('Lỗi thanh toán', error?.response?.data?.error || 'Không thể khởi tạo thanh toán VNPAY.')
+            CustomAlert('Lỗi thanh toán', error?.response?.data?.error || 'Không thể khởi tạo thanh toán VNPAY.')
         } finally {
             setLoading(false)
         }
@@ -273,7 +351,16 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         <Button
                             fullWidth
                             variant="outline"
-                            onPress={() => refreshShop()}
+                            onPress={async () => {
+                                setLoading(true)
+                                try {
+                                    await refreshShop()
+                                } catch (error: any) {
+                                    CustomAlert('Lỗi', error?.response?.data?.error || 'Không thể tải lại cửa hàng.')
+                                } finally {
+                                    setLoading(false)
+                                }
+                            }}
                             style={[styles.secondaryAction, { marginTop: 16 }]}
                         >
                             Đã thanh toán? Tải lại ngay
@@ -442,27 +529,27 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         />
                         {formData.shopLat ? (
                             <Text style={styles.coordinateText}>
-                                Coordinates received: {formData.shopLat.toFixed(4)}, {formData.shopLng?.toFixed(4)}
+                                Tữa độ: {formData.shopLat.toFixed(4)}, {formData.shopLng?.toFixed(4)}
                             </Text>
                         ) : null}
                     </View>
 
                     {/* Social Media Section */}
-                    <Text style={styles.label}>Social Media</Text>
+                    <Text style={styles.label}>Mạng xã hội</Text>
                     <Input
-                        placeholder="Facebook URL"
+                        placeholder="Đường dẫn Facebook"
                         value={formData.shopFacebook}
                         onChangeText={(t) => setFormData({ ...formData, shopFacebook: t })}
                         icon={<User size={18} color="#1877F2" />}
                     />
                     <Input
-                        placeholder="Instagram URL"
+                        placeholder="Đường dẫn Instagram"
                         value={formData.shopInstagram}
                         onChangeText={(t) => setFormData({ ...formData, shopInstagram: t })}
                         icon={<Camera size={18} color="#E4405F" />}
                     />
                     <Input
-                        placeholder="Youtube URL"
+                        placeholder="Đường dận Youtube"
                         value={formData.shopYoutube}
                         onChangeText={(t) => setFormData({ ...formData, shopYoutube: t })}
                         icon={<Play size={18} color="#E4405F" />}

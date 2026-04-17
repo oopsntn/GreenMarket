@@ -11,6 +11,7 @@ import {
     OwnerDashboardError,
     ownerDashboardService,
 } from "../../services/owner-dashboard.service.ts";
+import { postLifecycleService } from "../../services/postLifecycle.service.ts";
 
 const SHOP_GALLERY_DELIMITER = "|";
 const SHOP_EVENT_VIEW = "shop_view";
@@ -106,8 +107,25 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             shopFacebook, shopInstagram, shopYoutube
         } = req.body;
 
-        if (!shopName) {
-            res.status(400).json({ error: "Shop Name is required" });
+        // Validation
+        const errors: string[] = [];
+        if (!shopName?.trim()) errors.push("Shop Name is required");
+        if (!shopLocation?.trim()) errors.push("Shop Location is required");
+        if (!shopDescription?.trim()) errors.push("Shop Description is required");
+        if (shopLat === undefined || shopLat === null || String(shopLat).trim() === "") errors.push("Shop Latitude is required");
+        if (shopLng === undefined || shopLng === null || String(shopLng).trim() === "") errors.push("Shop Longitude is required");
+        
+        if (!shopLogoUrl?.trim()) {
+            errors.push("Shop Avatar (Logo) is required");
+        }
+
+        const galleryArray = Array.isArray(shopGalleryImages) ? shopGalleryImages : [];
+        if (galleryArray.length < 3) {
+            errors.push("At least 3 detailed images (Gallery) are required");
+        }
+
+        if (errors.length > 0) {
+            res.status(400).json({ error: errors.join(", ") });
             return;
         }
 
@@ -187,11 +205,40 @@ export const getMyShop = async (req: AuthRequest, res: Response): Promise<void> 
     }
 };
 
+export const deletePendingShop = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const [existingShop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!existingShop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        if (existingShop.shopStatus !== "pending") {
+            res.status(400).json({ error: "Only pending shops can be deleted" });
+            return;
+        }
+
+        await db.delete(shops).where(eq(shops.shopId, userId));
+        res.json({ message: "Shop registration cancelled successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+
 export const getOwnerDashboard = async (
     req: AuthRequest,
     res: Response,
 ): Promise<void> => {
     try {
+        await postLifecycleService.syncAutoExpiredPosts();
         const userId = req.user?.id;
         if (!userId) {
             res.status(401).json({ error: "Unauthorized", code: "UNAUTHORIZED" });
@@ -217,6 +264,7 @@ export const getOwnerDashboard = async (
 
 export const getPublicShopById = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
+        await postLifecycleService.syncAutoExpiredPosts();
         const id = parseId(req.params.id as string);
         if (!id) {
             res.status(400).json({ error: "Invalid Shop ID" });
@@ -391,6 +439,7 @@ export const updateShop = async (req: AuthRequest, res: Response): Promise<void>
 
 export const getAllShops = async (req: Request, res: Response): Promise<void> => {
     try {
+        await postLifecycleService.syncAutoExpiredPosts();
         const page = Number(req.query.page) || 1;
         const limit = Number(req.query.limit) || 20;
         const offset = (page - 1) * limit;

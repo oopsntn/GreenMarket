@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
@@ -8,6 +9,7 @@ import MyPosts from './pages/MyPosts';
 import CreatePost from './pages/CreatePost';
 import PostDetail from './pages/PostDetail';
 import Login from './pages/Login';
+import NewsDetail from "./pages/NewsDetail";
 import Profile from './pages/Profile';
 import ShopDetail from './pages/ShopDetail';
 import ShopList from './pages/ShopList';
@@ -38,9 +40,10 @@ const AppContent: React.FC = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/shops" element={<ShopList />} />
         <Route path="/news" element={<News />} />
+        <Route path="/news/detail/:id" element={<NewsDetail />} />
         <Route path="/packages" element={<Packages />} />
         <Route path="/payment-result" element={<PaymentResult />} />
-        <Route path="/detail/:slug" element={<PostDetail />} />
+        <Route path="/posts/detail/:slug" element={<PostDetail />} />
         <Route path="/shop/:id" element={<ShopDetail />} />
 
         {/* Protected Routes */}
@@ -84,7 +87,6 @@ const AppContent: React.FC = () => {
             <NewsBookmarks />
           </ProtectedRoute>
         } />
-        <Route path="/posts/detail/:slug" element={<PostDetail />} />
       </Routes>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   checkHostContentSaved,
   getHostPublicContents,
@@ -11,23 +11,23 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
-  Heart,
   Loader2,
   MousePointerClick,
   Search,
   Eye,
+  ArrowRight,
 } from "lucide-react";
 import { resolveImageUrl } from "../utils/resolveImageUrl";
 
 const PAGE_LIMIT = 9;
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const formatDate = (isoDate: string | null) => {
   if (!isoDate) return "N/A";
   const parsed = new Date(isoDate);
   if (Number.isNaN(parsed.getTime())) return "N/A";
   return new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -44,7 +44,7 @@ const getCoverImage = (item: HostPublicContent) => {
 
 const News: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const [items, setItems] = useState<HostPublicContent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +53,6 @@ const News: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [savedMap, setSavedMap] = useState<Record<number, boolean>>({});
-  const [savingId, setSavingId] = useState<number | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -67,7 +66,6 @@ const News: React.FC = () => {
       setLoading(true);
       try {
         const response = await getHostPublicContents({
-          targetType: "post",
           search: debouncedSearch || undefined,
           page,
           limit: PAGE_LIMIT,
@@ -125,28 +123,6 @@ const News: React.FC = () => {
     };
   }, [isAuthenticated, items]);
 
-  const handleToggleSave = async (contentId: number) => {
-    if (!isAuthenticated) {
-      navigate("/login", { state: { from: { pathname: "/news" } } });
-      return;
-    }
-
-    if (savingId === contentId) return;
-
-    setSavingId(contentId);
-    try {
-      const response = await toggleFavoriteHostContent(contentId);
-      setSavedMap((prev) => ({
-        ...prev,
-        [contentId]: !!response.data?.isSaved,
-      }));
-    } catch (error) {
-      console.error("Failed to toggle bookmark:", error);
-    } finally {
-      setSavingId(null);
-    }
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <header className="mb-10">
@@ -185,85 +161,74 @@ const News: React.FC = () => {
           <p className="text-slate-500">Thử đổi từ khóa tìm kiếm hoặc quay lại sau.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-8">
           {items.map((item) => {
-            const isSaved = !!savedMap[item.hostContentId];
             const coverImage = getCoverImage(item);
-            const trackingUrl = `${API_BASE}/host/tracking/${item.hostContentId}`;
-
             return (
               <article
                 key={item.hostContentId}
-                className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all"
+                className="group bg-white border border-slate-200 rounded-[1.5rem] overflow-hidden shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all duration-500"
               >
-                <div className="h-52 bg-slate-100 border-b border-slate-200 overflow-hidden">
-                  {coverImage ? (
-                    <img
-                      src={coverImage}
-                      alt={item.hostContentTitle}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400 font-semibold">
-                      Không có ảnh
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-5">
-                  <div className="flex items-center justify-between gap-4 mb-3">
-                    <span className="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full uppercase tracking-wide">
-                      Host Post
-                    </span>
-                    <button
-                      onClick={() => handleToggleSave(item.hostContentId)}
-                      disabled={savingId === item.hostContentId}
-                      className={`p-2 rounded-xl border transition-all ${isSaved
-                          ? "text-rose-500 border-rose-200 bg-rose-50"
-                          : "text-slate-400 border-slate-200 hover:text-rose-500 hover:border-rose-200"
-                        }`}
-                      title={isSaved ? "Bỏ bookmark" : "Lưu bookmark"}
-                    >
-                      {savingId === item.hostContentId ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Heart className={`w-4 h-4 ${isSaved ? "fill-rose-500" : ""}`} />
-                      )}
-                    </button>
+                <div className="flex flex-col md:flex-row h-full">
+                  {/* Image Section */}
+                  <div className="md:w-64 w-full h-48 md:h-auto shrink-0 relative overflow-hidden bg-slate-100">
+                    {coverImage ? (
+                      <img
+                        src={coverImage}
+                        alt={item.hostContentTitle}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 font-semibold bg-slate-50 text-xs">
+                        Không có ảnh
+                      </div>
+                    )}
                   </div>
 
-                  <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight line-clamp-2 mb-3">
-                    {item.hostContentTitle}
-                  </h2>
+                  {/* Content Section */}
+                  <div className="flex-1 p-4 md:p-5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                        <CalendarDays className="w-3 h-3" />
+                        {formatDate(item.hostContentCreatedAt)}
+                      </div>
 
-                  <p className="text-sm text-slate-600 line-clamp-3 min-h-[60px]">
-                    {item.hostContentDescription || "Không có mô tả"}
-                  </p>
+                      <Link to={`/news/detail/${item.hostContentId}`} className="block group/title">
+                        <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-tight mb-2 group-hover/title:text-emerald-700 transition-colors line-clamp-1">
+                          {item.hostContentTitle}
+                        </h2>
+                      </Link>
 
-                  <div className="mt-4 space-y-1 text-xs text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="w-3.5 h-3.5" />
-                      <span>{formatDate(item.hostContentCreatedAt)}</span>
+                      <p className="text-sm text-slate-500 font-medium leading-relaxed line-clamp-2 mb-4">
+                        {item.hostContentDescription || "Không có mô tả chi tiết."}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1">
-                        <Eye className="w-3.5 h-3.5" />
-                        {item.hostContentViewCount || 0}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MousePointerClick className="w-3.5 h-3.5" />
-                        {item.hostContentClickCount || 0}
-                      </span>
+
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                      <div className="flex items-center gap-4">
+                        {user?.id === item.authorId && (
+                          <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
+                            <span className="flex items-center gap-1">
+                              <Eye className="w-3.5 h-3.5 text-slate-300" />
+                              {item.hostContentViewCount || 0}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MousePointerClick className="w-3.5 h-3.5 text-slate-300" />
+                              {item.hostContentClickCount || 0}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <Link
+                        to={`/news/detail/${item.hostContentId}`}
+                        className="inline-flex items-center gap-2 h-8 px-4 rounded-xl bg-slate-100 text-slate-900 font-black uppercase text-[9px] tracking-widest hover:bg-emerald-700 hover:text-white transition-all shadow-sm"
+                      >
+                        Đọc tiếp
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
                     </div>
                   </div>
-
-                  <a
-                    href={trackingUrl}
-                    className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-700 text-white text-xs font-black uppercase tracking-wide hover:bg-emerald-600 transition-colors"
-                  >
-                    Xem bài viết
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
                 </div>
               </article>
             );

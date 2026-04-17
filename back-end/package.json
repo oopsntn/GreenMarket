@@ -15,6 +15,9 @@
     "seed:admin": "tsx src/scripts/seedAdmin.ts",
     "seed:sample": "tsx src/scripts/seedSampleData.ts",
     "seed:promotion-catalog": "tsx src/scripts/seedPromotionCatalog.ts",
+    "seed:standard-packages": "tsx src/scripts/seed-standard-packages.ts",
+    "seed:all": "npm run seed:promotion-catalog && npm run seed:standard-packages",
+    "set:test-prices": "tsx src/scripts/set-test-prices.ts",
     "approve:all": "tsx src/scripts/autoApprovePosts.ts",
     "approve:shops": "tsx src/scripts/autoApproveShops.ts",
     "test:rbac": "tsx src/scripts/testRbacApis.ts",
@@ -37,6 +40,7 @@
     "multer": "^2.1.1",
     "nodemailer": "^8.0.4",
     "pg": "^8.19.0",
+    "socket.io": "^4.8.3",
     "twilio": "^5.12.2",
     "uuid": "^13.0.0",
     "vnpay": "^2.4.4"

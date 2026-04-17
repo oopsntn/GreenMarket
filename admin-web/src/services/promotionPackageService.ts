@@ -1,5 +1,6 @@
 import { apiClient } from "../lib/apiClient";
 import type { PlacementSlotApiResponse } from "../types/placementSlot";
+import { isHomepageBoostSlotCode } from "../types/placementSlot";
 import type {
   PromotionPackage,
   PromotionPackageApiResponse,
@@ -56,6 +57,7 @@ const mapApiPackageToUi = (
     id: item.promotionPackageId,
     name: item.promotionPackageTitle?.trim() || "Gói chưa đặt tên",
     slot: mapSlotToUi(item.slotCode ?? null, item.slotTitle ?? null),
+    slotCode: item.slotCode?.trim() || "",
     durationDays: item.promotionPackageDurationDays ?? 1,
     price: formatCurrencyLabel(item.promotionPackagePrice),
     maxPosts: item.promotionPackageMaxPosts ?? 1,
@@ -123,11 +125,16 @@ const buildPackagePayload = (
 
 export const promotionPackageService = {
   getSlotOptions(slotResponses: PlacementSlotApiResponse[]) {
-    return slotResponses.map((item) => ({
-      id: item.placementSlotId,
-      code: item.placementSlotCode?.trim() || "",
-      label: mapSlotToUi(item.placementSlotCode ?? null, item.placementSlotTitle ?? null),
-    }));
+    return slotResponses
+      .map((item) => ({
+        id: item.placementSlotId,
+        code: item.placementSlotCode?.trim() || "",
+        label: mapSlotToUi(
+          item.placementSlotCode ?? null,
+          item.placementSlotTitle ?? null,
+        ),
+      }))
+      .filter((item) => isHomepageBoostSlotCode(item.code));
   },
 
   async getPromotionPackages(): Promise<PromotionPackage[]> {
@@ -138,7 +145,9 @@ export const promotionPackageService = {
       },
     );
 
-    return data.map(mapApiPackageToUi);
+    return data
+      .map(mapApiPackageToUi)
+      .filter((item) => isHomepageBoostSlotCode(item.slotCode));
   },
 
   getActivePromotionPackages(packages: PromotionPackage[]) {

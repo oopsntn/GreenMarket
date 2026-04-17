@@ -31,7 +31,9 @@ export const getPostingPolicy = () => api.get('/posts/posting-policy');
 export const activatePersonalMonthlyPlanMock = (durationDays = 30) =>
   api.post('/posts/personal-plan/mock-activate', { durationDays });
 export const updateUserPost = (postId: number, data: any) => api.patch(`/posts/${postId}`, data);
+export const togglePostVisibility = (postId: number | string) => api.patch(`/posts/${postId}/toggle-visibility`);
 export const deleteUserPost = (postId: number) => api.delete(`/posts/${postId}`);
+export const restoreUserPost = (postId: number) => api.post(`/posts/${postId}/restore`);
 
 // Shop APIs
 export const getAllShops = (params?: any) => api.get('/shops/browse', { params });
@@ -124,14 +126,27 @@ export const updateShop = (shopId: number, data: {
   shopYoutube?: string;
 }) => api.patch(`/shops/${shopId}`, data);
 
+export const deletePendingShop = () => api.delete('/shops/pending');
+
+
 export const requestShopVerificationOTP = (data: { target: string; type: 'email' | 'phone' }) => api.post('/shops/verify/request', data);
 export const verifyShopEmailOTP = (data: { email: string; otp: string }) => api.post('/shops/verify/email', data);
 export const addShopPhoneOTP = (data: { phone: string; otp: string }) => api.post('/shops/phones', data);
 export const deleteShopPhone = (data: { phone: string }) => api.delete('/shops/phones', { data });
 
 // Report API
-export const submitReport = (data: { postId: number; reportReason: string; reporterId?: number }) =>
-  api.post('/reports', data);
+export const submitReport = (data: {
+  postId: number;
+  reportReason: string;
+  reportReasonCode?: string;
+  reportNote?: string;
+  evidenceUrls?: string[];
+}) => api.post('/reports', data);
+
+// Notification API
+export const getMyNotifications = () => api.get('/notifications');
+export const markNotificationAsRead = (id: number) => api.patch(`/notifications/${id}/read`);
+export const markAllNotificationsAsRead = () => api.patch('/notifications/read-all');
 
 // --- Metadata (Categories & Attributes) ---
 export const getCategories = () => api.get('/categories');
@@ -193,6 +208,25 @@ export interface PricingConfig {
 }
 
 export const getPricingConfig = () => api.get<PricingConfig>('/pricing-config');
+export interface PublicSystemSettings {
+  general: {
+    platformName: string;
+    supportEmail: string;
+  };
+  postLifecycle: {
+    postRateLimitPerHour: number;
+    postExpiryDays: number;
+    restoreWindowDays: number;
+    allowAutoExpire: boolean;
+  };
+  media: {
+    maxImagesPerPost: number;
+    maxFileSizeMb: number;
+    enableImageCompression: boolean;
+  };
+}
+
+export const getPublicSystemSettings = () => api.get<PublicSystemSettings>('/settings/public');
 export const buyPersonalPackage = () => api.post<{ paymentUrl: string }>('/payment/buy-personal');
 export const getPaymentHistory = () => api.get('/payment/history');
 
@@ -209,17 +243,119 @@ export const updateProfile = (data: {
 // Create Post
 export const createPost = (data: any) => api.post("/posts", data);
 
-export const uploadMedia = (files: File[]) => {
+const HARD_MAX_IMAGE_SIZE_MB = 3;
+const HARD_ENABLE_IMAGE_COMPRESSION = true;
+
+const loadImageElement = (file: File) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error(`Không thể đọc ảnh ${file.name}`));
+    };
+
+    image.src = objectUrl;
+  });
+
+const canvasToFile = (
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality: number,
+  fileName: string,
+) =>
+  new Promise<File>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error(`Không thể nén ảnh ${fileName}`));
+        return;
+      }
+
+      resolve(new File([blob], fileName, { type: blob.type || type }));
+    }, type, quality);
+  });
+
+const compressImageFile = async (file: File, maxFileSizeMb: number) => {
+  if (!file.type.startsWith('image/')) {
+    return file;
+  }
+
+  if (['image/gif', 'image/avif', 'image/heic', 'image/heif'].includes(file.type)) {
+    return file;
+  }
+
+  const image = await loadImageElement(file);
+  const maxDimension = 2000;
+  const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+  const width = Math.max(1, Math.round(image.width * scale));
+  const height = Math.max(1, Math.round(image.height * scale));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return file;
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+
+  const preferredType =
+    file.type === 'image/png' && file.size <= maxFileSizeMb * 1024 * 1024
+      ? 'image/png'
+      : 'image/jpeg';
+
+  let quality = 0.86;
+  let compressed = await canvasToFile(
+    canvas,
+    preferredType,
+    preferredType === 'image/jpeg' ? quality : 0.92,
+    file.name.replace(/\.\w+$/, preferredType === 'image/jpeg' ? '.jpg' : '.png'),
+  );
+
+  const targetBytes = maxFileSizeMb * 1024 * 1024;
+  while (
+    preferredType === 'image/jpeg' &&
+    compressed.size > targetBytes &&
+    quality > 0.45
+  ) {
+    quality -= 0.08;
+    compressed = await canvasToFile(canvas, preferredType, quality, compressed.name);
+  }
+
+  return compressed.size <= file.size ? compressed : file;
+};
+
+const prepareUploadFiles = async (files: File[]) => {
+  if (!HARD_ENABLE_IMAGE_COMPRESSION) {
+    return files;
+  }
+
+  return Promise.all(
+    files.map((file) => compressImageFile(file, HARD_MAX_IMAGE_SIZE_MB).catch(() => file)),
+  );
+};
+
+export const uploadMedia = async (files: File[]) => {
+  const preparedFiles = await prepareUploadFiles(files);
   const formData = new FormData();
-  files.forEach(file => formData.append("media", file));
+  preparedFiles.forEach(file => formData.append("media", file));
   return api.post("/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" }
   });
 };
 
-export const uploadImages = (files: File[]) => {
+export const uploadImages = async (files: File[]) => {
+  const preparedFiles = await prepareUploadFiles(files);
   const formData = new FormData();
-  files.forEach(file => formData.append("media", file));
+  preparedFiles.forEach(file => formData.append("media", file));
   return api.post("/upload/images", formData, {
     headers: { "Content-Type": "multipart/form-data" }
   });
@@ -234,6 +370,7 @@ export interface HostPublicContent {
   hostContentId: number;
   hostContentTitle: string;
   hostContentDescription: string | null;
+  hostContentBody: string | null;
   hostContentTargetType: string | null;
   hostContentTargetId: number | null;
   hostContentMediaUrls: string[] | null;
@@ -243,6 +380,14 @@ export interface HostPublicContent {
   authorId: number | null;
   authorName: string | null;
   authorAvatar: string | null;
+  target?: {
+    postId?: number;
+    postTitle?: string;
+    postSlug?: string;
+    shopId?: number;
+    shopName?: string;
+    shopLogoUrl?: string;
+  } | null;
 }
 
 export interface HostPublicContentsResponse {
@@ -266,6 +411,7 @@ export interface HostFavoriteContent {
   hostContentCreatedAt: string | null;
   authorName: string | null;
   authorAvatar: string | null;
+  authorId: number | null;
 }
 
 export interface HostFavoriteContentsResponse {
@@ -295,5 +441,8 @@ export const getMyFavoriteHostContents = (params?: {
   page?: number;
   limit?: number;
 }) => api.get<HostFavoriteContentsResponse>('/host/favorites', { params });
+
+export const getHostPublicContentDetail = (id: number | string) =>
+  api.get<HostPublicContent>(`/host/public/contents/${id}`);
 
 export default api;

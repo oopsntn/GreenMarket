@@ -244,21 +244,21 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     }}
                 />
 
-                <Text style={styles.label}>Social Media</Text>
+                <Text style={styles.label}>Mạng xã hội</Text>
                 <Input
-                    placeholder="Facebook URL"
+                    placeholder="Đường dẫn Facebook"
                     value={formData.shopFacebook}
                     onChangeText={(t) => setFormData({ ...formData, shopFacebook: t })}
                     icon={<User size={18} color="#1877F2" />}
                 />
                 <Input
-                    placeholder="Instagram URL"
+                    placeholder="Đường dận Instagram"
                     value={formData.shopInstagram}
                     onChangeText={(t) => setFormData({ ...formData, shopInstagram: t })}
                     icon={<Camera size={18} color="#E4405F" />}
                 />
                 <Input
-                    placeholder="Youtube URL"
+                    placeholder="Đường dận Youtube"
                     value={formData.shopYoutube}
                     onChangeText={(t) => setFormData({ ...formData, shopYoutube: t })}
                     icon={<Play size={18} color="#FF0000" />}

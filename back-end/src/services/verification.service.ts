@@ -46,18 +46,18 @@ export class VerificationService {
      */
     async requestOTP(target: string, type: "email" | "phone", expiresInMinutes: number = 5): Promise<{ success: boolean; message: string }> {
         const normalizedTarget = type === "phone" ? this.normalizePhone(target) : target.trim().toLowerCase();
-        
+
         // --- 1. Phone + Twilio logic ---
         if (type === "phone" && this.client && this.verifyServiceSid) {
             // Check if it's the specific test number that should use Twilio
             // In a real app, you'd probably use Twilio for ALL real numbers.
-            const isTestNumber = normalizedTarget === "+84978195419"; 
+            const isTestNumber = normalizedTarget === "+84978195419";
             if (isTestNumber) {
                 try {
                     await this.client.verify.v2
                         .services(this.verifyServiceSid)
                         .verifications.create({ to: normalizedTarget, channel: "sms" });
-                    
+
                     return { success: true, message: "OTP sent via SMS (Twilio)" };
                 } catch (error: any) {
                     console.error("[VERIFICATION SERVICE] Twilio Send Error:", error.message);
@@ -118,7 +118,7 @@ export class VerificationService {
                     const check = await this.client.verify.v2
                         .services(this.verifyServiceSid)
                         .verificationChecks.create({ to: normalizedTarget, code });
-                    
+
                     if (check.status === "approved") {
                         return { success: true, message: "OTP verified (Twilio)" };
                     }

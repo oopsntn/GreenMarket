@@ -9,9 +9,9 @@ import {
   PlusCircle,
   LayoutDashboard,
   Newspaper,
-  Bookmark,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import NotificationCenter from "./NotificationCenter";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -27,36 +27,33 @@ const Navbar: React.FC = () => {
   const displayIdentity =
     isGardenOwner && shop?.shopName
       ? shop.shopName
-      : user?.userDisplayName?.trim() || user?.userMobile || "Nguoi dung";
+      : user?.userDisplayName?.trim() || user?.userMobile || "Người dùng";
 
   const guestNavItems = [
-    { label: "Trang chu", path: "/home", icon: ShoppingBag },
-    { label: "Danh sach nha vuon", path: "/shops", icon: Store },
-    { label: "News", path: "/news", icon: Newspaper },
+    { label: "Trang chủ", path: "/home", icon: ShoppingBag },
+    { label: "Danh sách nhà vườn", path: "/shops", icon: Store },
+    { label: "Tin tức", path: "/news", icon: Newspaper },
   ];
 
   const baseNavItems = [
-    { label: "Cho bonsai", path: "/home", icon: ShoppingBag },
-    { label: "Danh sach nha vuon", path: "/shops", icon: Store },
-    { label: "News", path: "/news", icon: Newspaper },
-    { label: "Dang tin", path: "/create-post", icon: PlusCircle },
+    { label: "Chợ bonsai", path: "/home", icon: ShoppingBag },
+    { label: "Danh sách nhà vườn", path: "/shops", icon: Store },
+    { label: "Tin tức", path: "/news", icon: Newspaper },
+    { label: "Đăng tin", path: "/create-post", icon: PlusCircle },
   ];
 
   const navItems = !isAuthenticated
     ? guestNavItems
     : isGardenOwner
       ? [
-          ...baseNavItems,
-          { label: "Bookmarks", path: "/news/bookmarks", icon: Bookmark },
-          { label: "Dashboard", path: "/owner-dashboard", icon: LayoutDashboard },
-          { label: shop?.shopName || "Nha vuon", path: "/my-posts", icon: Store },
-        ]
+        ...baseNavItems,
+        { label: "Dashboard", path: "/owner-dashboard", icon: LayoutDashboard },
+        { label: shop?.shopName || "Nhà vườn", path: "/my-posts", icon: Store },
+      ]
       : [
-          ...baseNavItems,
-          { label: "Bookmarks", path: "/news/bookmarks", icon: Bookmark },
-          ...(!shop ? [{ label: "Mo nha vuon", path: "/register-shop", icon: Store }] : []),
-          { label: "Ca nhan", path: "/my-posts", icon: User },
-        ];
+        ...baseNavItems,
+        { label: "Cá nhân", path: "/my-posts", icon: User },
+      ];
 
   return (
     <nav className="sticky top-0 z-50 glass border-b border-slate-200/50 px-6 py-4">
@@ -89,20 +86,23 @@ const Navbar: React.FC = () => {
               <Link to="/profile" className="hidden lg:block text-right hover:opacity-80 transition-opacity">
                 {isGardenOwner ? (
                   <>
-                    <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Chu vuon</div>
+                    <div className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Chủ vườn</div>
                     <div className="text-sm font-medium text-slate-700">{displayIdentity}</div>
                   </>
                 ) : (
                   <>
-                    <div className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Nghe nhan</div>
+                    <div className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Nghệ nhân</div>
                     <div className="text-sm font-medium text-slate-700">{displayIdentity}</div>
                   </>
                 )}
               </Link>
+              
+              <NotificationCenter />
+
               <button
                 onClick={logout}
-                className="bg-white border border-slate-200 p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
-                title="Dang xuat"
+                className="bg-white border border-slate-200 p-2.5 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
+                title="Đăng xuất"
               >
                 <LogOut className="w-5 h-5" />
               </button>
@@ -112,7 +112,7 @@ const Navbar: React.FC = () => {
               to="/login"
               className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl text-sm font-bold transition-all"
             >
-              Dang nhap
+              Đăng nhập
             </Link>
           )}
         </div>

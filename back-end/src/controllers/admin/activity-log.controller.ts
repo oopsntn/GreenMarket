@@ -237,7 +237,7 @@ const eventDefinitionMap: Record<string, EventDefinition> = {
   admin_promotion_paused: {
     actionLabel: "Tạm dừng chiến dịch quảng bá",
     moduleKey: "system",
-    moduleLabel: "Khuyến mãi",
+    moduleLabel: "Theo dõi quảng bá",
     actionType: "Tạm dừng / tiếp tục",
     severity: "trung bình",
     result: "Đã tạm dừng",
@@ -246,7 +246,7 @@ const eventDefinitionMap: Record<string, EventDefinition> = {
   admin_promotion_resumed: {
     actionLabel: "Tiếp tục chiến dịch quảng bá",
     moduleKey: "system",
-    moduleLabel: "Khuyến mãi",
+    moduleLabel: "Theo dõi quảng bá",
     actionType: "Tạm dừng / tiếp tục",
     severity: "trung bình",
     result: "Đã tiếp tục",
@@ -255,7 +255,7 @@ const eventDefinitionMap: Record<string, EventDefinition> = {
   admin_promotion_package_changed: {
     actionLabel: "Đổi gói quảng bá",
     moduleKey: "system",
-    moduleLabel: "Khuyến mãi",
+    moduleLabel: "Theo dõi quảng bá",
     actionType: "Đổi gói / mở lại",
     severity: "cao",
     result: "Đã cập nhật",
@@ -264,7 +264,7 @@ const eventDefinitionMap: Record<string, EventDefinition> = {
   admin_promotion_reopened: {
     actionLabel: "Mở lại chiến dịch quảng bá",
     moduleKey: "system",
-    moduleLabel: "Khuyến mãi",
+    moduleLabel: "Theo dõi quảng bá",
     actionType: "Đổi gói / mở lại",
     severity: "cao",
     result: "Đã mở lại",
@@ -273,7 +273,7 @@ const eventDefinitionMap: Record<string, EventDefinition> = {
   admin_boosted_post_closed: {
     actionLabel: "Đóng chiến dịch quảng bá",
     moduleKey: "system",
-    moduleLabel: "Khuyến mãi",
+    moduleLabel: "Theo dõi quảng bá",
     actionType: "Đóng chiến dịch",
     severity: "cao",
     result: "Đã đóng",

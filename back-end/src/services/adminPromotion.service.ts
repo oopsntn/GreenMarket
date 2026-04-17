@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, isNull, lte, or } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
     eventLogs,
@@ -16,6 +16,7 @@ import {
     mapPlacementSlotScope,
     type AdminPlacementSlotScope,
 } from "./adminPlacementSlotCatalog.service.ts";
+import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion.ts";
 
 type RawPromotionRow = {
     promotionId: number;
@@ -606,7 +607,12 @@ const selectPromotionRows = async (): Promise<RawPromotionRow[]> => {
             placementSlots,
             eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId),
         )
-        .where(inArray(posts.categoryId, BONSAI_CATEGORY_IDS))
+        .where(
+            and(
+                inArray(posts.categoryId, BONSAI_CATEGORY_IDS),
+                sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`,
+            ),
+        )
         .orderBy(desc(postPromotions.postPromotionCreatedAt));
 };
 
@@ -737,7 +743,7 @@ const logPromotionEvent = async (params: {
             performedBy: params.actorName?.trim() || "Quản trị viên hệ thống",
             actorRole: "Quản trị viên",
             result: params.result ?? "Thành công",
-            moduleLabel: "Khuyến mãi",
+            moduleLabel: "Theo dõi quảng bá",
             targetType: "Chiến dịch quảng bá",
             targetName: params.targetName,
         },

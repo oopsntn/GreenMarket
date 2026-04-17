@@ -1,4 +1,7 @@
 import { apiClient } from "../lib/apiClient";
+import {
+  isHomepageBoostSlotCode,
+} from "../types/placementSlot";
 import type {
   PlacementSlot,
   PlacementSlotApiResponse,
@@ -12,7 +15,7 @@ const emptyPlacementSlotForm: PlacementSlotFormState = {
   scope: "Homepage",
   positionCode: "",
   capacity: 1,
-  displayRule: "Round Robin",
+  displayRule: "Priority Score",
   priority: 1,
   notes: "",
 };
@@ -43,7 +46,7 @@ const validateSlotForm = (
   }
 
   if (!Number.isFinite(formData.priority) || formData.priority < 1) {
-    throw new Error("Độ ưu tiên phải lớn hơn hoặc bằng 1.");
+    throw new Error("Thứ tự hiển thị phải lớn hơn hoặc bằng 1.");
   }
 
   const isDuplicatedName = existingSlots.some((slot) => {
@@ -87,7 +90,7 @@ const mapRulesToUi = (rules: Record<string, unknown> | null) => {
       rules?.displayRule === "Random" ||
       rules?.displayRule === "Priority Score"
         ? (rules.displayRule as PlacementSlot["displayRule"])
-        : ("Round Robin" as PlacementSlot["displayRule"]),
+        : ("Priority Score" as PlacementSlot["displayRule"]),
     priority:
       typeof rules?.priority === "number" && Number.isFinite(rules.priority)
         ? rules.priority
@@ -128,8 +131,8 @@ const buildSlotPayload = (
     placementSlotCapacity: formData.capacity,
     placementSlotPublished: published,
     placementSlotRules: {
-      scope: formData.scope,
-      displayRule: formData.displayRule,
+      scope: "Homepage",
+      displayRule: "Priority Score",
       priority: formData.priority,
       notes: normalizeText(formData.notes),
     },
@@ -145,7 +148,11 @@ export const placementSlotService = {
       },
     );
 
-    return sortPlacementSlots(data.map(mapApiSlotToUi));
+    return sortPlacementSlots(
+      data
+        .map(mapApiSlotToUi)
+        .filter((slot) => isHomepageBoostSlotCode(slot.positionCode)),
+    );
   },
 
   getEmptyForm(): PlacementSlotFormState {

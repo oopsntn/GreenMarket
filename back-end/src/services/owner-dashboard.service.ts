@@ -3,11 +3,13 @@ import { db } from "../config/db.ts";
 import {
   eventLogs,
   paymentTxn,
+  placementSlots,
   postPromotions,
   posts,
   promotionPackages,
   shops,
 } from "../models/schema/index.ts";
+import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion.ts";
 
 const SHOP_EVENT_VIEW = "shop_view";
 const SHOP_EVENT_CONTACT_CLICK = "shop_contact_click";
@@ -135,7 +137,16 @@ export const ownerDashboardService = {
         postPromotionEndAt: postPromotions.postPromotionEndAt,
       })
       .from(postPromotions)
-      .where(eq(postPromotions.postPromotionBuyerId, userId));
+      .innerJoin(
+        placementSlots,
+        eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId),
+      )
+      .where(
+        and(
+          eq(postPromotions.postPromotionBuyerId, userId),
+          sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`,
+        ),
+      );
 
     const activePromotionPostIds = new Set<number>();
     let activePromotions = 0;
@@ -173,8 +184,11 @@ export const ownerDashboardService = {
       .orderBy(desc(paymentTxn.paymentTxnCreatedAt));
 
     const shopPayments = paymentRows.filter((item) => {
-      if (item.postId === null) return false;
-      return postIdSet.has(item.postId);
+      // Include if it belongs to a post in this shop
+      if (item.postId !== null && postIdSet.has(item.postId)) return true;
+      // Include shop-level/account-level transactions (where postId is null)
+      if (item.postId === null) return true;
+      return false;
     });
 
     const successfulPaymentRows = shopPayments.filter(
@@ -279,7 +293,7 @@ export const ownerDashboardService = {
         postId: item.postId,
         postTitle: item.postTitle,
         packageId: item.packageId,
-        packageTitle: item.packageTitle,
+        packageTitle: item.packageTitle || (item.packageId === null ? "Đăng ký nhà vườn" : "Nâng cấp tài khoản"),
       })),
     };
   },

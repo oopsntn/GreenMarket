@@ -16,7 +16,7 @@ const PostTabs = ({ activeTab, onTabChange, hasShop, styles }: PostTabsProps) =>
         onPress={() => onTabChange('personal')}
       >
         <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>
-          Personal
+          Cá nhân
         </Text>
       </TouchableOpacity>
 
@@ -26,7 +26,7 @@ const PostTabs = ({ activeTab, onTabChange, hasShop, styles }: PostTabsProps) =>
           onPress={() => onTabChange('shop')}
         >
           <Text style={[styles.tabText, activeTab === 'shop' && styles.activeTabText]}>
-            Shop
+            Cửa hàng
           </Text>
         </TouchableOpacity>
       ) : null}
