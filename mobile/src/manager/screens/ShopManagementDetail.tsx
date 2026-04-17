@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -31,7 +31,7 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
       setShop(data);
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Unable to load shop details.');
+      CustomAlert('Lỗi', 'Không thể tải thông tin cửa hàng.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -39,17 +39,17 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
   };
 
   const handleVerify = () => {
-    CustomAlert('Approve shop', 'Approve this shop and allow it to operate?', [
-      { text: 'Cancel', style: 'cancel' },
+    CustomAlert('Duyệt cửa hàng', 'Duyệt cửa hàng này và cho phép hoạt động?', [
+      { text: 'Hủy', style: 'cancel' },
       {
-        text: 'Approve',
+        text: 'Duyệt',
         onPress: async () => {
           try {
             await managerService.verifyShop(shopId);
-            CustomAlert('Success', 'The shop has been activated.');
+            CustomAlert('Thành công', 'Cửa hàng đã được kích hoạt.');
             navigation.goBack();
           } catch (error) {
-            CustomAlert('Error', 'Unable to activate this shop.');
+            CustomAlert('Lỗi', 'Không thể kích hoạt cửa hàng này.');
           }
         }
       },
@@ -59,10 +59,10 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
   const onSubmitBlock = async (reason: string) => {
     try {
       await managerService.updateShopStatus(shopId, 'blocked', reason);
-      CustomAlert('Blocked', `The shop has been blocked. Reason: ${reason}`);
+      CustomAlert('Chặn', `Cửa hàng đã bị chặn. Lý do: ${reason}`);
       navigation.goBack();
     } catch (error) {
-      CustomAlert('Error', 'The action could not be completed.');
+      CustomAlert('Lỗi', 'Không thể thực hiện thao tác này.');
     }
   };
 
@@ -84,7 +84,7 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <ArrowLeft color="#1E293B" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shop Profile</Text>
+        <Text style={styles.headerTitle}>Hồ sơ cửa hàng</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -102,13 +102,13 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Basic Information</Text>
+          <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <User size={18} color="#64748B" />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Owner</Text>
-                <Text style={styles.infoValue}>{shop.ownerName || 'Unknown owner'}</Text>
+                <Text style={styles.infoLabel}>Chủ sở hữu</Text>
+                <Text style={styles.infoValue}>{shop.ownerName || 'Chưa rõ chủ sở hữu'}</Text>
               </View>
             </View>
 
@@ -117,8 +117,8 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
             <View style={styles.infoRow}>
               <Calendar size={18} color="#64748B" />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Created at</Text>
-                <Text style={styles.infoValue}>{shop.createdAt ? new Date(shop.createdAt).toLocaleString() : 'Not available'}</Text>
+                <Text style={styles.infoLabel}>Ngày tạo</Text>
+                <Text style={styles.infoValue}>{shop.createdAt ? new Date(shop.createdAt).toLocaleString() : 'Không có'}</Text>
               </View>
             </View>
 
@@ -127,25 +127,25 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
             <View style={styles.infoRow}>
               <Calendar size={18} color="#64748B" />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Updated at</Text>
-                <Text style={styles.infoValue}>{shop.updatedAt ? new Date(shop.updatedAt).toLocaleString() : 'Not available'}</Text>
+                <Text style={styles.infoLabel}>Ngày cập nhật</Text>
+                <Text style={styles.infoValue}>{shop.updatedAt ? new Date(shop.updatedAt).toLocaleString() : 'Không có'}</Text>
               </View>
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Queue Context</Text>
+          <Text style={styles.sectionTitle}>Ngữ cảnh hàng đợi</Text>
           <View style={styles.descriptionCard}>
-            <Text style={styles.descriptionText}>{shop.subtitle || 'No extra moderation note available.'}</Text>
-            <Text style={styles.priorityText}>Priority: {shop.priority}</Text>
+            <Text style={styles.descriptionText}>{shop.subtitle || 'Không có ghi chú kiểm duyệt bổ sung.'}</Text>
+            <Text style={styles.priorityText}>Độ ưu tiên: {shop.priority}</Text>
           </View>
         </View>
 
         <View style={styles.warningBox}>
           <AlertCircle size={20} color="#F59E0B" />
           <Text style={styles.warningText}>
-            The manager API exposes moderation queue information for shops. Use activate or block here, and escalate separately if the case needs a stronger workflow.
+            API quản lý chỉ hiển thị thông tin hàng đợi kiểm duyệt cho cửa hàng. Sử dụng kích hoạt hoặc chặn tại đây, và leo thang riêng nếu trường hợp cần quy trình mạnh hơn.
           </Text>
         </View>
       </ScrollView>
@@ -153,12 +153,12 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
       <View style={styles.bottomBar}>
         <TouchableOpacity style={[styles.btn, styles.rejectBtn]} onPress={() => setIsBlockModalVisible(true)}>
           <Ban size={20} color="#F59E0B" />
-          <Text style={styles.rejectBtnText}>Block Shop</Text>
+          <Text style={styles.rejectBtnText}>Chặn cửa hàng</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.btn, styles.verifyBtn]} onPress={handleVerify}>
           <ShieldCheck size={20} color="white" />
-          <Text style={styles.verifyBtnText}>Approve & Activate</Text>
+          <Text style={styles.verifyBtnText}>Duyệt & Kích hoạt</Text>
         </TouchableOpacity>
       </View>
 
@@ -166,9 +166,9 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
         visible={isBlockModalVisible}
         onClose={() => setIsBlockModalVisible(false)}
         onSubmit={onSubmitBlock}
-        title="Reason for blocking"
-        placeholder="Explain why this shop is being blocked..."
-        confirmLabel="Block shop"
+        title="Lý do chặn"
+        placeholder="Giải thích lý do chặn cửa hàng này..."
+        confirmLabel="Chặn cửa hàng"
         confirmColor="#F59E0B"
       />
     </SafeAreaView>

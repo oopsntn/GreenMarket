@@ -28,7 +28,7 @@ const ReportManagementList = ({ navigation }: any) => {
       setReports(data.filter((r) => r.reportStatus === 'pending'));
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Unable to load reports.');
+      CustomAlert('Lỗi', 'Không thể tải danh sách báo cáo.');
     } finally {
       setLoading(false);
     }
@@ -45,10 +45,10 @@ const ReportManagementList = ({ navigation }: any) => {
         <View style={styles.reportInfo}>
           <View style={styles.reporteeRow}>
             <User size={14} color="#64748B" />
-            <Text style={styles.reporteeName}>{item.reporterDisplayName || 'Unknown reporter'}</Text>
+            <Text style={styles.reporteeName}>{item.reporterDisplayName || 'Người báo cáo không xác định'}</Text>
           </View>
           <Text style={styles.targetName} numberOfLines={1}>
-            {item.postTitle ? `Post: ${item.postTitle}` : item.shopName ? `Shop: ${item.shopName}` : `Report #${item.reportId}`}
+            {item.postTitle ? `Tin: ${item.postTitle}` : item.shopName ? `Cửa hàng: ${item.shopName}` : `Báo cáo #${item.reportId}`}
           </Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
@@ -56,16 +56,16 @@ const ReportManagementList = ({ navigation }: any) => {
 
       <View style={styles.reasonContainer}>
         <Flag size={14} color="#EF4444" strokeWidth={2} />
-        <Text style={styles.reasonText} numberOfLines={2}>{item.reportReason || item.reportReasonCode || 'No reason provided'}</Text>
+        <Text style={styles.reasonText} numberOfLines={2}>{item.reportReason || item.reportReasonCode || 'Không có lý do'}</Text>
       </View>
 
       <View style={styles.cardFooter}>
         <View style={styles.timeRow}>
           <Calendar size={14} color="#94A3B8" />
-          <Text style={styles.timeText}>{item.reportCreatedAt ? new Date(item.reportCreatedAt).toLocaleDateString() : 'No date'}</Text>
+          <Text style={styles.timeText}>{item.reportCreatedAt ? new Date(item.reportCreatedAt).toLocaleDateString() : 'Không có ngày'}</Text>
         </View>
         <TouchableOpacity style={styles.resolveBtn} onPress={() => navigation.navigate('ReportManagementDetail', { reportId: item.reportId })}>
-          <Text style={styles.resolveBtnText}>Review now</Text>
+          <Text style={styles.resolveBtnText}>Xem ngay</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -75,7 +75,7 @@ const ReportManagementList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>Report Management</Text>
+        <Text style={styles.title}>Quản lý báo cáo</Text>
         <TouchableOpacity onPress={fetchReports} style={styles.iconCircle}>
           <Flag size={22} color="#64748B" />
         </TouchableOpacity>
@@ -97,7 +97,7 @@ const ReportManagementList = ({ navigation }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#22C55E" strokeWidth={1} />
-              <Text style={styles.emptyText}>All reports have already been processed.</Text>
+              <Text style={styles.emptyText}>Tất cả báo cáo đã được xử lý.</Text>
             </View>
           }
         />

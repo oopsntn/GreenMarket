@@ -19,6 +19,7 @@ import SavedPostsScreen from '../components/post/screen/SavedPostsScreen';
 import PromotePostScreen from '../components/payment/screen/PromotePostScreen';
 import CreateReportScreen from '../components/report/screen/CreateReportService';
 import ShopDashboardScreen from '@/components/shop/screen/ShopDashboardScreen';
+import PackagesScreen from '@/components/shop/screen/PackagesScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -33,17 +34,6 @@ const HomeStackNavigator = () => {
       }}
     >
       <Stack.Screen name="HomeTab" component={HomeScreen} />
-      <Stack.Screen name="PostDetail" component={PostDetailScreen} />
-      <Stack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} />
-      <Stack.Screen name="SavedPosts" component={SavedPostsScreen} />
-      <Stack.Screen name="MyPost" component={MyPostLayout} />
-      <Stack.Screen name="MyShop" component={ShoDetailScreen} />
-      <Stack.Screen name="BrowseShops" component={BrowseShopsScreen} />
-      <Stack.Screen name="RegisterShop" component={RegisterShopScreen} />
-      <Stack.Screen name="EditShop" component={EditShopScreen} />
-      <Stack.Screen name="CreateReport" component={CreateReportScreen} />
-      <Stack.Screen name="PromotePost" component={PromotePostScreen} />
-      <Stack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
     </Stack.Navigator>
   );
 };
@@ -57,18 +47,11 @@ const SettingsStackNavigator = () => {
       }}
     >
       <Stack.Screen name="SettingsTab" component={UserSettingsScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="RegisterShop" component={RegisterShopScreen} />
-      <Stack.Screen name="EditShop" component={EditShopScreen} />
-      <Stack.Screen name="MyShop" component={ShoDetailScreen} />
-      <Stack.Screen name="SavedPosts" component={SavedPostsScreen} />
-      <Stack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
     </Stack.Navigator>
   );
 };
 
-// Main Bottom Tab Navigator
-const UserNavigator = () => {
+const MainTabsNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -119,6 +102,32 @@ const UserNavigator = () => {
         }}
       />
     </Tab.Navigator>
+  );
+};
+
+const UserNavigator = () => {
+  return (
+    <RootStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <RootStack.Screen name="MainTabs" component={MainTabsNavigator} />
+      <RootStack.Screen name="CreatePost" component={CreatePostLayout} />
+      <RootStack.Screen name="Profile" component={ProfileScreen} />
+      <RootStack.Screen name="PostDetail" component={PostDetailScreen} />
+      <RootStack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} />
+      <RootStack.Screen name="SavedPosts" component={SavedPostsScreen} />
+      <RootStack.Screen name="MyPost" component={MyPostLayout} />
+      <RootStack.Screen name="MyShop" component={ShoDetailScreen} />
+      <RootStack.Screen name="BrowseShops" component={BrowseShopsScreen} />
+      <RootStack.Screen name="RegisterShop" component={RegisterShopScreen} />
+      <RootStack.Screen name="EditShop" component={EditShopScreen} />
+      <RootStack.Screen name="CreateReport" component={CreateReportScreen} />
+      <RootStack.Screen name="PromotePost" component={PromotePostScreen} />
+      <RootStack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
+      <RootStack.Screen name="Packages" component={PackagesScreen} />
+    </RootStack.Navigator>
   );
 };
 

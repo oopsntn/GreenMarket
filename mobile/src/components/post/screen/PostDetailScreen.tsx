@@ -6,6 +6,7 @@ import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Button from '../../Reused/Button/Button'
 import { MediaGallery } from '../components/MediaGallery'
 import Card from '../../Reused/Card/Card'
+import { resolveImageUrl } from '../../../utils/resolveImageUrl'
 
 interface Props {
   route: any,
@@ -110,18 +111,10 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
 
   const media = [
     ...(post?.images || []).map((i: any) => {
-      let url = i.imageUrl;
-      if (url?.includes('localhost')) {
-        url = url.replace('localhost', '14.170.9.64');
-      }
-      return { type: 'image', url };
+      return { type: 'image', url: resolveImageUrl(i.imageUrl) };
     }),
     ...(post?.videos || []).map((v: any) => {
-      let url = v.videoUrl;
-      if (url?.includes('localhost')) {
-        url = url.replace('localhost', '14.170.9.64');
-      }
-      return { type: 'video', url };
+      return { type: 'video', url: resolveImageUrl(v.videoUrl) };
     })
   ]
 
@@ -152,6 +145,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       headerStyle="default"
       backButton={() => navigation.goBack()}
       rightAction={renderRightActions()}
+      scrollEnabled={true}
       bottom={
         <View style={styles.bottomActions}>
           <Button
