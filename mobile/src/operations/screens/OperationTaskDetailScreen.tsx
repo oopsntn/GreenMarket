@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -23,6 +25,8 @@ import {
 
 const STATUS_OPTIONS: OperationTaskStatus[] = ['open', 'in_progress', 'closed'];
 const PRIORITY_OPTIONS: OperationTaskPriority[] = ['low', 'medium', 'high', 'critical'];
+
+const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -419,7 +423,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12 + STATUS_BAR_OFFSET,
+    paddingBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

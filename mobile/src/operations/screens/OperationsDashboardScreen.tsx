@@ -1,18 +1,19 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Bell, ClipboardList, LogOut, TimerReset, Workflow } from 'lucide-react-native';
+import { Bell, ClipboardList, TimerReset, Workflow } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import CustomAlert from '../../utils/AlertHelper';
 import { useAuth } from '../../context/AuthContext';
 import {
   operationsService,
@@ -26,6 +27,8 @@ const emptyStats: OperationWorkloadStats = {
   open: 0,
   inProgress: 0,
 };
+
+const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -42,7 +45,7 @@ const formatDateTime = (value: string | null) => {
 
 const OperationsDashboardScreen = () => {
   const navigation = useNavigation<any>();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -100,13 +103,6 @@ const OperationsDashboardScreen = () => {
     return Math.round((stats.closed / stats.total) * 100);
   }, [stats.closed, stats.total]);
 
-  const handleLogout = () => {
-    CustomAlert('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', [
-      { text: 'Hủy', style: 'cancel' },
-      { text: 'Đăng xuất', style: 'destructive', onPress: logout },
-    ]);
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.centerContainer}>
@@ -128,10 +124,6 @@ const OperationsDashboardScreen = () => {
               <Text style={styles.helloText}>Xin chào,</Text>
               <Text style={styles.userName}>{user?.userDisplayName || 'Operations Staff'}</Text>
             </View>
-
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <LogOut color="white" size={18} />
-            </TouchableOpacity>
           </View>
 
           <Text style={styles.heroSubtitle}>Theo dõi khối lượng xử lý và điều phối công việc hằng ngày</Text>
@@ -239,7 +231,8 @@ const styles = StyleSheet.create({
   },
   hero: {
     paddingHorizontal: 16,
-    paddingVertical: 18,
+    paddingTop: 18 + STATUS_BAR_OFFSET,
+    paddingBottom: 18,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
@@ -263,14 +256,6 @@ const styles = StyleSheet.create({
     color: '#DCFCE7',
     fontSize: 12,
     lineHeight: 17,
-  },
-  logoutBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   progressCard: {
     marginTop: 14,

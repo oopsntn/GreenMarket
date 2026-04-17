@@ -1,9 +1,11 @@
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
@@ -17,6 +19,8 @@ const emptyStats: OperationWorkloadStats = {
   open: 0,
   inProgress: 0,
 };
+
+const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const formatDateTime = (value: string | null) => {
   if (!value) {
@@ -151,7 +155,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   content: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16 + STATUS_BAR_OFFSET,
     paddingBottom: 26,
   },
   pageTitle: {

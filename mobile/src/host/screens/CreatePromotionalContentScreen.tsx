@@ -5,6 +5,7 @@ import {
   Platform,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -24,6 +25,8 @@ const TARGET_OPTIONS: Array<{ label: string; value: HostContentTargetType }> = [
 ];
 
 const MAX_MEDIA = 5;
+
+const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const CreatePromotionalContentScreen = () => {
   const navigation = useNavigation<any>();
@@ -320,7 +323,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 14 + STATUS_BAR_OFFSET,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   RefreshControl,
   SafeAreaView,
   ScrollView,
@@ -15,13 +16,11 @@ import {
   BarChart3,
   CircleDollarSign,
   Eye,
-  LogOut,
   Megaphone,
   MousePointerClick,
   Wallet,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import CustomAlert from '../../utils/AlertHelper';
 import { useAuth } from '../../context/AuthContext';
 import { hostService, HostContent, HostDashboardStats } from '../services/hostService';
 
@@ -53,6 +52,8 @@ const emptyStats: HostDashboardStats = {
   availableBalance: 0,
 };
 
+const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
+
 type StatsCardProps = {
   label: string;
   value: string;
@@ -74,7 +75,7 @@ const StatsCard = ({ label, value, icon: Icon, color }: StatsCardProps) => {
 
 const HostDashboardScreen = () => {
   const navigation = useNavigation<any>();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -126,13 +127,6 @@ const HostDashboardScreen = () => {
       .slice(0, 6);
   }, [contents]);
 
-  const handleLogout = () => {
-    CustomAlert('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', [
-      { text: 'Hủy', style: 'cancel' },
-      { text: 'Đăng xuất', style: 'destructive', onPress: logout },
-    ]);
-  };
-
   if (loading) {
     return (
       <View style={styles.center}>
@@ -168,9 +162,6 @@ const HostDashboardScreen = () => {
               <Text style={styles.userName}>{user?.userDisplayName || 'Host'}</Text>
               <Text style={styles.subTitle}>Theo dõi hiệu suất và thu nhập nội dung</Text>
             </View>
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-              <LogOut size={20} color="white" />
-            </TouchableOpacity>
           </View>
 
           <View style={styles.balanceBox}>
@@ -310,7 +301,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 20 + STATUS_BAR_OFFSET,
     paddingBottom: 24,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
@@ -334,14 +325,6 @@ const styles = StyleSheet.create({
     color: '#DCFCE7',
     fontSize: 12,
     marginTop: 4,
-  },
-  logoutBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   balanceBox: {
     marginTop: 18,

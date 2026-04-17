@@ -2,8 +2,10 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -64,6 +66,8 @@ const defaultMeta: PaginationMeta = {
   totalItems: 0,
   totalPages: 1,
 };
+
+const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const OperationsTasksScreen = () => {
   const navigation = useNavigation<any>();
@@ -258,7 +262,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12 + STATUS_BAR_OFFSET,
+    paddingBottom: 12,
   },
   pageTitle: {
     color: '#0F172A',

@@ -2,8 +2,10 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -34,6 +36,8 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
 });
 
 const formatCurrency = (value: number) => currencyFormatter.format(Number.isFinite(value) ? value : 0);
+
+const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const HostPayoutScreen = () => {
   const navigation = useNavigation<any>();
@@ -321,7 +325,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 14 + STATUS_BAR_OFFSET,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },

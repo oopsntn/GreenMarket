@@ -2,8 +2,10 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -28,6 +30,8 @@ const formatDateTime = (value: string | null) => {
 
   return date.toLocaleString('vi-VN');
 };
+
+const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const OperationsNotificationsScreen = () => {
   const [loading, setLoading] = useState(true);
@@ -146,7 +150,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 14 + STATUS_BAR_OFFSET,
+    paddingBottom: 14,
   },
   pageTitle: {
     color: '#0F172A',
