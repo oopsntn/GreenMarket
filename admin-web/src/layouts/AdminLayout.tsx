@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getVisibleAdminMenuGroups } from "../utils/adminPermissions";
 import { clearAdminSession, getAdminProfile } from "../utils/adminSession";
+import AdminNotificationListener from "../components/AdminNotificationListener";
 import "./AdminLayout.css";
 
 function AdminLayout() {
@@ -37,6 +38,7 @@ function AdminLayout() {
 
   return (
     <div className="admin-layout">
+      <AdminNotificationListener />
       <aside className="admin-sidebar">
         <div className="admin-sidebar__brand">
           <h2>GreenMarket</h2>

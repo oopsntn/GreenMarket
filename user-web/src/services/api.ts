@@ -143,6 +143,11 @@ export const submitReport = (data: {
   evidenceUrls?: string[];
 }) => api.post('/reports', data);
 
+// Notification API
+export const getMyNotifications = () => api.get('/notifications');
+export const markNotificationAsRead = (id: number) => api.patch(`/notifications/${id}/read`);
+export const markAllNotificationsAsRead = () => api.patch('/notifications/read-all');
+
 // --- Metadata (Categories & Attributes) ---
 export const getCategories = () => api.get('/categories');
 export const getCategoryAttributes = (categoryId: number) => api.get(`/categories/${categoryId}/attributes`);

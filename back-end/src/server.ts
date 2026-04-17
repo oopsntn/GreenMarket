@@ -1,6 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import { createServer } from "http";
+import { initSocket } from "./config/socket.ts";
 
 dotenv.config();
 
@@ -43,6 +45,7 @@ import uploadRoutes from "./routes/upload.route.ts";
 import userPromotionRoutes from "./routes/user/promotion.route.ts";
 import userPaymentRoutes from "./routes/user/payment.route.ts";
 import pricingConfigRoutes from "./routes/user/pricing-config.route.ts";
+import userNotificationRoutes from "./routes/user/notification.route.ts";
 import { verifyToken, isAdmin } from "./middlewares/authMiddleware.ts";
 import path from "path";
 import "./services/promotionScheduler.ts";
@@ -162,6 +165,7 @@ app.use("/api/manager", userManagerRoutes);
 app.use("/api/operations", userOperationsRoutes);
 app.use("/api/host", userHostRoutes);
 app.use("/api/pricing-config", pricingConfigRoutes);
+app.use("/api/notifications", userNotificationRoutes);
 
 // Static files for uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -170,6 +174,13 @@ app.get("/", (_req, res) => {
   res.send("API is running...");
 });
 
-app.listen(process.env.PORT || 5000, () => {
-  console.log("Server running on port", process.env.PORT || 5000);
+// Create HTTP Server for Socket.io
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+initSocket(httpServer);
+
+const PORT = process.env.PORT || 5000;
+httpServer.listen(PORT, () => {
+  console.log("Server running on port", PORT);
 });

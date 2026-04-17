@@ -11,6 +11,7 @@ import {
   Newspaper,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import NotificationCenter from "./NotificationCenter";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -95,9 +96,12 @@ const Navbar: React.FC = () => {
                   </>
                 )}
               </Link>
+              
+              <NotificationCenter />
+
               <button
                 onClick={logout}
-                className="bg-white border border-slate-200 p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
+                className="bg-white border border-slate-200 p-2.5 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm"
                 title="Đăng xuất"
               >
                 <LogOut className="w-5 h-5" />

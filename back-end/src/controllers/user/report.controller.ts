@@ -6,6 +6,7 @@ import { posts } from "../../models/schema/posts.ts";
 import { reports } from "../../models/schema/reports.ts";
 import { reportEvidence } from "../../models/schema/report-evidence.ts";
 import { adminWebSettingsService } from "../../services/adminWebSettings.service.ts";
+import { notificationService } from "../../services/notification.service.ts";
 
 export const submitReport = async (
   req: AuthRequest,
@@ -96,6 +97,34 @@ export const submitReport = async (
           postUpdatedAt: new Date(),
         })
         .where(eq(posts.postId, post.postId));
+
+      // Notify the author that their post is under review due to reports
+      const [fullPost] = await db.select({ title: posts.postTitle, authorId: posts.postAuthorId }).from(posts).where(eq(posts.postId, post.postId)).limit(1);
+      if (fullPost && fullPost.authorId) {
+        try {
+          await notificationService.sendNotification({
+            recipientId: fullPost.authorId,
+            title: "Bài đăng tạm ẩn để xem xét",
+            message: `Bài đăng "${fullPost.title}" của bạn tạm thời bị ẩn để quản trị viên đối soát sau khi nhận được một số báo cáo từ cộng đồng.`,
+            type: "warning",
+            metaData: { postId: post.postId, status: "pending" }
+          });
+        } catch (notifError) {
+          console.error("Report author notification failed:", notifError);
+        }
+      }
+    }
+
+    // Notify ALL admins about the new report
+    try {
+      await notificationService.notifyAdmins({
+        title: "Báo cáo mới",
+        message: `Có báo cáo mới cho bài đăng ID #${post.postId}: "${reportReason}"`,
+        type: "warning",
+        metaData: { reportId: result.reportId, postId: post.postId }
+      });
+    } catch (notifError) {
+      console.error("Admin report alert failed:", notifError);
     }
 
     res.status(201).json({

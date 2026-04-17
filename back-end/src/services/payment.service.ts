@@ -25,6 +25,7 @@ import {
 } from "../constants/promotion.ts";
 import { readSettingNumber } from "../controllers/user/pricing-config.controller.ts";
 import { postingPolicyService } from "./posting-policy.service.ts";
+import { notificationService } from "./notification.service.ts";
 
 export class PaymentServiceError extends Error {
   statusCode: number;
@@ -452,6 +453,22 @@ const processVerifiedCallback = async (
           await activateRegistrationForTransaction(tx, updatedTxn.paymentTxnUserId);
         }
       }
+
+      // Send real-time notification to the user about successful activation
+      // We wrap this in a separate try/catch to ensure that notification failures 
+      // DO NOT rollback the entire payment transaction.
+      try {
+        await notificationService.sendNotification({
+          recipientId: updatedTxn.paymentTxnUserId,
+          title: "Kích hoạt gói thành công",
+          message: `Giao dịch #${updatedTxn.paymentTxnProviderTxnId} đã được xử lý thành công. Các đặc quyền của bạn đã được kích hoạt.`,
+          type: "success",
+          metaData: { txnId: updatedTxn.paymentTxnId, status: "success" }
+        });
+      } catch (notifError) {
+        console.error("Payment success notification failed (txnId:", updatedTxn.paymentTxnId, "):", notifError);
+      }
+
       return { status: "success", txnRef, responseCode };
     }
 

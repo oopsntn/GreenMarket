@@ -9,6 +9,7 @@ import { posts, type NewPost } from "../../models/schema/posts";
 import { parseId } from "../../utils/parseId";
 import { slugify } from "../../utils/slugify";
 import { postLifecycleService } from "../../services/postLifecycle.service.ts";
+import { notificationService } from "../../services/notification.service.ts";
 
 const getPostActionLabel = (status: string) => {
     switch (status.toLowerCase()) {
@@ -254,6 +255,37 @@ export const updatePostStatus = async (
             },
         });
 
+        // Send real-time notification to the author
+        const notificationTitles: Record<string, string> = {
+            approved: "Bài đăng đã được duyệt",
+            rejected: "Bài đăng bị từ chối",
+            hidden: "Bài đăng đã bị ẩn",
+            draft: "Bài đăng chuyển về nháp",
+            pending: "Bài đăng đang chờ duyệt",
+        };
+
+        const notificationType = normalizedStatus === "approved" ? "success" : 
+                                 normalizedStatus === "rejected" ? "error" : "warning";
+
+        if (updatedPost.postAuthorId && notificationTitles[normalizedStatus]) {
+            try {
+                await notificationService.sendNotification({
+                    recipientId: updatedPost.postAuthorId,
+                    title: notificationTitles[normalizedStatus],
+                    message: nextRejectedReason 
+                        ? `Bài đăng "${updatedPost.postTitle}" của bạn đã được cập nhật sang trạng thái ${normalizedStatus}. Lý do: ${nextRejectedReason}`
+                        : `Bài đăng "${updatedPost.postTitle}" của bạn đã được duyệt thành công và đang hiển thị trên sàn.`,
+                    type: notificationType,
+                    metaData: { 
+                        postId: updatedPost.postId, 
+                        status: normalizedStatus 
+                    }
+                });
+            } catch (notifError) {
+                console.error("Moderation notification failed (postId:", updatedPost.postId, "):", notifError);
+            }
+        }
+
         res.json(updatedPost);
     } catch (error) {
         console.error(error);
@@ -322,6 +354,22 @@ export const deletePost = async (
                 status: "hidden",
             },
         });
+
+        // Send notification to the author about post being hidden
+        if (deletedPost.postAuthorId) {
+            await notificationService.sendNotification({
+                recipientId: deletedPost.postAuthorId,
+                title: "Bài đăng đã bị ẩn",
+                message: reason?.trim()
+                    ? `Bài đăng "${deletedPost.postTitle}" của bạn đã bị quản trị viên ẩn. Lý do: ${reason.trim()}`
+                    : `Bài đăng "${deletedPost.postTitle}" của bạn đã bị ẩn khỏi hệ thống.`,
+                type: "warning",
+                metaData: { 
+                    postId: deletedPost.postId, 
+                    status: "hidden" 
+                }
+            });
+        }
 
         res.json({ message: "Ẩn bài đăng thành công", deletedPost });
     } catch (error) {
