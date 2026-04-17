@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   getMyPosts,
   deleteUserPost,
+  restoreUserPost,
   updateUserPost,
   togglePostVisibility,
   getPromotionPackages,
@@ -12,7 +13,7 @@ import {
   getOwnerDashboard,
   type PromotionPackageItem,
 } from '../services/api';
-import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User, Eye, EyeOff } from 'lucide-react';
+import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
@@ -71,25 +72,27 @@ const MyPosts: React.FC = () => {
   const [boostLoading, setBoostLoading] = useState(false);
   const [boostBuyingId, setBoostBuyingId] = useState<number | null>(null);
 
+  const refreshPosts = useCallback(async () => {
+    if (!user?.id) return;
+
+    try {
+      const postsRes = await getMyPosts();
+      setPosts(postsRes.data);
+    } catch (error) {
+      console.error("Failed to fetch posts:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     // Default to shop tab if user has an ACTIVE shop
     setActiveTab(shop?.shopStatus === 'active' ? 'shop' : 'personal');
   }, [shop?.shopStatus]);
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      if (!user?.id) return;
-      try {
-        const postsRes = await getMyPosts();
-        setPosts(postsRes.data);
-      } catch (error) {
-        console.error("Failed to fetch posts:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPosts();
-  }, [user?.id]);
+    void refreshPosts();
+  }, [refreshPosts]);
 
   useEffect(() => {
     const fetchShopStats = async () => {
@@ -131,11 +134,27 @@ const MyPosts: React.FC = () => {
       try {
         await deleteUserPost(postId);
         alert('Đã xóa bài đăng thành công.');
-        setPosts(posts.filter(p => p.postId !== postId));
+        await refreshPosts();
       } catch (error) {
         console.error('Failed to delete post', error);
         alert('Có lỗi xảy ra khi xóa bài đăng.');
       }
+    }
+  };
+
+  const handleRestore = async (postId: number) => {
+    if (!user?.id) return;
+
+    try {
+      await restoreUserPost(postId);
+      alert('Đã khôi phục bài đăng thành công.');
+      await refreshPosts();
+    } catch (error: any) {
+      console.error('Failed to restore post', error);
+      alert(
+        error?.response?.data?.error ||
+        'Không thể khôi phục bài đăng này. Có thể đã quá thời gian cho phép.',
+      );
     }
   };
 
@@ -347,6 +366,14 @@ const MyPosts: React.FC = () => {
   }, null);
 
   const getStatusBadge = (status: string) => {
+    if (status === 'hidden') {
+      return <span className="bg-slate-100 text-slate-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-slate-200 shadow-sm"><Trash2 className="w-3 h-3" /> Trong thùng rác</span>;
+    }
+
+    if (status === 'expired') {
+      return <span className="bg-orange-50 text-orange-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-orange-100 shadow-sm"><Clock className="w-3 h-3" /> Hết hạn</span>;
+    }
+
     switch (status) {
       case 'pending':
         return <span className="bg-amber-50 text-amber-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-amber-100 shadow-sm"><Clock className="w-3 h-3" /> Chờ duyệt</span>;
@@ -359,7 +386,7 @@ const MyPosts: React.FC = () => {
     }
   };
 
-  const filteredPosts = posts.filter(post => {
+  const scopedPosts = posts.filter(post => {
     // If user doesn't have an active shop, only show personal posts
     if (shop?.shopStatus !== 'active') {
       return post.postShopId === null;
@@ -370,6 +397,9 @@ const MyPosts: React.FC = () => {
     }
     return post.postShopId === null;
   });
+
+  const filteredPosts = scopedPosts.filter((post) => post.postStatus !== 'hidden');
+  const trashedPosts = scopedPosts.filter((post) => post.postStatus === 'hidden');
 
   const shopPosts = shop
     ? posts.filter((post) => post.postShopId === shop.shopId)
@@ -617,6 +647,78 @@ const MyPosts: React.FC = () => {
                   Tạo bài đăng đầu tiên
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-black mb-6 flex items-center gap-3 text-slate-900 tracking-tight uppercase">
+            Thùng rác bài đăng
+            <span className="text-sm font-bold text-slate-400 bg-slate-50 border border-slate-100 px-3 py-1 rounded-full shadow-sm">{trashedPosts.length} bài</span>
+          </h2>
+
+          {trashedPosts.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4">
+              {trashedPosts.map((post) => (
+                <div key={`trash-${post.postId}`} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center gap-5">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-3 mb-3">
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                        {post.postTitle}
+                      </h3>
+                      {getStatusBadge(post.postStatus)}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-500 font-medium">
+                      <div>
+                        <div className="text-slate-900 font-bold">
+                          Đã xóa lúc: {post.postDeletedAt ? new Date(post.postDeletedAt).toLocaleString('vi-VN') : 'Chưa rõ'}
+                        </div>
+                        <div>
+                          Khôi phục đến: {post.lifecycle?.restoreUntil ? new Date(post.lifecycle.restoreUntil).toLocaleString('vi-VN') : 'Không khả dụng'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-slate-900 font-bold">
+                          {post.postLocation || 'Chưa cập nhật vị trí'}
+                        </div>
+                        <div>
+                          {post.lifecycle?.canRestore
+                            ? 'Bài vẫn còn trong thời gian khôi phục.'
+                            : 'Đã hết thời gian khôi phục theo cấu hình hệ thống.'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      title="Xem chi tiết"
+                      onClick={() => navigate(`/posts/detail/${post.postSlug}`)}
+                      className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-blue-600 transition-all hover:scale-105 active:scale-95"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                    <button
+                      title="Khôi phục bài đăng"
+                      onClick={() => handleRestore(post.postId)}
+                      disabled={!post.lifecycle?.canRestore}
+                      className="px-4 py-3 rounded-xl font-bold border transition-all flex items-center gap-2 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-600 hover:text-white disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Khôi phục
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-white border border-slate-200 rounded-4xl shadow-sm border-dashed">
+              <Trash2 className="w-14 h-14 text-slate-200 mx-auto mb-5" />
+              <h3 className="text-lg font-bold mb-2 text-slate-900 tracking-tight uppercase">Thùng rác đang trống</h3>
+              <p className="text-slate-500 max-w-md mx-auto font-medium">
+                Những bài bạn tự xóa sẽ nằm ở đây trong khoảng thời gian khôi phục mà admin cấu hình.
+              </p>
             </div>
           )}
         </div>

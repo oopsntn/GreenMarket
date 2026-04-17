@@ -5,6 +5,7 @@ export type PromotionPackage = {
   id: number;
   name: string;
   slot: PromotionPackageSlot;
+  slotCode: string;
   durationDays: number;
   price: string;
   maxPosts: number;

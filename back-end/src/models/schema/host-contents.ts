@@ -7,6 +7,7 @@ export const hostContents = pgTable("host_contents", {
   hostContentAuthorId: integer("host_content_author_id").references(() => users.userId, { onDelete: "cascade" }),
   hostContentTitle: varchar("host_content_title", { length: 255 }).notNull(),
   hostContentDescription: text("host_content_description"),
+  hostContentBody: text("host_content_body"),
   hostContentTargetType: varchar("host_content_target_type", { length: 50 }).notNull(), // 'post', 'shop', 'external'
   hostContentTargetId: integer("host_content_target_id"), // post_id or shop_id
   hostContentTrackingUrl: text("host_content_tracking_url"),

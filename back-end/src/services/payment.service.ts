@@ -17,13 +17,15 @@ import {
   verifyVNPaySignature,
 } from "../utils/vnpay.ts";
 import {
-  BOOST_POST_SLOT_CODE,
+  BOOST_POST_SLOT_PREFIX,
   SHOP_VIP_SLOT_CODE,
+  isBoostPostSlotCode,
   SHOP_REGISTRATION_SLOT_CODE,
   PERSONAL_PLAN_SLOT_CODE,
 } from "../constants/promotion.ts";
 import { readSettingNumber } from "../controllers/user/pricing-config.controller.ts";
 import { postingPolicyService } from "./posting-policy.service.ts";
+import { notificationService } from "./notification.service.ts";
 
 export class PaymentServiceError extends Error {
   statusCode: number;
@@ -69,6 +71,17 @@ const createOrderId = () => {
   return `GM${Date.now()}${randomPart}`;
 };
 
+const getLivePromotionCondition = () =>
+  and(
+    sql`${postPromotions.postPromotionEndAt} > NOW()`,
+    or(
+      eq(postPromotions.postPromotionStatus, "active"),
+      eq(postPromotions.postPromotionStatus, "scheduled"),
+      eq(postPromotions.postPromotionStatus, "paused"),
+      eq(postPromotions.postPromotionStatus, "pending"),
+    ),
+  );
+
 const activatePromotionForTransaction = async (
   tx: any,
   txn: typeof paymentTxn.$inferSelect,
@@ -86,7 +99,9 @@ const activatePromotionForTransaction = async (
       promotionPackageId: promotionPackages.promotionPackageId,
       promotionPackageSlotId: promotionPackages.promotionPackageSlotId,
       promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+      promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
       promotionPackageTitle: promotionPackages.promotionPackageTitle,
+      slotCapacity: placementSlots.placementSlotCapacity,
       priority: sql<number>`
         CASE 
           WHEN (${placementSlots.placementSlotRules} ->> 'priority') ~ '^[0-9]+$' 
@@ -111,44 +126,72 @@ const activatePromotionForTransaction = async (
     );
   }
 
-  const now = new Date();
+  const livePromotionCondition = getLivePromotionCondition();
 
-  // 1. Check for existing active promotion in the same slot to extend
-  const [existingPromo] = await tx
-    .select()
+  const [existingPostPromotion] = await tx
+    .select({ promotionId: postPromotions.postPromotionId })
     .from(postPromotions)
     .where(
       and(
         eq(postPromotions.postPromotionPostId, txn.paymentTxnPostId),
-        eq(postPromotions.postPromotionSlotId, pkg.promotionPackageSlotId),
-        eq(postPromotions.postPromotionStatus, "active"),
+        livePromotionCondition,
       ),
     )
-    .orderBy(desc(postPromotions.postPromotionEndAt))
     .limit(1);
 
-  const baseDate =
-    existingPromo?.postPromotionEndAt &&
-    new Date(existingPromo.postPromotionEndAt) > now
-      ? new Date(existingPromo.postPromotionEndAt)
-      : now;
-
-  const durationDays = Number(pkg.promotionPackageDurationDays || 0);
-  const endAt = new Date(baseDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
-
-  // 2. Mark old promotions as expired/superseded
-  await tx
-    .update(postPromotions)
-    .set({ postPromotionStatus: "expired" })
-    .where(
-      and(
-        eq(postPromotions.postPromotionPostId, txn.paymentTxnPostId),
-        eq(postPromotions.postPromotionSlotId, pkg.promotionPackageSlotId),
-        eq(postPromotions.postPromotionStatus, "active"),
-      ),
+  if (existingPostPromotion) {
+    throw new PaymentServiceError(
+      409,
+      "POST_ALREADY_PROMOTED",
+      "Bài viết này đang có gói quảng bá còn hiệu lực.",
     );
+  }
 
-  // 3. Insert new cumulative promotion
+  const slotCapacity = Number(pkg.slotCapacity ?? 0);
+  if (slotCapacity > 0) {
+    const [slotUsage] = await tx
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(postPromotions)
+      .where(
+        and(
+          eq(postPromotions.postPromotionSlotId, pkg.promotionPackageSlotId),
+          livePromotionCondition,
+        ),
+      );
+
+    if (Number(slotUsage?.count ?? 0) >= slotCapacity) {
+      throw new PaymentServiceError(
+        409,
+        "PLACEMENT_SLOT_FULL",
+        "Vị trí hiển thị này đã đủ sức chứa trong thời gian hiện tại.",
+      );
+    }
+  }
+
+  const packageMaxPosts = Number(pkg.promotionPackageMaxPosts ?? 0);
+  if (packageMaxPosts > 0) {
+    const [packageUsage] = await tx
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(postPromotions)
+      .where(
+        and(
+          eq(postPromotions.postPromotionPackageId, txn.paymentTxnPackageId),
+          livePromotionCondition,
+        ),
+      );
+
+    if (Number(packageUsage?.count ?? 0) >= packageMaxPosts) {
+      throw new PaymentServiceError(
+        409,
+        "PROMOTION_PACKAGE_SOLD_OUT",
+        "Gói quảng bá này đã hết số lượng bài có thể áp dụng.",
+      );
+    }
+  }
+
+  const startAt = new Date();
+  const durationDays = Number(pkg.promotionPackageDurationDays || 0);
+  const endAt = new Date(startAt.getTime() + durationDays * 24 * 60 * 60 * 1000);
   await tx.insert(postPromotions).values({
     postPromotionPostId: txn.paymentTxnPostId,
     postPromotionBuyerId: txn.paymentTxnUserId,
@@ -156,7 +199,7 @@ const activatePromotionForTransaction = async (
     postPromotionSlotId: pkg.promotionPackageSlotId,
     postPromotionSnapshotTitle: pkg.promotionPackageTitle,
     postPromotionSnapshotPriority: pkg.priority,
-    postPromotionStartAt: now,
+    postPromotionStartAt: startAt,
     postPromotionEndAt: endAt,
     postPromotionStatus: "active",
   });
@@ -410,6 +453,22 @@ const processVerifiedCallback = async (
           await activateRegistrationForTransaction(tx, updatedTxn.paymentTxnUserId);
         }
       }
+
+      // Send real-time notification to the user about successful activation
+      // We wrap this in a separate try/catch to ensure that notification failures 
+      // DO NOT rollback the entire payment transaction.
+      try {
+        await notificationService.sendNotification({
+          recipientId: updatedTxn.paymentTxnUserId,
+          title: "Kích hoạt gói thành công",
+          message: `Giao dịch #${updatedTxn.paymentTxnProviderTxnId} đã được xử lý thành công. Các đặc quyền của bạn đã được kích hoạt.`,
+          type: "success",
+          metaData: { txnId: updatedTxn.paymentTxnId, status: "success" }
+        });
+      } catch (notifError) {
+        console.error("Payment success notification failed (txnId:", updatedTxn.paymentTxnId, "):", notifError);
+      }
+
       return { status: "success", txnRef, responseCode };
     }
 
@@ -702,6 +761,7 @@ export const paymentService = {
         promotionPackagePublished: promotionPackages.promotionPackagePublished,
         promotionPackageSlotId: promotionPackages.promotionPackageSlotId,
         promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+        promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
         promotionPackagePriceId: promotionPackagePrices.priceId,
         promotionPackagePrice: promotionPackagePrices.price,
       })
@@ -736,6 +796,7 @@ export const paymentService = {
         placementSlotId: placementSlots.placementSlotId,
         placementSlotPublished: placementSlots.placementSlotPublished,
         placementSlotCode: placementSlots.placementSlotCode,
+        placementSlotCapacity: placementSlots.placementSlotCapacity,
       })
       .from(placementSlots)
       .where(eq(placementSlots.placementSlotId, pkg.promotionPackageSlotId))
@@ -749,12 +810,75 @@ export const paymentService = {
       );
     }
 
-    if (slot.placementSlotCode !== BOOST_POST_SLOT_CODE) {
+    if (!isBoostPostSlotCode(slot.placementSlotCode)) {
       throw new PaymentServiceError(
         400,
         "BOOST_PACKAGE_TYPE_INVALID",
         "This package is not available for post boost purchases.",
       );
+    }
+
+    const livePromotionCondition = getLivePromotionCondition();
+
+    const [existingPromotion] = await db
+      .select({ promotionId: postPromotions.postPromotionId })
+      .from(postPromotions)
+      .where(
+        and(
+          eq(postPromotions.postPromotionPostId, parsedPostId),
+          livePromotionCondition,
+        ),
+      )
+      .limit(1);
+
+    if (existingPromotion) {
+      throw new PaymentServiceError(
+        409,
+        "POST_ALREADY_PROMOTED",
+        "Bài viết này đã có gói quảng bá còn hiệu lực, không thể mua thêm gói khác.",
+      );
+    }
+
+    const slotCapacity = Number(slot.placementSlotCapacity ?? 0);
+    if (slotCapacity > 0) {
+      const [slotUsage] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(postPromotions)
+        .where(
+          and(
+            eq(postPromotions.postPromotionSlotId, slot.placementSlotId),
+            livePromotionCondition,
+          ),
+        );
+
+      if (Number(slotUsage?.count ?? 0) >= slotCapacity) {
+        throw new PaymentServiceError(
+          409,
+          "PLACEMENT_SLOT_FULL",
+          "Vị trí hiển thị này đã đủ sức chứa. Hãy chọn gói ở vị trí khác hoặc chờ gói hiện tại hết hạn.",
+        );
+      }
+    }
+
+    const packageMaxPosts = Number(pkg.promotionPackageMaxPosts ?? 0);
+    if (packageMaxPosts > 0) {
+      const [packageUsage] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(postPromotions)
+        .where(
+          and(
+            eq(postPromotions.postPromotionPackageId, parsedPackageId),
+            livePromotionCondition,
+          ),
+        );
+
+      if (Number(packageUsage?.count ?? 0) >= packageMaxPosts) {
+        throw new PaymentServiceError(
+          409,
+          "PROMOTION_PACKAGE_SOLD_OUT",
+          "Gói quảng bá này đã đạt số bài tối đa cho phép và hiện không thể mua thêm.",
+        );
+      }
     }
 
     const finalAmount = toSafeIntegerAmount(pkg.promotionPackagePrice);
@@ -833,10 +957,12 @@ export const paymentService = {
       .from(postPromotions)
       .innerJoin(posts, eq(postPromotions.postPromotionPostId, posts.postId))
       .innerJoin(promotionPackages, eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId))
+      .innerJoin(placementSlots, eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId))
       .where(
         and(
           eq(posts.postAuthorId, userId),
-          or(eq(postPromotions.postPromotionStatus, "active"), eq(postPromotions.postPromotionStatus, "pending"))
+          or(eq(postPromotions.postPromotionStatus, "active"), eq(postPromotions.postPromotionStatus, "pending")),
+          sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`
         )
       )
       .orderBy(sql`${postPromotions.postPromotionStartAt} DESC`);

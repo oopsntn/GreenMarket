@@ -5,6 +5,17 @@ export type PlacementDisplayRule =
   | "Random"
   | "Priority Score";
 
+export const HOMEPAGE_BOOST_SLOT_CODE_PREFIX = "BOOST_POST";
+export const SHOP_VIP_SLOT_CODE = "SHOP_VIP";
+
+export const isHomepageBoostSlotCode = (code?: string | null) => {
+  const normalizedCode = code?.trim().toUpperCase();
+  return Boolean(
+    normalizedCode &&
+      normalizedCode.startsWith(HOMEPAGE_BOOST_SLOT_CODE_PREFIX),
+  );
+};
+
 export type PlacementSlotStatus = "Active" | "Disabled";
 
 export type PlacementSlot = {

@@ -22,5 +22,4 @@ router.post("/", runUpload(upload.array("media", 10)), validateFileSizes, upload
 // Handle image-only uploads
 router.post("/images", runUpload(uploadImagesOnly.array("media", 10)), validateFileSizes, uploadMedia);
 
-
 export default router;

@@ -7,6 +7,8 @@ import {
 } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 import ActivityLogPage from "../pages/ActivityLogPage";
+import AccountPackagesPage from "../pages/AccountPackagesPage";
+import AccountPackageTrackingPage from "../pages/AccountPackageTrackingPage";
 import AIInsightsPage from "../pages/AIInsightsPage";
 import AnalyticsPage from "../pages/AnalyticsPage";
 import AttributesPage from "../pages/AttributesPage";
@@ -159,6 +161,26 @@ function AppRoutes() {
 
             <Route element={<ProtectedModuleRoute moduleKey="settings" />}>
               <Route path="settings" element={<SettingsPage />} />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="accountPackages" />}
+            >
+              <Route
+                path="account-packages"
+                element={<AccountPackagesPage />}
+              />
+            </Route>
+
+            <Route
+              element={
+                <ProtectedModuleRoute moduleKey="accountPackageTracking" />
+              }
+            >
+              <Route
+                path="account-package-tracking"
+                element={<AccountPackageTrackingPage />}
+              />
             </Route>
 
             <Route

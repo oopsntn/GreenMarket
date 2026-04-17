@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { getFavoritePosts } from '../services/api';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
-import { PackageOpen, MapPin, Heart, Loader2 } from 'lucide-react';
+import { PackageOpen, MapPin, Loader2, Bookmark } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const SavedPosts: React.FC = () => {
@@ -40,7 +40,7 @@ const SavedPosts: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight mb-2 text-slate-900 uppercase">Bài Đăng Đã Lưu</h1>
-          <p className="text-slate-500 font-medium">Danh sách các bài đăng bạn đã thả tim hoặc lưu lại để theo dõi.</p>
+          <p className="text-slate-500 font-medium">Danh sách các bài đăng bạn đã đánh dấu hoặc lưu lại để theo dõi.</p>
         </div>
       </div>
 
@@ -71,8 +71,8 @@ const SavedPosts: React.FC = () => {
                         <PackageOpen className="w-12 h-12 group-hover:translate-y-[-4px] transition-transform" />
                       </div>
                     )}
-                    <div className="absolute top-4 right-4 p-2.5 rounded-2xl bg-white/90 backdrop-blur-md text-rose-500 shadow-xl border border-white/50">
-                      <Heart className="w-5 h-5 fill-rose-500" />
+                    <div className="absolute top-4 right-4 p-2.5 rounded-2xl bg-white/90 backdrop-blur-md text-emerald-600 shadow-xl border border-white/50">
+                      <Bookmark className="w-5 h-5 fill-emerald-600" />
                     </div>
                   </div>
 
@@ -95,13 +95,13 @@ const SavedPosts: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-24 bg-white border border-slate-200 rounded-4xl shadow-sm border-dashed">
-              <div className="bg-rose-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-100">
-                <Heart className="w-10 h-10 text-rose-300" />
+              <div className="bg-emerald-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100">
+                <Bookmark className="w-10 h-10 text-emerald-600" />
               </div>
               <h3 className="text-xl font-black mb-2 text-slate-900 tracking-tight uppercase">Chưa có bài viết nào được lưu</h3>
-              <p className="text-slate-500 mb-8 max-w-xs mx-auto font-medium">Bạn có thể thả tim bài viết để dễ dàng tìm lại sau này và nhận thông báo khi có thay đổi.</p>
+              <p className="text-slate-500 mb-8 max-w-xs mx-auto font-medium">Bạn có thể đánh dấu bài viết để dễ dàng tìm lại sau này và nhận thông báo khi có thay đổi.</p>
               <button
-                onClick={(e) => { e.preventDefault(); navigate('/'); }}
+                onClick={(e) => { e.preventDefault(); navigate('/home'); }}
                 className="bg-emerald-700 text-white px-10 py-4 rounded-2xl font-black uppercase text-sm hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200/50 active:scale-95"
               >
                 Khám phá thị trường

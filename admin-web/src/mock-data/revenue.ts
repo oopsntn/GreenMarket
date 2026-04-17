@@ -1,39 +1,48 @@
 import type { RevenueCard, RevenueRow } from "../types/revenue";
 
 export const revenueCards: RevenueCard[] = [
-  { title: "Total Revenue", value: "$18,420", note: "+12.6% vs last month" },
-  { title: "Active Packages", value: "126", note: "+8 this week" },
-  { title: "Avg. Order Value", value: "$146", note: "+4.2% improvement" },
-  { title: "Top Slot Revenue", value: "Home Top", note: "$7,800 generated" },
+  {
+    title: "Doanh thu gói đẩy bài",
+    value: "427,000 VND",
+    note: "Tổng thu từ 3 vị trí trang chủ trong kỳ mẫu",
+  },
+  {
+    title: "Gói đang bán",
+    value: "3",
+    note: "Ba gói vị trí 1, 2, 3 đang mở bán",
+  },
+  {
+    title: "Đơn đang hiệu lực",
+    value: "3",
+    note: "Đang có 3 chiến dịch còn thời hạn",
+  },
+  {
+    title: "Slot doanh thu cao nhất",
+    value: "Vị trí 1 trang chủ",
+    note: "299,000 VND trong kỳ mẫu",
+  },
 ];
 
 export const revenueRows: RevenueRow[] = [
   {
     id: 1,
-    packageName: "Premium 7 Days",
-    slot: "Home Top",
-    orders: 42,
-    revenue: "$7,800",
+    packageName: "Gói đẩy bài theo tháng vị trí 1 trang chủ",
+    slot: "Vị trí 1 trang chủ",
+    orders: 1,
+    revenue: "299,000 VND",
   },
   {
     id: 2,
-    packageName: "Standard 5 Days",
-    slot: "Category Top",
-    orders: 38,
-    revenue: "$5,240",
+    packageName: "Gói đẩy bài theo tháng vị trí 2 trang chủ",
+    slot: "Vị trí 2 trang chủ",
+    orders: 1,
+    revenue: "99,000 VND",
   },
   {
     id: 3,
-    packageName: "Boost 3 Days",
-    slot: "Search Boost",
-    orders: 31,
-    revenue: "$3,120",
-  },
-  {
-    id: 4,
-    packageName: "Starter 2 Days",
-    slot: "Search Boost",
-    orders: 18,
-    revenue: "$1,260",
+    packageName: "Gói đẩy bài theo tháng vị trí 3 trang chủ",
+    slot: "Vị trí 3 trang chủ",
+    orders: 1,
+    revenue: "29,000 VND",
   },
 ];

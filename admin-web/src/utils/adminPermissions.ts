@@ -19,6 +19,8 @@ export type AdminModuleKey =
   | "templates"
   | "templateBuilder"
   | "settings"
+  | "accountPackages"
+  | "accountPackageTracking"
   | "placementSlots"
   | "promotionPackages"
   | "boostedPosts"
@@ -57,6 +59,8 @@ const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
   templates: ADMIN_PORTAL_ROLE_CODES,
   templateBuilder: ADMIN_PORTAL_ROLE_CODES,
   settings: ADMIN_PORTAL_ROLE_CODES,
+  accountPackages: ADMIN_PORTAL_ROLE_CODES,
+  accountPackageTracking: ADMIN_PORTAL_ROLE_CODES,
   placementSlots: ADMIN_PORTAL_ROLE_CODES,
   promotionPackages: ADMIN_PORTAL_ROLE_CODES,
   boostedPosts: ADMIN_PORTAL_ROLE_CODES,
@@ -165,17 +169,29 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
   {
     id: "promotion",
     label: "Quảng bá và vận hành",
-    description: "Quản lý vị trí hiển thị, gói bán, đơn mua và chiến dịch.",
+    description: "Quản lý gói tài khoản, vị trí bài đẩy, đơn mua và chiến dịch.",
     items: [
       {
+        label: "Gói tài khoản / shop",
+        hint: "Chủ vườn, cá nhân và Nhà vườn VIP.",
+        path: "/account-packages",
+        moduleKey: "accountPackages",
+      },
+      {
+        label: "Theo dõi gói tài khoản / shop",
+        hint: "Ai đang dùng gói chủ vườn, cá nhân và VIP.",
+        path: "/account-package-tracking",
+        moduleKey: "accountPackageTracking",
+      },
+      {
         label: "Vị trí hiển thị",
-        hint: "Cấu hình slot quảng bá trên hệ thống.",
+        hint: "Cấu hình các vị trí bài đẩy trên trang chủ.",
         path: "/placement-slots",
         moduleKey: "placementSlots",
       },
       {
         label: "Gói quảng bá",
-        hint: "Giá bán, thời lượng và hạn mức hiển thị.",
+        hint: "Giá bán, thời lượng và hạn mức của gói đẩy bài.",
         path: "/promotion-packages",
         moduleKey: "promotionPackages",
       },

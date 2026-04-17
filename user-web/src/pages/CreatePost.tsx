@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Image as ImageIcon, MapPin, Tag, CircleDollarSign, CheckCircle, ArrowRight, X, UploadCloud } from 'lucide-react';
-import { getCategories, getCategoryAttributes, createPost, uploadMedia } from '../services/api';
+import { getCategories, getCategoryAttributes, createPost, uploadMedia, getPublicSystemSettings } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
+
+const MAX_IMAGES_PER_POST = 10;
+const MAX_IMAGE_SIZE_MB = 3;
+const MAX_VIDEO_SIZE_MB = 50;
+const ENABLE_IMAGE_COMPRESSION = true;
 
 const CreatePost: React.FC = () => {
     const navigate = useNavigate();
@@ -15,6 +20,17 @@ const CreatePost: React.FC = () => {
     const [attributes, setAttributes] = useState<any[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [systemSettings, setSystemSettings] = useState({
+        media: {
+            maxImagesPerPost: MAX_IMAGES_PER_POST,
+            maxImageSizeMb: MAX_IMAGE_SIZE_MB,
+            maxVideoSizeMb: MAX_VIDEO_SIZE_MB,
+            enableImageCompression: ENABLE_IMAGE_COMPRESSION,
+        },
+        postLifecycle: {
+            postRateLimitPerHour: 10,
+        },
+    });
     const [submissionMeta, setSubmissionMeta] = useState<{
         autoApprove: boolean;
         chargedAmount: number;
@@ -38,6 +54,29 @@ const CreatePost: React.FC = () => {
             setFormData(prev => ({ ...prev, postLocation: shop.shopLocation as string }));
         }
     }, [isGardenOwner, shop]);
+
+    useEffect(() => {
+        const fetchSystemSettings = async () => {
+            try {
+                const response = await getPublicSystemSettings();
+                setSystemSettings({
+                    media: {
+                        maxImagesPerPost: MAX_IMAGES_PER_POST,
+                        maxImageSizeMb: MAX_IMAGE_SIZE_MB,
+                        maxVideoSizeMb: MAX_VIDEO_SIZE_MB,
+                        enableImageCompression: ENABLE_IMAGE_COMPRESSION,
+                    },
+                    postLifecycle: {
+                        postRateLimitPerHour: Number(response.data?.postLifecycle?.postRateLimitPerHour || 10),
+                    },
+                });
+            } catch (error) {
+                console.error('Failed to fetch public system settings:', error);
+            }
+        };
+
+        fetchSystemSettings();
+    }, []);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -81,16 +120,37 @@ const CreatePost: React.FC = () => {
         const newVideos: File[] = [];
         const newPreviews: { url: string, type: 'image' | 'video' }[] = [];
 
-        selectedFiles.forEach(file => {
+        for (const file of selectedFiles) {
             const url = URL.createObjectURL(file);
             if (file.type.startsWith('image/')) {
+                const maxImageSizeBytes = systemSettings.media.maxImageSizeMb * 1024 * 1024;
+                if (file.size > maxImageSizeBytes) {
+                    URL.revokeObjectURL(url);
+                    alert(`Ảnh "${file.name}" vượt quá giới hạn ${systemSettings.media.maxImageSizeMb}MB.`);
+                    return;
+                }
                 newImages.push(file);
                 newPreviews.push({ url, type: 'image' });
             } else if (file.type.startsWith('video/')) {
+                const maxVideoSizeBytes = systemSettings.media.maxVideoSizeMb * 1024 * 1024;
+                if (file.size > maxVideoSizeBytes) {
+                    URL.revokeObjectURL(url);
+                    alert(`Video "${file.name}" vượt quá giới hạn ${systemSettings.media.maxVideoSizeMb}MB.`);
+                    return;
+                }
                 newVideos.push(file);
                 newPreviews.push({ url, type: 'video' });
+            } else {
+                URL.revokeObjectURL(url);
             }
-        });
+        }
+
+        const nextImageCount = imageFiles.length + newImages.length;
+        if (nextImageCount > systemSettings.media.maxImagesPerPost) {
+            newPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+            alert(`Mỗi bài chỉ được tối đa ${systemSettings.media.maxImagesPerPost} ảnh.`);
+            return;
+        }
 
         setImageFiles(prev => [...prev, ...newImages]);
         setVideoFiles(prev => [...prev, ...newVideos]);
@@ -118,10 +178,14 @@ const CreatePost: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (imageFiles.length === 0) {
-            alert("Vui lòng chọn ít nhất một ảnh sản phẩm!");
+            alert("Vui lòng chọn ít nhất 1 ảnh về sản phẩm!");
             return;
         }
 
+        if (imageFiles.length > systemSettings.media.maxImagesPerPost) {
+            alert(`Mỗi bài chỉ được tối đa ${systemSettings.media.maxImagesPerPost} ảnh.`);
+            return;
+        }
         setSubmitting(true);
         try {
             // 1. Upload all media files first
@@ -226,7 +290,7 @@ const CreatePost: React.FC = () => {
                         <input
                             required
                             type="text"
-                            placeholder="Ví dụ: Tùng la hán dáng văn nhân cốt chậu 10 năm"
+                            placeholder="Vd: Tùng la hán dáng văn nhân cốt chậu 10 năm"
                             className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
                             value={formData.postTitle}
                             onChange={(e) => setFormData({ ...formData, postTitle: e.target.value })}
@@ -272,7 +336,7 @@ const CreatePost: React.FC = () => {
                             </label>
                             <input
                                 type="text"
-                                placeholder="Ví dụ: Thạch Thất, Hà Nội"
+                                placeholder="Vd: Thạch Thất, Hà Nội"
                                 className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
                                 value={formData.postLocation}
                                 onChange={(e) => setFormData({ ...formData, postLocation: e.target.value })}
@@ -356,7 +420,7 @@ const CreatePost: React.FC = () => {
 
                         <label className="border-2 border-dashed border-slate-200 rounded-2xl aspect-square flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-emerald-500/50 hover:bg-emerald-50 transition-all group">
                             <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-emerald-600 transition-colors" />
-                            <span className="text-xs font-bold text-slate-400 group-hover:text-emerald-600 uppercase tracking-tight">Tải tệp lên</span>
+                            <span className="text-xs font-bold text-slate-400 group-hover:text-emerald-600 uppercase tracking-tight">Tải tập lên</span>
                             <input
                                 type="file"
                                 multiple
@@ -370,8 +434,12 @@ const CreatePost: React.FC = () => {
                     <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl">
                         <ul className="text-xs text-slate-500 space-y-1 font-medium">
                             <li>• Nên chọn ảnh rõ nét, ánh sáng tốt.</li>
-                            <li>• Bạn có thể chọn nhiều ảnh cùng lúc.</li>
-                            <li>• Video giúp bài đăng tin cậy hơn (tối đa 50MB).</li>
+                            <li>• Tối đa {systemSettings.media.maxImagesPerPost} ảnh cho mỗi bài đăng.</li>
+                            <li>• Ảnh tối đa {systemSettings.media.maxImageSizeMb}MB, video tối đa {systemSettings.media.maxVideoSizeMb}MB cho mỗi tệp.</li>
+                            <li>• Hệ thống giới hạn tối đa {systemSettings.postLifecycle.postRateLimitPerHour} bài trong 1 giờ cho mỗi tài khoản.</li>
+                            {systemSettings.media.enableImageCompression ? (
+                                <li>• Ảnh tải lên sẽ được nén tự động trước khi gửi để tối ưu tốc độ.</li>
+                            ) : null}
                         </ul>
                     </div>
                 </section>
@@ -392,3 +460,9 @@ const CreatePost: React.FC = () => {
 };
 
 export default CreatePost;
+
+
+
+
+
+
