@@ -529,27 +529,27 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         />
                         {formData.shopLat ? (
                             <Text style={styles.coordinateText}>
-                                Coordinates received: {formData.shopLat.toFixed(4)}, {formData.shopLng?.toFixed(4)}
+                                Tữa độ: {formData.shopLat.toFixed(4)}, {formData.shopLng?.toFixed(4)}
                             </Text>
                         ) : null}
                     </View>
 
                     {/* Social Media Section */}
-                    <Text style={styles.label}>Social Media</Text>
+                    <Text style={styles.label}>Mạng xã hội</Text>
                     <Input
-                        placeholder="Facebook URL"
+                        placeholder="Đường dẫn Facebook"
                         value={formData.shopFacebook}
                         onChangeText={(t) => setFormData({ ...formData, shopFacebook: t })}
                         icon={<User size={18} color="#1877F2" />}
                     />
                     <Input
-                        placeholder="Instagram URL"
+                        placeholder="Đường dẫn Instagram"
                         value={formData.shopInstagram}
                         onChangeText={(t) => setFormData({ ...formData, shopInstagram: t })}
                         icon={<Camera size={18} color="#E4405F" />}
                     />
                     <Input
-                        placeholder="Youtube URL"
+                        placeholder="Đường dận Youtube"
                         value={formData.shopYoutube}
                         onChangeText={(t) => setFormData({ ...formData, shopYoutube: t })}
                         icon={<Play size={18} color="#E4405F" />}

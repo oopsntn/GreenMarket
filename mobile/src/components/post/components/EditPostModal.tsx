@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../Reused/Card/Card';
 import Input from '../../Reused/Input/Input';
@@ -34,17 +34,17 @@ const EditPostModal = ({
         <Modal visible={visible} transparent animationType="slide">
             <View style={styles.modalOverlay}>
                 <Card style={styles.modalCard}>
-                    <Text style={styles.modalTitle}>Update Post Details</Text>
+                    <Text style={styles.modalTitle}>Cập nhật thông tin tin đăng</Text>
 
                     <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 500 }}>
                         <Input
-                            label="Post Title"
+                            label="Tiêu đề tin đăng"
                             value={editData.title}
                             onChangeText={(t) => setEditData({ ...editData, title: t })}
-                            placeholder="e.g. Rare Bonsai Tree"
+                            placeholder="Ví dụ: Cây bonsai hiếm"
                         />
 
-                        <Text style={styles.label}>Category</Text>
+                        <Text style={styles.label}>Danh mục</Text>
                         <View style={styles.categoryWrap}>
                             {categories.map((cat) => (
                                 <TouchableOpacity
@@ -66,7 +66,7 @@ const EditPostModal = ({
                         </View>
 
                         <Input
-                            label="Price (VND)"
+                            label="Giá bán (VND)"
                             type="numeric"
                             value={editData.price}
                             onChangeText={(t) => setEditData({ ...editData, price: t })}
@@ -74,27 +74,27 @@ const EditPostModal = ({
                         />
 
                         <Input
-                            label="Location"
+                            label="Địa chỉ"
                             value={editData.location}
                             onChangeText={(t) => setEditData({ ...editData, location: t })}
-                            placeholder="e.g. Dist 1, HCM"
+                            placeholder="Ví dụ: Quận 1, TP.HCM"
                         />
 
                         <Input
-                            label="Contact Phone"
+                            label="Số điện thoại liên hệ"
                             type="phone-pad"
                             value={editData.contactPhone}
                             onChangeText={(t) => setEditData({ ...editData, contactPhone: t })}
-                            placeholder="Leave blank for default"
+                            placeholder="Để trống nếu dùng số mặc định"
                         />
 
                         <Input
-                            label="Description"
+                            label="Mô tả"
                             value={editData.content}
                             onChangeText={(t) => setEditData({ ...editData, content: t })}
                             multiline
                             numberOfLines={4}
-                            placeholder="Describe your plant..."
+                            placeholder="Mô tả cây của bạn..."
                         />
                     </ScrollView>
 
@@ -105,7 +105,7 @@ const EditPostModal = ({
                             onPress={onClose}
                             disabled={saving}
                         >
-                            Cancel
+                            Hủy
                         </Button>
 
                         <View style={{ width: 12 }} />
@@ -123,7 +123,7 @@ const EditPostModal = ({
                                 postContactPhone: editData.contactPhone
                             })}
                         >
-                            Save Changes
+                            Lưu thay đổi
                         </Button>
                     </View>
                 </Card>

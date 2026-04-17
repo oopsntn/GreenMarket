@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { LogOut, User } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -9,12 +9,12 @@ const ManagerSettingsScreen = () => {
 
   const handleLogout = () => {
     Alert.alert(
-      'Sign out',
-      'Are you sure you want to sign out?',
+      'Đăng xuất',
+      'Bạn có chắc muốn đăng xuất không?',
       [
-        { text: 'Cancel', onPress: () => {} },
+        { text: 'Hủy', onPress: () => {} },
         {
-          text: 'Sign out',
+          text: 'Đăng xuất',
           onPress: async () => {
             await logout();
           },
@@ -25,7 +25,7 @@ const ManagerSettingsScreen = () => {
   };
 
   return (
-    <MobileLayout title="Settings" headerStyle="default">
+    <MobileLayout title="Cài đặt" headerStyle="default">
       <ScrollView style={styles.container}>
         <View style={styles.section}>
           <View style={styles.userInfo}>
@@ -54,8 +54,8 @@ const ManagerSettingsScreen = () => {
         </View>
 
         <View style={[styles.section, styles.footer]}>
-          <Text style={styles.appVersion}>GreenMarket Manager v1.0.0</Text>
-          <Text style={styles.copyright}>� 2024 GreenMarket. All rights reserved.</Text>
+          <Text style={styles.appVersion}>GreenMarket Quản lý v1.0.0</Text>
+          <Text style={styles.copyright}>� 2024 GreenMarket. All rights reserved.</Text>
         </View>
       </ScrollView>
     </MobileLayout>

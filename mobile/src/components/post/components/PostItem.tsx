@@ -18,7 +18,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
 
     const handlePress = () => {
         if (item.postStatus === 'pending') {
-            CustomAlert('Post Pending', 'This post is currently under review by our managers. Please check back later.')
+            CustomAlert('Tin đang chờ duyệt', 'Tin đăng này đang được quản lý xét duyệt. Vui lòng kiểm tra lại sau.')
             return
         }
 
@@ -56,7 +56,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                     {renderStatus && renderStatus(item.postStatus)}
                     {item.postStatus === 'rejected' && item.postRejectedReason && (
                         <View style={localStyles.rejectReason}>
-                            <Text style={localStyles.rejectText}>Reason: {item.postRejectedReason}</Text>
+                            <Text style={localStyles.rejectText}>Lý do: {item.postRejectedReason}</Text>
                         </View>
                     )}
                 </View>

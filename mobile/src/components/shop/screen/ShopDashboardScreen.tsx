@@ -26,7 +26,7 @@ const ShopDashboardScreen = () => {
             setDashboard(response || null)
         } catch (error: any) {
             console.error('Error fetching shop dashboard:', error)
-            CustomAlert('Error', error?.response?.data?.error || 'Unable to load shop dashboard.')
+            CustomAlert('Lỗi', error?.response?.data?.error || 'Không thể tải dashboard cửa hàng.')
             setDashboard(null)
         } finally {
             setLoading(false)
@@ -58,7 +58,7 @@ const ShopDashboardScreen = () => {
         if (!value) return 'Không có'
         const date = new Date(value)
         if (Number.isNaN(date.getTime())) return 'N/A'
-        return date.toLocaleString('en-US', {
+        return date.toLocaleString('vi-VN', {
             month: 'short',
             day: '2-digit',
             year: 'numeric',
@@ -85,7 +85,7 @@ const ShopDashboardScreen = () => {
                     {item.postTitle || `Post #${item.postId}`}
                 </Text>
                 <Text style={styles.listMeta}>
-                    {item.postStatus || 'unknown'} • {item.postViewCount ?? 0} lượt xem • {item.postContactCount ?? 0} liên hệ
+                    {item.postStatus || 'không xác định'} • {item.postViewCount ?? 0} lượt xem • {item.postContactCount ?? 0} liên hệ
                 </Text>
                 <Text style={styles.listMeta}>
                     Cập nhật: {formatDateTime(item.postUpdatedAt)}
@@ -107,10 +107,10 @@ const ShopDashboardScreen = () => {
         <View key={`${item.paymentId || item.orderId || index}`} style={styles.paymentRow}>
             <View style={{ flex: 1 }}>
                 <Text style={styles.listTitle} numberOfLines={1}>
-                    {item.promotionPackageTitle || item.packageTitle || 'Promotion Package'}
+                    {item.promotionPackageTitle || item.packageTitle || 'Gói quảng bá'}
                 </Text>
                 <Text style={styles.listMeta} numberOfLines={1}>
-                    {item.postTitle || 'No linked post'}
+                    {item.postTitle || 'Không có tin liên kết'}
                 </Text>
                 <Text style={styles.listMeta}>
                     {formatDateTime(item.createdAt || item.updatedAt)}
@@ -121,7 +121,7 @@ const ShopDashboardScreen = () => {
                 <Text style={styles.amountText}>
                     {new Intl.NumberFormat('en-US').format(Number(item.amount || 0))} VND
                 </Text>
-                <Text style={styles.paymentStatus}>{item.paymentStatus || 'Pending'}</Text>
+                <Text style={styles.paymentStatus}>{item.paymentStatus || 'Chờ xử lý'}</Text>
             </View>
         </View>
     )

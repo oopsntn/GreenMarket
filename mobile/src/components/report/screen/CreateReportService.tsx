@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useCreateReport } from '../service/useCreatereport'
@@ -19,15 +19,15 @@ const CreateReportScreen = ({ route, navigation }: any) => {
     } = useCreateReport(postId)
 
     return (
-        <MobileLayout title="Report Violation" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Báo cáo vi phạm" backButton={() => navigation.goBack()}>
             <ScrollView style={styles.container}>
                 <View style={styles.headerInfo}>
                     <AlertTriangle color="#ef4444" size={20} />
-                    <Text style={styles.headerText}>You are reporting the post: </Text>
+                    <Text style={styles.headerText}>Bạn đang báo cáo tin: </Text>
                     <Text style={[styles.headerText, { fontWeight: 'bold' }]}>{postTitle}</Text>
                 </View>
 
-                <Text style={styles.sectionTitle}>Choose a violation reason</Text>
+                <Text style={styles.sectionTitle}>Chọn lý do vi phạm</Text>
 
                 {reasons.map((item) => (
                     <TouchableOpacity
@@ -40,12 +40,12 @@ const CreateReportScreen = ({ route, navigation }: any) => {
                     </TouchableOpacity>
                 ))}
 
-                <Text style={styles.sectionTitle}>Detailed description (optional)</Text>
+                <Text style={styles.sectionTitle}>Mô tả chi tiết (không bắt buộc)</Text>
                 <Input
-                    label="Detailed description (optional)"
+                    label="Mô tả chi tiết (không bắt buộc)"
                     value={description}
                     onChangeText={setDescription}
-                    placeholder="Provide more information to help us review it faster..."
+                    placeholder="Cung cấp thêm thông tin để chúng tôi xử lý nhanh hơn..."
                     multiline
                     numberOfLines={4}
                     icon={<FileText size={18} color="#999" />}
@@ -55,7 +55,7 @@ const CreateReportScreen = ({ route, navigation }: any) => {
                     onPress={() => handleSubmit(() => navigation.goBack())}
                     style={styles.submitBtn}
                 >
-                    Submit report
+                    Gửi báo cáo
                 </Button>
             </ScrollView>
         </MobileLayout>

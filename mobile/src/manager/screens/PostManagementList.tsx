@@ -31,24 +31,24 @@ const PostManagementList = ({ navigation }: any) => {
       setPosts(data.filter((p) => p.postStatus === 'pending'));
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Unable to load posts awaiting moderation.');
+      CustomAlert('Lỗi', 'Không thể tải danh sách tin chờ duyệt.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = (id: number) => {
-    CustomAlert('Approve post', 'Do you want to approve this post?', [
-      { text: 'Cancel', style: 'cancel' },
+    CustomAlert('Duyệt tin', 'Bạn có muốn duyệt tin này không?', [
+      { text: 'Hủy', style: 'cancel' },
       {
-        text: 'Approve',
+        text: 'Duyệt',
         onPress: async () => {
           try {
             await managerService.updatePostStatus(id, 'approved');
             setPosts((current) => current.filter((p) => p.postId !== id));
-            CustomAlert('Success', 'The post has been approved.');
+            CustomAlert('Thành công', 'Tin đăng đã được duyệt.');
           } catch (error) {
-            CustomAlert('Error', 'Unable to approve this post.');
+            CustomAlert('Lỗi', 'Không thể duyệt tin này.');
           }
         }
       },
@@ -66,9 +66,9 @@ const PostManagementList = ({ navigation }: any) => {
     try {
       await managerService.updatePostStatus(selectedPost.postId, 'rejected', reason);
       setPosts((current) => current.filter((p) => p.postId !== selectedPost.postId));
-      CustomAlert('Success', `The post "${selectedPost.postTitle}" has been rejected.`);
+      CustomAlert('Thành công', `Tin đăng "${selectedPost.postTitle}" đã bị từ chối.`);
     } catch (error) {
-      CustomAlert('Error', 'Unable to reject this post.');
+      CustomAlert('Lỗi', 'Không thể từ chối tin này.');
     }
   };
 
@@ -83,13 +83,13 @@ const PostManagementList = ({ navigation }: any) => {
           <View style={styles.badgeContainer}>
             <View style={styles.pendingBadge}>
               <Clock size={12} color="#D97706" />
-              <Text style={styles.pendingText}>Pending</Text>
+              <Text style={styles.pendingText}>Chờ duyệt</Text>
             </View>
             <Text style={styles.timeText}>{item.postCreatedAt ? new Date(item.postCreatedAt).toLocaleDateString() : 'No date'}</Text>
           </View>
           <Text style={styles.postTitle} numberOfLines={2}>{item.postTitle}</Text>
-          <Text style={styles.metaText}>{item.authorName || item.summary || 'No author information'}</Text>
-          <Text style={styles.priorityText}>Priority: {item.priority}</Text>
+          <Text style={styles.metaText}>{item.authorName || item.summary || 'Không có thông tin tác giả'}</Text>
+          <Text style={styles.priorityText}>Độ ưu tiên: {item.priority}</Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
       </View>
@@ -97,12 +97,12 @@ const PostManagementList = ({ navigation }: any) => {
       <View style={styles.cardActions}>
         <TouchableOpacity style={[styles.actionButton, styles.rejectBtn]} onPress={() => handleReject(item)}>
           <X size={18} color="#EF4444" />
-          <Text style={[styles.actionText, styles.rejectText]}>Reject</Text>
+          <Text style={[styles.actionText, styles.rejectText]}>Từ chối</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.actionButton, styles.approveBtn]} onPress={() => handleApprove(item.postId)}>
           <Check size={18} color="#22C55E" />
-          <Text style={[styles.actionText, styles.approveText]}>Approve</Text>
+          <Text style={[styles.actionText, styles.approveText]}>Duyệt</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -112,7 +112,7 @@ const PostManagementList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>Post Moderation</Text>
+        <Text style={styles.title}>Kiểm duyệt tin đăng</Text>
         <TouchableOpacity onPress={fetchPosts} style={styles.iconCircle}>
           <Clock size={22} color="#64748B" />
         </TouchableOpacity>
@@ -134,7 +134,7 @@ const PostManagementList = ({ navigation }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#CBD5E1" strokeWidth={1} />
-              <Text style={styles.emptyText}>Nice work. There are no posts waiting for review.</Text>
+              <Text style={styles.emptyText}>Tuyệt vời! Không có tin nào chờ duyệt.</Text>
             </View>
           }
         />
@@ -144,9 +144,9 @@ const PostManagementList = ({ navigation }: any) => {
         visible={rejectModalVisible}
         onClose={() => setRejectModalVisible(false)}
         onSubmit={onSubmitReject}
-        title="Reason for rejection"
-        placeholder="Explain why this post is being rejected..."
-        confirmLabel="Reject post"
+        title="Lý do từ chối"
+        placeholder="Giải thích lý do từ chối tin đăng này..."
+        confirmLabel="Từ chối tin"
       />
     </SafeAreaView>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -28,24 +28,24 @@ const ShopManagementList = ({ navigation }: any) => {
       setShops(data.filter((s) => s.status === 'pending'));
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Unable to load shops awaiting moderation.');
+      CustomAlert('Lỗi', 'Không thể tải danh sách cửa hàng chờ duyệt.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerify = (id: number) => {
-    CustomAlert('Approve shop', 'Approve this shop and activate it?', [
-      { text: 'Cancel', style: 'cancel' },
+    CustomAlert('Duyệt cửa hàng', 'Duyệt cửa hàng này và kích hoạt?', [
+      { text: 'Hủy', style: 'cancel' },
       {
-        text: 'Approve',
+        text: 'Duyệt',
         onPress: async () => {
           try {
             await managerService.verifyShop(id);
             setShops((current) => current.filter((s) => s.id !== id));
-            CustomAlert('Success', 'The shop has been activated.');
+            CustomAlert('Thành công', 'Cửa hàng đã được kích hoạt.');
           } catch (error) {
-            CustomAlert('Error', 'Unable to activate this shop.');
+            CustomAlert('Lỗi', 'Không thể kích hoạt cửa hàng này.');
           }
         }
       },
@@ -64,14 +64,14 @@ const ShopManagementList = ({ navigation }: any) => {
         </View>
         <View style={styles.shopInfo}>
           <Text style={styles.shopName}>{item.name}</Text>
-          <Text style={styles.ownerName}>Owner: {item.ownerName || 'Unknown'}</Text>
+          <Text style={styles.ownerName}>Chủ sở hữu: {item.ownerName || 'Không rõ'}</Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
       </View>
 
       <View style={styles.addressRow}>
-        <Text style={styles.addressText} numberOfLines={1}>Priority: {item.priority}</Text>
-        <Text style={styles.timeText}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'No date'}</Text>
+        <Text style={styles.addressText} numberOfLines={1}>Độ ưu tiên: {item.priority}</Text>
+        <Text style={styles.timeText}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Không có ngày'}</Text>
       </View>
 
       <View style={styles.divider} />
@@ -84,7 +84,7 @@ const ShopManagementList = ({ navigation }: any) => {
 
         <TouchableOpacity style={styles.verifyBtn} onPress={() => handleVerify(item.id)}>
           <ShieldCheck size={18} color="white" />
-          <Text style={styles.verifyBtnText}>Approve & Activate</Text>
+          <Text style={styles.verifyBtnText}>Duyệt & Kích hoạt</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -94,7 +94,7 @@ const ShopManagementList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>Shop Moderation</Text>
+        <Text style={styles.title}>Kiểm duyệt cửa hàng</Text>
         <TouchableOpacity onPress={fetchShops} style={styles.iconCircle}>
           <Clock size={22} color="#64748B" />
         </TouchableOpacity>
@@ -116,7 +116,7 @@ const ShopManagementList = ({ navigation }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#CBD5E1" strokeWidth={1} />
-              <Text style={styles.emptyText}>All shops have already been processed.</Text>
+              <Text style={styles.emptyText}>Tất cả cửa hàng đã được xử lý.</Text>
             </View>
           }
         />
