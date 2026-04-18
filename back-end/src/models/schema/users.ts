@@ -5,6 +5,7 @@ import {
   timestamp,
   integer,
   text,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 import { businessRoles } from "./business-roles.ts";
@@ -26,6 +27,7 @@ export const users = pgTable("users", {
     () => businessRoles.businessRoleId,
     { onDelete: "set null" },
   ),
+  userSpecialistData: jsonb("user_specialist_data"),
   userRegisteredAt: timestamp("user_registered_at").defaultNow(),
   userLastLoginAt: timestamp("user_last_login_at"),
   userCreatedAt: timestamp("user_created_at").defaultNow(),
