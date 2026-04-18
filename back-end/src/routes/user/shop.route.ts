@@ -1,8 +1,7 @@
 import { Router } from "express";
-import { 
+import {
     registerShop, getMyShop, getOwnerDashboard, getPublicShopById, recordShopContactClick, updateShop, getAllShops,
-    requestVerificationOTP, verifyShopEmail, addShopPhone, deleteShopPhone, deletePendingShop, setPrimaryPhone
-    requestVerificationOTP, verifyShopEmail, addShopPhone, deleteShopPhone, deletePendingShop,
+    requestVerificationOTP, verifyShopEmail, addShopPhone, deleteShopPhone, deletePendingShop, setPrimaryPhone,
     getShopCollaborators, inviteCollaborator, removeCollaborator,
     getPendingOwnerPosts, approveCollaboratorPost, rejectCollaboratorPost
 } from "../../controllers/user/shop.controller.ts";
@@ -29,12 +28,12 @@ router.patch("/phones/primary", verifyToken, setPrimaryPhone);
 
 router.patch("/:id", verifyToken, updateShop);
 router.post("/:id/contact-click", recordShopContactClick);
- 
+
 // Collaborator management
 router.get("/collaborators/all", verifyToken, getShopCollaborators);
 router.post("/collaborators/invite", verifyToken, inviteCollaborator);
 router.delete("/collaborators/:id", verifyToken, removeCollaborator);
- 
+
 // Collaborator post approvals
 router.get("/collaborators/posts/pending", verifyToken, getPendingOwnerPosts);
 router.post("/collaborators/posts/:id/approve", verifyToken, approveCollaboratorPost);
