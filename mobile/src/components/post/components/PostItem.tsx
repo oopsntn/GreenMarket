@@ -4,6 +4,7 @@ import Card from '../../Reused/Card/Card'
 import { Edit, PackageOpen, Rocket, Trash2 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import CustomAlert from '../../../utils/AlertHelper';
+import { resolveImageUrl } from '@/utils/resolveImageUrl';
 
 interface PostItemProps {
     item: any;
@@ -17,7 +18,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
 
     const handlePress = () => {
         if (item.postStatus === 'pending') {
-            CustomAlert('Post Pending', 'This post is currently under review by our managers. Please check back later.')
+            CustomAlert('Tin đang chờ duyệt', 'Tin đăng này đang được quản lý xét duyệt. Vui lòng kiểm tra lại sau.')
             return
         }
 
@@ -39,7 +40,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                 <View style={styles.imgPlaceholder}>
                     {item.images && item.images.length > 0 ? (
                         <Image
-                            source={{ uri: item.images[0].imageUrl }}
+                            source={{ uri: resolveImageUrl(item.images[0].imageUrl) }}
                             style={{ width: '100%', height: '100%' }}
                         />
                     ) : (
@@ -55,7 +56,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                     {renderStatus && renderStatus(item.postStatus)}
                     {item.postStatus === 'rejected' && item.postRejectedReason && (
                         <View style={localStyles.rejectReason}>
-                            <Text style={localStyles.rejectText}>Reason: {item.postRejectedReason}</Text>
+                            <Text style={localStyles.rejectText}>Lý do: {item.postRejectedReason}</Text>
                         </View>
                     )}
                 </View>

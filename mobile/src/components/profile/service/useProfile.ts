@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Alert } from 'react-native'
 import { useAuth } from '../../../context/AuthContext'
 import { ProfilePayload, ProfileService } from './ProfileService'
+import { resolveImageUrl } from '@/utils/resolveImageUrl'
 
 export interface ProfileFormData {
     displayName: string
@@ -46,7 +47,7 @@ export const useProfile = () => {
 
             setFormData({
                 displayName: data.userDisplayName || '',
-                avatarUrl: shop?.shopLogoUrl || data.userAvatarUrl || '',
+                avatarUrl: resolveImageUrl(shop?.shopLogoUrl || data.userAvatarUrl || ''),
                 mobile: data.userMobile || '',
                 email: data.userEmail || '',
                 location: data.userLocation || '',

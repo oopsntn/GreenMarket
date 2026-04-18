@@ -41,7 +41,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
       setReport(data);
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Unable to load report details.');
+      CustomAlert('Lỗi', 'Không thể tải chi tiết báo cáo.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -79,7 +79,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         );
       }
     } catch (error) {
-      CustomAlert('Error', 'Unable to process this report.');
+      CustomAlert('Lỗi', 'Không thể xử lý báo cáo này.');
     }
   };
 
@@ -101,7 +101,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <ArrowLeft color="#1E293B" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Report Details</Text>
+        <Text style={styles.headerTitle}>Chi tiết báo cáo</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -111,19 +111,19 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
             <ShieldAlert size={16} color="#EF4444" />
             <Text style={styles.statusText}>{report.reportStatus}</Text>
           </View>
-          <Text style={styles.createdAt}>{report.reportCreatedAt ? new Date(report.reportCreatedAt).toLocaleString() : 'No date'}</Text>
+          <Text style={styles.createdAt}>{report.reportCreatedAt ? new Date(report.reportCreatedAt).toLocaleString() : 'Không có ngày'}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Reporter</Text>
+          <Text style={styles.label}>Người báo cáo</Text>
           <View style={styles.infoBox}>
             <User size={20} color="#64748B" />
-            <Text style={styles.infoText}>{report.reporterDisplayName || 'Unknown reporter'}</Text>
+            <Text style={styles.infoText}>{report.reporterDisplayName || 'Người báo cáo không xác định'}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Reported Target</Text>
+          <Text style={styles.label}>Tin/Cửa hàng bị báo cáo</Text>
           <TouchableOpacity
             style={styles.targetBox}
             onPress={() => {
@@ -132,40 +132,40 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
             }}
           >
             <View style={styles.targetInfo}>
-              <Text style={styles.targetType}>{report.postId ? 'Post' : 'Shop'}</Text>
-              <Text style={styles.targetTitle}>{report.postTitle || report.shopName || 'Unknown target'}</Text>
+              <Text style={styles.targetType}>{report.postId ? 'Tin đăng' : 'Cửa hàng'}</Text>
+              <Text style={styles.targetTitle}>{report.postTitle || report.shopName || 'Mục tiêu không xác định'}</Text>
             </View>
             <ExternalLink size={20} color="#3B82F6" />
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Report Reason</Text>
+          <Text style={styles.label}>Lý do báo cáo</Text>
           <View style={styles.reasonBox}>
             <Flag size={20} color="#EF4444" style={{ marginTop: 2 }} />
-            <Text style={styles.reasonText}>{report.reportReason || report.reportReasonCode || 'No reason provided'}</Text>
+            <Text style={styles.reasonText}>{report.reportReason || report.reportReasonCode || 'Không có lý do'}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Reporter Note</Text>
+          <Text style={styles.label}>Ghi chú từ người báo cáo</Text>
           <View style={styles.infoBox}>
-            <Text style={styles.infoText}>{report.reportNote || 'No note provided'}</Text>
+            <Text style={styles.infoText}>{report.reportNote || 'Không có ghi chú'}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Manager Note</Text>
+          <Text style={styles.label}>Ghi chú quản lý</Text>
           <View style={styles.infoBox}>
-            <Text style={styles.infoText}>{report.adminNote || 'No manager note yet'}</Text>
+            <Text style={styles.infoText}>{report.adminNote || 'Chưa có ghi chú quản lý'}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Processing Context</Text>
+          <Text style={styles.label}>Ngữ cảnh xử lý</Text>
           <View style={styles.chatPlaceholder}>
             <MessageSquare size={32} color="#CBD5E1" />
-            <Text style={styles.placeholderText}>Severity: {report.severity || 'medium'}</Text>
+            <Text style={styles.placeholderText}>Độ nghiêm trọng: {report.severity || 'medium'}</Text>
           </View>
         </View>
       </ScrollView>
@@ -173,17 +173,17 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
       <View style={styles.bottomActions}>
         <TouchableOpacity style={[styles.btn, styles.dismissBtn]} onPress={() => handleAction('dismissed')}>
           <XCircle size={20} color="#64748B" />
-          <Text style={[styles.btnText, styles.dismissBtnText]}>Dismiss</Text>
+          <Text style={[styles.btnText, styles.dismissBtnText]}>Bỏ qua</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.btn, styles.escalateBtn]} onPress={() => handleAction('escalated')}>
           <Flag size={20} color="white" />
-          <Text style={[styles.btnText, styles.escalateBtnText]}>Escalate</Text>
+          <Text style={[styles.btnText, styles.escalateBtnText]}>Leo thang</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.btn, styles.resolveBtn]} onPress={() => handleAction('resolved')}>
           <CheckCircle size={20} color="white" />
-          <Text style={[styles.btnText, styles.resolveBtnText]}>Resolve</Text>
+          <Text style={[styles.btnText, styles.resolveBtnText]}>Giải quyết</Text>
         </TouchableOpacity>
       </View>
 
@@ -191,9 +191,9 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         visible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
         onSubmit={onSubmitNote}
-        title={actionType === 'resolved' ? 'Resolve report' : actionType === 'escalated' ? 'Escalate report' : 'Dismiss report'}
-        placeholder={actionType === 'escalated' ? 'Enter the escalation reason...' : 'Enter a processing note...'}
-        confirmLabel={actionType === 'resolved' ? 'Resolve' : actionType === 'escalated' ? 'Escalate' : 'Dismiss'}
+        title={actionType === 'resolved' ? 'Giải quyết báo cáo' : actionType === 'escalated' ? 'Leo thang báo cáo' : 'Bỏ qua báo cáo'}
+        placeholder={actionType === 'escalated' ? 'Nhập lý do leo thang...' : 'Nhập ghi chú xử lý...'}
+        confirmLabel={actionType === 'resolved' ? 'Giải quyết' : actionType === 'escalated' ? 'Leo thang' : 'Bỏ qua'}
         confirmColor={actionType === 'resolved' ? '#22C55E' : actionType === 'escalated' ? '#F59E0B' : '#94A3B8'}
       />
     </SafeAreaView>

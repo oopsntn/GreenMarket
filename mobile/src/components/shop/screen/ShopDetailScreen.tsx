@@ -18,7 +18,7 @@ const ShoDetailScreen = () => {
             return
         }
 
-        navigation.navigate('Home')
+        navigation.navigate('MainTabs', { screen: 'HomeStack' })
     }
 
     if (loading && !shop) {

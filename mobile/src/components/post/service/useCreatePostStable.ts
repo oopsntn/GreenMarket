@@ -4,29 +4,29 @@ import CustomAlert from '../../../utils/AlertHelper'
 import { postService } from './postService'
 
 interface Category {
-    categoryId: number;
-    categoryTitle: string;
+    categoryId: number
+    categoryTitle: string
 }
 
 interface CategoryAttribute {
-    attributeId: number;
-    attributeTitle: string;
-    attributeDataType?: string;
-    required?: boolean;
+    attributeId: number
+    attributeTitle: string
+    attributeDataType?: string
+    required?: boolean
 }
 
 interface SelectedMedia {
-    uri: string;
-    type: 'image';
+    uri: string
+    type: 'image'
 }
 
 interface CreatePostFormData {
-    categoryId: string;
-    postTitle: string;
-    postPrice: string;
-    postLocation: string;
-    postContactPhone: string;
-    attributes: Record<number, string>;
+    categoryId: string
+    postTitle: string
+    postPrice: string
+    postLocation: string
+    postContactPhone: string
+    attributes: Record<number, string>
 }
 
 const initialFormData: CreatePostFormData = {
@@ -39,14 +39,14 @@ const initialFormData: CreatePostFormData = {
 }
 
 export interface PostingPolicy {
-    effectivePolicyType: string;
-    allowedNewPostsPerDay: number;
-    usedNewPostsToday: number;
-    isLimitReached: boolean;
-    postCreationFee: number;
+    effectivePolicyType: string
+    allowedNewPostsPerDay: number
+    usedNewPostsToday: number
+    isLimitReached: boolean
+    postCreationFee: number
 }
 
-const useCreatePost = () => {
+const useCreatePostStable = () => {
     const [categories, setCategories] = useState<Category[]>([])
     const [attributes, setAttributes] = useState<CategoryAttribute[]>([])
     const [policy, setPolicy] = useState<PostingPolicy | null>(null)
@@ -68,7 +68,7 @@ const useCreatePost = () => {
             setLoadingPolicy(true)
             const [resCategories, resPolicy] = await Promise.all([
                 postService.getCategories(),
-                postService.getPostingPolicy().catch(() => null)
+                postService.getPostingPolicy().catch(() => null),
             ])
             setCategories(Array.isArray(resCategories) ? resCategories : [])
             if (resPolicy) {
@@ -76,7 +76,7 @@ const useCreatePost = () => {
             }
         } catch (error) {
             console.error('Error fetching initial data:', error)
-            CustomAlert('Lỗi', 'Không thể tải danh mục tin đăng.')
+            CustomAlert('Loi', 'Khong the tai danh muc tin dang.')
         } finally {
             setLoadingInitialData(false)
             setLoadingPolicy(false)
@@ -86,14 +86,13 @@ const useCreatePost = () => {
     const handleCategorySelect = async (catId: string) => {
         setFormData((prev) => ({ ...prev, categoryId: catId, attributes: {} }))
         setAttributes([])
-
         try {
             setLoadingAttributes(true)
             const res = await postService.getCategoryAttributes(Number(catId))
             setAttributes(Array.isArray(res) ? res : [])
-        } catch (e) {
-            console.error('Error fetching category attributes:', e)
-            CustomAlert('Lỗi', 'Không thể tải thuộc tính cho danh mục đã chọn.')
+        } catch (error) {
+            console.error('Error fetching category attributes:', error)
+            CustomAlert('Loi', 'Khong the tai thuoc tinh cho danh muc da chon.')
         } finally {
             setLoadingAttributes(false)
         }
@@ -102,7 +101,7 @@ const useCreatePost = () => {
     const pickMedia = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (!permission.granted) {
-            CustomAlert('Yêu cầu quyền truy cập', 'Vui lòng cấp quyền truy cập thư viện ảnh để chọn ảnh.')
+            CustomAlert('Yeu cau quyen truy cap', 'Vui long cap quyen truy cap thu vien anh de chon anh.')
             return
         }
 
@@ -113,14 +112,15 @@ const useCreatePost = () => {
             selectionLimit: 10,
         })
 
-        if (!result.canceled) {
-            const selectedMedia: SelectedMedia[] = result.assets.map((asset): SelectedMedia => ({
-                uri: asset.uri,
-                type: 'image',
-            }))
-
-            setMedia((prev) => [...prev, ...selectedMedia].slice(0, 10))
+        if (result.canceled) {
+            return
         }
+
+        const selectedMedia: SelectedMedia[] = result.assets.map((asset): SelectedMedia => ({
+            uri: asset.uri,
+            type: 'image',
+        }))
+        setMedia((prev) => [...prev, ...selectedMedia].slice(0, 10))
     }
 
     const removeMedia = (index: number) => {
@@ -135,50 +135,57 @@ const useCreatePost = () => {
 
     const validateForm = () => {
         if (!formData.postTitle.trim()) {
-            CustomAlert('Thiếu thông tin', 'Vui lòng nhập tiêu đề tin đăng.')
+            CustomAlert('Thieu thong tin', 'Vui long nhap tieu de tin dang.')
             return false
         }
 
         if (!formData.categoryId) {
-            CustomAlert('Thiếu thông tin', 'Vui lòng chọn danh mục.')
+            CustomAlert('Thieu thong tin', 'Vui long chon danh muc.')
+            return false
+        }
+
+        const selectedCategoryId = Number(formData.categoryId)
+        const categoryExists = categories.some((cat) => cat.categoryId === selectedCategoryId)
+        if (!categoryExists) {
+            CustomAlert('Danh muc khong hop le', 'Danh muc da chon khong ton tai hoac da thay doi. Vui long chon lai.')
             return false
         }
 
         const priceStr = formData.postPrice.trim()
-        if (!priceStr || Number.isNaN(Number(priceStr)) || Number(priceStr) < 0) {
-            CustomAlert('Giá trị không hợp lệ', 'Giá bán phải là số lớn hơn hoặc bằng 0.')
+        const priceNumber = Number(priceStr)
+        if (!priceStr || Number.isNaN(priceNumber) || priceNumber < 0) {
+            CustomAlert('Gia tri khong hop le', 'Gia ban phai la so lon hon hoac bang 0.')
             return false
         }
 
         if (formData.postTitle.length > 200) {
-            CustomAlert('Giá trị quá dài', 'Tiêu đề không được vượt quá 200 ký tự.')
+            CustomAlert('Gia tri qua dai', 'Tieu de khong duoc vuot qua 200 ky tu.')
             return false
         }
 
         if (formData.postLocation && formData.postLocation.length > 255) {
-            CustomAlert('Giá trị quá dài', 'Địa chỉ không được vượt quá 255 ký tự.')
+            CustomAlert('Gia tri qua dai', 'Dia chi khong duoc vuot qua 255 ky tu.')
             return false
         }
 
         if (formData.postContactPhone) {
-            const cleanPhone = formData.postContactPhone.trim();
+            const cleanPhone = formData.postContactPhone.trim()
             if (cleanPhone.length < 9 || cleanPhone.length > 20 || !/^\+?[0-9\s-]+$/.test(cleanPhone)) {
-                CustomAlert('Giá trị không hợp lệ', 'Vui lòng nhập số điện thoại hợp lệ (ít nhất 9 số).')
+                CustomAlert('Gia tri khong hop le', 'Vui long nhap so dien thoai hop le (it nhat 9 so).')
                 return false
             }
         }
 
         if (media.length === 0) {
-            CustomAlert('Thiếu hình ảnh', 'Vui lòng chọn ít nhất một hình ảnh.')
+            CustomAlert('Thieu hinh anh', 'Vui long chon it nhat mot hinh anh.')
             return false
         }
 
         const missingRequiredAttribute = attributes.find(
-            (attr) => attr.required && !formData.attributes[attr.attributeId]?.trim()
+            (attr) => attr.required && !formData.attributes[attr.attributeId]?.trim(),
         )
-
         if (missingRequiredAttribute) {
-            CustomAlert('Thiếu thuộc tính', `Vui lòng nhập "${missingRequiredAttribute.attributeTitle}".`)
+            CustomAlert('Thieu thuoc tinh', `Vui long nhap "${missingRequiredAttribute.attributeTitle}".`)
             return false
         }
 
@@ -186,15 +193,12 @@ const useCreatePost = () => {
     }
 
     const submitForm = async () => {
-
         if (!validateForm()) {
             return
         }
 
         setSubmitting(true)
         try {
-
-            //1. Upload toan bo media len server
             const mediaUris = media.map((m) => m.uri)
             const uploadedMedia = await postService.uploadMedia(mediaUris)
             const uploadedUrls = Array.isArray(uploadedMedia?.urls) ? uploadedMedia.urls : []
@@ -203,40 +207,49 @@ const useCreatePost = () => {
                 throw new Error('Uploaded media count mismatch')
             }
 
-            //2. Prepare image payload in the same order as the selected media
             const images = uploadedUrls.filter((_: string, index: number) => media[index]?.type === 'image')
 
-            //3. Chuan bi Attribute Payload
-            const attributePayload = Object.entries(formData.attributes)
+            const allowedAttributeIds = new Set(attributes.map((attr) => attr.attributeId))
+            const attributeEntries = Object.entries(formData.attributes)
                 .filter(([, value]) => value.trim())
                 .map(([attributeId, value]) => ({
                     attributeId: Number(attributeId),
                     value: value.trim(),
                 }))
 
-            //4. Goi API tao Post
+            const hasInvalidAttribute = attributeEntries.some((item) => !allowedAttributeIds.has(item.attributeId))
+            if (hasInvalidAttribute) {
+                CustomAlert(
+                    'Thuoc tinh khong hop le',
+                    'Mot so thuoc tinh da thay doi tren he thong. Vui long chon lai danh muc va nhap lai thuoc tinh.',
+                )
+                return
+            }
+
+            const attributePayload = attributeEntries.filter((item) => allowedAttributeIds.has(item.attributeId))
+
             await postService.createPost({
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
                 postPrice: Number(formData.postPrice.trim()),
                 postLocation: formData.postLocation.trim() || undefined,
-                postContactPhone: formData.postContactPhone.replace(/\s+/g, '') || undefined,
+                postContactPhone: formData.postContactPhone.replace(/\s+/g, '').trim() || undefined,
                 images,
                 attributes: attributePayload,
             })
 
             setSubmitted(true)
             resetForm()
-        } catch (e: any) {
+        } catch (error: any) {
             console.error('Error submitting form:', {
-                status: e?.response?.status,
-                data: e?.response?.data,
-                message: e?.message,
+                status: error?.response?.status,
+                data: error?.response?.data,
+                message: error?.message,
             })
-            const serverMessage = e?.response?.data?.error || e?.response?.data?.message
+            const serverMessage = error?.response?.data?.error || error?.response?.data?.message
             CustomAlert(
                 'Dang tin that bai',
-                serverMessage || 'Da co loi xay ra trong qua trinh tao bai dang. Vui long thu lai.'
+                serverMessage || 'Da co loi xay ra trong qua trinh tao bai dang. Vui long thu lai.',
             )
         } finally {
             setSubmitting(false)
@@ -263,8 +276,9 @@ const useCreatePost = () => {
             pickMedia,
             removeMedia,
             submitForm,
-        }
+        },
     }
 }
 
-export default useCreatePost
+export default useCreatePostStable
+

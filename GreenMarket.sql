@@ -118,6 +118,7 @@ CREATE TABLE users (
     user_availability_note TEXT,
     user_status VARCHAR(20) DEFAULT 'active',
     user_business_role_id INTEGER REFERENCES business_roles(business_role_id) ON DELETE SET NULL,
+    user_specialist_data JSONB,
     user_registered_at TIMESTAMP DEFAULT now(),
     user_last_login_at TIMESTAMP,
     user_created_at TIMESTAMP DEFAULT now(),
@@ -265,7 +266,7 @@ CREATE TABLE posts (
 
     post_price NUMERIC(12,2),
     post_location VARCHAR(255),
-    post_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    post_status VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending, approved, rejected, hidden, draft, pending_owner
     post_rejected_reason TEXT,
     post_contact_phone VARCHAR(20),
     post_view_count INTEGER DEFAULT 0,
@@ -728,9 +729,11 @@ CREATE TABLE host_contents (
     host_content_body TEXT,
     host_content_target_type VARCHAR(50) NOT NULL, -- post | shop | external
     host_content_target_id INTEGER, -- linked post_id or shop_id
+    host_content_category VARCHAR(50), -- Tin tức, Mẹo vặt, Sự kiện
     host_content_tracking_url TEXT,
     host_content_media_urls JSONB DEFAULT '[]'::jsonb,
-    host_content_status VARCHAR(20) DEFAULT 'draft', -- draft | published
+    host_content_status VARCHAR(20) DEFAULT 'pending_admin', -- pending_admin, published, rejected
+    host_content_payout_amount NUMERIC(12,2),
     host_content_view_count INTEGER DEFAULT 0,
     host_content_click_count INTEGER DEFAULT 0,
     host_content_created_at TIMESTAMP DEFAULT now(),
@@ -744,7 +747,7 @@ CREATE TABLE host_earnings (
     host_earning_host_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     host_earning_amount NUMERIC(15,2) NOT NULL,
     host_earning_status VARCHAR(20) DEFAULT 'pending', -- pending | available
-    host_earning_source_type VARCHAR(50) NOT NULL, -- view | click | bonus
+    host_earning_source_type VARCHAR(50) NOT NULL, -- article_payout, performance_bonus
     host_earning_source_id INTEGER, -- linked host_content_id
     host_earning_created_at TIMESTAMP DEFAULT now()
 );
@@ -767,6 +770,16 @@ CREATE TABLE favorite_contents (
     favorite_content_id INTEGER NOT NULL REFERENCES host_contents(host_content_id) ON DELETE CASCADE,
     favorite_content_created_at TIMESTAMP DEFAULT now(),
     PRIMARY KEY (favorite_content_user_id, favorite_content_id)
+);
+
+-- Shop Collaborators
+CREATE TABLE shop_collaborators (
+    shop_collaborators_id SERIAL PRIMARY KEY,
+    shop_collaborators_shop_id INTEGER NOT NULL REFERENCES shops(shop_id) ON DELETE CASCADE,
+    collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    shop_collaborators_status VARCHAR(20) NOT NULL DEFAULT 'pending', -- active, pending, removed
+    shop_collaborators_created_at TIMESTAMP DEFAULT now(),
+    UNIQUE(shop_collaborators_shop_id, collaborator_id)
 );
 
 -- ============================================================
@@ -798,6 +811,10 @@ CREATE INDEX payout_requests_collaborator_created_idx ON payout_requests(payout_
 
 -- Post Meta
 CREATE INDEX idx_post_meta_post ON post_meta(post_meta_post_id);
+
+-- Shop Collaborators
+CREATE INDEX idx_shop_collaborators_shop ON shop_collaborators(shop_collaborators_shop_id);
+CREATE INDEX idx_shop_collaborators_user ON shop_collaborators(collaborator_id);
 CREATE INDEX idx_post_meta_key ON post_meta(post_meta_key);
 
 -- Post Categories

@@ -93,8 +93,17 @@ export const postService = {
     },
 
     createPost: async (postData: PostPayload) => {
-        const response = await api.post('/posts', postData)
-        return response.data
+        try {
+            const response = await api.post('/posts', postData)
+            return response.data
+        } catch (error: any) {
+            console.error('createPost failed:', {
+                status: error?.response?.status,
+                data: error?.response?.data,
+                payload: postData,
+            })
+            throw error
+        }
     },
 
     updatePost: async (postId: number, data: Partial<PostPayload>) => {
@@ -164,7 +173,7 @@ export const postService = {
         const response = await api.get(`/categories/${categoryId}/attributes`)
         return response.data
     },
-    
+
     getPostingPolicy: async () => {
         const response = await api.get('/posts/posting-policy')
         return response.data

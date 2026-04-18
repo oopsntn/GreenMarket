@@ -7,7 +7,7 @@ export const hostEarnings = pgTable("host_earnings", {
   hostEarningHostId: integer("host_earning_host_id").references(() => users.userId, { onDelete: "cascade" }),
   hostEarningAmount: decimal("host_earning_amount", { precision: 15, scale: 2 }).notNull(),
   hostEarningStatus: varchar("host_earning_status", { length: 20 }).default("pending"), // 'pending', 'available'
-  hostEarningSourceType: varchar("host_earning_source_type", { length: 50 }).notNull(), // 'view', 'click', 'bonus'
+  hostEarningSourceType: varchar("host_earning_source_type", { length: 50 }).notNull(), // 'article_payout', 'performance_bonus'
   hostEarningSourceId: integer("host_earning_source_id"), // linked to host_content_id or other
   hostEarningCreatedAt: timestamp("host_earning_created_at").defaultNow(),
 });
