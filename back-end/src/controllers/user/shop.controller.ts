@@ -12,6 +12,7 @@ import {
     ownerDashboardService,
 } from "../../services/owner-dashboard.service.ts";
 import { postLifecycleService } from "../../services/postLifecycle.service.ts";
+import { notificationService } from "../../services/notification.service.ts";
 
 const SHOP_GALLERY_DELIMITER = "|";
 const SHOP_EVENT_VIEW = "shop_view";
@@ -878,6 +879,15 @@ export const approveCollaboratorPost = async (req: AuthRequest, res: Response): 
             })
             .where(eq(posts.postId, postId));
 
+        // Notify collaborator
+        await notificationService.sendNotification({
+            recipientId: post.postAuthorId,
+            title: "Bài đăng đã được duyệt!",
+            message: `Bài đăng "${post.postTitle}" của bạn đã được chủ vườn [${shop.shopName}] phê duyệt và xuất bản.`,
+            type: "collaboration",
+            metaData: { postId: post.postId, shopId: shop.shopId }
+        }).catch(e => console.error("Failed to notify collaborator of approval:", e));
+
         res.json({ message: "Post approved and published successfully" });
     } catch (error) {
         console.error(error);
@@ -935,6 +945,15 @@ export const rejectCollaboratorPost = async (req: AuthRequest, res: Response): P
                 postModeratedAt: new Date(),
             })
             .where(eq(posts.postId, postId));
+
+        // Notify collaborator
+        await notificationService.sendNotification({
+            recipientId: post.postAuthorId,
+            title: "Bài đăng bị từ chối",
+            message: `Tiếc quá! Bài đăng "${post.postTitle}" của bạn đã bị từ chối. Lý do: ${reason}`,
+            type: "collaboration",
+            metaData: { postId: post.postId, shopId: shop.shopId }
+        }).catch(e => console.error("Failed to notify collaborator of rejection:", e));
 
         res.json({ message: "Post rejected successfully" });
     } catch (error) {

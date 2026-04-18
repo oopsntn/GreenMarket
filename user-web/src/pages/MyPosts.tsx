@@ -272,7 +272,7 @@ const MyPosts: React.FC = () => {
       const autoApprove = Boolean(updateRes?.data?.postingPolicy?.autoApprove);
       const chargedAmount = Number(updateRes?.data?.billing?.chargedAmount || 0);
       const feeSuffix = chargedAmount > 0
-        ? ` PhÃ­ sá»­a: ${chargedAmount.toLocaleString('vi-VN')}Ä‘.`
+        ? ` Phí sửa: ${chargedAmount.toLocaleString('vi-VN')}đ.`
         : '';
       if (autoApprove || shop?.shopStatus === 'active') {
         alert('Đã cập nhật bài đăng thành công! Bài viết được hiển thị ngay.');
@@ -298,7 +298,7 @@ const MyPosts: React.FC = () => {
     try {
       const res = await getPromotionPackages();
       const payload = res.data;
-      
+
       const packageList = sortPromotionPackages(payload?.packages || []);
       if (packageList.length === 0) {
         alert('Hiện không có gói phù hợp với tài khoản của bạn.');
@@ -520,31 +520,28 @@ const MyPosts: React.FC = () => {
               <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
                 <button
                   onClick={() => setShopSubTab('all')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                    shopSubTab === 'all' 
-                      ? 'bg-white text-emerald-700 shadow-md ring-1 ring-slate-200' 
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${shopSubTab === 'all'
+                    ? 'bg-white text-emerald-700 shadow-md ring-1 ring-slate-200'
+                    : 'text-slate-500 hover:text-slate-700'
+                    }`}
                 >
                   Tất cả
                 </button>
                 <button
                   onClick={() => setShopSubTab('owner')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                    shopSubTab === 'owner' 
-                      ? 'bg-white text-emerald-700 shadow-md ring-1 ring-slate-200' 
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${shopSubTab === 'owner'
+                    ? 'bg-white text-emerald-700 shadow-md ring-1 ring-slate-200'
+                    : 'text-slate-500 hover:text-slate-700'
+                    }`}
                 >
                   Vườn đăng
                 </button>
                 <button
                   onClick={() => setShopSubTab('collaborator')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-                    shopSubTab === 'collaborator' 
-                      ? 'bg-white text-emerald-700 shadow-md ring-1 ring-slate-200' 
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${shopSubTab === 'collaborator'
+                    ? 'bg-white text-emerald-700 shadow-md ring-1 ring-slate-200'
+                    : 'text-slate-500 hover:text-slate-700'
+                    }`}
                 >
                   CTV đăng
                 </button>
@@ -623,22 +620,21 @@ const MyPosts: React.FC = () => {
                     )}
                   </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      {post.postStatus === 'approved' && (
-                        <button
-                          title={post.postPublished ? "Ẩn bài đăng" : "Hiện bài đăng"}
-                          onClick={() => handleToggleVisibility(post.postId)}
-                          className={`p-3 rounded-xl transition-all hover:scale-105 active:scale-95 border ${
-                            post.postPublished 
-                              ? "bg-slate-50 border-slate-100 text-slate-400 hover:text-white hover:bg-slate-600" 
-                              : "bg-emerald-50 border-emerald-100 text-emerald-600 hover:text-white hover:bg-emerald-600 shadow-md animate-pulse-slow"
-                          }`}
-                        >
-                          {post.postPublished ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-                        </button>
-                      )}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {post.postStatus === 'approved' && (
                       <button
-                        title="Xem chi tiết"
+                        title={post.postPublished ? "Ẩn bài đăng" : "Hiện bài đăng"}
+                        onClick={() => handleToggleVisibility(post.postId)}
+                        className={`p-3 rounded-xl transition-all hover:scale-105 active:scale-95 border ${post.postPublished
+                          ? "bg-slate-50 border-slate-100 text-slate-400 hover:text-white hover:bg-slate-600"
+                          : "bg-emerald-50 border-emerald-100 text-emerald-600 hover:text-white hover:bg-emerald-600 shadow-md animate-pulse-slow"
+                          }`}
+                      >
+                        {post.postPublished ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                      </button>
+                    )}
+                    <button
+                      title="Xem chi tiết"
                       onClick={() => navigate(`/posts/detail/${post.postSlug}`)}
                       className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-blue-600 transition-all hover:scale-105 active:scale-95"
                     >
@@ -662,14 +658,18 @@ const MyPosts: React.FC = () => {
                       (shop && shop.shopStatus === 'active' && post.postShopId === shop.shopId) ||
                       (post.postShopId === null)
                     ) && (
-                      <button
-                        title="Quảng bá bài viết"
-                        onClick={() => openBoostModal(post)}
-                        className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-600 hover:text-white hover:bg-emerald-600 transition-all hover:scale-110 active:scale-95 shadow-sm"
-                      >
-                        <Zap className="w-5 h-5 fill-emerald-600 group-hover:fill-white" />
-                      </button>
-                    )}
+                        <button
+                          title={post.activePromotion ? "Bài đăng đang được quảng bá" : "Quảng bá bài viết"}
+                          disabled={!!post.activePromotion}
+                          onClick={() => openBoostModal(post)}
+                          className={`p-3 rounded-xl transition-all shadow-sm ${post.activePromotion
+                            ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                            : "bg-emerald-50 border-emerald-200 text-emerald-600 hover:text-white hover:bg-emerald-600 hover:scale-110 active:scale-95"
+                            }`}
+                        >
+                          <Zap className={`w-5 h-5 ${post.activePromotion ? "fill-slate-400" : "fill-emerald-600 group-hover:fill-white"}`} />
+                        </button>
+                      )}
                   </div>
                 </div>
               ))}
@@ -829,6 +829,7 @@ const MyPosts: React.FC = () => {
                             </h3>
                             <span className="text-[10px] px-2 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 uppercase tracking-wider">
                               {getDurationTierLabel(pkg.durationDays)}
+                              {toSafeNumber(pkg.slotCapacity) > 0 && ` (${pkg.currentUsage}/${pkg.slotCapacity})`}
                             </span>
                           </div>
                           {isRecommended ? (
@@ -869,12 +870,14 @@ const MyPosts: React.FC = () => {
                         </ul>
 
                         <button
-                          disabled={boostBuyingId !== null}
+                          disabled={boostBuyingId !== null || (toSafeNumber(pkg.slotCapacity) > 0 && (pkg.currentUsage || 0) >= toSafeNumber(pkg.slotCapacity))}
                           onClick={() => handleBuyBoost(pkg.promotionPackageId)}
                           className="w-full py-3 rounded-xl border font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all bg-emerald-700 border-emerald-600 hover:bg-emerald-600 text-white shadow-xl shadow-emerald-200/50 disabled:bg-slate-200 disabled:text-slate-400 disabled:border-slate-200 disabled:shadow-none"
                         >
                           {boostBuyingId === pkg.promotionPackageId ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (toSafeNumber(pkg.slotCapacity) > 0 && (pkg.currentUsage || 0) >= toSafeNumber(pkg.slotCapacity)) ? (
+                            'Vị trí đã đầy'
                           ) : (
                             'Mua gói này'
                           )}

@@ -19,6 +19,7 @@ import {
   shops,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
+import { notificationService } from "../../services/notification.service.ts";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -304,6 +305,25 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
         hostContentStatus: "published", // Default to published for demo
       })
       .returning();
+
+    // 1. Create earning for host
+    const PAYOUT_AMOUNT = 50000;
+    await db.insert(hostEarnings).values({
+      hostEarningHostId: userId,
+      hostEarningAmount: PAYOUT_AMOUNT.toString(),
+      hostEarningStatus: "available",
+      hostEarningSourceType: "article_payout",
+      hostEarningSourceId: newContent.hostContentId,
+    });
+
+    // 2. Notify host
+    await notificationService.sendNotification({
+      recipientId: userId,
+      title: "Thu nhập mới!",
+      message: `Bạn vừa nhận được ${PAYOUT_AMOUNT.toLocaleString("vi-VN")} VND cho bài viết mới: "${title}".`,
+      type: "earning",
+      metaData: { contentId: newContent.hostContentId },
+    });
 
     res.status(201).json(newContent);
   } catch (error) {

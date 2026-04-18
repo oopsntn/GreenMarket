@@ -54,7 +54,16 @@ Auth rules for all endpoints below:
 | POST | `/api/collaborator/jobs/:id/deliverables` | User token + `COLLABORATOR` | Submit job deliverables and mark job completed | path `id`, required `fileUrls` (string[]), optional `note` |
 | GET | `/api/collaborator/earnings` | User token + `COLLABORATOR` | Get earnings summary and history | optional query: `from`, `to` |
 | GET | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Get payout request history | optional query: `page`, `limit` |
-| POST | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Create payout request (mock) | required: `amount`, `method`; optional `note` |
+| POST | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Create payout request (VND) | required: `amount`, `method`; optional `note` |
+| GET | `/api/collaborator/invitations` | User token | Get invitations received from shops | none |
+| POST | `/api/collaborator/invitations/:id/respond` | User token | Accept or decline a shop invitation | path `id`, required `decision` (`accept`/`decline`) |
+
+**Discovery & Portfolio (for Owners/Public):**
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/collaborator/public-list` | User token | Get list of public collaborators available for hire | query: `page`, `limit` |
+| GET | `/api/collaborator/public/:id` | User token | Get detailed professional portfolio of a collaborator | path `id` |
 
 **Collaborator notes:**
 - `GET /api/collaborator/my-jobs` includes `progressPercent` derived from job status.
@@ -155,6 +164,7 @@ Auth rules for all endpoints below:
 | PATCH | `/api/posts/:id` | User token | Update user post | path `id` (post owner only) |
 | PATCH | `/api/posts/:id/toggle-visibility` | User token | Toggle public visibility (`postPublished`) | path `id` (post owner only) |
 | DELETE | `/api/posts/:id` | User token | Soft delete user post | path `id` (post owner only) |
+| POST | `/api/posts/:id/restore` | User token | Restore a soft-deleted post | path `id` (post owner only) |
 | GET | `/api/posts/:id/favorite` | User token | Check if a post is favorited by current user | path `id` |
 | POST | `/api/posts/:id/favorite` | User token | Toggle (add/remove) favorite post | path `id` |
 
@@ -183,17 +193,46 @@ Auth rules for all endpoints below:
 | POST | `/api/shops/:id/contact-click` | No | Record click to contact shop (phone/Zalo) | path `id` |
 | GET | `/api/shops/:id` | No | Get public shop detail with approved posts | path `id` |
 
+**Shop Collaborator Management (Owner only):**
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/shops/collaborators/all` | User token | List all active and pending collaborators for this shop | none |
+| POST | `/api/shops/collaborators/invite` | User token | Invite a user to be a collaborator | `userIdentifier` (mobile/email/id) |
+| DELETE | `/api/shops/collaborators/:id` | User token | Remove a collaborator or cancel invite | path `id` |
+| GET | `/api/shops/collaborators/posts/pending` | User token | List posts from collaborators awaiting approval | none |
+| POST | `/api/shops/collaborators/posts/:id/approve` | User token | Approve and publish a collaborator post | path `id` |
+| POST | `/api/shops/collaborators/posts/:id/reject` | User token | Reject a collaborator post | path `id`, required `reason` |
+
 **`GET /api/shops/dashboard` response highlights:**
 - `shop`: `shopId`, `shopName`, `shopStatus`
 - `summary`: `totalPosts`, `approvedPosts`, `pendingPosts`, `rejectedPosts`, `totalViews`, `totalContacts`, `totalShopViews`, `totalShopContactClicks`, `contactRate`, `postContactRate`, `totalPromotionSpend`, `totalBoostPackageSpend`, `successfulPayments`, `successfulBoostPurchases`, `activePromotions`, `boostedPostsActive`
 - `topPosts`: top 5 posts by views with `postViewCount`, `postContactCount`, `postStatus`, `isPromoted`, `postUpdatedAt`
 - `recentPayments`: latest 10 owner payment records with package/post references
 
+### Notifications (authenticated user)
+
+| Method | Endpoint | Auth | Description | Main request fields |
+|---|---|---|---|---|
+| GET | `/api/notifications` | User token | Get notification history (real-time + earnings + collaboration) | none |
+| PATCH | `/api/notifications/:id/read` | User token | Mark a specific notification as read | path `id` |
+| PATCH | `/api/notifications/read-all` | User token | Mark all notifications for current user as read | none |
+
+**Notification notes:**
+- Notifications include types: `system`, `earning`, `collaboration`.
+- New notifications are also pushed via Socket.io event `new_notification`.
+
 ### Reports
 
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
-| POST | `/api/reports` | No | Submit report for post | required: `postId`, `reportReason`; optional: `reporterId` |
+| POST | `/api/reports` | User token | Submit report for post | required: `postId`, `reportReason`; optional: `reporterId` |
+
+### System Settings (Public)
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/system-setting/public` | No | Get public system configuration (Privacy, terms, etc.) |
 
 ### Monetization Config
 
@@ -212,6 +251,7 @@ Auth rules for all endpoints below:
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
 | GET | `/api/promotions/packages` | No | Get published promotion packages | none |
+| GET | `/api/promotions/packages/shop-vip` | No | Get Shop VIP membership package detail | none |
 | GET | `/api/promotions/packages/eligible` | User token | Get promotion packages eligible for current account type | none |
 | GET | `/api/promotions/packages/:id` | No | Get promotion package detail | path `id` |
 
@@ -236,6 +276,7 @@ Auth rules for all endpoints below:
 | POST | `/api/payment/buy-personal` | User token | Create VNPay payment intent URL for personal monthly plan | none |
 | POST | `/api/payment/register-shop` | User token | Create VNPay payment intent URL for garden owner registration | none |
 | POST | `/api/payment/buy-shop-vip` | User token | Create VNPay payment intent URL for Shop VIP package | none |
+| GET | `/api/payment/history` | User token | Get transaction usage history for current user | none |
 | GET | `/api/payment/vnpay-return` | No | VNPay redirect callback | query params from VNPay |
 | POST | `/api/payment/vnpay-ipn` | No | VNPay IPN callback | callback payload from VNPay |
 
@@ -413,6 +454,49 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | GET | `/api/admin/users/:id` | Get user detail | path `id` |
 | PATCH | `/api/admin/users/:id/status` | Update user status | `status` (`active`, `blocked`) |
 | PATCH | `/api/admin/users/:id/business-role` | Assign business role to user | `businessRoleId` |
+
+### Account Packages
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/account-package` | List all system account packages (Individual, Garden Owner, etc.) |
+| GET | `/api/admin/account-package/tracking` | Get usage statistics across different package types |
+| PATCH | `/api/admin/account-package/:code` | Update account package rules/metadata |
+
+### AI Insights
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/ai-insight/settings` | Get AI generation settings |
+| PUT | `/api/admin/ai-insight/settings` | Update AI generation settings |
+| GET | `/api/admin/ai-insight/overview` | Get AI-generated business overview |
+| GET | `/api/admin/ai-insight/trends` | Get AI-generated market trends |
+| GET | `/api/admin/ai-insight/history` | Get AI insight generation history |
+| POST | `/api/admin/ai-insight/generate` | Trigger new AI insight generation |
+
+### Notification Templates
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/template` | List notification templates |
+| POST | `/api/admin/template` | Create new notification template |
+| PUT | `/api/admin/template/:id` | Update notification template |
+| PATCH | `/api/admin/template/:id/status` | Toggle template status |
+| POST | `/api/admin/template/:id/clone` | Clone an existing template |
+
+### System Settings
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/settings` | Get all system configuration settings |
+| PUT | `/api/admin/settings` | Update system configuration settings |
+| POST | `/api/admin/settings/reset` | Reset all settings to system defaults |
+
+### Activity Logs
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/activity-log` | List system activity and audit logs |
 
 ### Roles Management
 

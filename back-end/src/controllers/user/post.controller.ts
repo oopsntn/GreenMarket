@@ -11,6 +11,7 @@ import {
 } from "../../services/posting-policy.service.ts";
 import { adminWebSettingsService } from "../../services/adminWebSettings.service.ts";
 import { postLifecycleService } from "../../services/postLifecycle.service.ts";
+import { notificationService } from "../../services/notification.service.ts";
 import { BOOST_POST_SLOT_PREFIX } from "../../constants/promotion.ts";
 
 const actionCache = new Set<string>();
@@ -154,6 +155,22 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             if (attrRecords.length > 0) {
                 await db.insert(postAttributeValues).values(attrRecords);
             }
+        }
+
+        // Notify Shop Owner if this is a collaborator post
+        if (isDelegatedPost && targetShopId) {
+            const [author] = await db.select({ name: users.userDisplayName })
+                .from(users)
+                .where(eq(users.userId, userId))
+                .limit(1);
+
+            await notificationService.sendNotification({
+                recipientId: targetShopId,
+                title: "Bài đăng mới từ CTV",
+                message: `Cộng tác viên ${author?.name || "ẩn danh"} vừa gửi bài đăng "${postTitle}" cần bạn phê duyệt.`,
+                type: "collaboration",
+                metaData: { postId: newPost.postId, shopId: targetShopId }
+            }).catch(e => console.error("Failed to notify shop owner:", e));
         }
 
         const creationFee = await postingPolicyService.addFeeLedgerEntry({
