@@ -6,6 +6,8 @@ import UserNavigator from "./UserNavigator";
 import ManagerNavigator from "../manager/navigation/ManagerNavigator";
 import SuccessToast from "../components/SuccessToast";
 import CollaboratorNavigator from "@/collaborator/navigation/CollaboratorNavigator";
+import HostNavigator from "../host/navigation/HostNavigator";
+import OperationsNavigator from "../operations/navigation/OperationsNavigator";
 
 const AuthStack = () => {
   const { token, user, loading } = useAuth();
@@ -49,7 +51,11 @@ const AuthStack = () => {
       case "MANAGER":
         return <ManagerNavigator />;
       case "COLLABORATOR":
-        return <CollaboratorNavigator />
+        return <CollaboratorNavigator />;
+      case "OPERATION_STAFF":
+        return <OperationsNavigator />;
+      case "HOST":
+        return <HostNavigator />;
       default:
         return <UserNavigator />;
     }
