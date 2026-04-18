@@ -371,11 +371,9 @@ export interface HostPublicContent {
   hostContentTitle: string;
   hostContentDescription: string | null;
   hostContentBody: string | null;
-  hostContentTargetType: string | null;
-  hostContentTargetId: number | null;
   hostContentMediaUrls: string[] | null;
+  hostContentCategory: string | null;
   hostContentViewCount: number | null;
-  hostContentClickCount: number | null;
   hostContentCreatedAt: string | null;
   authorId: number | null;
   authorName: string | null;
@@ -405,8 +403,8 @@ export interface HostFavoriteContent {
   hostContentId: number;
   hostContentTitle: string;
   hostContentDescription: string | null;
-  hostContentTargetType: string | null;
   hostContentMediaUrls: string[] | null;
+  hostContentCategory: string | null;
   hostContentViewCount: number | null;
   hostContentCreatedAt: string | null;
   authorName: string | null;
@@ -426,7 +424,7 @@ export interface HostFavoriteContentsResponse {
 
 export const getHostPublicContents = (params?: {
   search?: string;
-  targetType?: "post" | "shop";
+  category?: "News" | "Tips" | "Events";
   page?: number;
   limit?: number;
 }) => api.get<HostPublicContentsResponse>('/host/public/contents', { params });

@@ -112,19 +112,19 @@ Auth rules for all endpoints below:
 
 | Method | Endpoint | Auth | Description | Main request fields |
 |---|---|---|---|---|
-| GET | `/api/host/dashboard` | User token + `HOST` | Get host dashboard summary (earnings, clicks, views) | none |
+| GET | `/api/host/dashboard` | User token + `HOST` | Get host dashboard summary (earnings, views) | none |
 | GET | `/api/host/earnings` | User token + `HOST` | Get detailed earnings history | optional query: `page`, `limit` |
 | GET | `/api/host/payout-requests` | User token + `HOST` | Get payout request history | optional query: `page`, `limit` |
 | POST | `/api/host/payout-requests` | User token + `HOST` | Create a new payout request | required: `amount` (min 500,000), `method`; optional `note` |
 | GET | `/api/host/contents` | User token + `HOST` | List promotional contents created by host | none |
-| POST | `/api/host/contents` | User token + `HOST` | Create promotional content and get tracking URL | required: `title`, `targetType` ('post'/'shop'/'external'), optional `targetId`, `mediaUrls` |
-| PATCH | `/api/host/contents/:id` | User token + `HOST` | Update promotional content | path `id`, all fields optional |
+| POST | `/api/host/contents` | User token + `HOST` | Create magazine content | required: `title`, optional `description`, `body`, `category`, `mediaUrls`, `payoutAmount` |
+| PATCH | `/api/host/contents/:id` | User token + `HOST` | Update magazine content | path `id`, all fields optional |
 | DELETE | `/api/host/contents/:id` | User token + `HOST` | Soft delete promotional content | path `id` |
-| GET | `/api/host/tracking/:id` | No | Public tracking link for content redirection | path `id` (content ID) |
+| DELETE | `/api/host/contents/:id` | User token + `HOST` | Soft delete promotional content | path `id` |
 
 **Host notes:**
-- `POST /api/host/contents` automatically returns a `hostContentTrackingUrl` for use on external platforms.
-- `GET /api/host/tracking/:id` increments click counts and logs earnings before redirecting to the target.
+- `POST /api/host/contents` stores magazine articles with categories (News, Tips, Events).
+- Earnings are now based on `article_payout` and `performance_bonus` (view count).
 - Payout requests enforce a minimum of `500,000 VND`.
 
 ### Upload
@@ -438,15 +438,14 @@ All admin APIs are mounted under `/api/admin/*` and require:
  | GET | `/api/host/payout-requests` | User token + `HOST` | Get host payout request history | optional query: `page`, `limit` |
  | POST | `/api/host/payout-requests` | User token + `HOST` | Request earnings withdrawal | required: `amount` (min 500k), `method`; optional `note` |
  | GET | `/api/host/contents` | User token + `HOST` | List own promotional contents | none |
- | POST | `/api/host/contents` | User token + `HOST` | Create new trackable promotional content | required: `title`, `targetType` (`shop`/`post`/`external`), `targetId`; optional `description`, `mediaUrls` |
+ | POST | `/api/host/contents` | User token + `HOST` | Create new magazine content | required: `title`; optional `description`, `body`, `category`, `mediaUrls` |
  | GET | `/api/host/contents/:id` | User token + `HOST` | Get content detail | path `id` |
- | PATCH | `/api/host/contents/:id` | User token + `HOST` | Update promotional content | path `id`, same fields as POST |
- | DELETE | `/api/host/contents/:id` | User token + `HOST` | Delete promotional content | path `id` |
- | GET | `/api/host/tracking/:id` | No | Public tracking redirect endpoint | path `id` |
+ | PATCH | `/api/host/contents/:id` | User token + `HOST` | Update magazine content | path `id`, same fields as POST |
+ | DELETE | `/api/host/contents/:id` | User token + `HOST` | Delete magazine content | path `id` |
  
  **Host notes:**
- - `POST /api/host/payout-requests` enforces a minimum withdrawal of `500,000` VND.
- - Content creation automatically generates a unique tracking URL that redirects to the target while logging clicks and awarding earnings.
+ - Payout requests enforce a minimum withdrawal of `500,000` VND.
+ - Content creation supports categorizing articles to help users discover relevant tips or news.
  
  ## Current Implementation Notes
 

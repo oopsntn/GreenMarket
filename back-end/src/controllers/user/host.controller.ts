@@ -24,7 +24,6 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const MIN_PAYOUT_AMOUNT = 500_000;
-const PUBLIC_CONTENT_TARGET_TYPES = new Set(["post", "shop", "external"]);
 
 const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
   const parsedPage = Number(queryPage);
@@ -62,7 +61,6 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
       .select({
         totalContents: sql<number>`COUNT(*)`,
         totalViews: sql<number>`COALESCE(SUM(${hostContents.hostContentViewCount}), 0)`,
-        totalClicks: sql<number>`COALESCE(SUM(${hostContents.hostContentClickCount}), 0)`,
       })
       .from(hostContents)
       .where(eq(hostContents.hostContentAuthorId, userId));
@@ -95,7 +93,6 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
       stats: {
         totalContents: Number(contentStats?.totalContents ?? 0),
         totalViews: Number(contentStats?.totalViews ?? 0),
-        totalClicks: Number(contentStats?.totalClicks ?? 0),
         totalEarnings,
         availableBalance,
       },
@@ -287,10 +284,10 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const { title, description, body, targetType, targetId, mediaUrls } = req.body;
+    const { title, description, body, category, mediaUrls, payoutAmount } = req.body;
 
-    if (!title || !targetType) {
-      res.status(400).json({ error: "Title and targetType are required" });
+    if (!title) {
+      res.status(400).json({ error: "Title is required" });
       return;
     }
 
@@ -301,26 +298,14 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
         hostContentTitle: title,
         hostContentDescription: description,
         hostContentBody: body,
-        hostContentTargetType: targetType,
-        hostContentTargetId: targetId,
+        hostContentCategory: category,
         hostContentMediaUrls: mediaUrls || [],
-        hostContentStatus: "published",
+        hostContentPayoutAmount: payoutAmount?.toString(),
+        hostContentStatus: "published", // Default to published for demo
       })
       .returning();
 
-    // Generate tracking URL (Mock base URL)
-    const baseUrl = process.env.BASE_URL || "http://localhost:5000";
-    const trackingUrl = `${baseUrl}/api/host/tracking/${newContent.hostContentId}`;
-
-    await db
-      .update(hostContents)
-      .set({ hostContentTrackingUrl: trackingUrl })
-      .where(eq(hostContents.hostContentId, newContent.hostContentId));
-
-    res.status(201).json({
-      ...newContent,
-      hostContentTrackingUrl: trackingUrl,
-    });
+    res.status(201).json(newContent);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
@@ -396,91 +381,29 @@ export const deleteContent = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-// --- Tracking ---
-export const trackContentClick = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const contentId = parseId(req.params.id as string);
-    if (!contentId) {
-      res.status(400).json({ error: "Invalid content ID" });
-      return;
-    }
-
-    const [content] = await db
-      .select()
-      .from(hostContents)
-      .where(eq(hostContents.hostContentId, contentId))
-      .limit(1);
-
-    if (!content) {
-      res.status(404).json({ error: "Content not found" });
-      return;
-    }
-
-    // Logging Click
-    await db
-      .update(hostContents)
-      .set({ hostContentClickCount: (content.hostContentClickCount || 0) + 1 })
-      .where(eq(hostContents.hostContentId, contentId));
-
-    // Log Earning (Mock: 5,000 VND per click)
-    await db
-      .insert(hostEarnings)
-      .values({
-        hostEarningHostId: content.hostContentAuthorId,
-        hostEarningAmount: "5000.00",
-        hostEarningStatus: "available",
-        hostEarningSourceType: "click",
-        hostEarningSourceId: contentId,
-      });
-
-    // Redirect Logic
-    const frontendBaseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    let redirectUrl = frontendBaseUrl;
-
-    if (content.hostContentTargetType === "post" && content.hostContentTargetId) {
-       // Need to find post slug
-       const [post] = await db.select({ slug: posts.postSlug }).from(posts).where(eq(posts.postId, content.hostContentTargetId)).limit(1);
-       if (post) redirectUrl = `${frontendBaseUrl}/posts/detail/${post.slug}`;
-    } else if (content.hostContentTargetType === "shop" && content.hostContentTargetId) {
-       redirectUrl = `${frontendBaseUrl}/shops/${content.hostContentTargetId}`;
-    }
-
-    res.redirect(redirectUrl);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
 // --- Public Content APIs ---
 export const getPublicContents = async (req: Request, res: Response): Promise<void> => {
   try {
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
-    const search = (req.query.search as string) || "";
-    const targetType = (req.query.targetType as string) || "";
-    const normalizedTargetType = targetType.trim().toLowerCase();
+    const search = ((req.query.search as string) || "").trim();
+    const category = ((req.query.category as string) || "").trim();
 
-    const conditions = [
+    const conditions: any[] = [
       eq(hostContents.hostContentStatus, "published"),
       sql`${hostContents.hostContentDeletedAt} IS NULL`,
     ];
 
-    if (search.trim()) {
+    if (search) {
       conditions.push(
         or(
-          ilike(hostContents.hostContentTitle, `%${search.trim()}%`),
-          ilike(hostContents.hostContentDescription, `%${search.trim()}%`)
-        )!
+          ilike(hostContents.hostContentTitle, `%${search}%`),
+          ilike(hostContents.hostContentDescription, `%${search}%`)
+        )
       );
     }
 
-    if (normalizedTargetType) {
-      if (!PUBLIC_CONTENT_TARGET_TYPES.has(normalizedTargetType)) {
-        res.status(400).json({ error: "targetType must be one of: post, shop" });
-        return;
-      }
-
-      conditions.push(eq(hostContents.hostContentTargetType, normalizedTargetType));
+    if (category) {
+      conditions.push(ilike(hostContents.hostContentCategory, `%${category}%`));
     }
 
     const rows = await db
@@ -489,11 +412,9 @@ export const getPublicContents = async (req: Request, res: Response): Promise<vo
         hostContentTitle: hostContents.hostContentTitle,
         hostContentDescription: hostContents.hostContentDescription,
         hostContentBody: hostContents.hostContentBody,
-        hostContentTargetType: hostContents.hostContentTargetType,
-        hostContentTargetId: hostContents.hostContentTargetId,
+        hostContentCategory: hostContents.hostContentCategory,
         hostContentMediaUrls: hostContents.hostContentMediaUrls,
         hostContentViewCount: hostContents.hostContentViewCount,
-        hostContentClickCount: hostContents.hostContentClickCount,
         hostContentCreatedAt: hostContents.hostContentCreatedAt,
         authorId: users.userId,
         authorName: users.userDisplayName,
@@ -502,7 +423,7 @@ export const getPublicContents = async (req: Request, res: Response): Promise<vo
       .from(hostContents)
       .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
       .where(and(...conditions))
-      .orderBy(desc(hostContents.hostContentCreatedAt))
+      .orderBy(desc(hostContents.hostContentCreatedAt), desc(hostContents.hostContentId))
       .limit(limit)
       .offset(offset);
 
@@ -540,12 +461,9 @@ export const getPublicContentDetail = async (req: Request<{ id: string }>, res: 
         hostContentTitle: hostContents.hostContentTitle,
         hostContentDescription: hostContents.hostContentDescription,
         hostContentBody: hostContents.hostContentBody,
-        hostContentTargetType: hostContents.hostContentTargetType,
-        hostContentTargetId: hostContents.hostContentTargetId,
-        hostContentTrackingUrl: hostContents.hostContentTrackingUrl,
+        hostContentCategory: hostContents.hostContentCategory,
         hostContentMediaUrls: hostContents.hostContentMediaUrls,
         hostContentViewCount: hostContents.hostContentViewCount,
-        hostContentClickCount: hostContents.hostContentClickCount,
         hostContentCreatedAt: hostContents.hostContentCreatedAt,
         hostContentUpdatedAt: hostContents.hostContentUpdatedAt,
         authorId: users.userId,
@@ -576,28 +494,9 @@ export const getPublicContentDetail = async (req: Request<{ id: string }>, res: 
       })
       .where(eq(hostContents.hostContentId, contentId));
 
-    // Fetch linked target details
-    let target: any = null;
-    if (content.hostContentTargetType === "post" && content.hostContentTargetId) {
-      const [post] = await db
-        .select({ postId: posts.postId, postTitle: posts.postTitle, postSlug: posts.postSlug })
-        .from(posts)
-        .where(eq(posts.postId, content.hostContentTargetId))
-        .limit(1);
-      target = post || null;
-    } else if (content.hostContentTargetType === "shop" && content.hostContentTargetId) {
-      const [shop] = await db
-        .select({ shopId: shops.shopId, shopName: shops.shopName, shopLogoUrl: shops.shopLogoUrl })
-        .from(shops)
-        .where(eq(shops.shopId, content.hostContentTargetId))
-        .limit(1);
-      target = shop || null;
-    }
-
     res.json({
       ...content,
       hostContentViewCount: (content.hostContentViewCount || 0) + 1,
-      target,
     });
   } catch (error) {
     console.error(error);
@@ -684,7 +583,7 @@ export const getMyFavoriteContents = async (req: AuthRequest, res: Response): Pr
         hostContentId: hostContents.hostContentId,
         hostContentTitle: hostContents.hostContentTitle,
         hostContentDescription: hostContents.hostContentDescription,
-        hostContentTargetType: hostContents.hostContentTargetType,
+        hostContentCategory: hostContents.hostContentCategory,
         hostContentMediaUrls: hostContents.hostContentMediaUrls,
         hostContentViewCount: hostContents.hostContentViewCount,
         hostContentCreatedAt: hostContents.hostContentCreatedAt,

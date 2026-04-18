@@ -714,9 +714,10 @@ CREATE TABLE system_notifications (
     notification_id SERIAL PRIMARY KEY,
     recipient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL,
-    read_status BOOLEAN DEFAULT FALSE,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'system',
+    meta_data JSONB DEFAULT '{}'::jsonb,
+    is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT now()
 );
 
@@ -727,15 +728,11 @@ CREATE TABLE host_contents (
     host_content_title VARCHAR(255) NOT NULL,
     host_content_description TEXT,
     host_content_body TEXT,
-    host_content_target_type VARCHAR(50) NOT NULL, -- post | shop | external
-    host_content_target_id INTEGER, -- linked post_id or shop_id
     host_content_category VARCHAR(50), -- Tin tức, Mẹo vặt, Sự kiện
-    host_content_tracking_url TEXT,
     host_content_media_urls JSONB DEFAULT '[]'::jsonb,
     host_content_status VARCHAR(20) DEFAULT 'pending_admin', -- pending_admin, published, rejected
     host_content_payout_amount NUMERIC(12,2),
     host_content_view_count INTEGER DEFAULT 0,
-    host_content_click_count INTEGER DEFAULT 0,
     host_content_created_at TIMESTAMP DEFAULT now(),
     host_content_updated_at TIMESTAMP DEFAULT now(),
     host_content_deleted_at TIMESTAMP
@@ -903,7 +900,7 @@ CREATE INDEX idx_operation_tasks_status ON operation_tasks(task_status);
 CREATE INDEX idx_task_replies_task ON task_replies(task_id);
 CREATE INDEX idx_escalations_status ON escalations(status);
 CREATE INDEX idx_system_notifications_recipient ON system_notifications(recipient_id);
-CREATE INDEX idx_system_notifications_read ON system_notifications(read_status);
+CREATE INDEX idx_system_notifications_read ON system_notifications(is_read);
 
 -- ============================================================
 -- TRIGGERS
@@ -1055,13 +1052,10 @@ INSERT INTO users (
     user_status,
     user_business_role_id
 ) VALUES
-(1, '0978195419', 'Nguyễn Thành Nam', 'nguyenthanhnamidol@gmail.com', 'Yên Phong, Bắc Ninh', 'Marketplace account used for general buyer and seller demo flows.', 'active', 2),
-(2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'Hoàng Mai, Hà Nội', 'Shop owner account used to demonstrate host storefront behaviour.', 'active', 2),
-(3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'Nam Trực, Nam Định', 'Marketplace user account with host permissions for additional shop demo content.', 'active', 2),
-(4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Collaborator demo account for mobile job and earnings scenarios.', 'active', 3),
-(5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
-(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 5),
-(7, '0901223344', 'Võ Thị Lan', 'lan.vo@gmail.com', 'Long Biên, Hà Nội', 'Marketplace customer demo account for favorites and reporting flows.', 'active', 1),
+(1, '0978195419', 'Nguyễn Thành Nam', 'nguyenthanhnamidol@gmail.com', 'Yên Phong, Bắc Ninh', 'Marketplace account used for general buyer and seller demo flows.', 'active', 1),
+(2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'Hoàng Mai, Hà Nội', 'Marketplace account used for general buyer and seller demo flows.', 'active', 1),
+(3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'Nam Trực, Nam Định', 'Marketplace account used for general buyer and seller demo flows.', 'active', 1),
+(6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Marketplace account used for general buyer and seller demo flows.', 'active', 1),
 (8, '0987654321', 'Người Dùng Test 0987654321', 'test.0987654321@gmail.com', 'Hà Nội', 'Test account for 0987654321', 'active', 1),
 (9, '0909000003', 'Collaborator Pro', 'collaborator@greenmarket.local', 'Ha Noi', 'Seed account for collaborator-role API testing and mobile login.', 'active', 3),
 (10, '0909000004', 'Manager Pro', 'manager@greenmarket.local', 'Ha Noi', 'Seed account for manager-role API testing and moderation workflows.', 'active', 4),
@@ -1073,7 +1067,7 @@ UPDATE users
 SET
     user_availability_status = 'available',
     user_availability_note = 'Available 08:00-18:00, Monday to Saturday.'
-WHERE user_id = 4;
+WHERE user_id = 9;
 UPDATE users
 SET
     user_availability_status = 'available',
@@ -1112,9 +1106,9 @@ INSERT INTO jobs (
     job_created_at,
     job_updated_at
 ) VALUES
-(1, 7, NULL, 'Photo package for bonsai listing', 'Photo', 'Long Bien, Ha Noi', now() + interval '3 days', 650000, 'Need 12 listing photos for a bonsai package.', '["24MP camera","4:3 ratio","clean background"]'::jsonb, 'open', NULL, NULL, now() - interval '1 day', now() - interval '1 day'),
-(2, 2, 4, 'SEO content for Linh Sam posts', 'Content', 'Hoang Mai, Ha Noi', now() + interval '1 day', 800000, 'Write SEO-ready descriptions for 20 Linh Sam posts.', '["min 600 words","H2/H3 headings","persuasive tone"]'::jsonb, 'accepted', NULL, NULL, now() - interval '2 days', now() - interval '6 hours'),
-(3, 1, 4, 'Deliver final bonsai album', 'Photo', 'Yen Phong, Bac Ninh', now() - interval '2 days', 720000, 'Finalized photo album package for Tung La Han listing.', '["20 JPEG photos","3 cover images","source files + web files"]'::jsonb, 'completed', NULL, now() - interval '2 days', now() - interval '4 days', now() - interval '2 days');
+(1, 1, NULL, 'Photo package for bonsai listing', 'Photo', 'Long Bien, Ha Noi', now() + interval '3 days', 650000, 'Need 12 listing photos for a bonsai package.', '["24MP camera","4:3 ratio","clean background"]'::jsonb, 'open', NULL, NULL, now() - interval '1 day', now() - interval '1 day'),
+(2, 2, 9, 'SEO content for Linh Sam posts', 'Content', 'Hoang Mai, Ha Noi', now() + interval '1 day', 800000, 'Write SEO-ready descriptions for 20 Linh Sam posts.', '["min 600 words","H2/H3 headings","persuasive tone"]'::jsonb, 'accepted', NULL, NULL, now() - interval '2 days', now() - interval '6 hours'),
+(3, 1, 9, 'Deliver final bonsai album', 'Photo', 'Yen Phong, Bac Ninh', now() - interval '2 days', 720000, 'Finalized photo album package for Tung La Han listing.', '["20 JPEG photos","3 cover images","source files + web files"]'::jsonb, 'completed', NULL, now() - interval '2 days', now() - interval '4 days', now() - interval '2 days');
 
 INSERT INTO job_contact_requests (
     contact_request_id,
@@ -1126,7 +1120,7 @@ INSERT INTO job_contact_requests (
     contact_request_created_at,
     contact_request_replied_at
 ) VALUES
-(1, 2, 4, 2, 'Can you clarify the exact keyword set and tone before delivery?', 'sent', now() - interval '8 hours', NULL);
+(1, 2, 9, 2, 'Can you clarify the exact keyword set and tone before delivery?', 'sent', now() - interval '8 hours', NULL);
 
 INSERT INTO job_deliverables (
     deliverable_id,
@@ -1136,7 +1130,7 @@ INSERT INTO job_deliverables (
     deliverable_note,
     deliverable_submitted_at
 ) VALUES
-(1, 3, 4, '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'Uploaded full album and source zip.', now() - interval '2 days');
+(1, 3, 9, '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'Uploaded full album and source zip.', now() - interval '2 days');
 
 INSERT INTO earning_entries (
     earning_entry_id,
@@ -1146,7 +1140,7 @@ INSERT INTO earning_entries (
     earning_entry_type,
     earning_entry_created_at
 ) VALUES
-(1, 4, 3, 720000, 'job', now() - interval '2 days');
+(1, 9, 3, 720000, 'job', now() - interval '2 days');
 
 INSERT INTO payout_requests (
     payout_request_id,
@@ -1158,19 +1152,32 @@ INSERT INTO payout_requests (
     payout_request_created_at,
     payout_request_processed_at
 ) VALUES
-(1, 4, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
+(1, 9, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
 
--- Host Contents (Mock)
-INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_description, host_content_body, host_content_target_type, host_content_target_id, host_content_tracking_url, host_content_status, host_content_view_count, host_content_click_count) VALUES
-(1, 136, 'Top 5 loại Tùng La Hán đẹp nhất 2026', 'Khám phá danh sách những giống Tùng La Hán được giới chơi cây cảnh săn đón nhất trong năm tới.', 'Tùng La Hán (Vạn Niên Tùng) từ lâu đã là biểu tượng của sự trường thọ và thịnh vượng. Trong năm 2026, xu hướng chơi Tùng đang chuyển dịch sang các dòng có lá nhỏ, mịn và khả năng chịu hạn tốt.\n\n1. Tùng La Hán Kim Thanh (Đài Loan): Đặc điểm lá cực nhỏ, dày và xanh đậm. Dễ tạo dáng nghệ thuật.\n2. Tùng La Hán Lá Ri (Việt Nam): Phù hợp với khí hậu nhiệt đới, thân dẻo dễ uốn.\n3. Tùng La Hán Kim Xà: Có bộ lá uốn lượn như vảy rồng, mang ý nghĩa phong thủy cực cao.\n\nĐể biết thêm chi tiết về cách chọn phôi và chăm sóc, mời bạn nhấn vào liên kết bên dưới để xem các sản phẩm Tùng đang có mặt tại hệ thống của chúng tôi.', 'shop', 1, '/api/host/tracking/1', 'published', 1250, 45),
-(2, 136, 'Review bộ kéo cắt tỉa cây cảnh của Shop A', 'Đánh giá chi tiết bộ dụng cụ bonsal chuyên dụng dành cho người mới bắt đầu.', 'Sau 1 tháng sử dụng bộ kéo cắt tỉa từ Vườn Bonsai Phố Huyện, tôi thực sự ấn tượng với độ sắc bén và cảm giác cầm nắm chắc chắn.\n\nBộ sản phẩm bao gồm:\n- Kéo tỉa dăm: Lưỡi mảnh, bén, lách sâu vào các khe nhỏ.\n- Kéo cắt cành lớn: Lực cắt mạnh, không làm dập thớ gỗ.\n- Kìm cạp tròn: Giúp xử lý các nốt sần trên thân cây một cách thẩm mỹ.\n\nĐây là lựa chọn tuyệt vời cho các bạn mới tập tành chơi Bonsai vì giá thành hợp lý và độ bền cao.', 'post', 1, '/api/host/tracking/2', 'published', 890, 12),
-(3, 136, 'Kỹ thuật chăm sóc Mai Chiếu Thủy mùa mưa', 'Những lưu ý quan trọng để tránh úng rễ và sâu bệnh cho Mai Chiếu Thủy khi vào mùa mưa.', 'Mùa mưa mang lại nguồn nước dồi dào nhưng cũng tiềm ẩn nguy cơ thối rễ cho Mai Chiếu Thủy nếu không được thoát nước tốt.\n\nMẹo nhỏ dành cho bạn:\n- Kê cao chậu để tránh tiếp xúc trực tiếp với mặt đất ẩm.\n- Kiểm tra lỗ thoát nước định kỳ.\n- Phun thuốc phòng ngừa nấm bệnh định kỳ 2 tuần/lần.\n\nTham khảo thêm các bài viết kỹ thuật khác trên trang cộng tác viên của GreenMarket.', 'external', NULL, 'https://external-blog.com/care-guide', 'published', 450, 5);
+-- Host Contents (Mock - Magazine Style)
+INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_description, host_content_body, host_content_category, host_content_media_urls, host_content_status, host_content_view_count, host_content_payout_amount) VALUES
+(1, 136, 'Top 5 loại Tùng La Hán đẹp nhất 2026', 'Khám phá danh sách những giống Tùng La Hán được giới chơi cây cảnh săn đón nhất.', 'Tùng La Hán từ lâu đã là biểu tượng của sự trường thọ, bền bỉ và khí chất kiên cường trong văn hóa Á Đông. Với dáng vẻ uy nghi, tán lá xanh quanh năm và khả năng sinh trưởng mạnh mẽ trong điều kiện khắc nghiệt, loài cây này không chỉ mang giá trị thẩm mỹ mà còn ẩn chứa chiều sâu triết lý về cuộc sống.
 
--- Host Earnings (Mock)
+![Vẻ đẹp uy nghi của Tùng La Hán](https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format)
+
+Trong giới chơi cây cảnh, Tùng La Hán – còn được biết đến với tên khoa học Podocarpus macrophyllus – được đánh giá cao bởi vẻ đẹp cổ kính và khả năng tạo hình đa dạng. Từ dáng trực, dáng hoành cho đến những thế bonsai uốn lượn cầu kỳ, mỗi cây đều mang một câu chuyện riêng, phản ánh bàn tay và tâm huyết của người nghệ nhân. Chính vì vậy, giá trị của một cây Tùng La Hán không chỉ nằm ở tuổi đời mà còn ở “thần thái” mà nó thể hiện.
+
+![Nghệ thuật tạo dáng Bonsai Tùng La Hán](https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format)
+
+Không chỉ xuất hiện trong sân vườn hay các khu biệt thự, Tùng La Hán còn là lựa chọn phổ biến trong phong thủy. Theo quan niệm truyền thống, loài cây này mang lại may mắn, tài lộc và sự bình an cho gia chủ. Tán lá dày, xanh mướt tượng trưng cho sức sống dồi dào, trong khi thân cây vững chãi thể hiện sự ổn định và phát triển bền vững.
+
+Bên cạnh đó, Tùng La Hán cũng gắn liền với hình ảnh của sự tĩnh tại và thiền định. Trong nhiều không gian kiến trúc mang phong cách Nhật Bản hay Trung Hoa, cây thường được đặt ở vị trí trung tâm như một điểm nhấn tinh thần, giúp cân bằng cảm xúc và tạo cảm giác an yên.
+
+Ngày nay, khi nhịp sống hiện đại ngày càng hối hả, sự hiện diện của Tùng La Hán như một lời nhắc nhở về giá trị của sự kiên nhẫn và bền bỉ. Đó không chỉ là một loài cây cảnh, mà còn là biểu tượng sống động của thời gian, của sự trưởng thành và của những điều bền vững vượt lên trên mọi biến đổi.', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format", "https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 1250, 500000.00),
+(2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Mẹo vặt', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
+(3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Sự kiện', '[]', 'published', 450, 450000.00);
+
+-- Host Earnings (Mock - Article Payouts)
 INSERT INTO host_earnings (host_earning_id, host_earning_host_id, host_earning_amount, host_earning_status, host_earning_source_type, host_earning_source_id) VALUES
-(1, 136, 225000, 'available', 'click', 1),
-(2, 136, 60000, 'pending', 'view', 1),
-(3, 136, 500000, 'available', 'bonus', NULL);
+(1, 136, 500000.00, 'available', 'article_payout', 1),
+(2, 136, 300000.00, 'available', 'article_payout', 2),
+(3, 136, 450000.00, 'pending', 'article_payout', 3),
+(4, 136, 120000.00, 'available', 'performance_bonus', 1);
 
 -- Host Payout Requests (Mock)
 INSERT INTO host_payout_requests (host_payout_id, host_payout_host_id, host_payout_amount, host_payout_method, host_payout_status, host_payout_note) VALUES
@@ -1184,10 +1191,10 @@ INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verifi
 (3, 'Nam Định Art Garden', '0123456789', 'hoainam.le@gmail.com', TRUE, 'Nam Trực, Nam Định',
     'Nghệ nhân cây cảnh cổ truyền Nam Điền. Chuyên sanh, si, tùng la hán cốt cách truyền thống. Hơn 20 năm kinh nghiệm.',
     '/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
-(4, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
+(6, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
     '/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
-(6, 'Vườn Tùng Cổ Đông Anh', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
+(137, 'Vườn Tùng Cổ Đông Anh', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
     'Chuyên sưu tầm và chăm sóc bonsai tùng, sanh, si theo phong cách vườn Bắc bộ. Nhận tư vấn phối chậu và tạo dáng cây trưởng thành.',
     '/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
 
@@ -1256,7 +1263,7 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'tung-la-han-dang-truc-co-thu',
     150000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 1520, 45, true, now() - interval '25 days', now() - interval '24 days'),
 
-(3,  4, 3, 12, 'Linh Sam Sông Hinh Lũa Thép',
+(3,  3, 3, 12, 'Linh Sam Sông Hinh Lũa Thép',
     'linh-sam-song-hinh-lua-thep',
     8500000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 876, 28, true, now() - interval '20 days', now() - interval '19 days'),
 
@@ -1264,7 +1271,7 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'sanh-que-dang-lang-dai-thu',
     45000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 432, 15, true, now() - interval '18 days', now() - interval '17 days'),
 
-(5,  4, 3, 11, 'Mai Chiếu Thủy Nu Gò Công Mini',
+(5,  3, 3, 11, 'Mai Chiếu Thủy Nu Gò Công Mini',
     'mai-chieu-thuy-nu-go-cong-mini',
     3500000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 567, 19, true, now() - interval '15 days', now() - interval '14 days'),
 
@@ -1276,7 +1283,7 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'si-bonsai-phong-thuy-tai-loc',
     4200000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 189, 7, true, now() - interval '10 days', now() - interval '9 days'),
 
-(8,  4, 3, 15, 'Mai Vàng Bonsai Nghệ Thuật',
+(8,  3, 3, 15, 'Mai Vàng Bonsai Nghệ Thuật',
     'mai-vang-bonsai-nghe-thuat',
     12000000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 723, 31, true, now() - interval '8 days', now() - interval '7 days'),
 
@@ -1288,19 +1295,19 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'kim-quyt-bonsai-mini-sai-qua',
     4900000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 156, 22, true, now() - interval '28 days', now() - interval '27 days'),
 
-(11, 6, 4, 12, 'Mai Chiếu Thủy Dáng Bay Gò Công',
+(11, 6, 6, 12, 'Mai Chiếu Thủy Dáng Bay Gò Công',
     'mai-chieu-thuy-dang-bay-go-cong',
     12800000, 'Chợ Lách, Bến Tre', 'approved', '0935112233', 412, 35, true, now() - interval '22 days', now() - interval '21 days'),
 
-(12, 6, 4, 12, 'Duối Cổ Bonsai Dáng Xiên',
+(12, 6, 6, 12, 'Duối Cổ Bonsai Dáng Xiên',
     'duoi-co-bonsai-dang-xien',
     17600000, 'Chợ Lách, Bến Tre', 'approved', '0935112233', 534, 48, true, now() - interval '26 days', now() - interval '25 days'),
 
-(13, 6, 4, 13, 'Sanh Cổ Tán Rơi Sân Vườn',
+(13, 6, 6, 13, 'Sanh Cổ Tán Rơi Sân Vườn',
     'sanh-co-tan-roi-san-vuon',
     32000000, 'Chợ Lách, Bến Tre', 'approved', '0935112233', 267, 16, true, now() - interval '16 days', now() - interval '15 days'),
 
-(14, 6, 4, 14, 'Lộc Vừng Phong Thủy Dáng Huyền',
+(14, 6, 6, 14, 'Lộc Vừng Phong Thủy Dáng Huyền',
     'loc-vung-phong-thuy-dang-huyen',
     9600000, 'Chợ Lách, Bến Tre', 'approved', '0935112233', 189, 27, true, now() - interval '14 days', now() - interval '13 days'),
 
@@ -1373,12 +1380,12 @@ INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
 
 -- Favorite Posts (Bookmarks)
 INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favorite_post_created_at) VALUES
-(5, 1, now() - interval '20 days'),
-(5, 3, now() - interval '15 days'),
-(5, 8, now() - interval '5 days'),
-(7, 2, now() - interval '18 days'),
-(7, 5, now() - interval '10 days'),
-(7, 13, now() - interval '8 days'),
+(1, 1, now() - interval '20 days'),
+(1, 3, now() - interval '15 days'),
+(1, 8, now() - interval '5 days'),
+(8, 2, now() - interval '18 days'),
+(8, 5, now() - interval '10 days'),
+(8, 13, now() - interval '8 days'),
 (2, 9, now() - interval '3 days');
 
 -- ============================================================
@@ -1386,7 +1393,7 @@ INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favori
 -- ============================================================
 INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_slot_title, placement_slot_capacity, placement_slot_rules, placement_slot_published) VALUES
 (1, 'BOOST_POST', 'Vị trí 1 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 1, "notes": "Vị trí đầu tiên dành cho bài đẩy trên trang chủ."}', true),
-(2, 'SHOP_VIP', 'Gói tài khoản', 500, '{"audience": "active-shop", "target": "shop-list", "priority": 1, "notes": "Dùng cho gói tài khoản / shop và ưu tiên hiển thị ở danh sách nhà vườn."}', true),
+(2, 'SHOP_VIP', 'Gói tài khoản', 10, '{"audience": "active-shop", "target": "shop-list", "priority": 1, "notes": "Dùng cho gói tài khoản / shop và ưu tiên hiển thị ở danh sách nhà vườn."}', true),
 (3, 'BOOST_POST_2', 'Vị trí 2 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 2, "notes": "Vị trí thứ hai dành cho bài đẩy trên trang chủ."}', true),
 (4, 'BOOST_POST_3', 'Vị trí 3 trang chủ', 1, '{"scope": "Homepage", "displayRule": "Priority Score", "priority": 3, "notes": "Vị trí thứ ba dành cho bài đẩy trên trang chủ."}', true),
 (5, 'SHOP_REGISTRATION', 'Đăng ký nhà vườn', 0, NULL, true),
@@ -1440,7 +1447,7 @@ INSERT INTO user_posting_plans (
 ) VALUES
 (1, 1, 'GARDEN_OWNER_LIFETIME', 'Gói chủ vườn vĩnh viễn', 'lifetime', 'active', true, 20, 20000, 4, 5000, now() - interval '120 days', NULL, now() - interval '120 days', now() - interval '120 days'),
 (2, 2, 'PERSONAL_MONTHLY',      'Gói cá nhân theo tháng', 'monthly',  'active', true, 20,     0, 4, 5000, now() - interval '12 days',  now() + interval '18 days', now() - interval '12 days', now() - interval '12 days'),
-(3, 7, 'PERSONAL_MONTHLY',      'Gói cá nhân theo tháng', 'monthly',  'expired', true, 20,    0, 4, 5000, now() - interval '65 days', now() - interval '35 days', now() - interval '65 days', now() - interval '35 days');
+(3, 3, 'PERSONAL_MONTHLY',      'Gói cá nhân theo tháng', 'monthly',  'expired', true, 20,    0, 4, 5000, now() - interval '65 days', now() - interval '35 days', now() - interval '65 days', now() - interval '35 days');
 
 -- Fee ledger demo for posting-plan billing (tracking only)
 INSERT INTO posting_fee_ledger (
@@ -1544,8 +1551,7 @@ INSERT INTO post_promotions (
 (5, 12, 6, 1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 2, '2026-03-28 08:00:00', '2026-04-26 23:59:00', 'paused',   '2026-03-27 15:10:00'),
 (6, 9, 3, 2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 1, '2026-04-11 08:00:00', '2026-05-10 23:59:00', 'scheduled','2026-04-09 08:30:00'),
 (7, 15, 1, 2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 1, '2026-04-16 08:00:00', '2026-05-15 23:59:00', 'active',   '2026-04-16 07:40:00'),
-(8, 7, 1, 1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 2, '2026-04-16 08:05:00', '2026-05-15 23:59:00', 'active',   '2026-04-16 07:45:00'),
-(9, 1, 1, 4, 4, 'Gói đẩy bài theo tháng vị trí 3 trang chủ', 3, '2026-04-16 08:10:00', '2026-05-15 23:59:00', 'active',   '2026-04-16 07:50:00');
+(8, 7, 1, 1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 2, '2026-04-16 08:05:00', '2026-05-15 23:59:00', 'active',   '2026-04-16 07:45:00');
 
 -- ============================================================
 -- PAYMENT TRANSACTIONS
@@ -1564,7 +1570,7 @@ INSERT INTO payment_txn (
 ) VALUES
 (1, 1, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260101-001', 'success', '2026-01-01 09:00:00'),
 (2, 3, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260103-002', 'success', '2026-01-03 10:00:00'),
-(3, 4, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260105-003', 'success', '2026-01-05 11:00:00'),
+(3, 9, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260105-003', 'success', '2026-01-05 11:00:00'),
 (4, 6, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260107-004', 'success', '2026-01-07 11:30:00'),
 (5, 2, NULL, NULL, NULL, 30000,  'bank_transfer', 'GM-TXN-20260403-005', 'success', '2026-04-03 18:58:00'),
 (6, 1, 3, NULL, 3, 499000, 'bank_transfer', 'GM-TXN-20260316-006', 'success', '2026-03-16 18:58:00'),
@@ -1573,18 +1579,17 @@ INSERT INTO payment_txn (
 (9, 3, 2, 9, 2, 299000, 'bank_transfer', 'GM-TXN-20260409-009', 'success', '2026-04-09 08:50:00'),
 (10, 6, 1, 12, 1, 99000,  'bank_transfer', 'GM-TXN-20260327-010', 'success', '2026-03-27 15:10:00'),
 (11, 1, 2, 15, 2, 299000, 'bank_transfer', 'GM-TXN-20260416-011', 'success', '2026-04-16 07:40:00'),
-(12, 1, 1, 7, 1, 99000,  'bank_transfer', 'GM-TXN-20260416-012', 'success', '2026-04-16 07:45:00'),
-(13, 1, 4, 1, 4, 29000,  'bank_transfer', 'GM-TXN-20260416-013', 'success', '2026-04-16 07:50:00');
+(12, 1, 1, 7, 1, 99000,  'bank_transfer', 'GM-TXN-20260416-012', 'success', '2026-04-16 07:45:00');
 
 INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_reason_code, report_reason, report_note, report_status, admin_note, report_created_at, report_updated_at) VALUES
-(1, 5, 1, 1, 'MISLEADING_INFO', 'Post title and product details are not consistent with the attached listing photos.', 'The seller describes a different bonsai shape in the text than in the gallery.', 'pending', NULL, '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
-(2, 5, 2, 3, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
-(3, 5, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00'),
-(4, 7, 3, 3, 'COPYRIGHT_MEDIA', 'Listing photos appear copied from another marketplace source.', 'Image set looks duplicated from a third-party seller page.', 'pending', NULL, '2026-03-26 14:05:00', '2026-03-26 14:05:00'),
+(1, 10, 1, 1, 'MISLEADING_INFO', 'Post title and product details are not consistent with the attached listing photos.', 'The seller describes a different bonsai shape in the text than in the gallery.', 'pending', NULL, '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
+(2, 10, 2, 3, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
+(3, 10, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00'),
+(4, 8, 3, 3, 'COPYRIGHT_MEDIA', 'Listing photos appear copied from another marketplace source.', 'Image set looks duplicated from a third-party seller page.', 'pending', NULL, '2026-03-26 14:05:00', '2026-03-26 14:05:00'),
 (5, 2, 4, 3, 'OFF_PLATFORM_CONTACT', 'Seller requests direct contact outside GreenMarket before checkout.', 'Contains messaging that bypasses marketplace payment flow.', 'resolved', 'Content was edited and compliant version was republished.', '2026-03-25 16:25:00', '2026-03-26 10:10:00'),
-(6, 4, 8, 3, 'WRONG_CATEGORY', 'The post was published under the wrong category and disrupts category relevance.', 'Needs category correction and listing clean-up.', 'dismissed', 'Category was acceptable after manual review.', '2026-03-24 09:30:00', '2026-03-24 17:20:00'),
-(7, 5, 9, 3, 'MISLEADING_INFO', 'The post description overstates the maturity and shape training of the tree.', 'Customer noted mismatch between wording and actual plant size.', 'pending', NULL, '2026-03-23 13:15:00', '2026-03-23 13:15:00'),
-(8, 7, 13, 4, 'SPAM_PROMOTION', 'Repeated marketing text is making the listing difficult to review.', 'Needs moderation note and content clean-up.', 'resolved', 'Seller removed duplicated promotional slogans and listing stayed visible.', '2026-03-22 10:45:00', '2026-03-22 15:40:00'),
+(6, 9, 8, 3, 'WRONG_CATEGORY', 'The post was published under the wrong category and disrupts category relevance.', 'Needs category correction and listing clean-up.', 'dismissed', 'Category was acceptable after manual review.', '2026-03-24 09:30:00', '2026-03-24 17:20:00'),
+(7, 10, 9, 3, 'MISLEADING_INFO', 'The post description overstates the maturity and shape training of the tree.', 'Customer noted mismatch between wording and actual plant size.', 'pending', NULL, '2026-03-23 13:15:00', '2026-03-23 13:15:00'),
+(8, 8, 13, 6, 'SPAM_PROMOTION', 'Repeated marketing text is making the listing difficult to review.', 'Needs moderation note and content clean-up.', 'resolved', 'Seller removed duplicated promotional slogans and listing stayed visible.', '2026-03-22 10:45:00', '2026-03-22 15:40:00'),
 (9, 2, 15, 1, 'SUSPICIOUS_PRICING', 'The reported price looks too low compared with product material quality.', 'Possible bait price to attract off-platform contact.', 'pending', NULL, '2026-03-21 11:05:00', '2026-03-21 11:05:00');
 
 -- ============================================================
@@ -1603,8 +1608,8 @@ INSERT INTO event_logs (
 ) VALUES
 (1, 6, NULL, NULL, NULL, NULL, 'admin_login',        '2026-03-29 08:00:00', '{"action":"Đăng nhập trang quản trị","detail":"Phiên đăng nhập trang quản trị đã được khởi tạo thành công.","performedBy":"Quản trị viên hệ thống"}'),
 (2, 3, NULL, NULL, NULL, NULL, 'role_assigned',      '2026-03-29 08:35:00', '{"action":"Gán vai trò","detail":"Đã gán vai trò: Nhân viên vận hành.","performedBy":"Quản trị viên hệ thống"}'),
-(3, 4, NULL, NULL, NULL, NULL, 'account_locked',     '2026-03-29 09:10:00', '{"action":"Khóa tài khoản","detail":"Quyền truy cập của người dùng đã bị hạn chế sau bước rà soát kiểm duyệt.","performedBy":"Quản trị viên hệ thống"}'),
-(4, 4, NULL, NULL, NULL, NULL, 'account_unlocked',   '2026-03-29 11:05:00', '{"action":"Mở khóa tài khoản","detail":"Quyền truy cập của người dùng đã được khôi phục sau khi xác minh.","performedBy":"Quản trị viên hệ thống"}'),
+(3, 9, NULL, NULL, NULL, NULL, 'account_locked',     '2026-03-29 09:10:00', '{"action":"Khóa tài khoản","detail":"Quyền truy cập của người dùng đã bị hạn chế sau bước rà soát kiểm duyệt.","performedBy":"Quản trị viên hệ thống"}'),
+(4, 9, NULL, NULL, NULL, NULL, 'account_unlocked',   '2026-03-29 11:05:00', '{"action":"Mở khóa tài khoản","detail":"Quyền truy cập của người dùng đã được khôi phục sau khi xác minh.","performedBy":"Quản trị viên hệ thống"}'),
 (5, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:00:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV danh sách người dùng.","generatedBy":"Quản trị viên hệ thống","reportName":"Xuất danh sách người dùng - 2026-03-29","status":"Completed"}'),
 (6, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:08:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV tổng quan doanh thu.","generatedBy":"Quản trị viên hệ thống","reportName":"Tổng quan doanh thu - 2026-03-29","status":"Completed"}'),
 (7, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:16:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV chi tiêu khách hàng.","generatedBy":"Quản trị viên hệ thống","reportName":"Chi tiêu khách hàng - 2026-03-29","status":"Completed"}'),
@@ -1704,7 +1709,7 @@ INSERT INTO ai_insights (
 -- Operation Tasks
 INSERT INTO operation_tasks (task_id, task_title, task_type, task_status, task_priority, assignee_id, customer_id, related_target_id, task_note, created_at, updated_at) VALUES
 (1, 'Hỗ trợ đổi email shop', 'support', 'in_progress', 'medium', 6, 2, NULL, 'Khách hàng gặp lỗi OTP khi đổi email.', now() - interval '2 days', now() - interval '1 day'),
-(2, 'Xác minh báo cáo spam', 'report_check', 'open', 'high', 6, 7, 2, 'Report #2 cần tra xét IP.', now() - interval '1 day', now() - interval '1 day'),
+(2, 'Xác minh báo cáo spam', 'report_check', 'open', 'high', 6, 8, 2, 'Report #2 cần tra xét IP.', now() - interval '1 day', now() - interval '1 day'),
 (3, 'Cấp lại quyền đăng bài', 'support', 'closed', 'high', 6, 1, NULL, 'Đã mở khóa.', now() - interval '5 days', now() - interval '4 days');
 
 -- Task Replies
@@ -1714,21 +1719,21 @@ INSERT INTO task_replies (reply_id, task_id, sender_id, message, visibility, cre
 
 -- Moderation Actions
 INSERT INTO moderation_actions (moderation_action_id, moderation_action_action_by, moderation_action_post_id, moderation_action_action, moderation_action_note, moderation_action_created_at) VALUES
-(1, 5, 2, 'HIDDEN', 'Tạm ẩn do spam. Chờ shop sửa.', now() - interval '5 days'),
-(2, 5, 2, 'RESTORED', 'Shop đã sửa bài hợp lệ.', now() - interval '4 days');
+(1, 10, 2, 'HIDDEN', 'Tạm ẩn do spam. Chờ shop sửa.', now() - interval '5 days'),
+(2, 10, 2, 'RESTORED', 'Shop đã sửa bài hợp lệ.', now() - interval '4 days');
 
 -- Moderation Feedback
 INSERT INTO moderation_feedback (feedback_id, target_type, target_id, sender_id, recipient_id, message, created_at) VALUES
-(1, 'post', 2, 5, 1, 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', now() - interval '5 days');
+(1, 'post', 2, 10, 1, 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', now() - interval '5 days');
 
 -- Escalations
 INSERT INTO escalations (escalation_id, source_task_id, target_type, target_id, created_by, severity, reason, status, resolution_note, created_at) VALUES
 (1, 2, 'shop', 1, 6, 'high', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'open', NULL, now() - interval '12 hours');
 
 -- System Notifications
-INSERT INTO system_notifications (notification_id, recipient_id, title, content, type, read_status, created_at) VALUES
+INSERT INTO system_notifications (notification_id, recipient_id, title, message, type, is_read, created_at) VALUES
 (1, 6, 'Task mới: Xác minh báo cáo spam', 'Bạn được assign một task mới từ hệ thống phân bổ.', 'new_task', true, now() - interval '1 day'),
-(2, 5, 'Escalation mới: Cần xử lý shop vi phạm', 'Operation Staff (ID: 6) vừa đẩy một ticket lên mức quản lý.', 'escalation', false, now() - interval '12 hours');
+(2, 10, 'Escalation mới: Cần xử lý shop vi phạm', 'Operation Staff (ID: 6) vừa đẩy một ticket lên mức quản lý.', 'escalation', false, now() - interval '12 hours');
 
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
 SELECT setval('admins_admin_id_seq', (SELECT COALESCE(MAX(admin_id), 1) FROM admins));
