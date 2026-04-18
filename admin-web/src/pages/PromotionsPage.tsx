@@ -18,6 +18,7 @@ import type {
   PromotionStatus,
   PromotionSummaryCard,
 } from "../types/promotion";
+import { coerceDateRange, getTodayDateValue } from "../utils/dateRange";
 import "./PromotionsPage.css";
 
 type ConfirmAction = "pause" | "resume";
@@ -85,12 +86,6 @@ const formatDateInput = (value: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getTodayDateInput = () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return formatDateInput(today);
-};
-
 const calculateEndDate = (startDate: string, durationDays: number) => {
   if (!startDate) return "";
 
@@ -113,7 +108,7 @@ const calculateDurationDays = (startDate: string, endDate: string) => {
 };
 
 function PromotionsPage() {
-  const todayDateInput = getTodayDateInput();
+  const todayDateInput = getTodayDateValue();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [activePackages, setActivePackages] = useState(
     [] as ReturnType<typeof promotionPackageService.getActivePromotionPackages>,
@@ -414,6 +409,28 @@ function PromotionsPage() {
       setPage(totalPages);
     }
   }, [page, totalPages]);
+
+  const handleFromDateFilterChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(
+      value,
+      toDateFilter,
+      "from",
+      todayDateInput,
+    );
+    setFromDateFilter(nextValue);
+    setToDateFilter(counterpartValue);
+  };
+
+  const handleToDateFilterChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(
+      value,
+      fromDateFilter,
+      "to",
+      todayDateInput,
+    );
+    setToDateFilter(nextValue);
+    setFromDateFilter(counterpartValue);
+  };
 
   const confirmPromotion =
     confirmState.promotionId !== null
@@ -837,7 +854,10 @@ function PromotionsPage() {
                 id="promotion-from-date"
                 type="date"
                 value={fromDateFilter}
-                onChange={(event) => setFromDateFilter(event.target.value)}
+                max={toDateFilter || todayDateInput}
+                onChange={(event) =>
+                  handleFromDateFilterChange(event.target.value)
+                }
               />
             </div>
 
@@ -847,7 +867,11 @@ function PromotionsPage() {
                 id="promotion-to-date"
                 type="date"
                 value={toDateFilter}
-                onChange={(event) => setToDateFilter(event.target.value)}
+                min={fromDateFilter || undefined}
+                max={todayDateInput}
+                onChange={(event) =>
+                  handleToDateFilterChange(event.target.value)
+                }
               />
             </div>
           </div>

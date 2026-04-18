@@ -68,6 +68,19 @@ const getActionLabel = (action: ModerationAction) => {
   }
 };
 
+const getTemplateTypeLabel = (type: string) => {
+  switch (type) {
+    case "Report Reason":
+      return "Lý do báo cáo";
+    case "Notification":
+      return "Thông báo";
+    case "Rejection Reason":
+      return "Lý do từ chối";
+    default:
+      return type;
+  }
+};
+
 const getAvailableActions = (status: PostModerationStatus) => {
   switch (status) {
     case "Pending":
@@ -700,27 +713,68 @@ function PostsModerationPage() {
                   Đang hiển thị {rejectionTemplateCount} mẫu phù hợp cho kiểm duyệt bài.
                 </span>
                 <small>Chỉ lấy các mẫu thuộc nhóm Lý do từ chối đang hoạt động.</small>
+                <small>
+                  Thư viện có nhiều mẫu hơn, nhưng màn này chỉ dùng nhóm Lý do từ
+                  chối để tránh admin chọn nhầm mẫu không đúng nghiệp vụ.
+                </small>
               </div>
-              <select
+              <div
                 id="posts-moderation-template"
-                className="posts-moderation-form__select"
-                value={selectedTemplateId}
-                onChange={(event) => handleTemplateChange(event.target.value)}
-                disabled={isLoadingTemplates || rejectionTemplates.length === 0}
+                className="posts-moderation-form__template-list"
               >
-                <option value="">
-                  {isLoadingTemplates
-                    ? "Đang tải mẫu nội dung..."
-                    : rejectionTemplates.length === 0
-                      ? "Chưa có mẫu phù hợp"
-                      : "Chọn mẫu để đổ nội dung nhanh"}
-                </option>
-                {rejectionTemplates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.name}
-                  </option>
-                ))}
-              </select>
+                {isLoadingTemplates ? (
+                  <div className="posts-moderation-form__template-empty">
+                    Đang tải mẫu nội dung...
+                  </div>
+                ) : rejectionTemplates.length === 0 ? (
+                  <div className="posts-moderation-form__template-empty">
+                    Chưa có mẫu từ chối phù hợp.
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={`posts-moderation-form__template-card ${
+                        selectedTemplateId === ""
+                          ? "posts-moderation-form__template-card--selected"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedTemplateId("");
+                        setModerationReason("");
+                      }}
+                    >
+                      <div className="posts-moderation-form__template-card-header">
+                        <strong>Tự nhập lý do</strong>
+                        <span>Thủ công</span>
+                      </div>
+                      <p>
+                        Không dùng mẫu có sẵn, tự nhập lý do hoặc ghi chú kiểm
+                        duyệt theo trường hợp thực tế.
+                      </p>
+                    </button>
+                    {rejectionTemplates.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        className={`posts-moderation-form__template-card ${
+                          String(template.id) === selectedTemplateId
+                            ? "posts-moderation-form__template-card--selected"
+                            : ""
+                        }`}
+                        onClick={() => handleTemplateChange(String(template.id))}
+                      >
+                        <div className="posts-moderation-form__template-card-header">
+                          <strong>{template.name}</strong>
+                          <span>{getTemplateTypeLabel(template.type)}</span>
+                        </div>
+                        <p>{template.previewText}</p>
+                        <small>{template.usageNote}</small>
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
 
               <small className="posts-moderation-form__hint">
                 Chọn mẫu để điền nhanh nội dung, sau đó vẫn có thể chỉnh sửa thủ
@@ -731,7 +785,7 @@ function PostsModerationPage() {
                 <div className="posts-moderation-form__template-preview">
                   <div className="posts-moderation-form__template-header">
                     <strong>{selectedTemplate.name}</strong>
-                    <span>{selectedTemplate.type}</span>
+                    <span>{getTemplateTypeLabel(selectedTemplate.type)}</span>
                   </div>
                   <p>{selectedTemplate.previewText}</p>
                   <small>{selectedTemplate.usageNote}</small>

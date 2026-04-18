@@ -31,7 +31,9 @@ function AccountPackagesPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formData, setFormData] = useState<AccountPackageFormState>({
+    title: "",
     price: "",
+    maxSales: 1,
     durationDays: 90,
   });
   const [formError, setFormError] = useState("");
@@ -132,7 +134,7 @@ function AccountPackagesPage() {
   const closeFormModal = () => {
     if (isSubmitting) return;
     setSelectedPackage(null);
-    setFormData({ price: "", durationDays: 90 });
+    setFormData({ title: "", price: "", maxSales: 1, durationDays: 90 });
     setFormError("");
     setIsFormModalOpen(false);
   };
@@ -144,7 +146,8 @@ function AccountPackagesPage() {
 
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "durationDays" ? Number(value) : value,
+      [name]:
+        name === "durationDays" || name === "maxSales" ? Number(value) : value,
     }));
 
     if (formError) {
@@ -191,7 +194,7 @@ function AccountPackagesPage() {
     <div className="account-packages-page">
       <PageHeader
         title="Gói tài khoản / shop"
-        description="Quản trị 3 gói cố định của hệ thống: Chủ vườn vĩnh viễn, Cá nhân theo tháng và Nhà vườn VIP. Admin chỉ điều chỉnh giá, và riêng VIP có thể đổi thêm thời hạn."
+        description="Quản trị 3 gói cố định của hệ thống: Chủ vườn vĩnh viễn, Cá nhân theo tháng và Nhà vườn VIP. Admin có thể đổi tên gói, giá bán và số lượt bán tối đa; riêng VIP được sửa thêm thời hạn."
       />
 
       <div className="account-packages-summary-grid">
@@ -212,7 +215,7 @@ function AccountPackagesPage() {
 
       <SectionCard
         title="Cách quản trị nhóm gói"
-        description="Ba gói trong màn này được khóa loại gói để giữ ổn định nghiệp vụ. Admin có thể đổi giá, và với Nhà vườn VIP thì đổi thêm thời hạn để phù hợp chu kỳ vận hành."
+        description="Ba gói trong màn này được khóa loại gói để giữ ổn định nghiệp vụ. Admin có thể đổi tên, giá bán, số lượt bán tối đa; riêng với Nhà vườn VIP thì đổi thêm thời hạn để phù hợp chu kỳ vận hành."
       >
         <div className="account-packages-banner">
           <div className="account-packages-banner__item">
@@ -235,7 +238,7 @@ function AccountPackagesPage() {
 
       <SectionCard
         title="Bộ lọc gói tài khoản / shop"
-        description="Tìm nhanh 3 gói cố định và chọn đúng nhóm cần điều chỉnh giá."
+        description="Tìm nhanh 3 gói cố định và chọn đúng nhóm cần chỉnh sửa."
       >
         <div className="account-packages-filters">
           <div className="account-packages-filters__field account-packages-filters__field--search">
@@ -268,7 +271,7 @@ function AccountPackagesPage() {
 
       <SectionCard
         title="Danh sách gói tài khoản / shop"
-        description="Màn này chỉ quản trị 3 gói cố định. Không tạo mới, không xóa, chỉ điều chỉnh giá và thời hạn VIP khi cần."
+        description="Màn này chỉ quản trị 3 gói cố định. Không tạo mới, không xóa, chỉ chỉnh sửa thông tin kinh doanh và thời hạn VIP khi cần."
       >
         {isLoading ? (
           <EmptyState
@@ -335,7 +338,7 @@ function AccountPackagesPage() {
                             className="account-packages-actions__edit"
                             onClick={() => openEditModal(item)}
                           >
-                            Sửa giá
+                            Chỉnh sửa
                           </button>
                         </div>
                       </td>
@@ -394,6 +397,10 @@ function AccountPackagesPage() {
               <strong>{selectedPackage.priceLabel}</strong>
             </div>
             <div>
+              <span>Số lượt bán tối đa</span>
+              <strong>{selectedPackage.maxSales ?? "Không giới hạn"}</strong>
+            </div>
+            <div>
               <span>Chu kỳ</span>
               <strong>{selectedPackage.cycleLabel}</strong>
             </div>
@@ -427,20 +434,47 @@ function AccountPackagesPage() {
 
       <BaseModal
         isOpen={isFormModalOpen}
-        title="Điều chỉnh gói tài khoản / shop"
-        description="Admin chỉ được sửa giá, và riêng gói Nhà vườn VIP được sửa thêm thời hạn áp dụng."
+        title="Chỉnh sửa gói tài khoản / shop"
+        description="Cập nhật thông tin bán cho gói hiện có. Riêng gói Nhà vườn VIP được điều chỉnh thêm thời hạn áp dụng."
         onClose={closeFormModal}
         maxWidth="720px"
       >
         {selectedPackage ? (
           <form className="account-package-form" onSubmit={handleSubmit}>
+            <div className="account-package-form__summary">
+              <div>
+                <span>Mã gói</span>
+                <strong>{selectedPackage.code}</strong>
+              </div>
+              <div>
+                <span>Giá hiện tại</span>
+                <strong>{selectedPackage.priceLabel}</strong>
+              </div>
+              <div>
+                <span>Chu kỳ hiện hành</span>
+                <strong>{selectedPackage.cycleLabel}</strong>
+              </div>
+              <div>
+                <span>Nhóm gói</span>
+                <strong>{selectedPackage.groupLabel}</strong>
+              </div>
+            </div>
+
             <label>
-              <span>Tên gói</span>
-              <input type="text" value={selectedPackage.title} disabled />
+              <span>Tên gói hiển thị</span>
+              <input
+                name="title"
+                type="text"
+                value={formData.title}
+                onChange={handleFormChange}
+                disabled={isSubmitting}
+                placeholder="Nhập tên gói"
+              />
+              <small>Dùng cho admin, user-web và màn mua gói hiện tại.</small>
             </label>
 
             <label>
-              <span>Giá mới</span>
+              <span>Giá áp dụng cho lượt mua mới (VND)</span>
               <input
                 name="price"
                 type="text"
@@ -449,21 +483,31 @@ function AccountPackagesPage() {
                 disabled={isSubmitting}
                 placeholder="Nhập giá mới"
               />
+              <small>Không làm thay đổi mức giá của các giao dịch đã phát sinh trước đó.</small>
             </label>
 
             <label>
-              <span>Chu kỳ</span>
-              <input type="text" value={selectedPackage.cycleLabel} disabled />
-            </label>
-
-            <label>
-              <span>Phạm vi</span>
+              <span>Phạm vi tác động</span>
               <input type="text" value={selectedPackage.scopeLabel} disabled />
+              <small>Hiển thị để admin xác nhận đúng nhóm gói đang chỉnh sửa.</small>
+            </label>
+
+            <label>
+              <span>Số lượt bán tối đa</span>
+              <input
+                name="maxSales"
+                type="number"
+                min={1}
+                value={formData.maxSales}
+                onChange={handleFormChange}
+                disabled={isSubmitting}
+              />
+              <small>Giới hạn số lượt mua mới được phép phát sinh cho gói này.</small>
             </label>
 
             {selectedPackage.durationEditable ? (
               <label className="account-package-form__wide">
-                <span>Thời hạn VIP (ngày)</span>
+                <span>Thời hạn áp dụng VIP (ngày)</span>
                 <input
                   name="durationDays"
                   type="number"
@@ -472,6 +516,7 @@ function AccountPackagesPage() {
                   onChange={handleFormChange}
                   disabled={isSubmitting}
                 />
+                <small>Thời lượng VIP dành cho các lượt kích hoạt mới sau khi lưu cấu hình.</small>
               </label>
             ) : null}
 
@@ -493,7 +538,7 @@ function AccountPackagesPage() {
                 className="account-package-form__submit"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Đang lưu..." : "Lưu thay đổi giá"}
+                {isSubmitting ? "Đang lưu..." : "Lưu chỉnh sửa"}
               </button>
             </div>
           </form>

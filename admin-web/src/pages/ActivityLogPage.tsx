@@ -8,6 +8,7 @@ import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import { activityLogService } from "../services/activityLogService";
 import type { ActivityLogItem } from "../types/activityLog";
+import { coerceDateRange, getTodayDateValue } from "../utils/dateRange";
 import "./ActivityLogPage.css";
 
 const PAGE_SIZE = 8;
@@ -39,6 +40,7 @@ const getResultVariant = (result: string) => {
 };
 
 function ActivityLogPage() {
+  const todayDate = getTodayDateValue();
   const [activityLogs, setActivityLogs] = useState<ActivityLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -160,6 +162,28 @@ function ActivityLogPage() {
     }
   }, [page, totalPages]);
 
+  const handleFromDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(
+      value,
+      dateTo,
+      "from",
+      todayDate,
+    );
+    setDateFrom(nextValue);
+    setDateTo(counterpartValue);
+  };
+
+  const handleToDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(
+      value,
+      dateFrom,
+      "to",
+      todayDate,
+    );
+    setDateTo(nextValue);
+    setDateFrom(counterpartValue);
+  };
+
   const todayPrefix = new Date().toISOString().slice(0, 10);
   const todayCount = activityLogs.filter((item) =>
     (item.occurredAt || "").startsWith(todayPrefix),
@@ -232,7 +256,8 @@ function ActivityLogPage() {
                 id="activity-log-date-from"
                 type="date"
                 value={dateFrom}
-                onChange={(event) => setDateFrom(event.target.value)}
+                max={dateTo || todayDate}
+                onChange={(event) => handleFromDateChange(event.target.value)}
               />
             </div>
 
@@ -242,7 +267,9 @@ function ActivityLogPage() {
                 id="activity-log-date-to"
                 type="date"
                 value={dateTo}
-                onChange={(event) => setDateTo(event.target.value)}
+                min={dateFrom || undefined}
+                max={todayDate}
+                onChange={(event) => handleToDateChange(event.target.value)}
               />
             </div>
 

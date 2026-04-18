@@ -29,6 +29,7 @@ import RolesManagementPage from "../pages/RolesManagementPage";
 import SettingsPage from "../pages/SettingsPage";
 import ShopsPage from "../pages/ShopsPage";
 import TemplatesPage from "../pages/TemplatesPage";
+import UserNotificationsPage from "../pages/UserNotificationsPage";
 import UsersPage from "../pages/UsersPage";
 import {
   canAccessAdminModule,
@@ -91,6 +92,15 @@ function AppRoutes() {
 
             <Route element={<ProtectedModuleRoute moduleKey="users" />}>
               <Route path="users" element={<UsersPage />} />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="userNotifications" />}
+            >
+              <Route
+                path="user-notifications"
+                element={<UserNotificationsPage />}
+              />
             </Route>
 
             <Route element={<ProtectedModuleRoute moduleKey="activityLog" />}>

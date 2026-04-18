@@ -46,6 +46,19 @@ const getStatusLabel = (status: StatusFilter) => {
   }
 };
 
+const getTemplateTypeLabel = (type: string) => {
+  switch (type) {
+    case "Report Reason":
+      return "Lý do báo cáo";
+    case "Notification":
+      return "Thông báo";
+    case "Rejection Reason":
+      return "Lý do từ chối";
+    default:
+      return type;
+  }
+};
+
 function ReportsModerationPage() {
   const [reports, setReports] = useState<ReportModerationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -626,27 +639,68 @@ function ReportsModerationPage() {
               Gồm {reportReasonTemplateCount} mẫu Lý do báo cáo và{" "}
               {notificationTemplateCount} mẫu Thông báo đang hoạt động.
             </small>
+            <small>
+              Thư viện hiện có 7 mẫu đang hoạt động, nhưng màn này chỉ lấy 2
+              nhóm dùng đúng cho xử lý báo cáo nên bạn sẽ thấy 5 mẫu để chọn.
+            </small>
           </div>
-          <select
+          <div
             id="report-template"
-            className="reports-moderation-form__select"
-            value={selectedTemplateId}
-            onChange={(event) => handleTemplateChange(event.target.value)}
-            disabled={isLoadingTemplates || reportTemplates.length === 0}
+            className="reports-moderation-form__template-list"
           >
-            <option value="">
-              {isLoadingTemplates
-                ? "Đang tải mẫu nội dung..."
-                : reportTemplates.length === 0
-                  ? "Chưa có mẫu phù hợp"
-                  : "Chọn mẫu để điền nhanh ghi chú"}
-            </option>
-            {reportTemplates.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name}
-              </option>
-            ))}
-          </select>
+            {isLoadingTemplates ? (
+              <div className="reports-moderation-form__template-empty">
+                Đang tải mẫu nội dung...
+              </div>
+            ) : reportTemplates.length === 0 ? (
+              <div className="reports-moderation-form__template-empty">
+                Chưa có mẫu phù hợp cho màn xử lý báo cáo.
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className={`reports-moderation-form__template-card ${
+                    selectedTemplateId === ""
+                      ? "reports-moderation-form__template-card--selected"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    setSelectedTemplateId("");
+                    setAdminNote("");
+                  }}
+                >
+                  <div className="reports-moderation-form__template-card-header">
+                    <strong>Tự nhập ghi chú</strong>
+                    <span>Thủ công</span>
+                  </div>
+                  <p>
+                    Không dùng mẫu có sẵn, admin tự nhập ghi chú xử lý theo tình
+                    huống.
+                  </p>
+                </button>
+                {reportTemplates.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    className={`reports-moderation-form__template-card ${
+                      String(template.id) === selectedTemplateId
+                        ? "reports-moderation-form__template-card--selected"
+                        : ""
+                    }`}
+                    onClick={() => handleTemplateChange(String(template.id))}
+                  >
+                    <div className="reports-moderation-form__template-card-header">
+                      <strong>{template.name}</strong>
+                      <span>{getTemplateTypeLabel(template.type)}</span>
+                    </div>
+                    <p>{template.previewText}</p>
+                    <small>{template.usageNote}</small>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
 
           <small className="reports-moderation-form__hint">
             Chọn mẫu để điền nhanh nội dung, sau đó vẫn có thể chỉnh sửa thủ
@@ -657,7 +711,7 @@ function ReportsModerationPage() {
             <div className="reports-moderation-form__template-preview">
               <div className="reports-moderation-form__template-header">
                 <strong>{selectedTemplate.name}</strong>
-                <span>{selectedTemplate.type}</span>
+                <span>{getTemplateTypeLabel(selectedTemplate.type)}</span>
               </div>
               <p>{selectedTemplate.previewText}</p>
               <small>{selectedTemplate.usageNote}</small>

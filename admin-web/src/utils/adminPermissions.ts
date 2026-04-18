@@ -8,6 +8,7 @@ export const ADMIN_PORTAL_ROLE_CODES = [
 export type AdminModuleKey =
   | "dashboard"
   | "users"
+  | "userNotifications"
   | "activityLog"
   | "postsModeration"
   | "reportsModeration"
@@ -47,6 +48,7 @@ export type AdminMenuGroup = {
 const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
   dashboard: ADMIN_PORTAL_ROLE_CODES,
   users: ADMIN_PORTAL_ROLE_CODES,
+  userNotifications: ADMIN_PORTAL_ROLE_CODES,
   activityLog: ADMIN_PORTAL_ROLE_CODES,
   postsModeration: ADMIN_PORTAL_ROLE_CODES,
   reportsModeration: ADMIN_PORTAL_ROLE_CODES,
@@ -87,6 +89,12 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
         hint: "Tài khoản, vai trò và trạng thái truy cập.",
         path: "/users",
         moduleKey: "users",
+      },
+      {
+        label: "Thông báo người dùng",
+        hint: "Gửi thông báo thủ công cho một người hoặc toàn bộ user.",
+        path: "/user-notifications",
+        moduleKey: "userNotifications",
       },
       {
         label: "Cửa hàng",

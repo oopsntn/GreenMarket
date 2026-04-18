@@ -10,9 +10,11 @@ import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { exportService } from "../services/exportService";
 import { revenueService } from "../services/revenueService";
 import {
+  coerceDateRange,
   DEFAULT_REPORT_FROM_DATE,
   DEFAULT_REPORT_TO_DATE,
   formatDateRangeLabel,
+  getTodayDateValue,
 } from "../utils/dateRange";
 import "./RevenuePage.css";
 
@@ -66,9 +68,22 @@ function RevenuePage() {
   const [page, setPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const today = getTodayDateValue();
 
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const slotCatalog = revenueData.slotCatalog;
+
+  const handleFromDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, toDate, "from", today);
+    setFromDate(nextValue);
+    setToDate(counterpartValue);
+  };
+
+  const handleToDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, fromDate, "to", today);
+    setToDate(nextValue);
+    setFromDate(counterpartValue);
+  };
 
   useEffect(() => {
     const loadRevenue = async () => {
@@ -192,20 +207,23 @@ function RevenuePage() {
       >
         <FilterBar
           fields={[
-            {
-              id: "revenue-from-date",
-              label: "Từ ngày",
-              type: "date",
-              value: fromDate,
-              onChange: setFromDate,
-            },
-            {
-              id: "revenue-to-date",
-              label: "Đến ngày",
-              type: "date",
-              value: toDate,
-              onChange: setToDate,
-            },
+          {
+            id: "revenue-from-date",
+            label: "Từ ngày",
+            type: "date",
+            value: fromDate,
+            max: toDate || today,
+            onChange: handleFromDateChange,
+          },
+          {
+            id: "revenue-to-date",
+            label: "Đến ngày",
+            type: "date",
+            value: toDate,
+            min: fromDate || undefined,
+            max: today,
+            onChange: handleToDateChange,
+          },
             {
               id: "revenue-slot-filter",
               label: "Vị trí hiển thị",

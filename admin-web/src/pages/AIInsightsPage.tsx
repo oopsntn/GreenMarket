@@ -9,7 +9,13 @@ import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { aiInsightService } from "../services/aiInsightService";
 import type { AIInsightFocus, AIInsightFocusFilter, AIInsightHistoryItem, AIInsightOverview, AIInsightOverviewTone, AIInsightSettings, AITrendScoreRow } from "../types/aiInsight";
-import { DEFAULT_REPORT_FROM_DATE, DEFAULT_REPORT_TO_DATE, formatDateRangeLabel } from "../utils/dateRange";
+import {
+  coerceDateRange,
+  DEFAULT_REPORT_FROM_DATE,
+  DEFAULT_REPORT_TO_DATE,
+  formatDateRangeLabel,
+  getTodayDateValue,
+} from "../utils/dateRange";
 import "./AIInsightsPage.css";
 
 const TREND_PAGE_SIZE = 5;
@@ -163,11 +169,24 @@ function AIInsightsPage() {
   const [historyPage, setHistoryPage] = useState(1);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<AIInsightHistoryItem | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const today = getTodayDateValue();
 
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const focusOptions = overview.availableFocuses.length ? overview.availableFocuses : defaultFocusOptions;
   const focusSelectOptions: AIInsightFocusFilter[] = ["All Focus Areas", ...focusOptions];
   const isDateRangeInvalid = Boolean(fromDate) && Boolean(toDate) && fromDate > toDate;
+
+  const handleFromDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, toDate, "from", today);
+    setFromDate(nextValue);
+    setToDate(counterpartValue);
+  };
+
+  const handleToDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, fromDate, "to", today);
+    setToDate(nextValue);
+    setFromDate(counterpartValue);
+  };
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -253,8 +272,8 @@ function AIInsightsPage() {
       <SectionCard title="Tạo Nhận Định AI" description="Chọn kỳ dữ liệu và trọng tâm cần xem. AI sẽ dựa trên các số liệu hiện có của hệ thống để tạo một bản nhận định kinh doanh ngắn gọn." actions={<div className="ai-insights-analysis__actions"><button type="button" className="ai-insights-button ai-insights-button--primary" onClick={() => void handleGenerateInsight()}>Tạo Phân Tích AI</button></div>}>
         <div className="ai-insights-analysis">
           <div className="ai-insights-analysis__grid">
-            <label className="ai-insights-analysis__field"><span>Từ ngày</span><input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} /><small>Mốc bắt đầu để AI gom số liệu và đánh giá xu hướng.</small></label>
-            <label className="ai-insights-analysis__field"><span>Đến ngày</span><input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} /><small>Mốc kết thúc của kỳ phân tích nên thống nhất với các màn báo cáo khác.</small></label>
+            <label className="ai-insights-analysis__field"><span>Từ ngày</span><input type="date" value={fromDate} max={toDate || today} onChange={(event) => handleFromDateChange(event.target.value)} /><small>Mốc bắt đầu để AI gom số liệu và đánh giá xu hướng.</small></label>
+            <label className="ai-insights-analysis__field"><span>Đến ngày</span><input type="date" value={toDate} min={fromDate || undefined} max={today} onChange={(event) => handleToDateChange(event.target.value)} /><small>Mốc kết thúc của kỳ phân tích nên thống nhất với các màn báo cáo khác.</small></label>
             <label className="ai-insights-analysis__field"><span>Trọng tâm phân tích</span><select value={focusFilter} onChange={(event) => setFocusFilter(event.target.value as AIInsightFocusFilter)}>{focusSelectOptions.map((option) => <option key={option} value={option}>{getFocusLabelVi(option)}</option>)}</select><small>Có thể xem toàn cảnh hoặc chỉ tập trung vào một nhóm chỉ số cụ thể.</small></label>
             <label className="ai-insights-analysis__field"><span>Giọng điệu khuyến nghị</span><select value={settings.recommendationTone} onChange={(event) => handleSettingChange("recommendationTone", event.target.value)}><option value="Conservative">{toneLabelMap.Conservative}</option><option value="Balanced">{toneLabelMap.Balanced}</option><option value="Aggressive">{toneLabelMap.Aggressive}</option></select><small>Điều chỉnh mức độ thận trọng của phần nhận định và đề xuất.</small></label>
           </div>
