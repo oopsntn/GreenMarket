@@ -8,10 +8,12 @@ import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { postModerationService } from "../services/postModerationService";
+import { templateService } from "../services/templateService";
 import type {
   PostModerationItem,
   PostModerationStatus,
 } from "../types/postModeration";
+import type { Template } from "../types/template";
 import "./PostsModerationPage.css";
 
 const PAGE_SIZE = 5;
@@ -101,6 +103,9 @@ function PostsModerationPage() {
     post: null,
   });
   const [moderationReason, setModerationReason] = useState("");
+  const [rejectionTemplates, setRejectionTemplates] = useState<Template[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -140,9 +145,33 @@ function PostsModerationPage() {
     }
   }, []);
 
+  const loadRejectionTemplates = useCallback(async () => {
+    try {
+      setIsLoadingTemplates(true);
+      const response = await templateService.getTemplates({
+        type: "Rejection Reason",
+        status: "Active",
+        page: 1,
+        pageSize: 100,
+      });
+
+      setRejectionTemplates(response.data);
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Không thể tải danh sách mẫu nội dung cho kiểm duyệt.",
+        "error",
+      );
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadPosts();
-  }, [loadPosts]);
+    void loadRejectionTemplates();
+  }, [loadPosts, loadRejectionTemplates]);
 
   const filteredPosts = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -169,6 +198,14 @@ function PostsModerationPage() {
     const startIndex = (page - 1) * PAGE_SIZE;
     return filteredPosts.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredPosts, page]);
+
+  const selectedTemplate = useMemo(
+    () =>
+      rejectionTemplates.find(
+        (template) => String(template.id) === selectedTemplateId,
+      ) ?? null,
+    [rejectionTemplates, selectedTemplateId],
+  );
 
   useEffect(() => {
     setPage(1);
@@ -218,6 +255,7 @@ function PostsModerationPage() {
       action,
       post,
     });
+    setSelectedTemplateId("");
     setModerationReason("");
   };
 
@@ -227,7 +265,20 @@ function PostsModerationPage() {
       action: null,
       post: null,
     });
+    setSelectedTemplateId("");
     setModerationReason("");
+  };
+
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+
+    const template = rejectionTemplates.find(
+      (item) => String(item.id) === templateId,
+    );
+
+    if (template) {
+      setModerationReason(template.content);
+    }
   };
 
   const handleModerationSubmit = async () => {
@@ -247,10 +298,12 @@ function PostsModerationPage() {
                 moderationState.post.id,
                 "Rejected",
                 moderationReason,
+                selectedTemplate ? selectedTemplate.id : undefined,
               )
             : await postModerationService.hidePost(
                 moderationState.post.id,
                 moderationReason,
+                selectedTemplate ? selectedTemplate.id : undefined,
               );
 
       setPosts((prev) =>
@@ -288,8 +341,12 @@ function PostsModerationPage() {
     moderationState.action === "approve"
       ? "Bài đăng sẽ được chuyển sang trạng thái đã duyệt để tiếp tục hiển thị trên hệ thống."
       : moderationState.action === "reject"
-        ? "Nhập lý do nếu cần để lưu lại quyết định từ chối."
-        : "Bài đăng sẽ bị ẩn khỏi hệ thống. Có thể nhập ghi chú vận hành nếu cần.";
+        ? "Chọn mẫu nội dung nếu cần, sau đó chỉnh lại lý do trước khi xác nhận từ chối."
+        : "Bài đăng sẽ bị ẩn khỏi hệ thống. Có thể chọn mẫu nội dung để điền nhanh ghi chú vận hành.";
+
+  const shouldShowTemplatePicker =
+    moderationState.action === "reject" || moderationState.action === "hide";
+  const rejectionTemplateCount = rejectionTemplates.length;
 
   return (
     <div className="posts-moderation-page">
@@ -571,6 +628,27 @@ function PostsModerationPage() {
             </div>
 
             <div className="posts-moderation-detail__section">
+              <h4>Mẫu nội dung đã dùng</h4>
+              {selectedPost.templateAudit?.templateName ? (
+                <ul className="posts-moderation-detail__list">
+                  <li>Tên mẫu: {selectedPost.templateAudit.templateName}</li>
+                  <li>
+                    Loại mẫu:{" "}
+                    {selectedPost.templateAudit.templateType ||
+                      "Không xác định"}
+                  </li>
+                  <li>
+                    Nội dung cuối cùng:{" "}
+                    {selectedPost.templateAudit.finalMessage ||
+                      "Không có nội dung được lưu"}
+                  </li>
+                </ul>
+              ) : (
+                <p>Chưa dùng mẫu nội dung trong lần xử lý gần nhất.</p>
+              )}
+            </div>
+
+            <div className="posts-moderation-detail__section">
               <h4>Ảnh liên quan</h4>
               {selectedPost.images.length === 0 ? (
                 <p>Chưa có dữ liệu ảnh trả về từ API.</p>
@@ -613,6 +691,54 @@ function PostsModerationPage() {
             Đối tượng:{" "}
             <strong>{moderationState.post?.title || "Bài đăng đã chọn"}</strong>
           </p>
+
+          {shouldShowTemplatePicker ? (
+            <>
+              <label htmlFor="posts-moderation-template">Chọn mẫu nội dung</label>
+              <div className="posts-moderation-form__picker-meta">
+                <span>
+                  Đang hiển thị {rejectionTemplateCount} mẫu phù hợp cho kiểm duyệt bài.
+                </span>
+                <small>Chỉ lấy các mẫu thuộc nhóm Lý do từ chối đang hoạt động.</small>
+              </div>
+              <select
+                id="posts-moderation-template"
+                className="posts-moderation-form__select"
+                value={selectedTemplateId}
+                onChange={(event) => handleTemplateChange(event.target.value)}
+                disabled={isLoadingTemplates || rejectionTemplates.length === 0}
+              >
+                <option value="">
+                  {isLoadingTemplates
+                    ? "Đang tải mẫu nội dung..."
+                    : rejectionTemplates.length === 0
+                      ? "Chưa có mẫu phù hợp"
+                      : "Chọn mẫu để đổ nội dung nhanh"}
+                </option>
+                {rejectionTemplates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+
+              <small className="posts-moderation-form__hint">
+                Chọn mẫu để điền nhanh nội dung, sau đó vẫn có thể chỉnh sửa thủ
+                công trước khi xác nhận.
+              </small>
+
+              {selectedTemplate ? (
+                <div className="posts-moderation-form__template-preview">
+                  <div className="posts-moderation-form__template-header">
+                    <strong>{selectedTemplate.name}</strong>
+                    <span>{selectedTemplate.type}</span>
+                  </div>
+                  <p>{selectedTemplate.previewText}</p>
+                  <small>{selectedTemplate.usageNote}</small>
+                </div>
+              ) : null}
+            </>
+          ) : null}
 
           <label htmlFor="posts-moderation-reason">Lý do / ghi chú</label>
           <textarea

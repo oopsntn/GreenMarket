@@ -2,11 +2,12 @@ import { Request, Response } from "express";
 import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../config/db";
 import { AuthRequest } from "../../dtos/auth.ts";
+import { adminTemplates } from "../../models/schema/admin-templates.ts";
 import { eventLogs } from "../../models/schema/index.ts";
 import { postPromotions } from "../../models/schema/post-promotions.ts";
+import { posts } from "../../models/schema/posts.ts";
 import { reportEvidence } from "../../models/schema/report-evidence.ts";
 import { reports } from "../../models/schema/reports.ts";
-import { posts } from "../../models/schema/posts.ts";
 import { shops } from "../../models/schema/shops.ts";
 import { users } from "../../models/schema/users.ts";
 import { parseId } from "../../utils/parseId";
@@ -62,6 +63,74 @@ const attachEvidenceToReports = async <T extends { reportId: number }>(
   }));
 };
 
+const getTemplateAuditMeta = async (templateId?: number) => {
+  if (typeof templateId !== "number" || !Number.isFinite(templateId)) {
+    return null;
+  }
+
+  const [template] = await db
+    .select({
+      templateId: adminTemplates.templateId,
+      templateName: adminTemplates.templateName,
+      templateType: adminTemplates.templateType,
+    })
+    .from(adminTemplates)
+    .where(eq(adminTemplates.templateId, templateId))
+    .limit(1);
+
+  return template ?? null;
+};
+
+type TemplateAuditLogMeta = {
+  templateId?: number | null;
+  templateName?: string | null;
+  templateType?: string | null;
+  finalMessage?: string | null;
+};
+
+const getReportTemplateAuditMeta = async (reportId: number) => {
+  const eventRows = await db
+    .select({
+      eventLogMeta: eventLogs.eventLogMeta,
+    })
+    .from(eventLogs)
+    .where(
+      inArray(eventLogs.eventLogEventType, [
+        "admin_report_resolved",
+        "admin_report_dismissed",
+      ]),
+    )
+    .orderBy(desc(eventLogs.eventLogEventTime), desc(eventLogs.eventLogId))
+    .limit(50);
+
+  const matchedEvent = eventRows.find((row) => {
+    if (!row.eventLogMeta || typeof row.eventLogMeta !== "object") {
+      return false;
+    }
+
+    const meta = row.eventLogMeta as Record<string, unknown>;
+    return meta.reportId === reportId;
+  });
+
+  const meta = (matchedEvent?.eventLogMeta ?? null) as TemplateAuditLogMeta &
+    Record<string, unknown> | null;
+
+  if (!meta?.templateName && !meta?.templateId) {
+    return null;
+  }
+
+  return {
+    templateId:
+      typeof meta.templateId === "number" ? meta.templateId : null,
+    templateName:
+      typeof meta.templateName === "string" ? meta.templateName : null,
+    templateType:
+      typeof meta.templateType === "string" ? meta.templateType : null,
+    finalMessage:
+      typeof meta.finalMessage === "string" ? meta.finalMessage : null,
+  };
+};
+
 const closePromotionsForResolvedReport = async (
   postId: number | null,
   performedBy: string,
@@ -94,9 +163,7 @@ const closePromotionsForResolvedReport = async (
     .set({
       postPromotionStatus: "closed",
     })
-    .where(
-      inArray(postPromotions.postPromotionId, closablePromotionIds),
-    )
+    .where(inArray(postPromotions.postPromotionId, closablePromotionIds))
     .returning({
       id: postPromotions.postPromotionId,
     });
@@ -122,7 +189,7 @@ const closePromotionsForResolvedReport = async (
 };
 
 export const getReports = async (
-  req: Request,
+  _req: Request,
   res: Response,
 ): Promise<void> => {
   try {
@@ -167,7 +234,11 @@ export const getReportById = async (
     }
 
     const [reportWithEvidence] = await attachEvidenceToReports([report]);
-    res.json(reportWithEvidence);
+    const templateAudit = await getReportTemplateAuditMeta(idNumber);
+    res.json({
+      ...reportWithEvidence,
+      templateAudit,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
@@ -176,7 +247,11 @@ export const getReportById = async (
 
 export const resolveReport = async (
   req: AuthRequest &
-    Request<{ id: string }, {}, { status: string; adminNote?: string }>,
+    Request<
+      { id: string },
+      {},
+      { status: string; adminNote?: string; templateId?: number }
+    >,
   res: Response,
 ): Promise<void> => {
   try {
@@ -186,7 +261,7 @@ export const resolveReport = async (
       return;
     }
 
-    const { status, adminNote } = req.body;
+    const { status, adminNote, templateId } = req.body;
     const normalizedStatus = status?.trim().toLowerCase();
     if (normalizedStatus !== "resolved" && normalizedStatus !== "dismissed") {
       res.status(400).json({ error: "Trạng thái báo cáo không hợp lệ" });
@@ -197,6 +272,12 @@ export const resolveReport = async (
       req.user?.name?.trim() ||
       req.user?.email?.trim() ||
       "Quản trị viên hệ thống";
+
+    const selectedTemplate = await getTemplateAuditMeta(templateId);
+    if (templateId !== undefined && !selectedTemplate) {
+      res.status(400).json({ error: "Mẫu nội dung không hợp lệ" });
+      return;
+    }
 
     const [updatedReport] = await db
       .update(reports)
@@ -249,6 +330,7 @@ export const resolveReport = async (
           : "admin_report_dismissed",
       eventLogEventTime: new Date(),
       eventLogMeta: {
+        reportId: updatedReport.reportId,
         action: actionLabel,
         detail: adminNote?.trim()
           ? `Báo cáo #${updatedReport.reportId} đã được cập nhật sang trạng thái ${statusLabel}.${promotionDetailSuffix} Ghi chú: ${adminNote.trim()}`
@@ -256,6 +338,10 @@ export const resolveReport = async (
         performedBy,
         actorRole: "Quản trị viên",
         status: normalizedStatus,
+        templateId: selectedTemplate?.templateId ?? null,
+        templateName: selectedTemplate?.templateName ?? null,
+        templateType: selectedTemplate?.templateType ?? null,
+        finalMessage: adminNote?.trim() || null,
       },
     });
 

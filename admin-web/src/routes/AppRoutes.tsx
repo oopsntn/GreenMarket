@@ -28,7 +28,6 @@ import RevenuePage from "../pages/RevenuePage";
 import RolesManagementPage from "../pages/RolesManagementPage";
 import SettingsPage from "../pages/SettingsPage";
 import ShopsPage from "../pages/ShopsPage";
-import TemplateBuilderPage from "../pages/TemplateBuilderPage";
 import TemplatesPage from "../pages/TemplatesPage";
 import UsersPage from "../pages/UsersPage";
 import {
@@ -148,15 +147,6 @@ function AppRoutes() {
 
             <Route element={<ProtectedModuleRoute moduleKey="templates" />}>
               <Route path="templates" element={<TemplatesPage />} />
-            </Route>
-
-            <Route
-              element={<ProtectedModuleRoute moduleKey="templateBuilder" />}
-            >
-              <Route
-                path="template-builder"
-                element={<TemplateBuilderPage />}
-              />
             </Route>
 
             <Route element={<ProtectedModuleRoute moduleKey="settings" />}>

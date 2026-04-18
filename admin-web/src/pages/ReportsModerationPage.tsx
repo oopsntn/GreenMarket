@@ -8,10 +8,12 @@ import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { reportModerationService } from "../services/reportModerationService";
+import { templateService } from "../services/templateService";
 import type {
   ReportModerationItem,
   ReportModerationStatus,
 } from "../types/reportModeration";
+import type { Template } from "../types/template";
 import "./ReportsModerationPage.css";
 
 const PAGE_SIZE = 6;
@@ -61,6 +63,9 @@ function ReportsModerationPage() {
     report: null,
   });
   const [adminNote, setAdminNote] = useState("");
+  const [reportTemplates, setReportTemplates] = useState<Template[]>([]);
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -98,9 +103,44 @@ function ReportsModerationPage() {
     }
   }, []);
 
+  const loadReportTemplates = useCallback(async () => {
+    try {
+      setIsLoadingTemplates(true);
+      const [reasonTemplates, notificationTemplates] = await Promise.all([
+        templateService.getTemplates({
+          type: "Report Reason",
+          status: "Active",
+          page: 1,
+          pageSize: 100,
+        }),
+        templateService.getTemplates({
+          type: "Notification",
+          status: "Active",
+          page: 1,
+          pageSize: 100,
+        }),
+      ]);
+
+      setReportTemplates([
+        ...reasonTemplates.data,
+        ...notificationTemplates.data,
+      ]);
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Không thể tải danh sách mẫu nội dung cho báo cáo.",
+        "error",
+      );
+    } finally {
+      setIsLoadingTemplates(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadReports();
-  }, [loadReports]);
+    void loadReportTemplates();
+  }, [loadReports, loadReportTemplates]);
 
   const filteredReports = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
@@ -127,6 +167,19 @@ function ReportsModerationPage() {
     const startIndex = (page - 1) * PAGE_SIZE;
     return filteredReports.slice(startIndex, startIndex + PAGE_SIZE);
   }, [filteredReports, page]);
+
+  const selectedTemplate = useMemo(
+    () =>
+      reportTemplates.find((template) => String(template.id) === selectedTemplateId) ??
+      null,
+    [reportTemplates, selectedTemplateId],
+  );
+  const reportReasonTemplateCount = reportTemplates.filter(
+    (template) => template.type === "Report Reason",
+  ).length;
+  const notificationTemplateCount = reportTemplates.filter(
+    (template) => template.type === "Notification",
+  ).length;
 
   useEffect(() => {
     setPage(1);
@@ -155,7 +208,9 @@ function ReportsModerationPage() {
       setSelectedReport(detail);
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Không thể tải chi tiết báo cáo.",
+        err instanceof Error
+          ? err.message
+          : "Không thể tải chi tiết báo cáo.",
         "error",
       );
     } finally {
@@ -176,6 +231,7 @@ function ReportsModerationPage() {
       action,
       report,
     });
+    setSelectedTemplateId("");
     setAdminNote(
       report.adminNote === "Chưa có ghi chú từ quản trị viên"
         ? ""
@@ -189,7 +245,20 @@ function ReportsModerationPage() {
       action: null,
       report: null,
     });
+    setSelectedTemplateId("");
     setAdminNote("");
+  };
+
+  const handleTemplateChange = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+
+    const template = reportTemplates.find(
+      (item) => String(item.id) === templateId,
+    );
+
+    if (template) {
+      setAdminNote(template.content);
+    }
   };
 
   const handleResolutionSubmit = async () => {
@@ -202,6 +271,7 @@ function ReportsModerationPage() {
         resolutionState.report.id,
         resolutionState.action === "resolve" ? "Resolved" : "Dismissed",
         adminNote,
+        selectedTemplate ? selectedTemplate.id : undefined,
       );
 
       setReports((prev) =>
@@ -485,6 +555,27 @@ function ReportsModerationPage() {
             </div>
 
             <div className="reports-moderation-detail__section">
+              <h4>Mẫu nội dung đã dùng</h4>
+              {selectedReport.templateAudit?.templateName ? (
+                <ul className="reports-moderation-detail__list">
+                  <li>Tên mẫu: {selectedReport.templateAudit.templateName}</li>
+                  <li>
+                    Loại mẫu:{" "}
+                    {selectedReport.templateAudit.templateType ||
+                      "Không xác định"}
+                  </li>
+                  <li>
+                    Nội dung cuối cùng:{" "}
+                    {selectedReport.templateAudit.finalMessage ||
+                      "Không có nội dung được lưu"}
+                  </li>
+                </ul>
+              ) : (
+                <p>Chưa dùng mẫu nội dung trong lần xử lý gần nhất.</p>
+              )}
+            </div>
+
+            <div className="reports-moderation-detail__section">
               <h4>Evidence đính kèm</h4>
               {selectedReport.evidenceUrls.length === 0 ? (
                 <p>Người báo cáo chưa đính kèm evidence.</p>
@@ -516,7 +607,7 @@ function ReportsModerationPage() {
             ? "Xử lý báo cáo"
             : "Bỏ qua báo cáo"
         }
-        description="Nhập ghi chú quản trị nếu cần trước khi xác nhận thao tác."
+        description="Chọn mẫu nội dung nếu cần, sau đó chỉnh lại ghi chú quản trị trước khi xác nhận thao tác."
         onClose={closeResolutionModal}
         maxWidth="520px"
       >
@@ -525,6 +616,54 @@ function ReportsModerationPage() {
             Báo cáo mục tiêu:{" "}
             <strong>#{resolutionState.report?.id || "Đã chọn"}</strong>
           </p>
+
+          <label htmlFor="report-template">Chọn mẫu nội dung</label>
+          <div className="reports-moderation-form__picker-meta">
+            <span>
+              Đang hiển thị {reportTemplates.length} mẫu phù hợp cho xử lý báo cáo.
+            </span>
+            <small>
+              Gồm {reportReasonTemplateCount} mẫu Lý do báo cáo và{" "}
+              {notificationTemplateCount} mẫu Thông báo đang hoạt động.
+            </small>
+          </div>
+          <select
+            id="report-template"
+            className="reports-moderation-form__select"
+            value={selectedTemplateId}
+            onChange={(event) => handleTemplateChange(event.target.value)}
+            disabled={isLoadingTemplates || reportTemplates.length === 0}
+          >
+            <option value="">
+              {isLoadingTemplates
+                ? "Đang tải mẫu nội dung..."
+                : reportTemplates.length === 0
+                  ? "Chưa có mẫu phù hợp"
+                  : "Chọn mẫu để điền nhanh ghi chú"}
+            </option>
+            {reportTemplates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name}
+              </option>
+            ))}
+          </select>
+
+          <small className="reports-moderation-form__hint">
+            Chọn mẫu để điền nhanh nội dung, sau đó vẫn có thể chỉnh sửa thủ
+            công trước khi xác nhận.
+          </small>
+
+          {selectedTemplate ? (
+            <div className="reports-moderation-form__template-preview">
+              <div className="reports-moderation-form__template-header">
+                <strong>{selectedTemplate.name}</strong>
+                <span>{selectedTemplate.type}</span>
+              </div>
+              <p>{selectedTemplate.previewText}</p>
+              <small>{selectedTemplate.usageNote}</small>
+            </div>
+          ) : null}
+
           <label htmlFor="report-admin-note">Ghi chú quản trị</label>
           <textarea
             id="report-admin-note"

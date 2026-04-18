@@ -174,6 +174,17 @@ const mapReportToUi = (item: ApiReportModerationResponse): ReportModerationItem 
     status: mapStatus(item.reportStatus),
     createdAt: formatDateTime(item.reportCreatedAt),
     updatedAt: formatDateTime(item.reportUpdatedAt),
+    templateAudit: item.templateAudit
+      ? {
+          templateId:
+            typeof item.templateAudit.templateId === "number"
+              ? item.templateAudit.templateId
+              : null,
+          templateName: item.templateAudit.templateName?.trim() || null,
+          templateType: item.templateAudit.templateType?.trim() || null,
+          finalMessage: item.templateAudit.finalMessage?.trim() || null,
+        }
+      : null,
   };
 };
 
@@ -204,6 +215,7 @@ export const reportModerationService = {
     reportId: number,
     status: Exclude<ReportModerationStatus, "Pending">,
     adminNote?: string,
+    templateId?: number,
   ): Promise<ReportModerationItem> {
     const adminProfile = getAdminProfile();
 
@@ -217,6 +229,7 @@ export const reportModerationService = {
           status: status.toLowerCase(),
           adminName: adminProfile?.name,
           ...(adminNote?.trim() ? { adminNote: adminNote.trim() } : {}),
+          ...(typeof templateId === "number" ? { templateId } : {}),
         }),
       },
     );

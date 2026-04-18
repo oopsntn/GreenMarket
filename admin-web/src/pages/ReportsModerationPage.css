@@ -35,7 +35,8 @@
 
 .reports-moderation-filters__field select,
 .reports-moderation-detail__field input,
-.reports-moderation-form textarea {
+.reports-moderation-form textarea,
+.reports-moderation-form__select {
   border: 1px solid #d7e6d9;
   border-radius: 12px;
   background-color: #fcfffc;
@@ -54,6 +55,21 @@
   padding: 12px 14px;
   resize: vertical;
   line-height: 1.6;
+}
+
+.reports-moderation-form__select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #486150 50%),
+    linear-gradient(135deg, #486150 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
 
 .reports-moderation-table-wrapper {
@@ -246,12 +262,65 @@
   gap: 16px;
 }
 
+.reports-moderation-form__picker-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: -8px;
+}
+
+.reports-moderation-form__picker-meta span,
+.reports-moderation-form__picker-meta small,
+.reports-moderation-form__hint {
+  color: #68786b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .reports-moderation-form__target,
 .reports-moderation-empty-state {
   padding: 18px;
   border: 1px dashed #d7e6d9;
   border-radius: 16px;
   background-color: #fcfffc;
+  color: #5e7062;
+  line-height: 1.6;
+}
+
+.reports-moderation-form__template-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #dfeadf;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fcfffc 0%, #f6fbf5 100%);
+}
+
+.reports-moderation-form__template-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reports-moderation-form__template-header strong {
+  color: #1b4332;
+  font-size: 14px;
+}
+
+.reports-moderation-form__template-header span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background-color: #edf7ee;
+  color: #1b5e20;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reports-moderation-form__template-preview p,
+.reports-moderation-form__template-preview small {
+  margin: 0;
   color: #5e7062;
   line-height: 1.6;
 }

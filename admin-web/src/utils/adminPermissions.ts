@@ -17,7 +17,6 @@ export type AdminModuleKey =
   | "attributes"
   | "categoryMapping"
   | "templates"
-  | "templateBuilder"
   | "settings"
   | "accountPackages"
   | "accountPackageTracking"
@@ -57,7 +56,6 @@ const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
   attributes: ADMIN_PORTAL_ROLE_CODES,
   categoryMapping: ADMIN_PORTAL_ROLE_CODES,
   templates: ADMIN_PORTAL_ROLE_CODES,
-  templateBuilder: ADMIN_PORTAL_ROLE_CODES,
   settings: ADMIN_PORTAL_ROLE_CODES,
   accountPackages: ADMIN_PORTAL_ROLE_CODES,
   accountPackageTracking: ADMIN_PORTAL_ROLE_CODES,
@@ -157,12 +155,6 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
         hint: "Các mẫu giao diện và mẫu nhập liệu.",
         path: "/templates",
         moduleKey: "templates",
-      },
-      {
-        label: "Thiết kế biểu mẫu",
-        hint: "Dựng nhanh form đăng bài và xem trước.",
-        path: "/template-builder",
-        moduleKey: "templateBuilder",
       },
     ],
   },
