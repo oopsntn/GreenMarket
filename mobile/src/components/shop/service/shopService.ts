@@ -99,12 +99,21 @@ const normalizeShopCoordinates = (shop: ShopDetail | null) => {
         ? shop.shopPhone.split('|').map((item) => item.trim()).filter(Boolean)
         : []
 
+    // Normalize gallery: backend có thể trả string pipe-separated hoặc array
+    let galleryImages: string[] = []
+    if (Array.isArray(shop.shopGalleryImages)) {
+        galleryImages = shop.shopGalleryImages.filter(Boolean)
+    } else if (typeof shop.shopGalleryImages === 'string' && shop.shopGalleryImages) {
+        galleryImages = shop.shopGalleryImages.split('|').map(s => s.trim()).filter(Boolean)
+    }
+
     return {
         ...shop,
         shopPhone: phoneList[0] || shop.shopPhone,
         phones: phoneList,
         shopLat: shop.shopLat !== null && shop.shopLat !== undefined ? Number(shop.shopLat) : undefined,
         shopLng: shop.shopLng !== null && shop.shopLng !== undefined ? Number(shop.shopLng) : undefined,
+        shopGalleryImages: galleryImages,
     }
 }
 

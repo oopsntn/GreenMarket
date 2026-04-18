@@ -7,6 +7,7 @@ import Button from '../../Reused/Button/Button'
 import { MediaGallery } from '../components/MediaGallery'
 import Card from '../../Reused/Card/Card'
 import { resolveImageUrl } from '../../../utils/resolveImageUrl'
+import { WEB_BASE_URL } from '../../../config/api'
 
 interface Props {
   route: any,
@@ -49,9 +50,12 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
 
   const handleShare = async () => {
     try {
+      const slug = post?.postSlug || post?.postId
+      const webUrl = `${WEB_BASE_URL}/san-pham/${slug}`
       await Share.share({
-        message: `Xem thử tin này: ${post?.postTitle} trên GreenMarket`,
-        url: `https://yourdomain.com/post/${post?.postSlug}`
+        message: `${post?.postTitle}\n${webUrl}`,
+        url: webUrl,  // iOS chỉ hiển thị url khi dùng AirDrop/Messages
+        title: post?.postTitle || 'GreenMarket',
       });
     } catch (error) {
       console.error(error);

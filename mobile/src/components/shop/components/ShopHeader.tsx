@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { FlatList, Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useState, useMemo } from 'react'
+import { Dimensions, FlatList, Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Camera, ExternalLink, MapPin, MessageCircle, Phone, Play, Store, User } from 'lucide-react-native'
 import { ShopService } from '../service/shopService'
 
@@ -9,13 +9,19 @@ interface ShopHeaderProps {
     styles?: any;
 }
 
+const SCREEN_W = Dimensions.get('window').width
+
 const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
-    const gallery = useMemo(() => {
-        if (!shop.shopGalleryImages) return [];
-        return typeof shop.shopGalleryImages === 'string'
-            ? shop.shopGalleryImages.split('|')
-            : shop.shopGalleryImages;
-    }, [shop.shopGalleryImages]);
+    const [activeGalleryIndex, setActiveGalleryIndex] = useState(0)
+
+    // gallery đã được normalize thành string[] trong shopService
+    const gallery: string[] = useMemo(() => {
+        if (!shop.shopGalleryImages) return []
+        if (Array.isArray(shop.shopGalleryImages)) return shop.shopGalleryImages.filter(Boolean)
+        if (typeof shop.shopGalleryImages === 'string')
+            return shop.shopGalleryImages.split('|').map(s => s.trim()).filter(Boolean)
+        return []
+    }, [shop.shopGalleryImages])
 
     if (!shop) return null
 
@@ -79,18 +85,41 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
     return (
         <View style={styles.headerCard}>
             {gallery.length > 0 ? (
-                <FlatList
-                    data={gallery}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={({ item }) => (
-                        <Image source={{ uri: item }} style={styles.coverImage} />
+                <View>
+                    <FlatList
+                        data={gallery}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(_, index) => index.toString()}
+                        onMomentumScrollEnd={(e) => {
+                            const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W)
+                            setActiveGalleryIndex(idx)
+                        }}
+                        renderItem={({ item }) => (
+                            <Image
+                                source={{ uri: item }}
+                                style={[styles.coverImage, { width: SCREEN_W }]}
+                                resizeMode="cover"
+                            />
+                        )}
+                    />
+                    {gallery.length > 1 && (
+                        <View style={styles.dotRow}>
+                            {gallery.map((_, i) => (
+                                <View
+                                    key={i}
+                                    style={[
+                                        styles.dot,
+                                        i === activeGalleryIndex && styles.dotActive
+                                    ]}
+                                />
+                            ))}
+                        </View>
                     )}
-                />
+                </View>
             ) : shop.shopCoverUrl ? (
-                <Image source={{ uri: shop.shopCoverUrl }} style={styles.coverImage} />
+                <Image source={{ uri: shop.shopCoverUrl }} style={[styles.coverImage, { width: SCREEN_W }]} resizeMode="cover" />
             ) : null}
 
             <View style={styles.headerTop}>
@@ -197,8 +226,26 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     coverImage: {
-        width: '100%',
-        height: 140,
+        height: 160,
+    },
+    dotRow: {
+        position: 'absolute',
+        bottom: 8,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    dot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+    },
+    dotActive: {
+        backgroundColor: '#fff',
+        width: 16,
     },
     headerTop: {
         flexDirection: 'row',

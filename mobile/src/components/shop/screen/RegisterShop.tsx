@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { ArrowRight, Camera, CheckCircle, Image as ImageIcon, Play, Plus, Store, User, X } from 'lucide-react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as WebBrowser from 'expo-web-browser'
@@ -9,6 +9,7 @@ import Button from '../../Reused/Button/Button'
 import { ShopService } from '../service/shopService'
 import CustomAlert from '../../../utils/AlertHelper'
 import { ProfileService } from '../../profile/service/ProfileService'
+import { postService } from '../../post/service/postService'
 import AddressPicker from '../components/AddressPicker'
 import { useAuth } from '../../../context/AuthContext'
 import { resolveImageUrl } from '../../../utils/resolveImageUrl'
@@ -57,35 +58,42 @@ const RegisterShopScreen = ({ navigation }: any) => {
             return
         }
 
+        // Cấu hình picker khác nhau theo từng field
+        const isGallery = field === 'shopGalleryImages'
+        const isLogo = field === 'shopLogoUrl'
+
         const result = await ImagePicker.launchImageLibraryAsync({
-            allowsEditing: field !== 'shopGalleryImages',
-            aspect: field === 'shopLogoUrl' ? [1, 1] : [16, 9],
-            selectionLimit: 4,
+            // Logo: crop vuông | Cover: không crop (tránh bug iOS bỏ qua asset)
+            // Gallery: cho phép chọn nhiều
+            allowsEditing: isLogo,
+            aspect: isLogo ? [1, 1] : undefined,
+            allowsMultipleSelection: isGallery,
+            selectionLimit: isGallery ? (4 - formData.shopGalleryImages.length) : 1,
             quality: 0.7,
         })
 
-        if (result.canceled) {
-            return
-        }
+        if (result.canceled || !result.assets?.length) return
 
         try {
-            setUploadingImage(true);
-            const uploadRes = await ProfileService.uploadAvatar(result.assets[0].uri);
-            if (uploadRes?.urls?.[0]) {
-                const newUrl = uploadRes.urls[0];
-                // Xử lý riêng cho Gallery (Push vào mảng)
-                if (field === 'shopGalleryImages') {
+            setUploadingImage(true)
+
+            if (isGallery) {
+                // Upload nhiều ảnh cùng lúc bằng postService.uploadMedia
+                const uris = result.assets.map((a) => a.uri)
+                const uploadRes = await postService.uploadMedia(uris)
+                if (uploadRes?.urls?.length) {
                     setFormData((prev) => ({
                         ...prev,
-                        shopGalleryImages: [...prev.shopGalleryImages, newUrl].slice(0, 4) // Giới hạn 4 ảnh
-                    }));
-                } else {
-                    // Xử lý cho Logo/Cover (Ghi đè string)
-                    setFormData((prev) => ({ ...prev, [field]: newUrl }));
+                        shopGalleryImages: [...prev.shopGalleryImages, ...uploadRes.urls].slice(0, 4)
+                    }))
                 }
-                return;
+            } else {
+                // Logo và Cover: upload từng ảnh
+                const uploadRes = await ProfileService.uploadAvatar(result.assets[0].uri)
+                if (uploadRes?.urls?.[0]) {
+                    setFormData((prev) => ({ ...prev, [field]: uploadRes.urls[0] }))
+                }
             }
-
         } catch (e) {
             console.error('Error uploading shop image:', e)
             CustomAlert('Lỗi tải lên', 'Không thể tải ảnh lên. Vui lòng thử lại.')
