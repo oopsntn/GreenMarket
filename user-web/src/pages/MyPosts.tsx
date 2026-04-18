@@ -678,21 +678,6 @@ const MyPosts: React.FC = () => {
             <div className="text-center py-24 bg-white border border-slate-200 rounded-4xl shadow-sm border-dashed">
               <PackageOpen className="w-16 h-16 text-slate-200 mx-auto mb-6" />
               <h3 className="text-xl font-bold mb-2 text-slate-900 tracking-tight uppercase">Không tìm thấy bài viết nào</h3>
-              <p className="text-slate-500 mb-8 max-w-xs mx-auto font-medium">Hãy bắt đầu rao bán những mẫu cây cảnh tuyệt vời của bạn ngay bây giờ!</p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button
-                  onClick={() => navigate('/packages')}
-                  className="bg-white border border-slate-200 text-slate-700 px-8 py-3 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-sm"
-                >
-                  Xem bang gia goi
-                </button>
-                <button
-                  onClick={() => navigate('/create-post')}
-                  className="bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200/50"
-                >
-                  Tạo bài đăng đầu tiên
-                </button>
-              </div>
             </div>
           )}
         </div>

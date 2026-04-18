@@ -405,16 +405,18 @@ const Profile: React.FC = () => {
               <p className="text-xs text-slate-500">Xem lại các bài báo và kiến thức đã lưu.</p>
             </Link>
 
-            <Link
-              to="/personal-dashboard"
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <LayoutDashboard className="w-4 h-4 text-emerald-600" />
-                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Dashboard cá nhân</p>
-              </div>
-              <p className="text-xs text-slate-500">Xem quá trình thanh toán và gói ưu tiên.</p>
-            </Link>
+            {!isGardenOwner && (
+              <Link
+                to="/personal-dashboard"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <LayoutDashboard className="w-4 h-4 text-emerald-600" />
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Dashboard cá nhân</p>
+                </div>
+                <p className="text-xs text-slate-500">Xem quá trình thanh toán và gói ưu tiên.</p>
+              </Link>
+            )}
 
             <Link
               to="/my-posts"

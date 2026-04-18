@@ -1,10 +1,10 @@
 import { Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and } from "drizzle-orm";
 import {
   users,
   businessRoles,
-  favoritePosts,
+  userFavorites,
   posts,
   postImages,
 } from "../../models/schema/index.ts";
@@ -122,12 +122,17 @@ export const getFavoritePosts = async (
     const favorites = await db
       .select({
         post: posts,
-        savedAt: favoritePosts.favoritePostCreatedAt,
+        savedAt: userFavorites.createdAt,
       })
-      .from(favoritePosts)
-      .innerJoin(posts, eq(favoritePosts.favoritePostPostId, posts.postId))
-      .where(eq(favoritePosts.favoritePostUserId, userId))
-      .orderBy(desc(favoritePosts.favoritePostCreatedAt));
+      .from(userFavorites)
+      .innerJoin(posts, eq(userFavorites.targetId, posts.postId))
+      .where(
+        and(
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetType, "post"),
+        ),
+      )
+      .orderBy(desc(userFavorites.createdAt));
 
     const postIds = favorites.map((f) => f.post.postId);
     let imagesData: any[] = [];

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, Search, MapPin, CheckCircle, Clock, 
+import {
+  Users, Search, MapPin, CheckCircle, Clock,
   MessageSquare, Phone, Info, Star, ChevronRight,
   UserPlus, ChevronLeft
 } from 'lucide-react';
-import { 
-  getPublicCollaborators, 
-  inviteCollaborator, 
+import {
+  getPublicCollaborators,
+  inviteCollaborator,
   type CollaboratorProfile,
   type CollaboratorFullProfile,
   getPublicCollaboratorDetail
@@ -106,7 +106,7 @@ const CollaboratorDirectory: React.FC = () => {
             Danh sách Cộng tác viên
           </h1>
           <p className="text-emerald-50 max-w-2xl mx-auto text-lg opacity-90">
-            Tìm kiếm những người kể chuyện tài năng để giúp quảng bá nông sản và câu chuyện về khu vườn của bạn.
+            Tìm kiếm những người chụp ảnh có tâm, yêu cây cảnh để giúp quảng bá những cây Bonsai của bạn.
           </p>
         </div>
       </div>
@@ -116,7 +116,7 @@ const CollaboratorDirectory: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 p-4 mb-8 flex flex-col md:flex-row gap-4 items-center border border-slate-100 backdrop-blur-sm bg-white/95">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input 
+            <input
               type="text"
               placeholder="Tìm kiếm cộng tác viên theo tên, kỹ năng hoặc địa điểm..."
               className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
@@ -139,16 +139,16 @@ const CollaboratorDirectory: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {collaborators.map((user) => (
-              <div 
-                key={user.userId} 
+              <div
+                key={user.userId}
                 className="group bg-white rounded-[2.5rem] p-6 border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-emerald-200/20 transition-all duration-500 transform hover:-translate-y-1 overflow-hidden relative"
               >
                 {/* Visual Flair */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-                
+
                 <div className="flex items-start gap-5 relative mb-6">
                   <div className="relative">
-                    <img 
+                    <img
                       src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName)}&background=10b981&color=fff&size=128`}
                       alt={user.displayName}
                       className="w-20 h-20 rounded-2xl object-cover shadow-lg border-2 border-white"
@@ -185,7 +185,7 @@ const CollaboratorDirectory: React.FC = () => {
                 <div className="flex flex-col gap-3">
                   {user.relationshipStatus === 'active' ? (
                     <div className="grid grid-cols-2 gap-3">
-                      <a 
+                      <a
                         href={`https://zalo.me/${user.mobile}`}
                         target="_blank"
                         rel="noreferrer"
@@ -194,7 +194,7 @@ const CollaboratorDirectory: React.FC = () => {
                         <MessageSquare className="w-4 h-4" />
                         Zalo
                       </a>
-                      <a 
+                      <a
                         href={`tel:${user.mobile}`}
                         className="flex items-center justify-center gap-2 py-3.5 bg-emerald-50 text-emerald-600 rounded-2xl font-bold text-sm hover:bg-emerald-100 transition-colors border border-emerald-100"
                       >
@@ -203,13 +203,13 @@ const CollaboratorDirectory: React.FC = () => {
                       </a>
                     </div>
                   ) : (
-                    <button 
+                    <button
                       onClick={() => handleInvite(user)}
                       disabled={invitingId === user.userId || user.relationshipStatus === 'pending'}
                       className={`
                         flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm transition-all shadow-lg
-                        ${user.relationshipStatus === 'pending' 
-                          ? 'bg-slate-100 text-slate-400 shadow-none cursor-default' 
+                        ${user.relationshipStatus === 'pending'
+                          ? 'bg-slate-100 text-slate-400 shadow-none cursor-default'
                           : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200 group-active:scale-[0.98]'
                         }
                       `}
@@ -229,15 +229,15 @@ const CollaboratorDirectory: React.FC = () => {
                       )}
                     </button>
                   )}
-                  
-                  <button 
+
+                  <button
                     onClick={() => setSelectedCollab(user)}
                     className="flex items-center justify-center gap-2 py-3 bg-slate-50 text-slate-600 rounded-2xl font-bold text-sm hover:bg-slate-100 transition-colors border border-slate-100"
                   >
                     <Info className="w-4 h-4" />
                     Xem chi tiết
                   </button>
-                  
+
                   {user.relationshipStatus !== 'active' && (
                     <p className="text-[10px] text-slate-400 text-center flex items-center justify-center gap-1 font-medium bg-slate-50/50 py-1.5 rounded-xl">
                       <Info className="w-3 h-3" />
@@ -270,11 +270,10 @@ const CollaboratorDirectory: React.FC = () => {
               <button
                 key={i + 1}
                 onClick={() => setPage(i + 1)}
-                className={`w-12 h-12 rounded-xl font-bold transition-all ${
-                  page === i + 1 
-                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200' 
+                className={`w-12 h-12 rounded-xl font-bold transition-all ${page === i + 1
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-200'
                     : 'bg-white text-slate-400 hover:bg-slate-50 border border-slate-100'
-                }`}
+                  }`}
               >
                 {i + 1}
               </button>
@@ -288,7 +287,7 @@ const CollaboratorDirectory: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedCollab(null)} />
           <div className="relative bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-10 shadow-2xl animate-in zoom-in duration-300">
-            <button 
+            <button
               onClick={() => setSelectedCollab(null)}
               className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 transition-colors"
             >
@@ -296,7 +295,7 @@ const CollaboratorDirectory: React.FC = () => {
             </button>
 
             <div className="flex flex-col md:flex-row gap-8 mb-8">
-              <img 
+              <img
                 src={selectedCollab.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedCollab.displayName)}&background=10b981&color=fff&size=200`}
                 alt={selectedCollab.displayName}
                 className="w-32 h-32 rounded-3xl object-cover shadow-xl border-4 border-slate-50"
@@ -310,7 +309,7 @@ const CollaboratorDirectory: React.FC = () => {
                     {selectedCollab.location || "Việt Nam"}
                   </span>
                 </div>
-                
+
                 {/* Stats Bar */}
                 <div className="flex gap-4 mb-6">
                   <div className="flex-1 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center">
@@ -354,7 +353,7 @@ const CollaboratorDirectory: React.FC = () => {
                     <span className="text-[10px] text-slate-400 normal-case font-medium">Chưa có tác phẩm mẫu</span>
                   )}
                 </h3>
-                
+
                 {fetchingDetail ? (
                   <div className="grid grid-cols-3 gap-3">
                     {[1, 2, 3].map(i => <div key={i} className="aspect-square bg-slate-50 rounded-2xl animate-pulse" />)}
@@ -362,14 +361,14 @@ const CollaboratorDirectory: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-3 gap-3">
                     {fullCollab?.portfolioPhotos.map((url, idx) => (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         className="group relative aspect-square rounded-2xl overflow-hidden cursor-zoom-in border border-slate-100"
                         onClick={() => setPreviewImage(url)}
                       >
-                        <img 
-                          src={url} 
-                          alt={`Portfolio ${idx}`} 
+                        <img
+                          src={url}
+                          alt={`Portfolio ${idx}`}
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -397,7 +396,7 @@ const CollaboratorDirectory: React.FC = () => {
             <div className="flex flex-col gap-4">
               {selectedCollab.relationshipStatus === 'active' ? (
                 <div className="grid grid-cols-2 gap-4">
-                  <a 
+                  <a
                     href={`https://zalo.me/${selectedCollab.mobile}`}
                     target="_blank"
                     rel="noreferrer"
@@ -406,7 +405,7 @@ const CollaboratorDirectory: React.FC = () => {
                     <MessageSquare className="w-5 h-5" />
                     Liên hệ Zalo
                   </a>
-                  <a 
+                  <a
                     href={`tel:${selectedCollab.mobile}`}
                     className="flex items-center justify-center gap-3 py-4 bg-emerald-600 text-white rounded-[1.5rem] font-bold shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all"
                   >
@@ -415,15 +414,15 @@ const CollaboratorDirectory: React.FC = () => {
                   </a>
                 </div>
               ) : (
-                <button 
+                <button
                   onClick={() => {
                     handleInvite(selectedCollab);
                   }}
                   disabled={invitingId === selectedCollab.userId || selectedCollab.relationshipStatus === 'pending'}
                   className={`
                     w-full flex items-center justify-center gap-3 py-5 rounded-[1.5rem] font-bold text-lg transition-all shadow-xl
-                    ${selectedCollab.relationshipStatus === 'pending' 
-                      ? 'bg-slate-100 text-slate-400 shadow-none cursor-default' 
+                    ${selectedCollab.relationshipStatus === 'pending'
+                      ? 'bg-slate-100 text-slate-400 shadow-none cursor-default'
                       : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200 active:scale-[0.98]'
                     }
                   `}
@@ -443,7 +442,7 @@ const CollaboratorDirectory: React.FC = () => {
                   )}
                 </button>
               )}
-              
+
               {selectedCollab.relationshipStatus !== 'active' && (
                 <p className="text-xs text-slate-400 text-center flex items-center justify-center gap-2 font-medium bg-slate-50 py-3 rounded-2xl">
                   <Info className="w-4 h-4" />
@@ -457,15 +456,15 @@ const CollaboratorDirectory: React.FC = () => {
       {/* Full Size Image Preview */}
       {previewImage && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 animate-in fade-in duration-300">
-          <button 
+          <button
             onClick={() => setPreviewImage(null)}
             className="absolute top-8 right-8 p-3 text-white/50 hover:text-white transition-colors"
           >
             <Info className="w-8 h-8 rotate-45" />
           </button>
-          <img 
-            src={previewImage} 
-            alt="Full size preview" 
+          <img
+            src={previewImage}
+            alt="Full size preview"
             className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
           />
         </div>

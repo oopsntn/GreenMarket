@@ -53,8 +53,8 @@ Auth rules for all endpoints below:
 | GET | `/api/collaborator/my-jobs` | User token + `COLLABORATOR` | Get jobs assigned to current collaborator | optional query: `status`, `page`, `limit` |
 | POST | `/api/collaborator/jobs/:id/deliverables` | User token + `COLLABORATOR` | Submit job deliverables and mark job completed | path `id`, required `fileUrls` (string[]), optional `note` |
 | GET | `/api/collaborator/earnings` | User token + `COLLABORATOR` | Get earnings summary and history | optional query: `from`, `to` |
-| GET | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Get payout request history | optional query: `page`, `limit` |
-| POST | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Create payout request (VND) | required: `amount`, `method`; optional `note` |
+| GET | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Get payout request history (unified) | optional query: `page`, `limit` |
+| POST | `/api/collaborator/payout-requests` | User token + `COLLABORATOR` | Request payout (unified) | required: `amount`, `method`; optional `note` |
 | GET | `/api/collaborator/invitations` | User token | Get invitations received from shops | none |
 | POST | `/api/collaborator/invitations/:id/respond` | User token | Accept or decline a shop invitation | path `id`, required `decision` (`accept`/`decline`) |
 
@@ -123,8 +123,8 @@ Auth rules for all endpoints below:
 |---|---|---|---|---|
 | GET | `/api/host/dashboard` | User token + `HOST` | Get host dashboard summary (earnings, views) | none |
 | GET | `/api/host/earnings` | User token + `HOST` | Get detailed earnings history | optional query: `page`, `limit` |
-| GET | `/api/host/payout-requests` | User token + `HOST` | Get payout request history | optional query: `page`, `limit` |
-| POST | `/api/host/payout-requests` | User token + `HOST` | Create a new payout request | required: `amount` (min 500,000), `method`; optional `note` |
+| GET | `/api/host/payout-requests` | User token + `HOST` | Get payout request history (unified) | optional query: `page`, `limit` |
+| POST | `/api/host/payout-requests` | User token + `HOST` | Request payout (unified) | required: `amount` (min 500,000), `method`; optional `note` |
 | GET | `/api/host/contents` | User token + `HOST` | List promotional contents created by host | none |
 | POST | `/api/host/contents` | User token + `HOST` | Create magazine content | required: `title`, optional `description`, `body`, `category`, `mediaUrls`, `payoutAmount` |
 | PATCH | `/api/host/contents/:id` | User token + `HOST` | Update magazine content | path `id`, all fields optional |
@@ -497,6 +497,8 @@ All admin APIs are mounted under `/api/admin/*` and require:
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/admin/activity-log` | List system activity and audit logs |
+| GET | `/api/admin/financial/payout-requests` | [ADMIN] List all payout requests (Host/CTV) |
+| PATCH | `/api/admin/financial/payout-requests/:id/process` | [ADMIN] Approve (completed) or Reject payout request |
 
 ### Roles Management
 

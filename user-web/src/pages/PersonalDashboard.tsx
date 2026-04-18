@@ -189,19 +189,6 @@ const PersonalDashboard: React.FC = () => {
             </div>
           </div>
 
-          <Link
-            to="/collaborator/invitations"
-            className="block group bg-white rounded-3xl border border-slate-200 shadow-sm p-6 hover:border-emerald-200 transition-all"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100">
-                <Bell className="w-5 h-5 text-orange-600" />
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
-            </div>
-            <h3 className="font-black text-slate-900 uppercase tracking-tight mb-1">Lời mời hợp tác</h3>
-            <p className="text-xs text-slate-500 font-medium">Kiểm tra và quản lý các lời mời làm CTV từ các nhà vườn.</p>
-          </Link>
         </div>
       </div>
     </div>

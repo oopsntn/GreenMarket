@@ -1,7 +1,7 @@
 import axios from "axios";
 import { db } from "../../config/db";
-import { users, categories, posts, favoritePosts } from "../../models/schema/index";
-import { eq } from "drizzle-orm";
+import { users, categories, posts, userFavorites } from "../../models/schema/index";
+import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { slugify } from "../../utils/slugify";
 import "dotenv/config";
@@ -67,7 +67,7 @@ async function runSavedPostsTests() {
         // Test 2: Toggle save (bookmark it)
         console.log(`\n[Test] Calling POST /posts/${testPostId}/favorite...`);
         const toggleSavedRes = await axios.post(`${BASE_URL}/posts/${testPostId}/favorite`, {}, { headers });
-        if (toggleSavedRes.data.isSaved === true && toggleSavedRes.data.message === "Post saved") {
+        if (toggleSavedRes.data.isSaved === true && toggleSavedRes.data.message.includes("added to favorites")) {
             console.log("✅ Passed: Post was bookmarked successfully.");
         } else {
             console.log("❌ Failed: Toggling save to true failed.", toggleSavedRes.data);
@@ -89,7 +89,7 @@ async function runSavedPostsTests() {
         // Test 4: Toggle save (unbookmark it)
         console.log(`\n[Test] Calling POST /posts/${testPostId}/favorite (second time)...`);
         const toggleUnsavedRes = await axios.post(`${BASE_URL}/posts/${testPostId}/favorite`, {}, { headers });
-        if (toggleUnsavedRes.data.isSaved === false && toggleUnsavedRes.data.message === "Post unsaved") {
+        if (toggleUnsavedRes.data.isSaved === false && toggleUnsavedRes.data.message.includes("removed from favorites")) {
             console.log("✅ Passed: Post was unbookmarked successfully.");
         } else {
             console.log("❌ Failed: Toggling save to false failed.", toggleUnsavedRes.data);
@@ -105,7 +105,13 @@ async function runSavedPostsTests() {
         // Cleanup Phase
         console.log("Cleaning up Test 07 data...");
         if (testUserId && testPostId) {
-             await db.delete(favoritePosts).where(eq(favoritePosts.favoritePostPostId, testPostId));
+             await db.delete(userFavorites).where(
+                 and(
+                    eq(userFavorites.userId, testUserId),
+                    eq(userFavorites.targetId, testPostId),
+                    eq(userFavorites.targetType, "post")
+                 )
+             );
         }
         if (testPostId) await db.delete(posts).where(eq(posts.postId, testPostId));
         if (testUserId) await db.delete(users).where(eq(users.userId, testUserId));

@@ -84,10 +84,10 @@ export {
 } from "./post-categories.ts";
 export { postMeta, type PostMeta, type NewPostMeta } from "./post-meta.ts";
 export {
-  favoritePosts,
-  type FavoritePost,
-  type NewFavoritePost,
-} from "./favorite-posts.ts";
+  userFavorites,
+  type UserFavorite,
+  type NewUserFavorite,
+} from "./user-favorites.ts";
 
 // Report & Moderation
 export { reports, type Report, type NewReport } from "./reports.ts";
@@ -155,10 +155,10 @@ export {
   type NewJobContactRequest,
 } from "./job-contact-requests.ts";
 export {
-  earningEntries,
-  type EarningEntry,
-  type NewEarningEntry,
-} from "./earning-entries.ts";
+  earnings,
+  type Earning,
+  type NewEarning,
+} from "./earnings.ts";
 export {
   payoutRequests,
   type PayoutRequest,
@@ -216,21 +216,6 @@ export {
   type HostContent,
   type NewHostContent,
 } from "./host-contents.ts";
-export {
-  favoriteContents,
-  type FavoriteContent,
-  type NewFavoriteContent,
-} from "./favorite-contents.ts";
-export {
-  hostEarnings,
-  type HostEarning,
-  type NewHostEarning,
-} from "./host-earnings.ts";
-export {
-  hostPayoutRequests,
-  type HostPayoutRequest,
-  type NewHostPayoutRequest,
-} from "./host-payout-requests.ts";
 
 // System
 export {

@@ -15,7 +15,7 @@ import {
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
-  earningEntries,
+  earnings,
   jobContactRequests,
   jobDeliverables,
   jobs,
@@ -117,10 +117,10 @@ const getProgressPercent = (status: string | null | undefined) => {
 const calculateAvailableBalance = async (collaboratorId: number) => {
   const [earningSummary] = await db
     .select({
-      total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+      total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
     })
-    .from(earningEntries)
-    .where(eq(earningEntries.earningEntryCollaboratorId, collaboratorId));
+    .from(earnings)
+    .where(eq(earnings.userId, collaboratorId));
 
   const [payoutSummary] = await db
     .select({
@@ -129,7 +129,7 @@ const calculateAvailableBalance = async (collaboratorId: number) => {
     .from(payoutRequests)
     .where(
       and(
-        eq(payoutRequests.payoutRequestCollaboratorId, collaboratorId),
+        eq(payoutRequests.payoutRequestUserId, collaboratorId),
         inArray(payoutRequests.payoutRequestStatus, ["pending", "approved"]),
       ),
     );
@@ -184,10 +184,10 @@ export const getCollaboratorProfile = async (
 
     const [earningSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
       })
-      .from(earningEntries)
-      .where(eq(earningEntries.earningEntryCollaboratorId, userId));
+      .from(earnings)
+      .where(eq(earnings.userId, userId));
 
     const availableBalance = await calculateAvailableBalance(userId);
 
@@ -856,13 +856,14 @@ export const submitJobDeliverables = async (
         .returning();
 
       const [earningEntry] = await tx
-        .insert(earningEntries)
+        .insert(earnings)
         .values({
-          earningEntryCollaboratorId: userId,
-          earningEntryJobId: jobId,
-          earningEntryAmount: completedJob.jobPrice ?? "0",
-          earningEntryType: "job",
-          earningEntryCreatedAt: now,
+          userId: userId,
+          sourceId: jobId,
+          amount: completedJob.jobPrice ?? "0",
+          type: "job",
+          status: "completed",
+          createdAt: now,
         })
         .returning();
 
@@ -914,47 +915,48 @@ export const getCollaboratorEarnings = async (
     }
 
     const conditions: SQL[] = [
-      eq(earningEntries.earningEntryCollaboratorId, userId),
+      eq(earnings.userId, userId),
     ];
     if (from) {
-      conditions.push(gte(earningEntries.earningEntryCreatedAt, from));
+      conditions.push(gte(earnings.createdAt, from));
     }
     if (to) {
-      conditions.push(lte(earningEntries.earningEntryCreatedAt, to));
+      conditions.push(lte(earnings.createdAt, to));
     }
 
     const [summary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
         txCount: sql<number>`COUNT(*)`,
       })
-      .from(earningEntries)
+      .from(earnings)
       .where(and(...conditions));
 
     const byType = await db
       .select({
-        type: earningEntries.earningEntryType,
-        total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+        type: earnings.type,
+        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
         count: sql<number>`COUNT(*)`,
       })
-      .from(earningEntries)
+      .from(earnings)
       .where(and(...conditions))
-      .groupBy(earningEntries.earningEntryType)
-      .orderBy(asc(earningEntries.earningEntryType));
+      .groupBy(earnings.type)
+      .orderBy(asc(earnings.type));
 
     const history = await db
       .select({
-        earningEntryId: earningEntries.earningEntryId,
-        jobId: earningEntries.earningEntryJobId,
+        earningId: earnings.earningId,
+        sourceId: earnings.sourceId,
         jobTitle: jobs.jobTitle,
-        amount: earningEntries.earningEntryAmount,
-        type: earningEntries.earningEntryType,
-        createdAt: earningEntries.earningEntryCreatedAt,
+        amount: earnings.amount,
+        type: earnings.type,
+        status: earnings.status,
+        createdAt: earnings.createdAt,
       })
-      .from(earningEntries)
-      .leftJoin(jobs, eq(earningEntries.earningEntryJobId, jobs.jobId))
+      .from(earnings)
+      .leftJoin(jobs, eq(earnings.sourceId, jobs.jobId))
       .where(and(...conditions))
-      .orderBy(desc(earningEntries.earningEntryCreatedAt));
+      .orderBy(desc(earnings.createdAt));
 
     const total = toNumber(summary?.total);
     const txCount = Number(summary?.txCount ?? 0);
@@ -996,7 +998,7 @@ export const getPayoutRequestHistory = async (
     const rows = await db
       .select()
       .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestCollaboratorId, userId))
+      .where(eq(payoutRequests.payoutRequestUserId, userId))
       .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
       .limit(limit)
       .offset(offset);
@@ -1004,7 +1006,7 @@ export const getPayoutRequestHistory = async (
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestCollaboratorId, userId));
+      .where(eq(payoutRequests.payoutRequestUserId, userId));
 
     const totalItems = Number(countResult?.count ?? 0);
     const totalPages = Math.ceil(totalItems / limit);
@@ -1074,7 +1076,7 @@ export const createPayoutRequest = async (
     const [createdRequest] = await db
       .insert(payoutRequests)
       .values({
-        payoutRequestCollaboratorId: userId,
+        payoutRequestUserId: userId,
         payoutRequestAmount: amount.toFixed(2),
         payoutRequestMethod: method,
         payoutRequestStatus: "pending",
