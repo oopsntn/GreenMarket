@@ -22,6 +22,10 @@ import PersonalDashboard from './pages/PersonalDashboard';
 import ScrollToTop from './components/ScrollToTop';
 import News from './pages/News';
 import NewsBookmarks from './pages/NewsBookmarks';
+import CollaboratorDirectory from './pages/CollaboratorDirectory';
+import CollaboratorInvitations from './pages/CollaboratorInvitations';
+import ShopTeamManagement from './pages/ShopTeamManagement';
+import { Toaster } from 'react-hot-toast';
 
 /**
  * AppContent handles the conditional rendering of the Navbar
@@ -87,6 +91,21 @@ const AppContent: React.FC = () => {
             <NewsBookmarks />
           </ProtectedRoute>
         } />
+        <Route path="/collaborator/directory" element={
+          <ProtectedRoute>
+            <CollaboratorDirectory />
+          </ProtectedRoute>
+        } />
+        <Route path="/collaborator/invitations" element={
+          <ProtectedRoute>
+            <CollaboratorInvitations />
+          </ProtectedRoute>
+        } />
+        <Route path="/owner-dashboard/team" element={
+          <ProtectedRoute>
+            <ShopTeamManagement />
+          </ProtectedRoute>
+        } />
       </Routes>
     </div>
   );
@@ -97,6 +116,7 @@ function App() {
     <AuthProvider>
       <Router>
         <ScrollToTop />
+        <Toaster position="top-right" />
         <AppContent />
       </Router>
     </AuthProvider>

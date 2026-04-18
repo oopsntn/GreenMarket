@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getPaymentHistory } from '../services/api';
-import { Clock, CheckCircle2, XCircle, ChevronLeft, Zap, Store, Receipt, Calendar } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, ChevronLeft, Zap, Store, Receipt, Calendar, Bell, ArrowRight } from 'lucide-react';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 const formatVnd = (value: number | string) =>
@@ -79,7 +79,7 @@ const PersonalDashboard: React.FC = () => {
               </div>
               <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Lịch sử giao dịch</h2>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-widest border-b border-slate-200">
@@ -126,33 +126,33 @@ const PersonalDashboard: React.FC = () => {
 
           {/* Mobile view for transactions */}
           <div className="md:hidden space-y-4">
-             <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight ml-2">Lịch sử giao dịch</h2>
-             {transactions.length === 0 ? (
-               <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center text-slate-400 font-medium italic shadow-sm">
-                  Chưa có giao dịch nào
-               </div>
-             ) : (
-               transactions.map((txn, index) => (
-                 <div key={txn.id || index} className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-3">
-                   <div className="flex justify-between items-start">
-                     <div>
-                       <div className="font-bold text-slate-900">#GD_{txn.id}</div>
-                       <div className="text-slate-500 text-xs flex items-center gap-1 mt-1">
-                         <Calendar className="w-3 h-3" /> {new Date(txn.createdAt).toLocaleDateString('vi-VN')}
-                       </div>
-                     </div>
-                     {getStatusBadge(txn.status)}
-                   </div>
-                   <div className="pt-2 border-t border-slate-100">
-                     <div className="font-bold text-slate-800">{txn.packageTitle || 'Giao dịch hệ thống'}</div>
-                     {txn.postTitle && <div className="text-xs text-slate-500 mt-1">Bài: {txn.postTitle}</div>}
-                   </div>
-                   <div className="pt-2 flex justify-end">
-                     <div className="font-black text-slate-900 text-base">{formatVnd(txn.amount)}</div>
-                   </div>
-                 </div>
-               ))
-             )}
+            <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight ml-2">Lịch sử giao dịch</h2>
+            {transactions.length === 0 ? (
+              <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center text-slate-400 font-medium italic shadow-sm">
+                Chưa có giao dịch nào
+              </div>
+            ) : (
+              transactions.map((txn, index) => (
+                <div key={txn.id || index} className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-bold text-slate-900">#GD_{txn.id}</div>
+                      <div className="text-slate-500 text-xs flex items-center gap-1 mt-1">
+                        <Calendar className="w-3 h-3" /> {new Date(txn.createdAt).toLocaleDateString('vi-VN')}
+                      </div>
+                    </div>
+                    {getStatusBadge(txn.status)}
+                  </div>
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="font-bold text-slate-800">{txn.packageTitle || 'Giao dịch hệ thống'}</div>
+                    {txn.postTitle && <div className="text-xs text-slate-500 mt-1">Bài: {txn.postTitle}</div>}
+                  </div>
+                  <div className="pt-2 flex justify-end">
+                    <div className="font-black text-slate-900 text-base">{formatVnd(txn.amount)}</div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -165,7 +165,7 @@ const PersonalDashboard: React.FC = () => {
               </div>
               <h2 className="text-lg font-black uppercase tracking-tight">Bài đăng đang đẩy</h2>
             </div>
-            
+
             <div className="space-y-4 relative z-10">
               {activePromotions.length === 0 ? (
                 <div className="text-emerald-100 text-sm font-medium text-center py-6">
@@ -188,6 +188,20 @@ const PersonalDashboard: React.FC = () => {
               )}
             </div>
           </div>
+
+          <Link
+            to="/collaborator/invitations"
+            className="block group bg-white rounded-3xl border border-slate-200 shadow-sm p-6 hover:border-emerald-200 transition-all"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100">
+                <Bell className="w-5 h-5 text-orange-600" />
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+            </div>
+            <h3 className="font-black text-slate-900 uppercase tracking-tight mb-1">Lời mời hợp tác</h3>
+            <p className="text-xs text-slate-500 font-medium">Kiểm tra và quản lý các lời mời làm CTV từ các nhà vườn.</p>
+          </Link>
         </div>
       </div>
     </div>

@@ -20,7 +20,10 @@ import {
   jobDeliverables,
   jobs,
   payoutRequests,
+  shopCollaborators,
+  shops,
   users,
+  hostContents,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 
@@ -779,9 +782,9 @@ export const submitJobDeliverables = async (
 
     const fileUrls = Array.isArray(req.body?.fileUrls)
       ? req.body.fileUrls.filter(
-          (item: unknown): item is string =>
-            typeof item === "string" && item.trim().length > 0,
-        )
+        (item: unknown): item is string =>
+          typeof item === "string" && item.trim().length > 0,
+      )
       : [];
     const note = typeof req.body?.note === "string" ? req.body.note.trim() : null;
 
@@ -1088,6 +1091,326 @@ export const createPayoutRequest = async (
       },
       availableBalanceAfter: Number((availableBalance - amount).toFixed(2)),
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+/**
+ * Get a public directory of collaborators for Garden Owners to browse.
+ * Masks contact info unless there is an active relationship.
+ */
+export const getPublicCollaborators = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
+
+    // 1. Get the requester's shop
+    const [ownerShop] = await db
+      .select({ shopId: shops.shopId })
+      .from(shops)
+      .where(eq(shops.shopId, userId))
+      .limit(1);
+
+    const shopId = ownerShop?.shopId || 0;
+
+    // 2. Build conditions for public listing
+    // Note: business_role_id 3 is COLLABORATOR
+    const conditions: SQL[] = [eq(users.userBusinessRoleId, 3), eq(users.userStatus, "active")];
+
+    const rows = await db
+      .select({
+        userId: users.userId,
+        displayName: users.userDisplayName,
+        avatarUrl: users.userAvatarUrl,
+        bio: users.userBio,
+        location: users.userLocation,
+        availabilityStatus: users.userAvailabilityStatus,
+        availabilityNote: users.userAvailabilityNote,
+        // Masking logic: returns mobile/email only if status is 'active' with the requester's shop
+        mobile: sql<string | null>`CASE WHEN ${shopCollaborators.shopCollaboratorsStatus} = 'active' THEN ${users.userMobile} ELSE NULL END`,
+        email: sql<string | null>`CASE WHEN ${shopCollaborators.shopCollaboratorsStatus} = 'active' THEN ${users.userEmail} ELSE NULL END`,
+        relationshipStatus: shopCollaborators.shopCollaboratorsStatus,
+      })
+      .from(users)
+      .leftJoin(
+        shopCollaborators,
+        and(
+          eq(users.userId, shopCollaborators.collaboratorId),
+          eq(shopCollaborators.shopCollaboratorsShopId, shopId)
+        )
+      )
+      .where(and(...conditions))
+      .orderBy(desc(users.userCreatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(and(...conditions));
+
+    const totalItems = Number(countResult?.count ?? 0);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      data: rows,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * Get full public profile of a collaborator including portfolio and stats.
+ */
+export const getPublicCollaboratorDetail = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const requesterId = req.user?.id;
+    const targetUserId = parseId(req.params.id as string);
+
+    if (!requesterId || !targetUserId) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    // 1. Get basic profile
+    const [profile] = await db
+      .select({
+        userId: users.userId,
+        displayName: users.userDisplayName,
+        avatarUrl: users.userAvatarUrl,
+        bio: users.userBio,
+        location: users.userLocation,
+        availabilityStatus: users.userAvailabilityStatus,
+        availabilityNote: users.userAvailabilityNote,
+      })
+      .from(users)
+      .where(and(eq(users.userId, targetUserId), eq(users.userBusinessRoleId, 3)))
+      .limit(1);
+
+    if (!profile) {
+      res.status(404).json({ error: "Collaborator not found" });
+      return;
+    }
+
+    // 2. Get relationship with current requester's shop
+    const [ownerShop] = await db
+      .select({ shopId: shops.shopId })
+      .from(shops)
+      .where(eq(shops.shopId, requesterId))
+      .limit(1);
+
+    const shopId = ownerShop?.shopId || 0;
+    console.log(`[getPublicCollaboratorDetail] Requester: ${requesterId}, Shop found: ${shopId}`);
+
+    const [relationship] = await db
+      .select({ status: shopCollaborators.shopCollaboratorsStatus })
+      .from(shopCollaborators)
+      .where(
+        and(
+          eq(shopCollaborators.collaboratorId, targetUserId),
+          eq(shopCollaborators.shopCollaboratorsShopId, shopId)
+        )
+      )
+      .limit(1);
+
+    // 3. Get Statistics (wrapped in try-catch to be extra safe)
+    let totalGardens = 0;
+    let totalPosts = 0;
+    try {
+      const [gardenResult] = await db
+        .select({ count: sql`count(distinct ${shopCollaborators.shopCollaboratorsShopId})` })
+        .from(shopCollaborators)
+        .where(and(eq(shopCollaborators.collaboratorId, targetUserId), eq(shopCollaborators.shopCollaboratorsStatus, "active")));
+      totalGardens = Number(gardenResult?.count || 0);
+
+      const [postResult] = await db
+        .select({ count: sql`count(*)` })
+        .from(hostContents)
+        .where(and(eq(hostContents.hostContentAuthorId, targetUserId), eq(hostContents.hostContentStatus, "published")));
+      totalPosts = Number(postResult?.count || 0);
+    } catch (err) {
+      console.error("Error fetching collaborator stats:", err);
+    }
+
+    // 4. Collect Portfolio Photos
+    const portfolioPhotos: string[] = [];
+    try {
+      const deliverables = await db
+        .select({ urls: jobDeliverables.deliverableFileUrls })
+        .from(jobDeliverables)
+        .where(eq(jobDeliverables.deliverableCollaboratorId, targetUserId))
+        .orderBy(desc(jobDeliverables.deliverableSubmittedAt))
+        .limit(5);
+
+      const hostPhotos = await db
+        .select({ urls: hostContents.hostContentMediaUrls })
+        .from(hostContents)
+        .where(and(eq(hostContents.hostContentAuthorId, targetUserId), eq(hostContents.hostContentStatus, "published")))
+        .orderBy(desc(hostContents.hostContentCreatedAt))
+        .limit(5);
+
+      deliverables.forEach(d => {
+        if (Array.isArray(d.urls)) {
+          d.urls.forEach(url => {
+            if (typeof url === 'string' && !portfolioPhotos.includes(url)) portfolioPhotos.push(url);
+          });
+        }
+      });
+      hostPhotos.forEach(p => {
+        if (Array.isArray(p.urls)) {
+          p.urls.forEach(url => {
+            if (typeof url === 'string' && !portfolioPhotos.includes(url)) portfolioPhotos.push(url);
+          });
+        }
+      });
+    } catch (err) {
+      console.error("Error fetching collaborator portfolio:", err);
+    }
+
+    // 5. Build final object (with masking if not active)
+    const [maskCheck] = await db
+      .select({
+        mobile: users.userMobile,
+        email: users.userEmail
+      })
+      .from(users)
+      .where(eq(users.userId, targetUserId))
+      .limit(1);
+
+    const isContactVisible = relationship?.status === 'active';
+
+    res.json({
+      ...profile,
+      mobile: isContactVisible ? maskCheck?.mobile : null,
+      email: isContactVisible ? maskCheck?.email : null,
+      relationshipStatus: relationship?.status || null,
+      stats: {
+        totalGardens,
+        totalPosts,
+      },
+      portfolioPhotos: portfolioPhotos.slice(0, 15),
+    });
+  } catch (error) {
+    console.error("Detailed error in getPublicCollaboratorDetail:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * Get pending collaborator invitations for the current CTV user.
+ */
+export const getMyInvitations = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const invitations = await db
+      .select({
+        invitationId: shopCollaborators.shopCollaboratorsId,
+        status: shopCollaborators.shopCollaboratorsStatus,
+        createdAt: shopCollaborators.shopCollaboratorsCreatedAt,
+        shopId: shops.shopId,
+        shopName: shops.shopName,
+        shopLogoUrl: shops.shopLogoUrl,
+        shopOwnerName: users.userDisplayName,
+      })
+      .from(shopCollaborators)
+      .innerJoin(shops, eq(shopCollaborators.shopCollaboratorsShopId, shops.shopId))
+      .innerJoin(users, eq(shops.shopId, users.userId))
+      .where(
+        and(
+          eq(shopCollaborators.collaboratorId, userId),
+          eq(shopCollaborators.shopCollaboratorsStatus, "pending")
+        )
+      )
+      .orderBy(desc(shopCollaborators.shopCollaboratorsCreatedAt));
+
+    res.json(invitations);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * Respond (accept/reject) to a shop invitation.
+ */
+export const respondToInvitation = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const invitationId = parseId(req.params.id as string);
+
+    if (!req.body) {
+      res.status(400).json({ error: "Request body is missing. Ensure you are sending JSON with Content-Type: application/json" });
+      return;
+    }
+
+    const { action } = req.body; // 'accept' or 'reject'
+
+    if (!userId || !invitationId) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    if (!["accept", "reject"].includes(action)) {
+      res.status(400).json({ error: "Action must be 'accept' or 'reject'" });
+      return;
+    }
+
+    const newStatus = action === "accept" ? "active" : "rejected";
+
+    const [updated] = await db
+      .update(shopCollaborators)
+      .set({
+        shopCollaboratorsStatus: newStatus,
+        // In a real system we'd track updated at
+      })
+      .where(
+        and(
+          eq(shopCollaborators.shopCollaboratorsId, invitationId),
+          eq(shopCollaborators.collaboratorId, userId),
+          eq(shopCollaborators.shopCollaboratorsStatus, "pending")
+        )
+      )
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "Invitation not found or no longer pending" });
+      return;
+    }
+
+    res.json({ message: `Invitation ${action}ed successfully`, status: newStatus });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });

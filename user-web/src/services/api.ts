@@ -73,6 +73,7 @@ export interface OwnerDashboardSummary {
   successfulBoostPurchases?: number;
   activePromotions: number;
   boostedPostsActive?: number;
+  pendingCollaboratorPosts?: number;
 }
 
 export interface OwnerDashboardTopPost {
@@ -442,5 +443,83 @@ export const getMyFavoriteHostContents = (params?: {
 
 export const getHostPublicContentDetail = (id: number | string) =>
   api.get<HostPublicContent>(`/host/public/contents/${id}`);
+
+// --- Collaborator (CTV) API ---
+export interface CollaboratorProfile {
+  userId: number;
+  displayName: string;
+  avatarUrl: string | null;
+  bio?: string | null;
+  location?: string | null;
+  availabilityStatus?: string | null;
+  availabilityNote?: string | null;
+  mobile?: string | null;
+  email?: string | null;
+  relationshipStatus?: 'pending' | 'active' | 'rejected' | null;
+  joinedAt?: string;
+}
+
+export interface CollaboratorFullProfile extends CollaboratorProfile {
+  stats: {
+    totalGardens: number;
+    totalPosts: number;
+  };
+  portfolioPhotos: string[];
+}
+
+export interface CollaboratorInvitation {
+  invitationId: number;
+  status: string;
+  createdAt: string;
+  shopId: number;
+  shopName: string;
+  shopLogoUrl: string | null;
+  shopOwnerName: string;
+}
+
+export interface CollaboratorsListResponse {
+  data: CollaboratorProfile[];
+  meta: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+// 1. Owner Discovery & Management
+export const getPublicCollaborators = (params?: {
+  page?: number;
+  limit?: number;
+}) => api.get<CollaboratorsListResponse>('/collaborator/public-list', { params });
+
+export const getPublicCollaboratorDetail = (id: number | string) =>
+  api.get<CollaboratorFullProfile>(`/collaborator/public/${id}`);
+
+export const getShopCollaborators = () => 
+  api.get<CollaboratorProfile[]>('/shops/collaborators/all');
+
+export const inviteCollaborator = (userIdentifier: string) => 
+  api.post('/shops/collaborators/invite', { userIdentifier });
+
+export const removeCollaborator = (id: number) => 
+  api.delete(`/shops/collaborators/${id}`);
+
+// 2. CTV Invitations
+export const getMyCollaboratorInvitations = () => 
+  api.get<CollaboratorInvitation[]>('/collaborator/invitations');
+
+export const respondToCollaboratorInvitation = (id: number, action: 'accept' | 'reject') => 
+  api.post(`/collaborator/invitations/${id}/respond`, { action });
+
+// 3. Delegated Post Management
+export const getPendingCollaboratorPosts = () => 
+  api.get<any[]>('/shops/collaborators/posts/pending');
+
+export const approveCollaboratorPost = (id: number) => 
+  api.post(`/shops/collaborators/posts/${id}/approve`);
+
+export const rejectCollaboratorPost = (id: number, reason: string) => 
+  api.post(`/shops/collaborators/posts/${id}/reject`, { reason });
 
 export default api;
