@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActionSheetIOS, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { ArrowRight, Camera, CheckCircle, Image as ImageIcon, Play, Plus, Store, User, X } from 'lucide-react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as WebBrowser from 'expo-web-browser'
@@ -21,16 +21,17 @@ const RegisterShopScreen = ({ navigation }: any) => {
         shopName: '',
         shopLocation: '',
         shopDescription: '',
-        shopLogoUrl: '',
         shopLat: undefined as number | undefined,
         shopLng: undefined as number | undefined,
         shopFacebook: '',
         shopInstagram: '',
         shopYoutube: '',
-        shopGalleryImages: [] as string[],
     })
+    // Local URIs lưu tạm, chưa upload lên server
+    const [localLogoUri, setLocalLogoUri] = useState<string | null>(null)
+    const [localGalleryUris, setLocalGalleryUris] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
-    const [uploadingImage, setUploadingImage] = useState(false)
+    const [uploading, setUploading] = useState(false)
     const [submitted, setSubmitted] = useState(false)
 
     const hasExistingShop = useMemo(
@@ -48,54 +49,82 @@ const RegisterShopScreen = ({ navigation }: any) => {
         [shop]
     )
 
-    const pickImage = async (field: 'shopLogoUrl' | 'shopCoverUrl' | 'shopGalleryImages') => {
+    /** Chọn logo từ thư viện (1 ảnh, crop vuông) */
+    const pickLogoFromLibrary = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (!permission.granted) {
             CustomAlert('Lỗi', 'Vui lòng cấp quyền truy cập thư viện ảnh')
             return
         }
-
-        // Cấu hình picker khác nhau theo từng field
-        const isGallery = field === 'shopGalleryImages'
-        const isLogo = field === 'shopLogoUrl'
-
         const result = await ImagePicker.launchImageLibraryAsync({
-            // Logo: crop vuông | Cover: không crop (tránh bug iOS bỏ qua asset)
-            // Gallery: cho phép chọn nhiều
-            allowsEditing: isLogo,
-            aspect: isLogo ? [1, 1] : undefined,
-            allowsMultipleSelection: isGallery,
-            selectionLimit: isGallery ? (4 - formData.shopGalleryImages.length) : 1,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        })
+        if (!result.canceled && result.assets?.[0]) {
+            setLocalLogoUri(result.assets[0].uri)
+        }
+    }
+
+    /** Chụp logo bằng camera */
+    const pickLogoFromCamera = async () => {
+        const permission = await ImagePicker.requestCameraPermissionsAsync()
+        if (!permission.granted) {
+            CustomAlert('Lỗi', 'Vui lòng cấp quyền truy cập máy ảnh')
+            return
+        }
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.8,
+        })
+        if (!result.canceled && result.assets?.[0]) {
+            setLocalLogoUri(result.assets[0].uri)
+        }
+    }
+
+    /** Hiển thị ActionSheet chọn nguồn ảnh logo (iOS) hoặc hỏi alert (Android) */
+    const handlePickLogo = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Hủy', 'Chọn từ thư viện', 'Chụp ảnh'],
+                    cancelButtonIndex: 0,
+                },
+                (index) => {
+                    if (index === 1) pickLogoFromLibrary()
+                    if (index === 2) pickLogoFromCamera()
+                }
+            )
+        } else {
+            // Android: dùng React Native Alert với buttons
+            const { Alert } = require('react-native')
+            Alert.alert('Chọn ảnh đại diện', '', [
+                { text: 'Hủy', style: 'cancel' },
+                { text: 'Chọn từ thư viện', onPress: pickLogoFromLibrary },
+                { text: 'Chụp ảnh', onPress: pickLogoFromCamera },
+            ])
+        }
+    }
+
+    /** Chọn nhiều ảnh gallery từ thư viện */
+    const pickGalleryImages = async () => {
+        const remaining = 4 - localGalleryUris.length
+        if (remaining <= 0) return
+
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+        if (!permission.granted) {
+            CustomAlert('Lỗi', 'Vui lòng cấp quyền truy cập thư viện ảnh')
+            return
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            allowsMultipleSelection: true,
+            selectionLimit: remaining,
             quality: 0.7,
         })
-
-        if (result.canceled || !result.assets?.length) return
-
-        try {
-            setUploadingImage(true)
-
-            if (isGallery) {
-                // Upload nhiều ảnh cùng lúc bằng postService.uploadMedia
-                const uris = result.assets.map((a) => a.uri)
-                const uploadRes = await postService.uploadMedia(uris)
-                if (uploadRes?.urls?.length) {
-                    setFormData((prev) => ({
-                        ...prev,
-                        shopGalleryImages: [...prev.shopGalleryImages, ...uploadRes.urls].slice(0, 4)
-                    }))
-                }
-            } else {
-                // Logo và Cover: upload từng ảnh
-                const uploadRes = await ProfileService.uploadAvatar(result.assets[0].uri)
-                if (uploadRes?.urls?.[0]) {
-                    setFormData((prev) => ({ ...prev, [field]: uploadRes.urls[0] }))
-                }
-            }
-        } catch (e) {
-            console.error('Error uploading shop image:', e)
-            CustomAlert('Lỗi tải lên', 'Không thể tải ảnh lên. Vui lòng thử lại.')
-        } finally {
-            setUploadingImage(false)
+        if (!result.canceled && result.assets?.length) {
+            const newUris = result.assets.map((a) => a.uri)
+            setLocalGalleryUris((prev) => [...prev, ...newUris].slice(0, 4))
         }
     }
 
@@ -103,14 +132,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
         setFormData((prev) => ({ ...prev, shopLocation: addr }))
     }
 
-    const handleLocationSelect = (lat: number, lng: number) => {
-        setFormData((prev) => ({ ...prev, shopLat: lat, shopLng: lng }))
-    }
-
     const validateForm = () => {
-        const phoneRegex = /^(0|84)(3|5|7|8|9)([0-9]{8})$/
-        const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/
-
         if (!formData.shopName.trim()) {
             CustomAlert('Lỗi', 'Vui lòng nhập tên cửa hàng')
             return false
@@ -119,20 +141,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
             CustomAlert('Lỗi', 'Tên cửa hàng phải có ít nhất 3 ký tự')
             return false
         }
-
-        // Đồng nhất với user-web: logo là bắt buộc
-        if (!formData.shopLogoUrl) {
+        if (!localLogoUri) {
             CustomAlert('Lỗi', 'Vui lòng tải lên ảnh đại diện cho cửa hàng')
             return false
         }
-
-        // Đồng nhất với user-web: tối thiểu 3 ảnh gallery
-        if (formData.shopGalleryImages.length < 3) {
+        if (localGalleryUris.length < 3) {
             CustomAlert('Lỗi', 'Vui lòng tải lên ít nhất 3 ảnh mô tả cửa hàng')
             return false
         }
-
-        // Mô tả bắt buộc (đồng nhất với user-web)
         if (!formData.shopDescription.trim()) {
             CustomAlert('Lỗi', 'Vui lòng nhập mô tả cho cửa hàng')
             return false
@@ -141,17 +157,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
             CustomAlert('Lỗi', 'Mô tả cửa hàng quá ngắn (cần ít nhất 10 ký tự)')
             return false
         }
-
-        if (!formData.shopLocation.trim() || formData.shopLocation.trim().length < 5) {
-            CustomAlert('Lỗi', 'Vui lòng nhập định vị địa chỉ rõ ràng cho cửa hàng')
+        if (!formData.shopLocation.trim() || formData.shopLocation.trim() === 'Vị trí đã chọn') {
+            CustomAlert('Lỗi', 'Vui lòng xác định địa chỉ cửa hàng hợp lệ')
             return false
         }
-
         if (!formData.shopLat || !formData.shopLng) {
             CustomAlert('Lỗi', 'Vui lòng chọn tọa độ cửa hàng trên bản đồ')
             return false
         }
-
         return true
     }
 
@@ -161,36 +174,23 @@ const RegisterShopScreen = ({ navigation }: any) => {
         return value.startsWith('http') ? value : `https://${value}`
     }
 
-    /**
-     * Poll shop status sau khi browser đóng.
-     * VNPAY IPN (webhook) có thể chậm vài giây → cần thử lại nhiều lần
-     * thay vì chỉ refresh 1 lần ngay lập tức.
-     */
     const pollShopActivation = async (maxRetries = 6, delayMs = 2500) => {
         for (let i = 0; i < maxRetries; i++) {
             await new Promise(resolve => setTimeout(resolve, delayMs))
             await refreshShop()
-            // AuthContext sẽ cập nhật shop state; component tự re-render
-            // nếu status đổi thành 'active'. Không cần kiểm tra ở đây.
         }
     }
 
     const openPaymentBrowser = async () => {
         const paymentRes = await paymentService.createShopPaymentIntent()
         console.log('[Payment] createShopPaymentIntent response:', paymentRes)
-
-        // Backend chỉ trả { paymentUrl } — không fallback field khác
         const paymentUrl = paymentRes?.paymentUrl
-
         if (!paymentUrl) {
             console.error('[Payment] Unexpected response shape:', paymentRes)
             throw new Error('Không nhận được link thanh toán từ hệ thống')
         }
-
         const result = await WebBrowser.openBrowserAsync(paymentUrl)
         console.log('[Payment] Browser closed, result:', result)
-
-        // Bắt đầu poll để bắt kịp IPN VNPAY (có thể chậm vài giây)
         await pollShopActivation()
     }
 
@@ -199,37 +199,52 @@ const RegisterShopScreen = ({ navigation }: any) => {
             CustomAlert('Thông báo', 'Hệ thống xác nhận tài khoản này đã có cửa hàng.')
             return
         }
-
-        if (!validateForm()) {
-            return
-        }
+        if (!validateForm()) return
 
         if (isBlockedOrOtherShopState) {
-            CustomAlert(
-                'Tài khoản bị hạn chế',
-                'Cửa hàng của bạn đang bị hạn chế hoặc đã bị từ chối. Vui lòng liên hệ bộ phận hỗ trợ để được giải quyết.'
-            )
+            CustomAlert('Tài khoản bị hạn chế', 'Cửa hàng của bạn đang bị hạn chế hoặc đã bị từ chối. Vui lòng liên hệ bộ phận hỗ trợ.')
             return
         }
-
         if (isPendingShop) {
-            CustomAlert('Thông báo', 'Cửa hàng của bạn đang chờ kích hoạt. Vui lòng hoàn tất thanh toán để bắt đầu sử dụng.')
+            CustomAlert('Thông báo', 'Cửa hàng của bạn đang chờ kích hoạt. Vui lòng hoàn tất thanh toán.')
             return
         }
 
-        if (uploadingImage) {
-            CustomAlert('Thông báo', 'Vui lòng chờ tải ảnh lên hoàn tất trước khi đăng ký')
-            return
-        }
-
-        const validateSocial = (url: string) => {
-            if (url && !url.startsWith('http')) {
-                return `https://${url}`;
-            }
-            return url;
-        };
         setLoading(true)
         try {
+            // ─── Bước 1: Upload ảnh ──────────────────────────────────────────
+            setUploading(true)
+            let uploadedLogoUrl = ''
+            let uploadedGalleryUrls: string[] = []
+
+            try {
+                if (localLogoUri) {
+                    const logoRes = await ProfileService.uploadAvatar(localLogoUri)
+                    if (logoRes?.urls?.[0]) uploadedLogoUrl = logoRes.urls[0]
+                }
+                if (localGalleryUris.length > 0) {
+                    const galleryRes = await postService.uploadMedia(localGalleryUris)
+                    if (galleryRes?.urls?.length) uploadedGalleryUrls = galleryRes.urls
+                }
+            } catch (uploadErr: any) {
+                console.error('[Upload] Lỗi tải ảnh:', uploadErr)
+                CustomAlert('Lỗi tải ảnh', 'Không thể tải ảnh lên. Vui lòng kiểm tra kết nối và thử lại.')
+                return
+            } finally {
+                setUploading(false)
+            }
+
+            // Kiểm tra kết quả upload
+            if (!uploadedLogoUrl) {
+                CustomAlert('Lỗi', 'Không tải được ảnh đại diện. Vui lòng thử lại.')
+                return
+            }
+            if (uploadedGalleryUrls.length < 3) {
+                CustomAlert('Lỗi', 'Cần tối thiểu 3 ảnh mô tả cửa hàng. Vui lòng thử lại.')
+                return
+            }
+
+            // ─── Bước 2: Tạo shop ────────────────────────────────────────────
             const cleanData = {
                 shopName: formData.shopName.trim(),
                 shopPhone: user?.userMobile,
@@ -237,28 +252,21 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 shopDescription: formData.shopDescription.trim(),
                 shopLat: formData.shopLat,
                 shopLng: formData.shopLng,
-                shopLogoUrl: formData.shopLogoUrl || undefined,
-                // Gửi mảng ảnh, BE sẽ tự xử lý join "|"
-                shopGalleryImages: formData.shopGalleryImages,
-                shopFacebook: validateSocial(formData.shopFacebook.trim()) || undefined,
-                shopInstagram: validateSocial(formData.shopInstagram.trim()) || undefined,
-                shopYoutube: validateSocial(formData.shopYoutube.trim()) || undefined,
+                shopLogoUrl: uploadedLogoUrl,
+                shopGalleryImages: uploadedGalleryUrls,
+                shopFacebook: normalizeSocialUrl(formData.shopFacebook) || undefined,
+                shopInstagram: normalizeSocialUrl(formData.shopInstagram) || undefined,
+                shopYoutube: normalizeSocialUrl(formData.shopYoutube) || undefined,
             }
 
             const createdShop = await ShopService.createShop(cleanData)
             console.log('[Shop] createShop response:', createdShop)
 
-            // QUAN TRỌNG: KHÔNG refreshShop() ở đây.
-            // Nếu refresh trước khi mở browser → isPendingShop = true
-            // → component re-render sang view "pending" TRƯỚC KHI cổng thanh toán mở.
-            // refreshShop chỉ được gọi BÊN TRONG openPaymentBrowser/pollShopActivation.
-
-            // Mở cổng thanh toán ngay sau khi tạo shop thành công
+            // ─── Bước 3: Mở cổng thanh toán ─────────────────────────────────
             try {
                 await openPaymentBrowser()
             } catch (paymentErr: any) {
                 console.error('[Payment] Failed to open payment after register:', paymentErr)
-                // Fallback: refresh shop để UI phản ánh trạng thái pending
                 await refreshShop()
                 CustomAlert(
                     'Chưa mở được thanh toán',
@@ -269,7 +277,6 @@ const RegisterShopScreen = ({ navigation }: any) => {
             }
 
         } catch (error: any) {
-            // Lấy message từ backend response trước, mới fallback về default
             const errorMsg = error.response?.data?.error || 'Không thể đăng ký cửa hàng'
             console.error('[Shop] Register shop error:', error)
             if (error.response?.data?.error === 'User already has a shop registered') {
@@ -277,10 +284,10 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 CustomAlert('Thông báo', 'Hệ thống xác nhận tài khoản này đã có cửa hàng.')
                 return
             }
-
             CustomAlert('Lỗi', errorMsg)
         } finally {
             setLoading(false)
+            setUploading(false)
         }
     }
 
@@ -288,7 +295,6 @@ const RegisterShopScreen = ({ navigation }: any) => {
         try {
             setLoading(true)
             await openPaymentBrowser()
-            // pollShopActivation() đã được gọi bên trong openPaymentBrowser
         } catch (error: any) {
             CustomAlert('Lỗi thanh toán', error?.response?.data?.error || 'Không thể khởi tạo thanh toán VNPAY.')
         } finally {
@@ -346,13 +352,9 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             variant="outline"
                             onPress={async () => {
                                 setLoading(true)
-                                try {
-                                    await refreshShop()
-                                } catch (error: any) {
+                                try { await refreshShop() } catch (error: any) {
                                     CustomAlert('Lỗi', error?.response?.data?.error || 'Không thể tải lại cửa hàng.')
-                                } finally {
-                                    setLoading(false)
-                                }
+                                } finally { setLoading(false) }
                             }}
                             style={[styles.secondaryAction, { marginTop: 16 }]}
                         >
@@ -376,11 +378,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         <Text style={styles.successDesc}>
                             Mỗi tài khoản chỉ được phép có một cửa hàng duy nhất. Bạn có thể xem hoặc chỉnh sửa cửa hàng hiện tại.
                         </Text>
-                        <Button
-                            fullWidth
-                            onPress={() => navigation.navigate('MyShop')}
-                            style={styles.primaryAction}
-                        >
+                        <Button fullWidth onPress={() => navigation.navigate('MyShop')} style={styles.primaryAction}>
                             Xem cửa hàng của tôi
                         </Button>
                         <Button
@@ -397,6 +395,8 @@ const RegisterShopScreen = ({ navigation }: any) => {
             </MobileLayout>
         )
     }
+
+    const isSubmitting = loading || uploading
 
     return (
         <MobileLayout title="Đăng ký cửa hàng" backButton={() => navigation.goBack()}>
@@ -420,52 +420,67 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         required
                     />
 
-                    <View style={styles.imagePickerRow}>
-                        <TouchableOpacity
-                            onPress={() => pickImage('shopLogoUrl')}
-                            style={styles.pickerBox}
-                            disabled={loading || uploadingImage}
-                        >
-                            {formData.shopLogoUrl ? (
-                                <Image source={{ uri: resolveImageUrl(formData.shopLogoUrl) }} style={styles.previewLogo} />
-                            ) : (
-                                <View style={styles.pickerInner}>
-                                    <ImageIcon color="#94a3b8" size={24} />
-                                    <Text style={styles.pickerText}>Ảnh đại diện</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                    </View>
+                    {/* ─── Logo ─── */}
+                    <Text style={styles.label}>Ảnh đại diện cửa hàng *</Text>
+                    <TouchableOpacity
+                        onPress={handlePickLogo}
+                        style={[styles.pickerBox, { marginBottom: 16 }]}
+                        disabled={isSubmitting}
+                    >
+                        {localLogoUri ? (
+                            <View style={{ position: 'relative' }}>
+                                <Image source={{ uri: localLogoUri }} style={styles.previewLogo} />
+                                <TouchableOpacity
+                                    style={styles.removeBadge}
+                                    onPress={() => setLocalLogoUri(null)}
+                                >
+                                    <X size={12} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={styles.pickerInner}>
+                                <Camera color="#94a3b8" size={28} />
+                                <Text style={styles.pickerText}>Chọn hoặc chụp ảnh</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
 
-                    <Text style={styles.label}>Hình ảnh cửa hàng (Tối đa 4 ảnh)</Text>
+                    {/* ─── Gallery ─── */}
+                    <Text style={styles.label}>Hình ảnh cửa hàng * (Tối thiểu 3, tối đa 4 ảnh)</Text>
                     <View style={styles.galleryContainer}>
-                        {formData.shopGalleryImages.map((url, index) => (
+                        {localGalleryUris.map((uri, index) => (
                             <View key={index} style={styles.galleryItem}>
-                                <Image source={{ uri: resolveImageUrl(url) }} style={styles.galleryImage} />
+                                <Image source={{ uri }} style={styles.galleryImage} />
                                 <TouchableOpacity
                                     style={styles.removeBadge}
                                     onPress={() => {
-                                        const newGallery = formData.shopGalleryImages.filter((_, i) => i !== index);
-                                        setFormData({ ...formData, shopGalleryImages: newGallery });
+                                        setLocalGalleryUris(prev => prev.filter((_, i) => i !== index))
                                     }}
                                 >
                                     <X size={12} color="#fff" />
                                 </TouchableOpacity>
                             </View>
                         ))}
-                        {formData.shopGalleryImages.length < 4 && (
-                            <TouchableOpacity style={styles.addGalleryBtn} onPress={pickImage.bind(null, 'shopGalleryImages')}>
+                        {localGalleryUris.length < 4 && (
+                            <TouchableOpacity
+                                style={styles.addGalleryBtn}
+                                onPress={pickGalleryImages}
+                                disabled={isSubmitting}
+                            >
                                 <Plus size={24} color="#94a3b8" />
+                                <Text style={styles.pickerText}>
+                                    {localGalleryUris.length}/4
+                                </Text>
                             </TouchableOpacity>
                         )}
                     </View>
 
                     <Text style={styles.helperText}>
-                        {uploadingImage ? 'Đang tải ảnh lên...' : 'Ảnh đại diện và ảnh bìa không bắt buộc nhưng sẽ làm cửa hàng chuyên nghiệp hơn.'}
+                        💡 Ảnh sẽ được tải lên khi bạn bấm "Đăng ký". Chọn ảnh rõ nét, đại diện tốt cho cửa hàng.
                     </Text>
 
                     <Input
-                        label="Mô tả cửa hàng"
+                        label="Mô tả cửa hàng *"
                         multiline
                         numberOfLines={4}
                         value={formData.shopDescription}
@@ -479,24 +494,22 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             address={formData.shopLocation}
                             onAddressChange={handleAddressChange}
                             onLocationConfirmed={(data: any) => {
-                                console.log(data)
                                 setFormData((prev) => ({
                                     ...prev,
                                     shopLocation: data.fullAddress,
                                     shopLat: data.lat,
                                     shopLng: data.lng,
                                 }))
-                            }
-                            }
+                            }}
                         />
                         {formData.shopLat ? (
                             <Text style={styles.coordinateText}>
-                                Tữa độ: {formData.shopLat.toFixed(4)}, {formData.shopLng?.toFixed(4)}
+                                Tọa độ: {formData.shopLat.toFixed(4)}, {formData.shopLng?.toFixed(4)}
                             </Text>
                         ) : null}
                     </View>
 
-                    {/* Social Media Section */}
+                    {/* Social Media */}
                     <Text style={styles.label}>Mạng xã hội</Text>
                     <Input
                         placeholder="Đường dẫn Facebook"
@@ -511,7 +524,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         icon={<Camera size={18} color="#E4405F" />}
                     />
                     <Input
-                        placeholder="Đường dận Youtube"
+                        placeholder="Đường dẫn Youtube"
                         value={formData.shopYoutube}
                         onChangeText={(t) => setFormData({ ...formData, shopYoutube: t })}
                         icon={<Play size={18} color="#E4405F" />}
@@ -519,12 +532,12 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
                     <Button
                         onPress={handleSubmit}
-                        loading={loading || uploadingImage}
-                        disabled={loading || uploadingImage}
+                        loading={isSubmitting}
+                        disabled={isSubmitting}
                         fullWidth
                         style={styles.submitBtn}
                     >
-                        Đăng ký cửa hàng
+                        {uploading ? 'Đang tải ảnh...' : loading ? 'Đang đăng ký...' : 'Đăng ký cửa hàng'}
                     </Button>
                 </View>
             </ScrollView>
@@ -539,14 +552,11 @@ const styles = StyleSheet.create({
     title: { fontSize: 24, fontWeight: '800', color: '#1e293b', marginTop: 12 },
     subtitle: { fontSize: 14, color: '#64748b', marginTop: 4, textAlign: 'center' },
     form: { paddingBottom: 50 },
-    imagePickerRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-    pickerBox: { flex: 1, height: 100, borderStyle: 'dashed', borderWidth: 2, borderColor: '#cbd5e1', borderRadius: 16, overflow: 'hidden' },
-    pickerBoxCover: { flex: 2, height: 100, borderStyle: 'dashed', borderWidth: 2, borderColor: '#cbd5e1', borderRadius: 16, overflow: 'hidden' },
-    pickerInner: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' },
-    pickerText: { fontSize: 11, color: '#94a3b8', marginTop: 4 },
+    pickerBox: { height: 110, borderStyle: 'dashed', borderWidth: 2, borderColor: '#cbd5e1', borderRadius: 16, overflow: 'hidden' },
+    pickerInner: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', gap: 6 },
+    pickerText: { fontSize: 11, color: '#94a3b8', marginTop: 2 },
     previewLogo: { width: '100%', height: '100%' },
-    previewCover: { width: '100%', height: '100%', resizeMode: 'cover' },
-    helperText: { fontSize: 12, color: '#64748b', marginBottom: 16 },
+    helperText: { fontSize: 12, color: '#64748b', marginBottom: 16, marginTop: 4 },
     coordinateText: { fontSize: 10, color: '#94a3b8', marginLeft: 8 },
     submitBtn: { marginTop: 10, backgroundColor: '#10b981' },
     primaryAction: { backgroundColor: '#10b981', marginTop: 8 },
@@ -560,7 +570,7 @@ const styles = StyleSheet.create({
     galleryItem: { width: '48%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden' },
     galleryImage: { width: '100%', height: '100%', resizeMode: 'cover' },
     removeBadge: { position: 'absolute', top: 6, right: 6, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10, padding: 2 },
-    addGalleryBtn: { width: '48%', aspectRatio: 1, borderRadius: 12, borderWidth: 2, borderColor: '#cbd5e1', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+    addGalleryBtn: { width: '48%', aspectRatio: 1, borderRadius: 12, borderWidth: 2, borderColor: '#cbd5e1', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 },
 })
 
 export default RegisterShopScreen

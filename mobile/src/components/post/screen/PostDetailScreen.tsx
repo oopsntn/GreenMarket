@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Linking, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { postService } from '../service/postService'
-import { AlertCircle, ExternalLink, Eye, Heart, MapPin, Maximize2, MessageCircle, Phone, Share2, ShieldCheck, Store } from 'lucide-react-native'
+import { AlertCircle, Bookmark, ExternalLink, Eye, MapPin, Maximize2, MessageCircle, Phone, Share2, ShieldCheck, Store } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Button from '../../Reused/Button/Button'
 import { MediaGallery } from '../components/MediaGallery'
@@ -138,7 +138,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
         <Share2 size={24} color="#fff" />
       </TouchableOpacity>
       <TouchableOpacity onPress={handleToggleSave}>
-        <Heart size={24} color={isSaved ? "#ff4d4f" : "#fff"} fill={isSaved ? "#ff4d4f" : "transparent"} />
+        <Bookmark size={24} color={isSaved ? '#10b981' : '#fff'} fill={isSaved ? '#10b981' : 'transparent'} />
       </TouchableOpacity>
     </View>
   );

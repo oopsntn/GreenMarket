@@ -42,11 +42,13 @@ const AddressPicker = ({
     const confirmByCoordinates = async (lat: number, lng: number, fallbackAddress?: string) => {
         const reversed = await reverseGeocode(lat, lng);
 
+        if (!reversed?.full?.trim() && !fallbackAddress?.trim()) {
+            CustomAlert('Lỗi', 'Không thể xác định địa chỉ từ vị trí đã chọn.');
+            return;
+        }
+
         const payload: ConfirmedAddress = {
-            fullAddress:
-                reversed?.full?.trim() ||
-                fallbackAddress?.trim() ||
-                'Vị trí đã chọn',
+            fullAddress: reversed?.full?.trim() || fallbackAddress!.trim(),
             province: reversed?.province || '',
             district: reversed?.district || '',
             ward: reversed?.ward || '',

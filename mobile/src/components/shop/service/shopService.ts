@@ -218,6 +218,11 @@ export const ShopService = {
         return response.data
     },
 
+    setPrimaryPhone: async (phone: string, emailOtp: string) => {
+        const response = await api.patch('/shops/phones/primary', { phone, emailOtp })
+        return response.data
+    },
+
     recordShopContactClick: async (shopId: number) => {
         const response = await api.post(`/shops/${shopId}/contact-click`)
         return response.data
