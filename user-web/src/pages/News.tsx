@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   checkHostContentSaved,
   getHostPublicContents,
-  toggleFavoriteHostContent,
   type HostPublicContent,
 } from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -12,10 +11,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  MousePointerClick,
-  Search,
   Eye,
   ArrowRight,
+  Search,
 } from "lucide-react";
 import { resolveImageUrl } from "../utils/resolveImageUrl";
 
@@ -43,7 +41,6 @@ const getCoverImage = (item: HostPublicContent) => {
 };
 
 const News: React.FC = () => {
-  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
 
   const [items, setItems] = useState<HostPublicContent[]>([]);
@@ -194,9 +191,16 @@ const News: React.FC = () => {
                       </div>
 
                       <Link to={`/news/detail/${item.hostContentId}`} className="block group/title">
-                        <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-tight mb-2 group-hover/title:text-emerald-700 transition-colors line-clamp-1">
-                          {item.hostContentTitle}
-                        </h2>
+                        <div className="flex items-center gap-2 mb-2">
+                          {item.hostContentCategory && (
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-wider">
+                              {item.hostContentCategory}
+                            </span>
+                          )}
+                          <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight leading-tight group-hover/title:text-emerald-700 transition-colors line-clamp-1">
+                            {item.hostContentTitle}
+                          </h2>
+                        </div>
                       </Link>
 
                       <p className="text-sm text-slate-500 font-medium leading-relaxed line-clamp-2 mb-4">
@@ -210,11 +214,7 @@ const News: React.FC = () => {
                           <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
                             <span className="flex items-center gap-1">
                               <Eye className="w-3.5 h-3.5 text-slate-300" />
-                              {item.hostContentViewCount || 0}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <MousePointerClick className="w-3.5 h-3.5 text-slate-300" />
-                              {item.hostContentClickCount || 0}
+                              {item.hostContentViewCount || 0} lượt xem
                             </span>
                           </div>
                         )}

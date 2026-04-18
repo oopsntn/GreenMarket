@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getPostDetail, recordContactClick, recordShopContactClick, submitReport, checkIsSaved, toggleFavoritePost } from '../services/api';
+import { getPostDetail, recordContactClick, recordShopContactClick, checkIsSaved, toggleFavoritePost } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
     Phone, Calendar, ChevronLeft, ChevronRight,

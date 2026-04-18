@@ -2,6 +2,9 @@ import { Router } from "express";
 import { 
     registerShop, getMyShop, getOwnerDashboard, getPublicShopById, recordShopContactClick, updateShop, getAllShops,
     requestVerificationOTP, verifyShopEmail, addShopPhone, deleteShopPhone, deletePendingShop, setPrimaryPhone
+    requestVerificationOTP, verifyShopEmail, addShopPhone, deleteShopPhone, deletePendingShop,
+    getShopCollaborators, inviteCollaborator, removeCollaborator,
+    getPendingOwnerPosts, approveCollaboratorPost, rejectCollaboratorPost
 } from "../../controllers/user/shop.controller.ts";
 import { optionalVerifyToken, verifyToken } from "../../middlewares/authMiddleware.ts";
 
@@ -26,6 +29,16 @@ router.patch("/phones/primary", verifyToken, setPrimaryPhone);
 
 router.patch("/:id", verifyToken, updateShop);
 router.post("/:id/contact-click", recordShopContactClick);
+ 
+// Collaborator management
+router.get("/collaborators/all", verifyToken, getShopCollaborators);
+router.post("/collaborators/invite", verifyToken, inviteCollaborator);
+router.delete("/collaborators/:id", verifyToken, removeCollaborator);
+ 
+// Collaborator post approvals
+router.get("/collaborators/posts/pending", verifyToken, getPendingOwnerPosts);
+router.post("/collaborators/posts/:id/approve", verifyToken, approveCollaboratorPost);
+router.post("/collaborators/posts/:id/reject", verifyToken, rejectCollaboratorPost);
 
 // Public route with path param must stay after static paths like /my-shop
 router.get("/:id", optionalVerifyToken, getPublicShopById);

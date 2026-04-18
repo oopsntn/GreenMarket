@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, and, sql, inArray } from "drizzle-orm";
-import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts, postPromotions, promotionPackages, placementSlots } from "../../models/schema/index.ts";
+import { eq, and, sql, inArray, or } from "drizzle-orm";
+import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts, postPromotions, promotionPackages, placementSlots, shopCollaborators } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
@@ -39,7 +39,8 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             postLocation,
             postContactPhone,
             images,
-            attributes: attrValues
+            attributes: attrValues,
+            shopId: bodyShopId
         } = req.body;
 
         if (!postTitle || !categoryId) {
@@ -61,10 +62,36 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
         const policySnapshot = await postingPolicyService.assertCanCreatePost(userId);
 
         // Check if user has an active shop (used to bind post -> shop profile)
-        const [activeShop] = await db.select()
+        const [ownShop] = await db.select()
             .from(shops)
             .where(and(eq(shops.shopId, userId), eq(shops.shopStatus, "active")))
             .limit(1);
+
+        let targetShopId = ownShop?.shopId || null;
+        let isDelegatedPost = false;
+
+        // If a specific shopId is provided and it's not the user's own shop, check if they are a collaborator
+        if (bodyShopId && Number(bodyShopId) !== userId) {
+            const [collabRelation] = await db
+                .select()
+                .from(shopCollaborators)
+                .where(
+                    and(
+                        eq(shopCollaborators.shopCollaboratorsShopId, Number(bodyShopId)),
+                        eq(shopCollaborators.collaboratorId, userId),
+                        eq(shopCollaborators.shopCollaboratorsStatus, "active")
+                    )
+                )
+                .limit(1);
+
+            if (collabRelation) {
+                targetShopId = Number(bodyShopId);
+                isDelegatedPost = true;
+            } else {
+                res.status(403).json({ error: "You are not an active collaborator for this shop" });
+                return;
+            }
+        }
 
         const now = new Date();
         const matchedKeywords = adminWebSettingsService.findMatchedKeywords(
@@ -85,17 +112,17 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
 
         const [newPost] = await db.insert(posts).values({
             postAuthorId: userId,
-            postShopId: activeShop?.shopId || null,
+            postShopId: targetShopId,
             categoryId: Number(categoryId),
             postTitle,
             postSlug: finalSlug,
             postPrice: postPrice?.toString(),
             postLocation,
             postContactPhone,
-            postStatus: canAutoApprove ? "approved" : "pending",
-            postPublished: canAutoApprove,
+            postStatus: isDelegatedPost ? "pending_owner" : (canAutoApprove ? "approved" : "pending"),
+            postPublished: isDelegatedPost ? false : canAutoApprove,
             postSubmittedAt: now,
-            postPublishedAt: canAutoApprove ? now : null,
+            postPublishedAt: (isDelegatedPost || !canAutoApprove) ? null : now,
             postRejectedReason: shouldFlagForModeration
                 ? `Cần kiểm duyệt thủ công do trùng từ khóa: ${matchedKeywords.join(", ")}`
                 : null,
@@ -200,7 +227,12 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
         const settings = await adminWebSettingsService.getSettings();
         await postLifecycleService.syncAutoExpiredPosts(settings);
 
-        const userPosts = await db.select().from(posts).where(eq(posts.postAuthorId, userId));
+        const userPosts = await db.select().from(posts).where(
+            or(
+                eq(posts.postAuthorId, userId),
+                eq(posts.postShopId, userId)
+            )
+        );
 
         if (userPosts.length === 0) {
             res.json([]);
@@ -421,13 +453,17 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             attributes: updatedAttributes
         } = req.body;
 
-        // Ensure user owns the post
+        // Ensure user owns the post (author or shop owner)
         const [existingPost] = await db.select().from(posts).where(eq(posts.postId, postId)).limit(1);
         if (!existingPost) {
             res.status(404).json({ error: "Post not found" });
             return;
         }
-        if (existingPost.postAuthorId !== userId) {
+
+        const isAuthorized = existingPost.postAuthorId === userId || 
+                           (existingPost.postShopId !== null && existingPost.postShopId === userId);
+
+        if (!isAuthorized) {
             res.status(403).json({ error: "Unauthorized to update this post" });
             return;
         }
@@ -581,7 +617,11 @@ export const softDeletePost = async (req: AuthRequest, res: Response): Promise<v
             res.status(404).json({ error: "Post not found" });
             return;
         }
-        if (existingPost.postAuthorId !== userId) {
+
+        const isAuthorized = existingPost.postAuthorId === userId || 
+                           (existingPost.postShopId !== null && existingPost.postShopId === userId);
+
+        if (!isAuthorized) {
             res.status(403).json({ error: "Unauthorized to delete this post" });
             return;
         }
@@ -618,7 +658,11 @@ export const restorePost = async (req: AuthRequest, res: Response): Promise<void
             res.status(404).json({ error: "Post not found" });
             return;
         }
-        if (existingPost.postAuthorId !== userId) {
+
+        const isAuthorized = existingPost.postAuthorId === userId || 
+                           (existingPost.postShopId !== null && existingPost.postShopId === userId);
+
+        if (!isAuthorized) {
             res.status(403).json({ error: "Unauthorized to restore this post" });
             return;
         }
@@ -661,7 +705,11 @@ export const togglePostVisibility = async (req: AuthRequest, res: Response): Pro
             res.status(404).json({ error: "Post not found" });
             return;
         }
-        if (existingPost.postAuthorId !== userId) {
+
+        const isAuthorized = existingPost.postAuthorId === userId || 
+                           (existingPost.postShopId !== null && existingPost.postShopId === userId);
+
+        if (!isAuthorized) {
             res.status(403).json({ error: "Unauthorized to update this post" });
             return;
         }

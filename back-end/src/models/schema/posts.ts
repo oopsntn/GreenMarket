@@ -13,7 +13,7 @@ export const posts = pgTable("posts", {
     postSlug: varchar("post_slug", { length: 255 }).unique().notNull(),
     postPrice: numeric("post_price", { precision: 12, scale: 2 }),
     postLocation: varchar("post_location", { length: 255 }),
-    postStatus: varchar("post_status", { length: 20 }).default("pending").notNull(), // pending, approved, rejected, hidden, draft
+    postStatus: varchar("post_status", { length: 20 }).default("pending").notNull(), // pending, approved, rejected, hidden, draft, pending_owner
     postRejectedReason: text("post_rejected_reason"),
     postContactPhone: varchar("post_contact_phone", { length: 20 }),
     postPublished: boolean("post_published").default(false),

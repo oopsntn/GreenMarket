@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, or, ilike, desc } from "drizzle-orm";
 import { shops, type Shop } from "../../models/schema/shops.ts";
-import { posts, postImages, eventLogs } from "../../models/schema/index.ts";
+import { posts, postImages, eventLogs, shopCollaborators } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import { verificationService } from "../../services/verification.service.ts";
@@ -176,6 +176,11 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             shopLng: shopLng ? String(shopLng) : null,
             shopStatus: "pending"
         }).returning();
+
+        // Automatically upgrade user to HOST business role
+        await db.update(users)
+            .set({ userBusinessRoleId: 2 })
+            .where(eq(users.userId, userId));
 
         res.status(201).json(withShopGallery(newShop));
     } catch (error) {
@@ -690,6 +695,313 @@ export const setPrimaryPhone = async (req: AuthRequest, res: Response): Promise<
         }
 
         res.json({ message: "Đã đổi số điện thoại chính thành công", shopPhone: newPhoneString, primaryPhone: phone });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// --- Collaborator Management (Invitations) ---
+
+/**
+ * Send an invitation to a user to become a collaborator for the shop.
+ */
+export const inviteCollaborator = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        const { userIdentifier } = req.body; // mobile or email
+
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        if (!userIdentifier) {
+            res.status(400).json({ error: "User identifier (mobile or email) is required" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        const inputId = parseId(userIdentifier);
+        const searchConditions = [
+            eq(users.userMobile, userIdentifier),
+            eq(users.userEmail, userIdentifier)
+        ];
+        if (inputId) searchConditions.push(eq(users.userId, inputId));
+
+        const [targetUser] = await db
+            .select()
+            .from(users)
+            .where(or(...searchConditions))
+            .limit(1);
+
+        if (!targetUser) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+
+        if (targetUser.userBusinessRoleId !== 3) {
+            res.status(400).json({ error: "User must be registered as a Collaborator by Admin first" });
+            return;
+        }
+
+        const [existing] = await db
+            .select()
+            .from(shopCollaborators)
+            .where(
+                and(
+                    eq(shopCollaborators.shopCollaboratorsShopId, shop.shopId),
+                    eq(shopCollaborators.collaboratorId, targetUser.userId)
+                )
+            )
+            .limit(1);
+
+        if (existing) {
+            res.status(400).json({ 
+                error: `User is already ${existing.shopCollaboratorsStatus === 'active' ? 'a collaborator' : 'invited'} for this shop` 
+            });
+            return;
+        }
+
+        await db.insert(shopCollaborators).values({
+            shopCollaboratorsShopId: shop.shopId,
+            collaboratorId: targetUser.userId,
+            shopCollaboratorsStatus: "pending",
+        });
+
+        res.status(201).json({ message: "Invitation sent successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+/**
+ * Remove a collaborator or cancel a pending invitation.
+ */
+export const removeCollaborator = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const collId = parseId(req.params.id as string);
+        if (!collId) {
+            res.status(400).json({ error: "Invalid collaborator ID" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        await db
+            .delete(shopCollaborators)
+            .where(
+                and(
+                    eq(shopCollaborators.shopCollaboratorsShopId, shop.shopId),
+                    eq(shopCollaborators.collaboratorId, collId)
+                )
+            );
+
+        res.json({ message: "Collaborator or invitation removed successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+/**
+ * Get the list of collaborators and pending invites for the shop.
+ */
+export const getShopCollaborators = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        const collaborators = await db
+            .select({
+                userId: users.userId,
+                displayName: users.userDisplayName,
+                mobile: users.userMobile,
+                avatarUrl: users.userAvatarUrl,
+                relationshipStatus: shopCollaborators.shopCollaboratorsStatus,
+                joinedAt: shopCollaborators.shopCollaboratorsCreatedAt,
+            })
+            .from(shopCollaborators)
+            .innerJoin(users, eq(shopCollaborators.collaboratorId, users.userId))
+            .where(eq(shopCollaborators.shopCollaboratorsShopId, shop.shopId))
+            .orderBy(desc(shopCollaborators.shopCollaboratorsCreatedAt));
+
+        res.json(collaborators);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// --- Collaborator Post Approval ---
+
+export const getPendingOwnerPosts = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        const pendingPosts = await db
+            .select({
+                postId: posts.postId,
+                postTitle: posts.postTitle,
+                postSlug: posts.postSlug,
+                postStatus: posts.postStatus,
+                postCreatedAt: posts.postCreatedAt,
+                authorName: users.userDisplayName,
+                authorMobile: users.userMobile,
+            })
+            .from(posts)
+            .innerJoin(users, eq(posts.postAuthorId, users.userId))
+            .where(and(eq(posts.postShopId, shop.shopId), eq(posts.postStatus, "pending_owner")))
+            .orderBy(desc(posts.postCreatedAt));
+
+        res.json(pendingPosts);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const approveCollaboratorPost = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const postId = parseId(req.params.id as string);
+        if (!postId) {
+            res.status(400).json({ error: "Invalid post ID" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        // Verify post belongs to this shop and is pending_owner
+        const [post] = await db
+            .select()
+            .from(posts)
+            .where(and(eq(posts.postId, postId), eq(posts.postShopId, shop.shopId)))
+            .limit(1);
+
+        if (!post) {
+            res.status(404).json({ error: "Post not found for this shop" });
+            return;
+        }
+
+        if (post.postStatus !== "pending_owner") {
+            res.status(400).json({ error: "Only posts waiting for owner approval can be approved here" });
+            return;
+        }
+
+        await db
+            .update(posts)
+            .set({
+                postStatus: "approved",
+                postPublished: true,
+                postPublishedAt: new Date(),
+                postModeratedAt: new Date(),
+            })
+            .where(eq(posts.postId, postId));
+
+        res.json({ message: "Post approved and published successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const rejectCollaboratorPost = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const postId = parseId(req.params.id as string);
+        if (!postId) {
+            res.status(400).json({ error: "Invalid post ID" });
+            return;
+        }
+
+        const { reason } = req.body;
+        if (!reason) {
+            res.status(400).json({ error: "Reason is required for rejection" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        const [post] = await db
+            .select()
+            .from(posts)
+            .where(and(eq(posts.postId, postId), eq(posts.postShopId, shop.shopId)))
+            .limit(1);
+
+        if (!post) {
+            res.status(404).json({ error: "Post not found for this shop" });
+            return;
+        }
+
+        if (post.postStatus !== "pending_owner") {
+            res.status(400).json({ error: "Only posts waiting for owner approval can be rejected here" });
+            return;
+        }
+
+        await db
+            .update(posts)
+            .set({
+                postStatus: "rejected",
+                postRejectedReason: reason,
+                postModeratedAt: new Date(),
+            })
+            .where(eq(posts.postId, postId));
+
+        res.json({ message: "Post rejected successfully" });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

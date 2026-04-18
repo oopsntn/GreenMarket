@@ -54,6 +54,11 @@ export {
   type Verification,
   type NewVerification,
 } from "./verifications.ts";
+export {
+  shopCollaborators,
+  type ShopCollaborator,
+  type NewShopCollaborator,
+} from "./shop-collaborators.ts";
 
 // Posts
 export { posts, type Post, type NewPost } from "./posts.ts";

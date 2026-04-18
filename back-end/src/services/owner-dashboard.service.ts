@@ -60,6 +60,7 @@ export type OwnerDashboardResponse = {
     successfulBoostPurchases: number;
     activePromotions: number;
     boostedPostsActive: number;
+    pendingCollaboratorPosts: number;
   };
   topPosts: Array<{
     postId: number;
@@ -282,6 +283,7 @@ export const ownerDashboardService = {
         successfulBoostPurchases: successfulPaymentRows.length,
         activePromotions,
         boostedPostsActive: activePromotions,
+        pendingCollaboratorPosts: shopPosts.filter((item) => item.postStatus === "pending_owner").length,
       },
       topPosts,
       recentPayments: shopPayments.slice(0, 10).map((item) => ({
