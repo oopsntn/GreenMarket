@@ -8,7 +8,6 @@ import {
   createContent,
   updateContent,
   deleteContent,
-  trackContentClick,
   getPublicContents,
   getPublicContentDetail,
   toggleFavoriteContent,
@@ -20,7 +19,6 @@ import { verifyToken, requireBusinessRole } from "../../middlewares/authMiddlewa
 const router = Router();
 
 // Public APIs (no auth required)
-router.get("/tracking/:id", trackContentClick);
 router.get("/public/contents", getPublicContents);
 router.get("/public/contents/:id", getPublicContentDetail);
 

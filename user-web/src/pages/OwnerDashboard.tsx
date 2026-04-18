@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Activity,
@@ -11,6 +11,10 @@ import {
   ShieldAlert,
   Sparkles,
   Wallet,
+  Users,
+  UserPlus,
+  MessageSquare,
+  Search
 } from 'lucide-react';
 import {
   getOwnerDashboard,
@@ -177,9 +181,9 @@ const OwnerDashboard: React.FC = () => {
         value: boostedPostsActive.toLocaleString('vi-VN'),
       },
       {
-        icon: <Clock3 className="w-5 h-5 text-slate-700" />,
-        label: 'Tin chờ duyệt',
-        value: summary.pendingPosts.toLocaleString('vi-VN'),
+        icon: <UserPlus className="w-5 h-5 text-emerald-600" />,
+        label: 'Bài CTV chờ duyệt',
+        value: (summary.pendingCollaboratorPosts ?? 0).toLocaleString('vi-VN'),
       },
     ];
   }, [data]);
@@ -304,7 +308,45 @@ const OwnerDashboard: React.FC = () => {
           </div>
         </section>
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <section className="bg-white border border-emerald-100 rounded-3xl p-7 shadow-sm">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
+              <Users className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Hợp tác & Đội ngũ</h2>
+              <p className="text-sm text-slate-500 font-medium tracking-tight">Mở rộng sức mạnh quảng bá cho vườn của bạn.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link
+              to="/owner-dashboard/team"
+              className="group p-5 bg-white border border-slate-200 rounded-2xl hover:border-emerald-200 hover:bg-emerald-50/30 transition-all shadow-sm"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <Users className="w-6 h-6 text-emerald-600" />
+                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+              </div>
+              <h3 className="font-black text-slate-900 mb-1">Quản lý đội ngũ</h3>
+              <p className="text-xs text-slate-500 font-medium">Danh sách CTV đã được bạn uỷ quyền đăng bài.</p>
+            </Link>
+
+            <Link
+              to="/collaborator/directory"
+              className="group p-5 bg-white border border-slate-200 rounded-2xl hover:border-emerald-200 hover:bg-emerald-50/30 transition-all shadow-sm"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <Search className="w-6 h-6 text-emerald-600" />
+                <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+              </div>
+              <h3 className="font-black text-slate-900 mb-1">Danh sách CTV</h3>
+              <p className="text-xs text-slate-500 font-medium">Tìm kiếm và mời thêm những cộng tác viên phù hợp.</p>
+            </Link>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
           {cards.map((card) => (
             <article
               key={card.label}

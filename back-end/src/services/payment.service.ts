@@ -812,7 +812,10 @@ export const paymentService = {
       throw new PaymentServiceError(404, "POST_NOT_FOUND", "Post not found.");
     }
 
-    if (post.postAuthorId !== userId) {
+    const isAuthorized = post.postAuthorId === userId || 
+                       (post.postShopId !== null && post.postShopId === userId);
+
+    if (!isAuthorized) {
       throw new PaymentServiceError(
         403,
         "POST_PERMISSION_DENIED",

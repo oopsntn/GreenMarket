@@ -55,6 +55,7 @@ const MyPosts: React.FC = () => {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'personal' | 'shop'>(shop?.shopStatus === 'active' ? 'shop' : 'personal');
+  const [shopSubTab, setShopSubTab] = useState<'all' | 'owner' | 'collaborator'>('all');
   const [shopStats, setShopStats] = useState<{ totalShopViews: number } | null>(null);
 
   // Edit Modal State
@@ -377,6 +378,8 @@ const MyPosts: React.FC = () => {
     switch (status) {
       case 'pending':
         return <span className="bg-amber-50 text-amber-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-amber-100 shadow-sm"><Clock className="w-3 h-3" /> Chờ duyệt</span>;
+      case 'pending_owner':
+        return <span className="bg-blue-50 text-blue-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-blue-100 shadow-sm"><ShieldCheck className="w-3 h-3" /> Chờ chủ vườn duyệt</span>;
       case 'approved':
         return <span className="bg-emerald-50 text-emerald-600 text-[10px] px-2 py-1 rounded-full font-bold uppercase flex items-center gap-1 border border-emerald-100 shadow-sm"><CheckCircle2 className="w-3 h-3" /> Đã duyệt</span>;
       case 'rejected':
@@ -393,7 +396,13 @@ const MyPosts: React.FC = () => {
     }
     // If shop is active, filter based on active tab
     if (activeTab === 'shop') {
-      return post.postShopId !== null;
+      const isShopPost = post.postShopId !== null;
+      if (!isShopPost) return false;
+
+      // Apply Sub-tab filtering
+      if (shopSubTab === 'owner') return post.postAuthorId === user?.id;
+      if (shopSubTab === 'collaborator') return post.postAuthorId !== user?.id;
+      return true; // 'all'
     }
     return post.postShopId === null;
   });
@@ -501,10 +510,47 @@ const MyPosts: React.FC = () => {
 
         {/* Posts List */}
         <div>
-          <h2 className="text-2xl font-black mb-6 flex items-center gap-3 text-slate-900 tracking-tight uppercase">
-            {activeTab === 'shop' ? 'Sản phẩm tại vườn' : 'Danh sách tin cá nhân'}
-            <span className="text-sm font-bold text-slate-400 bg-slate-50 border border-slate-100 px-3 py-1 rounded-full shadow-sm">{filteredPosts.length} bài</span>
-          </h2>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
+            <h2 className="text-2xl font-black flex items-center gap-3 text-slate-900 tracking-tight uppercase">
+              {activeTab === 'shop' ? 'Sản phẩm tại vườn' : 'Danh sách tin cá nhân'}
+              <span className="text-sm font-bold text-slate-400 bg-slate-50 border border-slate-100 px-3 py-1 rounded-full shadow-sm">{filteredPosts.length} bài</span>
+            </h2>
+
+            {activeTab === 'shop' && (
+              <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner">
+                <button
+                  onClick={() => setShopSubTab('all')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                    shopSubTab === 'all' 
+                      ? 'bg-white text-emerald-700 shadow-md ring-1 ring-slate-200' 
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Tất cả
+                </button>
+                <button
+                  onClick={() => setShopSubTab('owner')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                    shopSubTab === 'owner' 
+                      ? 'bg-white text-emerald-700 shadow-md ring-1 ring-slate-200' 
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Vườn đăng
+                </button>
+                <button
+                  onClick={() => setShopSubTab('collaborator')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
+                    shopSubTab === 'collaborator' 
+                      ? 'bg-white text-emerald-700 shadow-md ring-1 ring-slate-200' 
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  CTV đăng
+                </button>
+              </div>
+            )}
+          </div>
 
           {filteredPosts.length > 0 ? (
             <div className="grid grid-cols-1 gap-4">
