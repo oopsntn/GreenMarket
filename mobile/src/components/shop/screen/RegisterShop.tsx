@@ -16,17 +16,14 @@ import { resolveImageUrl } from '../../../utils/resolveImageUrl'
 import { paymentService } from '../../payment/service/paymentService'
 
 const RegisterShopScreen = ({ navigation }: any) => {
-    const { refreshShop, shop } = useAuth()
+    const { refreshShop, shop, user } = useAuth()
     const [formData, setFormData] = useState({
         shopName: '',
-        shopPhone: '',
         shopLocation: '',
         shopDescription: '',
         shopLogoUrl: '',
-        shopCoverUrl: '',
         shopLat: undefined as number | undefined,
         shopLng: undefined as number | undefined,
-        shopEmail: '',
         shopFacebook: '',
         shopInstagram: '',
         shopYoutube: '',
@@ -145,16 +142,6 @@ const RegisterShopScreen = ({ navigation }: any) => {
             return false
         }
 
-        if (formData.shopPhone.trim() && !phoneRegex.test(formData.shopPhone.trim())) {
-            CustomAlert('Lỗi', 'Định dạng số điện thoại Việt Nam không hợp lệ')
-            return false
-        }
-
-        if (formData.shopEmail.trim() && !emailRegex.test(formData.shopEmail.trim())) {
-            CustomAlert('Lỗi', 'Định dạng email không hợp lệ')
-            return false
-        }
-
         if (!formData.shopLocation.trim() || formData.shopLocation.trim().length < 5) {
             CustomAlert('Lỗi', 'Vui lòng nhập định vị địa chỉ rõ ràng cho cửa hàng')
             return false
@@ -245,14 +232,12 @@ const RegisterShopScreen = ({ navigation }: any) => {
         try {
             const cleanData = {
                 shopName: formData.shopName.trim(),
-                shopPhone: formData.shopPhone.trim() || undefined,
-                shopEmail: formData.shopEmail.trim() || undefined,
+                shopPhone: user?.userMobile,
                 shopLocation: formData.shopLocation.trim(),
                 shopDescription: formData.shopDescription.trim(),
                 shopLat: formData.shopLat,
                 shopLng: formData.shopLng,
                 shopLogoUrl: formData.shopLogoUrl || undefined,
-                shopCoverUrl: formData.shopCoverUrl || undefined,
                 // Gửi mảng ảnh, BE sẽ tự xử lý join "|"
                 shopGalleryImages: formData.shopGalleryImages,
                 shopFacebook: validateSocial(formData.shopFacebook.trim()) || undefined,
@@ -450,23 +435,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                                 </View>
                             )}
                         </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={() => pickImage('shopCoverUrl')}
-                            style={styles.pickerBoxCover}
-                            disabled={loading || uploadingImage}
-                        >
-                            {formData.shopCoverUrl ? (
-                                <Image source={{ uri: resolveImageUrl(formData.shopCoverUrl) }} style={styles.previewCover} />
-                            ) : (
-                                <View style={styles.pickerInner}>
-                                    <Camera color="#94a3b8" size={24} />
-                                    <Text style={styles.pickerText}>Ảnh bìa</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
                     </View>
-
 
                     <Text style={styles.label}>Hình ảnh cửa hàng (Tối đa 4 ảnh)</Text>
                     <View style={styles.galleryContainer}>
@@ -496,22 +465,6 @@ const RegisterShopScreen = ({ navigation }: any) => {
                     </Text>
 
                     <Input
-                        label="Email cửa hàng"
-                        type="email-address"
-                        value={formData.shopEmail}
-                        onChangeText={(txt) => setFormData({ ...formData, shopEmail: txt })}
-                        placeholder="Ví dụ: contact@greengarden.com"
-                    />
-
-                    <Input
-                        label="Số điện thoại cửa hàng"
-                        type="phone-pad"
-                        value={formData.shopPhone}
-                        onChangeText={(txt) => setFormData({ ...formData, shopPhone: txt })}
-                        placeholder="Ví dụ: 0912345678"
-                    />
-
-                    <Input
                         label="Mô tả cửa hàng"
                         multiline
                         numberOfLines={4}
@@ -525,12 +478,13 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             label="Địa chỉ cửa hàng *"
                             address={formData.shopLocation}
                             onAddressChange={handleAddressChange}
-                            onLocationSelect={(addr, lat, lng) => {
+                            onLocationConfirmed={(data: any) => {
+                                console.log(data)
                                 setFormData((prev) => ({
                                     ...prev,
-                                    shopLocation: addr,
-                                    shopLat: lat,
-                                    shopLng: lng,
+                                    shopLocation: data.fullAddress,
+                                    shopLat: data.lat,
+                                    shopLng: data.lng,
                                 }))
                             }
                             }
