@@ -41,6 +41,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
       if (!res.ok) {
         const errorData = await res.json();
         Alert.alert("Lỗi", errorData.message || "Thao tác thất bại");
+        console.error("OTP request error:", errorData);
         return;
       }
 

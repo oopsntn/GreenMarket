@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import FilterDrawer from '../components/FilterDrawer';
 import { getServerBaseUrl } from '../../../config/api';
 import { API_BASE_URL } from "../../../config/api";
+import { resolveImageUrl } from '@/utils/resolveImageUrl';
 
 const { width } = Dimensions.get('window');
 const COLUMN_WIDTH = (width - 32 - 8) / 2; // 2 columns with padding
@@ -135,16 +136,7 @@ const HomeScreen = () => {
 
   const renderPostCard = ({ item }: { item: Post }) => {
     const imageUrl = item.images?.[0]?.imageUrl;
-    let finalImageUrl = imageUrl
-      ? imageUrl.startsWith('http')
-        ? imageUrl
-        : `http://${API_BASE_URL}:5000${imageUrl}`
-      : null;
-
-    // Replace localhost with actual machine IP for physical devices
-    if (finalImageUrl?.includes('localhost')) {
-      finalImageUrl = finalImageUrl.replace('localhost', '14.170.9.64');
-    }
+    const finalImageUrl = resolveImageUrl(imageUrl)
 
     console.log('Post:', item.postTitle, 'Image URL:', finalImageUrl);
 

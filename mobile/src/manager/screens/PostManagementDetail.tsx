@@ -31,7 +31,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
       setPost(data);
     } catch (error) {
       console.error(error);
-      CustomAlert('Error', 'Unable to load post details.');
+      CustomAlert('Lỗi', 'Không thể tải chi tiết tin đăng.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -39,17 +39,17 @@ const PostManagementDetail = ({ route, navigation }: any) => {
   };
 
   const handleApprove = () => {
-    CustomAlert('Approve post', 'Do you want to approve this post?', [
-      { text: 'Cancel', style: 'cancel' },
+    CustomAlert('Duyệt tin', 'Bạn có muốn duyệt tin này không?', [
+      { text: 'Hủy', style: 'cancel' },
       {
-        text: 'Approve',
+        text: 'Duyệt',
         onPress: async () => {
           try {
             await managerService.updatePostStatus(postId, 'approved');
-            CustomAlert('Success', 'The post has been approved.');
+            CustomAlert('Thành công', 'Tin đăng đã được duyệt.');
             navigation.goBack();
           } catch (error) {
-            CustomAlert('Error', 'Unable to approve this post.');
+            CustomAlert('Lỗi', 'Không thể duyệt tin này.');
           }
         }
       },
@@ -60,14 +60,14 @@ const PostManagementDetail = ({ route, navigation }: any) => {
     try {
       if (modalType === 'reject') {
         await managerService.updatePostStatus(postId, 'rejected', reason);
-        CustomAlert('Rejected', `Reason saved: ${reason}`);
+        CustomAlert('Rừ chối', `Lý do đã lưu: ${reason}`);
       } else if (modalType === 'hide') {
         await managerService.deletePost(postId, reason);
-        CustomAlert('Hidden', `The post has been hidden. Reason: ${reason}`);
+        CustomAlert('Ẩn tin', `Tin đăng đã được ẩn. Lý do: ${reason}`);
       }
       navigation.goBack();
     } catch (error) {
-      CustomAlert('Error', 'The action could not be completed.');
+      CustomAlert('Lỗi', 'Không thể thực hiện thao tác này.');
     }
   };
 
@@ -89,7 +89,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <ArrowLeft color="#1E293B" size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Post Details</Text>
+        <Text style={styles.headerTitle}>Chi tiết tin đăng</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -100,20 +100,20 @@ const PostManagementDetail = ({ route, navigation }: any) => {
               <Clock3 size={14} color="#D97706" />
               <Text style={styles.statusText}>{post.postStatus || 'unknown'}</Text>
             </View>
-            <Text style={styles.priorityText}>Priority: {post.priority}</Text>
+            <Text style={styles.priorityText}>Độ ưu tiên: {post.priority}</Text>
           </View>
           <Text style={styles.title}>{post.postTitle}</Text>
-          <Text style={styles.subtitle}>{post.summary || 'No additional summary available.'}</Text>
+          <Text style={styles.subtitle}>{post.summary || 'Không có mô tả bổ sung.'}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Moderation Context</Text>
+          <Text style={styles.sectionTitle}>Ngữ cảnh kiểm duyệt</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <User size={18} color="#64748B" />
               <View>
-                <Text style={styles.infoLabel}>Author</Text>
-                <Text style={styles.infoValue}>{post.authorName || 'Unknown author'}</Text>
+                <Text style={styles.infoLabel}>Tác giả</Text>
+                <Text style={styles.infoValue}>{post.authorName || 'Chưa rõ tác giả'}</Text>
               </View>
             </View>
 
@@ -122,8 +122,8 @@ const PostManagementDetail = ({ route, navigation }: any) => {
             <View style={styles.infoRow}>
               <Calendar size={18} color="#64748B" />
               <View>
-                <Text style={styles.infoLabel}>Created at</Text>
-                <Text style={styles.infoValue}>{post.postCreatedAt ? new Date(post.postCreatedAt).toLocaleString() : 'Not available'}</Text>
+                <Text style={styles.infoLabel}>Ngày tạo</Text>
+                <Text style={styles.infoValue}>{post.postCreatedAt ? new Date(post.postCreatedAt).toLocaleString() : 'Không có'}</Text>
               </View>
             </View>
 
@@ -132,8 +132,8 @@ const PostManagementDetail = ({ route, navigation }: any) => {
             <View style={styles.infoRow}>
               <Calendar size={18} color="#64748B" />
               <View>
-                <Text style={styles.infoLabel}>Updated at</Text>
-                <Text style={styles.infoValue}>{post.postUpdatedAt ? new Date(post.postUpdatedAt).toLocaleString() : 'Not available'}</Text>
+                <Text style={styles.infoLabel}>Ngày cập nhật</Text>
+                <Text style={styles.infoValue}>{post.postUpdatedAt ? new Date(post.postUpdatedAt).toLocaleString() : 'Không có'}</Text>
               </View>
             </View>
           </View>
@@ -142,7 +142,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
         <View style={styles.warningBox}>
           <AlertCircle size={20} color="#94A3B8" />
           <Text style={styles.warningText}>
-            This manager workflow only exposes moderation queue data. If a post needs stronger action, hide or reject it from here and escalate separately when needed.
+            Quy trình quản lý này chỉ hiển thị dữ liệu hàng đợi kiểm duyệt. Nếu tin cần xử lý mạnh hơn, hãy ẩn hoặc từ chối tại đây và leo thang riêng khi cần.
           </Text>
         </View>
       </ScrollView>
@@ -150,17 +150,17 @@ const PostManagementDetail = ({ route, navigation }: any) => {
       <View style={styles.moderationBar}>
         <TouchableOpacity style={[styles.modButton, styles.hideBtn]} onPress={() => setModalType('hide')}>
           <EyeOff size={22} color="#EF4444" />
-          <Text style={[styles.modText, { color: '#EF4444' }]}>Hide</Text>
+          <Text style={[styles.modText, { color: '#EF4444' }]}>Ẩn tin</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.modButton, styles.rejectBtn]} onPress={() => setModalType('reject')}>
           <X size={22} color="#F59E0B" />
-          <Text style={[styles.modText, { color: '#F59E0B' }]}>Reject</Text>
+          <Text style={[styles.modText, { color: '#F59E0B' }]}>Từ chối</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.modButton, styles.approveBtn]} onPress={handleApprove}>
           <Check size={22} color="white" />
-          <Text style={[styles.modText, { color: 'white' }]}>Approve</Text>
+          <Text style={[styles.modText, { color: 'white' }]}>Duyệt</Text>
         </TouchableOpacity>
       </View>
 
@@ -168,9 +168,9 @@ const PostManagementDetail = ({ route, navigation }: any) => {
         visible={!!modalType}
         onClose={() => setModalType(null)}
         onSubmit={onSubmitModal}
-        title={modalType === 'reject' ? 'Reason for rejection' : 'Reason for hiding'}
-        placeholder={modalType === 'reject' ? 'Explain why this post is being rejected...' : 'Explain why this post is being hidden...'}
-        confirmLabel={modalType === 'reject' ? 'Reject post' : 'Hide post'}
+        title={modalType === 'reject' ? 'Lý do từ chối' : 'Lý do ẩn tin'}
+        placeholder={modalType === 'reject' ? 'Giải thích lý do từ chối tin đăng...' : 'Giải thích lý do ẩn tin đăng...'}
+        confirmLabel={modalType === 'reject' ? 'Từ chối tin' : 'Ẩn tin'}
         confirmColor={modalType === 'reject' ? '#F59E0B' : '#EF4444'}
       />
     </SafeAreaView>

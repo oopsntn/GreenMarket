@@ -50,9 +50,9 @@ const MyPostLayout = () => {
 
     const renderStatus = (status: string) => {
         const configs: any = {
-            pending: { label: 'Pending Approval', color: '#f59e0b', icon: <Clock size={12} color="#f59e0b" /> },
-            approved: { label: 'Approved', color: '#10b981', icon: <CheckCircle2 size={12} color="#10b981" /> },
-            rejected: { label: 'Rejected', color: '#ef4444', icon: <XCircle size={12} color="#ef4444" /> }
+            pending: { label: 'Chờ duyệt', color: '#f59e0b', icon: <Clock size={12} color="#f59e0b" /> },
+            approved: { label: 'Đã duyệt', color: '#10b981', icon: <CheckCircle2 size={12} color="#10b981" /> },
+            rejected: { label: 'Từ chối', color: '#ef4444', icon: <XCircle size={12} color="#ef4444" /> }
         };
         const config = configs[status] || configs.pending
         return (
@@ -63,7 +63,7 @@ const MyPostLayout = () => {
         )
     }
     return (
-        <MobileLayout title='Manage My Posts' backButton={() => navigation.goBack()} scrollEnabled={false}
+        <MobileLayout title='Quản lý tin đăng' backButton={() => navigation.goBack()} scrollEnabled={false}
             rightAction={
                 <TouchableOpacity testID="my-post-create-button" onPress={() => navigation.navigate('CreatePost')}>
                     <Plus color='#10b981' size={24} />
@@ -74,7 +74,7 @@ const MyPostLayout = () => {
             {state.loading ? (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 50 }}>
                     <ActivityIndicator color="#10b981" />
-                    <Text style={{ marginTop: 10, color: '#666' }}>Fetching your posts...</Text>
+                    <Text style={{ marginTop: 10, color: '#666' }}>Đang tải tin đăng...</Text>
                 </View>
             ) : (
                 <FlatList data={state.posts}
@@ -93,8 +93,8 @@ const MyPostLayout = () => {
                         <View style={styles.empty}>
                             <Text style={styles.emptyText}>
                                 {state.activeTab === 'shop'
-                                        ? 'No shop posts yet.'
-                                        : 'You haven\'t created any personal posts yet.'}
+                                        ? 'Cửa hàng chưa có tin đăng nào.'
+                                        : 'Bạn chưa tạo tin đăng cá nhân nào.'}
                             </Text>
                         </View>
                     }
