@@ -10,7 +10,7 @@ import {
   operationTasks,
   taskReplies,
   escalations,
-  systemNotifications,
+  notifications,
 } from "../../models/schema/index";
 
 const BASE_URL = "http://localhost:5000/api";
@@ -264,7 +264,7 @@ async function runOperationsTests() {
         // Cleanup replies, escalations, tasks first due to FKs
         await db.delete(taskReplies).where(inArray(taskReplies.senderId, createdUserIds));
         await db.delete(escalations).where(inArray(escalations.createdBy, createdUserIds));
-        await db.delete(systemNotifications).where(inArray(systemNotifications.recipientId, createdUserIds));
+        await db.delete(notifications).where(inArray(notifications.recipientId, createdUserIds));
         await db.delete(operationTasks).where(inArray(operationTasks.assigneeId, createdUserIds));
 
         await db

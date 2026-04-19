@@ -44,8 +44,8 @@ DECLARE v_action VARCHAR(50);
 BEGIN
     IF TG_OP = 'INSERT' THEN
         v_action := 'PACKAGE_CREATED';
-        INSERT INTO promotion_package_audit_log (action_type, package_id, before_state, after_state)
-        VALUES (v_action, NEW.promotion_package_id, NULL, row_to_json(NEW)::jsonb);
+        INSERT INTO event_logs (event_log_target_type, event_log_target_id, event_log_event_type, event_log_meta)
+        VALUES ('package', NEW.promotion_package_id, v_action, jsonb_build_object('after', row_to_json(NEW)::jsonb));
     ELSIF TG_OP = 'UPDATE' THEN
         IF OLD.promotion_package_deleted_at IS NULL AND NEW.promotion_package_deleted_at IS NOT NULL THEN
             v_action := 'PACKAGE_DELETED';
@@ -54,8 +54,8 @@ BEGIN
         ELSE
             v_action := 'PACKAGE_UPDATED';
         END IF;
-        INSERT INTO promotion_package_audit_log (action_type, package_id, before_state, after_state)
-        VALUES (v_action, NEW.promotion_package_id, row_to_json(OLD)::jsonb, row_to_json(NEW)::jsonb);
+        INSERT INTO event_logs (event_log_target_type, event_log_target_id, event_log_event_type, event_log_meta)
+        VALUES ('package', NEW.promotion_package_id, v_action, jsonb_build_object('before', row_to_json(OLD)::jsonb, 'after', row_to_json(NEW)::jsonb));
     END IF;
     RETURN NEW;
 END; $$;
@@ -71,8 +71,8 @@ BEGIN
         ELSE
             v_action := 'PRICE_ADDED';
         END IF;
-        INSERT INTO promotion_package_audit_log (action_type, package_id, price_id, before_state, after_state)
-        VALUES (v_action, NEW.package_id, NEW.price_id, NULL, row_to_json(NEW)::jsonb);
+        INSERT INTO event_logs (event_log_target_type, event_log_target_id, event_log_event_type, event_log_meta)
+        VALUES ('package_price', NEW.package_id, v_action, jsonb_build_object('price_id', NEW.price_id, 'after', row_to_json(NEW)::jsonb));
     ELSIF TG_OP = 'UPDATE' THEN
         -- effective_to được set → đóng lại bảng giá này
         IF OLD.effective_from > now() THEN
@@ -80,8 +80,8 @@ BEGIN
         ELSE
             v_action := 'PRICE_SUPERSEDED';          -- Giá cũ bị thay bởi giá mới
         END IF;
-        INSERT INTO promotion_package_audit_log (action_type, package_id, price_id, before_state, after_state)
-        VALUES (v_action, NEW.package_id, NEW.price_id, row_to_json(OLD)::jsonb, row_to_json(NEW)::jsonb);
+        INSERT INTO event_logs (event_log_target_type, event_log_target_id, event_log_event_type, event_log_meta)
+        VALUES ('package_price', NEW.package_id, v_action, jsonb_build_object('price_id', NEW.price_id, 'before', row_to_json(OLD)::jsonb, 'after', row_to_json(NEW)::jsonb));
     END IF;
     RETURN NEW;
 END; $$;
@@ -356,15 +356,6 @@ CREATE TABLE report_evidence (
     report_evidence_created_at TIMESTAMP DEFAULT now()
 );
 
--- Moderation Actions
-CREATE TABLE moderation_actions (
-    moderation_action_id SERIAL PRIMARY KEY,
-    moderation_action_action_by INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    moderation_action_post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
-    moderation_action_action VARCHAR(50),
-    moderation_action_note TEXT,
-    moderation_action_created_at TIMESTAMP DEFAULT now()
-);
 
 -- Placement Slots (Ad zones)
 CREATE TABLE placement_slots (
@@ -418,28 +409,6 @@ FROM promotion_package_prices ppp
 WHERE ppp.effective_from <= now()
   AND (ppp.effective_to IS NULL OR ppp.effective_to > now());
 
--- Promotion Package Audit Log
--- Ghi lại toàn bộ lịch sử hành động của admin lên gói quảng cáo và bảng giá.
--- action_type:
---   PACKAGE_CREATED         → Admin thêm gói mới
---   PACKAGE_UPDATED         → Admin sửa tên / thời hạn / trạng thái published
---   PACKAGE_DELETED         → Admin xóa mềm (deleted_at được set)
---   PACKAGE_RESTORED        → Admin khôi phục gói đã xóa
---   PRICE_ADDED             → Thêm bảng giá có hiệu lực ngay
---   PRICE_SCHEDULED         → Lên lịch giá tương lai (effective_from > now())
---   PRICE_SUPERSEDED        → Giá cũ bị đóng lại khi giá mới thay thế
---   PRICE_SCHEDULED_CANCELLED → Admin hủy lịch giá tương lai trước khi có hiệu lực
-CREATE TABLE promotion_package_audit_log (
-    audit_id        SERIAL PRIMARY KEY,
-    action_type     VARCHAR(50) NOT NULL,
-    package_id      INTEGER REFERENCES promotion_packages(promotion_package_id) ON DELETE SET NULL,
-    price_id        INTEGER REFERENCES promotion_package_prices(price_id) ON DELETE SET NULL,
-    before_state    JSONB,             -- Snapshot trạng thái TRƯỚC khi thay đổi
-    after_state     JSONB,             -- Snapshot trạng thái SAU khi thay đổi
-    changed_by      INTEGER REFERENCES admins(admin_id) ON DELETE SET NULL,
-    changed_at      TIMESTAMP DEFAULT now(),
-    note            TEXT               -- Ghi chú bổ sung nếu cần
-);
 
 -- Post Promotions
 CREATE TABLE post_promotions (
@@ -548,17 +517,15 @@ CREATE TABLE system_settings (
     system_setting_updated_at TIMESTAMP DEFAULT now()
 );
 
--- Event Logs
+-- Audit Logs (Unified System History)
 CREATE TABLE event_logs (
     event_log_id SERIAL PRIMARY KEY,
-    event_log_user_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    event_log_post_id INTEGER,
-    event_log_shop_id INTEGER,
-    event_log_slot_id INTEGER,
-    event_log_category_id INTEGER,
-    event_log_event_type VARCHAR(50),
+    event_log_user_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL, -- Who performed the action
+    event_log_target_type VARCHAR(50), -- post, shop, package, slot, user, system
+    event_log_target_id INTEGER,
+    event_log_event_type VARCHAR(50) NOT NULL,
     event_log_event_time TIMESTAMP DEFAULT now(),
-    event_log_meta JSONB
+    event_log_meta JSONB DEFAULT '{}'::jsonb
 );
 
 -- Collaborator Jobs
@@ -635,24 +602,6 @@ CREATE TABLE payout_requests (
     payout_request_processed_at TIMESTAMP
 );
 
--- Admin System Settings
-CREATE TABLE admin_system_settings (
-    setting_id SERIAL PRIMARY KEY,
-    otp_sandbox_enabled BOOLEAN,
-    max_images_per_post INTEGER,
-    post_rate_limit_per_hour INTEGER,
-    banned_keywords JSONB,
-    auto_moderation_enabled BOOLEAN,
-    keyword_filter_enabled BOOLEAN,
-    report_rate_limit INTEGER,
-    post_expiry_days INTEGER,
-    restore_window_days INTEGER,
-    auto_expire_enabled BOOLEAN,
-    max_file_size_mb INTEGER,
-    image_compression_enabled BOOLEAN,
-    updated_by INTEGER REFERENCES admins(admin_id) ON DELETE SET NULL,
-    updated_at TIMESTAMP DEFAULT now()
-);
 
 -- Admin Templates
 CREATE TABLE admin_templates (
@@ -693,14 +642,16 @@ CREATE TABLE task_replies (
     created_at TIMESTAMP DEFAULT now()
 );
 
--- Moderation Feedback
-CREATE TABLE moderation_feedback (
-    feedback_id SERIAL PRIMARY KEY,
-    target_type VARCHAR(50) NOT NULL,
-    target_id INTEGER NOT NULL,
-    sender_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+-- Notifications (Unified system alerts and feedback)
+CREATE TABLE notifications (
+    notification_id SERIAL PRIMARY KEY,
     recipient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    sender_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE, -- NULL for system
+    title VARCHAR(255),
     message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'system', -- system, moderation, job, promotion
+    meta_data JSONB DEFAULT '{}'::jsonb,
+    is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT now()
 );
 
@@ -720,17 +671,6 @@ CREATE TABLE escalations (
     resolved_at TIMESTAMP
 );
 
--- System Notifications
-CREATE TABLE system_notifications (
-    notification_id SERIAL PRIMARY KEY,
-    recipient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    message TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL DEFAULT 'system',
-    meta_data JSONB DEFAULT '{}'::jsonb,
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT now()
-);
 
 -- Host Contents
 CREATE TABLE host_contents (
@@ -860,47 +800,23 @@ ON posting_fee_ledger(posting_fee_post_id, posting_fee_created_at);
 CREATE INDEX idx_daily_metrics_date ON daily_placement_metrics(daily_placement_metric_date);
 CREATE INDEX idx_daily_metrics_slot ON daily_placement_metrics(daily_placement_metric_slot_id);
 
--- Event Logs
+-- Event Logs Indexes
 CREATE INDEX idx_event_logs_user ON event_logs(event_log_user_id);
 CREATE INDEX idx_event_logs_type ON event_logs(event_log_event_type);
 CREATE INDEX idx_event_logs_time ON event_logs(event_log_event_time);
-
--- Promotion Package Audit Log
-CREATE INDEX idx_pkg_audit_package    ON promotion_package_audit_log(package_id);
-CREATE INDEX idx_pkg_audit_price      ON promotion_package_audit_log(price_id);
-CREATE INDEX idx_pkg_audit_action     ON promotion_package_audit_log(action_type);
-CREATE INDEX idx_pkg_audit_changed_by ON promotion_package_audit_log(changed_by);
-CREATE INDEX idx_pkg_audit_changed_at ON promotion_package_audit_log(changed_at DESC);
+CREATE INDEX idx_event_logs_target ON event_logs(event_log_target_type, event_log_target_id);
 
 -- Internal Ops Indexes
 CREATE INDEX idx_operation_tasks_assignee ON operation_tasks(assignee_id);
 CREATE INDEX idx_operation_tasks_status ON operation_tasks(task_status);
 CREATE INDEX idx_task_replies_task ON task_replies(task_id);
 CREATE INDEX idx_escalations_status ON escalations(status);
-CREATE INDEX idx_system_notifications_recipient ON system_notifications(recipient_id);
-CREATE INDEX idx_system_notifications_read ON system_notifications(is_read);
+CREATE INDEX idx_notifications_recipient ON notifications(recipient_id);
+CREATE INDEX idx_notifications_read ON notifications(is_read);
 
 -- ============================================================
 -- TRIGGERS
 -- ============================================================
-CREATE TRIGGER update_admins_updated_at BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION update_admin_updated_at();
-CREATE TRIGGER update_business_roles_updated_at BEFORE UPDATE ON business_roles FOR EACH ROW EXECUTE FUNCTION update_business_role_updated_at();
-CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_category_updated_at();
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_user_updated_at();
-CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops FOR EACH ROW EXECUTE FUNCTION update_shop_updated_at();
-CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION update_post_updated_at();
-CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON reports FOR EACH ROW EXECUTE FUNCTION update_report_updated_at();
-CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_system_setting_updated_at();
-
--- Audit triggers cho promotion packages
-CREATE TRIGGER trg_audit_promotion_packages
-    AFTER INSERT OR UPDATE ON promotion_packages
-    FOR EACH ROW EXECUTE FUNCTION log_promotion_package_changes();
-
-CREATE TRIGGER trg_audit_promotion_prices
-    AFTER INSERT OR UPDATE ON promotion_package_prices
-    FOR EACH ROW EXECUTE FUNCTION log_promotion_price_changes();
-
 -- ============================================================
 -- SEED DATA
 -- ============================================================
@@ -1012,12 +928,6 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
--- Trigger for shops table
-CREATE TRIGGER trg_sync_shop_to_user_email
-AFTER UPDATE OF shop_email ON shops
-FOR EACH ROW
-EXECUTE FUNCTION sync_shop_to_user_email();
 
 -- Users
 INSERT INTO users (
@@ -1562,29 +1472,28 @@ INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_rea
 -- ============================================================
 -- EVENT LOGS / EXPORT HISTORY / ACTIVITY LOG
 -- ============================================================
+-- Event Logs / Activity Log Seed Data
 INSERT INTO event_logs (
     event_log_id,
     event_log_user_id,
-    event_log_post_id,
-    event_log_shop_id,
-    event_log_slot_id,
-    event_log_category_id,
+    event_log_target_type,
+    event_log_target_id,
     event_log_event_type,
     event_log_event_time,
     event_log_meta
 ) VALUES
-(1, 6, NULL, NULL, NULL, NULL, 'admin_login',        '2026-03-29 08:00:00', '{"action":"Đăng nhập trang quản trị","detail":"Phiên đăng nhập trang quản trị đã được khởi tạo thành công.","performedBy":"Quản trị viên hệ thống"}'),
-(2, 3, NULL, NULL, NULL, NULL, 'role_assigned',      '2026-03-29 08:35:00', '{"action":"Gán vai trò","detail":"Đã gán vai trò: Nhân viên vận hành.","performedBy":"Quản trị viên hệ thống"}'),
-(3, 9, NULL, NULL, NULL, NULL, 'account_locked',     '2026-03-29 09:10:00', '{"action":"Khóa tài khoản","detail":"Quyền truy cập của người dùng đã bị hạn chế sau bước rà soát kiểm duyệt.","performedBy":"Quản trị viên hệ thống"}'),
-(4, 9, NULL, NULL, NULL, NULL, 'account_unlocked',   '2026-03-29 11:05:00', '{"action":"Mở khóa tài khoản","detail":"Quyền truy cập của người dùng đã được khôi phục sau khi xác minh.","performedBy":"Quản trị viên hệ thống"}'),
-(5, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:00:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV danh sách người dùng.","generatedBy":"Quản trị viên hệ thống","reportName":"Xuất danh sách người dùng - 2026-03-29","status":"Completed"}'),
-(6, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:08:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV tổng quan doanh thu.","generatedBy":"Quản trị viên hệ thống","reportName":"Tổng quan doanh thu - 2026-03-29","status":"Completed"}'),
-(7, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:16:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV chi tiêu khách hàng.","generatedBy":"Quản trị viên hệ thống","reportName":"Chi tiêu khách hàng - 2026-03-29","status":"Completed"}'),
-(8, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:25:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV tổng quan phân tích.","generatedBy":"Quản trị viên hệ thống","reportName":"Tổng quan phân tích - 2026-03-29","status":"Completed"}'),
-(9, 1, NULL, NULL, NULL, NULL, 'admin_export',       '2026-03-29 12:33:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV vận hành khuyến mãi.","generatedBy":"Quản trị viên hệ thống","reportName":"Vận hành khuyến mãi - 2026-03-29","status":"Completed"}'),
-(10, 1, NULL, NULL, NULL, NULL, 'admin_export',      '2026-03-29 12:44:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV bài đang quảng bá.","generatedBy":"Quản trị viên hệ thống","reportName":"Bài đang quảng bá - 2026-03-29","status":"Completed"}'),
-(11, 2, 2, 3, 3, 11, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Tiếp tục chiến dịch quảng bá","detail":"Chiến dịch vị trí 2 trang chủ đã được tiếp tục sau khi cập nhật nội dung.","performedBy":"Quản trị viên hệ thống"}'),
-(12, 1, 3, 2, 4, 12, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Mở lại chiến dịch quảng bá","detail":"Chiến dịch vị trí 3 trang chủ đã hết hạn được mở lại sau khi xác nhận thanh toán.","performedBy":"Quản trị viên hệ thống"}');
+(1, 6, 'system', NULL, 'admin_login',        '2026-03-29 08:00:00', '{"action":"Đăng nhập trang quản trị","detail":"Phiên đăng nhập trang quản trị đã được khởi tạo thành công.","performedBy":"Quản trị viên hệ thống"}'),
+(2, 3, 'user', 3, 'role_assigned',      '2026-03-29 08:35:00', '{"action":"Gán vai trò","detail":"Đã gán vai trò: Nhân viên vận hành.","performedBy":"Quản trị viên hệ thống"}'),
+(3, 9, 'user', 9, 'account_locked',     '2026-03-29 09:10:00', '{"action":"Khóa tài khoản","detail":"Quyền truy cập của người dùng đã bị hạn chế sau bước rà soát kiểm duyệt.","performedBy":"Quản trị viên hệ thống"}'),
+(4, 9, 'user', 9, 'account_unlocked',   '2026-03-29 11:05:00', '{"action":"Mở khóa tài khoản","detail":"Quyền truy cập của người dùng đã được khôi phục sau khi xác minh.","performedBy":"Quản trị viên hệ thống"}'),
+(5, 1, 'system', NULL, 'admin_export',       '2026-03-29 12:00:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV danh sách người dùng.","generatedBy":"Quản trị viên hệ thống","reportName":"Xuất danh sách người dùng - 2026-03-29","status":"Completed"}'),
+(6, 1, 'system', NULL, 'admin_export',       '2026-03-29 12:08:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV tổng quan doanh thu.","generatedBy":"Quản trị viên hệ thống","reportName":"Tổng quan doanh thu - 2026-03-29","status":"Completed"}'),
+(7, 1, 'system', NULL, 'admin_export',       '2026-03-29 12:16:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV chi tiêu khách hàng.","generatedBy":"Quản trị viên hệ thống","reportName":"Chi tiêu khách hàng - 2026-03-29","status":"Completed"}'),
+(8, 1, 'system', NULL, 'admin_export',       '2026-03-29 12:25:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV tổng quan phân tích.","generatedBy":"Quản trị viên hệ thống","reportName":"Tổng quan phân tích - 2026-03-29","status":"Completed"}'),
+(9, 1, 'system', NULL, 'admin_export',       '2026-03-29 12:33:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV vận hành khuyến mãi.","generatedBy":"Quản trị viên hệ thống","reportName":"Vận hành khuyến mãi - 2026-03-29","status":"Completed"}'),
+(10, 1, 'system', NULL, 'admin_export',      '2026-03-29 12:44:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV bài đang quảng bá.","generatedBy":"Quản trị viên hệ thống","reportName":"Bài đang quảng bá - 2026-03-29","status":"Completed"}'),
+(11, 2, 'post', 2, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Tiếp tục chiến dịch quảng bá","detail":"Chiến dịch vị trí 2 trang chủ đã được tiếp tục sau khi cập nhật nội dung.","performedBy":"Quản trị viên hệ thống"}'),
+(12, 1, 'post', 3, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Mở lại chiến dịch quảng bá","detail":"Chiến dịch vị trí 3 trang chủ đã hết hạn được mở lại sau khi xác nhận thanh toán.","performedBy":"Quản trị viên hệ thống"}');
 
 -- ============================================================
 -- DAILY PLACEMENT METRICS
@@ -1684,23 +1593,16 @@ INSERT INTO task_replies (reply_id, task_id, sender_id, message, visibility, cre
 (1, 1, 6, 'Tôi đang kiểm tra hệ thống SMS provider.', 'internal', now() - interval '1 day'),
 (2, 2, 6, 'Khách này có dấu hiệu spam thực sự. Sẽ báo cấp trên.', 'internal', now() - interval '12 hours');
 
--- Moderation Actions
-INSERT INTO moderation_actions (moderation_action_id, moderation_action_action_by, moderation_action_post_id, moderation_action_action, moderation_action_note, moderation_action_created_at) VALUES
-(1, 10, 2, 'HIDDEN', 'Tạm ẩn do spam. Chờ shop sửa.', now() - interval '5 days'),
-(2, 10, 2, 'RESTORED', 'Shop đã sửa bài hợp lệ.', now() - interval '4 days');
-
--- Moderation Feedback
-INSERT INTO moderation_feedback (feedback_id, target_type, target_id, sender_id, recipient_id, message, created_at) VALUES
-(1, 'post', 2, 10, 1, 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', now() - interval '5 days');
+-- Notifications Seed Data
+INSERT INTO notifications (notification_id, recipient_id, sender_id, title, message, type, is_read, created_at) VALUES
+(1, 6, NULL, 'Task mới: Xác minh báo cáo spam', 'Bạn được assign một task mới từ hệ thống phân bổ.', 'system', true, now() - interval '1 day'),
+(2, 10, NULL, 'Escalation mới: Cần xử lý shop vi phạm', 'Operation Staff (ID: 6) vừa đẩy một ticket lên mức quản lý.', 'system', false, now() - interval '12 hours'),
+(3, 1, 10, 'Phản hồi kiểm duyệt', 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', 'moderation', false, now() - interval '5 days');
 
 -- Escalations
 INSERT INTO escalations (escalation_id, source_task_id, target_type, target_id, created_by, severity, reason, status, resolution_note, created_at) VALUES
 (1, 2, 'shop', 1, 6, 'high', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'open', NULL, now() - interval '12 hours');
 
--- System Notifications
-INSERT INTO system_notifications (notification_id, recipient_id, title, message, type, is_read, created_at) VALUES
-(1, 6, 'Task mới: Xác minh báo cáo spam', 'Bạn được assign một task mới từ hệ thống phân bổ.', 'new_task', true, now() - interval '1 day'),
-(2, 10, 'Escalation mới: Cần xử lý shop vi phạm', 'Operation Staff (ID: 6) vừa đẩy một ticket lên mức quản lý.', 'escalation', false, now() - interval '12 hours');
 
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
 SELECT setval('admins_admin_id_seq', (SELECT COALESCE(MAX(admin_id), 1) FROM admins));
@@ -1722,7 +1624,6 @@ SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM 
 SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
 SELECT setval('promotion_packages_promotion_package_id_seq', (SELECT COALESCE(MAX(promotion_package_id), 1) FROM promotion_packages));
 SELECT setval('promotion_package_prices_price_id_seq',          (SELECT COALESCE(MAX(price_id),              1) FROM promotion_package_prices));
-SELECT setval('promotion_package_audit_log_audit_id_seq',        (SELECT COALESCE(MAX(audit_id),              1) FROM promotion_package_audit_log));
 SELECT setval('user_posting_plans_posting_plan_id_seq',          (SELECT COALESCE(MAX(posting_plan_id),       1) FROM user_posting_plans));
 SELECT setval('posting_fee_ledger_posting_fee_id_seq',           (SELECT COALESCE(MAX(posting_fee_id),        1) FROM posting_fee_ledger));
 SELECT setval('banned_keywords_banned_keyword_id_seq', (SELECT COALESCE(MAX(banned_keyword_id), 1) FROM banned_keywords));
@@ -1736,8 +1637,38 @@ SELECT setval('trend_scores_trend_score_id_seq', (SELECT COALESCE(MAX(trend_scor
 SELECT setval('ai_insights_ai_insight_id_seq', (SELECT COALESCE(MAX(ai_insight_id), 1) FROM ai_insights));
 SELECT setval('operation_tasks_task_id_seq', (SELECT COALESCE(MAX(task_id), 1) FROM operation_tasks));
 SELECT setval('task_replies_reply_id_seq', (SELECT COALESCE(MAX(reply_id), 1) FROM task_replies));
-SELECT setval('moderation_actions_moderation_action_id_seq', (SELECT COALESCE(MAX(moderation_action_id), 1) FROM moderation_actions));
-SELECT setval('moderation_feedback_feedback_id_seq', (SELECT COALESCE(MAX(feedback_id), 1) FROM moderation_feedback));
 SELECT setval('escalations_escalation_id_seq', (SELECT COALESCE(MAX(escalation_id), 1) FROM escalations));
-SELECT setval('system_notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM system_notifications));
+SELECT setval('notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM notifications));
 SELECT setval('host_contents_host_content_id_seq', (SELECT COALESCE(MAX(host_content_id), 1) FROM host_contents));
+
+
+-- ============================================================
+-- FINAL TRIGGER SETUP
+-- Chỉ khởi tạo Trigger SAU KHI đã nạp xong Seed Data
+-- Tránh Trigger chạy đè khi đang INSERT dữ liệu mẫu gây lỗi PKEY
+-- ============================================================
+
+-- Timestamps Triggers
+CREATE TRIGGER update_admins_updated_at BEFORE UPDATE ON admins FOR EACH ROW EXECUTE FUNCTION update_admin_updated_at();
+CREATE TRIGGER update_business_roles_updated_at BEFORE UPDATE ON business_roles FOR EACH ROW EXECUTE FUNCTION update_business_role_updated_at();
+CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_category_updated_at();
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_user_updated_at();
+CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops FOR EACH ROW EXECUTE FUNCTION update_shop_updated_at();
+CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION update_post_updated_at();
+CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON reports FOR EACH ROW EXECUTE FUNCTION update_report_updated_at();
+CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_system_setting_updated_at();
+
+-- Audit Triggers (Polymorphic Event Logs)
+CREATE TRIGGER trg_audit_promotion_packages
+    AFTER INSERT OR UPDATE ON promotion_packages
+    FOR EACH ROW EXECUTE FUNCTION log_promotion_package_changes();
+
+CREATE TRIGGER trg_audit_promotion_prices
+    AFTER INSERT OR UPDATE ON promotion_package_prices
+    FOR EACH ROW EXECUTE FUNCTION log_promotion_price_changes();
+
+-- Sync Triggers
+CREATE TRIGGER trg_sync_shop_to_user_email
+    AFTER UPDATE OF shop_email ON shops
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_shop_to_user_email();

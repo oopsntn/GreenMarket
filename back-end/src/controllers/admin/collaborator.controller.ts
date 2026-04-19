@@ -458,8 +458,9 @@ export const updateAdminCollaboratorStatus = async (
     });
 
     await db.insert(eventLogs).values({
-      eventLogUserId: collaboratorId,
-      eventLogShopId: shopId,
+      eventLogUserId: null,
+      eventLogTargetType: "shop",
+      eventLogTargetId: shopId,
       eventLogEventType: `${COLLABORATOR_EVENT_PREFIX}_${nextStatus}`,
       eventLogEventTime: new Date(),
       eventLogMeta: {

@@ -17,7 +17,7 @@ import {
   reports,
   shops,
   users,
-  moderationFeedback,
+  notifications,
   escalations,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
@@ -73,8 +73,6 @@ type QueueItem = {
 type TargetContext = {
   targetType: ModerationTargetType;
   targetId: number;
-  eventLogPostId: number | null;
-  eventLogShopId: number | null;
 };
 
 const POST_STATUS_TRANSITIONS: Record<string, ReadonlyArray<ManagerPostStatus>> = {
@@ -341,8 +339,6 @@ const ensureTargetExists = async (
     return {
       targetType,
       targetId,
-      eventLogPostId: post.postId,
-      eventLogShopId: null,
     };
   }
 
@@ -360,16 +356,12 @@ const ensureTargetExists = async (
     return {
       targetType,
       targetId,
-      eventLogPostId: null,
-      eventLogShopId: shop.shopId,
     };
   }
 
   const [report] = await db
     .select({
       reportId: reports.reportId,
-      postId: reports.postId,
-      reportShopId: reports.reportShopId,
     })
     .from(reports)
     .where(eq(reports.reportId, targetId))
@@ -382,8 +374,6 @@ const ensureTargetExists = async (
   return {
     targetType,
     targetId,
-    eventLogPostId: report.postId ?? null,
-    eventLogShopId: report.reportShopId ?? null,
   };
 };
 
@@ -654,9 +644,10 @@ export const updateManagerPostStatus = async (
 
       const [actionLog] = await tx
         .insert(eventLogs)
-        .values({
-          eventLogUserId: managerId,
-          eventLogPostId: postId,
+        .values([{
+          eventLogUserId: (managerId ?? null) as number | null,
+          eventLogTargetType: "post",
+          eventLogTargetId: postId,
           eventLogEventType: MANAGER_POST_STATUS_EVENT,
           eventLogMeta: {
             fromStatus: currentStatus,
@@ -664,7 +655,7 @@ export const updateManagerPostStatus = async (
             reason,
             note,
           },
-        })
+        }] as any[])
         .returning({
           eventLogId: eventLogs.eventLogId,
           eventLogEventType: eventLogs.eventLogEventType,
@@ -803,9 +794,10 @@ export const updateManagerShopStatus = async (
 
       const [actionLog] = await tx
         .insert(eventLogs)
-        .values({
-          eventLogUserId: managerId,
-          eventLogShopId: shopId,
+        .values([{
+          eventLogUserId: (managerId ?? null) as number | null,
+          eventLogTargetType: "shop",
+          eventLogTargetId: shopId,
           eventLogEventType: MANAGER_SHOP_STATUS_EVENT,
           eventLogMeta: {
             fromStatus: currentStatus,
@@ -814,7 +806,7 @@ export const updateManagerShopStatus = async (
             note,
             postsAssigned,
           },
-        })
+        }] as any[])
         .returning({
           eventLogId: eventLogs.eventLogId,
           eventLogEventType: eventLogs.eventLogEventType,
@@ -1006,17 +998,18 @@ export const resolveManagerReport = async (
 
       const [decisionLog] = await tx
         .insert(eventLogs)
-        .values({
-          eventLogUserId: managerId,
+        .values([{
+          eventLogUserId: (managerId ?? null) as number | null,
+          eventLogTargetType: "report",
+          eventLogTargetId: reportId,
           eventLogEventType: MANAGER_REPORT_RESOLVED_EVENT,
           eventLogMeta: {
-            reportId,
             fromStatus: currentStatus,
             toStatus: status,
             resolution,
             note,
           },
-        })
+        }] as any[])
         .returning({
           eventLogId: eventLogs.eventLogId,
           eventLogEventType: eventLogs.eventLogEventType,
@@ -1138,41 +1131,46 @@ export const createModerationFeedback = async (
       return;
     }
 
-    const [feedbackRow] = await db
-      .insert(moderationFeedback)
-      .values({
-        targetType,
-        targetId,
-        senderId: managerId,
-        recipientId: recipientUserId,
-        message,
-      })
+    const [notificationRow] = await db
+      .insert(notifications)
+      .values([{
+        recipientId: recipientUserId!,
+        senderId: (managerId ?? null) as number | null,
+        title: `Phản hồi kiểm duyệt: ${targetType === "post" ? "Bài đăng" : "Cửa hàng"}`,
+        message: message,
+        type: "moderation",
+        metaData: {
+          targetType,
+          targetId,
+          templateId,
+        },
+      }] as any[])
       .returning();
 
-    // Still keep event log for secondary tracking if needed, or just return success
-    await db.insert(eventLogs).values({
-      eventLogUserId: managerId,
-      eventLogPostId: targetContext.eventLogPostId,
-      eventLogShopId: targetContext.eventLogShopId,
+    // Still keep event log for secondary tracking
+    await db.insert(eventLogs).values([{
+      eventLogUserId: (managerId ?? null) as number | null,
+      eventLogTargetType: targetType,
+      eventLogTargetId: targetId,
       eventLogEventType: MANAGER_FEEDBACK_EVENT,
       eventLogMeta: {
-        feedbackId: feedbackRow.feedbackId,
+        notificationId: notificationRow.notificationId,
         targetType,
         targetId,
         recipientUserId,
         templateId,
       },
-    });
+    }] as any[]);
 
     res.status(201).json({
       feedback: {
-        feedbackId: feedbackRow.feedbackId,
+        id: notificationRow.notificationId,
         targetType,
         targetId,
         recipientUserId,
         message,
         templateId,
-        createdAt: feedbackRow.createdAt,
+        createdAt: notificationRow.createdAt,
       },
     });
   } catch (error) {
@@ -1237,8 +1235,8 @@ export const getManagerHistory = async (
         .select({
           eventLogId: eventLogs.eventLogId,
           eventLogUserId: eventLogs.eventLogUserId,
-          eventLogPostId: eventLogs.eventLogPostId,
-          eventLogShopId: eventLogs.eventLogShopId,
+          eventLogTargetType: eventLogs.eventLogTargetType,
+          eventLogTargetId: eventLogs.eventLogTargetId,
           eventLogEventType: eventLogs.eventLogEventType,
           eventLogEventTime: eventLogs.eventLogEventTime,
           eventLogMeta: eventLogs.eventLogMeta,
@@ -1257,22 +1255,6 @@ export const getManagerHistory = async (
 
     const data = rows.map((item) => {
       const meta = toRecord(item.eventLogMeta);
-      const metaTargetType =
-        typeof meta?.targetType === "string" ? meta.targetType : undefined;
-      const metaTargetId =
-        typeof meta?.targetId === "number"
-          ? meta.targetId
-          : typeof meta?.targetId === "string"
-            ? Number(meta.targetId)
-            : undefined;
-
-      const fallbackTargetType = item.eventLogPostId
-        ? "post"
-        : item.eventLogShopId
-          ? "shop"
-          : null;
-      const fallbackTargetId = item.eventLogPostId ?? item.eventLogShopId ?? null;
-
       return {
         logId: item.eventLogId,
         actionType: formatEventActionType(item.eventLogEventType ?? ""),
@@ -1283,11 +1265,9 @@ export const getManagerHistory = async (
           displayName: item.actorName,
         },
         target: {
-          targetType: metaTargetType ?? fallbackTargetType,
-          targetId: metaTargetId ?? fallbackTargetId,
+          targetType: item.eventLogTargetType,
+          targetId: item.eventLogTargetId,
         },
-        postId: item.eventLogPostId,
-        shopId: item.eventLogShopId,
         meta,
       };
     });
@@ -1549,10 +1529,10 @@ export const createManagerEscalation = async (
       })
       .returning();
 
-    await db.insert(eventLogs).values({
-      eventLogUserId: managerId,
-      eventLogPostId: targetContext.eventLogPostId,
-      eventLogShopId: targetContext.eventLogShopId,
+    await db.insert(eventLogs).values([{
+      eventLogUserId: (managerId ?? null) as number | null,
+      eventLogTargetType: targetType,
+      eventLogTargetId: targetId,
       eventLogEventType: MANAGER_ESCALATION_EVENT,
       eventLogMeta: {
         escalationId: escalationRow.escalationId,
@@ -1560,7 +1540,7 @@ export const createManagerEscalation = async (
         targetId,
         severity,
       },
-    });
+    }] as any[]);
 
     res.status(201).json({
       escalationTicket: {

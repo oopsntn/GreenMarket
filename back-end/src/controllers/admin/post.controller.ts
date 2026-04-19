@@ -3,7 +3,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../config/db";
 import { AuthRequest } from "../../dtos/auth.ts";
 import { adminTemplates } from "../../models/schema/admin-templates.ts";
-import { eventLogs, moderationActions } from "../../models/schema/index.ts";
+import { eventLogs } from "../../models/schema/index.ts";
 import { postAttributeValues } from "../../models/schema/post-attribute-values";
 import { postImages } from "../../models/schema/post-images";
 import { posts, type NewPost } from "../../models/schema/posts";
@@ -85,7 +85,8 @@ const getPostTemplateAuditMeta = async (postId: number) => {
     .from(eventLogs)
     .where(
       and(
-        eq(eventLogs.eventLogPostId, postId),
+        eq(eventLogs.eventLogTargetType, "post"),
+        eq(eventLogs.eventLogTargetId, postId),
         inArray(eventLogs.eventLogEventType, [
           "admin_post_approved",
           "admin_post_rejected",
@@ -304,21 +305,10 @@ export const updatePostStatus = async (
       .where(eq(posts.postId, idNumber))
       .returning();
 
-    if (typeof req.user?.id === "number" && Number.isFinite(req.user.id)) {
-      await db.insert(moderationActions).values({
-        moderationActionActionBy: req.user.id,
-        moderationActionPostId: updatedPost.postId,
-        moderationActionAction: normalizedStatus,
-        moderationActionNote:
-          nextRejectedReason || getPostActionLabel(normalizedStatus),
-      });
-    }
-
     await db.insert(eventLogs).values({
-      eventLogUserId: updatedPost.postAuthorId,
-      eventLogPostId: updatedPost.postId,
-      eventLogShopId: updatedPost.postShopId,
-      eventLogCategoryId: updatedPost.categoryId,
+      eventLogUserId: null,
+      eventLogTargetType: "post",
+      eventLogTargetId: updatedPost.postId,
       eventLogEventType: getPostEventType(normalizedStatus),
       eventLogEventTime: new Date(),
       eventLogMeta: {
@@ -329,6 +319,9 @@ export const updatePostStatus = async (
         performedBy,
         actorRole: "Quản trị viên",
         status: normalizedStatus,
+        categoryId: updatedPost.categoryId,
+        shopId: updatedPost.postShopId,
+        authorId: updatedPost.postAuthorId,
         templateId: selectedTemplate?.templateId ?? null,
         templateName: selectedTemplate?.templateName ?? null,
         templateType: selectedTemplate?.templateType ?? null,
@@ -389,7 +382,7 @@ export const deletePost = async (
   try {
     const idNumber = parseId(req.params.id);
     const authReq = req as AuthRequest;
-    const { adminId, reason, templateId } = req.body;
+    const { reason, templateId } = req.body;
     const performedBy =
       authReq.user?.name?.trim() ||
       authReq.user?.email?.trim() ||
@@ -423,20 +416,10 @@ export const deletePost = async (
       return;
     }
 
-    if (typeof adminId === "number" && Number.isFinite(adminId)) {
-      await db.insert(moderationActions).values({
-        moderationActionActionBy: adminId,
-        moderationActionPostId: idNumber,
-        moderationActionAction: "hidden",
-        moderationActionNote: reason || "Quản trị viên ẩn bài đăng",
-      });
-    }
-
     await db.insert(eventLogs).values({
-      eventLogUserId: deletedPost.postAuthorId,
-      eventLogPostId: deletedPost.postId,
-      eventLogShopId: deletedPost.postShopId,
-      eventLogCategoryId: deletedPost.categoryId,
+      eventLogUserId: null,
+      eventLogTargetType: "post",
+      eventLogTargetId: deletedPost.postId,
       eventLogEventType: "admin_post_hidden",
       eventLogEventTime: new Date(),
       eventLogMeta: {
@@ -447,6 +430,9 @@ export const deletePost = async (
         performedBy,
         actorRole: "Quản trị viên",
         status: "hidden",
+        categoryId: deletedPost.categoryId,
+        shopId: deletedPost.postShopId,
+        authorId: deletedPost.postAuthorId,
         templateId: selectedTemplate?.templateId ?? null,
         templateName: selectedTemplate?.templateName ?? null,
         templateType: selectedTemplate?.templateType ?? null,

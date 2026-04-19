@@ -151,6 +151,8 @@ const logBuilderEvent = async (
 ) => {
   await db.insert(eventLogs).values({
     eventLogUserId: userId ?? null,
+    eventLogTargetType: "template_builder",
+    eventLogTargetId: null,
     eventLogEventType: eventType,
     eventLogEventTime: new Date(),
     eventLogMeta: {

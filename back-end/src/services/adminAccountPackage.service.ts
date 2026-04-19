@@ -320,6 +320,8 @@ const logAccountPackageEvent = async (params: {
 }) => {
   await db.insert(eventLogs).values({
     eventLogUserId: null,
+    eventLogTargetType: "account_package",
+    eventLogTargetId: null, // Global packages use codes in metadata
     eventLogEventType: "admin_account_package_updated",
     eventLogEventTime: new Date(),
     eventLogMeta: {

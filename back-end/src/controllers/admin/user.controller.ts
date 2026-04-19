@@ -181,7 +181,9 @@ export const updateUserStatus = async (
     }
 
     await db.insert(eventLogs).values({
-      eventLogUserId: idNumber,
+      eventLogUserId: null, // Performer is admin, but we don't store AdminID in eventLogUserId yet
+      eventLogTargetType: "user",
+      eventLogTargetId: idNumber,
       eventLogEventType: isBlocked
         ? "admin_user_locked"
         : "admin_user_unlocked",
@@ -276,7 +278,9 @@ export const assignUserBusinessRole = async (
       .where(eq(users.userId, userId));
 
     await db.insert(eventLogs).values({
-      eventLogUserId: userId,
+      eventLogUserId: null,
+      eventLogTargetType: "user",
+      eventLogTargetId: userId,
       eventLogEventType: "admin_user_role_assigned",
       eventLogEventTime: new Date(),
       eventLogMeta: {

@@ -293,7 +293,8 @@ export const getPublicShopById = async (req: AuthRequest, res: Response): Promis
             if (shouldCountShopView(id, viewerKey)) {
                 db.insert(eventLogs)
                     .values({
-                        eventLogShopId: id,
+                        eventLogTargetType: "shop",
+                        eventLogTargetId: id,
                         eventLogUserId: viewerId ?? null,
                         eventLogEventType: SHOP_EVENT_VIEW,
                         eventLogMeta: { source: "shop_detail_page" },
@@ -353,7 +354,8 @@ export const recordShopContactClick = async (req: Request<{ id: string }>, res: 
         }
 
         await db.insert(eventLogs).values({
-            eventLogShopId: shopId,
+            eventLogTargetType: "shop",
+            eventLogTargetId: shopId,
             eventLogEventType: SHOP_EVENT_CONTACT_CLICK,
             eventLogMeta: { source: "shop_contact_action" },
         });

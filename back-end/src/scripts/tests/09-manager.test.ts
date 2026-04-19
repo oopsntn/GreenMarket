@@ -1,6 +1,6 @@
 import axios from "axios";
 import jwt from "jsonwebtoken";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { db } from "../../config/db";
 import {
   businessRoles,
@@ -9,7 +9,7 @@ import {
   reports,
   shops,
   users,
-  moderationFeedback,
+  notifications,
   escalations,
 } from "../../models/schema/index";
 
@@ -283,8 +283,8 @@ async function runManagerTests() {
       templateId: "MOD-POST-WARN-01",
     });
     assertStatus(feedbackRes, 201, "POST /moderation-feedback");
-    if (!feedbackRes.data?.feedback?.feedbackId) {
-      throw new Error("Feedback response missing feedbackId.");
+    if (!feedbackRes.data?.feedback?.id) {
+      throw new Error("Feedback response missing id (notificationId).");
     }
 
     console.log("7) Escalation...");
@@ -332,8 +332,13 @@ async function runManagerTests() {
 
       if (createdUserIds.length > 0) {
         await db
-          .delete(moderationFeedback)
-          .where(inArray(moderationFeedback.senderId, createdUserIds));
+          .delete(notifications)
+          .where(
+            or(
+              inArray(notifications.senderId, createdUserIds),
+              inArray(notifications.recipientId, createdUserIds)
+            )
+          );
         await db
           .delete(escalations)
           .where(inArray(escalations.createdBy, createdUserIds));

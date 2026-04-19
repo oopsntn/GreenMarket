@@ -113,7 +113,8 @@ const logPlacementSlotEvent = async (params: {
 }) => {
   await db.insert(eventLogs).values({
     eventLogUserId: null,
-    eventLogSlotId: params.slotId,
+    eventLogTargetType: "slot",
+    eventLogTargetId: params.slotId,
     eventLogEventType: "admin_slot_updated",
     eventLogEventTime: new Date(),
     eventLogMeta: {

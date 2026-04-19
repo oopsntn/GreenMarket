@@ -15,7 +15,7 @@ import {
   operationTasks,
   taskReplies,
   escalations,
-  systemNotifications,
+  notifications,
   users,
   reports,
   posts,
@@ -340,14 +340,14 @@ export const getOperationNotifications = async (req: AuthRequest, res: Response)
       return;
     }
 
-    const notifications = await db
+    const staffNotifications = await db
       .select()
-      .from(systemNotifications)
-      .where(eq(systemNotifications.recipientId, userId))
-      .orderBy(desc(systemNotifications.createdAt))
+      .from(notifications)
+      .where(eq(notifications.recipientId, userId))
+      .orderBy(desc(notifications.createdAt))
       .limit(50);
 
-    res.json({ data: notifications });
+    res.json({ data: staffNotifications });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
