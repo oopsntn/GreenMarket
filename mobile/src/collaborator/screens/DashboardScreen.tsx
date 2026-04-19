@@ -117,6 +117,8 @@ const DashboardScreen = () => {
         stats: { totalJobs: 0, activeJobs: 0, completedJobs: 0, totalEarnings: 0, availableBalance: 0 }
     };
 
+    const displayName = profile?.displayName || user?.userDisplayName || 'Cộng tác viên';
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -129,7 +131,7 @@ const DashboardScreen = () => {
                     <View style={styles.headerTop}>
                         <View>
                             <Text style={styles.welcomeText}>Xin chào,</Text>
-                            <Text style={styles.nameText}>{profile.displayName || 'Cộng tác viên'}</Text>
+                            <Text style={styles.nameText}>{displayName}</Text>
                         </View>
                         <TouchableOpacity style={styles.notificationBtn}>
                             <Bell color="white" size={24} />
@@ -168,11 +170,11 @@ const DashboardScreen = () => {
                                 <View style={styles.statusBadge}>
                                     <Circle
                                         size={10}
-                                        fill={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
-                                        color={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
+                                        fill={profile?.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
+                                        color={profile?.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
                                     />
                                     <Text style={styles.statusText}>
-                                        {profile.availabilityStatus?.toUpperCase()}
+                                        {profile?.availabilityStatus?.toUpperCase() || 'OFFLINE'}
                                     </Text>
                                 </View>
                             </View>
