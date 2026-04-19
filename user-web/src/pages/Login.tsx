@@ -100,6 +100,13 @@ const Login: React.FC = () => {
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (mobile.length !== 10) {
+      alert("Số điện thoại phải có đúng 10 chữ số.");
+      setLoading(false);
+      return;
+    }
+
     try {
       await requestOtp(mobile);
       setStep('otp');
@@ -238,7 +245,10 @@ const Login: React.FC = () => {
                     className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all placeholder:text-slate-400 text-slate-900 text-sm font-medium"
                     placeholder="09xx xxx xxx"
                     value={mobile}
-                    onChange={(e) => setMobile(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (val.length <= 10) setMobile(val);
+                    }}
                   />
                 </div>
                 <button

@@ -1,5 +1,12 @@
 import { Router } from "express";
-import { getProfile, updateProfile, getFavoritePosts } from "../../controllers/user/profile.controller.ts";
+import { 
+  getProfile, 
+  updateProfile, 
+  getFavoritePosts,
+  requestUserEmailOTP,
+  verifyAndAddUserEmail,
+  removeUserEmail
+} from "../../controllers/user/profile.controller.ts";
 import { verifyToken } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
@@ -11,5 +18,9 @@ router.get("/", getProfile);
 router.patch("/", updateProfile);
 
 router.get("/favorites", getFavoritePosts);
+
+router.post("/email/request-otp", requestUserEmailOTP);
+router.post("/email/verify", verifyAndAddUserEmail);
+router.post("/email/remove", removeUserEmail);
 
 export default router;

@@ -1,8 +1,10 @@
 import { Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, desc, inArray, and } from "drizzle-orm";
+import { eq, desc, inArray, and, ne } from "drizzle-orm";
+import { verificationService } from "../../services/verification.service.ts";
 import {
   users,
+  shops,
   businessRoles,
   userFavorites,
   posts,
@@ -18,6 +20,7 @@ const buildProfileQuery = () =>
       userDisplayName: users.userDisplayName,
       userAvatarUrl: users.userAvatarUrl,
       userEmail: users.userEmail,
+      userEmailVerified: users.userEmailVerified,
       userLocation: users.userLocation,
       userBio: users.userBio,
       userStatus: users.userStatus,
@@ -77,7 +80,7 @@ export const updateProfile = async (
       return;
     }
 
-    const { userDisplayName, userAvatarUrl, userEmail, userLocation, userBio } =
+    const { userDisplayName, userAvatarUrl, userLocation, userBio } =
       req.body;
 
     await db
@@ -85,7 +88,6 @@ export const updateProfile = async (
       .set({
         userDisplayName,
         userAvatarUrl,
-        userEmail,
         userLocation,
         userBio,
         userUpdatedAt: new Date(),
@@ -160,6 +162,102 @@ export const getFavoritePosts = async (
     }));
 
     res.json({ posts: formattedPosts });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const requestUserEmailOTP = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const { email } = req.body;
+    console.log(`[PROFILE CONTROLLER] Requesting OTP for email: ${email} (User: ${userId})`);
+    if (!email) { res.status(400).json({ error: "Email is required" }); return; }
+
+    const [existing] = await db.select().from(users).where(eq(users.userEmail, email)).limit(1);
+    if (existing) {
+      if (existing.userId !== userId) {
+        res.status(400).json({ error: "Email này đã được sử dụng bởi một tài khoản khác" });
+        return;
+      }
+      if (existing.userEmailVerified) {
+        res.status(400).json({ error: "Email này đã được xác thực và đang là email hiện tại của bạn" });
+        return;
+      }
+    }
+
+    const result = await verificationService.requestOTP(email, "email", 15);
+    if (!result.success) {
+      res.status(500).json({ error: result.message });
+      return;
+    }
+    res.json({ message: result.message });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const verifyAndAddUserEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const { email, otp } = req.body;
+    if (!email || !otp) { res.status(400).json({ error: "Missing email or otp" }); return; }
+
+    const result = await verificationService.verifyOTP(email, otp, "email");
+    if (!result.success) {
+      res.status(400).json({ error: result.message });
+      return;
+    }
+
+    await db.update(users)
+      .set({ userEmail: email, userEmailVerified: true })
+      .where(eq(users.userId, userId));
+
+    const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+    if (shop) {
+      await db.update(shops).set({ shopEmail: email, shopEmailVerified: true }).where(eq(shops.shopId, userId));
+    }
+
+    res.json({ message: "Xác thực email thành công", userEmail: email });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const removeUserEmail = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    const { otp } = req.body;
+    if (!otp) { res.status(400).json({ error: "Missing otp" }); return; }
+
+    const [user] = await db.select().from(users).where(eq(users.userId, userId)).limit(1);
+    if (!user || !user.userEmail) { res.status(400).json({ error: "Không tìm thấy email hiện tại" }); return; }
+
+    const result = await verificationService.verifyOTP(user.userEmail, otp, "email");
+    if (!result.success) {
+      res.status(400).json({ error: result.message });
+      return;
+    }
+
+    await db.update(users)
+      .set({ userEmail: null, userEmailVerified: false })
+      .where(eq(users.userId, userId));
+
+    const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+    if (shop) {
+      await db.update(shops).set({ shopEmail: null, shopEmailVerified: false }).where(eq(shops.shopId, userId));
+    }
+
+    res.json({ message: "Gỡ email thành công" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
