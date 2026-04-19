@@ -63,15 +63,10 @@ export {
 // Posts
 export { posts, type Post, type NewPost } from "./posts.ts";
 export {
-  postImages,
-  type PostImage,
-  type NewPostImage,
-} from "./post-images.ts";
-export {
-  postVideos,
-  type PostVideo,
-  type NewPostVideo,
-} from "./post-videos.ts";
+  mediaAssets,
+  type MediaAsset,
+  type NewMediaAsset,
+} from "./media-assets.ts";
 export {
   postAttributeValues,
   type PostAttributeValue,
@@ -91,11 +86,6 @@ export {
 
 // Report & Moderation
 export { reports, type Report, type NewReport } from "./reports.ts";
-export {
-  reportEvidence,
-  type ReportEvidence,
-  type NewReportEvidence,
-} from "./report-evidence.ts";
 
 // Monetization
 export {

@@ -4,11 +4,11 @@ import { db } from "../../config/db";
 import { AuthRequest } from "../../dtos/auth.ts";
 import { eventLogs } from "../../models/schema/index.ts";
 import { postPromotions } from "../../models/schema/post-promotions.ts";
-import { reportEvidence } from "../../models/schema/report-evidence.ts";
 import { reports } from "../../models/schema/reports.ts";
 import { posts } from "../../models/schema/posts.ts";
 import { shops } from "../../models/schema/shops.ts";
 import { users } from "../../models/schema/users.ts";
+import { mediaAssets } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId";
 
 const reportSelection = {
@@ -39,10 +39,11 @@ const attachEvidenceToReports = async <T extends { reportId: number }>(
   const reportIds = new Set(items.map((item) => item.reportId));
   const evidenceRows = await db
     .select({
-      reportId: reportEvidence.reportEvidenceReportId,
-      url: reportEvidence.reportEvidenceUrl,
+      reportId: mediaAssets.targetId,
+      url: mediaAssets.url,
     })
-    .from(reportEvidence);
+    .from(mediaAssets)
+    .where(eq(mediaAssets.targetType, "report"));
 
   const evidenceMap = new Map<number, string[]>();
 

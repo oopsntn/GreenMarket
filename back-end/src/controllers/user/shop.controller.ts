@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and, inArray, sql, or, ilike, desc } from "drizzle-orm";
 import { shops, type Shop } from "../../models/schema/shops.ts";
-import { posts, postImages, eventLogs, shopCollaborators } from "../../models/schema/index.ts";
+import { posts, mediaAssets, eventLogs, shopCollaborators } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import { verificationService } from "../../services/verification.service.ts";
@@ -312,9 +312,18 @@ export const getPublicShopById = async (req: AuthRequest, res: Response): Promis
         let postsWithImages = shopPosts.map(p => ({ ...p, images: [] as any[] }));
         if (shopPosts.length > 0) {
             const postIds = shopPosts.map(p => p.postId);
-            const images = await db.select()
-                .from(postImages)
-                .where(inArray(postImages.postId, postIds));
+            const images = await db.select({
+                postId: mediaAssets.targetId,
+                imageUrl: mediaAssets.url,
+            })
+                .from(mediaAssets)
+                .where(
+                    and(
+                        eq(mediaAssets.targetType, "post"),
+                        eq(mediaAssets.mediaType, "image"),
+                        inArray(mediaAssets.targetId, postIds)
+                    )
+                );
 
             postsWithImages = shopPosts.map(post => ({
                 ...post,

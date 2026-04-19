@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and, sql, inArray, or } from "drizzle-orm";
-import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, userFavorites, postPromotions, promotionPackages, placementSlots, shopCollaborators } from "../../models/schema/index.ts";
+import { posts, mediaAssets, postAttributeValues, shops, type Post, categories, attributes, users, userFavorites, postPromotions, promotionPackages, placementSlots, shopCollaborators } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
@@ -133,11 +133,13 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
 
         // Save images if provided
         if (Array.isArray(images) && images.length > 0) {
-            await db.insert(postImages).values(
+            await db.insert(mediaAssets).values(
                 images.map((url: string, index: number) => ({
-                    postId: newPost.postId,
-                    imageUrl: url,
-                    imageSortOrder: index,
+                    targetType: "post",
+                    targetId: newPost.postId,
+                    mediaType: "image",
+                    url: url,
+                    sortOrder: index,
                 }))
             );
         }
@@ -268,14 +270,20 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
             .where(inArray(postAttributeValues.postId, postIds));
 
         const postImageRows = await db.select({
-            postId: postImages.postId,
-            imageId: postImages.imageId,
-            imageUrl: postImages.imageUrl,
-            imageSortOrder: postImages.imageSortOrder,
+            postId: mediaAssets.targetId,
+            imageId: mediaAssets.assetId,
+            imageUrl: mediaAssets.url,
+            imageSortOrder: mediaAssets.sortOrder,
         })
-            .from(postImages)
-            .where(inArray(postImages.postId, postIds))
-            .orderBy(postImages.postId, postImages.imageSortOrder, postImages.imageId);
+            .from(mediaAssets)
+            .where(
+                and(
+                    eq(mediaAssets.targetType, "post"),
+                    eq(mediaAssets.mediaType, "image"),
+                    inArray(mediaAssets.targetId, postIds)
+                )
+            )
+            .orderBy(mediaAssets.targetId, mediaAssets.sortOrder, mediaAssets.assetId);
 
         const [author] = await db.select({
             userId: users.userId,
@@ -793,10 +801,22 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
         }
 
         // Fetch related images
-        const images = await db.select().from(postImages).where(eq(postImages.postId, post.postId));
+        const images = await db.select().from(mediaAssets).where(
+            and(
+                eq(mediaAssets.targetType, "post"),
+                eq(mediaAssets.targetId, post.postId),
+                eq(mediaAssets.mediaType, "image")
+            )
+        );
 
         // Fetch related videos
-        const videos = await db.select().from(postVideos).where(eq(postVideos.postId, post.postId));
+        const videos = await db.select().from(mediaAssets).where(
+            and(
+                eq(mediaAssets.targetType, "post"),
+                eq(mediaAssets.targetId, post.postId),
+                eq(mediaAssets.mediaType, "video")
+            )
+        );
 
         // Fetch related attributes with names
         const attributesData = await db.select({

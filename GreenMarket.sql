@@ -290,22 +290,16 @@ CREATE TABLE posts (
     post_updated_at TIMESTAMP DEFAULT now()
 );
 
--- Post Images
-CREATE TABLE post_images (
-    image_id SERIAL PRIMARY KEY,
-    post_id INTEGER REFERENCES posts(post_id) ON DELETE CASCADE,
-    image_url TEXT NOT NULL,
-    image_sort_order INTEGER DEFAULT 0,
-    image_created_at TIMESTAMP DEFAULT now()
-);
-
--- Post Videos
-CREATE TABLE post_videos (
-    post_video_id SERIAL PRIMARY KEY,
-    post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
-    video_url TEXT NOT NULL,
-    video_position INTEGER DEFAULT 0,
-    video_created_at TIMESTAMP DEFAULT now()
+-- Media Assets (Unified resources like images, videos, documents)
+CREATE TABLE media_assets (
+    asset_id SERIAL PRIMARY KEY,
+    target_type VARCHAR(50) NOT NULL, -- post, report, job_deliverable, host_content, user, shop
+    target_id INTEGER NOT NULL,
+    media_type VARCHAR(20) NOT NULL, -- image, video, document
+    url TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    meta_data JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT now()
 );
 
 -- Post Categories (Many-to-Many)
@@ -348,13 +342,6 @@ CREATE TABLE reports (
     report_updated_at TIMESTAMP DEFAULT now()
 );
 
--- Report Evidence
-CREATE TABLE report_evidence (
-    report_evidence_id SERIAL PRIMARY KEY,
-    report_evidence_report_id INTEGER NOT NULL REFERENCES reports(report_id) ON DELETE CASCADE,
-    report_evidence_url TEXT,
-    report_evidence_created_at TIMESTAMP DEFAULT now()
-);
 
 
 -- Placement Slots (Ad zones)
@@ -1228,31 +1215,46 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 -- Post 15: Ổi Bonsai
 (15, 1, 'Dáng Hoành'),    (15, 2, '48'),  (15, 3, '18'),  (15, 4, '7'),  (15, 5, 'Bắc Ninh');
 
--- Post Images
-INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
-(1,  '/uploads/sanh-nam-dien-mini-1.jpg', 0),
-(1,  '/uploads/sanh-nam-dien-mini-2.jpg', 1),
-(1,  '/uploads/sanh-nam-dien-mini-3.jpg', 2),
-(2,  '/uploads/tung-la-han-1.jpg', 0),
-(2,  '/uploads/tung-la-han-2.jpg', 1),
-(3,  '/uploads/linh-sam-1.jpg', 0),
-(3,  '/uploads/linh-sam-2.jpg', 1),
-(4,  '/uploads/sanh-que-dai-1.jpg', 0),
-(5,  '/uploads/mct-mini-1.jpg', 0),
-(5,  '/uploads/mct-mini-2.jpg', 1),
-(6,  '/uploads/thong-den-1.jpg', 0),
-(7,  '/uploads/si-phong-thuy-1.jpg', 0),
-(8,  '/uploads/mai-vang-1.jpg', 0),
-(8,  '/uploads/mai-vang-2.jpg', 1),
-(9,  '/uploads/tung-bach-tan-1.jpg', 0),
-(10, '/uploads/kim-quyt-mini-1.jpg', 0),
-(11, '/uploads/mai-chieu-thuy-bay-1.jpg', 0),
-(11, '/uploads/mai-chieu-thuy-bay-2.jpg', 1),
-(12, '/uploads/duoi-co-xien-1.jpg', 0),
-(13, '/uploads/sanh-co-tan-roi-1.jpg', 0),
-(13, '/uploads/sanh-co-tan-roi-2.jpg', 1),
-(14, '/uploads/loc-vung-huyen-1.jpg', 0),
-(15, '/uploads/oi-bonsai-sai-qua-1.jpg', 0);
+-- Media Assets Seed Data
+INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order) VALUES
+-- Post 1: Sanh Nam Điền Mini
+('post', 1, 'image', '/uploads/sanh-nam-dien-mini-1.jpg', 0),
+('post', 1, 'image', '/uploads/sanh-nam-dien-mini-2.jpg', 1),
+('post', 1, 'image', '/uploads/sanh-nam-dien-mini-3.jpg', 2),
+-- Post 2: Tùng La Hán
+('post', 2, 'image', '/uploads/tung-la-han-1.jpg', 0),
+('post', 2, 'image', '/uploads/tung-la-han-2.jpg', 1),
+-- Post 3: Linh Sam
+('post', 3, 'image', '/uploads/linh-sam-1.jpg', 0),
+('post', 3, 'image', '/uploads/linh-sam-2.jpg', 1),
+-- Post 4: Sanh Quê Đại
+('post', 4, 'image', '/uploads/sanh-que-dai-1.jpg', 0),
+-- Post 5: MCT Mini
+('post', 5, 'image', '/uploads/mct-mini-1.jpg', 0),
+('post', 5, 'image', '/uploads/mct-mini-2.jpg', 1),
+-- Post 6: Thông Đen
+('post', 6, 'image', '/uploads/thong-den-1.jpg', 0),
+-- Post 7: Si Phong Thủy
+('post', 7, 'image', '/uploads/si-phong-thuy-1.jpg', 0),
+-- Post 8: Mai Vàng
+('post', 8, 'image', '/uploads/mai-vang-1.jpg', 0),
+('post', 8, 'image', '/uploads/mai-vang-2.jpg', 1),
+-- Post 9: Tùng Bách Tán
+('post', 9, 'image', '/uploads/tung-bach-tan-1.jpg', 0),
+-- Post 10: Kim Quýt Mini
+('post', 10, 'image', '/uploads/kim-quyt-mini-1.jpg', 0),
+-- Post 11: Mai Chiếu Thủy Dáng Bay
+('post', 11, 'image', '/uploads/mai-chieu-thuy-bay-1.jpg', 0),
+('post', 11, 'image', '/uploads/mai-chieu-thuy-bay-2.jpg', 1),
+-- Post 12: Duối Cổ
+('post', 12, 'image', '/uploads/duoi-co-xien-1.jpg', 0),
+-- Post 13: Sanh Cổ Tán Rơi
+('post', 13, 'image', '/uploads/sanh-co-tan-roi-1.jpg', 0),
+('post', 13, 'image', '/uploads/sanh-co-tan-roi-2.jpg', 1),
+-- Post 14: Lộc Vừng Phong Thủy
+('post', 14, 'image', '/uploads/loc-vung-huyen-1.jpg', 0),
+-- Post 15: Ổi Bonsai
+('post', 15, 'image', '/uploads/oi-bonsai-sai-qua-1.jpg', 0);
 
 -- Favorite Posts (Bookmarks)
 -- User Favorites (Mock - Posts & Contents)
@@ -1612,8 +1614,7 @@ SELECT setval('otp_requests_otp_request_id_seq', (SELECT COALESCE(MAX(otp_reques
 SELECT setval('categories_category_id_seq', (SELECT COALESCE(MAX(category_id), 1) FROM categories));
 SELECT setval('attributes_attribute_id_seq', (SELECT COALESCE(MAX(attribute_id), 1) FROM attributes));
 SELECT setval('posts_post_id_seq', (SELECT COALESCE(MAX(post_id), 1) FROM posts));
-SELECT setval('post_images_image_id_seq', (SELECT COALESCE(MAX(image_id), 1) FROM post_images));
-SELECT setval('post_videos_post_video_id_seq', (SELECT COALESCE(MAX(post_video_id), 1) FROM post_videos));
+SELECT setval('media_assets_asset_id_seq', (SELECT COALESCE(MAX(asset_id), 1) FROM media_assets));
 SELECT setval('post_attribute_values_value_id_seq', (SELECT COALESCE(MAX(value_id), 1) FROM post_attribute_values));
 SELECT setval('jobs_job_id_seq', (SELECT COALESCE(MAX(job_id), 1) FROM jobs));
 SELECT setval('job_contact_requests_contact_request_id_seq', (SELECT COALESCE(MAX(contact_request_id), 1) FROM job_contact_requests));

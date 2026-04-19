@@ -6,7 +6,7 @@ import {
   businessRoles,
   userFavorites,
   posts,
-  postImages,
+  mediaAssets,
 } from "../../models/schema/index.ts";
 import { AuthRequest } from "../../dtos/auth";
 
@@ -139,9 +139,18 @@ export const getFavoritePosts = async (
 
     if (postIds.length > 0) {
       imagesData = await db
-        .select()
-        .from(postImages)
-        .where(inArray(postImages.postId, postIds));
+        .select({
+          postId: mediaAssets.targetId,
+          imageUrl: mediaAssets.url,
+        })
+        .from(mediaAssets)
+        .where(
+          and(
+            eq(mediaAssets.targetType, "post"),
+            eq(mediaAssets.mediaType, "image"),
+            inArray(mediaAssets.targetId, postIds)
+          )
+        );
     }
 
     const formattedPosts = favorites.map((f) => ({

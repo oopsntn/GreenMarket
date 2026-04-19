@@ -2,9 +2,7 @@ import { Response } from "express";
 import { and, count, eq, ne } from "drizzle-orm";
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
-import { posts } from "../../models/schema/posts.ts";
-import { reports } from "../../models/schema/reports.ts";
-import { reportEvidence } from "../../models/schema/report-evidence.ts";
+import { posts, reports, mediaAssets } from "../../models/schema/index.ts";
 import { adminWebSettingsService } from "../../services/adminWebSettings.service.ts";
 import { notificationService } from "../../services/notification.service.ts";
 
@@ -66,10 +64,12 @@ export const submitReport = async (
 
       if (Array.isArray(evidenceUrls) && evidenceUrls.length > 0) {
         const evidenceData = evidenceUrls.map(url => ({
-          reportEvidenceReportId: newReport.reportId,
-          reportEvidenceUrl: url,
+          targetType: "report",
+          targetId: newReport.reportId,
+          mediaType: "image",
+          url: url,
         }));
-        await tx.insert(reportEvidence).values(evidenceData);
+        await tx.insert(mediaAssets).values(evidenceData);
       }
 
       const settings = await adminWebSettingsService.getSettings();

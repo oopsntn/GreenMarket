@@ -1,10 +1,9 @@
 import { Request, Response } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "../../config/db";
 import { AuthRequest } from "../../dtos/auth.ts";
-import { eventLogs, users } from "../../models/schema/index.ts";
+import { eventLogs, users, mediaAssets } from "../../models/schema/index.ts";
 import { postAttributeValues } from "../../models/schema/post-attribute-values";
-import { postImages } from "../../models/schema/post-images";
 import { posts, type NewPost } from "../../models/schema/posts";
 import { parseId } from "../../utils/parseId";
 import { slugify } from "../../utils/slugify";
@@ -87,11 +86,13 @@ export const createPost = async (
             .returning();
 
         if (images && images.length > 0) {
-            await db.insert(postImages).values(
+            await db.insert(mediaAssets).values(
                 images.map((url, index) => ({
-                    postId: newPost.postId,
-                    imageUrl: url,
-                    imageSortOrder: index,
+                    targetType: "post",
+                    targetId: newPost.postId,
+                    mediaType: "image",
+                    url: url,
+                    sortOrder: index,
                 })),
             );
         }
@@ -137,9 +138,19 @@ export const getPostById = async (
         }
 
         const images = await db
-            .select()
-            .from(postImages)
-            .where(eq(postImages.postId, idNumber));
+            .select({
+                imageId: mediaAssets.assetId,
+                imageUrl: mediaAssets.url,
+                imageSortOrder: mediaAssets.sortOrder,
+            })
+            .from(mediaAssets)
+            .where(
+                and(
+                    eq(mediaAssets.targetType, "post"),
+                    eq(mediaAssets.targetId, idNumber),
+                    eq(mediaAssets.mediaType, "image")
+                )
+            );
         const attrValues = await db
             .select()
             .from(postAttributeValues)
