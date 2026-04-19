@@ -18,11 +18,6 @@ export {
   type NewQRSession,
 } from "./qr-sessions.ts";
 export {
-  otpRequests,
-  type OtpRequest,
-  type NewOtpRequest,
-} from "./otp-requests.ts";
-export {
   adminTemplates,
   type AdminTemplate,
   type NewAdminTemplate,
@@ -63,20 +58,15 @@ export {
 // Posts
 export { posts, type Post, type NewPost } from "./posts.ts";
 export {
-  mediaAssets,
-  type MediaAsset,
-  type NewMediaAsset,
-} from "./media-assets.ts";
-export {
   postAttributeValues,
   type PostAttributeValue,
   type NewPostAttributeValue,
 } from "./post-attribute-values.ts";
 export {
-  postCategories,
-  type PostCategory,
-  type NewPostCategory,
-} from "./post-categories.ts";
+  mediaAssets,
+  type MediaAsset,
+  type NewMediaAsset,
+} from "./media-assets.ts";
 export { postMeta, type PostMeta, type NewPostMeta } from "./post-meta.ts";
 export {
   userFavorites,
@@ -84,8 +74,12 @@ export {
   type NewUserFavorite,
 } from "./user-favorites.ts";
 
-// Report & Moderation
-export { reports, type Report, type NewReport } from "./reports.ts";
+// Tickets & Moderation
+export { tickets, type Ticket, type NewTicket } from "./tickets.ts";
+// Legacy aliases for tickets
+export { tickets as reports, type Ticket as Report, type Ticket as NewReport } from "./tickets.ts";
+export { tickets as operationTasks, type Ticket as OperationTask, type Ticket as NewOperationTask } from "./tickets.ts";
+export { tickets as escalations, type Ticket as Escalation, type Ticket as NewEscalation } from "./tickets.ts";
 
 // Monetization
 export {
@@ -154,11 +148,7 @@ export {
 export { eventLogs, type EventLog, type NewEventLog } from "./event-logs.ts";
 
 // Manager & Operations
-export {
-  operationTasks,
-  type OperationTask,
-  type NewOperationTask,
-} from "./operation-tasks.ts";
+// Manager & Operations
 export {
   taskReplies,
   type TaskReply,
@@ -169,11 +159,7 @@ export {
   type Notification,
   type NewNotification,
 } from "./notifications.ts";
-export {
-  escalations,
-  type Escalation,
-  type NewEscalation,
-} from "./escalations.ts";
+// Escalations (Handled by tickets alias)
 
 // Host
 export {

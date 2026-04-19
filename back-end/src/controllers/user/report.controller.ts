@@ -49,28 +49,33 @@ export const submitReport = async (
 
     // Use transaction to insert report and evidence
     const { result, totalReports, reportLimit } = await db.transaction(async (tx) => {
-      const [newReport] = await tx
+      const [newTicket] = await tx
         .insert(reports)
         .values({
-          reporterId: reporterId,
-          postId: post.postId,
-          reportShopId: post.postShopId ?? null,
-          reportReasonCode: reportReasonCode?.trim() || null,
-          reportReason: reportReason.trim(),
-          reportNote: reportNote?.trim() || null,
-          reportStatus: "pending",
+          ticketType: 'REPORT',
+          ticketCreatorId: reporterId,
+          ticketTargetType: 'post',
+          ticketTargetId: post.postId,
+          ticketTitle: reportReasonCode?.trim() || null,
+          ticketContent: reportReason.trim(),
+          ticketMetaData: { note: reportNote?.trim() || null },
+          ticketStatus: "pending",
         })
         .returning();
 
-      if (Array.isArray(evidenceUrls) && evidenceUrls.length > 0) {
-        const evidenceData = evidenceUrls.map(url => ({
+      // Legacy alias for logic below
+      const newReport = {
+        ...newTicket,
+        reportId: newTicket.ticketId,
+      };
+
+        const evidenceData = evidenceUrls.map((url: string) => ({
           targetType: "report",
           targetId: newReport.reportId,
           mediaType: "image",
           url: url,
         }));
         await tx.insert(mediaAssets).values(evidenceData);
-      }
 
       const settings = await adminWebSettingsService.getSettings();
       const limit = Math.max(1, Number(settings.moderation.reportLimit || 0));
@@ -79,8 +84,10 @@ export const submitReport = async (
         .from(reports)
         .where(
           and(
-            eq(reports.postId, post.postId),
-            ne(reports.reportStatus, "ignored"),
+            eq(reports.ticketType, 'REPORT'),
+            eq(reports.ticketTargetType, 'post'),
+            eq(reports.ticketTargetId, post.postId),
+            ne(reports.ticketStatus, "ignored"),
           ),
         );
 

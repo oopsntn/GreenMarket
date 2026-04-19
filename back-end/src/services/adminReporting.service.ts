@@ -9,7 +9,8 @@ import {
     transactions,
     posts,
     promotionPackages,
-    reports,
+    reports, // Alias of tickets
+    tickets,
     shops,
     users,
 } from "../models/schema/index.ts";
@@ -472,7 +473,14 @@ export const adminReportingService = {
         const [allUsers, allPosts, allReports, allPayments, promotions] = await Promise.all([
             db.select().from(users),
             db.select().from(posts),
-            db.select().from(reports),
+            db.select({
+                reportId: tickets.ticketId,
+                reportStatus: tickets.ticketStatus,
+                reportCreatedAt: tickets.ticketCreatedAt,
+                reporterId: tickets.ticketCreatorId,
+            })
+            .from(tickets)
+            .where(eq(tickets.ticketType, 'REPORT')),
             getSuccessfulPayments(),
             adminPromotionService.getPromotions(),
         ]);

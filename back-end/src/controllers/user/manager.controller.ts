@@ -361,10 +361,10 @@ const ensureTargetExists = async (
 
   const [report] = await db
     .select({
-      reportId: reports.reportId,
+      reportId: reports.ticketId,
     })
     .from(reports)
-    .where(eq(reports.reportId, targetId))
+    .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketId, targetId)))
     .limit(1);
 
   if (!report) {
@@ -420,24 +420,25 @@ export const getModerationQueue = async (
             .leftJoin(users, eq(posts.postAuthorId, users.userId))
             .where(inArray(posts.postStatus, ["pending", "approved", "rejected", "hidden"]))
         : Promise.resolve([]),
-      !queueTypeFilter || queueTypeFilter === "report"
-        ? db
-            .select({
-              reportId: reports.reportId,
-              reportStatus: reports.reportStatus,
-              reportReasonCode: reports.reportReasonCode,
-              reportReason: reports.reportReason,
-              reportCreatedAt: reports.reportCreatedAt,
-              reportUpdatedAt: reports.reportUpdatedAt,
-              reporterName: users.userDisplayName,
-              postTitle: posts.postTitle,
-              shopName: shops.shopName,
-            })
-            .from(reports)
-            .leftJoin(users, eq(reports.reporterId, users.userId))
-            .leftJoin(posts, eq(reports.postId, posts.postId))
-            .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
-        : Promise.resolve([]),
+        !queueTypeFilter || queueTypeFilter === "report"
+          ? db
+              .select({
+                reportId: reports.ticketId,
+                reportStatus: reports.ticketStatus,
+                reportReasonCode: reports.ticketTitle,
+                reportReason: reports.ticketContent,
+                reportCreatedAt: reports.ticketCreatedAt,
+                reportUpdatedAt: reports.ticketUpdatedAt,
+                reporterName: users.userDisplayName,
+                postTitle: posts.postTitle,
+                shopName: shops.shopName,
+              })
+              .from(reports)
+              .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+              .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+              .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+              .where(eq(reports.ticketType, 'REPORT'))
+          : Promise.resolve([]),
       !queueTypeFilter || queueTypeFilter === "shop"
         ? db
             .select({
@@ -861,34 +862,34 @@ export const getManagerReports = async (
     }
 
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [eq(reports.ticketType, 'REPORT')];
     if (statusFilter) {
-      conditions.push(eq(reports.reportStatus, statusFilter));
+      conditions.push(eq(reports.ticketStatus, statusFilter));
     }
 
     const rows = await db
       .select({
-        reportId: reports.reportId,
-        reportStatus: reports.reportStatus,
-        reportReasonCode: reports.reportReasonCode,
-        reportReason: reports.reportReason,
-        reportNote: reports.reportNote,
-        adminNote: reports.adminNote,
-        reportCreatedAt: reports.reportCreatedAt,
-        reportUpdatedAt: reports.reportUpdatedAt,
-        reporterId: reports.reporterId,
-        postId: reports.postId,
-        reportShopId: reports.reportShopId,
+        reportId: reports.ticketId,
+        reportStatus: reports.ticketStatus,
+        reportReasonCode: reports.ticketTitle,
+        reportReason: reports.ticketContent,
+        reportNote: sql<string>`${reports.ticketMetaData}->>'note'`,
+        adminNote: reports.ticketResolutionNote,
+        reportCreatedAt: reports.ticketCreatedAt,
+        reportUpdatedAt: reports.ticketUpdatedAt,
+        reporterId: reports.ticketCreatorId,
+        postId: sql<number>`case when ${reports.ticketTargetType} = 'post' then ${reports.ticketTargetId} end`,
+        reportShopId: sql<number>`case when ${reports.ticketTargetType} = 'shop' then ${reports.ticketTargetId} end`,
         reporterName: users.userDisplayName,
         postTitle: posts.postTitle,
         shopName: shops.shopName,
       })
       .from(reports)
-      .leftJoin(users, eq(reports.reporterId, users.userId))
-      .leftJoin(posts, eq(reports.postId, posts.postId))
-      .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(reports.reportCreatedAt), desc(reports.reportId));
+      .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+      .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+      .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+      .where(and(...conditions))
+      .orderBy(desc(reports.ticketCreatedAt), desc(reports.ticketId));
 
     const filteredRows = rows
       .map((item) => ({
@@ -952,11 +953,11 @@ export const resolveManagerReport = async (
 
     const [existingReport] = await db
       .select({
-        reportId: reports.reportId,
-        status: reports.reportStatus,
+        reportId: reports.ticketId,
+        status: reports.ticketStatus,
       })
       .from(reports)
-      .where(eq(reports.reportId, reportId))
+      .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketId, reportId)))
       .limit(1);
 
     if (!existingReport) {
@@ -980,16 +981,17 @@ export const resolveManagerReport = async (
       const [updatedReport] = await tx
         .update(reports)
         .set({
-          reportStatus: status,
-          adminNote: decisionText,
-          reportUpdatedAt: now,
+          ticketStatus: status,
+          ticketResolutionNote: decisionText,
+          ticketUpdatedAt: now,
+          ticketResolvedAt: now,
         })
-        .where(and(eq(reports.reportId, reportId), eq(reports.reportStatus, "pending")))
+        .where(and(eq(reports.ticketId, reportId), eq(reports.ticketType, 'REPORT'), eq(reports.ticketStatus, 'pending')))
         .returning({
-          reportId: reports.reportId,
-          reportStatus: reports.reportStatus,
-          adminNote: reports.adminNote,
-          reportUpdatedAt: reports.reportUpdatedAt,
+          reportId: reports.ticketId,
+          reportStatus: reports.ticketStatus,
+          adminNote: reports.ticketResolutionNote,
+          reportUpdatedAt: reports.ticketUpdatedAt,
         });
 
       if (!updatedReport) {
@@ -1019,26 +1021,26 @@ export const resolveManagerReport = async (
 
       const [enrichedReport] = await tx
         .select({
-          reportId: reports.reportId,
-          reportStatus: reports.reportStatus,
-          reportReasonCode: reports.reportReasonCode,
-          reportReason: reports.reportReason,
-          reportNote: reports.reportNote,
-          adminNote: reports.adminNote,
-          reportCreatedAt: reports.reportCreatedAt,
-          reportUpdatedAt: reports.reportUpdatedAt,
-          reporterId: reports.reporterId,
-          postId: reports.postId,
-          reportShopId: reports.reportShopId,
+          reportId: reports.ticketId,
+          reportStatus: reports.ticketStatus,
+          reportReasonCode: reports.ticketTitle,
+          reportReason: reports.ticketContent,
+          reportNote: sql<string>`${reports.ticketMetaData}->>'note'`,
+          adminNote: reports.ticketResolutionNote,
+          reportCreatedAt: reports.ticketCreatedAt,
+          reportUpdatedAt: reports.ticketUpdatedAt,
+          reporterId: reports.ticketCreatorId,
+          postId: sql<number>`case when ${reports.ticketTargetType} = 'post' then ${reports.ticketTargetId} end`,
+          reportShopId: sql<number>`case when ${reports.ticketTargetType} = 'shop' then ${reports.ticketTargetId} end`,
           reporterName: users.userDisplayName,
           postTitle: posts.postTitle,
           shopName: shops.shopName,
         })
         .from(reports)
-        .leftJoin(users, eq(reports.reporterId, users.userId))
-        .leftJoin(posts, eq(reports.postId, posts.postId))
-        .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
-        .where(eq(reports.reportId, reportId))
+        .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+        .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+        .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+        .where(eq(reports.ticketId, reportId))
         .limit(1);
 
       return {
@@ -1340,7 +1342,7 @@ export const getManagerStatistics = async (
         db
           .select({ count: sql<number>`count(*)` })
           .from(reports)
-          .where(eq(reports.reportStatus, "pending")),
+          .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketStatus, "pending"))),
         db
           .select({ count: sql<number>`count(*)` })
           .from(shops)
@@ -1519,13 +1521,14 @@ export const createManagerEscalation = async (
     const [escalationRow] = await db
       .insert(escalations)
       .values({
-        targetType,
-        targetId,
-        createdBy: managerId,
-        severity: severity as any,
-        reason,
-        evidenceUrls,
-        status: "open",
+        ticketType: 'ESCALATION',
+        ticketTargetType: targetType,
+        ticketTargetId: targetId,
+        ticketCreatorId: managerId,
+        ticketPriority: severity as any,
+        ticketContent: reason,
+        ticketMetaData: { evidenceUrls },
+        ticketStatus: "open",
       })
       .returning();
 
@@ -1535,7 +1538,7 @@ export const createManagerEscalation = async (
       eventLogTargetId: targetId,
       eventLogEventType: MANAGER_ESCALATION_EVENT,
       eventLogMeta: {
-        escalationId: escalationRow.escalationId,
+        escalationId: escalationRow.ticketId,
         targetType,
         targetId,
         severity,
@@ -1544,15 +1547,15 @@ export const createManagerEscalation = async (
 
     res.status(201).json({
       escalationTicket: {
-        escalationId: escalationRow.escalationId,
-        ticketCode: `ESC-${escalationRow.escalationId}`,
-        status: escalationRow.status,
+        escalationId: escalationRow.ticketId,
+        ticketCode: `ESC-${escalationRow.ticketId}`,
+        status: escalationRow.ticketStatus,
         targetType,
         targetId,
         severity,
         reason,
         evidenceUrls,
-        createdAt: escalationRow.createdAt,
+        createdAt: escalationRow.ticketCreatedAt,
       },
     });
   } catch (error) {

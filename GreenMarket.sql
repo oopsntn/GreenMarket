@@ -171,15 +171,6 @@ CREATE TABLE qr_sessions (
     expires_at TIMESTAMP NOT NULL
 );
 
--- OTP Requests
-CREATE TABLE otp_requests (
-    otp_request_id SERIAL PRIMARY KEY,
-    otp_request_mobile VARCHAR(20),
-    otp_request_otp_code VARCHAR(20),
-    otp_request_expire_at TIMESTAMP,
-    otp_request_status VARCHAR(30),
-    otp_request_created_at TIMESTAMP DEFAULT now()
-);
 
 -- Banned Keywords
 CREATE TABLE banned_keywords (
@@ -293,20 +284,13 @@ CREATE TABLE posts (
 -- Media Assets (Unified resources like images, videos, documents)
 CREATE TABLE media_assets (
     asset_id SERIAL PRIMARY KEY,
-    target_type VARCHAR(50) NOT NULL, -- post, report, job_deliverable, host_content, user, shop
+    target_type VARCHAR(50) NOT NULL, -- post, report, job_deliverable, host_content, user, shop, ticket
     target_id INTEGER NOT NULL,
     media_type VARCHAR(20) NOT NULL, -- image, video, document
     url TEXT NOT NULL,
     sort_order INTEGER DEFAULT 0,
     meta_data JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP DEFAULT now()
-);
-
--- Post Categories (Many-to-Many)
-CREATE TABLE post_categories (
-    post_category_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
-    post_category_category_id INTEGER NOT NULL REFERENCES categories(category_id) ON DELETE CASCADE,
-    PRIMARY KEY (post_category_post_id, post_category_category_id)
 );
 
 -- Post Attribute Values
@@ -327,20 +311,25 @@ CREATE TABLE post_meta (
     post_meta_created_at TIMESTAMP DEFAULT now()
 );
 
--- Reports
-CREATE TABLE reports (
-    report_id SERIAL PRIMARY KEY,
-    reporter_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
-    report_shop_id INTEGER REFERENCES shops(shop_id) ON DELETE SET NULL,
-    report_reason_code VARCHAR(50),
-    report_reason TEXT NOT NULL,
-    report_note TEXT,
-    report_status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    admin_note TEXT,
-    report_created_at TIMESTAMP DEFAULT now(),
-    report_updated_at TIMESTAMP DEFAULT now()
+-- Tickets (Unified Support, Reports, and Escalations)
+CREATE TABLE tickets (
+    ticket_id SERIAL PRIMARY KEY,
+    ticket_type VARCHAR(50) NOT NULL, -- SUPPORT, REPORT, ESCALATION
+    ticket_creator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    ticket_assignee_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    ticket_status VARCHAR(20) NOT NULL DEFAULT 'open',
+    ticket_priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+    ticket_target_type VARCHAR(50), -- post, shop, user, order
+    ticket_target_id INTEGER,
+    ticket_title VARCHAR(255),
+    ticket_content TEXT NOT NULL,
+    ticket_resolution_note TEXT,
+    ticket_meta_data JSONB DEFAULT '{}'::jsonb,
+    ticket_created_at TIMESTAMP DEFAULT now(),
+    ticket_updated_at TIMESTAMP DEFAULT now(),
+    ticket_resolved_at TIMESTAMP
 );
+
 
 
 
@@ -587,59 +576,28 @@ CREATE TABLE admin_templates (
     template_updated_at TIMESTAMP DEFAULT now()
 );
 
--- Operation Tasks
-CREATE TABLE operation_tasks (
-    task_id SERIAL PRIMARY KEY,
-    task_title VARCHAR(255) NOT NULL,
-    task_type VARCHAR(50) NOT NULL,
-    task_status VARCHAR(20) NOT NULL DEFAULT 'open',
-    task_priority VARCHAR(20) NOT NULL DEFAULT 'medium',
-    assignee_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    customer_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    related_target_id INTEGER,
-    task_note TEXT,
-    created_at TIMESTAMP DEFAULT now(),
-    updated_at TIMESTAMP DEFAULT now()
-);
-
--- Task Replies
-CREATE TABLE task_replies (
-    reply_id SERIAL PRIMARY KEY,
-    task_id INTEGER NOT NULL REFERENCES operation_tasks(task_id) ON DELETE CASCADE,
-    sender_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    message TEXT NOT NULL,
-    attachments JSONB DEFAULT '[]'::jsonb,
-    visibility VARCHAR(20) DEFAULT 'internal',
-    created_at TIMESTAMP DEFAULT now()
-);
-
--- Notifications (Unified system alerts and feedback)
+-- Notifications
 CREATE TABLE notifications (
     notification_id SERIAL PRIMARY KEY,
     recipient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    sender_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE, -- NULL for system
+    sender_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
     title VARCHAR(255),
     message TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL DEFAULT 'system', -- system, moderation, job, promotion
+    type VARCHAR(50) NOT NULL DEFAULT 'system',
     meta_data JSONB DEFAULT '{}'::jsonb,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT now()
 );
 
--- Escalations
-CREATE TABLE escalations (
-    escalation_id SERIAL PRIMARY KEY,
-    source_task_id INTEGER REFERENCES operation_tasks(task_id) ON DELETE SET NULL,
-    target_type VARCHAR(50) NOT NULL,
-    target_id INTEGER NOT NULL,
-    created_by INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    severity VARCHAR(20) NOT NULL DEFAULT 'medium',
-    reason TEXT NOT NULL,
-    evidence_urls JSONB DEFAULT '[]'::jsonb,
-    status VARCHAR(20) NOT NULL DEFAULT 'open',
-    resolution_note TEXT,
-    created_at TIMESTAMP DEFAULT now(),
-    resolved_at TIMESTAMP
+-- Task/Ticket Replies
+CREATE TABLE task_replies (
+    reply_id SERIAL PRIMARY KEY,
+    ticket_id INTEGER NOT NULL REFERENCES tickets(ticket_id) ON DELETE CASCADE,
+    sender_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    attachments JSONB DEFAULT '[]'::jsonb,
+    visibility VARCHAR(20) DEFAULT 'internal',
+    created_at TIMESTAMP DEFAULT now()
 );
 
 
@@ -705,9 +663,6 @@ CREATE INDEX idx_shop_collaborators_shop ON shop_collaborators(shop_collaborator
 CREATE INDEX idx_shop_collaborators_user ON shop_collaborators(collaborator_id);
 CREATE INDEX idx_post_meta_key ON post_meta(post_meta_key);
 
--- Post Categories
-CREATE INDEX idx_post_categories_post ON post_categories(post_category_post_id);
-CREATE INDEX idx_post_categories_category ON post_categories(post_category_category_id);
 
 -- Users
 CREATE INDEX idx_users_mobile ON users(user_mobile);
@@ -732,11 +687,6 @@ CREATE INDEX idx_category_attributes_category ON category_attributes(category_at
 CREATE INDEX idx_category_attributes_attribute ON category_attributes(category_attribute_attribute_id);
 CREATE INDEX idx_category_attributes_status ON category_attributes(category_attribute_status);
 
--- Reports
-CREATE INDEX idx_reports_reporter ON reports(reporter_id);
-CREATE INDEX idx_reports_post ON reports(post_id);
-CREATE INDEX idx_reports_shop ON reports(report_shop_id);
-CREATE INDEX idx_reports_status ON reports(report_status);
 
 -- Promotions
 CREATE INDEX idx_post_promotions_post ON post_promotions(post_promotion_post_id);
@@ -773,15 +723,9 @@ CREATE INDEX idx_daily_metrics_slot ON daily_placement_metrics(daily_placement_m
 CREATE INDEX idx_event_logs_user ON event_logs(event_log_user_id);
 CREATE INDEX idx_event_logs_type ON event_logs(event_log_event_type);
 CREATE INDEX idx_event_logs_time ON event_logs(event_log_event_time);
-CREATE INDEX idx_event_logs_target ON event_logs(event_log_target_type, event_log_target_id);
-
--- Internal Ops Indexes
-CREATE INDEX idx_operation_tasks_assignee ON operation_tasks(assignee_id);
-CREATE INDEX idx_operation_tasks_status ON operation_tasks(task_status);
-CREATE INDEX idx_task_replies_task ON task_replies(task_id);
-CREATE INDEX idx_escalations_status ON escalations(status);
 CREATE INDEX idx_notifications_recipient ON notifications(recipient_id);
 CREATE INDEX idx_notifications_read ON notifications(is_read);
+CREATE INDEX idx_task_replies_task ON task_replies(ticket_id);
 
 -- ============================================================
 -- TRIGGERS
@@ -1363,10 +1307,6 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('admin_template_builder_config', '{"templateName":"Mẫu đăng tin cây cảnh","categoryName":"Cây cảnh & Bonsai","usageNote":"Dùng để xem trước bố cục form đăng tin cho ngành cây cảnh trước khi đưa vào vận hành.","previewTitlePlaceholder":"Ví dụ: Sanh mini 8 năm tuổi, dáng trực","submitLabel":"Đăng tin cây cảnh (Xem trước)","fields":[{"id":"bonsai-style","type":"select","label":"Dáng cây (Thế cây)","placeholder":"Chọn dáng cây","helperText":"Giúp người đăng mô tả bố cục bonsai theo đúng cách gọi phổ biến.","required":true,"options":["Trực","Xiêu","Huyền","Hoành","Văn nhân"]},{"id":"pot-type","type":"select","label":"Loại chậu đi kèm","placeholder":"Chọn loại chậu","helperText":"Thể hiện tình trạng đi kèm chậu để người mua định giá rõ hơn.","required":true,"options":["Chậu gốm","Chậu đá","Bầu đất / túi ươm"]},{"id":"tree-age","type":"number","label":"Tuổi cây (ước lượng)","placeholder":"Ví dụ: 8","helperText":"Dùng để ước lượng độ trưởng thành của cây, hỗ trợ so sánh giá trị.","required":false,"options":[]}]}', 1),
 ('admin_ai_insight_settings', '{"autoDailySummary":true,"anomalyAlerts":true,"operatorDigest":false,"recommendationTone":"Balanced","confidenceThreshold":78,"promptVersion":"gm-admin-v1.4","reviewMode":"Required"}', 1);
 
--- OTP Requests (Sample)
-INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_expire_at, otp_request_status) VALUES
-('0978195419', '123456', now() + interval '10 minutes', 'verified'),
-('0982703398', '654321', now() + interval '10 minutes', 'pending');
 
 -- ============================================================
 -- ADMIN TEMPLATES
@@ -1444,16 +1384,17 @@ INSERT INTO transactions (
 (20, 1, 299000, 'payment', 'bank_transfer', 'GM-TXN-20260416-011', 'success', 'package', 2, '2026-04-16 07:40:00'),
 (21, 1, 99000,  'payment', 'bank_transfer', 'GM-TXN-20260416-012', 'success', 'package', 1, '2026-04-16 07:45:00');
 
-INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_reason_code, report_reason, report_note, report_status, admin_note, report_created_at, report_updated_at) VALUES
-(1, 10, 1, 1, 'MISLEADING_INFO', 'Post title and product details are not consistent with the attached listing photos.', 'The seller describes a different bonsai shape in the text than in the gallery.', 'pending', NULL, '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
-(2, 10, 2, 3, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
-(3, 10, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00'),
-(4, 8, 3, 3, 'COPYRIGHT_MEDIA', 'Listing photos appear copied from another marketplace source.', 'Image set looks duplicated from a third-party seller page.', 'pending', NULL, '2026-03-26 14:05:00', '2026-03-26 14:05:00'),
-(5, 2, 4, 3, 'OFF_PLATFORM_CONTACT', 'Seller requests direct contact outside GreenMarket before checkout.', 'Contains messaging that bypasses marketplace payment flow.', 'resolved', 'Content was edited and compliant version was republished.', '2026-03-25 16:25:00', '2026-03-26 10:10:00'),
-(6, 9, 8, 3, 'WRONG_CATEGORY', 'The post was published under the wrong category and disrupts category relevance.', 'Needs category correction and listing clean-up.', 'dismissed', 'Category was acceptable after manual review.', '2026-03-24 09:30:00', '2026-03-24 17:20:00'),
-(7, 10, 9, 3, 'MISLEADING_INFO', 'The post description overstates the maturity and shape training of the tree.', 'Customer noted mismatch between wording and actual plant size.', 'pending', NULL, '2026-03-23 13:15:00', '2026-03-23 13:15:00'),
-(8, 8, 13, 6, 'SPAM_PROMOTION', 'Repeated marketing text is making the listing difficult to review.', 'Needs moderation note and content clean-up.', 'resolved', 'Seller removed duplicated promotional slogans and listing stayed visible.', '2026-03-22 10:45:00', '2026-03-22 15:40:00'),
-(9, 2, 15, 1, 'SUSPICIOUS_PRICING', 'The reported price looks too low compared with product material quality.', 'Possible bait price to attract off-platform contact.', 'pending', NULL, '2026-03-21 11:05:00', '2026-03-21 11:05:00');
+-- Tickets Seed Data (Reports migrated)
+INSERT INTO tickets (ticket_id, ticket_type, ticket_creator_id, ticket_target_type, ticket_target_id, ticket_title, ticket_content, ticket_status, ticket_resolution_note, ticket_meta_data, ticket_created_at, ticket_updated_at) VALUES
+(1, 'REPORT', 10, 'post', 1, 'Báo cáo bài đăng #1', 'Post title and product details are not consistent with the attached listing photos.', 'open', NULL, '{"reason_code": "MISLEADING_INFO", "note": "The seller describes a different bonsai shape in the text than in the gallery."}', '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
+(2, 'REPORT', 10, 'post', 2, 'Báo cáo bài đăng #2', 'The post content repeats promotional text and external contact instructions too aggressively.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '{"reason_code": "SPAM_PROMOTION", "note": "Please review whether this listing should stay visible or be rewritten."}', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
+(3, 'REPORT', 10, 'post', 6, 'Báo cáo bài đăng #6', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'closed', 'Pricing was verified with the shop and no policy breach was found.', '{"reason_code": "SUSPICIOUS_PRICING", "note": "Potential bait pricing. Needs manual moderation follow-up."}', '2026-03-27 11:20:00', '2026-03-28 08:40:00'),
+(4, 'REPORT', 8, 'post', 3, 'Báo cáo bài đăng #3', 'Listing photos appear copied from another marketplace source.', 'open', NULL, '{"reason_code": "COPYRIGHT_MEDIA", "note": "Image set looks duplicated from a third-party seller page."}', '2026-03-26 14:05:00', '2026-03-26 14:05:00'),
+(5, 'REPORT', 2, 'post', 4, 'Báo cáo bài đăng #4', 'Seller requests direct contact outside GreenMarket before checkout.', 'resolved', 'Content was edited and compliant version was republished.', '{"reason_code": "OFF_PLATFORM_CONTACT", "note": "Contains messaging that bypasses marketplace payment flow."}', '2026-03-25 16:25:00', '2026-03-26 10:10:00'),
+(6, 'REPORT', 9, 'post', 8, 'Báo cáo bài đăng #8', 'The post was published under the wrong category and disrupts category relevance.', 'closed', 'Category was acceptable after manual review.', '{"reason_code": "WRONG_CATEGORY", "note": "Needs category correction and listing clean-up."}', '2026-03-24 09:30:00', '2026-03-24 17:20:00'),
+(7, 'REPORT', 10, 'post', 9, 'Báo cáo bài đăng #9', 'The post description overstates the maturity and shape training of the tree.', 'open', NULL, '{"reason_code": "MISLEADING_INFO", "note": "Customer noted mismatch between wording and actual plant size."}', '2026-03-23 13:15:00', '2026-03-23 13:15:00'),
+(8, 'REPORT', 8, 'post', 13, 'Báo cáo bài đăng #13', 'Repeated marketing text is making the listing difficult to review.', 'resolved', 'Seller removed duplicated promotional slogans and listing stayed visible.', '{"reason_code": "SPAM_PROMOTION", "note": "Needs moderation note and content clean-up."}', '2026-03-22 10:45:00', '2026-03-22 15:40:00'),
+(9, 'REPORT', 2, 'post', 15, 'Báo cáo bài đăng #15', 'The reported price looks too low compared with product material quality.', 'open', NULL, '{"reason_code": "SUSPICIOUS_PRICING", "note": "Possible bait price to attract off-platform contact."}', '2026-03-21 11:05:00', '2026-03-21 11:05:00');
 
 -- ============================================================
 -- EVENT LOGS / EXPORT HISTORY / ACTIVITY LOG
@@ -1569,33 +1510,27 @@ INSERT INTO ai_insights (
 -- OPERATIONS & MANAGER DATA
 -- ============================================================
 
--- Operation Tasks
-INSERT INTO operation_tasks (task_id, task_title, task_type, task_status, task_priority, assignee_id, customer_id, related_target_id, task_note, created_at, updated_at) VALUES
-(1, 'Hỗ trợ đổi email shop', 'support', 'in_progress', 'medium', 6, 2, NULL, 'Khách hàng gặp lỗi OTP khi đổi email.', now() - interval '2 days', now() - interval '1 day'),
-(2, 'Xác minh báo cáo spam', 'report_check', 'open', 'high', 6, 8, 2, 'Report #2 cần tra xét IP.', now() - interval '1 day', now() - interval '1 day'),
-(3, 'Cấp lại quyền đăng bài', 'support', 'closed', 'high', 6, 1, NULL, 'Đã mở khóa.', now() - interval '5 days', now() - interval '4 days');
+-- Tickets Seed Data (Support & Escalations migrated)
+INSERT INTO tickets (ticket_id, ticket_type, ticket_creator_id, ticket_assignee_id, ticket_status, ticket_priority, ticket_title, ticket_content, ticket_target_type, ticket_target_id, ticket_created_at, ticket_updated_at) VALUES
+(10, 'SUPPORT', 2, 6, 'in_progress', 'medium', 'Hỗ trợ đổi email shop', 'Khách hàng gặp lỗi OTP khi đổi email.', NULL, NULL, now() - interval '2 days', now() - interval '1 day'),
+(11, 'REPORT', 8, 6, 'open', 'high', 'Xác minh báo cáo spam', 'Report #2 cần tra xét IP.', 'post', 2, now() - interval '1 day', now() - interval '1 day'),
+(12, 'SUPPORT', 1, 6, 'resolved', 'high', 'Cấp lại quyền đăng bài', 'Đã mở khóa.', NULL, NULL, now() - interval '5 days', now() - interval '4 days'),
+(13, 'ESCALATION', 6, 10, 'open', 'high', 'Leo thang xử lý shop vi phạm', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'shop', 1, now() - interval '12 hours', now() - interval '12 hours');
 
--- Task Replies
-INSERT INTO task_replies (reply_id, task_id, sender_id, message, visibility, created_at) VALUES
-(1, 1, 6, 'Tôi đang kiểm tra hệ thống SMS provider.', 'internal', now() - interval '1 day'),
-(2, 2, 6, 'Khách này có dấu hiệu spam thực sự. Sẽ báo cấp trên.', 'internal', now() - interval '12 hours');
+-- Task/Ticket Replies
+INSERT INTO task_replies (reply_id, ticket_id, sender_id, message, visibility, created_at) VALUES
+(1, 10, 6, 'Tôi đang kiểm tra hệ thống SMS provider.', 'internal', now() - interval '1 day'),
+(2, 11, 6, 'Khách này có dấu hiệu spam thực sự. Sẽ báo cấp trên.', 'internal', now() - interval '12 hours');
 
--- Notifications Seed Data
-INSERT INTO notifications (notification_id, recipient_id, sender_id, title, message, type, is_read, created_at) VALUES
-(1, 6, NULL, 'Task mới: Xác minh báo cáo spam', 'Bạn được assign một task mới từ hệ thống phân bổ.', 'system', true, now() - interval '1 day'),
-(2, 10, NULL, 'Escalation mới: Cần xử lý shop vi phạm', 'Operation Staff (ID: 6) vừa đẩy một ticket lên mức quản lý.', 'system', false, now() - interval '12 hours'),
-(3, 1, 10, 'Phản hồi kiểm duyệt', 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', 'moderation', false, now() - interval '5 days');
-
--- Escalations
-INSERT INTO escalations (escalation_id, source_task_id, target_type, target_id, created_by, severity, reason, status, resolution_note, created_at) VALUES
-(1, 2, 'shop', 1, 6, 'high', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'open', NULL, now() - interval '12 hours');
+-- Seq
+SELECT setval('tickets_ticket_id_seq', (SELECT COALESCE(MAX(ticket_id), 1) FROM tickets));
+SELECT setval('task_replies_reply_id_seq', (SELECT COALESCE(MAX(reply_id), 1) FROM task_replies));
 
 
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
 SELECT setval('admins_admin_id_seq', (SELECT COALESCE(MAX(admin_id), 1) FROM admins));
 SELECT setval('roles_role_id_seq', (SELECT COALESCE(MAX(role_id), 1) FROM roles));
 SELECT setval('business_roles_business_role_id_seq', (SELECT COALESCE(MAX(business_role_id), 1) FROM business_roles));
-SELECT setval('otp_requests_otp_request_id_seq', (SELECT COALESCE(MAX(otp_request_id), 1) FROM otp_requests));
 SELECT setval('categories_category_id_seq', (SELECT COALESCE(MAX(category_id), 1) FROM categories));
 SELECT setval('attributes_attribute_id_seq', (SELECT COALESCE(MAX(attribute_id), 1) FROM attributes));
 SELECT setval('posts_post_id_seq', (SELECT COALESCE(MAX(post_id), 1) FROM posts));
@@ -1606,7 +1541,6 @@ SELECT setval('job_contact_requests_contact_request_id_seq', (SELECT COALESCE(MA
 SELECT setval('job_deliverables_deliverable_id_seq', (SELECT COALESCE(MAX(deliverable_id), 1) FROM job_deliverables));
 SELECT setval('ledgers_ledger_id_seq', (SELECT COALESCE(MAX(ledger_id), 1) FROM ledgers));
 SELECT setval('transactions_transaction_id_seq', (SELECT COALESCE(MAX(transaction_id), 1) FROM transactions));
-SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM reports));
 SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
 SELECT setval('promotion_packages_promotion_package_id_seq', (SELECT COALESCE(MAX(promotion_package_id), 1) FROM promotion_packages));
 SELECT setval('promotion_package_prices_price_id_seq',          (SELECT COALESCE(MAX(price_id),              1) FROM promotion_package_prices));
@@ -1619,11 +1553,6 @@ SELECT setval('event_logs_event_log_id_seq', (SELECT COALESCE(MAX(event_log_id),
 SELECT setval('daily_placement_metrics_daily_placement_metric_id_seq', (SELECT COALESCE(MAX(daily_placement_metric_id), 1) FROM daily_placement_metrics));
 SELECT setval('trend_scores_trend_score_id_seq', (SELECT COALESCE(MAX(trend_score_id), 1) FROM trend_scores));
 SELECT setval('ai_insights_ai_insight_id_seq', (SELECT COALESCE(MAX(ai_insight_id), 1) FROM ai_insights));
-SELECT setval('operation_tasks_task_id_seq', (SELECT COALESCE(MAX(task_id), 1) FROM operation_tasks));
-SELECT setval('task_replies_reply_id_seq', (SELECT COALESCE(MAX(reply_id), 1) FROM task_replies));
-SELECT setval('escalations_escalation_id_seq', (SELECT COALESCE(MAX(escalation_id), 1) FROM escalations));
-SELECT setval('notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM notifications));
-SELECT setval('host_contents_host_content_id_seq', (SELECT COALESCE(MAX(host_content_id), 1) FROM host_contents));
 
 
 -- ============================================================
@@ -1639,7 +1568,6 @@ CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_user_updated_at();
 CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops FOR EACH ROW EXECUTE FUNCTION update_shop_updated_at();
 CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION update_post_updated_at();
-CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON reports FOR EACH ROW EXECUTE FUNCTION update_report_updated_at();
 CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_system_setting_updated_at();
 
 -- Audit Triggers (Polymorphic Event Logs)

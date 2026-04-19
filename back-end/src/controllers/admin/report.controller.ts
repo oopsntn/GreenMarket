@@ -1,28 +1,30 @@
 import { Request, Response } from "express";
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../config/db";
 import { AuthRequest } from "../../dtos/auth.ts";
-import { eventLogs } from "../../models/schema/index.ts";
-import { postPromotions } from "../../models/schema/post-promotions.ts";
-import { reports } from "../../models/schema/reports.ts";
-import { posts } from "../../models/schema/posts.ts";
-import { shops } from "../../models/schema/shops.ts";
-import { users } from "../../models/schema/users.ts";
-import { mediaAssets } from "../../models/schema/index.ts";
+import {
+  tickets as reports,
+  posts,
+  shops,
+  users,
+  mediaAssets,
+  eventLogs,
+  postPromotions,
+} from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId";
 
 const reportSelection = {
-  reportId: reports.reportId,
-  reporterId: reports.reporterId,
-  postId: reports.postId,
-  reportShopId: reports.reportShopId,
-  reportReasonCode: reports.reportReasonCode,
-  reportReason: reports.reportReason,
-  reportNote: reports.reportNote,
-  reportStatus: reports.reportStatus,
-  adminNote: reports.adminNote,
-  reportCreatedAt: reports.reportCreatedAt,
-  reportUpdatedAt: reports.reportUpdatedAt,
+  reportId: reports.ticketId,
+  reporterId: reports.ticketCreatorId,
+  postId: sql<number>`case when ${reports.ticketTargetType} = 'post' then ${reports.ticketTargetId} end`,
+  reportShopId: sql<number>`case when ${reports.ticketTargetType} = 'shop' then ${reports.ticketTargetId} end`,
+  reportReasonCode: reports.ticketTitle,
+  reportReason: reports.ticketContent,
+  reportNote: sql<string>`${reports.ticketMetaData}->>'note'`,
+  reportStatus: reports.ticketStatus,
+  adminNote: reports.ticketResolutionNote,
+  reportCreatedAt: reports.ticketCreatedAt,
+  reportUpdatedAt: reports.ticketUpdatedAt,
   reporterDisplayName: users.userDisplayName,
   reporterEmail: users.userEmail,
   postTitle: posts.postTitle,
@@ -130,10 +132,11 @@ export const getReports = async (
     const allReports = await db
       .select(reportSelection)
       .from(reports)
-      .leftJoin(users, eq(reports.reporterId, users.userId))
-      .leftJoin(posts, eq(reports.postId, posts.postId))
-      .leftJoin(shops, eq(posts.postShopId, shops.shopId))
-      .orderBy(desc(reports.reportCreatedAt), desc(reports.reportId));
+      .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+      .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+      .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+      .where(eq(reports.ticketType, 'REPORT'))
+      .orderBy(desc(reports.ticketCreatedAt), desc(reports.ticketId));
 
     res.json(await attachEvidenceToReports(allReports));
   } catch (error) {
@@ -156,10 +159,10 @@ export const getReportById = async (
     const [report] = await db
       .select(reportSelection)
       .from(reports)
-      .leftJoin(users, eq(reports.reporterId, users.userId))
-      .leftJoin(posts, eq(reports.postId, posts.postId))
-      .leftJoin(shops, eq(posts.postShopId, shops.shopId))
-      .where(eq(reports.reportId, idNumber))
+      .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+      .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+      .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+      .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketId, idNumber)))
       .limit(1);
 
     if (!report) {
@@ -202,12 +205,27 @@ export const resolveReport = async (
     const [updatedReport] = await db
       .update(reports)
       .set({
-        reportStatus: normalizedStatus as "resolved" | "dismissed",
-        adminNote,
-        reportUpdatedAt: new Date(),
+        ticketStatus: normalizedStatus as "resolved" | "dismissed",
+        ticketResolutionNote: adminNote,
+        ticketUpdatedAt: new Date(),
+        ticketResolvedAt: normalizedStatus === 'resolved' ? new Date() : null,
       })
-      .where(eq(reports.reportId, idNumber))
-      .returning();
+      .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketId, idNumber)))
+      .returning({
+        ticketId: reports.ticketId,
+        ticketTargetId: reports.ticketTargetId,
+        ticketTargetType: reports.ticketTargetType,
+        ticketCreatorId: reports.ticketCreatorId,
+      });
+
+    // Alias for legacy consumption in subsequent logic
+    const updatedReportLegacy = {
+      ...updatedReport,
+      reportId: updatedReport.ticketId,
+      postId: updatedReport.ticketTargetType === 'post' ? updatedReport.ticketTargetId : null,
+      reportShopId: updatedReport.ticketTargetType === 'shop' ? updatedReport.ticketTargetId : null,
+      reporterId: updatedReport.ticketCreatorId
+    };
 
     if (!updatedReport) {
       res.status(404).json({ error: "Không tìm thấy báo cáo" });
@@ -217,7 +235,7 @@ export const resolveReport = async (
     const closedPromotionCount =
       normalizedStatus === "resolved"
         ? await closePromotionsForResolvedReport(
-            updatedReport.postId ?? null,
+            updatedReportLegacy.postId ?? null,
             performedBy,
           )
         : 0;
@@ -225,10 +243,10 @@ export const resolveReport = async (
     const [enrichedReport] = await db
       .select(reportSelection)
       .from(reports)
-      .leftJoin(users, eq(reports.reporterId, users.userId))
-      .leftJoin(posts, eq(reports.postId, posts.postId))
-      .leftJoin(shops, eq(posts.postShopId, shops.shopId))
-      .where(eq(reports.reportId, updatedReport.reportId))
+      .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+      .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+      .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+      .where(eq(reports.ticketId, updatedReport.ticketId))
       .limit(1);
 
     const actionLabel =
@@ -241,9 +259,9 @@ export const resolveReport = async (
         : "";
 
     await db.insert(eventLogs).values({
-      eventLogUserId: null, // Admin ID should be used here if available in req.user
-      eventLogTargetType: updatedReport.postId ? "post" : (updatedReport.reportShopId ? "shop" : "report"),
-      eventLogTargetId: updatedReport.postId || updatedReport.reportShopId || updatedReport.reportId,
+      eventLogUserId: null,
+      eventLogTargetType: updatedReportLegacy.postId ? "post" : (updatedReportLegacy.reportShopId ? "shop" : "report"),
+      eventLogTargetId: updatedReportLegacy.postId || updatedReportLegacy.reportShopId || updatedReportLegacy.reportId,
       eventLogEventType:
         normalizedStatus === "resolved"
           ? "admin_report_resolved"
@@ -252,12 +270,12 @@ export const resolveReport = async (
       eventLogMeta: {
         action: actionLabel,
         detail: adminNote?.trim()
-          ? `Báo cáo #${updatedReport.reportId} đã được cập nhật sang trạng thái ${statusLabel}.${promotionDetailSuffix} Ghi chú: ${adminNote.trim()}`
-          : `Báo cáo #${updatedReport.reportId} đã được cập nhật sang trạng thái ${statusLabel}.${promotionDetailSuffix}`,
+          ? `Báo cáo #${updatedReportLegacy.reportId} đã được cập nhật sang trạng thái ${statusLabel}.${promotionDetailSuffix} Ghi chú: ${adminNote.trim()}`
+          : `Báo cáo #${updatedReportLegacy.reportId} đã được cập nhật sang trạng thái ${statusLabel}.${promotionDetailSuffix}`,
         performedBy,
         actorRole: "Quản trị viên",
         status: normalizedStatus,
-        reporterId: updatedReport.reporterId,
+        reporterId: updatedReportLegacy.reporterId,
       },
     });
 
