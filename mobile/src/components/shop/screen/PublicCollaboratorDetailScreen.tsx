@@ -1,0 +1,382 @@
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { MapPin, Mail, Phone, Briefcase, Award, Star, Info, MailPlus } from 'lucide-react-native';
+import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
+import { CollaboratorService } from '../../../collaborator/services/collaboratorService';
+import { ShopService } from '../../shop/service/shopService';
+import CustomAlert from '../../../utils/AlertHelper';
+import Button from '../../Reused/Button/Button';
+import { resolveImageUrl } from '../../../utils/resolveImageUrl';
+
+const { width } = Dimensions.get('window');
+
+const PublicCollaboratorDetailScreen = () => {
+    const navigation = useNavigation<any>();
+    const route = useRoute<any>();
+    const collaboratorId = route.params?.id;
+
+    const [profile, setProfile] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [inviting, setInviting] = useState(false);
+
+    const fetchDetail = async () => {
+        try {
+            const data = await CollaboratorService.getPublicCollaboratorDetail(collaboratorId);
+            setProfile(data);
+        } catch (error: any) {
+            CustomAlert('Lỗi', 'Không thể tải thông tin cộng tác viên');
+            navigation.goBack();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            if (collaboratorId) {
+                fetchDetail();
+            }
+        }, [collaboratorId])
+    );
+
+    const handleInvite = async () => {
+        if (!profile?.userId) return;
+        
+        setInviting(true);
+        try {
+            // Need an identifier to invite, we'll use userId by sending it to API
+            await ShopService.inviteCollaborator(profile.userId.toString());
+            CustomAlert('Thành công', 'Đã gửi lời mời cộng tác thành công');
+            fetchDetail(); // Refresh to update relationship status
+        } catch (error: any) {
+            CustomAlert('Lỗi', error?.response?.data?.error || 'Không thể gửi lời mời');
+        } finally {
+            setInviting(false);
+        }
+    };
+
+    if (loading || !profile) {
+        return (
+            <MobileLayout title="Hồ sơ Cộng tác viên" backButton={() => navigation.goBack()}>
+                <Text style={styles.loadingText}>Đang tải...</Text>
+            </MobileLayout>
+        );
+    }
+
+    const isOnline = profile.availabilityStatus === 'available';
+    const isActive = profile.relationshipStatus === 'active';
+    const isPending = profile.relationshipStatus === 'pending';
+    
+    // Masked contact info logic is handled by backend, but we show UI states here
+    const canSeeContact = isActive;
+
+    return (
+        <MobileLayout title="Hồ sơ Cộng tác viên" backButton={() => navigation.goBack()}>
+            <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+                {/* Header Profile */}
+                <View style={styles.header}>
+                    <View style={styles.avatarWrapper}>
+                        <Image 
+                            source={{ uri: resolveImageUrl(profile.avatarUrl) }} 
+                            style={styles.avatar} 
+                        />
+                        <View style={[styles.statusBadge, { backgroundColor: isOnline ? '#10B981' : '#F59E0B' }]}>
+                            <Text style={styles.statusText}>{isOnline ? 'Sẵn sàng' : 'Đang bận'}</Text>
+                        </View>
+                    </View>
+                    
+                    <Text style={styles.name}>{profile.displayName || 'Người dùng ẩn danh'}</Text>
+                    
+                    {profile.location && (
+                        <View style={styles.locationRow}>
+                            <MapPin size={14} color="#64748B" />
+                            <Text style={styles.locationText}>{profile.location}</Text>
+                        </View>
+                    )}
+                </View>
+
+                {/* Stats */}
+                <View style={styles.statsContainer}>
+                    <View style={styles.statBox}>
+                        <Briefcase size={20} color="#0EA5E9" />
+                        <Text style={styles.statValue}>{profile.stats?.totalGardens || 0}</Text>
+                        <Text style={styles.statLabel}>Shop hợp tác</Text>
+                    </View>
+                    <View style={styles.divider} />
+                    <View style={styles.statBox}>
+                        <FileTextIcon size={20} color="#8B5CF6" />
+                        <Text style={styles.statValue}>{profile.stats?.totalPosts || 0}</Text>
+                        <Text style={styles.statLabel}>Bài viết</Text>
+                    </View>
+                </View>
+
+                {/* Contact Alert / Action */}
+                <View style={styles.actionSection}>
+                    {!isActive ? (
+                        <>
+                            <View style={styles.contactMask}>
+                                <Info size={20} color="#D97706" />
+                                <Text style={styles.maskText}>
+                                    Thông tin liên hệ được bảo mật. Bạn cần gửi lời mời và được CTV này chấp nhận để xem số điện thoại và email.
+                                </Text>
+                            </View>
+                            <Button 
+                                fullWidth 
+                                icon={<MailPlus size={18} color="white" />}
+                                onPress={handleInvite}
+                                loading={inviting}
+                                disabled={inviting || isPending}
+                                style={isPending ? { backgroundColor: '#94A3B8' } : {}}
+                            >
+                                {isPending ? 'Đã gửi lời mời (Chờ duyệt)' : 'Mời vào Shop của tôi'}
+                            </Button>
+                        </>
+                    ) : (
+                        <View style={styles.contactCard}>
+                            <Text style={styles.sectionTitle}>Thông tin liên hệ</Text>
+                            <View style={styles.contactRow}>
+                                <Phone size={18} color="#047857" />
+                                <Text style={styles.contactInfo}>{profile.mobile || 'Không có số điện thoại'}</Text>
+                            </View>
+                            {profile.email && (
+                                <View style={styles.contactRow}>
+                                    <Mail size={18} color="#047857" />
+                                    <Text style={styles.contactInfo}>{profile.email}</Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
+                </View>
+
+                {/* Bio */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Giới thiệu</Text>
+                    <Text style={styles.bioText}>
+                        {profile.bio || 'Cộng tác viên này chưa cập nhật phần giới thiệu về bản thân.'}
+                    </Text>
+                </View>
+
+                {/* Availability Note */}
+                {profile.availabilityNote && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Ghi chú từ CTV</Text>
+                        <View style={styles.noteBox}>
+                            <Text style={styles.noteText}>{profile.availabilityNote}</Text>
+                        </View>
+                    </View>
+                )}
+
+                {/* Portfolio */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Dự án & Năng lực (Portfolio)</Text>
+                    {profile.portfolioPhotos && profile.portfolioPhotos.length > 0 ? (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.portfolioScroll}>
+                            {profile.portfolioPhotos.map((url: string, index: number) => (
+                                <Image 
+                                    key={index} 
+                                    source={{ uri: resolveImageUrl(url) }} 
+                                    style={styles.portfolioImg} 
+                                />
+                            ))}
+                        </ScrollView>
+                    ) : (
+                        <Text style={styles.emptyText}>CTV này chưa có hình ảnh portfolio nào công khai.</Text>
+                    )}
+                </View>
+                
+                <View style={{ height: 40 }} />
+            </ScrollView>
+        </MobileLayout>
+    );
+};
+
+// Helper icon
+const FileTextIcon = (props: any) => {
+    return <Award {...props} />; // Fallback if FileText is not imported correctly anywhere
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#F8FAFC',
+    },
+    loadingText: {
+        textAlign: 'center',
+        marginTop: 40,
+        color: '#64748B',
+    },
+    header: {
+        alignItems: 'center',
+        padding: 24,
+        backgroundColor: 'white',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E2E8F0',
+    },
+    avatarWrapper: {
+        position: 'relative',
+        marginBottom: 16,
+    },
+    avatar: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#E2E8F0',
+        borderWidth: 3,
+        borderColor: 'white',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    statusBadge: {
+        position: 'absolute',
+        bottom: -4,
+        alignSelf: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: 'white',
+    },
+    statusText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+    name: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#0F172A',
+        marginBottom: 8,
+    },
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    locationText: {
+        marginLeft: 6,
+        color: '#64748B',
+        fontSize: 14,
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        backgroundColor: 'white',
+        marginHorizontal: 16,
+        marginTop: 16,
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    statBox: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    divider: {
+        width: 1,
+        backgroundColor: '#E2E8F0',
+        marginHorizontal: 16,
+    },
+    statValue: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#0F172A',
+        marginTop: 8,
+        marginBottom: 4,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: '#64748B',
+    },
+    actionSection: {
+        padding: 16,
+    },
+    contactMask: {
+        flexDirection: 'row',
+        backgroundColor: '#FEF3C7',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#FDE68A',
+    },
+    maskText: {
+        flex: 1,
+        marginLeft: 12,
+        fontSize: 13,
+        color: '#B45309',
+        lineHeight: 18,
+    },
+    contactCard: {
+        backgroundColor: '#ECFDF5',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#A7F3D0',
+    },
+    contactRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 12,
+    },
+    contactInfo: {
+        fontSize: 16,
+        color: '#065F46',
+        fontWeight: '600',
+        marginLeft: 12,
+    },
+    section: {
+        paddingTop: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 8,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#0F172A',
+        marginBottom: 12,
+    },
+    bioText: {
+        fontSize: 14,
+        color: '#475569',
+        lineHeight: 22,
+    },
+    noteBox: {
+        backgroundColor: 'white',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderLeftWidth: 4,
+        borderLeftColor: '#3B82F6',
+    },
+    noteText: {
+        fontSize: 14,
+        color: '#334155',
+        fontStyle: 'italic',
+    },
+    portfolioScroll: {
+        flexDirection: 'row',
+        paddingBottom: 8,
+    },
+    portfolioImg: {
+        width: 120,
+        height: 120,
+        borderRadius: 8,
+        marginRight: 12,
+        backgroundColor: '#E2E8F0',
+    },
+    emptyText: {
+        fontSize: 14,
+        color: '#94A3B8',
+        fontStyle: 'italic',
+    },
+});
+
+export default PublicCollaboratorDetailScreen;

@@ -20,6 +20,10 @@ import PromotePostScreen from '../components/payment/screen/PromotePostScreen';
 import CreateReportScreen from '../components/report/screen/CreateReportService';
 import ShopDashboardScreen from '@/components/shop/screen/ShopDashboardScreen';
 import PackagesScreen from '@/components/shop/screen/PackagesScreen';
+import ShopCollaboratorsScreen from '@/components/shop/screen/ShopCollaboratorsScreen';
+import CollaboratorPublicListScreen from '@/components/shop/screen/CollaboratorPublicListScreen';
+import PublicCollaboratorDetailScreen from '@/components/shop/screen/PublicCollaboratorDetailScreen';
+import PendingOwnerPostsScreen from '@/components/shop/screen/PendingOwnerPostsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -127,6 +131,12 @@ const UserNavigator = () => {
       <RootStack.Screen name="PromotePost" component={PromotePostScreen} />
       <RootStack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
       <RootStack.Screen name="Packages" component={PackagesScreen} />
+      
+      {/* Collaborator Screens For Shop Owner */}
+      <RootStack.Screen name="ShopCollaborators" component={ShopCollaboratorsScreen} />
+      <RootStack.Screen name="CollaboratorPublicList" component={CollaboratorPublicListScreen} />
+      <RootStack.Screen name="PublicCollaboratorDetail" component={PublicCollaboratorDetailScreen} />
+      <RootStack.Screen name="PendingOwnerPosts" component={PendingOwnerPostsScreen} />
     </RootStack.Navigator>
   );
 };

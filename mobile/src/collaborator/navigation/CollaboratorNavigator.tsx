@@ -16,6 +16,7 @@ import EarningsScreen from '../screens/EarningsScreen';
 import SubmitWorkScreen from '../screens/SubmitWorkScreen';
 import JobDetailScreen from '../screens/JobDetailScreen';
 import PayoutRequestScreen from '../screens/PayoutRequestScreen';
+import InvitationsScreen from '../screens/InvitationsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -62,6 +63,7 @@ const CollaboratorNavigator = () => {
       <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="SubmitWork" component={SubmitWorkScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="PayoutRequest" component={PayoutRequestScreen} options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="Invitations" component={InvitationsScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 };

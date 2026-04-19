@@ -28,6 +28,25 @@ export interface ShopDetail {
     posts?: ShopPost[];
 }
 
+export interface ShopCollaborator {
+    userId: number;
+    displayName: string | null;
+    mobile: string;
+    avatarUrl: string | null;
+    relationshipStatus: 'pending' | 'active' | 'rejected';
+    joinedAt: string;
+}
+
+export interface PendingOwnerPost {
+    postId: number;
+    postTitle: string;
+    postSlug: string | null;
+    postStatus: string;
+    postCreatedAt: string;
+    authorName: string | null;
+    authorMobile: string;
+}
+
 export interface ShopPayload {
     shopName?: string;
     shopPhone?: string;
@@ -226,5 +245,37 @@ export const ShopService = {
     recordShopContactClick: async (shopId: number) => {
         const response = await api.post(`/shops/${shopId}/contact-click`)
         return response.data
-    }
+    },
+
+    // ─── Cộng tác viên (Owner side) ──────────────────────────────────────
+    getCollaborators: async (): Promise<ShopCollaborator[]> => {
+        const response = await api.get('/shops/collaborators/all')
+        return Array.isArray(response.data) ? response.data : []
+    },
+
+    inviteCollaborator: async (userIdentifier: string) => {
+        const response = await api.post('/shops/collaborators/invite', { userIdentifier })
+        return response.data
+    },
+
+    removeCollaborator: async (collaboratorUserId: number) => {
+        const response = await api.delete(`/shops/collaborators/${collaboratorUserId}`)
+        return response.data
+    },
+
+    // ─── Duyệt bài CTV (Owner side) ──────────────────────────────────────
+    getPendingOwnerPosts: async (): Promise<PendingOwnerPost[]> => {
+        const response = await api.get('/shops/collaborators/posts/pending')
+        return Array.isArray(response.data) ? response.data : []
+    },
+
+    approveCollaboratorPost: async (postId: number) => {
+        const response = await api.post(`/shops/collaborators/posts/${postId}/approve`)
+        return response.data
+    },
+
+    rejectCollaboratorPost: async (postId: number, reason: string) => {
+        const response = await api.post(`/shops/collaborators/posts/${postId}/reject`, { reason })
+        return response.data
+    },
 }

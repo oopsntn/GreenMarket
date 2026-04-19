@@ -18,7 +18,8 @@ import {
     Settings,
     ChevronRight,
     Circle,
-    Bell
+    Bell,
+    MailOpen
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CollaboratorService, CollaboratorProfileResponse } from '../services/collaboratorService';
@@ -219,6 +220,17 @@ const DashboardScreen = () => {
                                 <View style={styles.menuContent}>
                                     <Text style={styles.menuTitle}>Tìm việc mới</Text>
                                     <Text style={styles.menuDesc}>Khám phá các yêu cầu chưa có người nhận</Text>
+                                </View>
+                                <ChevronRight color="#94A3B8" size={20} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Invitations')}>
+                                <View style={[styles.menuIconWrap, { backgroundColor: '#FEF3C7' }]}>
+                                    <MailOpen color="#D97706" size={20} />
+                                </View>
+                                <View style={styles.menuContent}>
+                                    <Text style={styles.menuTitle}>Lời mời hợp tác</Text>
+                                    <Text style={styles.menuDesc}>Xem và phản hồi lời mời từ các Chủ vườn</Text>
                                 </View>
                                 <ChevronRight color="#94A3B8" size={20} />
                             </TouchableOpacity>

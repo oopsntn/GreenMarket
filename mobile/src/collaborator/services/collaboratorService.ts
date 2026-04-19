@@ -110,6 +110,26 @@ export const CollaboratorService = {
         return response.data;
     },
 
+    getPublicCollaborators: async (params?: { page?: number; limit?: number }) => {
+        const response = await api.get('/collaborator/public-list', { params });
+        return response.data;
+    },
+
+    getPublicCollaboratorDetail: async (id: number) => {
+        const response = await api.get(`/collaborator/public/${id}`);
+        return response.data;
+    },
+
+    getMyInvitations: async () => {
+        const response = await api.get('/collaborator/invitations');
+        return response.data;
+    },
+
+    respondToInvitation: async (id: number, action: 'accept' | 'reject') => {
+        const response = await api.post(`/collaborator/invitations/${id}/respond`, { action });
+        return response.data;
+    },
+
     updateAvailability: async (data: { availabilityStatus?: string; availabilityNote?: string }) => {
         const response = await api.patch('/collaborator/profile', data);
         return response.data;
