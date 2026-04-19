@@ -1,5 +1,5 @@
 import { db } from "../config/db.ts";
-import { admins, categories, posts, moderationActions } from "../models/schema/index.ts";
+import { admins, categories, posts, eventLogs } from "../models/schema/index.ts";
 import { eq, desc } from "drizzle-orm";
 import { slugify } from "../utils/slugify.ts";
 import axios from "axios";
@@ -44,21 +44,21 @@ async function testAdminPostManagement() {
         }
 
         // 3. Verify Log creation
-        console.log("\n3. Verifying moderation action log...");
-        const [logEntry] = await db.select().from(moderationActions)
-            .where(eq(moderationActions.moderationActionPostId, post.postId))
-            .orderBy(desc(moderationActions.moderationActionCreatedAt))
+        console.log("\n3. Verifying event log...");
+        const [logEntry] = await db.select().from(eventLogs)
+            .where(eq(eventLogs.eventLogTargetId, post.postId))
+            .orderBy(desc(eventLogs.eventLogEventTime))
             .limit(1);
 
-        if (logEntry && logEntry.moderationActionAction === "hidden" && logEntry.moderationActionActionBy === admin.adminId) {
-            console.log("   ✅ Moderation action successfully recorded.");
+        if (logEntry && logEntry.eventLogTargetType === "post" && logEntry.eventLogUserId === admin.adminId) {
+            console.log("   ✅ Event log successfully recorded.");
         } else {
-            console.log("   ❌ Moderation action not recorded correctly.", logEntry);
+            console.log("   ❌ Event log not recorded correctly.", logEntry);
         }
 
         // 4. Cleanup
         console.log("\n4. Cleanup...");
-        await db.delete(moderationActions).where(eq(moderationActions.moderationActionPostId, post.postId));
+        await db.delete(eventLogs).where(eq(eventLogs.eventLogTargetId, post.postId));
         await db.delete(posts).where(eq(posts.postId, post.postId));
         await db.delete(categories).where(eq(categories.categoryId, cat.categoryId));
         await db.delete(admins).where(eq(admins.adminId, admin.adminId));

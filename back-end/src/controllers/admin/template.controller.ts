@@ -327,9 +327,12 @@ const logTemplateEvent = async (
     | "admin_template_cloned"
     | "admin_template_status_updated",
   detail: string,
+  targetId?: number | null,
 ) => {
   await db.insert(eventLogs).values({
     eventLogUserId: userId ?? null,
+    eventLogTargetType: "template",
+    eventLogTargetId: targetId ?? null,
     eventLogEventType: eventType,
     eventLogEventTime: new Date(),
     eventLogMeta: {
@@ -445,6 +448,7 @@ export const createTemplate = async (
       req.user?.id,
       "admin_template_created",
       `Đã tạo mẫu "${validated.templateName}" thuộc loại ${validated.templateType}.`,
+      newTemplate.templateId,
     );
 
     res.status(201).json({
@@ -509,6 +513,7 @@ export const updateTemplate = async (
       req.user?.id,
       "admin_template_updated",
       `Đã cập nhật mẫu "${validated.templateName}".`,
+      idNumber,
     );
 
     res.json({
@@ -579,6 +584,7 @@ export const cloneTemplate = async (
       req.user?.id,
       "admin_template_cloned",
       `Đã nhân bản mẫu "${sourceTemplate.templateName}" thành "${clonedName}".`,
+      clonedTemplate.templateId,
     );
 
     res.status(201).json({
@@ -629,6 +635,7 @@ export const updateTemplateStatus = async (
       req.user?.id,
       "admin_template_status_updated",
       `Đã ${nextStatus === "Active" ? "bật" : "tắt"} mẫu "${updatedTemplate.templateName}".`,
+      idNumber,
     );
 
     res.json({

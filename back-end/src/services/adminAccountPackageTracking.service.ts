@@ -1,8 +1,8 @@
-import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import { SHOP_VIP_SLOT_CODE } from "../constants/promotion.ts";
 import {
-  paymentTxn,
+  transactions,
   placementSlots,
   promotionPackages,
   shops,
@@ -94,9 +94,9 @@ const buildStatus = (expiresAt: Date | null): Pick<
 
 const buildLatestPaymentMap = <
   T extends {
-    paymentTxnUserId: number;
-    paymentTxnAmount: unknown;
-    paymentTxnCreatedAt: Date | null;
+    transactionUserId: number;
+    transactionAmount: unknown;
+    transactionCreatedAt: Date | null;
   },
 >(
   rows: T[],
@@ -104,13 +104,13 @@ const buildLatestPaymentMap = <
   const result = new Map<number, LatestPaymentSnapshot>();
 
   for (const row of rows) {
-    if (result.has(row.paymentTxnUserId)) {
+    if (result.has(row.transactionUserId)) {
       continue;
     }
 
-    result.set(row.paymentTxnUserId, {
-      amount: toSafeNumber(row.paymentTxnAmount),
-      createdAt: row.paymentTxnCreatedAt ?? null,
+    result.set(row.transactionUserId, {
+      amount: toSafeNumber(row.transactionAmount),
+      createdAt: row.transactionCreatedAt ?? null,
     });
   }
 
@@ -120,21 +120,21 @@ const buildLatestPaymentMap = <
 const getLatestGenericPaymentsByUser = async () => {
   const rows = await db
     .select({
-      paymentTxnUserId: paymentTxn.paymentTxnUserId,
-      paymentTxnAmount: paymentTxn.paymentTxnAmount,
-      paymentTxnCreatedAt: paymentTxn.paymentTxnCreatedAt,
+      transactionUserId: transactions.transactionUserId,
+      transactionAmount: transactions.transactionAmount,
+      transactionCreatedAt: transactions.transactionCreatedAt,
     })
-    .from(paymentTxn)
+    .from(transactions)
     .where(
       and(
-        eq(paymentTxn.paymentTxnStatus, "success"),
-        isNull(paymentTxn.paymentTxnPackageId),
-        isNull(paymentTxn.paymentTxnPostId),
+        eq(transactions.transactionStatus, "success"),
+        isNull(transactions.transactionReferenceType),
+        sql`${transactions.transactionMeta}->>'postId' IS NULL`,
       ),
     )
     .orderBy(
-      desc(paymentTxn.paymentTxnCreatedAt),
-      desc(paymentTxn.paymentTxnId),
+      desc(transactions.transactionCreatedAt),
+      desc(transactions.transactionId),
     );
 
   return buildLatestPaymentMap(rows);
@@ -162,20 +162,24 @@ const getLatestVipPaymentsByUser = async () => {
 
   const rows = await db
     .select({
-      paymentTxnUserId: paymentTxn.paymentTxnUserId,
-      paymentTxnAmount: paymentTxn.paymentTxnAmount,
-      paymentTxnCreatedAt: paymentTxn.paymentTxnCreatedAt,
+      transactionUserId: transactions.transactionUserId,
+      transactionAmount: transactions.transactionAmount,
+      transactionCreatedAt: transactions.transactionCreatedAt,
     })
-    .from(paymentTxn)
+    .from(transactions)
     .where(
       and(
-        eq(paymentTxn.paymentTxnStatus, "success"),
-        inArray(paymentTxn.paymentTxnPackageId, vipPackageIds),
+        eq(transactions.transactionStatus, "success"),
+        eq(transactions.transactionReferenceType, "promotion_package"),
+        inArray(
+          sql<number>`(${transactions.transactionReferenceId})::int`,
+          vipPackageIds,
+        ),
       ),
     )
     .orderBy(
-      desc(paymentTxn.paymentTxnCreatedAt),
-      desc(paymentTxn.paymentTxnId),
+      desc(transactions.transactionCreatedAt),
+      desc(transactions.transactionId),
     );
 
   return buildLatestPaymentMap(rows);
@@ -384,3 +388,4 @@ export const adminAccountPackageTrackingService = {
     };
   },
 };
+

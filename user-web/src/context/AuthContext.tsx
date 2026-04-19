@@ -9,6 +9,7 @@ interface User {
   userEmail?: string | null;
   userLocation?: string | null;
   userBio?: string | null;
+  businessRoleCode?: string | null;
 }
 
 interface Shop {
@@ -65,6 +66,7 @@ const normalizeUser = (rawUser: any): User | null => {
     userEmail: rawUser.userEmail ?? null,
     userLocation: rawUser.userLocation ?? null,
     userBio: rawUser.userBio ?? null,
+    businessRoleCode: rawUser.businessRoleCode ?? null,
   };
 };
 

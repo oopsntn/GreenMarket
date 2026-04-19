@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and, inArray, sql, or, ilike, desc } from "drizzle-orm";
 import { shops, type Shop } from "../../models/schema/shops.ts";
-import { posts, postImages, eventLogs, shopCollaborators } from "../../models/schema/index.ts";
+import { posts, mediaAssets, eventLogs, shopCollaborators } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import { verificationService } from "../../services/verification.service.ts";
@@ -12,6 +12,7 @@ import {
     ownerDashboardService,
 } from "../../services/owner-dashboard.service.ts";
 import { postLifecycleService } from "../../services/postLifecycle.service.ts";
+import { notificationService } from "../../services/notification.service.ts";
 
 const SHOP_GALLERY_DELIMITER = "|";
 const SHOP_EVENT_VIEW = "shop_view";
@@ -292,7 +293,8 @@ export const getPublicShopById = async (req: AuthRequest, res: Response): Promis
             if (shouldCountShopView(id, viewerKey)) {
                 db.insert(eventLogs)
                     .values({
-                        eventLogShopId: id,
+                        eventLogTargetType: "shop",
+                        eventLogTargetId: id,
                         eventLogUserId: viewerId ?? null,
                         eventLogEventType: SHOP_EVENT_VIEW,
                         eventLogMeta: { source: "shop_detail_page" },
@@ -310,9 +312,18 @@ export const getPublicShopById = async (req: AuthRequest, res: Response): Promis
         let postsWithImages = shopPosts.map(p => ({ ...p, images: [] as any[] }));
         if (shopPosts.length > 0) {
             const postIds = shopPosts.map(p => p.postId);
-            const images = await db.select()
-                .from(postImages)
-                .where(inArray(postImages.postId, postIds));
+            const images = await db.select({
+                postId: mediaAssets.targetId,
+                imageUrl: mediaAssets.url,
+            })
+                .from(mediaAssets)
+                .where(
+                    and(
+                        eq(mediaAssets.targetType, "post"),
+                        eq(mediaAssets.mediaType, "image"),
+                        inArray(mediaAssets.targetId, postIds)
+                    )
+                );
 
             postsWithImages = shopPosts.map(post => ({
                 ...post,
@@ -352,7 +363,8 @@ export const recordShopContactClick = async (req: Request<{ id: string }>, res: 
         }
 
         await db.insert(eventLogs).values({
-            eventLogShopId: shopId,
+            eventLogTargetType: "shop",
+            eventLogTargetId: shopId,
             eventLogEventType: SHOP_EVENT_CONTACT_CLICK,
             eventLogMeta: { source: "shop_contact_action" },
         });
@@ -943,6 +955,15 @@ export const approveCollaboratorPost = async (req: AuthRequest, res: Response): 
             })
             .where(eq(posts.postId, postId));
 
+        // Notify collaborator
+        await notificationService.sendNotification({
+            recipientId: post.postAuthorId,
+            title: "Bài đăng đã được duyệt!",
+            message: `Bài đăng "${post.postTitle}" của bạn đã được chủ vườn [${shop.shopName}] phê duyệt và xuất bản.`,
+            type: "collaboration",
+            metaData: { postId: post.postId, shopId: shop.shopId }
+        }).catch(e => console.error("Failed to notify collaborator of approval:", e));
+
         res.json({ message: "Post approved and published successfully" });
     } catch (error) {
         console.error(error);
@@ -1000,6 +1021,15 @@ export const rejectCollaboratorPost = async (req: AuthRequest, res: Response): P
                 postModeratedAt: new Date(),
             })
             .where(eq(posts.postId, postId));
+
+        // Notify collaborator
+        await notificationService.sendNotification({
+            recipientId: post.postAuthorId,
+            title: "Bài đăng bị từ chối",
+            message: `Tiếc quá! Bài đăng "${post.postTitle}" của bạn đã bị từ chối. Lý do: ${reason}`,
+            type: "collaboration",
+            metaData: { postId: post.postId, shopId: shop.shopId }
+        }).catch(e => console.error("Failed to notify collaborator of rejection:", e));
 
         res.json({ message: "Post rejected successfully" });
     } catch (error) {

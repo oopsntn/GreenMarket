@@ -1,12 +1,12 @@
 import { Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and } from "drizzle-orm";
 import {
   users,
   businessRoles,
-  favoritePosts,
+  userFavorites,
   posts,
-  postImages,
+  mediaAssets,
 } from "../../models/schema/index.ts";
 import { AuthRequest } from "../../dtos/auth";
 
@@ -122,21 +122,35 @@ export const getFavoritePosts = async (
     const favorites = await db
       .select({
         post: posts,
-        savedAt: favoritePosts.favoritePostCreatedAt,
+        savedAt: userFavorites.createdAt,
       })
-      .from(favoritePosts)
-      .innerJoin(posts, eq(favoritePosts.favoritePostPostId, posts.postId))
-      .where(eq(favoritePosts.favoritePostUserId, userId))
-      .orderBy(desc(favoritePosts.favoritePostCreatedAt));
+      .from(userFavorites)
+      .innerJoin(posts, eq(userFavorites.targetId, posts.postId))
+      .where(
+        and(
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetType, "post"),
+        ),
+      )
+      .orderBy(desc(userFavorites.createdAt));
 
     const postIds = favorites.map((f) => f.post.postId);
     let imagesData: any[] = [];
 
     if (postIds.length > 0) {
       imagesData = await db
-        .select()
-        .from(postImages)
-        .where(inArray(postImages.postId, postIds));
+        .select({
+          postId: mediaAssets.targetId,
+          imageUrl: mediaAssets.url,
+        })
+        .from(mediaAssets)
+        .where(
+          and(
+            eq(mediaAssets.targetType, "post"),
+            eq(mediaAssets.mediaType, "image"),
+            inArray(mediaAssets.targetId, postIds)
+          )
+        );
     }
 
     const formattedPosts = favorites.map((f) => ({

@@ -320,10 +320,8 @@ const resolveTarget = (
   meta: EventLogMeta | null,
   row: {
     eventLogUserId: number | null;
-    eventLogPostId: number | null;
-    eventLogShopId: number | null;
-    eventLogSlotId: number | null;
-    eventLogCategoryId: number | null;
+    eventLogTargetType: string | null;
+    eventLogTargetId: number | null;
     userDisplayName: string | null;
     userEmail: string | null;
   },
@@ -336,35 +334,35 @@ const resolveTarget = (
     };
   }
 
-  if (row.eventLogPostId) {
+  if (row.eventLogTargetType === "post") {
     return {
       targetType: "Bài đăng",
-      targetName: `Bài đăng #${row.eventLogPostId}`,
-      targetCode: `POST-${row.eventLogPostId}`,
+      targetName: `Bài đăng #${row.eventLogTargetId}`,
+      targetCode: `POST-${row.eventLogTargetId}`,
     };
   }
 
-  if (row.eventLogShopId) {
+  if (row.eventLogTargetType === "shop") {
     return {
       targetType: "Cửa hàng",
-      targetName: `Cửa hàng #${row.eventLogShopId}`,
-      targetCode: `SHOP-${row.eventLogShopId}`,
+      targetName: `Cửa hàng #${row.eventLogTargetId}`,
+      targetCode: `SHOP-${row.eventLogTargetId}`,
     };
   }
 
-  if (row.eventLogSlotId) {
+  if (row.eventLogTargetType === "slot") {
     return {
       targetType: "Vị trí hiển thị",
-      targetName: `Vị trí #${row.eventLogSlotId}`,
-      targetCode: `SLOT-${row.eventLogSlotId}`,
+      targetName: `Vị trí #${row.eventLogTargetId}`,
+      targetCode: `SLOT-${row.eventLogTargetId}`,
     };
   }
 
-  if (row.eventLogCategoryId) {
+  if (row.eventLogTargetType === "category") {
     return {
       targetType: "Danh mục",
-      targetName: `Danh mục #${row.eventLogCategoryId}`,
-      targetCode: `CAT-${row.eventLogCategoryId}`,
+      targetName: `Danh mục #${row.eventLogTargetId}`,
+      targetCode: `CAT-${row.eventLogTargetId}`,
     };
   }
 
@@ -421,10 +419,8 @@ export const getActivityLogs = async (
       .select({
         eventLogId: eventLogs.eventLogId,
         eventLogUserId: eventLogs.eventLogUserId,
-        eventLogPostId: eventLogs.eventLogPostId,
-        eventLogShopId: eventLogs.eventLogShopId,
-        eventLogSlotId: eventLogs.eventLogSlotId,
-        eventLogCategoryId: eventLogs.eventLogCategoryId,
+        eventLogTargetType: eventLogs.eventLogTargetType,
+        eventLogTargetId: eventLogs.eventLogTargetId,
         eventLogEventType: eventLogs.eventLogEventType,
         eventLogEventTime: eventLogs.eventLogEventTime,
         eventLogMeta: eventLogs.eventLogMeta,
@@ -471,11 +467,9 @@ export const getActivityLogs = async (
           severity: definition.severity,
           detail,
           relatedIds: {
-            userId: row.eventLogUserId,
-            postId: row.eventLogPostId,
-            shopId: row.eventLogShopId,
-            slotId: row.eventLogSlotId,
-            categoryId: row.eventLogCategoryId,
+            actorId: row.eventLogUserId,
+            targetType: row.eventLogTargetType,
+            targetId: row.eventLogTargetId,
           },
         };
       }),

@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
-  postingFeeLedger,
+  ledgers,
   posts,
   shops,
   userPostingPlans,
@@ -155,10 +155,15 @@ const orPlanNotExpired = (now: Date) =>
 const getTotalTrackedFees = async (userId: number): Promise<number> => {
   const [row] = await db
     .select({
-      totalFees: sql<string>`coalesce(sum(${postingFeeLedger.postingFeeTotalAmount}), 0)`,
+      totalFees: sql<string>`coalesce(sum(${ledgers.ledgerAmount}), 0)`,
     })
-    .from(postingFeeLedger)
-    .where(eq(postingFeeLedger.postingFeeUserId, userId));
+    .from(ledgers)
+    .where(
+        and(
+            eq(ledgers.ledgerUserId, userId),
+            eq(ledgers.ledgerDirection, "DEBIT")
+        )
+    );
 
   return toSafeNumber(row?.totalFees ?? 0);
 };
@@ -315,23 +320,26 @@ export const postingPolicyService = {
     }
 
     const [row] = await db
-      .insert(postingFeeLedger)
+      .insert(ledgers)
       .values({
-        postingFeeUserId: params.userId,
-        postingFeePostId: params.postId,
-        postingFeePlanId: params.planId ?? null,
-        postingFeeActionType: params.actionType,
-        postingFeeQuantity: 1,
-        postingFeeUnitAmount: String(amount),
-        postingFeeTotalAmount: String(amount),
-        postingFeeCurrency: "VND",
-        postingFeeNote: params.note ?? null,
+        ledgerUserId: params.userId,
+        ledgerAmount: String(amount),
+        ledgerType: "fee_debit",
+        ledgerDirection: "DEBIT",
+        ledgerStatus: "completed",
+        ledgerMeta: {
+            actionType: params.actionType,
+            postId: params.postId,
+            planId: params.planId ?? null,
+            note: params.note ?? null
+        },
+        ledgerCreatedAt: new Date(),
       })
       .returning({
-        postingFeeId: postingFeeLedger.postingFeeId,
-        actionType: postingFeeLedger.postingFeeActionType,
-        totalAmount: postingFeeLedger.postingFeeTotalAmount,
-        createdAt: postingFeeLedger.postingFeeCreatedAt,
+        postingFeeId: ledgers.ledgerId,
+        totalAmount: ledgers.ledgerAmount,
+        createdAt: ledgers.ledgerCreatedAt,
+        meta: ledgers.ledgerMeta
       });
 
     if (!row) {
@@ -340,7 +348,7 @@ export const postingPolicyService = {
 
     return {
       postingFeeId: row.postingFeeId,
-      actionType: row.actionType,
+      actionType: (row.meta as any)?.actionType || params.actionType,
       amount: toSafeNumber(row.totalAmount),
       createdAt: row.createdAt ?? null,
     };

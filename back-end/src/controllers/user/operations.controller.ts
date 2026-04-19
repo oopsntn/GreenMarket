@@ -15,7 +15,7 @@ import {
   operationTasks,
   taskReplies,
   escalations,
-  systemNotifications,
+  notifications,
   users,
   reports,
   posts,
@@ -82,29 +82,32 @@ export const getOperationTasks = async (req: AuthRequest, res: Response): Promis
     const typeFilter = normalizeOptionalEnum(req.query.type, VALID_TASK_TYPES);
     const priorityFilter = normalizeOptionalEnum(req.query.priority, VALID_PRIORITY_LEVELS);
 
-    const whereClauses: SQL[] = [eq(operationTasks.assigneeId, userId)];
-    if (statusFilter) whereClauses.push(eq(operationTasks.taskStatus, statusFilter));
-    if (typeFilter) whereClauses.push(eq(operationTasks.taskType, typeFilter));
-    if (priorityFilter) whereClauses.push(eq(operationTasks.taskPriority, priorityFilter));
+    const whereClauses: SQL[] = [
+      eq(operationTasks.ticketAssigneeId, userId),
+      eq(operationTasks.ticketType, 'SUPPORT')
+    ];
+    if (statusFilter) whereClauses.push(eq(operationTasks.ticketStatus, statusFilter));
+    // typeFilter removed as we fixed it to SUPPORT for this endpoint
+    if (priorityFilter) whereClauses.push(eq(operationTasks.ticketPriority, priorityFilter));
 
     const [tasks, [{ count }]] = await Promise.all([
       db
         .select({
-          taskId: operationTasks.taskId,
-          title: operationTasks.taskTitle,
-          type: operationTasks.taskType,
-          status: operationTasks.taskStatus,
-          priority: operationTasks.taskPriority,
-          createdAt: operationTasks.createdAt,
-          updatedAt: operationTasks.updatedAt,
+          taskId: operationTasks.ticketId,
+          title: operationTasks.ticketTitle,
+          type: operationTasks.ticketType,
+          status: operationTasks.ticketStatus,
+          priority: operationTasks.ticketPriority,
+          createdAt: operationTasks.ticketCreatedAt,
+          updatedAt: operationTasks.ticketUpdatedAt,
           customerName: users.userDisplayName,
         })
         .from(operationTasks)
-        .leftJoin(users, eq(operationTasks.customerId, users.userId))
+        .leftJoin(users, eq(operationTasks.ticketCreatorId, users.userId))
         .where(and(...whereClauses))
         .limit(limit)
         .offset(offset)
-        .orderBy(desc(operationTasks.updatedAt)),
+        .orderBy(desc(operationTasks.ticketUpdatedAt)),
       db
         .select({ count: sql<number>`count(*)` })
         .from(operationTasks)
@@ -136,9 +139,19 @@ export const getOperationTaskDetail = async (req: AuthRequest, res: Response): P
     }
 
     const [task] = await db
-      .select()
+      .select({
+        taskId: operationTasks.ticketId,
+        title: operationTasks.ticketTitle,
+        type: operationTasks.ticketType,
+        status: operationTasks.ticketStatus,
+        priority: operationTasks.ticketPriority,
+        description: operationTasks.ticketContent,
+        createdAt: operationTasks.ticketCreatedAt,
+        updatedAt: operationTasks.ticketUpdatedAt,
+        assigneeId: operationTasks.ticketAssigneeId,
+      })
       .from(operationTasks)
-      .where(and(eq(operationTasks.taskId, taskId), eq(operationTasks.assigneeId, userId)))
+      .where(and(eq(operationTasks.ticketId, taskId), eq(operationTasks.ticketAssigneeId, userId)))
       .limit(1);
 
     if (!task) {
@@ -158,13 +171,18 @@ export const getOperationTaskDetail = async (req: AuthRequest, res: Response): P
         })
         .from(taskReplies)
         .leftJoin(users, eq(taskReplies.senderId, users.userId))
-        .where(eq(taskReplies.taskId, taskId))
+        .where(eq(taskReplies.ticketId, taskId))
         .orderBy(desc(taskReplies.createdAt)),
       db
-        .select()
+        .select({
+          escalationId: escalations.ticketId,
+          status: escalations.ticketStatus,
+          createdAt: escalations.ticketCreatedAt,
+          reason: escalations.ticketContent,
+        })
         .from(escalations)
-        .where(eq(escalations.sourceTaskId, taskId))
-        .orderBy(desc(escalations.createdAt)),
+        .where(and(eq(escalations.ticketType, 'ESCALATION'), eq(escalations.ticketTargetId, taskId)))
+        .orderBy(desc(escalations.ticketCreatedAt)),
     ]);
 
     res.json({
@@ -192,14 +210,14 @@ export const updateOperationTaskStatus = async (req: AuthRequest, res: Response)
     const [existingTask] = await db
       .select()
       .from(operationTasks)
-      .where(and(eq(operationTasks.taskId, taskId), eq(operationTasks.assigneeId, userId)))
+      .where(and(eq(operationTasks.ticketId, taskId), eq(operationTasks.ticketAssigneeId, userId)))
       .limit(1);
 
     if (!existingTask) {
       res.status(404).json({ error: "Task not found" });
       return;
     }
-    const currentStatus = existingTask.taskStatus;
+    const currentStatus = existingTask.ticketStatus;
 
     if (currentStatus === "closed" && nextStatus !== "closed") {
       res.status(409).json({ error: "Cannot reopen a closed task" });
@@ -215,10 +233,10 @@ export const updateOperationTaskStatus = async (req: AuthRequest, res: Response)
     const [updatedTask] = await db
       .update(operationTasks)
       .set({
-        taskStatus: nextStatus,
-        updatedAt: new Date(),
+        ticketStatus: nextStatus,
+        ticketUpdatedAt: new Date(),
       })
-      .where(and(eq(operationTasks.taskId, taskId), eq(operationTasks.assigneeId, userId)))
+      .where(and(eq(operationTasks.ticketId, taskId), eq(operationTasks.ticketAssigneeId, userId)))
       .returning();
 
     res.json({ task: updatedTask });
@@ -242,7 +260,7 @@ export const createOperationTaskReply = async (req: AuthRequest, res: Response):
     const [newReply] = await db
       .insert(taskReplies)
       .values({
-        taskId,
+        ticketId: taskId,
         senderId: userId,
         message,
         attachments: attachments || [],
@@ -277,9 +295,9 @@ export const escalateOperationTask = async (req: AuthRequest, res: Response): Pr
     }
 
     const [task] = await db
-      .select({ status: operationTasks.taskStatus })
+      .select({ status: operationTasks.ticketStatus })
       .from(operationTasks)
-      .where(eq(operationTasks.taskId, taskId))
+      .where(eq(operationTasks.ticketId, taskId))
       .limit(1);
 
     if (task?.status === "closed") {
@@ -288,13 +306,13 @@ export const escalateOperationTask = async (req: AuthRequest, res: Response): Pr
     }
 
     const [escalation] = await db.insert(escalations).values({
-      sourceTaskId: taskId,
-      targetType: finalTargetType,
-      targetId: finalTargetId,
-      createdBy: userId,
-      reason: finalReason,
-      severity: finalSeverity,
-      status: "open",
+      ticketType: 'ESCALATION',
+      ticketTargetType: finalTargetType,
+      ticketTargetId: taskId, // Use current task as target
+      ticketCreatorId: userId,
+      ticketContent: finalReason,
+      ticketPriority: finalSeverity,
+      ticketStatus: "open",
     }).returning();
 
     res.status(201).json({ escalation });
@@ -318,12 +336,16 @@ export const getDailyOperationWorkload = async (req: AuthRequest, res: Response)
     const [stats] = await db
       .select({
         total: sql<number>`count(*)::int`,
-        closed: sql<number>`count(*) filter (where task_status = 'closed')::int`,
-        open: sql<number>`count(*) filter (where task_status = 'open')::int`,
-        inProgress: sql<number>`count(*) filter (where task_status = 'in_progress')::int`,
+        closed: sql<number>`count(*) filter (where ticket_status = 'closed')::int`,
+        open: sql<number>`count(*) filter (where ticket_status = 'open')::int`,
+        inProgress: sql<number>`count(*) filter (where ticket_status = 'in_progress')::int`,
       })
       .from(operationTasks)
-      .where(and(eq(operationTasks.assigneeId, userId), gte(operationTasks.createdAt, today)));
+      .where(and(
+        eq(operationTasks.ticketAssigneeId, userId), 
+        eq(operationTasks.ticketType, 'SUPPORT'),
+        gte(operationTasks.ticketCreatedAt, today)
+      ));
 
     res.json({ stats });
   } catch (error) {
@@ -340,14 +362,14 @@ export const getOperationNotifications = async (req: AuthRequest, res: Response)
       return;
     }
 
-    const notifications = await db
+    const staffNotifications = await db
       .select()
-      .from(systemNotifications)
-      .where(eq(systemNotifications.recipientId, userId))
-      .orderBy(desc(systemNotifications.createdAt))
+      .from(notifications)
+      .where(eq(notifications.recipientId, userId))
+      .orderBy(desc(notifications.createdAt))
       .limit(50);
 
-    res.json({ data: notifications });
+    res.json({ data: staffNotifications });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });

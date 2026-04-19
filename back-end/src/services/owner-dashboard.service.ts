@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
   eventLogs,
-  paymentTxn,
+  transactions,
   placementSlots,
   postPromotions,
   posts,
@@ -165,24 +165,24 @@ export const ownerDashboardService = {
 
     const paymentRows = await db
       .select({
-        paymentTxnId: paymentTxn.paymentTxnId,
-        paymentTxnProviderTxnId: paymentTxn.paymentTxnProviderTxnId,
-        paymentTxnStatus: paymentTxn.paymentTxnStatus,
-        paymentTxnAmount: paymentTxn.paymentTxnAmount,
-        paymentTxnCreatedAt: paymentTxn.paymentTxnCreatedAt,
-        postId: posts.postId,
+        paymentTxnId: transactions.transactionId,
+        paymentTxnProviderTxnId: transactions.transactionProviderTxnId,
+        paymentTxnStatus: transactions.transactionStatus,
+        paymentTxnAmount: transactions.transactionAmount,
+        paymentTxnCreatedAt: transactions.transactionCreatedAt,
+        postId: sql<number | null>`(${transactions.transactionMeta}->>'postId')::int`,
         postTitle: posts.postTitle,
-        packageId: promotionPackages.promotionPackageId,
+        packageId: sql<number | null>`CASE WHEN ${transactions.transactionReferenceType} = 'promotion_package' THEN (${transactions.transactionReferenceId})::int ELSE NULL END`,
         packageTitle: promotionPackages.promotionPackageTitle,
       })
-      .from(paymentTxn)
-      .leftJoin(posts, eq(paymentTxn.paymentTxnPostId, posts.postId))
+      .from(transactions)
+      .leftJoin(posts, eq(sql<number>`(${transactions.transactionMeta}->>'postId')::int`, posts.postId))
       .leftJoin(
         promotionPackages,
-        eq(paymentTxn.paymentTxnPackageId, promotionPackages.promotionPackageId),
+        eq(sql<number>`(${transactions.transactionReferenceId})::int`, promotionPackages.promotionPackageId),
       )
-      .where(eq(paymentTxn.paymentTxnUserId, userId))
-      .orderBy(desc(paymentTxn.paymentTxnCreatedAt));
+      .where(eq(transactions.transactionUserId, userId))
+      .orderBy(desc(transactions.transactionCreatedAt));
 
     const shopPayments = paymentRows.filter((item) => {
       // Include if it belongs to a post in this shop
@@ -217,7 +217,8 @@ export const ownerDashboardService = {
       .from(eventLogs)
       .where(
         and(
-          eq(eventLogs.eventLogShopId, shop.shopId),
+          eq(eventLogs.eventLogTargetType, "shop"),
+          eq(eventLogs.eventLogTargetId, shop.shopId),
           inArray(eventLogs.eventLogEventType, [
             SHOP_EVENT_VIEW,
             SHOP_EVENT_CONTACT_CLICK,
