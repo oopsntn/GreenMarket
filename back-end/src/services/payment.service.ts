@@ -1,8 +1,8 @@
 import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
-  paymentTxn,
-  type PaymentTxn,
+  transactions,
+  type Transaction,
   placementSlots,
   postPromotions,
   posts,
@@ -84,13 +84,17 @@ const getLivePromotionCondition = () =>
 
 const activatePromotionForTransaction = async (
   tx: any,
-  txn: typeof paymentTxn.$inferSelect,
+  txn: Transaction,
 ) => {
-  if (!txn.paymentTxnPostId || !txn.paymentTxnPackageId) {
+  const meta = txn.transactionMeta as any;
+  const packageId = txn.transactionReferenceId;
+  const postId = meta?.postId;
+
+  if (!postId || !packageId || txn.transactionReferenceType !== 'package') {
     throw new PaymentServiceError(
       500,
       "PAYMENT_TXN_POST_MISSING",
-      "Payment transaction does not include a post or package reference.",
+      "Payment transaction does not include a valid post or package reference.",
     );
   }
 
@@ -115,7 +119,7 @@ const activatePromotionForTransaction = async (
       placementSlots,
       eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
     )
-    .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId!))
+    .where(eq(promotionPackages.promotionPackageId, packageId))
     .limit(1);
 
   if (!pkg) {
@@ -133,7 +137,7 @@ const activatePromotionForTransaction = async (
     .from(postPromotions)
     .where(
       and(
-        eq(postPromotions.postPromotionPostId, txn.paymentTxnPostId),
+        eq(postPromotions.postPromotionPostId, postId),
         livePromotionCondition,
       ),
     )
@@ -175,7 +179,7 @@ const activatePromotionForTransaction = async (
       .from(postPromotions)
       .where(
         and(
-          eq(postPromotions.postPromotionPackageId, txn.paymentTxnPackageId),
+          eq(postPromotions.postPromotionPackageId, packageId),
           livePromotionCondition,
         ),
       );
@@ -193,9 +197,9 @@ const activatePromotionForTransaction = async (
   const durationDays = Number(pkg.promotionPackageDurationDays || 0);
   const endAt = new Date(startAt.getTime() + durationDays * 24 * 60 * 60 * 1000);
   await tx.insert(postPromotions).values({
-    postPromotionPostId: txn.paymentTxnPostId,
-    postPromotionBuyerId: txn.paymentTxnUserId,
-    postPromotionPackageId: txn.paymentTxnPackageId,
+    postPromotionPostId: postId,
+    postPromotionBuyerId: txn.transactionUserId,
+    postPromotionPackageId: packageId,
     postPromotionSlotId: pkg.promotionPackageSlotId,
     postPromotionSnapshotTitle: pkg.promotionPackageTitle,
     postPromotionSnapshotPriority: pkg.priority,
@@ -207,9 +211,9 @@ const activatePromotionForTransaction = async (
 
 const activateShopVipForTransaction = async (
   tx: any,
-  txn: PaymentTxn,
+  txn: Transaction,
 ) => {
-  if (!txn.paymentTxnPackageId || txn.paymentTxnPostId) {
+  if (!txn.transactionReferenceId || txn.transactionReferenceType !== 'package' || (txn.transactionMeta as any)?.postId) {
     throw new PaymentServiceError(
       500,
       "SHOP_VIP_TXN_INVALID",
@@ -228,7 +232,7 @@ const activateShopVipForTransaction = async (
       placementSlots,
       eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
     )
-    .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId))
+    .where(eq(promotionPackages.promotionPackageId, txn.transactionReferenceId!))
     .limit(1);
 
   if (!pkg || pkg.slotCode !== SHOP_VIP_SLOT_CODE) {
@@ -256,7 +260,7 @@ const activateShopVipForTransaction = async (
       shopVipExpiresAt: shops.shopVipExpiresAt,
     })
     .from(shops)
-    .where(eq(shops.shopId, txn.paymentTxnUserId))
+    .where(eq(shops.shopId, txn.transactionUserId))
     .limit(1);
 
   if (!shop) {
@@ -296,7 +300,7 @@ const activateShopVipForTransaction = async (
       shopVipExpiresAt: newExpiresAt,
       shopUpdatedAt: now,
     })
-    .where(eq(shops.shopId, txn.paymentTxnUserId));
+    .where(eq(shops.shopId, txn.transactionUserId));
 };
 
 const activateRegistrationForTransaction = async (tx: any, userId: number) => {
@@ -317,7 +321,7 @@ const activateRegistrationForTransaction = async (tx: any, userId: number) => {
 
 const handleNonPostPackageActivation = async (
   tx: any,
-  txn: PaymentTxn,
+  txn: Transaction,
 ) => {
   const [pkg] = await tx
     .select({
@@ -328,7 +332,7 @@ const handleNonPostPackageActivation = async (
       placementSlots,
       eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
     )
-    .where(eq(promotionPackages.promotionPackageId, txn.paymentTxnPackageId!))
+    .where(eq(promotionPackages.promotionPackageId, txn.transactionReferenceId!))
     .limit(1);
 
   if (!pkg) return;
@@ -338,11 +342,11 @@ const handleNonPostPackageActivation = async (
       await activateShopVipForTransaction(tx, txn);
       break;
     case SHOP_REGISTRATION_SLOT_CODE:
-      await activateRegistrationForTransaction(tx, txn.paymentTxnUserId);
+      await activateRegistrationForTransaction(tx, txn.transactionUserId);
       break;
     case PERSONAL_PLAN_SLOT_CODE:
       await postingPolicyService.activatePersonalMonthlyPlan({
-        userId: txn.paymentTxnUserId,
+        userId: txn.transactionUserId,
         durationDays: 30,
       });
       break;
@@ -363,15 +367,15 @@ const processVerifiedCallback = async (
   return db.transaction(async (tx) => {
     const [txn] = await tx
       .select()
-      .from(paymentTxn)
-      .where(eq(paymentTxn.paymentTxnProviderTxnId, txnRef))
+      .from(transactions)
+      .where(eq(transactions.transactionProviderTxnId, txnRef))
       .limit(1);
 
     if (!txn) {
       return { status: "not_found", txnRef, responseCode };
     }
 
-    const requiredAmount = Number(txn.paymentTxnAmount || 0);
+    const requiredAmount = Number(txn.transactionAmount || 0);
     if (
       Number.isFinite(callbackAmount) &&
       Number.isFinite(requiredAmount) &&
@@ -379,14 +383,14 @@ const processVerifiedCallback = async (
       callbackAmount !== requiredAmount
     ) {
       await tx
-        .update(paymentTxn)
-        .set({ paymentTxnStatus: "failed" })
+        .update(transactions)
+        .set({ transactionStatus: "failed", transactionUpdatedAt: new Date() })
         .where(
           and(
-            eq(paymentTxn.paymentTxnId, txn.paymentTxnId),
+            eq(transactions.transactionId, txn.transactionId),
             or(
-              eq(paymentTxn.paymentTxnStatus, "pending"),
-              isNull(paymentTxn.paymentTxnStatus),
+              eq(transactions.transactionStatus, "pending"),
+              isNull(transactions.transactionStatus),
             ),
           ),
         );
@@ -395,23 +399,27 @@ const processVerifiedCallback = async (
     }
 
     if (responseCode === "00") {
-      if (txn.paymentTxnStatus === "success") {
+      if (txn.transactionStatus === "success") {
         return { status: "already_success", txnRef, responseCode };
       }
 
-      if (txn.paymentTxnStatus === "failed") {
+      if (txn.transactionStatus === "failed") {
         return { status: "already_failed", txnRef, responseCode };
       }
 
       const [updatedTxn] = await tx
-        .update(paymentTxn)
-        .set({ paymentTxnStatus: "success" })
+        .update(transactions)
+        .set({ 
+          transactionStatus: "success", 
+          transactionUpdatedAt: new Date(),
+          transactionProcessedAt: new Date()
+        })
         .where(
           and(
-            eq(paymentTxn.paymentTxnId, txn.paymentTxnId),
+            eq(transactions.transactionId, txn.transactionId),
             or(
-              eq(paymentTxn.paymentTxnStatus, "pending"),
-              isNull(paymentTxn.paymentTxnStatus),
+              eq(transactions.transactionStatus, "pending"),
+              isNull(transactions.transactionStatus),
             ),
           ),
         )
@@ -420,75 +428,73 @@ const processVerifiedCallback = async (
       if (!updatedTxn) {
         const [latestTxn] = await tx
           .select()
-          .from(paymentTxn)
-          .where(eq(paymentTxn.paymentTxnId, txn.paymentTxnId))
+          .from(transactions)
+          .where(eq(transactions.transactionId, txn.transactionId))
           .limit(1);
 
-        if (latestTxn?.paymentTxnStatus === "success") {
+        if (latestTxn?.transactionStatus === "success") {
           return { status: "already_success", txnRef, responseCode };
         }
 
-        if (latestTxn?.paymentTxnStatus === "failed") {
+        if (latestTxn?.transactionStatus === "failed") {
           return { status: "already_failed", txnRef, responseCode };
         }
 
         return { status: "failed", txnRef, responseCode };
       }
 
-      if (updatedTxn.paymentTxnPackageId) {
-        if (updatedTxn.paymentTxnPostId) {
+      const meta = updatedTxn.transactionMeta as any;
+      if (updatedTxn.transactionReferenceType === 'package' && updatedTxn.transactionReferenceId) {
+        if (meta?.postId) {
           await activatePromotionForTransaction(tx, updatedTxn);
         } else {
           await handleNonPostPackageActivation(tx, updatedTxn);
         }
       } else {
-        // Fallback for legacy transactions (missing packageId)
+        // Fallback or other transaction types
         const orderInfo = String(body.vnp_OrderInfo || "");
         if (orderInfo.startsWith("PayPersonalPkg")) {
           await postingPolicyService.activatePersonalMonthlyPlan({
-            userId: updatedTxn.paymentTxnUserId,
+            userId: updatedTxn.transactionUserId,
             durationDays: 30,
           });
-        } else {
-          await activateRegistrationForTransaction(tx, updatedTxn.paymentTxnUserId);
+        } else if (orderInfo.startsWith("PayShopReg")) {
+          await activateRegistrationForTransaction(tx, updatedTxn.transactionUserId);
         }
       }
 
-      // Send real-time notification to the user about successful activation
-      // We wrap this in a separate try/catch to ensure that notification failures 
-      // DO NOT rollback the entire payment transaction.
       try {
         await notificationService.sendNotification({
-          recipientId: updatedTxn.paymentTxnUserId,
+          recipientId: updatedTxn.transactionUserId,
           title: "Kích hoạt gói thành công",
-          message: `Giao dịch #${updatedTxn.paymentTxnProviderTxnId} đã được xử lý thành công. Các đặc quyền của bạn đã được kích hoạt.`,
+          message: `Giao dịch #${updatedTxn.transactionProviderTxnId} đã được xử lý thành công. Các đặc quyền của bạn đã được kích hoạt.`,
           type: "success",
-          metaData: { txnId: updatedTxn.paymentTxnId, status: "success" }
+          metaData: { txnId: updatedTxn.transactionId, status: "success" }
         });
       } catch (notifError) {
-        console.error("Payment success notification failed (txnId:", updatedTxn.paymentTxnId, "):", notifError);
+        console.error("Payment success notification failed (txnId:", updatedTxn.transactionId, "):", notifError);
       }
 
       return { status: "success", txnRef, responseCode };
     }
 
-    if (txn.paymentTxnStatus === "success") {
+    if (txn.transactionStatus === "success") {
       return { status: "already_success", txnRef, responseCode };
     }
 
-    if (txn.paymentTxnStatus === "failed") {
+    if (txn.transactionStatus === "failed") {
       return { status: "already_failed", txnRef, responseCode };
     }
 
     await tx
-      .update(paymentTxn)
-      .set({ paymentTxnStatus: "failed" })
+      .update(transactions)
+      .set({ transactionStatus: "failed", transactionUpdatedAt: new Date() })
       .where(
         and(
-          eq(paymentTxn.paymentTxnId, txn.paymentTxnId),
+          eq(transactions.transactionId, txn.transactionId),
           or(
-            eq(paymentTxn.paymentTxnStatus, "pending"),
-            isNull(paymentTxn.paymentTxnStatus),
+            eq(transactions.transactionStatus, "pending"),
+            isNull(transactions.transactionStatus),
           ),
         ),
       );
@@ -555,14 +561,16 @@ export const paymentService = {
 
     const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr);
 
-    await db.insert(paymentTxn).values({
-      paymentTxnUserId: userId,
-      paymentTxnPackageId: pkg.promotionPackageId,
-      paymentTxnPriceId: pkg.promotionPackagePriceId ?? null,
-      paymentTxnAmount: String(finalAmount),
-      paymentTxnProvider: "VNPAY",
-      paymentTxnProviderTxnId: orderId,
-      paymentTxnStatus: "pending",
+    await db.insert(transactions).values({
+      transactionUserId: userId,
+      transactionType: "payment",
+      transactionReferenceType: "package",
+      transactionReferenceId: pkg.promotionPackageId,
+      transactionAmount: String(finalAmount),
+      transactionProvider: "VNPAY",
+      transactionProviderTxnId: orderId,
+      transactionStatus: "pending",
+      transactionMeta: { priceId: pkg.promotionPackagePriceId },
     });
 
     return { paymentUrl: payUrl };
@@ -592,14 +600,16 @@ export const paymentService = {
 
     const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr);
 
-    await db.insert(paymentTxn).values({
-      paymentTxnUserId: userId,
-      paymentTxnPackageId: pkg.promotionPackageId,
-      paymentTxnPriceId: pkg.promotionPackagePriceId ?? null,
-      paymentTxnAmount: String(finalAmount),
-      paymentTxnProvider: "VNPAY",
-      paymentTxnProviderTxnId: orderId,
-      paymentTxnStatus: "pending",
+    await db.insert(transactions).values({
+      transactionUserId: userId,
+      transactionType: "payment",
+      transactionReferenceType: "package",
+      transactionReferenceId: pkg.promotionPackageId,
+      transactionAmount: String(finalAmount),
+      transactionProvider: "VNPAY",
+      transactionProviderTxnId: orderId,
+      transactionStatus: "pending",
+      transactionMeta: { priceId: pkg.promotionPackagePriceId },
     });
 
     return { paymentUrl: payUrl };
@@ -683,14 +693,16 @@ export const paymentService = {
       ipAddr,
     );
 
-    await db.insert(paymentTxn).values({
-      paymentTxnUserId: userId,
-      paymentTxnPackageId: vipPackage.promotionPackageId,
-      paymentTxnPriceId: vipPackage.promotionPackagePriceId ?? null,
-      paymentTxnAmount: String(finalAmount),
-      paymentTxnProvider: "VNPAY",
-      paymentTxnProviderTxnId: orderId,
-      paymentTxnStatus: "pending",
+    await db.insert(transactions).values({
+      transactionUserId: userId,
+      transactionType: "payment",
+      transactionReferenceType: "package",
+      transactionReferenceId: vipPackage.promotionPackageId,
+      transactionAmount: String(finalAmount),
+      transactionProvider: "VNPAY",
+      transactionProviderTxnId: orderId,
+      transactionStatus: "pending",
+      transactionMeta: { priceId: vipPackage.promotionPackagePriceId },
     });
 
     return { paymentUrl: payUrl };
@@ -899,15 +911,19 @@ export const paymentService = {
 
     const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr);
 
-    await db.insert(paymentTxn).values({
-      paymentTxnUserId: userId,
-      paymentTxnPostId: parsedPostId,
-      paymentTxnPackageId: parsedPackageId,
-      paymentTxnPriceId: pkg.promotionPackagePriceId ?? null,
-      paymentTxnAmount: String(finalAmount),
-      paymentTxnProvider: "VNPAY",
-      paymentTxnProviderTxnId: orderId,
-      paymentTxnStatus: "pending",
+    await db.insert(transactions).values({
+      transactionUserId: userId,
+      transactionType: "payment",
+      transactionReferenceType: "package",
+      transactionReferenceId: parsedPackageId,
+      transactionAmount: String(finalAmount),
+      transactionProvider: "VNPAY",
+      transactionProviderTxnId: orderId,
+      transactionStatus: "pending",
+      transactionMeta: { 
+        postId: parsedPostId, 
+        priceId: pkg.promotionPackagePriceId 
+      },
     });
 
     return { paymentUrl: payUrl };
@@ -930,21 +946,24 @@ export const paymentService = {
   async getUserTransactionHistory(userId: number) {
     const transactionsResult = await db
       .select({
-        id: paymentTxn.paymentTxnId,
-        amount: paymentTxn.paymentTxnAmount,
-        status: paymentTxn.paymentTxnStatus,
-        createdAt: paymentTxn.paymentTxnCreatedAt,
-        packageId: paymentTxn.paymentTxnPackageId,
-        postId: paymentTxn.paymentTxnPostId,
+        id: transactions.transactionId,
+        amount: transactions.transactionAmount,
+        status: transactions.transactionStatus,
+        createdAt: transactions.transactionCreatedAt,
+        packageId: transactions.transactionReferenceId,
+        postId: sql<number | null>`(${transactions.transactionMeta}->>'postId')::int`,
         packageTitle: promotionPackages.promotionPackageTitle,
         postTitle: posts.postTitle,
         postShopId: posts.postShopId,
       })
-      .from(paymentTxn)
-      .leftJoin(promotionPackages, eq(paymentTxn.paymentTxnPackageId, promotionPackages.promotionPackageId))
-      .leftJoin(posts, eq(paymentTxn.paymentTxnPostId, posts.postId))
-      .where(eq(paymentTxn.paymentTxnUserId, userId))
-      .orderBy(sql`${paymentTxn.paymentTxnCreatedAt} DESC`)
+      .from(transactions)
+      .leftJoin(promotionPackages, and(
+        eq(transactions.transactionReferenceType, 'package'),
+        eq(transactions.transactionReferenceId, promotionPackages.promotionPackageId)
+      ))
+      .leftJoin(posts, eq(sql<number>`(${transactions.transactionMeta}->>'postId')::int`, posts.postId))
+      .where(eq(transactions.transactionUserId, userId))
+      .orderBy(sql`${transactions.transactionCreatedAt} DESC`)
       .limit(50);
 
     const activePromotionsResult = await db

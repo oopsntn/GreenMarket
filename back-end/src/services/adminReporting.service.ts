@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import { db } from "../config/db.ts";
 import {
@@ -6,7 +6,7 @@ import {
     categories,
     categoryAttributes,
     eventLogs,
-    paymentTxn,
+    transactions,
     posts,
     promotionPackages,
     reports,
@@ -159,7 +159,7 @@ type RevenueSummaryResponse = {
 };
 
 type PaymentOrder = {
-    paymentTxnId: number;
+    transactionId: number;
     userId: number;
     customerName: string;
     email: string;
@@ -376,25 +376,28 @@ const getGeneratedByLabel = (generatedBy: string) => generatedBy || "Quản tr�
 
 const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
     const slotCatalog = await adminPlacementSlotCatalogService.getCatalog();
-    const transactions = await db
+    const records = await db
         .select({
-            paymentTxnId: paymentTxn.paymentTxnId,
-            paymentTxnUserId: paymentTxn.paymentTxnUserId,
-            paymentTxnAmount: paymentTxn.paymentTxnAmount,
-            paymentTxnStatus: paymentTxn.paymentTxnStatus,
-            paymentTxnCreatedAt: paymentTxn.paymentTxnCreatedAt,
+            transactionId: transactions.transactionId,
+            userId: transactions.transactionUserId,
+            amount: transactions.transactionAmount,
+            status: transactions.transactionStatus,
+            createdAt: transactions.transactionCreatedAt,
             userDisplayName: users.userDisplayName,
             userEmail: users.userEmail,
-            packageId: promotionPackages.promotionPackageId,
+            packageId: transactions.transactionReferenceId,
             packageTitle: promotionPackages.promotionPackageTitle,
         })
-        .from(paymentTxn)
-        .leftJoin(users, eq(paymentTxn.paymentTxnUserId, users.userId))
+        .from(transactions)
+        .leftJoin(users, eq(transactions.transactionUserId, users.userId))
         .leftJoin(
             promotionPackages,
-            eq(paymentTxn.paymentTxnPackageId, promotionPackages.promotionPackageId),
+            and(
+                eq(transactions.transactionReferenceType, 'package'),
+                eq(transactions.transactionReferenceId, promotionPackages.promotionPackageId)
+            ),
         )
-        .orderBy(desc(paymentTxn.paymentTxnCreatedAt));
+        .orderBy(desc(transactions.transactionCreatedAt));
 
     const allSlots = await db.select().from(promotionPackages);
     const slotByPackageId = new Map<number, number | null>();
@@ -407,19 +410,19 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
         slotNameById.set(item.id, item.label);
     });
 
-    return transactions
-        .filter((item) => item.paymentTxnStatus === "success")
+    return records
+        .filter((item) => item.status === "success")
         .map((item) => ({
-            paymentTxnId: item.paymentTxnId,
-            userId: item.paymentTxnUserId,
-            customerName: item.userDisplayName?.trim() || `Người dùng #${item.paymentTxnUserId}`,
+            transactionId: item.transactionId,
+            userId: item.userId,
+            customerName: item.userDisplayName?.trim() || `Người dùng #${item.userId}`,
             email: item.userEmail?.trim() || "Chưa có email",
             packageName: item.packageTitle?.trim() || "Chưa xác định gói",
             slot:
                 slotNameById.get(slotByPackageId.get(item.packageId ?? -1) ?? -1) ||
                 "Vị trí chưa xác định",
-            amount: Number(item.paymentTxnAmount ?? 0),
-            createdAt: item.paymentTxnCreatedAt,
+            amount: Number(item.amount ?? 0),
+            createdAt: item.createdAt,
         }));
 };
 

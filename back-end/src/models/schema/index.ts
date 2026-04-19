@@ -109,20 +109,20 @@ export {
   type NewPostPromotion,
 } from "./post-promotions.ts";
 export {
-  paymentTxn,
-  type PaymentTxn,
-  type NewPaymentTxn,
-} from "./payment-txn.ts";
+  transactions,
+  type Transaction,
+  type NewTransaction,
+} from "./transactions.ts";
+export {
+  ledgers,
+  type Ledger,
+  type NewLedger,
+} from "./ledgers.ts";
 export {
   userPostingPlans,
   type UserPostingPlan,
   type NewUserPostingPlan,
 } from "./user-posting-plans.ts";
-export {
-  postingFeeLedger,
-  type PostingFeeLedger,
-  type NewPostingFeeLedger,
-} from "./posting-fee-ledger.ts";
 export { jobs, type Job, type NewJob } from "./jobs.ts";
 export {
   jobDeliverables,
@@ -134,16 +134,6 @@ export {
   type JobContactRequest,
   type NewJobContactRequest,
 } from "./job-contact-requests.ts";
-export {
-  earnings,
-  type Earning,
-  type NewEarning,
-} from "./earnings.ts";
-export {
-  payoutRequests,
-  type PayoutRequest,
-  type NewPayoutRequest,
-} from "./payout-requests.ts";
 
 // Analytics
 export {

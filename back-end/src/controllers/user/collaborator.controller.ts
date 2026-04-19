@@ -15,11 +15,11 @@ import {
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
-  earnings,
+  ledgers,
   jobContactRequests,
   jobDeliverables,
   jobs,
-  payoutRequests,
+  transactions,
   shopCollaborators,
   shops,
   users,
@@ -117,20 +117,21 @@ const getProgressPercent = (status: string | null | undefined) => {
 const calculateAvailableBalance = async (collaboratorId: number) => {
   const [earningSummary] = await db
     .select({
-      total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
+      total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
     })
-    .from(earnings)
-    .where(eq(earnings.userId, collaboratorId));
+    .from(ledgers)
+    .where(eq(ledgers.ledgerUserId, collaboratorId));
 
   const [payoutSummary] = await db
     .select({
-      total: sql<string>`COALESCE(SUM(${payoutRequests.payoutRequestAmount}), 0)`,
+      total: sql<string>`COALESCE(SUM(${transactions.transactionAmount}), 0)`,
     })
-    .from(payoutRequests)
+    .from(transactions)
     .where(
       and(
-        eq(payoutRequests.payoutRequestUserId, collaboratorId),
-        inArray(payoutRequests.payoutRequestStatus, ["pending", "approved"]),
+        eq(transactions.transactionUserId, collaboratorId),
+        eq(transactions.transactionType, "payout"),
+        inArray(transactions.transactionStatus, ["pending", "success"]),
       ),
     );
 
@@ -184,10 +185,10 @@ export const getCollaboratorProfile = async (
 
     const [earningSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
       })
-      .from(earnings)
-      .where(eq(earnings.userId, userId));
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId));
 
     const availableBalance = await calculateAvailableBalance(userId);
 
@@ -856,14 +857,18 @@ export const submitJobDeliverables = async (
         .returning();
 
       const [earningEntry] = await tx
-        .insert(earnings)
+        .insert(ledgers)
         .values({
-          userId: userId,
-          sourceId: jobId,
-          amount: completedJob.jobPrice ?? "0",
-          type: "job",
-          status: "completed",
-          createdAt: now,
+          ledgerUserId: userId,
+          ledgerAmount: completedJob.jobPrice ?? "0",
+          ledgerType: "earning",
+          ledgerDirection: "CREDIT",
+          ledgerStatus: "completed",
+          ledgerMeta: {
+            type: "job",
+            sourceId: jobId
+          },
+          ledgerCreatedAt: now,
         })
         .returning();
 
@@ -915,48 +920,48 @@ export const getCollaboratorEarnings = async (
     }
 
     const conditions: SQL[] = [
-      eq(earnings.userId, userId),
+      eq(ledgers.ledgerUserId, userId),
     ];
     if (from) {
-      conditions.push(gte(earnings.createdAt, from));
+      conditions.push(gte(ledgers.ledgerCreatedAt, from));
     }
     if (to) {
-      conditions.push(lte(earnings.createdAt, to));
+      conditions.push(lte(ledgers.ledgerCreatedAt, to));
     }
 
     const [summary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
         txCount: sql<number>`COUNT(*)`,
       })
-      .from(earnings)
+      .from(ledgers)
       .where(and(...conditions));
 
     const byType = await db
       .select({
-        type: earnings.type,
-        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
+        type: sql<string>`${ledgers.ledgerMeta}->>'type'`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
         count: sql<number>`COUNT(*)`,
       })
-      .from(earnings)
+      .from(ledgers)
       .where(and(...conditions))
-      .groupBy(earnings.type)
-      .orderBy(asc(earnings.type));
+      .groupBy(sql`${ledgers.ledgerMeta}->>'type'`)
+      .orderBy(asc(sql`${ledgers.ledgerMeta}->>'type'`));
 
     const history = await db
       .select({
-        earningId: earnings.earningId,
-        sourceId: earnings.sourceId,
+        earningId: ledgers.ledgerId,
+        sourceId: sql<number | null>`(${ledgers.ledgerMeta}->>'sourceId')::int`,
         jobTitle: jobs.jobTitle,
-        amount: earnings.amount,
-        type: earnings.type,
-        status: earnings.status,
-        createdAt: earnings.createdAt,
+        amount: ledgers.ledgerAmount,
+        type: sql<string>`${ledgers.ledgerMeta}->>'type'`,
+        status: ledgers.ledgerStatus,
+        createdAt: ledgers.ledgerCreatedAt,
       })
-      .from(earnings)
-      .leftJoin(jobs, eq(earnings.sourceId, jobs.jobId))
+      .from(ledgers)
+      .leftJoin(jobs, eq(sql<number>`(${ledgers.ledgerMeta}->>'sourceId')::int`, jobs.jobId))
       .where(and(...conditions))
-      .orderBy(desc(earnings.createdAt));
+      .orderBy(desc(ledgers.ledgerCreatedAt));
 
     const total = toNumber(summary?.total);
     const txCount = Number(summary?.txCount ?? 0);
@@ -997,16 +1002,26 @@ export const getPayoutRequestHistory = async (
 
     const rows = await db
       .select()
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestUserId, userId))
-      .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      )
+      .orderBy(desc(transactions.transactionCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestUserId, userId));
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      );
 
     const totalItems = Number(countResult?.count ?? 0);
     const totalPages = Math.ceil(totalItems / limit);
@@ -1014,7 +1029,11 @@ export const getPayoutRequestHistory = async (
     res.json({
       data: rows.map((item) => ({
         ...item,
-        payoutRequestAmount: toNumber(item.payoutRequestAmount),
+        payoutRequestAmount: toNumber(item.transactionAmount),
+        payoutRequestStatus: item.transactionStatus,
+        payoutRequestCreatedAt: item.transactionCreatedAt,
+        payoutRequestMethod: item.transactionProvider,
+        payoutRequestNote: (item.transactionMeta as any)?.note
       })),
       meta: {
         page,
@@ -1074,14 +1093,15 @@ export const createPayoutRequest = async (
     }
 
     const [createdRequest] = await db
-      .insert(payoutRequests)
+      .insert(transactions)
       .values({
-        payoutRequestUserId: userId,
-        payoutRequestAmount: amount.toFixed(2),
-        payoutRequestMethod: method,
-        payoutRequestStatus: "pending",
-        payoutRequestNote: note,
-        payoutRequestCreatedAt: new Date(),
+        transactionUserId: userId,
+        transactionType: "payout",
+        transactionAmount: amount.toFixed(2),
+        transactionProvider: method,
+        transactionStatus: "pending",
+        transactionMeta: { note },
+        transactionCreatedAt: new Date(),
       })
       .returning();
 
@@ -1089,7 +1109,11 @@ export const createPayoutRequest = async (
       message: "Payout request created successfully (mock)",
       payoutRequest: {
         ...createdRequest,
-        payoutRequestAmount: toNumber(createdRequest.payoutRequestAmount),
+        payoutRequestAmount: toNumber(createdRequest.transactionAmount),
+        payoutRequestStatus: createdRequest.transactionStatus,
+        payoutRequestCreatedAt: createdRequest.transactionCreatedAt,
+        payoutRequestMethod: createdRequest.transactionProvider,
+        payoutRequestNote: note
       },
       availableBalanceAfter: Number((availableBalance - amount).toFixed(2)),
     });

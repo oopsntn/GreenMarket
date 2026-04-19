@@ -1,13 +1,13 @@
 import axios from "axios";
 import jwt from "jsonwebtoken";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { db } from "../../config/db";
 import {
   businessRoles,
-  earnings,
+  ledgers,
   jobDeliverables,
   jobs,
-  payoutRequests,
+  transactions,
   users,
 } from "../../models/schema/index";
 
@@ -389,14 +389,17 @@ async function runCollaboratorTests() {
     try {
       if (createdUserIds.length > 0) {
         await db
-          .delete(payoutRequests)
+          .delete(transactions)
           .where(
-            inArray(payoutRequests.payoutRequestUserId, createdUserIds),
+            and(
+              inArray(transactions.transactionUserId, createdUserIds),
+              eq(transactions.transactionType, "payout")
+            )
           );
         await db
-          .delete(earnings)
+          .delete(ledgers)
           .where(
-            inArray(earnings.userId, createdUserIds),
+            inArray(ledgers.ledgerUserId, createdUserIds),
           );
       }
 

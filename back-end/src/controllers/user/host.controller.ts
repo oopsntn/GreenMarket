@@ -11,8 +11,8 @@ import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
   hostContents,
-  earnings,
-  payoutRequests,
+  ledgers,
+  transactions,
   userFavorites,
   users,
   posts,
@@ -68,21 +68,22 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
 
     const [earningSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
-        available: sql<string>`COALESCE(SUM(CASE WHEN ${earnings.status} = 'available' THEN ${earnings.amount} ELSE 0 END), 0)`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
+        available: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' AND ${ledgers.ledgerStatus} = 'available' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
       })
-      .from(earnings)
-      .where(eq(earnings.userId, userId));
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId));
 
     const [payoutSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${payoutRequests.payoutRequestAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(${transactions.transactionAmount}), 0)`,
       })
-      .from(payoutRequests)
+      .from(transactions)
       .where(
         and(
-          eq(payoutRequests.payoutRequestUserId, userId),
-          eq(payoutRequests.payoutRequestStatus, "completed")
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout"),
+          eq(transactions.transactionStatus, "success")
         )
       );
 
@@ -117,16 +118,16 @@ export const getHostEarnings = async (req: AuthRequest, res: Response): Promise<
 
     const rows = await db
       .select()
-      .from(earnings)
-      .where(eq(earnings.userId, userId))
-      .orderBy(desc(earnings.createdAt))
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId))
+      .orderBy(desc(ledgers.ledgerCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(earnings)
-      .where(eq(earnings.userId, userId));
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId));
 
     res.json({
       data: rows,
@@ -155,25 +156,35 @@ export const getPayoutRequests = async (req: AuthRequest, res: Response): Promis
 
     const rows = await db
       .select({
-        hostPayoutId: payoutRequests.payoutRequestId,
-        hostPayoutHostId: payoutRequests.payoutRequestUserId,
-        hostPayoutAmount: payoutRequests.payoutRequestAmount,
-        hostPayoutMethod: payoutRequests.payoutRequestMethod,
-        hostPayoutStatus: payoutRequests.payoutRequestStatus,
-        hostPayoutNote: payoutRequests.payoutRequestNote,
-        hostPayoutProcessedAt: payoutRequests.payoutRequestProcessedAt,
-        hostPayoutCreatedAt: payoutRequests.payoutRequestCreatedAt,
+        hostPayoutId: transactions.transactionId,
+        hostPayoutHostId: transactions.transactionUserId,
+        hostPayoutAmount: transactions.transactionAmount,
+        hostPayoutMethod: transactions.transactionProvider,
+        hostPayoutStatus: transactions.transactionStatus,
+        hostPayoutNote: sql<string>`${transactions.transactionMeta}->>'note'`,
+        hostPayoutProcessedAt: transactions.transactionUpdatedAt,
+        hostPayoutCreatedAt: transactions.transactionCreatedAt,
       })
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestUserId, userId))
-      .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      )
+      .orderBy(desc(transactions.transactionCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestUserId, userId));
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      );
 
     res.json({
       data: rows,
@@ -214,20 +225,21 @@ export const createPayoutRequest = async (req: AuthRequest, res: Response): Prom
     // Check balance
     const [earningSummary] = await db
       .select({
-        available: sql<string>`COALESCE(SUM(CASE WHEN ${earnings.status} = 'available' THEN ${earnings.amount} ELSE 0 END), 0)`,
+        available: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' AND ${ledgers.ledgerStatus} = 'available' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
       })
-      .from(earnings)
-      .where(eq(earnings.userId, userId));
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId));
 
     const [payoutSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${payoutRequests.payoutRequestAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(${transactions.transactionAmount}), 0)`,
       })
-      .from(payoutRequests)
+      .from(transactions)
       .where(
         and(
-          eq(payoutRequests.payoutRequestUserId, userId),
-          sql`${payoutRequests.payoutRequestStatus} IN ('completed', 'pending')`
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout"),
+          sql`${transactions.transactionStatus} IN ('success', 'pending')`
         )
       );
 
@@ -239,26 +251,27 @@ export const createPayoutRequest = async (req: AuthRequest, res: Response): Prom
     }
 
     const [newRequest] = await db
-      .insert(payoutRequests)
+      .insert(transactions)
       .values({
-        payoutRequestUserId: userId,
-        payoutRequestAmount: amount.toFixed(2),
-        payoutRequestMethod: method,
-        payoutRequestNote: note,
-        payoutRequestStatus: "pending",
-        payoutRequestCreatedAt: new Date(),
+        transactionUserId: userId,
+        transactionType: "payout",
+        transactionAmount: amount.toFixed(2),
+        transactionProvider: method,
+        transactionMeta: { note },
+        transactionStatus: "pending",
+        transactionCreatedAt: new Date(),
       })
       .returning();
 
     // Map back to old field names for frontend compatibility if necessary
     const responseData = {
-      hostPayoutId: newRequest.payoutRequestId,
-      hostPayoutHostId: newRequest.payoutRequestUserId,
-      hostPayoutAmount: toNumber(newRequest.payoutRequestAmount),
-      hostPayoutMethod: newRequest.payoutRequestMethod,
-      hostPayoutStatus: newRequest.payoutRequestStatus,
-      hostPayoutNote: newRequest.payoutRequestNote,
-      hostPayoutCreatedAt: newRequest.payoutRequestCreatedAt,
+      hostPayoutId: newRequest.transactionId,
+      hostPayoutHostId: newRequest.transactionUserId,
+      hostPayoutAmount: toNumber(newRequest.transactionAmount),
+      hostPayoutMethod: newRequest.transactionProvider,
+      hostPayoutStatus: newRequest.transactionStatus,
+      hostPayoutNote: note,
+      hostPayoutCreatedAt: newRequest.transactionCreatedAt,
     };
 
     res.status(201).json({
@@ -329,12 +342,16 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
 
     // 1. Create earning for host
     const PAYOUT_AMOUNT = 50000;
-    await db.insert(earnings).values({
-      userId: userId,
-      amount: PAYOUT_AMOUNT.toString(),
-      status: "available",
-      type: "article_payout",
-      sourceId: newContent.hostContentId,
+    await db.insert(ledgers).values({
+      ledgerUserId: userId,
+      ledgerAmount: PAYOUT_AMOUNT.toString(),
+      ledgerType: "earning",
+      ledgerDirection: "CREDIT",
+      ledgerStatus: "available",
+      ledgerMeta: {
+        type: "article_payout",
+        sourceId: newContent.hostContentId
+      },
     });
 
     // 2. Notify host

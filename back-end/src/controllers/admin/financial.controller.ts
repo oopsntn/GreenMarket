@@ -8,7 +8,7 @@ import {
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
-  payoutRequests,
+  transactions,
   users,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
@@ -32,35 +32,37 @@ export const getAllPayoutRequests = async (req: AuthRequest, res: Response): Pro
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
     const status = req.query.status as string;
 
-    const conditions = [];
+    const conditions = [
+        eq(transactions.transactionType, "payout")
+    ];
     if (status) {
-      conditions.push(eq(payoutRequests.payoutRequestStatus, status));
+      conditions.push(eq(transactions.transactionStatus, status));
     }
 
     const rows = await db
       .select({
-        payoutRequestId: payoutRequests.payoutRequestId,
-        userId: payoutRequests.payoutRequestUserId,
+        payoutRequestId: transactions.transactionId,
+        userId: transactions.transactionUserId,
         userName: users.userDisplayName,
         userEmail: users.userEmail,
         userRole: users.userBusinessRoleId, // 3 for CTV, 2 for HOST (usually)
-        amount: payoutRequests.payoutRequestAmount,
-        method: payoutRequests.payoutRequestMethod,
-        status: payoutRequests.payoutRequestStatus,
-        note: payoutRequests.payoutRequestNote,
-        createdAt: payoutRequests.payoutRequestCreatedAt,
-        processedAt: payoutRequests.payoutRequestProcessedAt,
+        amount: transactions.transactionAmount,
+        method: transactions.transactionProvider,
+        status: transactions.transactionStatus,
+        note: sql<string>`${transactions.transactionMeta}->>'note'`,
+        createdAt: transactions.transactionCreatedAt,
+        processedAt: transactions.transactionUpdatedAt,
       })
-      .from(payoutRequests)
-      .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
+      .from(transactions)
+      .leftJoin(users, eq(transactions.transactionUserId, users.userId))
       .where(and(...conditions))
-      .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
+      .orderBy(desc(transactions.transactionCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(payoutRequests)
+      .from(transactions)
       .where(and(...conditions));
 
     res.json({
@@ -84,46 +86,55 @@ export const getAllPayoutRequests = async (req: AuthRequest, res: Response): Pro
 export const processPayoutRequest = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const requestId = parseId(req.params.id as string);
-    const { status, adminNote } = req.body; // 'completed' or 'rejected'
+    const { status, adminNote } = req.body; // 'success' or 'failed' (mapped from 'completed' or 'rejected')
 
-    if (!requestId || !["completed", "rejected"].includes(status)) {
+    // Map legacy status to new transaction status
+    const targetStatus = status === "completed" ? "success" : status === "rejected" ? "failed" : status;
+
+    if (!requestId || !["success", "failed"].includes(targetStatus)) {
       res.status(400).json({ error: "Invalid request ID or status" });
       return;
     }
 
     const [request] = await db
       .select()
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestId, requestId))
+      .from(transactions)
+      .where(and(
+          eq(transactions.transactionId, requestId),
+          eq(transactions.transactionType, "payout")
+      ))
       .limit(1);
 
     if (!request) {
-      res.status(404).json({ error: "Payout request not found" });
+      res.status(404).json({ error: "Payout transaction not found" });
       return;
     }
 
-    if (request.payoutRequestStatus !== "pending") {
+    if (request.transactionStatus !== "pending") {
       res.status(400).json({ error: "Only pending requests can be processed" });
       return;
     }
 
     const [updated] = await db
-      .update(payoutRequests)
+      .update(transactions)
       .set({
-        payoutRequestStatus: status,
-        payoutRequestNote: adminNote || request.payoutRequestNote,
-        payoutRequestProcessedAt: new Date(),
+        transactionStatus: targetStatus,
+        transactionMeta: { 
+            ...(request.transactionMeta as any),
+            adminNote: adminNote || (request.transactionMeta as any)?.note
+        },
+        transactionUpdatedAt: new Date(),
       })
-      .where(eq(payoutRequests.payoutRequestId, requestId))
+      .where(eq(transactions.transactionId, requestId))
       .returning();
 
     // Notify the user
-    const statusText = status === "completed" ? "Đã duyệt" : "Bị từ chối";
+    const statusText = targetStatus === "success" ? "Đã duyệt" : "Bị từ chối";
     await notificationService.sendNotification({
-      recipientId: request.payoutRequestUserId,
+      recipientId: request.transactionUserId,
       title: `Yêu cầu rút tiền ${statusText}`,
-      message: status === "completed" 
-        ? `Yêu cầu rút ${Number(request.payoutRequestAmount).toLocaleString()} VND của bạn đã được thực hiện thành công.`
+      message: targetStatus === "success" 
+        ? `Yêu cầu rút ${Number(request.transactionAmount).toLocaleString()} VND của bạn đã được thực hiện thành công.`
         : `Yêu cầu rút tiền của bạn bị từ chối. Lý do: ${adminNote || "Liên hệ Admin để biết thêm chi tiết"}.`,
       type: "system",
     });
