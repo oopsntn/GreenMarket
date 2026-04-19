@@ -39,11 +39,7 @@ export {
 
 // Shop
 export { shops, type Shop, type NewShop } from "./shops.ts";
-export {
-  blockedShops,
-  type BlockedShop,
-  type NewBlockedShop,
-} from "./blocked-shops.ts";
+
 export {
   verifications,
   type Verification,
@@ -67,7 +63,6 @@ export {
   type MediaAsset,
   type NewMediaAsset,
 } from "./media-assets.ts";
-export { postMeta, type PostMeta, type NewPostMeta } from "./post-meta.ts";
 export {
   userFavorites,
   type UserFavorite,
@@ -80,6 +75,7 @@ export { tickets, type Ticket, type NewTicket } from "./tickets.ts";
 export { tickets as reports, type Ticket as Report, type Ticket as NewReport } from "./tickets.ts";
 export { tickets as operationTasks, type Ticket as OperationTask, type Ticket as NewOperationTask } from "./tickets.ts";
 export { tickets as escalations, type Ticket as Escalation, type Ticket as NewEscalation } from "./tickets.ts";
+export { tickets as jobs, type Ticket as Job, type NewTicket as NewJob } from "./tickets.ts";
 
 // Monetization
 export {
@@ -117,17 +113,8 @@ export {
   type UserPostingPlan,
   type NewUserPostingPlan,
 } from "./user-posting-plans.ts";
-export { jobs, type Job, type NewJob } from "./jobs.ts";
-export {
-  jobDeliverables,
-  type JobDeliverable,
-  type NewJobDeliverable,
-} from "./job-deliverables.ts";
-export {
-  jobContactRequests,
-  type JobContactRequest,
-  type NewJobContactRequest,
-} from "./job-contact-requests.ts";
+export { taskReplies as jobContactRequests, type TaskReply as JobContactRequest, type NewTaskReply as NewJobContactRequest } from "./task-replies.ts";
+export { taskReplies as jobDeliverables, type TaskReply as JobDeliverable, type NewTaskReply as NewJobDeliverable } from "./task-replies.ts";
 
 // Analytics
 export {

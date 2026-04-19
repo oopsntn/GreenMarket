@@ -89,15 +89,6 @@ END; $$;
 -- ============================================================
 -- TABLES
 -- ============================================================
-
-DROP TABLE IF EXISTS favorite_posts CASCADE;
-DROP TABLE IF EXISTS favorite_contents CASCADE;
-DROP TABLE IF EXISTS earning_entries CASCADE;
-DROP TABLE IF EXISTS host_earnings CASCADE;
-DROP TABLE IF EXISTS host_payout_requests CASCADE;
-DROP TABLE IF EXISTS user_favorites CASCADE;
-DROP TABLE IF EXISTS earnings CASCADE;
-
 -- Business Roles
 CREATE TABLE business_roles (
     business_role_id SERIAL PRIMARY KEY,
@@ -246,14 +237,6 @@ CREATE TABLE verifications (
     created_at TIMESTAMP DEFAULT now()
 );
 
--- Blocked Shops
-CREATE TABLE blocked_shops (
-    blocked_shop_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    blocked_shop_shop_id INTEGER NOT NULL REFERENCES shops(shop_id) ON DELETE CASCADE,
-    blocked_shop_created_at TIMESTAMP DEFAULT now(),
-    PRIMARY KEY (blocked_shop_user_id, blocked_shop_shop_id)
-);
-
 -- Posts
 CREATE TABLE posts (
     post_id SERIAL PRIMARY KEY,
@@ -301,20 +284,10 @@ CREATE TABLE post_attribute_values (
     attribute_value TEXT NOT NULL,
     value_created_at TIMESTAMP DEFAULT now()
 );
-
--- Post Meta
-CREATE TABLE post_meta (
-    post_meta_id SERIAL PRIMARY KEY,
-    post_meta_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
-    post_meta_key VARCHAR(100),
-    post_meta_content TEXT,
-    post_meta_created_at TIMESTAMP DEFAULT now()
-);
-
 -- Tickets (Unified Support, Reports, and Escalations)
 CREATE TABLE tickets (
     ticket_id SERIAL PRIMARY KEY,
-    ticket_type VARCHAR(50) NOT NULL, -- SUPPORT, REPORT, ESCALATION
+    ticket_type VARCHAR(50) NOT NULL, -- SUPPORT, REPORT, ESCALATION, JOB
     ticket_creator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     ticket_assignee_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
     ticket_status VARCHAR(20) NOT NULL DEFAULT 'open',
@@ -329,9 +302,6 @@ CREATE TABLE tickets (
     ticket_updated_at TIMESTAMP DEFAULT now(),
     ticket_resolved_at TIMESTAMP
 );
-
-
-
 
 -- Placement Slots (Ad zones)
 CREATE TABLE placement_slots (
@@ -510,46 +480,7 @@ CREATE TABLE event_logs (
     event_log_meta JSONB DEFAULT '{}'::jsonb
 );
 
--- Collaborator Jobs
-CREATE TABLE jobs (
-    job_id SERIAL PRIMARY KEY,
-    job_customer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    job_collaborator_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    job_title VARCHAR(255) NOT NULL,
-    job_category VARCHAR(100),
-    job_location VARCHAR(255),
-    job_deadline TIMESTAMP,
-    job_price NUMERIC(12,2) NOT NULL DEFAULT 0,
-    job_description TEXT,
-    job_requirements JSONB DEFAULT '[]'::jsonb,
-    job_status VARCHAR(20) NOT NULL DEFAULT 'open',
-    job_decline_reason TEXT,
-    job_completed_at TIMESTAMP,
-    job_created_at TIMESTAMP DEFAULT now(),
-    job_updated_at TIMESTAMP DEFAULT now()
-);
-
--- Collaborator Contact Requests (Mock ask-more flow)
-CREATE TABLE job_contact_requests (
-    contact_request_id SERIAL PRIMARY KEY,
-    contact_request_job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
-    contact_request_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    contact_request_customer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    contact_request_message TEXT NOT NULL,
-    contact_request_status VARCHAR(20) NOT NULL DEFAULT 'sent',
-    contact_request_created_at TIMESTAMP DEFAULT now(),
-    contact_request_replied_at TIMESTAMP
-);
-
--- Collaborator Deliverables
-CREATE TABLE job_deliverables (
-    deliverable_id SERIAL PRIMARY KEY,
-    deliverable_job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
-    deliverable_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    deliverable_file_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
-    deliverable_note TEXT,
-    deliverable_submitted_at TIMESTAMP DEFAULT now()
-);
+-- Note: Jobs, job_contact_requests, and job_deliverables have been consolidated into the 'tickets' table.
 
 -- Unified Earnings
 -- User Favorites (Centralized Bookmarks)
@@ -649,19 +580,15 @@ CREATE INDEX idx_posts_created ON posts(post_created_at);
 CREATE INDEX attribute_filter_idx ON post_attribute_values USING btree (post_id, attribute_id, attribute_value);
 
 -- Collaborator Services
-CREATE INDEX jobs_status_deadline_idx ON jobs(job_status, job_deadline);
-CREATE INDEX jobs_collaborator_status_idx ON jobs(job_collaborator_id, job_status);
-CREATE INDEX job_contact_requests_collaborator_created_idx ON job_contact_requests(contact_request_collaborator_id, contact_request_created_at);
-CREATE INDEX job_contact_requests_job_created_idx ON job_contact_requests(contact_request_job_id, contact_request_created_at);
-CREATE INDEX job_deliverables_job_submitted_idx ON job_deliverables(deliverable_job_id, deliverable_submitted_at);
+-- Legacy job indices removed
+-- Legacy job contact and deliverable indices removed
 
--- Post Meta
-CREATE INDEX idx_post_meta_post ON post_meta(post_meta_post_id);
+
 
 -- Shop Collaborators
 CREATE INDEX idx_shop_collaborators_shop ON shop_collaborators(shop_collaborators_shop_id);
 CREATE INDEX idx_shop_collaborators_user ON shop_collaborators(collaborator_id);
-CREATE INDEX idx_post_meta_key ON post_meta(post_meta_key);
+
 
 
 -- Users
@@ -890,52 +817,49 @@ SET
 WHERE user_id = 6;
 
 -- Collaborator Jobs (Mock)
-INSERT INTO jobs (
-    job_id,
-    job_customer_id,
-    job_collaborator_id,
-    job_title,
-    job_category,
-    job_location,
-    job_deadline,
-    job_price,
-    job_description,
-    job_requirements,
-    job_status,
-    job_decline_reason,
-    job_completed_at,
-    job_created_at,
-    job_updated_at
+-- Migrated Collaborator Jobs to Tickets
+INSERT INTO tickets (
+    ticket_id,
+    ticket_type,
+    ticket_creator_id,
+    ticket_assignee_id,
+    ticket_status,
+    ticket_title,
+    ticket_content,
+    ticket_meta_data,
+    ticket_created_at,
+    ticket_updated_at
 ) VALUES
-(1, 1, NULL, 'Photo package for bonsai listing', 'Photo', 'Long Bien, Ha Noi', now() + interval '3 days', 650000, 'Need 12 listing photos for a bonsai package.', '["24MP camera","4:3 ratio","clean background"]'::jsonb, 'open', NULL, NULL, now() - interval '1 day', now() - interval '1 day'),
-(2, 2, 9, 'SEO content for Linh Sam posts', 'Content', 'Hoang Mai, Ha Noi', now() + interval '1 day', 800000, 'Write SEO-ready descriptions for 20 Linh Sam posts.', '["min 600 words","H2/H3 headings","persuasive tone"]'::jsonb, 'accepted', NULL, NULL, now() - interval '2 days', now() - interval '6 hours'),
-(3, 1, 9, 'Deliver final bonsai album', 'Photo', 'Yen Phong, Bac Ninh', now() - interval '2 days', 720000, 'Finalized photo album package for Tung La Han listing.', '["20 JPEG photos","3 cover images","source files + web files"]'::jsonb, 'completed', NULL, now() - interval '2 days', now() - interval '4 days', now() - interval '2 days');
+(100, 'JOB', 1, NULL, 'open', 'Photo package for bonsai listing', 'Need 12 listing photos for a bonsai package.', '{"category": "Photo", "location": "Long Bien, Ha Noi", "price": 650000, "deadline": "2026-04-22T00:00:00Z", "requirements": ["24MP camera","4:3 ratio","clean background"]}'::jsonb, now() - interval '1 day', now() - interval '1 day'),
+(101, 'JOB', 2, 9, 'accepted', 'SEO content for Linh Sam posts', 'Write SEO-ready descriptions for 20 Linh Sam posts.', '{"category": "Content", "location": "Hoang Mai, Ha Noi", "price": 800000, "deadline": "2026-04-20T00:00:00Z", "requirements": ["min 600 words","H2/H3 headings","persuasive tone"]}'::jsonb, now() - interval '2 days', now() - interval '6 hours'),
+(102, 'JOB', 1, 9, 'completed', 'Deliver final bonsai album', 'Finalized photo album package for Tung La Han listing.', '{"category": "Photo", "location": "Yen Phong, Bac Ninh", "price": 720000, "deadline": "2026-04-17T00:00:00Z", "requirements": ["20 JPEG photos","3 cover images","source files + web files"]}'::jsonb, now() - interval '4 days', now() - interval '2 days');
 
-INSERT INTO job_contact_requests (
-    contact_request_id,
-    contact_request_job_id,
-    contact_request_collaborator_id,
-    contact_request_customer_id,
-    contact_request_message,
-    contact_request_status,
-    contact_request_created_at,
-    contact_request_replied_at
+-- Migrated Job Contact Requests to Task Replies
+INSERT INTO task_replies (
+    reply_id,
+    ticket_id,
+    sender_id,
+    message,
+    visibility,
+    created_at
 ) VALUES
-(1, 2, 9, 2, 'Can you clarify the exact keyword set and tone before delivery?', 'sent', now() - interval '8 hours', NULL);
+(100, 101, 9, 'Can you clarify the exact keyword set and tone before delivery?', 'internal', now() - interval '8 hours');
 
-INSERT INTO job_deliverables (
-    deliverable_id,
-    deliverable_job_id,
-    deliverable_collaborator_id,
-    deliverable_file_urls,
-    deliverable_note,
-    deliverable_submitted_at
+-- Migrated Job Deliverables to Task Replies (as final submissions)
+INSERT INTO task_replies (
+    reply_id,
+    ticket_id,
+    sender_id,
+    message,
+    attachments,
+    visibility,
+    created_at
 ) VALUES
-(1, 3, 9, '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'Uploaded full album and source zip.', now() - interval '2 days');
+(101, 102, 9, 'Uploaded full album and source zip.', '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'internal', now() - interval '2 days');
 
 -- Collaborator Earnings & Payout Requests (Consolidated into ledgers & transactions)
 INSERT INTO ledgers (ledger_id, ledger_user_id, ledger_amount, ledger_status, ledger_type, ledger_direction, ledger_reference_type, ledger_reference_id, ledger_created_at) VALUES
-(1, 9, 720000.00, 'available', 'job', 'CREDIT', 'job', 3, now() - interval '2 days');
+(1, 9, 720000.00, 'available', 'job', 'CREDIT', 'ticket', 102, now() - interval '2 days');
 
 INSERT INTO transactions (
     transaction_id,
@@ -1536,9 +1460,7 @@ SELECT setval('attributes_attribute_id_seq', (SELECT COALESCE(MAX(attribute_id),
 SELECT setval('posts_post_id_seq', (SELECT COALESCE(MAX(post_id), 1) FROM posts));
 SELECT setval('media_assets_asset_id_seq', (SELECT COALESCE(MAX(asset_id), 1) FROM media_assets));
 SELECT setval('post_attribute_values_value_id_seq', (SELECT COALESCE(MAX(value_id), 1) FROM post_attribute_values));
-SELECT setval('jobs_job_id_seq', (SELECT COALESCE(MAX(job_id), 1) FROM jobs));
-SELECT setval('job_contact_requests_contact_request_id_seq', (SELECT COALESCE(MAX(contact_request_id), 1) FROM job_contact_requests));
-SELECT setval('job_deliverables_deliverable_id_seq', (SELECT COALESCE(MAX(deliverable_id), 1) FROM job_deliverables));
+-- Job sequences removed (consolidated into tickets)
 SELECT setval('ledgers_ledger_id_seq', (SELECT COALESCE(MAX(ledger_id), 1) FROM ledgers));
 SELECT setval('transactions_transaction_id_seq', (SELECT COALESCE(MAX(transaction_id), 1) FROM transactions));
 SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
