@@ -8,10 +8,12 @@ export const ADMIN_PORTAL_ROLE_CODES = [
 export type AdminModuleKey =
   | "dashboard"
   | "users"
+  | "collaborators"
   | "userNotifications"
   | "activityLog"
   | "postsModeration"
   | "reportsModeration"
+  | "hostContents"
   | "rolesManagement"
   | "shops"
   | "categories"
@@ -28,6 +30,7 @@ export type AdminModuleKey =
   | "analytics"
   | "aiInsights"
   | "revenue"
+  | "financial"
   | "customerSpending"
   | "export";
 
@@ -48,10 +51,12 @@ export type AdminMenuGroup = {
 const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
   dashboard: ADMIN_PORTAL_ROLE_CODES,
   users: ADMIN_PORTAL_ROLE_CODES,
+  collaborators: ADMIN_PORTAL_ROLE_CODES,
   userNotifications: ADMIN_PORTAL_ROLE_CODES,
   activityLog: ADMIN_PORTAL_ROLE_CODES,
   postsModeration: ADMIN_PORTAL_ROLE_CODES,
   reportsModeration: ADMIN_PORTAL_ROLE_CODES,
+  hostContents: ADMIN_PORTAL_ROLE_CODES,
   rolesManagement: ADMIN_PORTAL_ROLE_CODES,
   shops: ADMIN_PORTAL_ROLE_CODES,
   categories: ADMIN_PORTAL_ROLE_CODES,
@@ -68,6 +73,7 @@ const MODULE_ROLE_MAP: Record<AdminModuleKey, string[]> = {
   analytics: ADMIN_PORTAL_ROLE_CODES,
   aiInsights: ADMIN_PORTAL_ROLE_CODES,
   revenue: ADMIN_PORTAL_ROLE_CODES,
+  financial: ADMIN_PORTAL_ROLE_CODES,
   customerSpending: ADMIN_PORTAL_ROLE_CODES,
   export: ADMIN_PORTAL_ROLE_CODES,
 };
@@ -89,6 +95,12 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
         hint: "Tài khoản, vai trò và trạng thái truy cập.",
         path: "/users",
         moduleKey: "users",
+      },
+      {
+        label: "Quản lý cộng tác viên",
+        hint: "Theo dõi quan hệ shop - cộng tác viên và bài gửi liên quan.",
+        path: "/collaborators",
+        moduleKey: "collaborators",
       },
       {
         label: "Thông báo người dùng",
@@ -133,6 +145,12 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
         path: "/reports-moderation",
         moduleKey: "reportsModeration",
       },
+      {
+        label: "Nội dung Host / News",
+        hint: "Duyệt bài nội dung Host đang đổ sang phần News của user web.",
+        path: "/host-contents",
+        moduleKey: "hostContents",
+      },
     ],
   },
   {
@@ -169,7 +187,8 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
   {
     id: "promotion",
     label: "Quảng bá và vận hành",
-    description: "Quản lý gói tài khoản, vị trí bài đẩy, đơn mua và chiến dịch.",
+    description:
+      "Quản lý gói tài khoản, vị trí bài đẩy, đơn mua và chiến dịch.",
     items: [
       {
         label: "Gói tài khoản / shop",
@@ -231,6 +250,12 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
         hint: "Theo dõi doanh thu và giao dịch thành công.",
         path: "/revenue",
         moduleKey: "revenue",
+      },
+      {
+        label: "Tài chính / Chi trả",
+        hint: "Xử lý yêu cầu rút tiền của Host và cộng tác viên.",
+        path: "/financial",
+        moduleKey: "financial",
       },
       {
         label: "Chi tiêu khách hàng",

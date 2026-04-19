@@ -15,9 +15,12 @@ import AttributesPage from "../pages/AttributesPage";
 import BoostedPostsPage from "../pages/BoostedPostsPage";
 import CategoriesPage from "../pages/CategoriesPage";
 import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage";
+import CollaboratorsPage from "../pages/CollaboratorsPage";
 import CustomerSpendingPage from "../pages/CustomerSpendingPage";
 import DashboardPage from "../pages/DashboardPage";
 import ExportPage from "../pages/ExportPage";
+import FinancialPage from "../pages/FinancialPage";
+import HostContentsPage from "../pages/HostContentsPage";
 import LoginPage from "../pages/LoginPage";
 import PlacementSlotsPage from "../pages/PlacementSlotsPage";
 import PostsModerationPage from "../pages/PostsModerationPage";
@@ -95,6 +98,12 @@ function AppRoutes() {
             </Route>
 
             <Route
+              element={<ProtectedModuleRoute moduleKey="collaborators" />}
+            >
+              <Route path="collaborators" element={<CollaboratorsPage />} />
+            </Route>
+
+            <Route
               element={<ProtectedModuleRoute moduleKey="userNotifications" />}
             >
               <Route
@@ -123,6 +132,12 @@ function AppRoutes() {
                 path="reports-moderation"
                 element={<ReportsModerationPage />}
               />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="hostContents" />}
+            >
+              <Route path="host-contents" element={<HostContentsPage />} />
             </Route>
 
             <Route
@@ -218,6 +233,10 @@ function AppRoutes() {
 
             <Route element={<ProtectedModuleRoute moduleKey="revenue" />}>
               <Route path="revenue" element={<RevenuePage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="financial" />}>
+              <Route path="financial" element={<FinancialPage />} />
             </Route>
 
             <Route
