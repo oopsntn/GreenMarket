@@ -103,9 +103,9 @@ const closePromotionsForResolvedReport = async (
 
   if (closedPromotions.length > 0) {
     await db.insert(eventLogs).values({
-      eventLogUserId: null,
-      eventLogPostId: postId,
-      eventLogShopId: null,
+      eventLogUserId: null, // Should ideally be admin ID if available
+      eventLogTargetType: "post",
+      eventLogTargetId: postId,
       eventLogEventType: "admin_boosted_post_closed",
       eventLogEventTime: new Date(),
       eventLogMeta: {
@@ -240,9 +240,9 @@ export const resolveReport = async (
         : "";
 
     await db.insert(eventLogs).values({
-      eventLogUserId: updatedReport.reporterId,
-      eventLogPostId: updatedReport.postId,
-      eventLogShopId: updatedReport.reportShopId,
+      eventLogUserId: null, // Admin ID should be used here if available in req.user
+      eventLogTargetType: updatedReport.postId ? "post" : (updatedReport.reportShopId ? "shop" : "report"),
+      eventLogTargetId: updatedReport.postId || updatedReport.reportShopId || updatedReport.reportId,
       eventLogEventType:
         normalizedStatus === "resolved"
           ? "admin_report_resolved"
@@ -256,6 +256,7 @@ export const resolveReport = async (
         performedBy,
         actorRole: "Quản trị viên",
         status: normalizedStatus,
+        reporterId: updatedReport.reporterId,
       },
     });
 

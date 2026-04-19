@@ -733,8 +733,8 @@ const logPromotionEvent = async (params: {
 }) => {
     await db.insert(eventLogs).values({
         eventLogUserId: params.userId,
-        eventLogPostId: params.postId,
-        eventLogSlotId: params.slotId,
+        eventLogTargetType: "post",
+        eventLogTargetId: params.postId,
         eventLogEventType: params.eventType,
         eventLogEventTime: new Date(),
         eventLogMeta: {
@@ -746,6 +746,7 @@ const logPromotionEvent = async (params: {
             moduleLabel: "Theo dõi quảng bá",
             targetType: "Chiến dịch quảng bá",
             targetName: params.targetName,
+            slotId: params.slotId, // Keep slotId in metadata for reference
         },
     });
 };

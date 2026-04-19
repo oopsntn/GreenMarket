@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../../config/db";
 import { AuthRequest } from "../../dtos/auth.ts";
-import { eventLogs, moderationActions } from "../../models/schema/index.ts";
+import { eventLogs, users } from "../../models/schema/index.ts";
 import { postAttributeValues } from "../../models/schema/post-attribute-values";
 import { postImages } from "../../models/schema/post-images";
 import { posts, type NewPost } from "../../models/schema/posts";
@@ -227,21 +227,11 @@ export const updatePostStatus = async (
             .where(eq(posts.postId, idNumber))
             .returning();
 
-        if (typeof req.user?.id === "number" && Number.isFinite(req.user.id)) {
-            await db.insert(moderationActions).values({
-                moderationActionActionBy: req.user.id,
-                moderationActionPostId: updatedPost.postId,
-                moderationActionAction: normalizedStatus,
-                moderationActionNote:
-                    nextRejectedReason || getPostActionLabel(normalizedStatus),
-            });
-        }
 
         await db.insert(eventLogs).values({
-            eventLogUserId: updatedPost.postAuthorId,
-            eventLogPostId: updatedPost.postId,
-            eventLogShopId: updatedPost.postShopId,
-            eventLogCategoryId: updatedPost.categoryId,
+            eventLogUserId: req.user?.id || null, // Performer of the action
+            eventLogTargetType: "post",
+            eventLogTargetId: updatedPost.postId,
             eventLogEventType: getPostEventType(normalizedStatus),
             eventLogEventTime: new Date(),
             eventLogMeta: {
@@ -252,6 +242,9 @@ export const updatePostStatus = async (
                 performedBy,
                 actorRole: "Quản trị viên",
                 status: normalizedStatus,
+                categoryId: updatedPost.categoryId,
+                shopId: updatedPost.postShopId,
+                authorId: updatedPost.postAuthorId,
             },
         });
 
@@ -328,20 +321,11 @@ export const deletePost = async (
             return;
         }
 
-        if (typeof adminId === "number" && Number.isFinite(adminId)) {
-            await db.insert(moderationActions).values({
-                moderationActionActionBy: adminId,
-                moderationActionPostId: idNumber,
-                moderationActionAction: "hidden",
-                moderationActionNote: reason || "Quản trị viên ẩn bài đăng",
-            });
-        }
 
         await db.insert(eventLogs).values({
-            eventLogUserId: deletedPost.postAuthorId,
-            eventLogPostId: deletedPost.postId,
-            eventLogShopId: deletedPost.postShopId,
-            eventLogCategoryId: deletedPost.categoryId,
+            eventLogUserId: authReq.user?.id || null,
+            eventLogTargetType: "post",
+            eventLogTargetId: deletedPost.postId,
             eventLogEventType: "admin_post_hidden",
             eventLogEventTime: new Date(),
             eventLogMeta: {
@@ -352,6 +336,9 @@ export const deletePost = async (
                 performedBy,
                 actorRole: "Quản trị viên",
                 status: "hidden",
+                categoryId: deletedPost.categoryId,
+                shopId: deletedPost.postShopId,
+                authorId: deletedPost.postAuthorId,
             },
         });
 

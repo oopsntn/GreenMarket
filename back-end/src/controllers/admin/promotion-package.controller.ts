@@ -161,6 +161,7 @@ const setCurrentPackagePrice = async (params: {
 };
 
 const logPromotionPackageEvent = async (params: {
+    packageId?: number | null;
     action: string;
     detail: string;
     performedBy?: string | null;
@@ -168,6 +169,8 @@ const logPromotionPackageEvent = async (params: {
 }) => {
     await db.insert(eventLogs).values({
         eventLogUserId: null,
+        eventLogTargetType: "package",
+        eventLogTargetId: params.packageId ?? null,
         eventLogEventType: "admin_promotion_package_updated",
         eventLogEventTime: new Date(),
         eventLogMeta: {
@@ -340,6 +343,7 @@ export const createPromotionPackage = async (
         });
 
         await logPromotionPackageEvent({
+            packageId: newPkg.promotionPackageId,
             action: "Tạo gói quảng bá",
             detail: `Đã tạo gói "${newPkg.promotionPackageTitle}" cho vị trí ${slot.placementSlotTitle ?? slot.placementSlotCode ?? "không xác định"}.`,
             performedBy: req.user?.email ?? null,
@@ -542,6 +546,7 @@ export const updatePromotionPackage = async (
         ]);
 
         await logPromotionPackageEvent({
+            packageId: idNumber,
             action:
                 Object.prototype.hasOwnProperty.call(body, "promotionPackagePublished")
                     ? Boolean(body.promotionPackagePublished)

@@ -217,7 +217,8 @@ export const ownerDashboardService = {
       .from(eventLogs)
       .where(
         and(
-          eq(eventLogs.eventLogShopId, shop.shopId),
+          eq(eventLogs.eventLogTargetType, "shop"),
+          eq(eventLogs.eventLogTargetId, shop.shopId),
           inArray(eventLogs.eventLogEventType, [
             SHOP_EVENT_VIEW,
             SHOP_EVENT_CONTACT_CLICK,
