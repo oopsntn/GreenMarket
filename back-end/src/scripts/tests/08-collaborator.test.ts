@@ -4,7 +4,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "../../config/db";
 import {
   businessRoles,
-  earningEntries,
+  earnings,
   jobDeliverables,
   jobs,
   payoutRequests,
@@ -391,12 +391,12 @@ async function runCollaboratorTests() {
         await db
           .delete(payoutRequests)
           .where(
-            inArray(payoutRequests.payoutRequestCollaboratorId, createdUserIds),
+            inArray(payoutRequests.payoutRequestUserId, createdUserIds),
           );
         await db
-          .delete(earningEntries)
+          .delete(earnings)
           .where(
-            inArray(earningEntries.earningEntryCollaboratorId, createdUserIds),
+            inArray(earnings.userId, createdUserIds),
           );
       }
 

@@ -11,14 +11,15 @@ import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
   hostContents,
-  hostEarnings,
-  hostPayoutRequests,
-  favoriteContents,
+  earnings,
+  payoutRequests,
+  userFavorites,
   users,
   posts,
   shops,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
+import { notificationService } from "../../services/notification.service.ts";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -67,21 +68,21 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
 
     const [earningSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${hostEarnings.hostEarningAmount}), 0)`,
-        available: sql<string>`COALESCE(SUM(CASE WHEN ${hostEarnings.hostEarningStatus} = 'available' THEN ${hostEarnings.hostEarningAmount} ELSE 0 END), 0)`,
+        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
+        available: sql<string>`COALESCE(SUM(CASE WHEN ${earnings.status} = 'available' THEN ${earnings.amount} ELSE 0 END), 0)`,
       })
-      .from(hostEarnings)
-      .where(eq(hostEarnings.hostEarningHostId, userId));
+      .from(earnings)
+      .where(eq(earnings.userId, userId));
 
     const [payoutSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${hostPayoutRequests.hostPayoutAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(${payoutRequests.payoutRequestAmount}), 0)`,
       })
-      .from(hostPayoutRequests)
+      .from(payoutRequests)
       .where(
         and(
-          eq(hostPayoutRequests.hostPayoutHostId, userId),
-          eq(hostPayoutRequests.hostPayoutStatus, "completed")
+          eq(payoutRequests.payoutRequestUserId, userId),
+          eq(payoutRequests.payoutRequestStatus, "completed")
         )
       );
 
@@ -116,16 +117,16 @@ export const getHostEarnings = async (req: AuthRequest, res: Response): Promise<
 
     const rows = await db
       .select()
-      .from(hostEarnings)
-      .where(eq(hostEarnings.hostEarningHostId, userId))
-      .orderBy(desc(hostEarnings.hostEarningCreatedAt))
+      .from(earnings)
+      .where(eq(earnings.userId, userId))
+      .orderBy(desc(earnings.createdAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(hostEarnings)
-      .where(eq(hostEarnings.hostEarningHostId, userId));
+      .from(earnings)
+      .where(eq(earnings.userId, userId));
 
     res.json({
       data: rows,
@@ -153,17 +154,26 @@ export const getPayoutRequests = async (req: AuthRequest, res: Response): Promis
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
 
     const rows = await db
-      .select()
-      .from(hostPayoutRequests)
-      .where(eq(hostPayoutRequests.hostPayoutHostId, userId))
-      .orderBy(desc(hostPayoutRequests.hostPayoutCreatedAt))
+      .select({
+        hostPayoutId: payoutRequests.payoutRequestId,
+        hostPayoutHostId: payoutRequests.payoutRequestUserId,
+        hostPayoutAmount: payoutRequests.payoutRequestAmount,
+        hostPayoutMethod: payoutRequests.payoutRequestMethod,
+        hostPayoutStatus: payoutRequests.payoutRequestStatus,
+        hostPayoutNote: payoutRequests.payoutRequestNote,
+        hostPayoutProcessedAt: payoutRequests.payoutRequestProcessedAt,
+        hostPayoutCreatedAt: payoutRequests.payoutRequestCreatedAt,
+      })
+      .from(payoutRequests)
+      .where(eq(payoutRequests.payoutRequestUserId, userId))
+      .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(hostPayoutRequests)
-      .where(eq(hostPayoutRequests.hostPayoutHostId, userId));
+      .from(payoutRequests)
+      .where(eq(payoutRequests.payoutRequestUserId, userId));
 
     res.json({
       data: rows,
@@ -204,20 +214,20 @@ export const createPayoutRequest = async (req: AuthRequest, res: Response): Prom
     // Check balance
     const [earningSummary] = await db
       .select({
-        available: sql<string>`COALESCE(SUM(CASE WHEN ${hostEarnings.hostEarningStatus} = 'available' THEN ${hostEarnings.hostEarningAmount} ELSE 0 END), 0)`,
+        available: sql<string>`COALESCE(SUM(CASE WHEN ${earnings.status} = 'available' THEN ${earnings.amount} ELSE 0 END), 0)`,
       })
-      .from(hostEarnings)
-      .where(eq(hostEarnings.hostEarningHostId, userId));
+      .from(earnings)
+      .where(eq(earnings.userId, userId));
 
     const [payoutSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${hostPayoutRequests.hostPayoutAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(${payoutRequests.payoutRequestAmount}), 0)`,
       })
-      .from(hostPayoutRequests)
+      .from(payoutRequests)
       .where(
         and(
-          eq(hostPayoutRequests.hostPayoutHostId, userId),
-          sql`${hostPayoutRequests.hostPayoutStatus} IN ('completed', 'pending')`
+          eq(payoutRequests.payoutRequestUserId, userId),
+          sql`${payoutRequests.payoutRequestStatus} IN ('completed', 'pending')`
         )
       );
 
@@ -229,19 +239,31 @@ export const createPayoutRequest = async (req: AuthRequest, res: Response): Prom
     }
 
     const [newRequest] = await db
-      .insert(hostPayoutRequests)
+      .insert(payoutRequests)
       .values({
-        hostPayoutHostId: userId,
-        hostPayoutAmount: amount.toString(),
-        hostPayoutMethod: method,
-        hostPayoutNote: note,
-        hostPayoutStatus: "pending",
+        payoutRequestUserId: userId,
+        payoutRequestAmount: amount.toFixed(2),
+        payoutRequestMethod: method,
+        payoutRequestNote: note,
+        payoutRequestStatus: "pending",
+        payoutRequestCreatedAt: new Date(),
       })
       .returning();
 
+    // Map back to old field names for frontend compatibility if necessary
+    const responseData = {
+      hostPayoutId: newRequest.payoutRequestId,
+      hostPayoutHostId: newRequest.payoutRequestUserId,
+      hostPayoutAmount: toNumber(newRequest.payoutRequestAmount),
+      hostPayoutMethod: newRequest.payoutRequestMethod,
+      hostPayoutStatus: newRequest.payoutRequestStatus,
+      hostPayoutNote: newRequest.payoutRequestNote,
+      hostPayoutCreatedAt: newRequest.payoutRequestCreatedAt,
+    };
+
     res.status(201).json({
       message: "Payout request created successfully",
-      data: newRequest,
+      data: responseData,
     });
   } catch (error) {
     console.error(error);
@@ -304,6 +326,25 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
         hostContentStatus: "published", // Default to published for demo
       })
       .returning();
+
+    // 1. Create earning for host
+    const PAYOUT_AMOUNT = 50000;
+    await db.insert(earnings).values({
+      userId: userId,
+      amount: PAYOUT_AMOUNT.toString(),
+      status: "available",
+      type: "article_payout",
+      sourceId: newContent.hostContentId,
+    });
+
+    // 2. Notify host
+    await notificationService.sendNotification({
+      recipientId: userId,
+      title: "Thu nhập mới!",
+      message: `Bạn vừa nhận được ${PAYOUT_AMOUNT.toLocaleString("vi-VN")} VND cho bài viết mới: "${title}".`,
+      type: "earning",
+      metaData: { contentId: newContent.hostContentId },
+    });
 
     res.status(201).json(newContent);
   } catch (error) {
@@ -535,29 +576,32 @@ export const toggleFavoriteContent = async (req: AuthRequest, res: Response): Pr
 
     const [existing] = await db
       .select()
-      .from(favoriteContents)
+      .from(userFavorites)
       .where(
         and(
-          eq(favoriteContents.favoriteContentUserId, userId),
-          eq(favoriteContents.favoriteContentId, contentId)
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetId, contentId),
+          eq(userFavorites.targetType, "host_content")
         )
       )
       .limit(1);
 
     if (existing) {
       await db
-        .delete(favoriteContents)
+        .delete(userFavorites)
         .where(
           and(
-            eq(favoriteContents.favoriteContentUserId, userId),
-            eq(favoriteContents.favoriteContentId, contentId)
+            eq(userFavorites.userId, userId),
+            eq(userFavorites.targetId, contentId),
+            eq(userFavorites.targetType, "host_content")
           )
         );
       res.json({ message: "Content removed from bookmarks", isSaved: false });
     } else {
-      await db.insert(favoriteContents).values({
-        favoriteContentUserId: userId,
-        favoriteContentId: contentId,
+      await db.insert(userFavorites).values({
+        userId: userId,
+        targetId: contentId,
+        targetType: "host_content"
       });
       res.json({ message: "Content added to bookmarks", isSaved: true });
     }
@@ -579,7 +623,7 @@ export const getMyFavoriteContents = async (req: AuthRequest, res: Response): Pr
 
     const rows = await db
       .select({
-        favoriteCreatedAt: favoriteContents.favoriteContentCreatedAt,
+        favoriteCreatedAt: userFavorites.createdAt,
         hostContentId: hostContents.hostContentId,
         hostContentTitle: hostContents.hostContentTitle,
         hostContentDescription: hostContents.hostContentDescription,
@@ -591,27 +635,29 @@ export const getMyFavoriteContents = async (req: AuthRequest, res: Response): Pr
         authorAvatar: users.userAvatarUrl,
         authorId: users.userId,
       })
-      .from(favoriteContents)
-      .innerJoin(hostContents, eq(favoriteContents.favoriteContentId, hostContents.hostContentId))
+      .from(userFavorites)
+      .innerJoin(hostContents, eq(userFavorites.targetId, hostContents.hostContentId))
       .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
       .where(
         and(
-          eq(favoriteContents.favoriteContentUserId, userId),
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetType, "host_content"),
           eq(hostContents.hostContentStatus, "published"),
           sql`${hostContents.hostContentDeletedAt} IS NULL`
         )
       )
-      .orderBy(desc(favoriteContents.favoriteContentCreatedAt))
+      .orderBy(desc(userFavorites.createdAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(favoriteContents)
-      .innerJoin(hostContents, eq(favoriteContents.favoriteContentId, hostContents.hostContentId))
+      .from(userFavorites)
+      .innerJoin(hostContents, eq(userFavorites.targetId, hostContents.hostContentId))
       .where(
         and(
-          eq(favoriteContents.favoriteContentUserId, userId),
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetType, "host_content"),
           eq(hostContents.hostContentStatus, "published"),
           sql`${hostContents.hostContentDeletedAt} IS NULL`
         )
@@ -643,11 +689,12 @@ export const checkIsContentSaved = async (req: AuthRequest, res: Response): Prom
 
     const [existing] = await db
       .select()
-      .from(favoriteContents)
+      .from(userFavorites)
       .where(
         and(
-          eq(favoriteContents.favoriteContentUserId, userId),
-          eq(favoriteContents.favoriteContentId, contentId)
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetId, contentId),
+          eq(userFavorites.targetType, "host_content")
         )
       )
       .limit(1);

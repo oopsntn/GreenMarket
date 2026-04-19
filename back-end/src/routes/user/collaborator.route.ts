@@ -18,6 +18,7 @@ import {
 } from "../../controllers/user/collaborator.controller.ts";
 import {
   requireBusinessRole,
+  requireShop,
   verifyToken,
 } from "../../middlewares/authMiddleware.ts";
 
@@ -27,12 +28,12 @@ router.get("/profile", verifyToken, requireBusinessRole("COLLABORATOR"), getColl
 router.patch("/profile", verifyToken, requireBusinessRole("COLLABORATOR"), updateCollaboratorAvailability);
 
 // Public/Owner discovery routes
-router.get("/public-list", verifyToken, getPublicCollaborators);
-router.get("/public/:id", verifyToken, getPublicCollaboratorDetail);
+router.get("/public-list", verifyToken, requireShop, getPublicCollaborators);
+router.get("/public/:id", verifyToken, requireShop, getPublicCollaboratorDetail);
 
 // Invitation management
-router.get("/invitations", verifyToken, getMyInvitations); // CTV check invites
-router.post("/invitations/:id/respond", verifyToken, respondToInvitation); // CTV respond
+router.get("/invitations", verifyToken, requireBusinessRole("COLLABORATOR"), getMyInvitations); // CTV check invites
+router.post("/invitations/:id/respond", verifyToken, requireBusinessRole("COLLABORATOR"), respondToInvitation); // CTV respond
 
 // CTV Job management
 router.get("/jobs", verifyToken, requireBusinessRole("COLLABORATOR"), getAvailableJobs);

@@ -2,8 +2,8 @@ import { Response, NextFunction, RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { AuthRequest, JWTUserPayload } from "../dtos/auth";
 import { db } from "../config/db.ts";
-import { businessRoles, users } from "../models/schema/index.ts";
-import { eq } from "drizzle-orm";
+import { businessRoles, users, shops } from "../models/schema/index.ts";
+import { eq, and } from "drizzle-orm";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
 const ADMIN_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"];
@@ -197,4 +197,44 @@ export const requireBusinessRole = (...allowedBusinessRoles: string[]) => {
     };
 
     return handler;
+};
+
+export const requireShop: RequestHandler = async (
+    req,
+    res: Response,
+    next: NextFunction,
+): Promise<void> => {
+    try {
+        const authReq = req as AuthRequest;
+        const userId = authReq.user?.id;
+
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const [shop] = await db
+            .select()
+            .from(shops)
+            .where(
+                and(
+                    eq(shops.shopId, userId),
+                    eq(shops.shopStatus, "active")
+                )
+            )
+            .limit(1);
+
+        if (!shop) {
+            res.status(403).json({
+                error: "Access denied. Active shop profile required.",
+            });
+            return;
+        }
+
+        authReq.shop = shop; // Attach shop info for convenience
+        next();
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
 };

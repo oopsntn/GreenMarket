@@ -15,7 +15,7 @@ export const payoutRequests = pgTable(
   "payout_requests",
   {
     payoutRequestId: serial("payout_request_id").primaryKey(),
-    payoutRequestCollaboratorId: integer("payout_request_collaborator_id")
+    payoutRequestUserId: integer("payout_request_user_id")
       .references(() => users.userId, { onDelete: "cascade" })
       .notNull(),
     payoutRequestAmount: numeric("payout_request_amount", {
@@ -32,8 +32,8 @@ export const payoutRequests = pgTable(
     payoutRequestProcessedAt: timestamp("payout_request_processed_at"),
   },
   (table) => ({
-    collaboratorCreatedIdx: index("payout_requests_collaborator_created_idx").on(
-      table.payoutRequestCollaboratorId,
+    userCreatedIdx: index("payout_requests_user_created_idx").on(
+      table.payoutRequestUserId,
       table.payoutRequestCreatedAt,
     ),
   }),

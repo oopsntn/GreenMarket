@@ -90,6 +90,14 @@ END; $$;
 -- TABLES
 -- ============================================================
 
+DROP TABLE IF EXISTS favorite_posts CASCADE;
+DROP TABLE IF EXISTS favorite_contents CASCADE;
+DROP TABLE IF EXISTS earning_entries CASCADE;
+DROP TABLE IF EXISTS host_earnings CASCADE;
+DROP TABLE IF EXISTS host_payout_requests CASCADE;
+DROP TABLE IF EXISTS user_favorites CASCADE;
+DROP TABLE IF EXISTS earnings CASCADE;
+
 -- Business Roles
 CREATE TABLE business_roles (
     business_role_id SERIAL PRIMARY KEY,
@@ -323,14 +331,6 @@ CREATE TABLE post_meta (
     post_meta_key VARCHAR(100),
     post_meta_content TEXT,
     post_meta_created_at TIMESTAMP DEFAULT now()
-);
-
--- Favorite Posts (Bookmarks)
-CREATE TABLE favorite_posts (
-    favorite_post_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    favorite_post_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
-    favorite_post_created_at TIMESTAMP DEFAULT now(),
-    PRIMARY KEY (favorite_post_user_id, favorite_post_post_id)
 );
 
 -- Reports
@@ -602,20 +602,31 @@ CREATE TABLE job_deliverables (
     deliverable_submitted_at TIMESTAMP DEFAULT now()
 );
 
--- Collaborator Earnings
-CREATE TABLE earning_entries (
-    earning_entry_id SERIAL PRIMARY KEY,
-    earning_entry_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    earning_entry_job_id INTEGER REFERENCES jobs(job_id) ON DELETE SET NULL,
-    earning_entry_amount NUMERIC(15,2) NOT NULL DEFAULT 0,
-    earning_entry_type VARCHAR(30) NOT NULL DEFAULT 'job',
-    earning_entry_created_at TIMESTAMP DEFAULT now()
+-- Unified Earnings
+CREATE TABLE earnings (
+    earning_id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    amount NUMERIC(15,2) NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'available', -- pending | available
+    type VARCHAR(50) NOT NULL, -- job, article_payout, performance_bonus
+    source_id INTEGER, -- linked job_id, host_content_id, etc.
+    created_at TIMESTAMP DEFAULT now()
 );
+
+-- User Favorites (Centralized Bookmarks)
+CREATE TABLE user_favorites (
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    target_id INTEGER NOT NULL,
+    target_type VARCHAR(50) NOT NULL, -- post, host_content, etc.
+    created_at TIMESTAMP DEFAULT now(),
+    PRIMARY KEY (user_id, target_id, target_type)
+);
+CREATE INDEX idx_user_favorites_user ON user_favorites(user_id);
 
 -- Collaborator Payout Requests (Mock)
 CREATE TABLE payout_requests (
     payout_request_id SERIAL PRIMARY KEY,
-    payout_request_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    payout_request_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     payout_request_amount NUMERIC(15,2) NOT NULL,
     payout_request_method VARCHAR(50) NOT NULL,
     payout_request_status VARCHAR(20) NOT NULL DEFAULT 'pending',
@@ -738,36 +749,7 @@ CREATE TABLE host_contents (
     host_content_deleted_at TIMESTAMP
 );
 
--- Host Earnings
-CREATE TABLE host_earnings (
-    host_earning_id SERIAL PRIMARY KEY,
-    host_earning_host_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    host_earning_amount NUMERIC(15,2) NOT NULL,
-    host_earning_status VARCHAR(20) DEFAULT 'pending', -- pending | available
-    host_earning_source_type VARCHAR(50) NOT NULL, -- article_payout, performance_bonus
-    host_earning_source_id INTEGER, -- linked host_content_id
-    host_earning_created_at TIMESTAMP DEFAULT now()
-);
 
--- Host Payout Requests
-CREATE TABLE host_payout_requests (
-    host_payout_id SERIAL PRIMARY KEY,
-    host_payout_host_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    host_payout_amount NUMERIC(15,2) NOT NULL,
-    host_payout_method VARCHAR(50) NOT NULL,
-    host_payout_status VARCHAR(20) DEFAULT 'pending', -- pending | completed | rejected
-    host_payout_note TEXT,
-    host_payout_processed_at TIMESTAMP,
-    host_payout_created_at TIMESTAMP DEFAULT now()
-);
-
--- Favorite Contents (Bookmarks)
-CREATE TABLE favorite_contents (
-    favorite_content_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    favorite_content_id INTEGER NOT NULL REFERENCES host_contents(host_content_id) ON DELETE CASCADE,
-    favorite_content_created_at TIMESTAMP DEFAULT now(),
-    PRIMARY KEY (favorite_content_user_id, favorite_content_id)
-);
 
 -- Shop Collaborators
 CREATE TABLE shop_collaborators (
@@ -803,8 +785,8 @@ CREATE INDEX jobs_collaborator_status_idx ON jobs(job_collaborator_id, job_statu
 CREATE INDEX job_contact_requests_collaborator_created_idx ON job_contact_requests(contact_request_collaborator_id, contact_request_created_at);
 CREATE INDEX job_contact_requests_job_created_idx ON job_contact_requests(contact_request_job_id, contact_request_created_at);
 CREATE INDEX job_deliverables_job_submitted_idx ON job_deliverables(deliverable_job_id, deliverable_submitted_at);
-CREATE INDEX earning_entries_collaborator_created_idx ON earning_entries(earning_entry_collaborator_id, earning_entry_created_at);
-CREATE INDEX payout_requests_collaborator_created_idx ON payout_requests(payout_request_collaborator_id, payout_request_created_at);
+CREATE INDEX idx_earnings_user ON earnings(user_id);
+CREATE INDEX idx_payout_requests_user ON payout_requests(payout_request_user_id);
 
 -- Post Meta
 CREATE INDEX idx_post_meta_post ON post_meta(post_meta_post_id);
@@ -817,10 +799,6 @@ CREATE INDEX idx_post_meta_key ON post_meta(post_meta_key);
 -- Post Categories
 CREATE INDEX idx_post_categories_post ON post_categories(post_category_post_id);
 CREATE INDEX idx_post_categories_category ON post_categories(post_category_category_id);
-
--- Favorites & Blocks
-CREATE INDEX idx_favorite_posts_user ON favorite_posts(favorite_post_user_id);
-CREATE INDEX idx_favorite_posts_post ON favorite_posts(favorite_post_post_id);
 
 -- Users
 CREATE INDEX idx_users_mobile ON users(user_mobile);
@@ -1132,19 +1110,12 @@ INSERT INTO job_deliverables (
 ) VALUES
 (1, 3, 9, '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'Uploaded full album and source zip.', now() - interval '2 days');
 
-INSERT INTO earning_entries (
-    earning_entry_id,
-    earning_entry_collaborator_id,
-    earning_entry_job_id,
-    earning_entry_amount,
-    earning_entry_type,
-    earning_entry_created_at
-) VALUES
-(1, 9, 3, 720000, 'job', now() - interval '2 days');
+INSERT INTO earnings (earning_id, user_id, amount, status, type, source_id, created_at) VALUES
+(1, 9, 720000, 'available', 'job', 3, now() - interval '2 days');
 
 INSERT INTO payout_requests (
     payout_request_id,
-    payout_request_collaborator_id,
+    payout_request_user_id,
     payout_request_amount,
     payout_request_method,
     payout_request_status,
@@ -1172,16 +1143,11 @@ Ngày nay, khi nhịp sống hiện đại ngày càng hối hả, sự hiện d
 (2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Mẹo vặt', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
 (3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Sự kiện', '[]', 'published', 450, 450000.00);
 
--- Host Earnings (Mock - Article Payouts)
-INSERT INTO host_earnings (host_earning_id, host_earning_host_id, host_earning_amount, host_earning_status, host_earning_source_type, host_earning_source_id) VALUES
-(1, 136, 500000.00, 'available', 'article_payout', 1),
-(2, 136, 300000.00, 'available', 'article_payout', 2),
-(3, 136, 450000.00, 'pending', 'article_payout', 3),
-(4, 136, 120000.00, 'available', 'performance_bonus', 1);
-
--- Host Payout Requests (Mock)
-INSERT INTO host_payout_requests (host_payout_id, host_payout_host_id, host_payout_amount, host_payout_method, host_payout_status, host_payout_note) VALUES
-(1, 136, 600000, 'Momo', 'completed', 'Thanh toán đợt 1 tháng 4.');
+INSERT INTO earnings (earning_id, user_id, amount, status, type, source_id, created_at) VALUES
+(2, 136, 500000.00, 'available', 'article_payout', 1, now() - interval '5 days'),
+(3, 136, 300000.00, 'available', 'article_payout', 2, now() - interval '4 days'),
+(4, 136, 450000.00, 'pending', 'article_payout', 3, now() - interval '3 days'),
+(5, 136, 120000.00, 'available', 'performance_bonus', 1, now() - interval '2 days');
 
 -- Shops
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_vip_started_at, shop_vip_expires_at, shop_lat, shop_lng) VALUES
@@ -1379,14 +1345,15 @@ INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
 (15, '/uploads/oi-bonsai-sai-qua-1.jpg', 0);
 
 -- Favorite Posts (Bookmarks)
-INSERT INTO favorite_posts (favorite_post_user_id, favorite_post_post_id, favorite_post_created_at) VALUES
-(1, 1, now() - interval '20 days'),
-(1, 3, now() - interval '15 days'),
-(1, 8, now() - interval '5 days'),
-(8, 2, now() - interval '18 days'),
-(8, 5, now() - interval '10 days'),
-(8, 13, now() - interval '8 days'),
-(2, 9, now() - interval '3 days');
+-- User Favorites (Mock - Posts & Contents)
+INSERT INTO user_favorites (user_id, target_id, target_type, created_at) VALUES
+(1, 1, 'post', now() - interval '20 days'),
+(1, 3, 'post', now() - interval '15 days'),
+(1, 8, 'post', now() - interval '5 days'),
+(8, 2, 'post', now() - interval '18 days'),
+(8, 5, 'post', now() - interval '10 days'),
+(8, 13, 'post', now() - interval '8 days'),
+(2, 9, 'post', now() - interval '3 days');
 
 -- ============================================================
 -- PLACEMENT SLOTS & PROMOTION PACKAGES
@@ -1409,10 +1376,10 @@ INSERT INTO promotion_packages (
     promotion_package_description,
     promotion_package_published
 ) VALUES
-(1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 30, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 2 trang chủ.', true),
-(2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 30, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 1 trang chủ.', true),
+(1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày ở vị trí 2 trang chủ.', true),
+(2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 7, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 7 ngày ở vị trí 1 trang chủ.', true),
 (3, 2, 'Gói nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên shop lên đầu danh sách nhà vườn và tăng nhận diện VIP trong 90 ngày.', true),
-(4, 4, 'Gói đẩy bài theo tháng vị trí 3 trang chủ', 30, 1, 5000, 'Ưu tiên hiển thị bài đăng trong 30 ngày ở vị trí 3 trang chủ.', true),
+(4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 7, 1, 5000, 'Ưu tiên hiển thị bài đăng trong 7 ngày ở vị trí 3 trang chủ.', true),
 (5, 5, 'Gói Lên Nhà Vườn (Vĩnh viễn)', 36500, 1, 0, 'Nâng cấp tài khoản cá nhân lên tài khoản nhà vườn chuyên nghiệp.', true),
 (6, 6, 'Gói Cá Nhân (30 ngày)', 30, 1, 0, 'Gói đăng tin ưu tiên cho cá nhân trong 30 ngày.', true);
 
@@ -1749,7 +1716,7 @@ SELECT setval('post_attribute_values_value_id_seq', (SELECT COALESCE(MAX(value_i
 SELECT setval('jobs_job_id_seq', (SELECT COALESCE(MAX(job_id), 1) FROM jobs));
 SELECT setval('job_contact_requests_contact_request_id_seq', (SELECT COALESCE(MAX(contact_request_id), 1) FROM job_contact_requests));
 SELECT setval('job_deliverables_deliverable_id_seq', (SELECT COALESCE(MAX(deliverable_id), 1) FROM job_deliverables));
-SELECT setval('earning_entries_earning_entry_id_seq', (SELECT COALESCE(MAX(earning_entry_id), 1) FROM earning_entries));
+SELECT setval('earnings_earning_id_seq', (SELECT COALESCE(MAX(earning_id), 1) FROM earnings));
 SELECT setval('payout_requests_payout_request_id_seq', (SELECT COALESCE(MAX(payout_request_id), 1) FROM payout_requests));
 SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM reports));
 SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
@@ -1774,5 +1741,3 @@ SELECT setval('moderation_feedback_feedback_id_seq', (SELECT COALESCE(MAX(feedba
 SELECT setval('escalations_escalation_id_seq', (SELECT COALESCE(MAX(escalation_id), 1) FROM escalations));
 SELECT setval('system_notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM system_notifications));
 SELECT setval('host_contents_host_content_id_seq', (SELECT COALESCE(MAX(host_content_id), 1) FROM host_contents));
-SELECT setval('host_earnings_host_earning_id_seq', (SELECT COALESCE(MAX(host_earning_id), 1) FROM host_earnings));
-SELECT setval('host_payout_requests_host_payout_id_seq', (SELECT COALESCE(MAX(host_payout_id), 1) FROM host_payout_requests));

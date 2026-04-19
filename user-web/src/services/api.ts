@@ -164,6 +164,10 @@ export interface PromotionPackageItem {
   promotionPackageDescription?: string | null;
   slotCode?: string | null;
   slotTitle?: string | null;
+  slotCapacity?: number;
+  currentUsage?: number;
+  slotRules?: string;
+  recommended?: boolean;
 }
 
 export interface EligiblePromotionPackagesResponse {
@@ -380,7 +384,6 @@ export interface HostPublicContent {
   authorName: string | null;
   authorAvatar: string | null;
   target?: {
-    postId?: number;
     postTitle?: string;
     postSlug?: string;
     shopId?: number;

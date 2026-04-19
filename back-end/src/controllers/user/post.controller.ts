@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and, sql, inArray, or } from "drizzle-orm";
-import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, favoritePosts, postPromotions, promotionPackages, placementSlots, shopCollaborators } from "../../models/schema/index.ts";
+import { posts, postImages, postVideos, postAttributeValues, shops, type Post, categories, attributes, users, userFavorites, postPromotions, promotionPackages, placementSlots, shopCollaborators } from "../../models/schema/index.ts";
 import { slugify } from "../../utils/slugify.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
@@ -11,6 +11,7 @@ import {
 } from "../../services/posting-policy.service.ts";
 import { adminWebSettingsService } from "../../services/adminWebSettings.service.ts";
 import { postLifecycleService } from "../../services/postLifecycle.service.ts";
+import { notificationService } from "../../services/notification.service.ts";
 import { BOOST_POST_SLOT_PREFIX } from "../../constants/promotion.ts";
 
 const actionCache = new Set<string>();
@@ -154,6 +155,22 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             if (attrRecords.length > 0) {
                 await db.insert(postAttributeValues).values(attrRecords);
             }
+        }
+
+        // Notify Shop Owner if this is a collaborator post
+        if (isDelegatedPost && targetShopId) {
+            const [author] = await db.select({ name: users.userDisplayName })
+                .from(users)
+                .where(eq(users.userId, userId))
+                .limit(1);
+
+            await notificationService.sendNotification({
+                recipientId: targetShopId,
+                title: "Bài đăng mới từ CTV",
+                message: `Cộng tác viên ${author?.name || "ẩn danh"} vừa gửi bài đăng "${postTitle}" cần bạn phê duyệt.`,
+                type: "collaboration",
+                metaData: { postId: newPost.postId, shopId: targetShopId }
+            }).catch(e => console.error("Failed to notify shop owner:", e));
         }
 
         const creationFee = await postingPolicyService.addFeeLedgerEntry({
@@ -843,8 +860,14 @@ export const checkIsSaved = async (req: AuthRequest, res: Response): Promise<voi
         const postId = parseId(req.params.id as string);
         if (!userId || !postId) { res.status(400).json({ isSaved: false }); return; }
         
-        const [existingFavorite] = await db.select().from(favoritePosts)
-            .where(and(eq(favoritePosts.favoritePostUserId, userId), eq(favoritePosts.favoritePostPostId, postId)))
+        const [existingFavorite] = await db.select().from(userFavorites)
+            .where(
+                and(
+                    eq(userFavorites.userId, userId),
+                    eq(userFavorites.targetId, postId),
+                    eq(userFavorites.targetType, "post")
+                )
+            )
             .limit(1);
             
         res.json({ isSaved: !!existingFavorite });
@@ -864,21 +887,34 @@ export const toggleFavoritePost = async (req: AuthRequest, res: Response): Promi
             return;
         }
 
-        const [existingFavorite] = await db.select().from(favoritePosts)
-            .where(and(eq(favoritePosts.favoritePostUserId, userId), eq(favoritePosts.favoritePostPostId, postId)))
+        const [existingFavorite] = await db.select().from(userFavorites)
+            .where(
+                and(
+                    eq(userFavorites.userId, userId),
+                    eq(userFavorites.targetId, postId),
+                    eq(userFavorites.targetType, "post")
+                )
+            )
             .limit(1);
 
         if (existingFavorite) {
             // Remove from favorites
-            await db.delete(favoritePosts)
-                .where(and(eq(favoritePosts.favoritePostUserId, userId), eq(favoritePosts.favoritePostPostId, postId)));
+            await db.delete(userFavorites)
+                .where(
+                    and(
+                        eq(userFavorites.userId, userId),
+                        eq(userFavorites.targetId, postId),
+                        eq(userFavorites.targetType, "post")
+                    )
+                );
             res.json({ message: "Post removed from favorites", isSaved: false });
         } else {
             // Add to favorites
-            await db.insert(favoritePosts)
+            await db.insert(userFavorites)
                 .values({
-                    favoritePostUserId: userId,
-                    favoritePostPostId: postId
+                    userId: userId,
+                    targetId: postId,
+                    targetType: "post"
                 });
             res.json({ message: "Post added to favorites", isSaved: true });
         }

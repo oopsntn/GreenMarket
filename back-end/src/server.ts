@@ -32,6 +32,7 @@ import adminSettingsRoutes from "./routes/admin/settings.route.ts";
 import adminAIInsightRoutes from "./routes/admin/ai-insight.route.ts";
 import adminActivityLogRoutes from "./routes/admin/activity-log.route.ts";
 import adminNotificationRoutes from "./routes/admin/notification.route.ts";
+import adminFinancialRoutes from "./routes/admin/financial.route.ts";
 import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
 import userReportRoutes from "./routes/user/report.route.ts";
@@ -156,6 +157,7 @@ app.use(
   isAdmin,
   adminNotificationRoutes,
 );
+app.use("/api/admin/financial", verifyToken, isAdmin, adminFinancialRoutes);
 
 // User Routes
 app.use("/api/shops", userShopRoutes);
