@@ -631,19 +631,6 @@ function ReportsModerationPage() {
           </p>
 
           <label htmlFor="report-template">Chọn mẫu nội dung</label>
-          <div className="reports-moderation-form__picker-meta">
-            <span>
-              Đang hiển thị {reportTemplates.length} mẫu phù hợp cho xử lý báo cáo.
-            </span>
-            <small>
-              Gồm {reportReasonTemplateCount} mẫu Lý do báo cáo và{" "}
-              {notificationTemplateCount} mẫu Thông báo đang hoạt động.
-            </small>
-            <small>
-              Thư viện hiện có 7 mẫu đang hoạt động, nhưng màn này chỉ lấy 2
-              nhóm dùng đúng cho xử lý báo cáo nên bạn sẽ thấy 5 mẫu để chọn.
-            </small>
-          </div>
           <div
             id="report-template"
             className="reports-moderation-form__template-list"
@@ -675,7 +662,7 @@ function ReportsModerationPage() {
                     <span>Thủ công</span>
                   </div>
                   <p>
-                    Không dùng mẫu có sẵn, admin tự nhập ghi chú xử lý theo tình
+                    Không dùng mẫu có sẵn, quản trị viên tự nhập ghi chú xử lý theo tình
                     huống.
                   </p>
                 </button>
@@ -700,6 +687,16 @@ function ReportsModerationPage() {
                 ))}
               </>
             )}
+          </div>
+
+          <div className="reports-moderation-form__picker-meta">
+            <span>
+              Đang hiển thị {reportTemplates.length} mẫu phù hợp cho xử lý báo cáo.
+            </span>
+            <small>
+              Gồm {reportReasonTemplateCount} mẫu Lý do báo cáo và{" "}
+              {notificationTemplateCount} mẫu Thông báo đang hoạt động.
+            </small>
           </div>
 
           <small className="reports-moderation-form__hint">

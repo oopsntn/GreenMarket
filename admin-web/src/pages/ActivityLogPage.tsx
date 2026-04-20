@@ -374,7 +374,11 @@ function ActivityLogPage() {
                       <td>
                         <div className="activity-log-cell">
                           <strong>{item.targetName}</strong>
-                          <span>{item.targetCode ? `${item.targetType} • ${item.targetCode}` : item.targetType}</span>
+                          <span>
+                            {item.targetCode
+                              ? `${item.targetType} • ${item.targetCode}`
+                              : item.targetType}
+                          </span>
                         </div>
                       </td>
                       <td>

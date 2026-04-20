@@ -305,7 +305,7 @@ function CollaboratorsPage() {
               <table className="collaborators-page__table">
                 <thead>
                   <tr>
-                    <th>Shop</th>
+                    <th>Cửa hàng</th>
                     <th>Cộng tác viên</th>
                     <th>Trạng thái</th>
                     <th>Bài đã duyệt</th>

@@ -11,58 +11,80 @@ type LegacyActivityLogItem = {
   performedAt?: string;
 };
 
+const repairMojibake = (value: string) => {
+  if (!value || !/[ÃÂáºá»Ä]/.test(value)) {
+    return value;
+  }
+
+  try {
+    return decodeURIComponent(escape(value));
+  } catch {
+    return value;
+  }
+};
+
+const normalizeTextKey = (value: string) =>
+  repairMojibake(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/[^\p{L}\p{N}\s/]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
 const ACTION_LABELS: Record<string, string> = {
-  "Admin Login": "Đăng nhập trang quản trị",
-  "Role Assigned": "Gán vai trò",
-  "Account Locked": "Khóa tài khoản",
-  "Account Unlocked": "Mở khóa tài khoản",
-  "Export Generated": "Tạo tệp xuất",
-  "Promotion Resumed": "Tiếp tục chiến dịch quảng bá",
-  "Promotion Reopened": "Mở lại chiến dịch quảng bá",
-  "Moderation Updated": "Cập nhật kiểm duyệt",
+  "admin login": "Đăng nhập trang quản trị",
+  "role assigned": "Gán vai trò",
+  "account locked": "Khóa tài khoản",
+  "account unlocked": "Mở khóa tài khoản",
+  "export generated": "Tạo tệp xuất",
+  "promotion resumed": "Tiếp tục chiến dịch quảng bá",
+  "promotion reopened": "Mở lại chiến dịch quảng bá",
+  "moderation updated": "Cập nhật kiểm duyệt",
+  "admin collaborator relationship active": "Kích hoạt quan hệ cộng tác",
+  "admin host content published": "Xuất bản nội dung Host / News",
+  "admin payout request completed": "Hoàn tất chi trả Host / News",
+  "admin system settings updated": "Cập nhật thiết lập hệ thống",
+  "update system settings": "Cập nhật thiết lập hệ thống",
 };
 
 const RESULT_LABELS: Record<string, string> = {
-  completed: "Hoàn tất",
+  completed: "Hoàn thành",
   success: "Thành công",
   processed: "Đã xử lý",
   pending: "Đang chờ",
   dismissed: "Đã bỏ qua",
   resolved: "Đã xử lý",
+  saved: "Đã lưu",
 };
 
-const REPORT_NAME_LABELS: Record<string, string> = {
-  "Revenue Summary": "Tổng quan doanh thu",
-  "Customer Spending Report": "Báo cáo chi tiêu khách hàng",
-  "Customer Spending": "Chi tiêu khách hàng",
-  "Promotion Performance": "Hiệu quả chiến dịch quảng bá",
-  "Users Export": "Xuất danh sách người dùng",
-  "Analytics Overview": "Tổng quan phân tích",
-  "Promotion Operations": "Theo dõi quảng bá",
-  "Boosted Campaigns": "Chiến dịch đẩy nổi bật",
-  Users: "Danh sách người dùng",
-  Categories: "Danh sách danh mục",
-  Attributes: "Danh sách thuộc tính",
-  Templates: "Mẫu nội dung",
-  Promotions: "Theo dõi quảng bá",
-  Analytics: "Phân tích hiệu quả",
-  "Khuyến mãi": "Theo dõi quảng bá",
-  "Vận hành khuyến mãi": "Theo dõi quảng bá",
+const MODULE_LABELS: Record<string, string> = {
+  system: "Hệ thống",
+  "system settings": "Thiết lập hệ thống",
+  promotions: "Theo dõi quảng bá",
+  analytics: "Phân tích hiệu quả",
+  revenue: "Doanh thu",
+  reports: "Xử lý báo cáo",
+  templates: "Mẫu nội dung",
+  collaborators: "Quản lý cộng tác viên",
+  "host / news": "Nội dung Host / News",
 };
 
 const TARGET_CODE_LABELS: Record<string, string> = {
-  EXPORT: "Bản xuất dữ liệu",
-  TEMPLATE: "Mẫu nội dung",
-  "SYSTEM-SETTINGS": "Thiết lập hệ thống",
+  export: "Bản xuất dữ liệu",
+  template: "Mẫu nội dung",
+  "system settings": "Thiết lập hệ thống",
 };
 
 const ACTOR_LABELS: Record<string, string> = {
-  "System Administrator": "Quản trị viên hệ thống",
-  System: "Hệ thống",
-  Admin: "Quản trị viên",
+  "system administrator": "Quản trị viên hệ thống",
+  system: "Hệ thống",
+  admin: "Quản trị viên",
 };
 
-const DETAIL_REPLACEMENTS: Array<[string, string]> = [
+const PHRASE_REPLACEMENTS: Array<[string, string]> = [
   [
     "Admin dashboard session started successfully.",
     "Phiên đăng nhập trang quản trị đã được khởi tạo thành công.",
@@ -78,13 +100,10 @@ const DETAIL_REPLACEMENTS: Array<[string, string]> = [
   ],
   ["Users CSV export completed.", "Đã hoàn tất xuất CSV danh sách người dùng."],
   ["Revenue summary CSV export completed.", "Đã hoàn tất xuất CSV tổng quan doanh thu."],
-  [
-    "Customer spending CSV export completed.",
-    "Đã hoàn tất xuất CSV chi tiêu khách hàng.",
-  ],
+  ["Customer spending CSV export completed.", "Đã hoàn tất xuất CSV chi tiêu khách hàng."],
   ["Analytics overview CSV export completed.", "Đã hoàn tất xuất CSV tổng quan phân tích."],
-  ["Promotion operations CSV export completed.", "Đã hoàn tất xuất CSV vận hành khuyến mãi."],
-  ["Boosted campaigns CSV export completed.", "Đã hoàn tất xuất CSV chiến dịch đẩy nổi bật."],
+  ["Promotion operations CSV export completed.", "Đã hoàn tất xuất CSV theo dõi quảng bá."],
+  ["Boosted campaigns CSV export completed.", "Đã hoàn tất xuất CSV chiến dịch đẩy bài."],
   [
     "Category Top campaign resumed after content update.",
     "Chiến dịch vị trí 2 trang chủ đã được tiếp tục sau khi cập nhật nội dung.",
@@ -93,6 +112,10 @@ const DETAIL_REPLACEMENTS: Array<[string, string]> = [
     "Expired Search Boost campaign reopened after payment confirmation.",
     "Chiến dịch vị trí 3 trang chủ đã hết hạn được mở lại sau khi xác nhận thanh toán.",
   ],
+  ["Updated system settings", "Cập nhật thiết lập hệ thống"],
+  ["Admin payout request completed", "Hoàn tất chi trả Host / News"],
+  ["Cáº­p nháº­t thiáº¿t láº­p há»‡ thá»‘ng", "Cập nhật thiết lập hệ thống"],
+  ["KhÃ´i phá»¥c thiáº¿t láº­p há»‡ thá»‘ng", "Khôi phục thiết lập hệ thống"],
 ];
 
 const isActivityLogItem = (item: unknown): item is ActivityLogItem => {
@@ -100,19 +123,20 @@ const isActivityLogItem = (item: unknown): item is ActivityLogItem => {
     return false;
   }
 
-  return (
-    "occurredAtLabel" in item &&
-    "moduleLabel" in item &&
-    "actionType" in item
-  );
+  return "occurredAtLabel" in item && "moduleLabel" in item && "actionType" in item;
 };
 
-const replaceKnownPhrases = (value: string) =>
-  Object.entries(REPORT_NAME_LABELS)
-    .sort(([left], [right]) => right.length - left.length)
-    .reduce((result, [source, target]) => result.replaceAll(source, target), value);
+const translateKnownPhrases = (value: string) =>
+  PHRASE_REPLACEMENTS.reduce(
+    (result, [source, target]) => result.replaceAll(source, target),
+    repairMojibake(value),
+  );
 
-const translateReportName = (value: string) => replaceKnownPhrases(value);
+const humanizeCode = (value: string) =>
+  repairMojibake(value)
+    .replaceAll("_", " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .trim();
 
 const translateAction = (value: string) => {
   const normalized = value.trim();
@@ -120,7 +144,13 @@ const translateAction = (value: string) => {
     return "Sự kiện hệ thống";
   }
 
-  return ACTION_LABELS[normalized] || replaceKnownPhrases(normalized);
+  const translatedPhrase = translateKnownPhrases(normalized);
+  if (translatedPhrase !== normalized) {
+    return translatedPhrase;
+  }
+
+  const actionKey = normalizeTextKey(normalized);
+  return ACTION_LABELS[actionKey] || translateKnownPhrases(humanizeCode(normalized));
 };
 
 const translateResult = (value: string) => {
@@ -129,7 +159,7 @@ const translateResult = (value: string) => {
     return "Đã ghi nhận";
   }
 
-  return RESULT_LABELS[normalized.toLowerCase()] || translateReportName(normalized);
+  return RESULT_LABELS[normalizeTextKey(normalized)] || translateKnownPhrases(humanizeCode(normalized));
 };
 
 const translateActor = (value: string) => {
@@ -138,7 +168,16 @@ const translateActor = (value: string) => {
     return "Quản trị viên hệ thống";
   }
 
-  return ACTOR_LABELS[normalized] || normalized;
+  return ACTOR_LABELS[normalizeTextKey(normalized)] || repairMojibake(normalized);
+};
+
+const translateModule = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) {
+    return "Hệ thống";
+  }
+
+  return MODULE_LABELS[normalizeTextKey(normalized)] || translateKnownPhrases(humanizeCode(normalized));
 };
 
 const translateTargetCode = (value: string) => {
@@ -147,7 +186,7 @@ const translateTargetCode = (value: string) => {
     return "";
   }
 
-  return TARGET_CODE_LABELS[normalized] || normalized;
+  return TARGET_CODE_LABELS[normalizeTextKey(normalized)] || repairMojibake(normalized);
 };
 
 const translateDetail = (value: string) => {
@@ -156,30 +195,19 @@ const translateDetail = (value: string) => {
     return "Bản ghi không có thêm chi tiết.";
   }
 
-  return DETAIL_REPLACEMENTS.reduce(
-    (result, [source, target]) => result.replaceAll(source, target),
-    replaceKnownPhrases(normalized),
-  );
+  return translateKnownPhrases(normalized);
 };
 
 const normalizeLegacyLog = (item: LegacyActivityLogItem): ActivityLogItem => {
   const action = translateAction(item.action?.trim() || "Sự kiện hệ thống");
-  const detail = item.detail?.trim()
-    ? translateDetail(item.detail)
-    : `${action} được backend ghi nhận trong nhật ký sự kiện.`;
-  const actorName = translateActor(
-    item.performedBy?.trim() || "Quản trị viên hệ thống",
-  );
-  const targetName = translateReportName(item.userName?.trim() || "Người dùng");
-  const targetCode = item.userId ? `USER-${item.userId}` : "";
-  const occurredAtLabel = item.performedAt?.trim() || "Chưa có dữ liệu";
-  const occurredAt = item.performedAt?.trim() ? item.performedAt.trim() : "";
+  const actorName = translateActor(item.performedBy?.trim() || "Quản trị viên hệ thống");
+  const targetName = repairMojibake(item.userName?.trim() || "") || "Người dùng";
 
   return {
     id: item.id ?? 0,
     eventType: "legacy_activity_log",
-    occurredAt,
-    occurredAtLabel,
+    occurredAt: item.performedAt?.trim() || "",
+    occurredAtLabel: item.performedAt?.trim() || "Chưa có dữ liệu",
     actorName,
     actorRole: "Quản trị viên",
     moduleKey: "system",
@@ -188,10 +216,13 @@ const normalizeLegacyLog = (item: LegacyActivityLogItem): ActivityLogItem => {
     actionType: "Hoạt động đã ghi nhận",
     targetType: "Người dùng",
     targetName,
-    targetCode,
+    targetCode: item.userId ? `USER-${item.userId}` : "",
     result: "Đã ghi nhận",
     severity: "trung bình",
-    detail,
+    detail:
+      item.detail?.trim() && item.detail.trim().length > 0
+        ? translateDetail(item.detail)
+        : `${action} được backend ghi nhận trong nhật ký sự kiện.`,
     relatedIds: {
       userId: item.userId ?? null,
       postId: null,
@@ -212,23 +243,21 @@ const normalizeLog = (item: unknown): ActivityLogItem => {
     occurredAt: typeof item.occurredAt === "string" ? item.occurredAt : "",
     occurredAtLabel:
       typeof item.occurredAtLabel === "string" && item.occurredAtLabel.trim()
-        ? item.occurredAtLabel
+        ? repairMojibake(item.occurredAtLabel)
         : "Chưa có dữ liệu",
     actorName:
       typeof item.actorName === "string" && item.actorName.trim()
         ? translateActor(item.actorName)
         : "Quản trị viên hệ thống",
     actorRole:
-      typeof item.actorRole === "string"
+      typeof item.actorRole === "string" && item.actorRole.trim()
         ? translateActor(item.actorRole)
         : "Quản trị viên",
     moduleKey:
-      typeof item.moduleKey === "string" && item.moduleKey.trim()
-        ? item.moduleKey
-        : "system",
+      typeof item.moduleKey === "string" && item.moduleKey.trim() ? item.moduleKey : "system",
     moduleLabel:
       typeof item.moduleLabel === "string" && item.moduleLabel.trim()
-        ? translateReportName(item.moduleLabel)
+        ? translateModule(item.moduleLabel)
         : "Hệ thống",
     action:
       typeof item.action === "string" && item.action.trim()
@@ -236,34 +265,24 @@ const normalizeLog = (item: unknown): ActivityLogItem => {
         : "Sự kiện hệ thống",
     actionType:
       typeof item.actionType === "string" && item.actionType.trim()
-        ? translateReportName(item.actionType)
+        ? translateAction(item.actionType)
         : "Hoạt động đã ghi nhận",
     targetType:
       typeof item.targetType === "string" && item.targetType.trim()
-        ? translateReportName(item.targetType)
+        ? translateKnownPhrases(humanizeCode(item.targetType))
         : "Đối tượng hệ thống",
     targetName:
       typeof item.targetName === "string" && item.targetName.trim()
-        ? translateReportName(item.targetName)
+        ? translateKnownPhrases(item.targetName)
         : "Bản ghi hệ thống",
-    targetCode:
-      typeof item.targetCode === "string"
-        ? translateTargetCode(item.targetCode)
-        : "",
-    result:
-      typeof item.result === "string"
-        ? translateResult(item.result)
-        : "Đã ghi nhận",
+    targetCode: typeof item.targetCode === "string" ? translateTargetCode(item.targetCode) : "",
+    result: typeof item.result === "string" ? translateResult(item.result) : "Đã ghi nhận",
     severity:
-      item.severity === "thấp" ||
-      item.severity === "trung bình" ||
-      item.severity === "cao"
+      item.severity === "thấp" || item.severity === "trung bình" || item.severity === "cao"
         ? item.severity
         : "trung bình",
     detail:
-      typeof item.detail === "string"
-        ? translateDetail(item.detail)
-        : "Bản ghi không có thêm chi tiết.",
+      typeof item.detail === "string" ? translateDetail(item.detail) : "Bản ghi không có thêm chi tiết.",
     relatedIds: item.relatedIds ?? {
       userId: null,
       postId: null,

@@ -13,7 +13,7 @@ import type {
 } from "../types/accountPackage";
 import "./AccountPackagesPage.css";
 
-type PackageGroupFilter = "All" | "Tài khoản" | "Shop";
+type PackageGroupFilter = "All" | "Tài khoản" | "Nhà vườn VIP";
 
 const PAGE_SIZE = 5;
 
@@ -139,9 +139,7 @@ function AccountPackagesPage() {
     setIsFormModalOpen(false);
   };
 
-  const handleFormChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleFormChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
 
     setFormData((prev) => ({
@@ -226,11 +224,11 @@ function AccountPackagesPage() {
             </span>
           </div>
           <div className="account-packages-banner__item">
-            <strong>Gói shop VIP</strong>
+            <strong>Gói Nhà vườn VIP</strong>
             <span>
               Nhà vườn VIP ảnh hưởng đến độ nổi bật của shop trong danh sách nhà
-              vườn. Gói này không đi chung với vị trí hiển thị bài đẩy trên trang
-              chủ.
+              vườn. Gói này không đi chung với vị trí hiển thị bài đẩy trên
+              trang chủ.
             </span>
           </div>
         </div>
@@ -263,7 +261,7 @@ function AccountPackagesPage() {
             >
               <option value="All">Tất cả nhóm</option>
               <option value="Tài khoản">Tài khoản</option>
-              <option value="Shop">Shop</option>
+              <option value="Nhà vườn VIP">Nhà vườn VIP</option>
             </select>
           </div>
         </div>
@@ -317,7 +315,8 @@ function AccountPackagesPage() {
                         <StatusBadge
                           label={item.statusLabel}
                           variant={
-                            item.code === "SHOP_VIP" && item.statusLabel === "Tạm dừng"
+                            item.code === "SHOP_VIP" &&
+                            item.statusLabel === "Tạm dừng"
                               ? "disabled"
                               : "success"
                           }

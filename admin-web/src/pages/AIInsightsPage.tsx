@@ -221,7 +221,7 @@ function AIInsightsPage() {
 
   const filteredTrendRows = useMemo(() => {
     const keyword = searchKeyword.trim().toLowerCase();
-    return trendRows.filter((item) => (focusFilter === "All Focus Areas" || item.focus === focusFilter) && (!keyword || item.entity.toLowerCase().includes(keyword) || item.recommendation.toLowerCase().includes(keyword) || item.scoreNote.toLowerCase().includes(keyword) || item.momentumNote.toLowerCase().includes(keyword)));
+    return trendRows.filter((item) => (focusFilter === "All Focus Areas" || item.focus === focusFilter) && (!keyword || item.entity.toLowerCase().includes(keyword) || item.recommendation.toLowerCase().includes(keyword) || item.momentumNote.toLowerCase().includes(keyword)));
   }, [focusFilter, searchKeyword, trendRows]);
 
   const filteredHistory = useMemo(() => {
@@ -266,10 +266,10 @@ function AIInsightsPage() {
 
   return (
     <div className="ai-insights-page">
-      <PageHeader title="Phân Tích Kinh Doanh Bằng AI" description="AI tổng hợp số liệu từ các màn doanh thu, quảng bá, xu hướng tiêu dùng và vận hành để đưa ra nhận định ngắn gọn, dễ đọc cho admin." />
+      <PageHeader title="Phân tích kinh doanh bằng AI" description="AI tổng hợp số liệu từ các màn doanh thu, quảng bá, xu hướng tiêu dùng và vận hành để đưa ra nhận định ngắn gọn, dễ đọc cho quản trị viên." />
       {pageError ? <EmptyState title="Không thể tải màn nhận định AI" description={pageError} /> : null}
 
-      <SectionCard title="Tạo Nhận Định AI" description="Chọn kỳ dữ liệu và trọng tâm cần xem. AI sẽ dựa trên các số liệu hiện có của hệ thống để tạo một bản nhận định kinh doanh ngắn gọn." actions={<div className="ai-insights-analysis__actions"><button type="button" className="ai-insights-button ai-insights-button--primary" onClick={() => void handleGenerateInsight()}>Tạo Phân Tích AI</button></div>}>
+      <SectionCard title="Tạo nhận định AI" description="Chọn kỳ dữ liệu và trọng tâm cần xem. AI sẽ dựa trên các số liệu hiện có của hệ thống để tạo một bản nhận định kinh doanh ngắn gọn." actions={<div className="ai-insights-analysis__actions"><button type="button" className="ai-insights-button ai-insights-button--primary" onClick={() => void handleGenerateInsight()}>Tạo nhận định AI</button></div>}>
         <div className="ai-insights-analysis">
           <div className="ai-insights-analysis__grid">
             <label className="ai-insights-analysis__field"><span>Từ ngày</span><input type="date" value={fromDate} max={toDate || today} onChange={(event) => handleFromDateChange(event.target.value)} /><small>Mốc bắt đầu để AI gom số liệu và đánh giá xu hướng.</small></label>
@@ -282,7 +282,7 @@ function AIInsightsPage() {
             <div className="ai-insights-analysis__meta-card"><strong>Kỳ dữ liệu</strong><span>{dateRangeLabel}</span></div>
             <div className="ai-insights-analysis__meta-card"><strong>Trọng tâm đang chọn</strong><span>{getFocusLabelVi(focusFilter)}</span></div>
             <div className="ai-insights-analysis__meta-card"><strong>Giọng điệu nhận định</strong><span>{toneLabelMap[settings.recommendationTone]}</span></div>
-            <div className="ai-insights-analysis__meta-card"><strong>Dữ liệu nền</strong><span>{trendRows.length} tín hiệu xu hướng và {historyItems.length} bản phân tích đang có sẵn cho admin đối chiếu.</span></div>
+            <div className="ai-insights-analysis__meta-card"><strong>Dữ liệu nền</strong><span>{trendRows.length} tín hiệu xu hướng và {historyItems.length} bản phân tích đang có sẵn cho quản trị viên đối chiếu.</span></div>
           </div>
         </div>
       </SectionCard>
@@ -294,24 +294,106 @@ function AIInsightsPage() {
       </SectionCard>
 
       <div className="ai-insights-business-grid">
-        <SectionCard title="Điểm đáng chú ý" description="Các insight vận hành rút ra từ số liệu nền và khuyến nghị AI, giúp admin thấy rõ việc gì đáng theo dõi nhất trong kỳ này."><div className="ai-insights-bullet-grid">{operationalHighlights.length === 0 ? <EmptyState title="Chưa có insight vận hành" description="Khoảng thời gian được chọn chưa có đủ dữ liệu để rút ra các điểm đáng chú ý riêng cho admin." /> : operationalHighlights.map((item) => <article key={item.title} className={`ai-insights-bullet-card ${getInsightToneClass(item.tone)}`}><h4>{item.title}</h4><p>{item.body}</p></article>)}</div></SectionCard>
-        <SectionCard title="Đề xuất cho admin" description="Các hướng xử lý hoặc ưu tiên phát triển được AI đề xuất từ số liệu hiện có."><div className="ai-insights-bullet-grid">{overview.recommendations.length === 0 ? <EmptyState title="Chưa có khuyến nghị" description="Hãy tạo thêm dữ liệu hoặc phân tích ở giai đoạn đã chọn để AI đề xuất hành động cụ thể." /> : overview.recommendations.map((item) => <article key={item.title} className={`ai-insights-bullet-card ${getInsightToneClass(item.tone)}`}><h4>{item.title}</h4><p>{item.body}</p></article>)}</div></SectionCard>
+        <SectionCard title="Điểm đáng chú ý" description="Các nhận định vận hành rút ra từ số liệu nền và khuyến nghị AI, giúp quản trị viên thấy rõ việc gì đáng theo dõi nhất trong kỳ này."><div className="ai-insights-bullet-grid">{operationalHighlights.length === 0 ? <EmptyState title="Chưa có nhận định vận hành" description="Khoảng thời gian được chọn chưa có đủ dữ liệu để rút ra các điểm đáng chú ý riêng cho quản trị viên." /> : operationalHighlights.map((item) => <article key={item.title} className={`ai-insights-bullet-card ${getInsightToneClass(item.tone)}`}><h4>{item.title}</h4><p>{item.body}</p></article>)}</div></SectionCard>
+        <SectionCard title="Đề xuất cho quản trị viên" description="Các hướng xử lý hoặc ưu tiên phát triển được AI đề xuất từ số liệu hiện có."><div className="ai-insights-bullet-grid">{overview.recommendations.length === 0 ? <EmptyState title="Chưa có khuyến nghị" description="Hãy tạo thêm dữ liệu hoặc phân tích ở giai đoạn đã chọn để AI đề xuất hành động cụ thể." /> : overview.recommendations.map((item) => <article key={item.title} className={`ai-insights-bullet-card ${getInsightToneClass(item.tone)}`}><h4>{item.title}</h4><p>{item.body}</p></article>)}</div></SectionCard>
       </div>
 
       <SectionCard title="Số liệu nền cho AI" description="Bảng này giúp đối chiếu nhanh các số liệu chính đứng sau kết luận của AI.">{overview.topRows.length === 0 ? <EmptyState title="Chưa có dữ liệu ảnh chụp nhanh" description="Khoảng thời gian đang chọn chưa có đủ dữ liệu liên kết để tạo ảnh chụp kinh doanh." /> : <div className="ai-insights-overview-list">{overview.topRows.map((item) => <article key={item.label} className="ai-insights-overview-list__item"><span className="ai-insights-overview-list__label">{item.label}</span><strong className="ai-insights-overview-list__value">{item.value}</strong><small className="ai-insights-overview-list__detail">{item.detail}</small></article>)}</div>}</SectionCard>
 
       <SearchToolbar placeholder="Tìm theo thực thể, khuyến nghị, nội dung phân tích hoặc người tạo" searchValue={searchKeyword} onSearchChange={setSearchKeyword} filterSummaryItems={[getFocusLabelVi(focusFilter)]} />
 
-      <SectionCard title="Bảng tín hiệu xu hướng" description={`${dateRangeLabel} / ${getFocusLabelVi(focusFilter)}. Điểm là mức đánh giá tổng hợp 0-100 theo từng trọng tâm; xu hướng phản ánh tín hiệu đang tốt hơn, đi ngang hay yếu hơn so với mặt bằng cùng nhóm.`}>
-        {isLoading ? <EmptyState title="Đang tải điểm xu hướng" description="Đang lấy danh sách chấm điểm xu hướng từ API admin." /> : filteredTrendRows.length === 0 ? <EmptyState title="Không có điểm xu hướng phù hợp" description="Không có dòng chấm điểm xu hướng nào khớp với bộ lọc hiện tại." /> : <><div className="ai-insights-table-wrapper"><table className="ai-insights-table"><thead><tr><th>ID</th><th>Trọng tâm</th><th>Thực thể</th><th>Điểm</th><th>Xu hướng</th><th>Khuyến nghị</th><th>Cập nhật</th></tr></thead><tbody>{paginatedTrendRows.map((item) => <tr key={item.id}><td className="ai-insights-table__cell--compact">#{item.id}</td><td><StatusBadge label={getFocusLabelVi(item.focus)} variant="type" /></td><td>{item.entity}</td><td><div className="ai-insights-table__stack"><strong>{item.score}/100</strong><span>{item.scoreNote}</span></div></td><td><div className="ai-insights-table__stack"><StatusBadge label={momentumLabelMap[item.momentum]} variant={getMomentumVariant(item.momentum)} /><span>{item.momentumNote}</span></div></td><td>{item.recommendation}</td><td>{item.updatedAt}</td></tr>)}</tbody></table></div><div className="ai-insights-pagination"><span className="ai-insights-pagination__info">Trang {trendPage} / {trendTotalPages}</span><div className="ai-insights-pagination__actions"><button type="button" onClick={() => setTrendPage((prev) => Math.max(1, prev - 1))} disabled={trendPage === 1}>Trước</button><button type="button" onClick={() => setTrendPage((prev) => Math.min(trendTotalPages, prev + 1))} disabled={trendPage === trendTotalPages}>Sau</button></div></div></>}
+      <SectionCard
+        title="Bảng tín hiệu xu hướng"
+        description={`${dateRangeLabel} / ${getFocusLabelVi(focusFilter)}. Bảng này chỉ giữ các tín hiệu thực tế, xu hướng thay đổi và khuyến nghị để quản trị viên đọc nhanh hơn.`}
+      >
+        {isLoading ? (
+          <EmptyState
+            title="Đang tải tín hiệu xu hướng"
+            description="Đang lấy danh sách tín hiệu xu hướng từ API quản trị."
+          />
+        ) : filteredTrendRows.length === 0 ? (
+          <EmptyState
+            title="Không có tín hiệu xu hướng phù hợp"
+            description="Không có dòng tín hiệu xu hướng nào khớp với bộ lọc hiện tại."
+          />
+        ) : (
+          <>
+            <div className="ai-insights-table-wrapper">
+              <table className="ai-insights-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Trọng tâm</th>
+                    <th>Thực thể</th>
+                    <th>Xu hướng</th>
+                    <th>Khuyến nghị</th>
+                    <th>Cập nhật</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedTrendRows.map((item) => (
+                    <tr key={item.id}>
+                      <td className="ai-insights-table__cell--compact">#{item.id}</td>
+                      <td>
+                        <StatusBadge
+                          label={getFocusLabelVi(item.focus)}
+                          variant="type"
+                        />
+                      </td>
+                      <td>
+                        <div className="ai-insights-table__stack">
+                          <strong>{item.entity}</strong>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="ai-insights-table__stack">
+                          <StatusBadge
+                            label={momentumLabelMap[item.momentum]}
+                            variant={getMomentumVariant(item.momentum)}
+                          />
+                          <span>{item.momentumNote}</span>
+                        </div>
+                      </td>
+                      <td>{item.recommendation}</td>
+                      <td>{item.updatedAt}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="ai-insights-pagination">
+              <span className="ai-insights-pagination__info">
+                Trang {trendPage} / {trendTotalPages}
+              </span>
+              <div className="ai-insights-pagination__actions">
+                <button
+                  type="button"
+                  onClick={() => setTrendPage((prev) => Math.max(1, prev - 1))}
+                  disabled={trendPage === 1}
+                >
+                  Trước
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setTrendPage((prev) => Math.min(trendTotalPages, prev + 1))
+                  }
+                  disabled={trendPage === trendTotalPages}
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </SectionCard>
 
-      <SectionCard title="Lịch sử phân tích AI" description={`${dateRangeLabel}. Các bản phân tích đã tạo được lưu tại đây để admin mở xem lại chi tiết khi cần.`}>
-        {isLoading ? <EmptyState title="Đang tải lịch sử insight" description="Đang lấy lịch sử insight đã tạo từ API admin." /> : filteredHistory.length === 0 ? <EmptyState title="Chưa có lịch sử insight" description="Các bản tổng hợp AI đã tạo sẽ xuất hiện ở đây." /> : <><div className="ai-insights-table-wrapper"><table className="ai-insights-table ai-insights-table--history"><thead><tr><th>ID</th><th>Tiêu đề</th><th>Trọng tâm</th><th>Được tạo bởi</th><th>Thời gian</th><th>Chi tiết</th></tr></thead><tbody>{paginatedHistory.map((item) => <tr key={item.id}><td className="ai-insights-table__cell--compact">#{item.id}</td><td>{item.title}</td><td><StatusBadge label={getFocusLabelVi(item.focus)} variant="type" /></td><td>{item.generatedBy}</td><td>{item.generatedAt}</td><td className="ai-insights-table__cell--compact"><button type="button" className="ai-insights-button ai-insights-button--secondary ai-insights-button--inline" onClick={() => setSelectedHistoryItem(item)}>Chi tiết</button></td></tr>)}</tbody></table></div><div className="ai-insights-pagination"><span className="ai-insights-pagination__info">Trang {historyPage} / {historyTotalPages}</span><div className="ai-insights-pagination__actions"><button type="button" onClick={() => setHistoryPage((prev) => Math.max(1, prev - 1))} disabled={historyPage === 1}>Trước</button><button type="button" onClick={() => setHistoryPage((prev) => Math.min(historyTotalPages, prev + 1))} disabled={historyPage === historyTotalPages}>Sau</button></div></div></>}
+      <SectionCard title="Lịch sử phân tích AI" description={`${dateRangeLabel}. Các bản phân tích đã tạo được lưu tại đây để quản trị viên mở xem lại chi tiết khi cần.`}>
+        {isLoading ? <EmptyState title="Đang tải lịch sử nhận định" description="Đang lấy lịch sử nhận định đã tạo từ API quản trị." /> : filteredHistory.length === 0 ? <EmptyState title="Chưa có lịch sử nhận định" description="Các bản tổng hợp AI đã tạo sẽ xuất hiện ở đây." /> : <><div className="ai-insights-table-wrapper"><table className="ai-insights-table ai-insights-table--history"><thead><tr><th>ID</th><th>Tiêu đề</th><th>Trọng tâm</th><th>Được tạo bởi</th><th>Thời gian</th><th>Chi tiết</th></tr></thead><tbody>{paginatedHistory.map((item) => <tr key={item.id}><td className="ai-insights-table__cell--compact">#{item.id}</td><td>{item.title}</td><td><StatusBadge label={getFocusLabelVi(item.focus)} variant="type" /></td><td>{item.generatedBy}</td><td>{item.generatedAt}</td><td className="ai-insights-table__cell--compact"><button type="button" className="ai-insights-button ai-insights-button--secondary ai-insights-button--inline" onClick={() => setSelectedHistoryItem(item)}>Chi tiết</button></td></tr>)}</tbody></table></div><div className="ai-insights-pagination"><span className="ai-insights-pagination__info">Trang {historyPage} / {historyTotalPages}</span><div className="ai-insights-pagination__actions"><button type="button" onClick={() => setHistoryPage((prev) => Math.max(1, prev - 1))} disabled={historyPage === 1}>Trước</button><button type="button" onClick={() => setHistoryPage((prev) => Math.min(historyTotalPages, prev + 1))} disabled={historyPage === historyTotalPages}>Sau</button></div></div></>}
       </SectionCard>
 
       <BaseModal isOpen={Boolean(selectedHistoryItem)} title={selectedHistoryItem?.title ?? "Chi tiết phân tích AI"} description={selectedHistoryItem ? getFocusLabelVi(selectedHistoryItem.focus) : "Chi tiết phân tích AI"} onClose={() => setSelectedHistoryItem(null)} maxWidth="980px">
-        {selectedHistoryItem ? <div className="ai-insights-latest"><div className="ai-insights-latest__header"><div><h3>{selectedHistoryItem.title}</h3><p>{selectedHistoryItem.generatedAt} / {selectedHistoryItem.generatedBy}</p></div><div className="ai-insights-latest__badges"><StatusBadge label={getFocusLabelVi(selectedHistoryItem.focus)} variant="type" /></div></div><div className="ai-insights-detail-meta"><article className="ai-insights-detail-meta__item"><span>Kết luận nhanh</span><strong>{selectedHistoryItem.focus === "Executive Summary" ? (overview.executiveSummary[0] ?? selectedHistoryItem.summary) : selectedHistoryItem.summary}</strong></article><article className="ai-insights-detail-meta__item"><span>Khuyến nghị sử dụng</span><strong>{selectedHistoryUsesFallback ? "Bản lưu này đang được diễn giải lại từ số liệu overview hiện tại để admin đọc nhanh theo từng mục điều hành." : "Nội dung chi tiết bên dưới lấy trực tiếp từ bản phân tích đã lưu và được nhóm theo các mục dễ đọc hơn."}</strong></article></div><div className="ai-insights-detail-sections">{selectedHistorySections.map((section) => <article key={`${selectedHistoryItem.id}-${section.title}`} className="ai-insights-detail-section"><h4>{section.title}</h4><ul>{section.items.map((item, index) => <li key={`${section.title}-${index}`}>{item}</li>)}</ul></article>)}</div></div> : null}
+        {selectedHistoryItem ? <div className="ai-insights-latest"><div className="ai-insights-latest__header"><div><h3>{selectedHistoryItem.title}</h3><p>{selectedHistoryItem.generatedAt} / {selectedHistoryItem.generatedBy}</p></div><div className="ai-insights-latest__badges"><StatusBadge label={getFocusLabelVi(selectedHistoryItem.focus)} variant="type" /></div></div><div className="ai-insights-detail-meta"><article className="ai-insights-detail-meta__item"><span>Kết luận nhanh</span><strong>{selectedHistoryItem.focus === "Executive Summary" ? (overview.executiveSummary[0] ?? selectedHistoryItem.summary) : selectedHistoryItem.summary}</strong></article><article className="ai-insights-detail-meta__item"><span>Khuyến nghị sử dụng</span><strong>{selectedHistoryUsesFallback ? "Bản lưu này đang được diễn giải lại từ số liệu overview hiện tại để quản trị viên đọc nhanh theo từng mục điều hành." : "Nội dung chi tiết bên dưới lấy trực tiếp từ bản phân tích đã lưu và được nhóm theo các mục dễ đọc hơn."}</strong></article></div><div className="ai-insights-detail-sections">{selectedHistorySections.map((section) => <article key={`${selectedHistoryItem.id}-${section.title}`} className="ai-insights-detail-section"><h4>{section.title}</h4><ul>{section.items.map((item, index) => <li key={`${section.title}-${index}`}>{item}</li>)}</ul></article>)}</div></div> : null}
       </BaseModal>
 
       <ToastContainer toasts={toasts} onClose={removeToast} />

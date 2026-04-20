@@ -6,6 +6,18 @@ import type {
 } from "../types/reportModeration";
 import { getAdminProfile } from "../utils/adminSession";
 
+const repairMojibake = (value: string) => {
+  if (!value || !/[ÃÂáºá»Ä]/.test(value)) {
+    return value;
+  }
+
+  try {
+    return decodeURIComponent(escape(value));
+  } catch {
+    return value;
+  }
+};
+
 const REPORT_REASON_LABELS: Record<string, string> = {
   SUSPICIOUS_PRICING:
     "Giá bán có dấu hiệu bất thường so với mặt bằng chung.",
@@ -21,6 +33,14 @@ const REPORT_REASON_LABELS: Record<string, string> = {
     "Bài đăng có thể chứa nội dung bị cấm hoặc không phù hợp.",
   SPAM_PROMOTION:
     "Nội dung quảng bá lặp lại quá nhiều hoặc cố tình dẫn người dùng ra ngoài nền tảng.",
+  MISLEADING_INFO:
+    "Thông tin mô tả đang gây hiểu nhầm so với nội dung thực tế của bài đăng.",
+  OFF_PLATFORM_CONTACT:
+    "Bài đăng đang điều hướng người mua liên hệ hoặc thanh toán ngoài nền tảng.",
+  MisleadingInfo: "Thông tin gây hiểu nhầm",
+  "Misleading Info": "Thông tin gây hiểu nhầm",
+  OffPlatformContact: "Liên hệ ngoài nền tảng",
+  "Off Platform Contact": "Liên hệ ngoài nền tảng",
 };
 
 const REPORT_REASON_CODE_LABELS: Record<string, string> = {
@@ -31,7 +51,47 @@ const REPORT_REASON_CODE_LABELS: Record<string, string> = {
   DUPLICATE_LISTING: "Bài đăng trùng lặp",
   PROHIBITED_CONTENT: "Nội dung bị cấm",
   SPAM_PROMOTION: "Quảng bá quá mức",
+  MISLEADING_INFO: "Thông tin gây hiểu nhầm",
+  OFF_PLATFORM_CONTACT: "Liên hệ ngoài nền tảng",
+  MisleadingInfo: "Thông tin gây hiểu nhầm",
+  "Misleading Info": "Thông tin gây hiểu nhầm",
+  OffPlatformContact: "Liên hệ ngoài nền tảng",
+  "Off Platform Contact": "Liên hệ ngoài nền tảng",
 };
+
+const normalizeReasonKey = (value: string | null | undefined) =>
+  repairMojibake(value?.trim() || "");
+
+const canonicalizeReasonKey = (value: string) =>
+  normalizeReasonKey(value)
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .replace(/[\s-]+/g, "_")
+    .replace(/_+/g, "_")
+    .toUpperCase();
+
+const compactReasonKey = (value: string) =>
+  canonicalizeReasonKey(value).replaceAll("_", "");
+
+const buildReasonLookup = (labels: Record<string, string>) => {
+  const lookup: Record<string, string> = {};
+
+  Object.entries(labels).forEach(([key, label]) => {
+    const normalized = normalizeReasonKey(key);
+
+    if (!normalized) {
+      return;
+    }
+
+    lookup[normalized] = label;
+    lookup[canonicalizeReasonKey(normalized)] = label;
+    lookup[compactReasonKey(normalized)] = label;
+  });
+
+  return lookup;
+};
+
+const REPORT_REASON_LABEL_LOOKUP = buildReasonLookup(REPORT_REASON_LABELS);
+const REPORT_REASON_CODE_LOOKUP = buildReasonLookup(REPORT_REASON_CODE_LABELS);
 
 const REPORT_TEXT_LABELS: Record<string, string> = {
   "Potential bait pricing. Needs manual moderation follow-up.":
@@ -62,8 +122,24 @@ const REPORT_TEXT_LABELS: Record<string, string> = {
     "Tiêu đề bài đăng và thông tin sản phẩm chưa khớp với bộ ảnh đính kèm.",
   "The seller describes a different bonsai shape in the text than in the gallery.":
     "Phần mô tả đang ghi kiểu dáng bonsai khác với hình ảnh trong thư viện.",
-  "The post was published under the wrong category and disrupts category relevance":
-    "Bài đăng đang được xếp sai danh mục và làm giảm độ chính xác của phân loại.",
+  "Image set looks duplicated from a third-party seller page.":
+    "Bộ ảnh trông giống ảnh bị lấy lại từ một trang bán hàng bên thứ ba.",
+  "Contains messaging that bypasses marketplace payment flow.":
+    "Nội dung có dấu hiệu điều hướng người mua bỏ qua luồng thanh toán của sàn.",
+  "Content was edited and compliant version was republished.":
+    "Nội dung đã được chỉnh sửa và phiên bản phù hợp đã được đăng lại.",
+  "The post description overstates the maturity and shape training of the tree.":
+    "Mô tả bài đăng đang nói quá về độ trưởng thành và mức độ tạo dáng của cây.",
+  "Customer noted mismatch between wording and actual plant size.":
+    "Người dùng phản ánh mô tả không khớp với kích thước thực tế của cây.",
+  "Needs moderation note and content clean-up.":
+    "Cần ghi chú kiểm duyệt và làm sạch lại nội dung.",
+  "Seller removed duplicated promotional slogans and listing stayed visible.":
+    "Người bán đã gỡ các câu quảng bá lặp và bài đăng vẫn được giữ hiển thị.",
+  "The reported price looks too low compared with product material quality.":
+    "Mức giá bị báo cáo đang thấp bất thường so với chất lượng vật liệu của sản phẩm.",
+  "Possible bait price to attract off-platform contact.":
+    "Có khả năng đây là giá mồi để dẫn người mua sang liên hệ ngoài nền tảng.",
 };
 
 const formatDateTime = (value: string | null) => {
@@ -96,75 +172,82 @@ const mapStatus = (value: string | null): ReportModerationStatus => {
   }
 };
 
+const humanizeCode = (value: string) =>
+  value.replaceAll("_", " ").replace(/([a-z])([A-Z])/g, "$1 $2").trim();
+
+const toVietnameseTitle = (value: string) =>
+  value
+    .split(" ")
+    .map((segment) =>
+      segment ? segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase() : "",
+    )
+    .join(" ");
+
 const translateReportText = (
   value: string | null | undefined,
   fallback: string,
 ) => {
-  const normalized = value?.trim();
+  const normalized = normalizeReasonKey(value);
   if (!normalized) {
     return fallback;
   }
 
   return (
     REPORT_TEXT_LABELS[normalized] ||
-    REPORT_REASON_LABELS[normalized] ||
+    REPORT_REASON_LABEL_LOOKUP[normalized] ||
+    REPORT_REASON_LABEL_LOOKUP[canonicalizeReasonKey(normalized)] ||
+    REPORT_REASON_LABEL_LOOKUP[compactReasonKey(normalized)] ||
     normalized
   );
 };
 
 const translateReasonCode = (value: string | null | undefined) => {
-  const normalized = value?.trim();
+  const normalized = normalizeReasonKey(value);
   if (!normalized) {
     return "Chung";
   }
 
-  if (REPORT_REASON_CODE_LABELS[normalized]) {
-    return REPORT_REASON_CODE_LABELS[normalized];
+  const canonical = canonicalizeReasonKey(normalized);
+  const compact = compactReasonKey(normalized);
+
+  if (REPORT_REASON_CODE_LOOKUP[normalized]) {
+    return REPORT_REASON_CODE_LOOKUP[normalized];
   }
 
-  return normalized
-    .split("_")
-    .map((segment) =>
-      segment
-        ? segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase()
-        : "",
-    )
-    .join(" ");
+  if (REPORT_REASON_CODE_LOOKUP[canonical]) {
+    return REPORT_REASON_CODE_LOOKUP[canonical];
+  }
+
+  if (REPORT_REASON_CODE_LOOKUP[compact]) {
+    return REPORT_REASON_CODE_LOOKUP[compact];
+  }
+
+  return toVietnameseTitle(humanizeCode(normalized));
 };
 
 const mapReportToUi = (item: ApiReportModerationResponse): ReportModerationItem => {
   const reporterDisplayName =
-    item.reporterDisplayName?.trim() ||
+    repairMojibake(item.reporterDisplayName?.trim() || "") ||
     (item.reporterId ? `Người dùng #${item.reporterId}` : "Ẩn danh");
 
   const reporterSecondaryLabel =
-    item.reporterEmail?.trim() ||
-    (item.reporterId
-      ? `Mã người báo cáo ${item.reporterId}`
-      : "Báo cáo ẩn danh");
+    repairMojibake(item.reporterEmail?.trim() || "") ||
+    (item.reporterId ? `Mã người báo cáo ${item.reporterId}` : "Báo cáo ẩn danh");
 
   return {
     id: item.reportId,
     reporterLabel: reporterDisplayName,
     reporterSecondaryLabel,
     postLabel:
-      item.postTitle?.trim() ||
+      repairMojibake(item.postTitle?.trim() || "") ||
       (item.postId ? `Bài đăng #${item.postId}` : "Chưa liên kết bài đăng"),
     shopLabel:
-      item.shopName?.trim() ||
-      (item.reportShopId
-        ? `Cửa hàng #${item.reportShopId}`
-        : "Chưa liên kết cửa hàng"),
+      repairMojibake(item.shopName?.trim() || "") ||
+      (item.reportShopId ? `Cửa hàng #${item.reportShopId}` : "Chưa liên kết cửa hàng"),
     reasonCode: translateReasonCode(item.reportReasonCode),
     reason: translateReportText(item.reportReason, "Chưa có lý do báo cáo"),
-    reporterNote: translateReportText(
-      item.reportNote,
-      "Chưa có ghi chú người báo cáo",
-    ),
-    adminNote: translateReportText(
-      item.adminNote,
-      "Chưa có ghi chú từ quản trị viên",
-    ),
+    reporterNote: translateReportText(item.reportNote, "Chưa có ghi chú người báo cáo"),
+    adminNote: translateReportText(item.adminNote, "Chưa có ghi chú từ quản trị viên"),
     evidenceUrls: Array.isArray(item.evidenceUrls)
       ? item.evidenceUrls
           .filter((value): value is string => typeof value === "string")
@@ -180,9 +263,12 @@ const mapReportToUi = (item: ApiReportModerationResponse): ReportModerationItem 
             typeof item.templateAudit.templateId === "number"
               ? item.templateAudit.templateId
               : null,
-          templateName: item.templateAudit.templateName?.trim() || null,
-          templateType: item.templateAudit.templateType?.trim() || null,
-          finalMessage: item.templateAudit.finalMessage?.trim() || null,
+          templateName:
+            repairMojibake(item.templateAudit.templateName?.trim() || "") || null,
+          templateType:
+            repairMojibake(item.templateAudit.templateType?.trim() || "") || null,
+          finalMessage:
+            repairMojibake(item.templateAudit.finalMessage?.trim() || "") || null,
         }
       : null,
   };

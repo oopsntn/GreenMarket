@@ -1,18 +1,28 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import { db } from "../config/db.ts";
+import {
+    PERSONAL_PLAN_SLOT_CODE,
+    SHOP_REGISTRATION_SLOT_CODE,
+    SHOP_VIP_SLOT_CODE,
+    isBoostPostSlotCode,
+} from "../constants/promotion.ts";
 import {
     attributes,
     categories,
     categoryAttributes,
+    businessRoles,
     eventLogs,
     paymentTxn,
+    payoutRequests,
+    promotionPackagePrices,
     posts,
     promotionPackages,
     reports,
     shops,
     users,
 } from "../models/schema/index.ts";
+import { adminAccountPackageService } from "./adminAccountPackage.service.ts";
 import {
     adminPlacementSlotCatalogService,
     type AdminPlacementSlotCatalogItem,
@@ -165,8 +175,16 @@ type PaymentOrder = {
     email: string;
     packageName: string;
     slot: string;
+    slotCode: string | null;
     amount: number;
     createdAt: Date | null;
+};
+
+type HostPayoutOrder = {
+    payoutRequestId: number;
+    userId: number;
+    amount: number;
+    processedAt: Date | null;
 };
 
 const parseDateRange = (fromDate?: string, toDate?: string): DateRange => {
@@ -374,53 +392,215 @@ const buildExportContent = (
 
 const getGeneratedByLabel = (generatedBy: string) => generatedBy || "Quản trị viên hệ thống";
 
-const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
-    const slotCatalog = await adminPlacementSlotCatalogService.getCatalog();
-    const transactions = await db
-        .select({
-            paymentTxnId: paymentTxn.paymentTxnId,
-            paymentTxnUserId: paymentTxn.paymentTxnUserId,
-            paymentTxnAmount: paymentTxn.paymentTxnAmount,
-            paymentTxnStatus: paymentTxn.paymentTxnStatus,
-            paymentTxnCreatedAt: paymentTxn.paymentTxnCreatedAt,
-            userDisplayName: users.userDisplayName,
-            userEmail: users.userEmail,
-            packageId: promotionPackages.promotionPackageId,
-            packageTitle: promotionPackages.promotionPackageTitle,
-        })
-        .from(paymentTxn)
-        .leftJoin(users, eq(paymentTxn.paymentTxnUserId, users.userId))
-        .leftJoin(
-            promotionPackages,
-            eq(paymentTxn.paymentTxnPackageId, promotionPackages.promotionPackageId),
-        )
-        .orderBy(desc(paymentTxn.paymentTxnCreatedAt));
+const isPriceEffectiveAt = (
+    effectiveFrom: Date | null,
+    effectiveTo: Date | null,
+    createdAt: Date | null,
+) => {
+    if (!createdAt) {
+        return false;
+    }
 
-    const allSlots = await db.select().from(promotionPackages);
+    if (effectiveFrom && createdAt.getTime() < effectiveFrom.getTime()) {
+        return false;
+    }
+
+    if (effectiveTo && createdAt.getTime() >= effectiveTo.getTime()) {
+        return false;
+    }
+
+    return true;
+};
+
+const ACCOUNT_SLOT_LABEL_BY_CODE: Record<string, string> = {
+    [SHOP_REGISTRATION_SLOT_CODE]: "Gói tài khoản",
+    [PERSONAL_PLAN_SLOT_CODE]: "Gói tài khoản",
+    [SHOP_VIP_SLOT_CODE]: "Danh sách nhà vườn VIP",
+};
+
+const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
+    const [slotCatalog, accountPackages, transactions, allSlots, allPriceRows] = await Promise.all([
+        adminPlacementSlotCatalogService.getCatalog(),
+        adminAccountPackageService.getCatalog(),
+        db
+            .select({
+                paymentTxnId: paymentTxn.paymentTxnId,
+                paymentTxnUserId: paymentTxn.paymentTxnUserId,
+                paymentTxnAmount: paymentTxn.paymentTxnAmount,
+                paymentTxnStatus: paymentTxn.paymentTxnStatus,
+                paymentTxnCreatedAt: paymentTxn.paymentTxnCreatedAt,
+                paymentTxnPriceId: paymentTxn.paymentTxnPriceId,
+                userDisplayName: users.userDisplayName,
+                userEmail: users.userEmail,
+                packageId: promotionPackages.promotionPackageId,
+                packageTitle: promotionPackages.promotionPackageTitle,
+            })
+            .from(paymentTxn)
+            .leftJoin(users, eq(paymentTxn.paymentTxnUserId, users.userId))
+            .leftJoin(
+                promotionPackages,
+                eq(paymentTxn.paymentTxnPackageId, promotionPackages.promotionPackageId),
+            )
+            .orderBy(desc(paymentTxn.paymentTxnCreatedAt)),
+        db.select().from(promotionPackages),
+        db.select().from(promotionPackagePrices),
+    ]);
     const slotByPackageId = new Map<number, number | null>();
+    const packageTitleById = new Map<number, string>();
     allSlots.forEach((item) => {
         slotByPackageId.set(item.promotionPackageId, item.promotionPackageSlotId);
+        packageTitleById.set(
+            item.promotionPackageId,
+            item.promotionPackageTitle?.trim() || `Gói #${item.promotionPackageId}`,
+        );
+    });
+
+    const packageIdByPriceId = new Map<number, number>();
+    allPriceRows.forEach((item) => {
+        packageIdByPriceId.set(item.priceId, item.packageId);
     });
 
     const slotNameById = new Map<number, string>();
+    const slotCodeById = new Map<number, string>();
     slotCatalog.forEach((item) => {
         slotNameById.set(item.id, item.label);
+        slotCodeById.set(item.id, item.code);
     });
+
+    const accountPackageByPrice = new Map<
+        number,
+        Array<{ title: string; slot: string; slotCode: string }>
+    >();
+    accountPackages.forEach((item) => {
+        const slotCode =
+            item.code === "OWNER_LIFETIME"
+                ? SHOP_REGISTRATION_SLOT_CODE
+                : item.code === "PERSONAL_MONTHLY"
+                    ? PERSONAL_PLAN_SLOT_CODE
+                    : SHOP_VIP_SLOT_CODE;
+        const amountKey = Math.round(item.price);
+        const current = accountPackageByPrice.get(amountKey) ?? [];
+        current.push({
+            title: item.title.trim(),
+            slot: ACCOUNT_SLOT_LABEL_BY_CODE[slotCode] ?? "Gói tài khoản",
+            slotCode,
+        });
+        accountPackageByPrice.set(amountKey, current);
+    });
+
+    const resolvePackageId = (item: (typeof transactions)[number]) => {
+        if (item.packageId) {
+            return item.packageId;
+        }
+
+        if (item.paymentTxnPriceId && packageIdByPriceId.has(item.paymentTxnPriceId)) {
+            return packageIdByPriceId.get(item.paymentTxnPriceId) ?? null;
+        }
+
+        const amount = Number(item.paymentTxnAmount ?? 0);
+        const matchedPrices = allPriceRows.filter(
+            (priceRow) =>
+                Number(priceRow.price ?? 0) === amount &&
+                isPriceEffectiveAt(
+                    priceRow.effectiveFrom,
+                    priceRow.effectiveTo,
+                    item.paymentTxnCreatedAt,
+                ),
+        );
+
+        if (matchedPrices.length === 1) {
+            return matchedPrices[0]?.packageId ?? null;
+        }
+
+        return null;
+    };
 
     return transactions
         .filter((item) => item.paymentTxnStatus === "success")
-        .map((item) => ({
-            paymentTxnId: item.paymentTxnId,
-            userId: item.paymentTxnUserId,
-            customerName: item.userDisplayName?.trim() || `Người dùng #${item.paymentTxnUserId}`,
-            email: item.userEmail?.trim() || "Chưa có email",
-            packageName: item.packageTitle?.trim() || "Chưa xác định gói",
-            slot:
-                slotNameById.get(slotByPackageId.get(item.packageId ?? -1) ?? -1) ||
-                "Vị trí chưa xác định",
-            amount: Number(item.paymentTxnAmount ?? 0),
-            createdAt: item.paymentTxnCreatedAt,
-        }));
+        .map((item) => {
+            const resolvedPackageId = resolvePackageId(item);
+            const resolvedSlotId = slotByPackageId.get(resolvedPackageId ?? -1) ?? null;
+            const resolvedSlotCode =
+                resolvedSlotId !== null ? slotCodeById.get(resolvedSlotId) ?? null : null;
+            const resolvedSlotLabel =
+                resolvedSlotId !== null ? slotNameById.get(resolvedSlotId) ?? null : null;
+            const amount = Math.round(Number(item.paymentTxnAmount ?? 0));
+            const accountPackageCandidates = accountPackageByPrice.get(amount) ?? [];
+            const fallbackAccountPackage =
+                !resolvedPackageId && accountPackageCandidates.length === 1
+                    ? accountPackageCandidates[0]
+                    : null;
+            const slotCode = fallbackAccountPackage?.slotCode ?? resolvedSlotCode;
+            const slotLabel =
+                fallbackAccountPackage?.slot ||
+                (slotCode
+                    ? ACCOUNT_SLOT_LABEL_BY_CODE[slotCode] ?? resolvedSlotLabel
+                    : resolvedSlotLabel);
+
+            const basePayment: PaymentOrder = {
+                paymentTxnId: item.paymentTxnId,
+                userId: item.paymentTxnUserId,
+                customerName:
+                    item.userDisplayName?.trim() || `Người dùng #${item.paymentTxnUserId}`,
+                email: item.userEmail?.trim() || "Chưa có email",
+                packageName:
+                    item.packageTitle?.trim() ||
+                    packageTitleById.get(resolvedPackageId ?? -1) ||
+                    "Giao dịch chưa gắn gói",
+                slot:
+                    slotNameById.get(
+                        slotByPackageId.get(resolvedPackageId ?? -1) ?? -1,
+                    ) || "Nhóm gói chưa xác định",
+                slotCode: null,
+                amount: Number(item.paymentTxnAmount ?? 0),
+                createdAt: item.paymentTxnCreatedAt,
+            };
+
+            return {
+                ...basePayment,
+                customerName:
+                    item.userDisplayName?.trim() || `Người dùng #${item.paymentTxnUserId}`,
+                email: item.userEmail?.trim() || "Chưa có email",
+                packageName:
+                    item.packageTitle?.trim() ||
+                    packageTitleById.get(resolvedPackageId ?? -1) ||
+                    fallbackAccountPackage?.title ||
+                    "Giao dịch chưa gắn gói",
+                slot: slotLabel || "Vị trí chưa xác định",
+                slotCode,
+                amount,
+            };
+        });
+};
+
+const getCompletedHostPayouts = async (): Promise<HostPayoutOrder[]> => {
+    const rows = await db
+        .select({
+            payoutRequestId: payoutRequests.payoutRequestId,
+            userId: payoutRequests.payoutRequestUserId,
+            amount: payoutRequests.payoutRequestAmount,
+            processedAt: payoutRequests.payoutRequestProcessedAt,
+        })
+        .from(payoutRequests)
+        .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
+        .leftJoin(
+            businessRoles,
+            eq(users.userBusinessRoleId, businessRoles.businessRoleId),
+        )
+        .where(
+            and(
+                eq(payoutRequests.payoutRequestStatus, "completed"),
+                eq(sql`upper(${businessRoles.businessRoleCode})`, "HOST"),
+            ),
+        )
+        .orderBy(desc(payoutRequests.payoutRequestProcessedAt));
+
+    return rows.map((item) => ({
+        payoutRequestId: item.payoutRequestId,
+        userId: item.userId,
+        amount: Number(item.amount ?? 0),
+        processedAt: item.processedAt,
+    }));
 };
 
 const buildExportHistoryItem = (
@@ -514,11 +694,17 @@ export const adminReportingService = {
             getSuccessfulPayments(),
             adminPlacementSlotCatalogService.getCatalog(),
         ]);
+        const reportingSlotCatalog = slotCatalog.filter((item) => isBoostPostSlotCode(item.code));
+        const boostSlotLabels = new Set(reportingSlotCatalog.map((item) => item.label));
 
         const filteredBoostedPosts = boostedPosts.filter((item) =>
             doesRangeOverlap(item.startDate, item.endDate, range),
         );
-        const filteredPayments = payments.filter((item) => isDateInRange(item.createdAt, range));
+        const filteredPayments = payments.filter(
+            (item) =>
+                isDateInRange(item.createdAt, range) &&
+                boostSlotLabels.has(item.slot),
+        );
 
         const totalViews = filteredBoostedPosts.reduce((sum, item) => sum + item.impressions, 0);
         const totalClicks = filteredBoostedPosts.reduce((sum, item) => sum + item.clicks, 0);
@@ -552,14 +738,14 @@ export const adminReportingService = {
 
         const activeSlotLabels = Array.from(
             new Set(
-                slotCatalog
+                reportingSlotCatalog
                     .map((item) => item.label)
                     .filter((label) => placementMap.has(label)),
             ),
         );
         const activeTrafficSlotLabels = Array.from(
             new Set(
-                slotCatalog
+                reportingSlotCatalog
                     .map((item) => item.label)
                     .filter((label) =>
                         filteredBoostedPosts.some(
@@ -699,16 +885,70 @@ export const adminReportingService = {
             },
         ];
 
-        return { kpiCards, topPlacements, dailyTraffic, slotCatalog };
+        return { kpiCards, topPlacements, dailyTraffic, slotCatalog: reportingSlotCatalog };
     },
 
     async getRevenueSummary(fromDate?: string, toDate?: string): Promise<RevenueSummaryResponse> {
+        return this.getRevenueSummaryWithHostCosts(fromDate, toDate);
+    },
+        /*
+
+        
+
+        const summaryCards: RevenueCard[] = [
+            {
+                title: "Tổng doanh thu",
+                value: formatCurrency(totalRevenue),
+                note: `${filteredPayments.length} đơn hàng thanh toán thành công trong kỳ`,
+            },
+            {
+                title: "Gói có phát sinh doanh thu",
+                value: formatNumber(packageNames.size),
+                note: "Các gói có đơn thanh toán thành công trong kỳ",
+            },
+            {
+                title: "Giá trị đơn hàng trung bình",
+                value: formatCurrency(totalHostPayoutCost),
+                note: `${filteredHostPayouts.length} completed Host payout request(s) in period`,
+            },
+            {
+                title: "Estimated Profit",
+                value: formatCurrency(provisionalProfit),
+                note: "Revenue minus completed Host / News payout cost",
+            },
+            {
+                title: "Avg. Order Value",
+                value: formatCurrency(avgOrderValue),
+                note: "Giá trị trung bình của một giao dịch thành công",
+            },
+            {
+                title: "Vị trí có doanh thu cao nhất",
+                value: topSlot?.[0] ?? "Chưa có dữ liệu",
+                note: topSlot
+                    ? formatCurrency(topSlot[1])
+                    : "Chưa có đơn thanh toán thành công trong kỳ",
+            },
+        ];
+
+        return { summaryCards, rows, slotCatalog };
+    },
+
+        */
+    async getRevenueSummaryWithHostCosts(
+        fromDate?: string,
+        toDate?: string,
+    ): Promise<RevenueSummaryResponse> {
         const range = parseDateRange(fromDate, toDate);
-        const [payments, slotCatalog] = await Promise.all([
+        const [payments, hostPayouts, slotCatalog] = await Promise.all([
             getSuccessfulPayments(),
+            getCompletedHostPayouts(),
             adminPlacementSlotCatalogService.getCatalog(),
         ]);
+
         const filteredPayments = payments.filter((item) => isDateInRange(item.createdAt, range));
+        const filteredHostPayouts = hostPayouts.filter((item) =>
+            isDateInRange(item.processedAt, range),
+        );
 
         const grouped = new Map<string, { packageName: string; slot: string; orders: number; revenue: number }>();
         const revenueBySlot = new Map<string, number>();
@@ -722,6 +962,7 @@ export const adminReportingService = {
                 orders: 0,
                 revenue: 0,
             };
+
             current.orders += 1;
             current.revenue += item.amount;
             grouped.set(key, current);
@@ -740,32 +981,47 @@ export const adminReportingService = {
             }));
 
         const totalRevenue = filteredPayments.reduce((sum, item) => sum + item.amount, 0);
+        const totalHostPayoutCost = filteredHostPayouts.reduce(
+            (sum, item) => sum + item.amount,
+            0,
+        );
+        const provisionalProfit = totalRevenue - totalHostPayoutCost;
         const avgOrderValue = filteredPayments.length > 0 ? totalRevenue / filteredPayments.length : 0;
         const topSlot = Array.from(revenueBySlot.entries())
             .sort((left, right) => right[1] - left[1])[0];
 
         const summaryCards: RevenueCard[] = [
             {
-                title: "Tổng doanh thu",
+                title: "Total Revenue",
                 value: formatCurrency(totalRevenue),
-                note: `${filteredPayments.length} đơn hàng thanh toán thành công trong kỳ`,
+                note: `${filteredPayments.length} successful order(s) in period`,
             },
             {
-                title: "Gói có phát sinh doanh thu",
+                title: "Active Packages",
                 value: formatNumber(packageNames.size),
-                note: "Các gói có đơn thanh toán thành công trong kỳ",
+                note: "Packages with paid orders in period",
             },
             {
-                title: "Giá trị đơn hàng trung bình",
+                title: "Host / News Payout Cost",
+                value: formatCurrency(totalHostPayoutCost),
+                note: `${filteredHostPayouts.length} completed Host payout request(s) in period`,
+            },
+            {
+                title: "Estimated Profit",
+                value: formatCurrency(provisionalProfit),
+                note: "Revenue minus completed Host / News payout cost",
+            },
+            {
+                title: "Avg. Order Value",
                 value: formatCurrency(avgOrderValue),
-                note: "Giá trị trung bình của một giao dịch thành công",
+                note: "Average successful package payment",
             },
             {
-                title: "Vị trí có doanh thu cao nhất",
-                value: topSlot?.[0] ?? "Chưa có dữ liệu",
+                title: "Top Slot Revenue",
+                value: topSlot?.[0] ?? "No data yet",
                 note: topSlot
                     ? formatCurrency(topSlot[1])
-                    : "Chưa có đơn thanh toán thành công trong kỳ",
+                    : "No paid orders in period",
             },
         ];
 

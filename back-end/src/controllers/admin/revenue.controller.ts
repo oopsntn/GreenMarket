@@ -6,7 +6,7 @@ export const getRevenueSummary = async (
     res: Response,
 ): Promise<void> => {
     try {
-        const data = await adminReportingService.getRevenueSummary(
+        const data = await adminReportingService.getRevenueSummaryWithHostCosts(
             req.query.fromDate,
             req.query.toDate,
         );

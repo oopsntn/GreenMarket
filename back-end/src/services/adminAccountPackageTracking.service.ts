@@ -1,6 +1,10 @@
 import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { db } from "../config/db.ts";
-import { SHOP_VIP_SLOT_CODE } from "../constants/promotion.ts";
+import {
+  PERSONAL_PLAN_SLOT_CODE,
+  SHOP_REGISTRATION_SLOT_CODE,
+  SHOP_VIP_SLOT_CODE,
+} from "../constants/promotion.ts";
 import {
   paymentTxn,
   placementSlots,
@@ -117,6 +121,44 @@ const buildLatestPaymentMap = <
   return result;
 };
 
+const buildLatestPaymentListMap = <
+  T extends {
+    paymentTxnUserId: number;
+    paymentTxnAmount: unknown;
+    paymentTxnCreatedAt: Date | null;
+  },
+>(
+  rows: T[],
+) => {
+  const result = new Map<number, LatestPaymentSnapshot[]>();
+
+  for (const row of rows) {
+    const current = result.get(row.paymentTxnUserId) ?? [];
+    current.push({
+      amount: toSafeNumber(row.paymentTxnAmount),
+      createdAt: row.paymentTxnCreatedAt ?? null,
+    });
+    result.set(row.paymentTxnUserId, current);
+  }
+
+  return result;
+};
+
+const resolveLatestPaymentByAmount = (
+  paymentsByUser: Map<number, LatestPaymentSnapshot[]>,
+  userId: number,
+  expectedAmount: number,
+) => {
+  const rows = paymentsByUser.get(userId) ?? [];
+  const roundedExpectedAmount = Math.round(expectedAmount);
+
+  return (
+    rows.find((item) => Math.round(item.amount ?? 0) === roundedExpectedAmount) ??
+    rows[0] ??
+    null
+  );
+};
+
 const getLatestGenericPaymentsByUser = async () => {
   const rows = await db
     .select({
@@ -137,7 +179,7 @@ const getLatestGenericPaymentsByUser = async () => {
       desc(paymentTxn.paymentTxnId),
     );
 
-  return buildLatestPaymentMap(rows);
+  return buildLatestPaymentListMap(rows);
 };
 
 const getLatestVipPaymentsByUser = async () => {
@@ -259,7 +301,11 @@ export const adminAccountPackageTrackingService = {
     const rows: AdminAccountPackageTrackingRow[] = [];
 
     for (const item of activeShops) {
-      const latestPayment = latestGenericPayments.get(item.userId);
+      const latestPayment = resolveLatestPaymentByAmount(
+        latestGenericPayments,
+        item.userId,
+        ownerPackage.price,
+      );
       const status = buildStatus(null);
 
       rows.push({
@@ -287,7 +333,11 @@ export const adminAccountPackageTrackingService = {
     }
 
     for (const item of activePersonalPlans) {
-      const latestPayment = latestGenericPayments.get(item.userId);
+      const latestPayment = resolveLatestPaymentByAmount(
+        latestGenericPayments,
+        item.userId,
+        personalPackage.price,
+      );
       const status = buildStatus(item.planExpiresAt ?? null);
 
       rows.push({

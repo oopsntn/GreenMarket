@@ -201,9 +201,9 @@ function DashboardPage() {
               note: `${fromDate} đến ${toDate}`,
             },
             {
-              title: "Shop chờ duyệt",
+              title: "Cửa hàng chờ duyệt",
               value: String(pendingShops),
-              note: "Hồ sơ đang chờ admin kiểm tra",
+              note: "Hồ sơ đang chờ quản trị viên kiểm tra",
             },
             {
               title: "Báo cáo chờ xử lý",
@@ -331,7 +331,7 @@ function DashboardPage() {
       ) : pageError ? (
         <SectionCard title="Chỉ số điều hành rất ngắn">
           <EmptyState
-            title="Không thể tải dashboard"
+            title="Không thể tải màn tổng quan"
             description={pageError}
           />
         </SectionCard>
@@ -339,7 +339,7 @@ function DashboardPage() {
         <>
           <SectionCard
             title="Chỉ số điều hành rất ngắn"
-            description="Giữ lại các chỉ số mà admin cần đọc trong vài giây đầu tiên."
+            description="Giữ lại các chỉ số mà quản trị viên cần đọc trong vài giây đầu tiên."
           >
             <div className="dashboard-cards">
               {dashboardData.metrics.map((card) => (

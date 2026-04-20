@@ -23,6 +23,12 @@ type AccountPackageApiResponse = {
   statusLabel: AccountPackageStatus;
 };
 
+const GROUP_LABELS: Record<string, string> = {
+  Shop: "Nhà vườn VIP",
+  "Shop VIP": "Nhà vườn VIP",
+  VIP: "Nhà vườn VIP",
+};
+
 const formatCurrencyLabel = (value: number | string | null | undefined) => {
   const numeric = Number(value ?? 0);
 
@@ -52,11 +58,14 @@ const formatDateTimeLabel = (value: string | null | undefined) => {
   }).format(parsed);
 };
 
+const translateGroupLabel = (value: string) => GROUP_LABELS[value] || value;
+
 const normalizePackage = (
   item: AccountPackageApiResponse,
 ): AccountPackage => ({
   ...item,
   title: item.title.trim(),
+  groupLabel: translateGroupLabel(item.groupLabel),
   description: item.description.trim(),
   features: item.features.filter(Boolean),
   priceLabel: formatCurrencyLabel(item.price),
