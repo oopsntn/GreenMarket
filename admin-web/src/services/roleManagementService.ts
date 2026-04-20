@@ -59,7 +59,8 @@ const translateText = (value: string | null | undefined) => {
     "Review promotion package options": "Xem và đánh giá các gói quảng bá",
     "Create and maintain listings": "Tạo và duy trì bài đăng",
     "Manage shop content": "Quản lý nội dung shop",
-    "Request payout for host earnings": "Gửi yêu cầu rút doanh thu của chủ shop",
+    "Request payout for host earnings": "Theo dõi thu nhập Host đã được duyệt",
+    "Track approved article income": "Theo dõi thu nhập bài Host đã được duyệt",
     "Purchase promotion packages": "Mua gói quảng bá",
     "Track shop analytics": "Theo dõi phân tích của shop",
     "Prepare content and media for listings":
@@ -342,3 +343,4 @@ export const roleManagementService = {
     return this.fetchRoles();
   },
 };
+

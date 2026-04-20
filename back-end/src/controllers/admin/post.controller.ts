@@ -3,9 +3,8 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../config/db";
 import { AuthRequest } from "../../dtos/auth.ts";
 import { adminTemplates } from "../../models/schema/admin-templates.ts";
-import { eventLogs } from "../../models/schema/index.ts";
+import { eventLogs, mediaAssets } from "../../models/schema/index.ts";
 import { postAttributeValues } from "../../models/schema/post-attribute-values";
-import { postImages } from "../../models/schema/post-images";
 import { posts, type NewPost } from "../../models/schema/posts";
 import { notificationService } from "../../services/notification.service.ts";
 import { postLifecycleService } from "../../services/postLifecycle.service.ts";
@@ -100,20 +99,15 @@ const getPostTemplateAuditMeta = async (postId: number) => {
     .limit(1);
 
   const meta = (latestEvent?.eventLogMeta ?? null) as TemplateAuditLogMeta | null;
-
   if (!meta?.templateName && !meta?.templateId) {
     return null;
   }
 
   return {
-    templateId:
-      typeof meta.templateId === "number" ? meta.templateId : null,
-    templateName:
-      typeof meta.templateName === "string" ? meta.templateName : null,
-    templateType:
-      typeof meta.templateType === "string" ? meta.templateType : null,
-    finalMessage:
-      typeof meta.finalMessage === "string" ? meta.finalMessage : null,
+    templateId: typeof meta.templateId === "number" ? meta.templateId : null,
+    templateName: typeof meta.templateName === "string" ? meta.templateName : null,
+    templateType: typeof meta.templateType === "string" ? meta.templateType : null,
+    finalMessage: typeof meta.finalMessage === "string" ? meta.finalMessage : null,
   };
 };
 
@@ -152,11 +146,13 @@ export const createPost = async (
       .returning();
 
     if (images && images.length > 0) {
-      await db.insert(postImages).values(
+      await db.insert(mediaAssets).values(
         images.map((url, index) => ({
-          postId: newPost.postId,
-          imageUrl: url,
-          imageSortOrder: index,
+          targetType: "post",
+          targetId: newPost.postId,
+          mediaType: "image",
+          url,
+          sortOrder: index,
         })),
       );
     }
@@ -202,9 +198,19 @@ export const getPostById = async (
     }
 
     const images = await db
-      .select()
-      .from(postImages)
-      .where(eq(postImages.postId, idNumber));
+      .select({
+        imageId: mediaAssets.assetId,
+        imageUrl: mediaAssets.url,
+        imageSortOrder: mediaAssets.sortOrder,
+      })
+      .from(mediaAssets)
+      .where(
+        and(
+          eq(mediaAssets.targetType, "post"),
+          eq(mediaAssets.targetId, idNumber),
+          eq(mediaAssets.mediaType, "image"),
+        ),
+      );
     const attrValues = await db
       .select()
       .from(postAttributeValues)
@@ -306,7 +312,7 @@ export const updatePostStatus = async (
       .returning();
 
     await db.insert(eventLogs).values({
-      eventLogUserId: null,
+      eventLogUserId: req.user?.id || null,
       eventLogTargetType: "post",
       eventLogTargetId: updatedPost.postId,
       eventLogEventType: getPostEventType(normalizedStatus),
@@ -417,7 +423,7 @@ export const deletePost = async (
     }
 
     await db.insert(eventLogs).values({
-      eventLogUserId: null,
+      eventLogUserId: authReq.user?.id || null,
       eventLogTargetType: "post",
       eventLogTargetId: deletedPost.postId,
       eventLogEventType: "admin_post_hidden",

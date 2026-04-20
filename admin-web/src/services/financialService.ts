@@ -32,7 +32,6 @@ type FinancialListApiResponse = {
     totalRequests: number;
     pendingRequests: number;
     completedRequests: number;
-    rejectedRequests: number;
     pendingAmount: number;
     completedAmount: number;
   };
@@ -150,8 +149,6 @@ const getStatusLabel = (status: FinancialPayoutStatus) => {
       return "Chờ chi trả";
     case "completed":
       return "Đã chi trả";
-    case "rejected":
-      return "Từ chối";
     default:
       return "Không xác định";
   }
@@ -181,6 +178,7 @@ const translateMethodLabel = (value: string | null | undefined) => {
     "bank transfer": "Chuyển khoản ngân hàng",
     manualtransfer: "Chuyển khoản thủ công",
     "manual transfer": "Chuyển khoản thủ công",
+    bank: "Chuyển khoản ngân hàng",
     wallet: "Ví nội bộ",
     internalwallet: "Ví nội bộ",
   };

@@ -1,4 +1,4 @@
-export type FinancialPayoutStatus = "pending" | "completed" | "rejected";
+export type FinancialPayoutStatus = "pending" | "completed";
 export type FinancialAudienceFilter = "all" | "host" | "collaborator";
 
 export type FinancialPayoutRequest = {
@@ -23,7 +23,6 @@ export type FinancialPayoutSummary = {
   totalRequests: number;
   pendingRequests: number;
   completedRequests: number;
-  rejectedRequests: number;
   pendingAmount: number;
   completedAmount: number;
   pendingAmountLabel: string;

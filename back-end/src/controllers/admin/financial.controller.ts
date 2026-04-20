@@ -4,10 +4,10 @@ import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
   businessRoles,
-  earnings,
   eventLogs,
   hostContents,
-  payoutRequests,
+  ledgers,
+  transactions,
   users,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
@@ -17,17 +17,17 @@ import { hostIncomePolicyService } from "../../services/hostIncomePolicy.service
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
-const PAYOUT_EVENT_PREFIX = "admin_payout_request";
+const PAYOUT_EVENT_PREFIX = "admin_host_payout";
 
-type PayoutStatus = "pending" | "completed" | "rejected";
-type FundingStatus = "system_managed" | "not_required" | "recorded";
-
-type ProcessPayload = {
-  adminNote?: string;
-};
+type PayoutStatus = "pending" | "completed";
 
 const normalizeString = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
+
+const toNumber = (value: string | number | null | undefined) => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
   const page = Math.max(DEFAULT_PAGE, Number(queryPage) || DEFAULT_PAGE);
@@ -46,16 +46,55 @@ const getPerformedBy = (req: AuthRequest) =>
 const hostRoleCondition = () =>
   eq(sql`upper(${businessRoles.businessRoleCode})`, "HOST");
 
+const normalizePayoutStatus = (status: string | null | undefined): PayoutStatus => {
+  if ((status || "").trim().toLowerCase() === "success") {
+    return "completed";
+  }
+
+  return "pending";
+};
+
 const resolveAudienceLabel = () => "Host";
+
+const resolveSourceTypeLabel = (type: string | null) => {
+  switch ((type || "").toLowerCase()) {
+    case "article_payout":
+      return "Nhuận bút cố định theo bài";
+    case "performance_bonus":
+      return "Thưởng đạt mốc lượt xem";
+    default:
+      return "Khoản thu nhập khác";
+  }
+};
+
+const resolveHostContentStatusLabel = (status: string | null) => {
+  switch ((status || "").toLowerCase()) {
+    case "published":
+      return "Đã duyệt";
+    case "pending_admin":
+      return "Chờ duyệt";
+    case "rejected":
+      return "Không được duyệt";
+    default:
+      return status || "Không xác định";
+  }
+};
 
 const buildBaseConditions = (req: AuthRequest) => {
   const status = normalizeString(req.query.status).toLowerCase();
   const keyword = normalizeString(req.query.keyword);
 
-  const conditions = [hostRoleCondition()];
+  const conditions = [
+    eq(transactions.transactionType, "payout"),
+    hostRoleCondition(),
+  ];
 
   if (status && status !== "all") {
-    conditions.push(eq(payoutRequests.payoutRequestStatus, status));
+    if (status === "completed") {
+      conditions.push(eq(transactions.transactionStatus, "success"));
+    } else if (status === "pending") {
+      conditions.push(eq(transactions.transactionStatus, "pending"));
+    }
   }
 
   if (keyword) {
@@ -64,7 +103,7 @@ const buildBaseConditions = (req: AuthRequest) => {
         ilike(users.userDisplayName, `%${keyword}%`),
         ilike(users.userEmail, `%${keyword}%`),
         ilike(users.userMobile, `%${keyword}%`),
-        ilike(sql`cast(${payoutRequests.payoutRequestId} as text)`, `%${keyword}%`),
+        ilike(sql`cast(${transactions.transactionId} as text)`, `%${keyword}%`),
       )!,
     );
   }
@@ -72,144 +111,358 @@ const buildBaseConditions = (req: AuthRequest) => {
   return and(...conditions);
 };
 
-const buildNotificationMessage = (
-  status: Exclude<PayoutStatus, "pending">,
-  amount: number,
-  adminNote: string,
-) => {
-  if (status === "completed") {
-    return `Yêu cầu nhận nhuận bút ${amount.toLocaleString("vi-VN")} VND của bạn đã được admin xác nhận hoàn thành.`;
-  }
-
-  return adminNote
-    ? `Yêu cầu nhận nhuận bút của bạn đã bị từ chối. Lý do: ${adminNote}`
-    : "Yêu cầu nhận nhuận bút của bạn đã bị từ chối. Vui lòng liên hệ admin để biết thêm chi tiết.";
-};
-
-const resolveSourceTypeLabel = (type: string | null) => {
-  switch ((type || "").toLowerCase()) {
-    case "article_payout":
-      return "Nhuận bút nội dung";
-    case "performance_bonus":
-      return "Thưởng hiệu suất";
-    default:
-      return "Nguồn thu khác";
-  }
-};
-
-const resolveHostContentStatusLabel = (status: string | null) => {
-  switch ((status || "").toLowerCase()) {
-    case "published":
-      return "Đã xuất bản";
-    case "pending_admin":
-      return "Chờ duyệt";
-    case "rejected":
-      return "Bị từ chối";
-    default:
-      return status || "Không xác định";
-  }
-};
-
-const resolveFundingStatusLabel = (status: FundingStatus) => {
-  if (status === "system_managed") {
-    return "Hệ thống tự chi trả";
-  }
-
-  return "Không cần đối soát thêm";
-};
-
-const getHostPayoutRequestById = async (requestId: number) => {
-  const [request] = await db
+const getHostProfiles = async () => {
+  const rows = await db
     .select({
-      payoutRequestId: payoutRequests.payoutRequestId,
-      userId: payoutRequests.payoutRequestUserId,
-      amount: payoutRequests.payoutRequestAmount,
-      status: payoutRequests.payoutRequestStatus,
-      method: payoutRequests.payoutRequestMethod,
-      note: payoutRequests.payoutRequestNote,
-      createdAt: payoutRequests.payoutRequestCreatedAt,
-      processedAt: payoutRequests.payoutRequestProcessedAt,
+      userId: users.userId,
       userName: users.userDisplayName,
       userEmail: users.userEmail,
       userMobile: users.userMobile,
       roleCode: businessRoles.businessRoleCode,
     })
-    .from(payoutRequests)
-    .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
+    .from(users)
     .leftJoin(
       businessRoles,
       eq(users.userBusinessRoleId, businessRoles.businessRoleId),
     )
-    .where(and(eq(payoutRequests.payoutRequestId, requestId), hostRoleCondition()))
+    .where(hostRoleCondition());
+
+  return rows;
+};
+
+const syncPendingHostPayouts = async () => {
+  const hosts = await getHostProfiles();
+  if (hosts.length === 0) {
+    return;
+  }
+
+  await Promise.all(hosts.map((host) => hostIncomePolicyService.syncForUser(host.userId)));
+
+  const hostIds = hosts.map((host) => host.userId);
+  const [ledgerRows, payoutRows] = await Promise.all([
+    db
+      .select({
+        userId: ledgers.ledgerUserId,
+        totalEarned:
+          sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
+      })
+      .from(ledgers)
+      .where(
+        and(
+          eq(ledgers.ledgerType, "earning"),
+          inArray(ledgers.ledgerUserId, hostIds),
+        ),
+      )
+      .groupBy(ledgers.ledgerUserId),
+    db
+      .select({
+        transactionId: transactions.transactionId,
+        userId: transactions.transactionUserId,
+        amount: transactions.transactionAmount,
+        status: transactions.transactionStatus,
+        createdAt: transactions.transactionCreatedAt,
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionType, "payout"),
+          inArray(transactions.transactionUserId, hostIds),
+        ),
+      )
+      .orderBy(desc(transactions.transactionCreatedAt), desc(transactions.transactionId)),
+  ]);
+
+  const earnedByUser = new Map(
+    ledgerRows.map((item) => [item.userId, toNumber(item.totalEarned)]),
+  );
+
+  const payoutsByUser = new Map<
+    number,
+    Array<{
+      transactionId: number;
+      amount: number;
+      status: string | null;
+    }>
+  >();
+
+  for (const item of payoutRows) {
+    const current = payoutsByUser.get(item.userId) ?? [];
+    current.push({
+      transactionId: item.transactionId,
+      amount: toNumber(item.amount),
+      status: item.status,
+    });
+    payoutsByUser.set(item.userId, current);
+  }
+
+  for (const host of hosts) {
+    const payouts = payoutsByUser.get(host.userId) ?? [];
+    const paidOut = payouts
+      .filter((item) => item.status === "success")
+      .reduce((sum, item) => sum + item.amount, 0);
+    const pendingPayout = payouts.find((item) => item.status === "pending");
+    const remainingPayable = Math.max((earnedByUser.get(host.userId) ?? 0) - paidOut, 0);
+
+    if (remainingPayable <= 0 || pendingPayout) {
+      continue;
+    }
+
+    await db.insert(transactions).values({
+      transactionUserId: host.userId,
+      transactionAmount: remainingPayable.toFixed(2),
+      transactionCurrency: "VND",
+      transactionType: "payout",
+      transactionStatus: "pending",
+      transactionProvider: "bank_transfer",
+      transactionMeta: {
+        audience: "host",
+        note: "Đợt chi trả do hệ thống tổng hợp từ thu nhập Host chưa thanh toán.",
+      },
+      transactionCreatedAt: new Date(),
+      transactionUpdatedAt: new Date(),
+    });
+  }
+};
+
+const getHostPayoutTransactionById = async (transactionId: number) => {
+  const [row] = await db
+    .select({
+      payoutRequestId: transactions.transactionId,
+      userId: transactions.transactionUserId,
+      amount: transactions.transactionAmount,
+      method: transactions.transactionProvider,
+      status: transactions.transactionStatus,
+      note: sql<string>`${transactions.transactionMeta}->>'note'`,
+      createdAt: transactions.transactionCreatedAt,
+      updatedAt: transactions.transactionUpdatedAt,
+      processedAt: transactions.transactionProcessedAt,
+      userName: users.userDisplayName,
+      userEmail: users.userEmail,
+      userMobile: users.userMobile,
+      roleCode: businessRoles.businessRoleCode,
+    })
+    .from(transactions)
+    .leftJoin(users, eq(transactions.transactionUserId, users.userId))
+    .leftJoin(
+      businessRoles,
+      eq(users.userBusinessRoleId, businessRoles.businessRoleId),
+    )
+    .where(
+      and(
+        eq(transactions.transactionId, transactionId),
+        eq(transactions.transactionType, "payout"),
+        hostRoleCondition(),
+      ),
+    )
     .limit(1);
 
-  return request;
+  return row;
+};
+
+const getHostIncomeBreakdown = async (userId: number) => {
+  const [earningSummary, payoutSummary, sourceBreakdown, sourceDetails, recentRequests] =
+    await Promise.all([
+      db
+        .select({
+          totalEarned:
+            sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
+        })
+        .from(ledgers)
+        .where(
+          and(
+            eq(ledgers.ledgerUserId, userId),
+            eq(ledgers.ledgerType, "earning"),
+          ),
+        ),
+      db
+        .select({
+          paidOutAmount:
+            sql<string>`COALESCE(SUM(${transactions.transactionAmount}) FILTER (WHERE ${transactions.transactionStatus} = 'success'), 0)`,
+          pendingPayoutAmount:
+            sql<string>`COALESCE(SUM(${transactions.transactionAmount}) FILTER (WHERE ${transactions.transactionStatus} = 'pending'), 0)`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.transactionUserId, userId),
+            eq(transactions.transactionType, "payout"),
+          ),
+        ),
+      db
+        .select({
+          type: sql<string>`${ledgers.ledgerMeta}->>'type'`,
+          amount:
+            sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
+          count: sql<number>`COUNT(*)`,
+        })
+        .from(ledgers)
+        .where(
+          and(
+            eq(ledgers.ledgerUserId, userId),
+            eq(ledgers.ledgerType, "earning"),
+          ),
+        )
+        .groupBy(sql`${ledgers.ledgerMeta}->>'type'`)
+        .orderBy(desc(sql`SUM(${ledgers.ledgerAmount})`)),
+      db
+        .select({
+          earningId: ledgers.ledgerId,
+          sourceId: ledgers.ledgerReferenceId,
+          amount: ledgers.ledgerAmount,
+          status: ledgers.ledgerStatus,
+          createdAt: ledgers.ledgerCreatedAt,
+          sourceType: sql<string>`${ledgers.ledgerMeta}->>'type'`,
+          sourceTitle: hostContents.hostContentTitle,
+          sourceStatus: hostContents.hostContentStatus,
+        })
+        .from(ledgers)
+        .leftJoin(
+          hostContents,
+          and(
+            eq(ledgers.ledgerReferenceType, "host_content"),
+            eq(ledgers.ledgerReferenceId, hostContents.hostContentId),
+          ),
+        )
+        .where(
+          and(
+            eq(ledgers.ledgerUserId, userId),
+            eq(ledgers.ledgerType, "earning"),
+          ),
+        )
+        .orderBy(desc(ledgers.ledgerCreatedAt), desc(ledgers.ledgerId)),
+      db
+        .select({
+          payoutRequestId: transactions.transactionId,
+          amount: transactions.transactionAmount,
+          status: transactions.transactionStatus,
+          createdAt: transactions.transactionCreatedAt,
+          processedAt: transactions.transactionProcessedAt,
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.transactionUserId, userId),
+            eq(transactions.transactionType, "payout"),
+          ),
+        )
+        .orderBy(desc(transactions.transactionCreatedAt), desc(transactions.transactionId))
+        .limit(6),
+    ]);
+
+  const totalEarned = toNumber(earningSummary?.[0]?.totalEarned);
+  const paidOutAmount = toNumber(payoutSummary?.[0]?.paidOutAmount);
+  const pendingPayoutAmount = toNumber(payoutSummary?.[0]?.pendingPayoutAmount);
+
+  return {
+    earningSummary: {
+      totalEarned,
+      paidOutAmount,
+      pendingBalance: pendingPayoutAmount,
+      availableBalance: Math.max(totalEarned - paidOutAmount, 0),
+    },
+    sourceBreakdown: sourceBreakdown.map((item) => ({
+      type: item.type || "other",
+      typeLabel: resolveSourceTypeLabel(item.type),
+      amount: toNumber(item.amount),
+      count: Number(item.count ?? 0),
+    })),
+    sourceDetails: sourceDetails.map((item) => ({
+      earningId: item.earningId,
+      sourceId: item.sourceId,
+      sourceType: item.sourceType || "other",
+      sourceTypeLabel: resolveSourceTypeLabel(item.sourceType),
+      sourceTitle:
+        normalizeString(item.sourceTitle) ||
+        (item.sourceId ? `Nội dung #${item.sourceId}` : "Khoản thu nhập nội bộ"),
+      sourceStatus: item.sourceStatus,
+      sourceStatusLabel: resolveHostContentStatusLabel(item.sourceStatus),
+      amount: toNumber(item.amount),
+      createdAt: item.createdAt,
+      payerName: "GreenMarket",
+      payerEmail: null,
+      payerMobile: null,
+      payerLabel: "Đơn vị ghi nhận",
+      shopName: null,
+      fundingStatus: "recorded",
+      fundingStatusLabel: "Đã ghi nhận trong hệ thống",
+      fundingNote:
+        item.sourceType === "performance_bonus"
+          ? "Khoản này là thưởng cố định khi bài Host đạt mốc lượt xem đã cấu hình."
+          : "Khoản này là nhuận bút cố định cho bài Host đã được admin duyệt.",
+    })),
+    recentRequests: recentRequests.map((item) => ({
+      payoutRequestId: item.payoutRequestId,
+      amount: toNumber(item.amount),
+      status: normalizePayoutStatus(item.status),
+      createdAt: item.createdAt,
+      processedAt: item.processedAt,
+    })),
+  };
 };
 
 const processPayoutRequestStatus = async (
   req: AuthRequest,
   res: Response,
-  nextStatus: Exclude<PayoutStatus, "pending">,
 ): Promise<void> => {
   try {
     const requestId = parseId(req.params.id as string);
-    const { adminNote = "" } = req.body as ProcessPayload;
-    const normalizedNote = normalizeString(adminNote);
+    const normalizedStatus = normalizeString(req.body?.status).toLowerCase();
+    const adminNote = normalizeString(req.body?.adminNote);
 
     if (!requestId) {
-      res.status(400).json({ error: "ID yêu cầu không hợp lệ." });
+      res.status(400).json({ error: "ID đợt chi trả không hợp lệ." });
       return;
     }
 
-    const request = await getHostPayoutRequestById(requestId);
-
-    if (!request) {
-      res.status(404).json({ error: "Không tìm thấy yêu cầu nhuận bút Host." });
-      return;
-    }
-
-    if (request.status !== "pending") {
+    if (normalizedStatus && normalizedStatus !== "completed") {
       res.status(400).json({
-        error: "Chỉ có thể xử lý các yêu cầu đang ở trạng thái chờ.",
+        error: "Luồng chi trả Host mới chỉ hỗ trợ xác nhận đã chi trả.",
       });
       return;
     }
 
-    if (nextStatus === "rejected" && !normalizedNote) {
-      res.status(400).json({ error: "Vui lòng nhập lý do từ chối." });
+    const request = await getHostPayoutTransactionById(requestId);
+    if (!request) {
+      res.status(404).json({ error: "Không tìm thấy đợt chi trả Host." });
       return;
     }
 
-    const [updated] = await db
-      .update(payoutRequests)
-      .set({
-        payoutRequestStatus: nextStatus,
-        payoutRequestNote: normalizedNote || request.note,
-        payoutRequestProcessedAt: new Date(),
-      })
-      .where(eq(payoutRequests.payoutRequestId, requestId))
-      .returning();
+    if (request.status === "success") {
+      res.status(400).json({ error: "Đợt chi trả này đã được xác nhận trước đó." });
+      return;
+    }
 
-    const amountValue = Number(request.amount ?? 0);
     const performedBy = getPerformedBy(req);
+    const [updated] = await db
+      .update(transactions)
+      .set({
+        transactionStatus: "success",
+        transactionProcessedAt: new Date(),
+        transactionUpdatedAt: new Date(),
+        transactionMeta: {
+          ...(request.note ? { note: request.note } : {}),
+          adminNote,
+          performedBy,
+          audience: "host",
+        },
+      })
+      .where(eq(transactions.transactionId, requestId))
+      .returning();
 
     await notificationService.sendNotification({
       recipientId: request.userId,
-      title:
-        nextStatus === "completed"
-          ? "Yêu cầu nhuận bút đã hoàn thành"
-          : "Yêu cầu nhuận bút bị từ chối",
-      message: buildNotificationMessage(nextStatus, amountValue, normalizedNote),
-      type: nextStatus === "completed" ? "success" : "warning",
+      title: "Thu nhập Host đã được chi trả",
+      message: `GreenMarket đã xác nhận chuyển khoản ${toNumber(request.amount).toLocaleString("vi-VN")} VND cho thu nhập Host của bạn.`,
+      type: "success",
       metaData: {
         source: "admin_financial",
         payoutRequestId: requestId,
-        payoutStatus: nextStatus,
+        payoutStatus: "completed",
       },
     });
 
     await db.insert(eventLogs).values({
-      eventLogEventType: `${PAYOUT_EVENT_PREFIX}_${nextStatus}`,
+      eventLogEventType: `${PAYOUT_EVENT_PREFIX}_completed`,
       eventLogEventTime: new Date(),
       eventLogUserId: request.userId,
       eventLogMeta: {
@@ -219,25 +472,22 @@ const processPayoutRequestStatus = async (
           normalizeString(request.userName) ||
           normalizeString(request.userEmail) ||
           `Host #${request.userId}`,
-        amount: amountValue,
+        amount: toNumber(request.amount),
         method: request.method,
         previousStatus: request.status,
-        nextStatus,
-        adminNote: normalizedNote,
+        nextStatus: "success",
+        adminNote,
         performedBy,
       },
     });
 
     res.json({
-      message:
-        nextStatus === "completed"
-          ? "Đã xác nhận hoàn thành yêu cầu nhuận bút Host."
-          : "Đã từ chối yêu cầu nhuận bút Host.",
+      message: "Đã xác nhận hoàn tất chi trả cho Host.",
       data: updated,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Không thể xử lý yêu cầu nhuận bút Host." });
+    res.status(500).json({ error: "Không thể xác nhận chi trả Host." });
   }
 };
 
@@ -246,42 +496,40 @@ export const getAllPayoutRequests = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { page, limit, offset } = parsePagination(
-      req.query.page,
-      req.query.limit,
-    );
+    await syncPendingHostPayouts();
+    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
     const whereClause = buildBaseConditions(req);
 
     const rows = await db
       .select({
-        payoutRequestId: payoutRequests.payoutRequestId,
-        userId: payoutRequests.payoutRequestUserId,
+        payoutRequestId: transactions.transactionId,
+        userId: transactions.transactionUserId,
         userName: users.userDisplayName,
         userEmail: users.userEmail,
         userMobile: users.userMobile,
         roleCode: businessRoles.businessRoleCode,
-        amount: payoutRequests.payoutRequestAmount,
-        method: payoutRequests.payoutRequestMethod,
-        status: payoutRequests.payoutRequestStatus,
-        note: payoutRequests.payoutRequestNote,
-        createdAt: payoutRequests.payoutRequestCreatedAt,
-        processedAt: payoutRequests.payoutRequestProcessedAt,
+        amount: transactions.transactionAmount,
+        method: transactions.transactionProvider,
+        status: transactions.transactionStatus,
+        note: sql<string>`${transactions.transactionMeta}->>'note'`,
+        createdAt: transactions.transactionCreatedAt,
+        processedAt: transactions.transactionProcessedAt,
       })
-      .from(payoutRequests)
-      .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
+      .from(transactions)
+      .leftJoin(users, eq(transactions.transactionUserId, users.userId))
       .leftJoin(
         businessRoles,
         eq(users.userBusinessRoleId, businessRoles.businessRoleId),
       )
       .where(whereClause)
-      .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
+      .orderBy(desc(transactions.transactionCreatedAt), desc(transactions.transactionId))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(payoutRequests)
-      .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
+      .from(transactions)
+      .leftJoin(users, eq(transactions.transactionUserId, users.userId))
       .leftJoin(
         businessRoles,
         eq(users.userBusinessRoleId, businessRoles.businessRoleId),
@@ -292,18 +540,16 @@ export const getAllPayoutRequests = async (
       .select({
         totalRequests: sql<number>`count(*)`,
         pendingRequests:
-          sql<number>`count(*) filter (where ${payoutRequests.payoutRequestStatus} = 'pending')`,
+          sql<number>`count(*) filter (where ${transactions.transactionStatus} = 'pending')`,
         completedRequests:
-          sql<number>`count(*) filter (where ${payoutRequests.payoutRequestStatus} = 'completed')`,
-        rejectedRequests:
-          sql<number>`count(*) filter (where ${payoutRequests.payoutRequestStatus} = 'rejected')`,
+          sql<number>`count(*) filter (where ${transactions.transactionStatus} = 'success')`,
         pendingAmount:
-          sql<string>`coalesce(sum(${payoutRequests.payoutRequestAmount}) filter (where ${payoutRequests.payoutRequestStatus} = 'pending'), 0)`,
+          sql<string>`coalesce(sum(${transactions.transactionAmount}) filter (where ${transactions.transactionStatus} = 'pending'), 0)`,
         completedAmount:
-          sql<string>`coalesce(sum(${payoutRequests.payoutRequestAmount}) filter (where ${payoutRequests.payoutRequestStatus} = 'completed'), 0)`,
+          sql<string>`coalesce(sum(${transactions.transactionAmount}) filter (where ${transactions.transactionStatus} = 'success'), 0)`,
       })
-      .from(payoutRequests)
-      .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
+      .from(transactions)
+      .leftJoin(users, eq(transactions.transactionUserId, users.userId))
       .leftJoin(
         businessRoles,
         eq(users.userBusinessRoleId, businessRoles.businessRoleId),
@@ -322,9 +568,9 @@ export const getAllPayoutRequests = async (
         userMobile: row.userMobile,
         audienceLabel: resolveAudienceLabel(),
         roleCode: row.roleCode,
-        amount: Number(row.amount ?? 0),
-        method: row.method,
-        status: row.status,
+        amount: toNumber(row.amount),
+        method: row.method || "bank_transfer",
+        status: normalizePayoutStatus(row.status),
         note: row.note,
         createdAt: row.createdAt,
         processedAt: row.processedAt,
@@ -339,14 +585,13 @@ export const getAllPayoutRequests = async (
         totalRequests: Number(summary?.totalRequests ?? 0),
         pendingRequests: Number(summary?.pendingRequests ?? 0),
         completedRequests: Number(summary?.completedRequests ?? 0),
-        rejectedRequests: Number(summary?.rejectedRequests ?? 0),
-        pendingAmount: Number(summary?.pendingAmount ?? 0),
-        completedAmount: Number(summary?.completedAmount ?? 0),
+        pendingAmount: toNumber(summary?.pendingAmount),
+        completedAmount: toNumber(summary?.completedAmount),
       },
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Không thể tải danh sách nhuận bút Host." });
+    res.status(500).json({ error: "Không thể tải danh sách chi trả Host." });
   }
 };
 
@@ -356,165 +601,21 @@ export const getPayoutRequestDetail = async (
 ): Promise<void> => {
   try {
     const requestId = parseId(req.params.id as string);
-
     if (!requestId) {
-      res.status(400).json({ error: "ID yêu cầu không hợp lệ." });
+      res.status(400).json({ error: "ID đợt chi trả không hợp lệ." });
       return;
     }
 
-    const detail = await getHostPayoutRequestById(requestId);
-
+    await syncPendingHostPayouts();
+    const detail = await getHostPayoutTransactionById(requestId);
     if (!detail) {
-      res.status(404).json({ error: "Không tìm thấy yêu cầu nhuận bút Host." });
+      res.status(404).json({ error: "Không tìm thấy đợt chi trả Host." });
       return;
     }
 
     await hostIncomePolicyService.syncForUser(detail.userId);
     const hostIncomePolicy = await hostIncomePolicyService.getPolicy();
-
-    const [earningSummary] = await db
-      .select({
-        totalEarned: sql<string>`coalesce(sum(${earnings.amount}), 0)`,
-        availableEarnings:
-          sql<string>`coalesce(sum(${earnings.amount}) filter (where ${earnings.status} = 'available'), 0)`,
-        pendingIncome:
-          sql<string>`coalesce(sum(${earnings.amount}) filter (where ${earnings.status} = 'pending'), 0)`,
-      })
-      .from(earnings)
-      .where(eq(earnings.userId, detail.userId));
-
-    const [payoutLedger] = await db
-      .select({
-        paidOutAmount:
-          sql<string>`coalesce(sum(${payoutRequests.payoutRequestAmount}) filter (where ${payoutRequests.payoutRequestStatus} = 'completed'), 0)`,
-        pendingPayoutAmount:
-          sql<string>`coalesce(sum(${payoutRequests.payoutRequestAmount}) filter (where ${payoutRequests.payoutRequestStatus} = 'pending'), 0)`,
-      })
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestUserId, detail.userId));
-
-    const sourceBreakdown = await db
-      .select({
-        type: earnings.type,
-        amount: sql<string>`coalesce(sum(${earnings.amount}), 0)`,
-        count: sql<number>`count(*)`,
-      })
-      .from(earnings)
-      .where(eq(earnings.userId, detail.userId))
-      .groupBy(earnings.type)
-      .orderBy(desc(sql`sum(${earnings.amount})`));
-
-    const earningEntries = await db
-      .select({
-        earningId: earnings.earningId,
-        amount: earnings.amount,
-        status: earnings.status,
-        type: earnings.type,
-        sourceId: earnings.sourceId,
-        createdAt: earnings.createdAt,
-      })
-      .from(earnings)
-      .where(eq(earnings.userId, detail.userId))
-      .orderBy(desc(earnings.createdAt), desc(earnings.earningId));
-
-    const hostContentSourceIds = Array.from(
-      new Set(
-        earningEntries
-          .filter((item) => item.type === "article_payout" && item.sourceId)
-          .map((item) => Number(item.sourceId)),
-      ),
-    );
-
-    const hostContentRows =
-      hostContentSourceIds.length === 0
-        ? []
-        : await db
-            .select({
-              hostContentId: hostContents.hostContentId,
-              hostContentTitle: hostContents.hostContentTitle,
-              hostContentStatus: hostContents.hostContentStatus,
-            })
-            .from(hostContents)
-            .where(inArray(hostContents.hostContentId, hostContentSourceIds));
-
-    const hostContentById = new Map(
-      hostContentRows.map((item) => [
-        item.hostContentId,
-        {
-          title: normalizeString(item.hostContentTitle),
-          status: item.hostContentStatus,
-        },
-      ]),
-    );
-
-    const sourceDetails = earningEntries.map((item) => {
-      const amount = Number(item.amount ?? 0);
-      const sourceType = normalizeString(item.type) || "other";
-      const sourceTypeLabel = resolveSourceTypeLabel(item.type);
-
-      if (item.type === "article_payout") {
-        const contentSource = hostContentById.get(Number(item.sourceId ?? -1));
-
-        return {
-          earningId: item.earningId,
-          sourceId: item.sourceId,
-          sourceType,
-          sourceTypeLabel,
-          sourceTitle:
-            contentSource?.title ||
-            (item.sourceId ? `Nội dung #${item.sourceId}` : "Nội dung chưa xác định"),
-          sourceStatus: contentSource?.status || null,
-          sourceStatusLabel: resolveHostContentStatusLabel(contentSource?.status || null),
-          amount,
-          createdAt: item.createdAt,
-          payerName: "GreenMarket",
-          payerEmail: null,
-          payerMobile: null,
-          payerLabel: "Đơn vị chi trả",
-          shopName: null,
-          fundingStatus: "system_managed" as FundingStatus,
-          fundingStatusLabel: resolveFundingStatusLabel("system_managed"),
-          fundingNote:
-            "Khoản này là nhuận bút nội dung Host do GreenMarket tự chi trả sau khi bài được ghi nhận hợp lệ.",
-        };
-      }
-
-      return {
-        earningId: item.earningId,
-        sourceId: item.sourceId,
-        sourceType,
-        sourceTypeLabel,
-        sourceTitle: item.sourceId
-          ? `Nguồn thu #${item.sourceId}`
-          : "Nguồn thu nội bộ",
-        sourceStatus: item.status,
-        sourceStatusLabel: item.status || "Không xác định",
-        amount,
-        createdAt: item.createdAt,
-        payerName: "GreenMarket",
-        payerEmail: null,
-        payerMobile: null,
-        payerLabel: "Đơn vị ghi nhận",
-        shopName: null,
-        fundingStatus: "not_required" as FundingStatus,
-        fundingStatusLabel: resolveFundingStatusLabel("not_required"),
-        fundingNote:
-          "Khoản này được GreenMarket ghi nhận nội bộ cho tài khoản Host và không đi qua luồng thanh toán giữa khách hàng với cộng tác viên.",
-      };
-    });
-
-    const recentRequests = await db
-      .select({
-        payoutRequestId: payoutRequests.payoutRequestId,
-        amount: payoutRequests.payoutRequestAmount,
-        status: payoutRequests.payoutRequestStatus,
-        createdAt: payoutRequests.payoutRequestCreatedAt,
-        processedAt: payoutRequests.payoutRequestProcessedAt,
-      })
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestUserId, detail.userId))
-      .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
-      .limit(6);
+    const incomeBreakdown = await getHostIncomeBreakdown(detail.userId);
 
     res.json({
       data: {
@@ -528,49 +629,23 @@ export const getPayoutRequestDetail = async (
         userMobile: detail.userMobile,
         audienceLabel: resolveAudienceLabel(),
         roleCode: detail.roleCode,
-        amount: Number(detail.amount ?? 0),
-        method: detail.method,
-        status: detail.status,
+        amount: toNumber(detail.amount),
+        method: detail.method || "bank_transfer",
+        status: normalizePayoutStatus(detail.status),
         note: detail.note,
         createdAt: detail.createdAt,
         processedAt: detail.processedAt,
-        earningSummary: {
-          totalEarned: Number(earningSummary?.totalEarned ?? 0),
-          availableBalance: Math.max(
-            Number(earningSummary?.availableEarnings ?? 0) -
-              Number(payoutLedger?.paidOutAmount ?? 0) -
-              Number(payoutLedger?.pendingPayoutAmount ?? 0),
-            0,
-          ),
-          pendingBalance: Number(payoutLedger?.pendingPayoutAmount ?? 0),
-          pendingIncome: Number(earningSummary?.pendingIncome ?? 0),
-          paidOutAmount: Number(payoutLedger?.paidOutAmount ?? 0),
-        },
-        sourceBreakdown: sourceBreakdown.map((item) => ({
-          type: item.type,
-          typeLabel: resolveSourceTypeLabel(item.type),
-          amount: Number(item.amount ?? 0),
-          count: Number(item.count ?? 0),
-        })),
-        sourceDetails: sourceDetails.map((item) => ({
-          ...item,
-          amount: Number(item.amount ?? 0),
-        })),
-        requiresSourceConfirmation: sourceDetails.length > 0,
-        approvalHint:
-          `Chính sách hiện hành: mỗi bài Host được xuất bản sẽ ghi nhận ${hostIncomePolicy.articlePayoutAmount.toLocaleString("vi-VN")} VND; khi bài đạt từ ${hostIncomePolicy.viewBonusThreshold.toLocaleString("vi-VN")} lượt xem sẽ được cộng thêm ${hostIncomePolicy.viewBonusAmount.toLocaleString("vi-VN")} VND. GreenMarket chuyển khoản thủ công ngoài hệ thống và admin xác nhận lại sau khi đã chi trả.`,
-        recentRequests: recentRequests.map((item) => ({
-          payoutRequestId: item.payoutRequestId,
-          amount: Number(item.amount ?? 0),
-          status: item.status,
-          createdAt: item.createdAt,
-          processedAt: item.processedAt,
-        })),
+        earningSummary: incomeBreakdown.earningSummary,
+        sourceBreakdown: incomeBreakdown.sourceBreakdown,
+        sourceDetails: incomeBreakdown.sourceDetails,
+        requiresSourceConfirmation: incomeBreakdown.sourceDetails.length > 0,
+        approvalHint: `Chính sách hiện hành: mỗi bài Host được admin duyệt sẽ ghi nhận ${hostIncomePolicy.articlePayoutAmount.toLocaleString("vi-VN")} VND; khi bài đạt từ ${hostIncomePolicy.viewBonusThreshold.toLocaleString("vi-VN")} lượt xem sẽ được cộng thêm ${hostIncomePolicy.viewBonusAmount.toLocaleString("vi-VN")} VND. GreenMarket chuyển khoản thủ công ngoài hệ thống và admin chỉ xác nhận lại sau khi đã chi trả.`,
+        recentRequests: incomeBreakdown.recentRequests,
       },
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Không thể tải chi tiết nhuận bút Host." });
+    res.status(500).json({ error: "Không thể tải chi tiết chi trả Host." });
   }
 };
 
@@ -578,26 +653,21 @@ export const approvePayoutRequest = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
-  await processPayoutRequestStatus(req, res, "completed");
+  await processPayoutRequestStatus(req, res);
 };
 
 export const rejectPayoutRequest = async (
-  req: AuthRequest,
+  _req: AuthRequest,
   res: Response,
 ): Promise<void> => {
-  await processPayoutRequestStatus(req, res, "rejected");
+  res.status(400).json({
+    error: "Luồng chi trả Host mới không còn trạng thái từ chối.",
+  });
 };
 
 export const processPayoutRequest = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
-  const status = normalizeString(req.body?.status).toLowerCase();
-
-  if (status !== "completed" && status !== "rejected") {
-    res.status(400).json({ error: "Trạng thái xử lý không hợp lệ." });
-    return;
-  }
-
-  await processPayoutRequestStatus(req, res, status);
+  await processPayoutRequestStatus(req, res);
 };

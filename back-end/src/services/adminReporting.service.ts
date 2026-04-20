@@ -13,13 +13,12 @@ import {
     categoryAttributes,
     businessRoles,
     eventLogs,
-    paymentTxn,
-    payoutRequests,
     promotionPackagePrices,
     posts,
     promotionPackages,
     reports,
     shops,
+    transactions,
     users,
 } from "../models/schema/index.ts";
 import { adminAccountPackageService } from "./adminAccountPackage.service.ts";
@@ -178,6 +177,13 @@ type PaymentOrder = {
     slotCode: string | null;
     amount: number;
     createdAt: Date | null;
+};
+
+type PaymentRecordRow = {
+    packageId: number | null;
+    paymentTxnPriceId: number | null;
+    paymentTxnAmount: string | number | null;
+    paymentTxnCreatedAt: Date | null;
 };
 
 type HostPayoutOrder = {
@@ -419,29 +425,35 @@ const ACCOUNT_SLOT_LABEL_BY_CODE: Record<string, string> = {
 };
 
 const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
-    const [slotCatalog, accountPackages, transactions, allSlots, allPriceRows] = await Promise.all([
+    const [slotCatalog, accountPackages, paymentRecords, allSlots, allPriceRows] = await Promise.all([
         adminPlacementSlotCatalogService.getCatalog(),
         adminAccountPackageService.getCatalog(),
         db
             .select({
-                paymentTxnId: paymentTxn.paymentTxnId,
-                paymentTxnUserId: paymentTxn.paymentTxnUserId,
-                paymentTxnAmount: paymentTxn.paymentTxnAmount,
-                paymentTxnStatus: paymentTxn.paymentTxnStatus,
-                paymentTxnCreatedAt: paymentTxn.paymentTxnCreatedAt,
-                paymentTxnPriceId: paymentTxn.paymentTxnPriceId,
+                paymentTxnId: transactions.transactionId,
+                paymentTxnUserId: transactions.transactionUserId,
+                paymentTxnAmount: transactions.transactionAmount,
+                paymentTxnStatus: transactions.transactionStatus,
+                paymentTxnCreatedAt: transactions.transactionCreatedAt,
+                paymentTxnPriceId:
+                    sql<number | null>`(${transactions.transactionMeta}->>'priceId')::int`,
                 userDisplayName: users.userDisplayName,
                 userEmail: users.userEmail,
-                packageId: promotionPackages.promotionPackageId,
+                packageId:
+                    sql<number | null>`case when ${transactions.transactionReferenceType} = 'package' then ${transactions.transactionReferenceId} end`,
                 packageTitle: promotionPackages.promotionPackageTitle,
             })
-            .from(paymentTxn)
-            .leftJoin(users, eq(paymentTxn.paymentTxnUserId, users.userId))
+            .from(transactions)
+            .leftJoin(users, eq(transactions.transactionUserId, users.userId))
             .leftJoin(
                 promotionPackages,
-                eq(paymentTxn.paymentTxnPackageId, promotionPackages.promotionPackageId),
+                and(
+                    eq(transactions.transactionReferenceType, "package"),
+                    eq(transactions.transactionReferenceId, promotionPackages.promotionPackageId),
+                ),
             )
-            .orderBy(desc(paymentTxn.paymentTxnCreatedAt)),
+            .where(eq(transactions.transactionType, "payment"))
+            .orderBy(desc(transactions.transactionCreatedAt)),
         db.select().from(promotionPackages),
         db.select().from(promotionPackagePrices),
     ]);
@@ -488,7 +500,7 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
         accountPackageByPrice.set(amountKey, current);
     });
 
-    const resolvePackageId = (item: (typeof transactions)[number]) => {
+    const resolvePackageId = (item: PaymentRecordRow) => {
         if (item.packageId) {
             return item.packageId;
         }
@@ -515,7 +527,7 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
         return null;
     };
 
-    return transactions
+    return paymentRecords
         .filter((item) => item.paymentTxnStatus === "success")
         .map((item) => {
             const resolvedPackageId = resolvePackageId(item);
@@ -576,24 +588,25 @@ const getSuccessfulPayments = async (): Promise<PaymentOrder[]> => {
 const getCompletedHostPayouts = async (): Promise<HostPayoutOrder[]> => {
     const rows = await db
         .select({
-            payoutRequestId: payoutRequests.payoutRequestId,
-            userId: payoutRequests.payoutRequestUserId,
-            amount: payoutRequests.payoutRequestAmount,
-            processedAt: payoutRequests.payoutRequestProcessedAt,
+            payoutRequestId: transactions.transactionId,
+            userId: transactions.transactionUserId,
+            amount: transactions.transactionAmount,
+            processedAt: transactions.transactionProcessedAt,
         })
-        .from(payoutRequests)
-        .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
+        .from(transactions)
+        .leftJoin(users, eq(transactions.transactionUserId, users.userId))
         .leftJoin(
             businessRoles,
             eq(users.userBusinessRoleId, businessRoles.businessRoleId),
         )
         .where(
             and(
-                eq(payoutRequests.payoutRequestStatus, "completed"),
+                eq(transactions.transactionType, "payout"),
+                eq(transactions.transactionStatus, "success"),
                 eq(sql`upper(${businessRoles.businessRoleCode})`, "HOST"),
             ),
         )
-        .orderBy(desc(payoutRequests.payoutRequestProcessedAt));
+        .orderBy(desc(transactions.transactionProcessedAt), desc(transactions.transactionId));
 
     return rows.map((item) => ({
         payoutRequestId: item.payoutRequestId,
@@ -658,7 +671,9 @@ export const adminReportingService = {
             item.userStatus?.toLowerCase() !== "deleted",
         );
         const filteredPosts = allPosts.filter((item) => item.postStatus !== "deleted");
-        const filteredReports = allReports.filter((item) => isDateInRange(item.reportCreatedAt, range));
+        const filteredReports = allReports.filter((item) =>
+            isDateInRange(item.ticketCreatedAt, range),
+        );
         const filteredPayments = allPayments.filter((item) => isDateInRange(item.createdAt, range));
 
         const revenue = filteredPayments.reduce((sum, item) => sum + item.amount, 0);
@@ -670,7 +685,7 @@ export const adminReportingService = {
             {
                 title: "Báo cáo chờ xử lý",
                 value: formatNumber(
-                    filteredReports.filter((item) => item.reportStatus === "pending").length,
+                    filteredReports.filter((item) => item.ticketStatus === "pending").length,
                 ),
             },
             { title: "Doanh thu", value: formatCurrency(revenue) },

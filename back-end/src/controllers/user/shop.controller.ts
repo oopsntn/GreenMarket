@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
 import { eq, and, inArray, sql, or, ilike, desc } from "drizzle-orm";
 import { shops, type Shop } from "../../models/schema/shops.ts";
-import { posts, postImages, eventLogs, shopCollaborators } from "../../models/schema/index.ts";
+import { posts, mediaAssets, eventLogs, shopCollaborators } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import { verificationService } from "../../services/verification.service.ts";
@@ -94,6 +94,20 @@ const validateEmail = (email: string) => {
         );
 };
 
+const checkPhoneConflict = async (phone: string, currentUserId: number): Promise<string | null> => {
+    if (!phone) return null;
+    const [duplicateUser] = await db.select().from(users).where(eq(users.userMobile, phone)).limit(1);
+    if (duplicateUser && duplicateUser.userId !== currentUserId) {
+        return "Số điện thoại này đã được đăng ký tài khoản trên hệ thống bởi một người dùng khác.";
+    }
+    const duplicatePhones = await db.select().from(shops).where(sql`shop_phone ILIKE ${'%' + phone + '%'}`);
+    const isDuplicate = duplicatePhones.some(s => s.shopId !== currentUserId && s.shopPhone?.split('|').includes(phone));
+    if (isDuplicate) {
+        return "Số điện thoại này đã được một cửa hàng khác sử dụng làm liên hệ.";
+    }
+    return null;
+};
+
 export const registerShop = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const userId = req.user?.id;
@@ -123,6 +137,11 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
         const galleryArray = Array.isArray(shopGalleryImages) ? shopGalleryImages : [];
         if (galleryArray.length < 3) {
             errors.push("At least 3 detailed images (Gallery) are required");
+        }
+
+        const phoneRegex = /^\d{10}$/;
+        if (shopPhone && !phoneRegex.test(shopPhone)) {
+            errors.push("Số điện thoại phải có đúng 10 chữ số");
         }
 
         if (errors.length > 0) {
@@ -158,6 +177,14 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
         if (!defaultShopPhone) {
             const [user] = await db.select().from(users).where(eq(users.userId, userId)).limit(1);
             defaultShopPhone = user?.userMobile || null;
+        }
+
+        if (defaultShopPhone) {
+            const conflictMsg = await checkPhoneConflict(defaultShopPhone, userId);
+            if (conflictMsg) {
+                res.status(400).json({ error: conflictMsg });
+                return;
+            }
         }
 
         const [newShop] = await db.insert(shops).values({
@@ -312,9 +339,18 @@ export const getPublicShopById = async (req: AuthRequest, res: Response): Promis
         let postsWithImages = shopPosts.map(p => ({ ...p, images: [] as any[] }));
         if (shopPosts.length > 0) {
             const postIds = shopPosts.map(p => p.postId);
-            const images = await db.select()
-                .from(postImages)
-                .where(inArray(postImages.postId, postIds));
+            const images = await db.select({
+                postId: mediaAssets.targetId,
+                imageUrl: mediaAssets.url,
+            })
+                .from(mediaAssets)
+                .where(
+                    and(
+                        eq(mediaAssets.targetType, "post"),
+                        eq(mediaAssets.mediaType, "image"),
+                        inArray(mediaAssets.targetId, postIds)
+                    )
+                );
 
             postsWithImages = shopPosts.map(post => ({
                 ...post,
@@ -494,12 +530,9 @@ export const requestVerificationOTP = async (req: AuthRequest, res: Response): P
 
         // Check for duplicates
         if (type === "phone") {
-            // Check if phone exists (using Drizzle's ILIKE for Postgres)
-            const duplicatePhones = await db.select().from(shops).where(sql`shop_phone ILIKE ${'%' + target + '%'}`);
-            // Exact match validation in backend since ILIKE could match substrings
-            const isDuplicate = duplicatePhones.some(s => s.shopPhone?.split('|').includes(target));
-            if (isDuplicate) {
-                res.status(400).json({ error: "Phone number is already in use by a shop" });
+            const conflictMsg = await checkPhoneConflict(target, userId);
+            if (conflictMsg) {
+                res.status(400).json({ error: conflictMsg });
                 return;
             }
         } else if (type === "email") {
@@ -569,6 +602,12 @@ export const addShopPhone = async (req: AuthRequest, res: Response): Promise<voi
         const { phone, otp } = req.body;
         if (!phone || !otp) { res.status(400).json({ error: "Missing phone or otp" }); return; }
 
+        const phoneRegex = /^\d{10}$/;
+        if (!phoneRegex.test(phone)) {
+            res.status(400).json({ error: "Số điện thoại phải có đúng 10 chữ số" });
+            return;
+        }
+
         const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
         if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
 
@@ -579,6 +618,12 @@ export const addShopPhone = async (req: AuthRequest, res: Response): Promise<voi
         }
         if (currentPhones.includes(phone)) {
             res.status(400).json({ error: "Phone number already exists in your shop." });
+            return;
+        }
+
+        const conflictMsg = await checkPhoneConflict(phone, userId);
+        if (conflictMsg) {
+            res.status(400).json({ error: conflictMsg });
             return;
         }
 
@@ -626,6 +671,17 @@ export const deleteShopPhone = async (req: AuthRequest, res: Response): Promise<
         const newPhoneString = currentPhones.join('|');
 
         await db.update(shops).set({ shopPhone: newPhoneString }).where(eq(shops.shopId, userId));
+
+        // SYNC: If the deleted phone was the primary userMobile, migrate to the new first shop phone
+        const [user] = await db.select().from(users).where(eq(users.userId, userId)).limit(1);
+        if (user && user.userMobile === phone) {
+            const nextPrimaryPhone = currentPhones[0]; 
+            if (nextPrimaryPhone) {
+                await db.update(users)
+                    .set({ userMobile: nextPrimaryPhone, userUpdatedAt: new Date() })
+                    .where(eq(users.userId, userId));
+            }
+        }
 
         // Send real Security Warning Email
         if (shop.shopEmail) {

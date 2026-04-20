@@ -69,9 +69,6 @@ const validateSettings = (settings: AdminWebSettingsState) => {
     throw new Error("Tiền thưởng lượt xem không được âm.");
   }
 
-  if (settings.hostIncome.minimumPayoutRequestAmount < 0) {
-    throw new Error("Số tiền tối thiểu cho một yêu cầu chi trả không được âm.");
-  }
 };
 
 const summarizeSettingsChange = (
@@ -194,15 +191,6 @@ const summarizeSettingsChange = (
   ) {
     changes.push(
       `Thưởng lượt xem cố định: ${previous.hostIncome.viewBonusAmount} -> ${next.hostIncome.viewBonusAmount}`,
-    );
-  }
-
-  if (
-    previous.hostIncome.minimumPayoutRequestAmount !==
-    next.hostIncome.minimumPayoutRequestAmount
-  ) {
-    changes.push(
-      `Mức tối thiểu một yêu cầu chi trả: ${previous.hostIncome.minimumPayoutRequestAmount} -> ${next.hostIncome.minimumPayoutRequestAmount}`,
     );
   }
 

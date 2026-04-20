@@ -89,15 +89,6 @@ END; $$;
 -- ============================================================
 -- TABLES
 -- ============================================================
-
-DROP TABLE IF EXISTS favorite_posts CASCADE;
-DROP TABLE IF EXISTS favorite_contents CASCADE;
-DROP TABLE IF EXISTS earning_entries CASCADE;
-DROP TABLE IF EXISTS host_earnings CASCADE;
-DROP TABLE IF EXISTS host_payout_requests CASCADE;
-DROP TABLE IF EXISTS user_favorites CASCADE;
-DROP TABLE IF EXISTS earnings CASCADE;
-
 -- Business Roles
 CREATE TABLE business_roles (
     business_role_id SERIAL PRIMARY KEY,
@@ -119,7 +110,8 @@ CREATE TABLE users (
     user_mobile VARCHAR(15) NOT NULL UNIQUE,
     user_display_name VARCHAR(80),
     user_avatar_url TEXT,
-    user_email VARCHAR(255),
+    user_email VARCHAR(255) UNIQUE,
+    user_email_verified BOOLEAN DEFAULT FALSE,
     user_location VARCHAR(255),
     user_bio TEXT,
     user_availability_status VARCHAR(20) NOT NULL DEFAULT 'available',
@@ -171,15 +163,6 @@ CREATE TABLE qr_sessions (
     expires_at TIMESTAMP NOT NULL
 );
 
--- OTP Requests
-CREATE TABLE otp_requests (
-    otp_request_id SERIAL PRIMARY KEY,
-    otp_request_mobile VARCHAR(20),
-    otp_request_otp_code VARCHAR(20),
-    otp_request_expire_at TIMESTAMP,
-    otp_request_status VARCHAR(30),
-    otp_request_created_at TIMESTAMP DEFAULT now()
-);
 
 -- Banned Keywords
 CREATE TABLE banned_keywords (
@@ -255,14 +238,6 @@ CREATE TABLE verifications (
     created_at TIMESTAMP DEFAULT now()
 );
 
--- Blocked Shops
-CREATE TABLE blocked_shops (
-    blocked_shop_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    blocked_shop_shop_id INTEGER NOT NULL REFERENCES shops(shop_id) ON DELETE CASCADE,
-    blocked_shop_created_at TIMESTAMP DEFAULT now(),
-    PRIMARY KEY (blocked_shop_user_id, blocked_shop_shop_id)
-);
-
 -- Posts
 CREATE TABLE posts (
     post_id SERIAL PRIMARY KEY,
@@ -290,29 +265,16 @@ CREATE TABLE posts (
     post_updated_at TIMESTAMP DEFAULT now()
 );
 
--- Post Images
-CREATE TABLE post_images (
-    image_id SERIAL PRIMARY KEY,
-    post_id INTEGER REFERENCES posts(post_id) ON DELETE CASCADE,
-    image_url TEXT NOT NULL,
-    image_sort_order INTEGER DEFAULT 0,
-    image_created_at TIMESTAMP DEFAULT now()
-);
-
--- Post Videos
-CREATE TABLE post_videos (
-    post_video_id SERIAL PRIMARY KEY,
-    post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
-    video_url TEXT NOT NULL,
-    video_position INTEGER DEFAULT 0,
-    video_created_at TIMESTAMP DEFAULT now()
-);
-
--- Post Categories (Many-to-Many)
-CREATE TABLE post_categories (
-    post_category_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
-    post_category_category_id INTEGER NOT NULL REFERENCES categories(category_id) ON DELETE CASCADE,
-    PRIMARY KEY (post_category_post_id, post_category_category_id)
+-- Media Assets (Unified resources like images, videos, documents)
+CREATE TABLE media_assets (
+    asset_id SERIAL PRIMARY KEY,
+    target_type VARCHAR(50) NOT NULL, -- post, report, job_deliverable, host_content, user, shop, ticket
+    target_id INTEGER NOT NULL,
+    media_type VARCHAR(20) NOT NULL, -- image, video, document
+    url TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    meta_data JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT now()
 );
 
 -- Post Attribute Values
@@ -323,39 +285,24 @@ CREATE TABLE post_attribute_values (
     attribute_value TEXT NOT NULL,
     value_created_at TIMESTAMP DEFAULT now()
 );
-
--- Post Meta
-CREATE TABLE post_meta (
-    post_meta_id SERIAL PRIMARY KEY,
-    post_meta_post_id INTEGER NOT NULL REFERENCES posts(post_id) ON DELETE CASCADE,
-    post_meta_key VARCHAR(100),
-    post_meta_content TEXT,
-    post_meta_created_at TIMESTAMP DEFAULT now()
+-- Tickets (Unified Support, Reports, and Escalations)
+CREATE TABLE tickets (
+    ticket_id SERIAL PRIMARY KEY,
+    ticket_type VARCHAR(50) NOT NULL, -- SUPPORT, REPORT, ESCALATION, JOB
+    ticket_creator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    ticket_assignee_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    ticket_status VARCHAR(20) NOT NULL DEFAULT 'open',
+    ticket_priority VARCHAR(20) NOT NULL DEFAULT 'medium',
+    ticket_target_type VARCHAR(50), -- post, shop, user, order
+    ticket_target_id INTEGER,
+    ticket_title VARCHAR(255),
+    ticket_content TEXT NOT NULL,
+    ticket_resolution_note TEXT,
+    ticket_meta_data JSONB DEFAULT '{}'::jsonb,
+    ticket_created_at TIMESTAMP DEFAULT now(),
+    ticket_updated_at TIMESTAMP DEFAULT now(),
+    ticket_resolved_at TIMESTAMP
 );
-
--- Reports
-CREATE TABLE reports (
-    report_id SERIAL PRIMARY KEY,
-    reporter_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
-    report_shop_id INTEGER REFERENCES shops(shop_id) ON DELETE SET NULL,
-    report_reason_code VARCHAR(50),
-    report_reason TEXT NOT NULL,
-    report_note TEXT,
-    report_status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    admin_note TEXT,
-    report_created_at TIMESTAMP DEFAULT now(),
-    report_updated_at TIMESTAMP DEFAULT now()
-);
-
--- Report Evidence
-CREATE TABLE report_evidence (
-    report_evidence_id SERIAL PRIMARY KEY,
-    report_evidence_report_id INTEGER NOT NULL REFERENCES reports(report_id) ON DELETE CASCADE,
-    report_evidence_url TEXT,
-    report_evidence_created_at TIMESTAMP DEFAULT now()
-);
-
 
 -- Placement Slots (Ad zones)
 CREATE TABLE placement_slots (
@@ -426,17 +373,22 @@ CREATE TABLE post_promotions (
 );
 
 -- Payment Transactions
-CREATE TABLE payment_txn (
-    payment_txn_id       SERIAL PRIMARY KEY,
-    payment_txn_user_id  INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    payment_txn_post_id  INTEGER REFERENCES posts(post_id),
-    payment_txn_package_id INTEGER REFERENCES promotion_packages(promotion_package_id) ON DELETE RESTRICT,
-    payment_txn_price_id INTEGER REFERENCES promotion_package_prices(price_id) ON DELETE SET NULL, -- Snapshot bảng giá tại thời điểm mua
-    payment_txn_amount   DECIMAL(15, 2),                  -- Số tiền thực thu (snapshot, không đổi dù giá gói thay đổi sau)
-    payment_txn_provider VARCHAR(50),
-    payment_txn_provider_txn_id VARCHAR(100) UNIQUE,
-    payment_txn_status   VARCHAR(20),
-    payment_txn_created_at TIMESTAMP DEFAULT now()
+-- Unified Cash Transactions (Inbound/Outbound)
+CREATE TABLE transactions (
+    transaction_id SERIAL PRIMARY KEY,
+    transaction_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    transaction_amount DECIMAL(15, 2) NOT NULL,
+    transaction_currency VARCHAR(10) DEFAULT 'VND',
+    transaction_type VARCHAR(50) NOT NULL, -- payment (in), payout (out)
+    transaction_status VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending, success, failed, cancelled, rejected
+    transaction_provider VARCHAR(50), -- vnpay, payos, bank, system
+    transaction_provider_txn_id VARCHAR(100) UNIQUE,
+    transaction_reference_type VARCHAR(50), -- package, payout_request
+    transaction_reference_id INTEGER,
+    transaction_meta JSONB DEFAULT '{}'::jsonb,
+    transaction_created_at TIMESTAMP DEFAULT now(),
+    transaction_updated_at TIMESTAMP DEFAULT now(),
+    transaction_processed_at TIMESTAMP
 );
 
 -- User Posting Plans
@@ -459,18 +411,19 @@ CREATE TABLE user_posting_plans (
 );
 
 -- Posting Fee Ledger
-CREATE TABLE posting_fee_ledger (
-    posting_fee_id SERIAL PRIMARY KEY,
-    posting_fee_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    posting_fee_post_id INTEGER REFERENCES posts(post_id) ON DELETE SET NULL,
-    posting_fee_plan_id INTEGER REFERENCES user_posting_plans(posting_plan_id) ON DELETE SET NULL,
-    posting_fee_action_type VARCHAR(30) NOT NULL, -- POST_CREATE | POST_EDIT
-    posting_fee_quantity INTEGER NOT NULL DEFAULT 1,
-    posting_fee_unit_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
-    posting_fee_total_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
-    posting_fee_currency VARCHAR(10) NOT NULL DEFAULT 'VND',
-    posting_fee_note TEXT,
-    posting_fee_created_at TIMESTAMP DEFAULT now()
+-- Unified Internal Accounting Ledger
+CREATE TABLE ledgers (
+    ledger_id SERIAL PRIMARY KEY,
+    ledger_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    ledger_amount DECIMAL(15, 2) NOT NULL,
+    ledger_type VARCHAR(50) NOT NULL, -- earning, fee_debit
+    ledger_direction VARCHAR(10) NOT NULL, -- CREDIT (add), DEBIT (subtract)
+    ledger_status VARCHAR(20) NOT NULL DEFAULT 'available', -- pending, available, cancelled
+    ledger_reference_type VARCHAR(50), -- job, post, content
+    ledger_reference_id INTEGER,
+    ledger_note TEXT,
+    ledger_meta JSONB DEFAULT '{}'::jsonb,
+    ledger_created_at TIMESTAMP DEFAULT now()
 );
 
 -- Daily Placement Metrics
@@ -528,58 +481,9 @@ CREATE TABLE event_logs (
     event_log_meta JSONB DEFAULT '{}'::jsonb
 );
 
--- Collaborator Jobs
-CREATE TABLE jobs (
-    job_id SERIAL PRIMARY KEY,
-    job_customer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    job_collaborator_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    job_title VARCHAR(255) NOT NULL,
-    job_category VARCHAR(100),
-    job_location VARCHAR(255),
-    job_deadline TIMESTAMP,
-    job_price NUMERIC(12,2) NOT NULL DEFAULT 0,
-    job_description TEXT,
-    job_requirements JSONB DEFAULT '[]'::jsonb,
-    job_status VARCHAR(20) NOT NULL DEFAULT 'open',
-    job_decline_reason TEXT,
-    job_completed_at TIMESTAMP,
-    job_created_at TIMESTAMP DEFAULT now(),
-    job_updated_at TIMESTAMP DEFAULT now()
-);
-
--- Collaborator Contact Requests (Mock ask-more flow)
-CREATE TABLE job_contact_requests (
-    contact_request_id SERIAL PRIMARY KEY,
-    contact_request_job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
-    contact_request_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    contact_request_customer_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    contact_request_message TEXT NOT NULL,
-    contact_request_status VARCHAR(20) NOT NULL DEFAULT 'sent',
-    contact_request_created_at TIMESTAMP DEFAULT now(),
-    contact_request_replied_at TIMESTAMP
-);
-
--- Collaborator Deliverables
-CREATE TABLE job_deliverables (
-    deliverable_id SERIAL PRIMARY KEY,
-    deliverable_job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
-    deliverable_collaborator_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    deliverable_file_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
-    deliverable_note TEXT,
-    deliverable_submitted_at TIMESTAMP DEFAULT now()
-);
+-- Note: Jobs, job_contact_requests, and job_deliverables have been consolidated into the 'tickets' table.
 
 -- Unified Earnings
-CREATE TABLE earnings (
-    earning_id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    amount NUMERIC(15,2) NOT NULL DEFAULT 0,
-    status VARCHAR(20) NOT NULL DEFAULT 'available', -- pending | available
-    type VARCHAR(50) NOT NULL, -- job, article_payout, performance_bonus
-    source_id INTEGER, -- linked job_id, host_content_id, etc.
-    created_at TIMESTAMP DEFAULT now()
-);
-
 -- User Favorites (Centralized Bookmarks)
 CREATE TABLE user_favorites (
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -589,18 +493,6 @@ CREATE TABLE user_favorites (
     PRIMARY KEY (user_id, target_id, target_type)
 );
 CREATE INDEX idx_user_favorites_user ON user_favorites(user_id);
-
--- Collaborator Payout Requests (Mock)
-CREATE TABLE payout_requests (
-    payout_request_id SERIAL PRIMARY KEY,
-    payout_request_user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    payout_request_amount NUMERIC(15,2) NOT NULL,
-    payout_request_method VARCHAR(50) NOT NULL,
-    payout_request_status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    payout_request_note TEXT,
-    payout_request_created_at TIMESTAMP DEFAULT now(),
-    payout_request_processed_at TIMESTAMP
-);
 
 
 -- Admin Templates
@@ -616,59 +508,28 @@ CREATE TABLE admin_templates (
     template_updated_at TIMESTAMP DEFAULT now()
 );
 
--- Operation Tasks
-CREATE TABLE operation_tasks (
-    task_id SERIAL PRIMARY KEY,
-    task_title VARCHAR(255) NOT NULL,
-    task_type VARCHAR(50) NOT NULL,
-    task_status VARCHAR(20) NOT NULL DEFAULT 'open',
-    task_priority VARCHAR(20) NOT NULL DEFAULT 'medium',
-    assignee_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    customer_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    related_target_id INTEGER,
-    task_note TEXT,
-    created_at TIMESTAMP DEFAULT now(),
-    updated_at TIMESTAMP DEFAULT now()
-);
-
--- Task Replies
-CREATE TABLE task_replies (
-    reply_id SERIAL PRIMARY KEY,
-    task_id INTEGER NOT NULL REFERENCES operation_tasks(task_id) ON DELETE CASCADE,
-    sender_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    message TEXT NOT NULL,
-    attachments JSONB DEFAULT '[]'::jsonb,
-    visibility VARCHAR(20) DEFAULT 'internal',
-    created_at TIMESTAMP DEFAULT now()
-);
-
--- Notifications (Unified system alerts and feedback)
+-- Notifications
 CREATE TABLE notifications (
     notification_id SERIAL PRIMARY KEY,
     recipient_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    sender_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE, -- NULL for system
+    sender_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
     title VARCHAR(255),
     message TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL DEFAULT 'system', -- system, moderation, job, promotion
+    type VARCHAR(50) NOT NULL DEFAULT 'system',
     meta_data JSONB DEFAULT '{}'::jsonb,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT now()
 );
 
--- Escalations
-CREATE TABLE escalations (
-    escalation_id SERIAL PRIMARY KEY,
-    source_task_id INTEGER REFERENCES operation_tasks(task_id) ON DELETE SET NULL,
-    target_type VARCHAR(50) NOT NULL,
-    target_id INTEGER NOT NULL,
-    created_by INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    severity VARCHAR(20) NOT NULL DEFAULT 'medium',
-    reason TEXT NOT NULL,
-    evidence_urls JSONB DEFAULT '[]'::jsonb,
-    status VARCHAR(20) NOT NULL DEFAULT 'open',
-    resolution_note TEXT,
-    created_at TIMESTAMP DEFAULT now(),
-    resolved_at TIMESTAMP
+-- Task/Ticket Replies
+CREATE TABLE task_replies (
+    reply_id SERIAL PRIMARY KEY,
+    ticket_id INTEGER NOT NULL REFERENCES tickets(ticket_id) ON DELETE CASCADE,
+    sender_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    attachments JSONB DEFAULT '[]'::jsonb,
+    visibility VARCHAR(20) DEFAULT 'internal',
+    created_at TIMESTAMP DEFAULT now()
 );
 
 
@@ -720,25 +581,16 @@ CREATE INDEX idx_posts_created ON posts(post_created_at);
 CREATE INDEX attribute_filter_idx ON post_attribute_values USING btree (post_id, attribute_id, attribute_value);
 
 -- Collaborator Services
-CREATE INDEX jobs_status_deadline_idx ON jobs(job_status, job_deadline);
-CREATE INDEX jobs_collaborator_status_idx ON jobs(job_collaborator_id, job_status);
-CREATE INDEX job_contact_requests_collaborator_created_idx ON job_contact_requests(contact_request_collaborator_id, contact_request_created_at);
-CREATE INDEX job_contact_requests_job_created_idx ON job_contact_requests(contact_request_job_id, contact_request_created_at);
-CREATE INDEX job_deliverables_job_submitted_idx ON job_deliverables(deliverable_job_id, deliverable_submitted_at);
-CREATE INDEX idx_earnings_user ON earnings(user_id);
-CREATE INDEX idx_payout_requests_user ON payout_requests(payout_request_user_id);
+-- Legacy job indices removed
+-- Legacy job contact and deliverable indices removed
 
--- Post Meta
-CREATE INDEX idx_post_meta_post ON post_meta(post_meta_post_id);
+
 
 -- Shop Collaborators
 CREATE INDEX idx_shop_collaborators_shop ON shop_collaborators(shop_collaborators_shop_id);
 CREATE INDEX idx_shop_collaborators_user ON shop_collaborators(collaborator_id);
-CREATE INDEX idx_post_meta_key ON post_meta(post_meta_key);
 
--- Post Categories
-CREATE INDEX idx_post_categories_post ON post_categories(post_category_post_id);
-CREATE INDEX idx_post_categories_category ON post_categories(post_category_category_id);
+
 
 -- Users
 CREATE INDEX idx_users_mobile ON users(user_mobile);
@@ -763,11 +615,6 @@ CREATE INDEX idx_category_attributes_category ON category_attributes(category_at
 CREATE INDEX idx_category_attributes_attribute ON category_attributes(category_attribute_attribute_id);
 CREATE INDEX idx_category_attributes_status ON category_attributes(category_attribute_status);
 
--- Reports
-CREATE INDEX idx_reports_reporter ON reports(reporter_id);
-CREATE INDEX idx_reports_post ON reports(post_id);
-CREATE INDEX idx_reports_shop ON reports(report_shop_id);
-CREATE INDEX idx_reports_status ON reports(report_status);
 
 -- Promotions
 CREATE INDEX idx_post_promotions_post ON post_promotions(post_promotion_post_id);
@@ -781,20 +628,20 @@ CREATE INDEX idx_pkg_prices_effective    ON promotion_package_prices(package_id,
 -- Index nhanh cho truy vấn: "gói này có bảng giá nào chưa hết hạn?" (bao gồm cả giá tương lai)
 CREATE INDEX idx_pkg_prices_open_ended   ON promotion_package_prices(package_id, effective_from) WHERE effective_to IS NULL;
 
--- Payments
-CREATE INDEX idx_payment_txn_user        ON payment_txn(payment_txn_user_id);
-CREATE INDEX idx_payment_txn_status      ON payment_txn(payment_txn_status);
-CREATE INDEX idx_payment_txn_price       ON payment_txn(payment_txn_price_id);
+-- Transactions & Ledger Indexes
+CREATE INDEX idx_transactions_user ON transactions(transaction_user_id);
+CREATE INDEX idx_transactions_status ON transactions(transaction_status);
+CREATE INDEX idx_transactions_type ON transactions(transaction_type);
+CREATE INDEX idx_transactions_ref ON transactions(transaction_reference_type, transaction_reference_id);
 
 CREATE INDEX user_posting_plans_user_status_idx
 ON user_posting_plans(posting_plan_user_id, posting_plan_status);
 CREATE INDEX user_posting_plans_code_status_idx
 ON user_posting_plans(posting_plan_code, posting_plan_status);
 
-CREATE INDEX posting_fee_ledger_user_created_idx
-ON posting_fee_ledger(posting_fee_user_id, posting_fee_created_at);
-CREATE INDEX posting_fee_ledger_post_created_idx
-ON posting_fee_ledger(posting_fee_post_id, posting_fee_created_at);
+CREATE INDEX idx_ledgers_user ON ledgers(ledger_user_id);
+CREATE INDEX idx_ledgers_type ON ledgers(ledger_type);
+CREATE INDEX idx_ledgers_ref ON ledgers(ledger_reference_type, ledger_reference_id);
 
 -- Analytics
 CREATE INDEX idx_daily_metrics_date ON daily_placement_metrics(daily_placement_metric_date);
@@ -804,15 +651,9 @@ CREATE INDEX idx_daily_metrics_slot ON daily_placement_metrics(daily_placement_m
 CREATE INDEX idx_event_logs_user ON event_logs(event_log_user_id);
 CREATE INDEX idx_event_logs_type ON event_logs(event_log_event_type);
 CREATE INDEX idx_event_logs_time ON event_logs(event_log_event_time);
-CREATE INDEX idx_event_logs_target ON event_logs(event_log_target_type, event_log_target_id);
-
--- Internal Ops Indexes
-CREATE INDEX idx_operation_tasks_assignee ON operation_tasks(assignee_id);
-CREATE INDEX idx_operation_tasks_status ON operation_tasks(task_status);
-CREATE INDEX idx_task_replies_task ON task_replies(task_id);
-CREATE INDEX idx_escalations_status ON escalations(status);
 CREATE INDEX idx_notifications_recipient ON notifications(recipient_id);
 CREATE INDEX idx_notifications_read ON notifications(is_read);
+CREATE INDEX idx_task_replies_task ON task_replies(ticket_id);
 
 -- ============================================================
 -- TRIGGERS
@@ -873,7 +714,7 @@ INSERT INTO business_roles (
     'Mobile App',
     'Seller-side business role for shop owners who list ornamental plants and manage promotion packages.',
     '["Manage storefront profile", "Publish and update listings", "Review promotion package options"]'::jsonb,
-    '["Create and maintain listings", "Manage shop content", "Request payout for host earnings"]'::jsonb,
+    '["Create and maintain listings", "Manage shop content", "Track approved article income"]'::jsonb,
     'active'
 ),
 (
@@ -977,66 +818,61 @@ SET
 WHERE user_id = 6;
 
 -- Collaborator Jobs (Mock)
-INSERT INTO jobs (
-    job_id,
-    job_customer_id,
-    job_collaborator_id,
-    job_title,
-    job_category,
-    job_location,
-    job_deadline,
-    job_price,
-    job_description,
-    job_requirements,
-    job_status,
-    job_decline_reason,
-    job_completed_at,
-    job_created_at,
-    job_updated_at
+-- Migrated Collaborator Jobs to Tickets
+INSERT INTO tickets (
+    ticket_id,
+    ticket_type,
+    ticket_creator_id,
+    ticket_assignee_id,
+    ticket_status,
+    ticket_title,
+    ticket_content,
+    ticket_meta_data,
+    ticket_created_at,
+    ticket_updated_at
 ) VALUES
-(1, 1, NULL, 'Photo package for bonsai listing', 'Photo', 'Long Bien, Ha Noi', now() + interval '3 days', 650000, 'Need 12 listing photos for a bonsai package.', '["24MP camera","4:3 ratio","clean background"]'::jsonb, 'open', NULL, NULL, now() - interval '1 day', now() - interval '1 day'),
-(2, 2, 9, 'SEO content for Linh Sam posts', 'Content', 'Hoang Mai, Ha Noi', now() + interval '1 day', 800000, 'Write SEO-ready descriptions for 20 Linh Sam posts.', '["min 600 words","H2/H3 headings","persuasive tone"]'::jsonb, 'accepted', NULL, NULL, now() - interval '2 days', now() - interval '6 hours'),
-(3, 1, 9, 'Deliver final bonsai album', 'Photo', 'Yen Phong, Bac Ninh', now() - interval '2 days', 720000, 'Finalized photo album package for Tung La Han listing.', '["20 JPEG photos","3 cover images","source files + web files"]'::jsonb, 'completed', NULL, now() - interval '2 days', now() - interval '4 days', now() - interval '2 days');
+(100, 'JOB', 1, NULL, 'open', 'Photo package for bonsai listing', 'Need 12 listing photos for a bonsai package.', '{"category": "Photo", "location": "Long Bien, Ha Noi", "price": 650000, "deadline": "2026-04-22T00:00:00Z", "requirements": ["24MP camera","4:3 ratio","clean background"]}'::jsonb, now() - interval '1 day', now() - interval '1 day'),
+(101, 'JOB', 2, 9, 'accepted', 'SEO content for Linh Sam posts', 'Write SEO-ready descriptions for 20 Linh Sam posts.', '{"category": "Content", "location": "Hoang Mai, Ha Noi", "price": 800000, "deadline": "2026-04-20T00:00:00Z", "requirements": ["min 600 words","H2/H3 headings","persuasive tone"]}'::jsonb, now() - interval '2 days', now() - interval '6 hours'),
+(102, 'JOB', 1, 9, 'completed', 'Deliver final bonsai album', 'Finalized photo album package for Tung La Han listing.', '{"category": "Photo", "location": "Yen Phong, Bac Ninh", "price": 720000, "deadline": "2026-04-17T00:00:00Z", "requirements": ["20 JPEG photos","3 cover images","source files + web files"]}'::jsonb, now() - interval '4 days', now() - interval '2 days');
 
-INSERT INTO job_contact_requests (
-    contact_request_id,
-    contact_request_job_id,
-    contact_request_collaborator_id,
-    contact_request_customer_id,
-    contact_request_message,
-    contact_request_status,
-    contact_request_created_at,
-    contact_request_replied_at
+-- Migrated Job Contact Requests to Task Replies
+INSERT INTO task_replies (
+    reply_id,
+    ticket_id,
+    sender_id,
+    message,
+    visibility,
+    created_at
 ) VALUES
-(1, 2, 9, 2, 'Can you clarify the exact keyword set and tone before delivery?', 'sent', now() - interval '8 hours', NULL);
+(100, 101, 9, 'Can you clarify the exact keyword set and tone before delivery?', 'internal', now() - interval '8 hours');
 
-INSERT INTO job_deliverables (
-    deliverable_id,
-    deliverable_job_id,
-    deliverable_collaborator_id,
-    deliverable_file_urls,
-    deliverable_note,
-    deliverable_submitted_at
+-- Migrated Job Deliverables to Task Replies (as final submissions)
+INSERT INTO task_replies (
+    reply_id,
+    ticket_id,
+    sender_id,
+    message,
+    attachments,
+    visibility,
+    created_at
 ) VALUES
-(1, 3, 9, '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'Uploaded full album and source zip.', now() - interval '2 days');
+(101, 102, 9, 'Uploaded full album and source zip.', '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'internal', now() - interval '2 days');
 
-INSERT INTO earnings (earning_id, user_id, amount, status, type, source_id, created_at) VALUES
-(1, 9, 720000, 'available', 'job', 3, now() - interval '2 days');
+-- Collaborator Earnings & Payout Requests (Consolidated into ledgers & transactions)
+INSERT INTO ledgers (ledger_id, ledger_user_id, ledger_amount, ledger_status, ledger_type, ledger_direction, ledger_reference_type, ledger_reference_id, ledger_created_at) VALUES
+(1, 9, 720000.00, 'available', 'job', 'CREDIT', 'ticket', 102, now() - interval '2 days');
 
-INSERT INTO payout_requests (
-    payout_request_id,
-    payout_request_user_id,
-    payout_request_amount,
-    payout_request_method,
-    payout_request_status,
-    payout_request_note,
-    payout_request_created_at,
-    payout_request_processed_at
+INSERT INTO transactions (
+    transaction_id,
+    transaction_user_id,
+    transaction_amount,
+    transaction_type,
+    transaction_provider,
+    transaction_status,
+    transaction_meta,
+    transaction_created_at
 ) VALUES
-(1, 9, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL),
-(2, 136, 400000, 'Bank transfer', 'pending', 'Yêu cầu nhận nhuận bút cho loạt bài News tháng này.', now() - interval '12 hours', NULL),
-(3, 136, 250000, 'Bank transfer', 'completed', 'Đã đối soát nội bộ và hoàn tất chi trả.', now() - interval '4 days', now() - interval '3 days'),
-(4, 136, 150000, 'Bank transfer', 'rejected', 'Tạm từ chối để chờ đối soát thêm kỳ thanh toán.', now() - interval '2 days', now() - interval '36 hours');
+(1, 9, 500000.00,  'payout', 'bank', 'pending', '{"method":"Bank transfer","note":"Weekly payout request (mock)."}', now() - interval '1 day');
 
 -- Host Contents (Mock - Magazine Style)
 INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_description, host_content_body, host_content_category, host_content_media_urls, host_content_status, host_content_view_count, host_content_payout_amount) VALUES
@@ -1056,11 +892,23 @@ Ngày nay, khi nhịp sống hiện đại ngày càng hối hả, sự hiện d
 (2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Mẹo vặt', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
 (3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Sự kiện', '[]', 'published', 450, 300000.00);
 
-INSERT INTO earnings (earning_id, user_id, amount, status, type, source_id, created_at) VALUES
-(2, 136, 300000.00, 'available', 'article_payout', 1, now() - interval '5 days'),
-(3, 136, 300000.00, 'available', 'article_payout', 2, now() - interval '4 days'),
-(4, 136, 300000.00, 'pending', 'article_payout', 3, now() - interval '3 days'),
-(5, 136, 120000.00, 'available', 'performance_bonus', 1, now() - interval '2 days');
+INSERT INTO ledgers (
+    ledger_id,
+    ledger_user_id,
+    ledger_amount,
+    ledger_type,
+    ledger_direction,
+    ledger_status,
+    ledger_reference_type,
+    ledger_reference_id,
+    ledger_note,
+    ledger_meta,
+    ledger_created_at
+) VALUES
+(2, 136, 300000.00, 'earning', 'CREDIT', 'available', 'host_content', 1, 'Fixed article payout for HostContent #1', '{"type":"article_payout","sourceId":1}'::jsonb, now() - interval '5 days'),
+(3, 136, 300000.00, 'earning', 'CREDIT', 'available', 'host_content', 2, 'Fixed article payout for HostContent #2', '{"type":"article_payout","sourceId":2}'::jsonb, now() - interval '4 days'),
+(4, 136, 300000.00, 'earning', 'CREDIT', 'available', 'host_content', 3, 'Fixed article payout for HostContent #3', '{"type":"article_payout","sourceId":3}'::jsonb, now() - interval '3 days'),
+(5, 136, 120000.00, 'earning', 'CREDIT', 'available', 'host_content', 1, 'Fixed bonus for reaching the view milestone', '{"type":"performance_bonus","sourceId":1,"threshold":1000}'::jsonb, now() - interval '2 days');
 
 -- Shops
 INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verified, shop_location, shop_description, shop_cover_url, shop_status, shop_vip_started_at, shop_vip_expires_at, shop_lat, shop_lng) VALUES
@@ -1076,15 +924,6 @@ INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verifi
 (137, 'Vườn Tùng Cổ Đông Anh', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
     'Chuyên sưu tầm và chăm sóc bonsai tùng, sanh, si theo phong cách vườn Bắc bộ. Nhận tư vấn phối chậu và tạo dáng cây trưởng thành.',
     '/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
-
-INSERT INTO shop_collaborators (
-    shop_collaborators_id,
-    shop_collaborators_shop_id,
-    collaborator_id,
-    shop_collaborators_status,
-    shop_collaborators_created_at
-) VALUES
-(1, 1, 9, 'active', now() - interval '10 days');
 
 -- ============================================================
 -- CATEGORIES
@@ -1240,31 +1079,46 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 -- Post 15: Ổi Bonsai
 (15, 1, 'Dáng Hoành'),    (15, 2, '48'),  (15, 3, '18'),  (15, 4, '7'),  (15, 5, 'Bắc Ninh');
 
--- Post Images
-INSERT INTO post_images (post_id, image_url, image_sort_order) VALUES
-(1,  '/uploads/sanh-nam-dien-mini-1.jpg', 0),
-(1,  '/uploads/sanh-nam-dien-mini-2.jpg', 1),
-(1,  '/uploads/sanh-nam-dien-mini-3.jpg', 2),
-(2,  '/uploads/tung-la-han-1.jpg', 0),
-(2,  '/uploads/tung-la-han-2.jpg', 1),
-(3,  '/uploads/linh-sam-1.jpg', 0),
-(3,  '/uploads/linh-sam-2.jpg', 1),
-(4,  '/uploads/sanh-que-dai-1.jpg', 0),
-(5,  '/uploads/mct-mini-1.jpg', 0),
-(5,  '/uploads/mct-mini-2.jpg', 1),
-(6,  '/uploads/thong-den-1.jpg', 0),
-(7,  '/uploads/si-phong-thuy-1.jpg', 0),
-(8,  '/uploads/mai-vang-1.jpg', 0),
-(8,  '/uploads/mai-vang-2.jpg', 1),
-(9,  '/uploads/tung-bach-tan-1.jpg', 0),
-(10, '/uploads/kim-quyt-mini-1.jpg', 0),
-(11, '/uploads/mai-chieu-thuy-bay-1.jpg', 0),
-(11, '/uploads/mai-chieu-thuy-bay-2.jpg', 1),
-(12, '/uploads/duoi-co-xien-1.jpg', 0),
-(13, '/uploads/sanh-co-tan-roi-1.jpg', 0),
-(13, '/uploads/sanh-co-tan-roi-2.jpg', 1),
-(14, '/uploads/loc-vung-huyen-1.jpg', 0),
-(15, '/uploads/oi-bonsai-sai-qua-1.jpg', 0);
+-- Media Assets Seed Data
+INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order) VALUES
+-- Post 1: Sanh Nam Điền Mini
+('post', 1, 'image', '/uploads/sanh-nam-dien-mini-1.jpg', 0),
+('post', 1, 'image', '/uploads/sanh-nam-dien-mini-2.jpg', 1),
+('post', 1, 'image', '/uploads/sanh-nam-dien-mini-3.jpg', 2),
+-- Post 2: Tùng La Hán
+('post', 2, 'image', '/uploads/tung-la-han-1.jpg', 0),
+('post', 2, 'image', '/uploads/tung-la-han-2.jpg', 1),
+-- Post 3: Linh Sam
+('post', 3, 'image', '/uploads/linh-sam-1.jpg', 0),
+('post', 3, 'image', '/uploads/linh-sam-2.jpg', 1),
+-- Post 4: Sanh Quê Đại
+('post', 4, 'image', '/uploads/sanh-que-dai-1.jpg', 0),
+-- Post 5: MCT Mini
+('post', 5, 'image', '/uploads/mct-mini-1.jpg', 0),
+('post', 5, 'image', '/uploads/mct-mini-2.jpg', 1),
+-- Post 6: Thông Đen
+('post', 6, 'image', '/uploads/thong-den-1.jpg', 0),
+-- Post 7: Si Phong Thủy
+('post', 7, 'image', '/uploads/si-phong-thuy-1.jpg', 0),
+-- Post 8: Mai Vàng
+('post', 8, 'image', '/uploads/mai-vang-1.jpg', 0),
+('post', 8, 'image', '/uploads/mai-vang-2.jpg', 1),
+-- Post 9: Tùng Bách Tán
+('post', 9, 'image', '/uploads/tung-bach-tan-1.jpg', 0),
+-- Post 10: Kim Quýt Mini
+('post', 10, 'image', '/uploads/kim-quyt-mini-1.jpg', 0),
+-- Post 11: Mai Chiếu Thủy Dáng Bay
+('post', 11, 'image', '/uploads/mai-chieu-thuy-bay-1.jpg', 0),
+('post', 11, 'image', '/uploads/mai-chieu-thuy-bay-2.jpg', 1),
+-- Post 12: Duối Cổ
+('post', 12, 'image', '/uploads/duoi-co-xien-1.jpg', 0),
+-- Post 13: Sanh Cổ Tán Rơi
+('post', 13, 'image', '/uploads/sanh-co-tan-roi-1.jpg', 0),
+('post', 13, 'image', '/uploads/sanh-co-tan-roi-2.jpg', 1),
+-- Post 14: Lộc Vừng Phong Thủy
+('post', 14, 'image', '/uploads/loc-vung-huyen-1.jpg', 0),
+-- Post 15: Ổi Bonsai
+('post', 15, 'image', '/uploads/oi-bonsai-sai-qua-1.jpg', 0);
 
 -- Favorite Posts (Bookmarks)
 -- User Favorites (Mock - Posts & Contents)
@@ -1339,23 +1193,23 @@ INSERT INTO user_posting_plans (
 (3, 3, 'PERSONAL_MONTHLY',      'Gói cá nhân theo tháng', 'monthly',  'expired', true, 20,    0, 4, 5000, now() - interval '65 days', now() - interval '35 days', now() - interval '65 days', now() - interval '35 days');
 
 -- Fee ledger demo for posting-plan billing (tracking only)
-INSERT INTO posting_fee_ledger (
-    posting_fee_id,
-    posting_fee_user_id,
-    posting_fee_post_id,
-    posting_fee_plan_id,
-    posting_fee_action_type,
-    posting_fee_quantity,
-    posting_fee_unit_amount,
-    posting_fee_total_amount,
-    posting_fee_currency,
-    posting_fee_note,
-    posting_fee_created_at
+-- Fee ledger demo for posting-plan billing (tracking only)
+INSERT INTO ledgers (
+    ledger_id,
+    ledger_user_id,
+    ledger_amount,
+    ledger_type,
+    ledger_direction,
+    ledger_status,
+    ledger_reference_type,
+    ledger_reference_id,
+    ledger_note,
+    ledger_created_at
 ) VALUES
-(1, 1, 15, NULL, 'POST_CREATE', 1, 20000, 20000, 'VND', 'Owner plan create-post fee tracking.', now() - interval '7 days'),
-(2, 3, 9,  NULL, 'POST_CREATE', 1, 20000, 20000, 'VND', 'Owner plan create-post fee tracking.', now() - interval '5 days'),
-(3, 1, 7,  NULL, 'POST_EDIT',   1, 5000,  5000,  'VND', 'Charged after free edit quota was exhausted.', now() - interval '2 days'),
-(4, 2, 6,  2,    'POST_EDIT',   1, 5000,  5000,  'VND', 'Monthly personal plan paid edit beyond free quota.', now() - interval '1 day');
+(100, 1, 20000, 'POST_CREATE', 'DEBIT', 'available', 'post', 15, 'Owner plan create-post fee tracking.', now() - interval '7 days'),
+(101, 3, 20000, 'POST_CREATE', 'DEBIT', 'available', 'post', 9,  'Owner plan create-post fee tracking.', now() - interval '5 days'),
+(102, 1, 5000,  'POST_EDIT',   'DEBIT', 'available', 'post', 7,  'Charged after free edit quota was exhausted.', now() - interval '2 days'),
+(103, 2, 5000,  'POST_EDIT',   'DEBIT', 'available', 'post', 6,  'Monthly personal plan paid edit beyond free quota.', now() - interval '1 day');
 
 -- ============================================================
 -- BANNED KEYWORDS
@@ -1386,14 +1240,10 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('owner_posting_policy', '{"planTitle": "Gói Chủ Vườn Vĩnh Viễn", "autoApprove": true, "dailyPostLimit": 20, "postFeeAmount": 20000, "freeEditQuota": 4, "editFeeAmount": 5000, "features": ["Đăng bài ngay, không qua chờ duyệt", "Giới hạn 20 bài viết mỗi ngày", "4 lượt sửa bài miễn phí", "Phí đăng tin lẻ cực thấp"]}', 1),
 ('personal_posting_policy', '{"planTitle": "Gói Cá Nhân Theo Tháng", "autoApprove": true, "dailyPostLimit": 20, "postFeeAmount": 0, "freeEditQuota": 4, "editFeeAmount": 5000, "features": ["Dành cho người chơi nhỏ lẻ", "Đăng bài tự động duyệt trong chu kỳ", "Giới hạn 20 bài viết mỗi ngày", "4 lượt sửa bài miễn phí mỗi tháng"]}', 1),
 ('shop_vip_policy', '{"planTitle": "Gói Nhà Vườn VIP", "features": ["Xếp đầu danh sách nhà vườn", "Gắn nhãn VIP nổi bật trong danh sách nhà vườn", "Hiển thị viền vàng sang trọng cho shop", "Ưu tiên hỗ trợ từ đội ngũ vận hành"]}', 1),
-('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"Tiếng Việt"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true,"postRateLimitPerHour":10},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true},"hostIncome":{"articlePayoutAmount":300000,"viewBonusThreshold":1000,"viewBonusAmount":120000,"minimumPayoutRequestAmount":100000}}', 1),
+('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"Vietnamese"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true},"hostIncome":{"articlePayoutAmount":300000,"viewBonusThreshold":1000,"viewBonusAmount":120000}}', 1),
 ('admin_template_builder_config', '{"templateName":"Mẫu đăng tin cây cảnh","categoryName":"Cây cảnh & Bonsai","usageNote":"Dùng để xem trước bố cục form đăng tin cho ngành cây cảnh trước khi đưa vào vận hành.","previewTitlePlaceholder":"Ví dụ: Sanh mini 8 năm tuổi, dáng trực","submitLabel":"Đăng tin cây cảnh (Xem trước)","fields":[{"id":"bonsai-style","type":"select","label":"Dáng cây (Thế cây)","placeholder":"Chọn dáng cây","helperText":"Giúp người đăng mô tả bố cục bonsai theo đúng cách gọi phổ biến.","required":true,"options":["Trực","Xiêu","Huyền","Hoành","Văn nhân"]},{"id":"pot-type","type":"select","label":"Loại chậu đi kèm","placeholder":"Chọn loại chậu","helperText":"Thể hiện tình trạng đi kèm chậu để người mua định giá rõ hơn.","required":true,"options":["Chậu gốm","Chậu đá","Bầu đất / túi ươm"]},{"id":"tree-age","type":"number","label":"Tuổi cây (ước lượng)","placeholder":"Ví dụ: 8","helperText":"Dùng để ước lượng độ trưởng thành của cây, hỗ trợ so sánh giá trị.","required":false,"options":[]}]}', 1),
 ('admin_ai_insight_settings', '{"autoDailySummary":true,"anomalyAlerts":true,"operatorDigest":false,"recommendationTone":"Balanced","confidenceThreshold":78,"promptVersion":"gm-admin-v1.4","reviewMode":"Required"}', 1);
 
--- OTP Requests (Sample)
-INSERT INTO otp_requests (otp_request_mobile, otp_request_otp_code, otp_request_expire_at, otp_request_status) VALUES
-('0978195419', '123456', now() + interval '10 minutes', 'verified'),
-('0982703398', '654321', now() + interval '10 minutes', 'pending');
 
 -- ============================================================
 -- ADMIN TEMPLATES
@@ -1445,41 +1295,43 @@ INSERT INTO post_promotions (
 -- ============================================================
 -- PAYMENT TRANSACTIONS
 -- ============================================================
-INSERT INTO payment_txn (
-    payment_txn_id,
-    payment_txn_user_id,
-    payment_txn_package_id,
-    payment_txn_post_id,
-    payment_txn_price_id,
-    payment_txn_amount,
-    payment_txn_provider,
-    payment_txn_provider_txn_id,
-    payment_txn_status,
-    payment_txn_created_at
+-- Seed Transactions (Previously payment_txn)
+INSERT INTO transactions (
+    transaction_id,
+    transaction_user_id,
+    transaction_amount,
+    transaction_type,
+    transaction_provider,
+    transaction_provider_txn_id,
+    transaction_status,
+    transaction_reference_type,
+    transaction_reference_id,
+    transaction_created_at
 ) VALUES
-(1, 1, 5, NULL, 5, 250000, 'bank_transfer', 'GM-TXN-20260101-001', 'success', '2026-01-01 09:00:00'),
-(2, 3, 5, NULL, 5, 250000, 'bank_transfer', 'GM-TXN-20260103-002', 'success', '2026-01-03 10:00:00'),
-(3, 9, 5, NULL, 5, 250000, 'bank_transfer', 'GM-TXN-20260105-003', 'success', '2026-01-05 11:00:00'),
-(4, 6, 5, NULL, 5, 250000, 'bank_transfer', 'GM-TXN-20260107-004', 'success', '2026-01-07 11:30:00'),
-(5, 2, 6, NULL, 6, 30000,  'bank_transfer', 'GM-TXN-20260403-005', 'success', '2026-04-03 18:58:00'),
-(6, 1, 3, NULL, 3, 499000, 'bank_transfer', 'GM-TXN-20260316-006', 'success', '2026-03-16 18:58:00'),
-(7, 1, 2, 1, 2, 299000, 'bank_transfer', 'GM-TXN-20260304-007', 'success', '2026-03-04 15:30:00'),
-(8, 3, 1, 4, 1, 99000,  'bank_transfer', 'GM-TXN-20260311-008', 'success', '2026-03-11 13:40:00'),
-(9, 3, 2, 9, 2, 299000, 'bank_transfer', 'GM-TXN-20260409-009', 'success', '2026-04-09 08:50:00'),
-(10, 6, 1, 12, 1, 99000,  'bank_transfer', 'GM-TXN-20260327-010', 'success', '2026-03-27 15:10:00'),
-(11, 1, 2, 15, 2, 299000, 'bank_transfer', 'GM-TXN-20260416-011', 'success', '2026-04-16 07:40:00'),
-(12, 1, 1, 7, 1, 99000,  'bank_transfer', 'GM-TXN-20260416-012', 'success', '2026-04-16 07:45:00');
+(10, 1, 250000, 'payment', 'bank_transfer', 'GM-TXN-20260101-001', 'success', 'plan', null, '2026-01-01 09:00:00'),
+(11, 3, 250000, 'payment', 'bank_transfer', 'GM-TXN-20260103-002', 'success', 'plan', null, '2026-01-03 10:00:00'),
+(12, 9, 250000, 'payment', 'bank_transfer', 'GM-TXN-20260105-003', 'success', 'plan', null, '2026-01-05 11:00:00'),
+(13, 6, 250000, 'payment', 'bank_transfer', 'GM-TXN-20260107-004', 'success', 'plan', null, '2026-01-07 11:30:00'),
+(14, 2, 30000,  'payment', 'bank_transfer', 'GM-TXN-20260403-005', 'success', 'plan', null, '2026-04-03 18:58:00'),
+(15, 1, 499000, 'payment', 'bank_transfer', 'GM-TXN-20260316-006', 'success', 'package', 3, '2026-03-16 18:58:00'),
+(16, 1, 299000, 'payment', 'bank_transfer', 'GM-TXN-20260304-007', 'success', 'package', 2, '2026-03-04 15:30:00'),
+(17, 3, 99000,  'payment', 'bank_transfer', 'GM-TXN-20260311-008', 'success', 'package', 1, '2026-03-11 13:40:00'),
+(18, 3, 299000, 'payment', 'bank_transfer', 'GM-TXN-20260409-009', 'success', 'package', 2, '2026-04-09 08:50:00'),
+(19, 6, 99000,  'payment', 'bank_transfer', 'GM-TXN-20260327-010', 'success', 'package', 1, '2026-03-27 15:10:00'),
+(20, 1, 299000, 'payment', 'bank_transfer', 'GM-TXN-20260416-011', 'success', 'package', 2, '2026-04-16 07:40:00'),
+(21, 1, 99000,  'payment', 'bank_transfer', 'GM-TXN-20260416-012', 'success', 'package', 1, '2026-04-16 07:45:00');
 
-INSERT INTO reports (report_id, reporter_id, post_id, report_shop_id, report_reason_code, report_reason, report_note, report_status, admin_note, report_created_at, report_updated_at) VALUES
-(1, 10, 1, 1, 'MISLEADING_INFO', 'Post title and product details are not consistent with the attached listing photos.', 'The seller describes a different bonsai shape in the text than in the gallery.', 'pending', NULL, '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
-(2, 10, 2, 3, 'SPAM_PROMOTION', 'The post content repeats promotional text and external contact instructions too aggressively.', 'Please review whether this listing should stay visible or be rewritten.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
-(3, 10, 6, 3, 'SUSPICIOUS_PRICING', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'Potential bait pricing. Needs manual moderation follow-up.', 'dismissed', 'Pricing was verified with the shop and no policy breach was found.', '2026-03-27 11:20:00', '2026-03-28 08:40:00'),
-(4, 8, 3, 3, 'COPYRIGHT_MEDIA', 'Listing photos appear copied from another marketplace source.', 'Image set looks duplicated from a third-party seller page.', 'pending', NULL, '2026-03-26 14:05:00', '2026-03-26 14:05:00'),
-(5, 2, 4, 3, 'OFF_PLATFORM_CONTACT', 'Seller requests direct contact outside GreenMarket before checkout.', 'Contains messaging that bypasses marketplace payment flow.', 'resolved', 'Content was edited and compliant version was republished.', '2026-03-25 16:25:00', '2026-03-26 10:10:00'),
-(6, 9, 8, 3, 'WRONG_CATEGORY', 'The post was published under the wrong category and disrupts category relevance.', 'Needs category correction and listing clean-up.', 'dismissed', 'Category was acceptable after manual review.', '2026-03-24 09:30:00', '2026-03-24 17:20:00'),
-(7, 10, 9, 3, 'MISLEADING_INFO', 'The post description overstates the maturity and shape training of the tree.', 'Customer noted mismatch between wording and actual plant size.', 'pending', NULL, '2026-03-23 13:15:00', '2026-03-23 13:15:00'),
-(8, 8, 13, 6, 'SPAM_PROMOTION', 'Repeated marketing text is making the listing difficult to review.', 'Needs moderation note and content clean-up.', 'resolved', 'Seller removed duplicated promotional slogans and listing stayed visible.', '2026-03-22 10:45:00', '2026-03-22 15:40:00'),
-(9, 2, 15, 1, 'SUSPICIOUS_PRICING', 'The reported price looks too low compared with product material quality.', 'Possible bait price to attract off-platform contact.', 'pending', NULL, '2026-03-21 11:05:00', '2026-03-21 11:05:00');
+-- Tickets Seed Data (Reports migrated)
+INSERT INTO tickets (ticket_id, ticket_type, ticket_creator_id, ticket_target_type, ticket_target_id, ticket_title, ticket_content, ticket_status, ticket_resolution_note, ticket_meta_data, ticket_created_at, ticket_updated_at) VALUES
+(1, 'REPORT', 10, 'post', 1, 'Báo cáo bài đăng #1', 'Post title and product details are not consistent with the attached listing photos.', 'open', NULL, '{"reason_code": "MISLEADING_INFO", "note": "The seller describes a different bonsai shape in the text than in the gallery."}', '2026-03-29 09:15:00', '2026-03-29 09:15:00'),
+(2, 'REPORT', 10, 'post', 2, 'Báo cáo bài đăng #2', 'The post content repeats promotional text and external contact instructions too aggressively.', 'resolved', 'Seller was instructed to remove repeated off-platform promotion text before republishing.', '{"reason_code": "SPAM_PROMOTION", "note": "Please review whether this listing should stay visible or be rewritten."}', '2026-03-28 15:42:00', '2026-03-29 10:05:00'),
+(3, 'REPORT', 10, 'post', 6, 'Báo cáo bài đăng #6', 'The listed price looks abnormal compared with similar ornamental plant posts in the same category.', 'closed', 'Pricing was verified with the shop and no policy breach was found.', '{"reason_code": "SUSPICIOUS_PRICING", "note": "Potential bait pricing. Needs manual moderation follow-up."}', '2026-03-27 11:20:00', '2026-03-28 08:40:00'),
+(4, 'REPORT', 8, 'post', 3, 'Báo cáo bài đăng #3', 'Listing photos appear copied from another marketplace source.', 'open', NULL, '{"reason_code": "COPYRIGHT_MEDIA", "note": "Image set looks duplicated from a third-party seller page."}', '2026-03-26 14:05:00', '2026-03-26 14:05:00'),
+(5, 'REPORT', 2, 'post', 4, 'Báo cáo bài đăng #4', 'Seller requests direct contact outside GreenMarket before checkout.', 'resolved', 'Content was edited and compliant version was republished.', '{"reason_code": "OFF_PLATFORM_CONTACT", "note": "Contains messaging that bypasses marketplace payment flow."}', '2026-03-25 16:25:00', '2026-03-26 10:10:00'),
+(6, 'REPORT', 9, 'post', 8, 'Báo cáo bài đăng #8', 'The post was published under the wrong category and disrupts category relevance.', 'closed', 'Category was acceptable after manual review.', '{"reason_code": "WRONG_CATEGORY", "note": "Needs category correction and listing clean-up."}', '2026-03-24 09:30:00', '2026-03-24 17:20:00'),
+(7, 'REPORT', 10, 'post', 9, 'Báo cáo bài đăng #9', 'The post description overstates the maturity and shape training of the tree.', 'open', NULL, '{"reason_code": "MISLEADING_INFO", "note": "Customer noted mismatch between wording and actual plant size."}', '2026-03-23 13:15:00', '2026-03-23 13:15:00'),
+(8, 'REPORT', 8, 'post', 13, 'Báo cáo bài đăng #13', 'Repeated marketing text is making the listing difficult to review.', 'resolved', 'Seller removed duplicated promotional slogans and listing stayed visible.', '{"reason_code": "SPAM_PROMOTION", "note": "Needs moderation note and content clean-up."}', '2026-03-22 10:45:00', '2026-03-22 15:40:00'),
+(9, 'REPORT', 2, 'post', 15, 'Báo cáo bài đăng #15', 'The reported price looks too low compared with product material quality.', 'open', NULL, '{"reason_code": "SUSPICIOUS_PRICING", "note": "Possible bait price to attract off-platform contact."}', '2026-03-21 11:05:00', '2026-03-21 11:05:00');
 
 -- ============================================================
 -- EVENT LOGS / EXPORT HISTORY / ACTIVITY LOG
@@ -1586,6 +1438,7 @@ INSERT INTO ai_insights (
 (5, 1, 'Placement Performance', '{"title":"Tóm tắt hiệu quả vị trí hiển thị","focus":"Placement Performance","status":"Archived","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Lượt hiển thị trang chủ đầu tháng 3 ở mức tốt nhưng giảm dần trước khi gói cao cấp 30 ngày được kích hoạt. Cần rà soát lại độ mới của nội dung quảng bá dành cho khách mua vị trí trang chủ.', 'Gemini gemini-2.0-flash', '2026-03-29 16:25:00'),
 (6, 1, 'Revenue Signals',       '{"title":"Tóm tắt tín hiệu doanh thu","focus":"Revenue Signals","status":"Needs Review","generatedBy":"Quản trị viên hệ thống","model":"Gemini gemini-2.0-flash"}', 'Giá trị đơn hàng trung bình hiện được giữ bởi các gói vị trí 1 trang chủ, trong khi các gói vị trí 3 đang kéo số lượng đơn. Nên tiếp tục theo dõi đồng thời cả hai tầng gói trong phân tích giá.', 'Gemini gemini-2.0-flash', '2026-03-30 11:10:00');
 
+
 -- ============================================================
 -- RESET SEQUENCES
 -- ============================================================
@@ -1594,64 +1447,47 @@ INSERT INTO ai_insights (
 -- OPERATIONS & MANAGER DATA
 -- ============================================================
 
--- Operation Tasks
-INSERT INTO operation_tasks (task_id, task_title, task_type, task_status, task_priority, assignee_id, customer_id, related_target_id, task_note, created_at, updated_at) VALUES
-(1, 'Hỗ trợ đổi email shop', 'support', 'in_progress', 'medium', 6, 2, NULL, 'Khách hàng gặp lỗi OTP khi đổi email.', now() - interval '2 days', now() - interval '1 day'),
-(2, 'Xác minh báo cáo spam', 'report_check', 'open', 'high', 6, 8, 2, 'Report #2 cần tra xét IP.', now() - interval '1 day', now() - interval '1 day'),
-(3, 'Cấp lại quyền đăng bài', 'support', 'closed', 'high', 6, 1, NULL, 'Đã mở khóa.', now() - interval '5 days', now() - interval '4 days');
+-- Tickets Seed Data (Support & Escalations migrated)
+INSERT INTO tickets (ticket_id, ticket_type, ticket_creator_id, ticket_assignee_id, ticket_status, ticket_priority, ticket_title, ticket_content, ticket_target_type, ticket_target_id, ticket_created_at, ticket_updated_at) VALUES
+(10, 'SUPPORT', 2, 6, 'in_progress', 'medium', 'Hỗ trợ đổi email shop', 'Khách hàng gặp lỗi OTP khi đổi email.', NULL, NULL, now() - interval '2 days', now() - interval '1 day'),
+(11, 'REPORT', 8, 6, 'open', 'high', 'Xác minh báo cáo spam', 'Report #2 cần tra xét IP.', 'post', 2, now() - interval '1 day', now() - interval '1 day'),
+(12, 'SUPPORT', 1, 6, 'resolved', 'high', 'Cấp lại quyền đăng bài', 'Đã mở khóa.', NULL, NULL, now() - interval '5 days', now() - interval '4 days'),
+(13, 'ESCALATION', 6, 10, 'open', 'high', 'Leo thang xử lý shop vi phạm', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'shop', 1, now() - interval '12 hours', now() - interval '12 hours');
 
--- Task Replies
-INSERT INTO task_replies (reply_id, task_id, sender_id, message, visibility, created_at) VALUES
-(1, 1, 6, 'Tôi đang kiểm tra hệ thống SMS provider.', 'internal', now() - interval '1 day'),
-(2, 2, 6, 'Khách này có dấu hiệu spam thực sự. Sẽ báo cấp trên.', 'internal', now() - interval '12 hours');
+-- Task/Ticket Replies
+INSERT INTO task_replies (reply_id, ticket_id, sender_id, message, visibility, created_at) VALUES
+(1, 10, 6, 'Tôi đang kiểm tra hệ thống SMS provider.', 'internal', now() - interval '1 day'),
+(2, 11, 6, 'Khách này có dấu hiệu spam thực sự. Sẽ báo cấp trên.', 'internal', now() - interval '12 hours');
 
--- Notifications Seed Data
-INSERT INTO notifications (notification_id, recipient_id, sender_id, title, message, type, is_read, created_at) VALUES
-(1, 6, NULL, 'Task mới: Xác minh báo cáo spam', 'Bạn được assign một task mới từ hệ thống phân bổ.', 'system', true, now() - interval '1 day'),
-(2, 10, NULL, 'Escalation mới: Cần xử lý shop vi phạm', 'Operation Staff (ID: 6) vừa đẩy một ticket lên mức quản lý.', 'system', false, now() - interval '12 hours'),
-(3, 1, 10, 'Phản hồi kiểm duyệt', 'Vui lòng gỡ bỏ các đoạn quảng cáo lặp lại quá nhiều lần để bài được hiển thị lại.', 'moderation', false, now() - interval '5 days');
-
--- Escalations
-INSERT INTO escalations (escalation_id, source_task_id, target_type, target_id, created_by, severity, reason, status, resolution_note, created_at) VALUES
-(1, 2, 'shop', 1, 6, 'high', 'Shop này vi phạm nhiều lần, vượt quyền hạn của Operation Staff.', 'open', NULL, now() - interval '12 hours');
+-- Seq
+SELECT setval('tickets_ticket_id_seq', (SELECT COALESCE(MAX(ticket_id), 1) FROM tickets));
+SELECT setval('task_replies_reply_id_seq', (SELECT COALESCE(MAX(reply_id), 1) FROM task_replies));
 
 
 SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));
 SELECT setval('admins_admin_id_seq', (SELECT COALESCE(MAX(admin_id), 1) FROM admins));
 SELECT setval('roles_role_id_seq', (SELECT COALESCE(MAX(role_id), 1) FROM roles));
 SELECT setval('business_roles_business_role_id_seq', (SELECT COALESCE(MAX(business_role_id), 1) FROM business_roles));
-SELECT setval('otp_requests_otp_request_id_seq', (SELECT COALESCE(MAX(otp_request_id), 1) FROM otp_requests));
 SELECT setval('categories_category_id_seq', (SELECT COALESCE(MAX(category_id), 1) FROM categories));
 SELECT setval('attributes_attribute_id_seq', (SELECT COALESCE(MAX(attribute_id), 1) FROM attributes));
 SELECT setval('posts_post_id_seq', (SELECT COALESCE(MAX(post_id), 1) FROM posts));
-SELECT setval('post_images_image_id_seq', (SELECT COALESCE(MAX(image_id), 1) FROM post_images));
-SELECT setval('post_videos_post_video_id_seq', (SELECT COALESCE(MAX(post_video_id), 1) FROM post_videos));
+SELECT setval('media_assets_asset_id_seq', (SELECT COALESCE(MAX(asset_id), 1) FROM media_assets));
 SELECT setval('post_attribute_values_value_id_seq', (SELECT COALESCE(MAX(value_id), 1) FROM post_attribute_values));
-SELECT setval('jobs_job_id_seq', (SELECT COALESCE(MAX(job_id), 1) FROM jobs));
-SELECT setval('job_contact_requests_contact_request_id_seq', (SELECT COALESCE(MAX(contact_request_id), 1) FROM job_contact_requests));
-SELECT setval('job_deliverables_deliverable_id_seq', (SELECT COALESCE(MAX(deliverable_id), 1) FROM job_deliverables));
-SELECT setval('earnings_earning_id_seq', (SELECT COALESCE(MAX(earning_id), 1) FROM earnings));
-SELECT setval('payout_requests_payout_request_id_seq', (SELECT COALESCE(MAX(payout_request_id), 1) FROM payout_requests));
-SELECT setval('reports_report_id_seq', (SELECT COALESCE(MAX(report_id), 1) FROM reports));
+-- Job sequences removed (consolidated into tickets)
+SELECT setval('ledgers_ledger_id_seq', (SELECT COALESCE(MAX(ledger_id), 1) FROM ledgers));
+SELECT setval('transactions_transaction_id_seq', (SELECT COALESCE(MAX(transaction_id), 1) FROM transactions));
 SELECT setval('placement_slots_placement_slot_id_seq', (SELECT COALESCE(MAX(placement_slot_id), 1) FROM placement_slots));
 SELECT setval('promotion_packages_promotion_package_id_seq', (SELECT COALESCE(MAX(promotion_package_id), 1) FROM promotion_packages));
 SELECT setval('promotion_package_prices_price_id_seq',          (SELECT COALESCE(MAX(price_id),              1) FROM promotion_package_prices));
 SELECT setval('user_posting_plans_posting_plan_id_seq',          (SELECT COALESCE(MAX(posting_plan_id),       1) FROM user_posting_plans));
-SELECT setval('posting_fee_ledger_posting_fee_id_seq',           (SELECT COALESCE(MAX(posting_fee_id),        1) FROM posting_fee_ledger));
 SELECT setval('banned_keywords_banned_keyword_id_seq', (SELECT COALESCE(MAX(banned_keyword_id), 1) FROM banned_keywords));
 SELECT setval('system_settings_system_setting_id_seq', (SELECT COALESCE(MAX(system_setting_id), 1) FROM system_settings));
 SELECT setval('admin_templates_template_id_seq', (SELECT COALESCE(MAX(template_id), 1) FROM admin_templates));
 SELECT setval('post_promotions_post_promotion_id_seq', (SELECT COALESCE(MAX(post_promotion_id), 1) FROM post_promotions));
-SELECT setval('payment_txn_payment_txn_id_seq', (SELECT COALESCE(MAX(payment_txn_id), 1) FROM payment_txn));
 SELECT setval('event_logs_event_log_id_seq', (SELECT COALESCE(MAX(event_log_id), 1) FROM event_logs));
 SELECT setval('daily_placement_metrics_daily_placement_metric_id_seq', (SELECT COALESCE(MAX(daily_placement_metric_id), 1) FROM daily_placement_metrics));
 SELECT setval('trend_scores_trend_score_id_seq', (SELECT COALESCE(MAX(trend_score_id), 1) FROM trend_scores));
 SELECT setval('ai_insights_ai_insight_id_seq', (SELECT COALESCE(MAX(ai_insight_id), 1) FROM ai_insights));
-SELECT setval('operation_tasks_task_id_seq', (SELECT COALESCE(MAX(task_id), 1) FROM operation_tasks));
-SELECT setval('task_replies_reply_id_seq', (SELECT COALESCE(MAX(reply_id), 1) FROM task_replies));
-SELECT setval('escalations_escalation_id_seq', (SELECT COALESCE(MAX(escalation_id), 1) FROM escalations));
-SELECT setval('notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM notifications));
-SELECT setval('host_contents_host_content_id_seq', (SELECT COALESCE(MAX(host_content_id), 1) FROM host_contents));
 
 
 -- ============================================================
@@ -1667,7 +1503,6 @@ CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_user_updated_at();
 CREATE TRIGGER update_shops_updated_at BEFORE UPDATE ON shops FOR EACH ROW EXECUTE FUNCTION update_shop_updated_at();
 CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON posts FOR EACH ROW EXECUTE FUNCTION update_post_updated_at();
-CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON reports FOR EACH ROW EXECUTE FUNCTION update_report_updated_at();
 CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_system_setting_updated_at();
 
 -- Audit Triggers (Polymorphic Event Logs)
@@ -1684,3 +1519,4 @@ CREATE TRIGGER trg_sync_shop_to_user_email
     AFTER UPDATE OF shop_email ON shops
     FOR EACH ROW
     EXECUTE FUNCTION sync_shop_to_user_email();
+

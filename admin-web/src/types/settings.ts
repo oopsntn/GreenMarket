@@ -30,7 +30,6 @@ export type HostIncomeSettings = {
   articlePayoutAmount: number;
   viewBonusThreshold: number;
   viewBonusAmount: number;
-  minimumPayoutRequestAmount: number;
 };
 
 export type SettingsState = {

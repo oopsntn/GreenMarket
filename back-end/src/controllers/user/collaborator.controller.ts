@@ -15,11 +15,10 @@ import {
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
-  earnings,
-  jobContactRequests,
-  jobDeliverables,
-  jobs,
-  payoutRequests,
+  ledgers,
+  taskReplies,
+  tickets,
+  transactions,
   shopCollaborators,
   shops,
   users,
@@ -117,20 +116,21 @@ const getProgressPercent = (status: string | null | undefined) => {
 const calculateAvailableBalance = async (collaboratorId: number) => {
   const [earningSummary] = await db
     .select({
-      total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
+      total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
     })
-    .from(earnings)
-    .where(eq(earnings.userId, collaboratorId));
+    .from(ledgers)
+    .where(eq(ledgers.ledgerUserId, collaboratorId));
 
   const [payoutSummary] = await db
     .select({
-      total: sql<string>`COALESCE(SUM(${payoutRequests.payoutRequestAmount}), 0)`,
+      total: sql<string>`COALESCE(SUM(${transactions.transactionAmount}), 0)`,
     })
-    .from(payoutRequests)
+    .from(transactions)
     .where(
       and(
-        eq(payoutRequests.payoutRequestUserId, collaboratorId),
-        inArray(payoutRequests.payoutRequestStatus, ["pending", "approved"]),
+        eq(transactions.transactionUserId, collaboratorId),
+        eq(transactions.transactionType, "payout"),
+        inArray(transactions.transactionStatus, ["pending", "success"]),
       ),
     );
 
@@ -176,18 +176,18 @@ export const getCollaboratorProfile = async (
     const [jobSummary] = await db
       .select({
         totalJobs: sql<number>`COUNT(*)`,
-        activeJobs: sql<number>`COALESCE(SUM(CASE WHEN ${jobs.jobStatus} = 'accepted' THEN 1 ELSE 0 END), 0)`,
-        completedJobs: sql<number>`COALESCE(SUM(CASE WHEN ${jobs.jobStatus} = 'completed' THEN 1 ELSE 0 END), 0)`,
+        activeJobs: sql<number>`COALESCE(SUM(CASE WHEN ${tickets.ticketStatus} = 'accepted' THEN 1 ELSE 0 END), 0)`,
+        completedJobs: sql<number>`COALESCE(SUM(CASE WHEN ${tickets.ticketStatus} = 'completed' THEN 1 ELSE 0 END), 0)`,
       })
-      .from(jobs)
-      .where(eq(jobs.jobCollaboratorId, userId));
+      .from(tickets)
+      .where(and(eq(tickets.ticketAssigneeId, userId), eq(tickets.ticketType, "JOB")));
 
     const [earningSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
       })
-      .from(earnings)
-      .where(eq(earnings.userId, userId));
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId));
 
     const availableBalance = await calculateAvailableBalance(userId);
 
@@ -322,46 +322,50 @@ export const getAvailableJobs = async (
       typeof req.query.location === "string" ? req.query.location.trim() : "";
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
 
-    const conditions: SQL[] = [eq(jobs.jobStatus, "open"), isNull(jobs.jobCollaboratorId)];
+    const conditions: SQL[] = [
+      eq(tickets.ticketType, "JOB"),
+      eq(tickets.ticketStatus, "open"),
+      isNull(tickets.ticketAssigneeId)
+    ];
 
     if (keyword) {
       conditions.push(
-        sql`(${jobs.jobTitle} ILIKE ${`%${keyword}%`} OR ${jobs.jobDescription} ILIKE ${`%${keyword}%`})`,
+        sql`(${tickets.ticketTitle} ILIKE ${`%${keyword}%`} OR ${tickets.ticketContent} ILIKE ${`%${keyword}%`})`,
       );
     }
 
     if (category) {
-      conditions.push(ilike(jobs.jobCategory, `%${category}%`));
+      conditions.push(sql`${tickets.ticketMetaData}->>'category' ILIKE ${`%${category}%`}`);
     }
 
     if (location) {
-      conditions.push(ilike(jobs.jobLocation, `%${location}%`));
+      conditions.push(sql`${tickets.ticketMetaData}->>'location' ILIKE ${`%${location}%`}`);
     }
 
     const rows = await db
       .select({
-        jobId: jobs.jobId,
-        title: jobs.jobTitle,
-        category: jobs.jobCategory,
-        location: jobs.jobLocation,
-        deadline: jobs.jobDeadline,
-        price: jobs.jobPrice,
-        status: jobs.jobStatus,
-        createdAt: jobs.jobCreatedAt,
+        jobId: tickets.ticketId,
+        title: tickets.ticketTitle,
+        category: sql<string>`${tickets.ticketMetaData}->>'category'`,
+        location: sql<string>`${tickets.ticketMetaData}->>'location'`,
+        deadline: sql<string>`${tickets.ticketMetaData}->>'deadline'`,
+        price: sql<string>`${tickets.ticketMetaData}->>'price'`,
+        status: tickets.ticketStatus,
+        createdAt: tickets.ticketCreatedAt,
         customerId: users.userId,
         customerName: users.userDisplayName,
         customerLocation: users.userLocation,
       })
-      .from(jobs)
-      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
+      .from(tickets)
+      .leftJoin(users, eq(tickets.ticketCreatorId, users.userId))
       .where(and(...conditions))
-      .orderBy(asc(jobs.jobDeadline), desc(jobs.jobCreatedAt))
+      .orderBy(sql`${tickets.ticketMetaData}->>'deadline' ASC`, desc(tickets.ticketCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(jobs)
+      .from(tickets)
       .where(and(...conditions));
 
     const totalItems = Number(countResult?.count ?? 0);
@@ -411,26 +415,26 @@ export const getJobDetail = async (
 
     const [jobDetail] = await db
       .select({
-        jobId: jobs.jobId,
-        customerId: jobs.jobCustomerId,
-        collaboratorId: jobs.jobCollaboratorId,
-        title: jobs.jobTitle,
-        category: jobs.jobCategory,
-        location: jobs.jobLocation,
-        deadline: jobs.jobDeadline,
-        price: jobs.jobPrice,
-        description: jobs.jobDescription,
-        requirements: jobs.jobRequirements,
-        status: jobs.jobStatus,
-        declineReason: jobs.jobDeclineReason,
-        createdAt: jobs.jobCreatedAt,
-        updatedAt: jobs.jobUpdatedAt,
+        jobId: tickets.ticketId,
+        customerId: tickets.ticketCreatorId,
+        collaboratorId: tickets.ticketAssigneeId,
+        title: tickets.ticketTitle,
+        category: sql<string>`${tickets.ticketMetaData}->>'category'`,
+        location: sql<string>`${tickets.ticketMetaData}->>'location'`,
+        deadline: sql<string>`${tickets.ticketMetaData}->>'deadline'`,
+        price: sql<string>`${tickets.ticketMetaData}->>'price'`,
+        description: tickets.ticketContent,
+        requirements: sql<any>`${tickets.ticketMetaData}->'requirements'`,
+        status: tickets.ticketStatus,
+        declineReason: sql<string>`${tickets.ticketMetaData}->>'declineReason'`,
+        createdAt: tickets.ticketCreatedAt,
+        updatedAt: tickets.ticketUpdatedAt,
         customerName: users.userDisplayName,
         customerLocation: users.userLocation,
       })
-      .from(jobs)
-      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
-      .where(eq(jobs.jobId, jobId))
+      .from(tickets)
+      .leftJoin(users, eq(tickets.ticketCreatorId, users.userId))
+      .where(and(eq(tickets.ticketId, jobId), eq(tickets.ticketType, "JOB")))
       .limit(1);
 
     if (!jobDetail) {
@@ -440,7 +444,8 @@ export const getJobDetail = async (
 
     const canView =
       jobDetail.status === "open" ||
-      jobDetail.collaboratorId === userId;
+      jobDetail.collaboratorId === userId ||
+      jobDetail.customerId === userId;
 
     if (!canView) {
       res.status(403).json({ error: "Access denied to this job detail" });
@@ -501,18 +506,18 @@ export const decideJob = async (
 
     if (decision === "accept") {
       const [updatedJob] = await db
-        .update(jobs)
+        .update(tickets)
         .set({
-          jobStatus: "accepted",
-          jobCollaboratorId: userId,
-          jobDeclineReason: null,
-          jobUpdatedAt: now,
+          ticketStatus: "accepted",
+          ticketAssigneeId: userId,
+          ticketUpdatedAt: now,
         })
         .where(
           and(
-            eq(jobs.jobId, jobId),
-            eq(jobs.jobStatus, "open"),
-            isNull(jobs.jobCollaboratorId),
+            eq(tickets.ticketId, jobId),
+            eq(tickets.ticketType, "JOB"),
+            eq(tickets.ticketStatus, "open"),
+            isNull(tickets.ticketAssigneeId),
           ),
         )
         .returning();
@@ -520,12 +525,12 @@ export const decideJob = async (
       if (!updatedJob) {
         const [existing] = await db
           .select({
-            jobId: jobs.jobId,
-            status: jobs.jobStatus,
-            collaboratorId: jobs.jobCollaboratorId,
+            jobId: tickets.ticketId,
+            status: tickets.ticketStatus,
+            collaboratorId: tickets.ticketAssigneeId,
           })
-          .from(jobs)
-          .where(eq(jobs.jobId, jobId))
+          .from(tickets)
+          .where(eq(tickets.ticketId, jobId))
           .limit(1);
 
         if (!existing) {
@@ -545,33 +550,16 @@ export const decideJob = async (
       });
       return;
     }
-
-    const [updatedJob] = await db
-      .update(jobs)
-      .set({
-        jobStatus: "declined",
-        jobCollaboratorId: null,
-        jobDeclineReason: reason,
-        jobUpdatedAt: now,
-      })
-      .where(
-        and(
-          eq(jobs.jobId, jobId),
-          eq(jobs.jobStatus, "open"),
-          isNull(jobs.jobCollaboratorId),
-        ),
-      )
-      .returning();
-
-    if (!updatedJob) {
+    if (decision === "decline") {
       const [existing] = await db
         .select({
-          jobId: jobs.jobId,
-          status: jobs.jobStatus,
-          collaboratorId: jobs.jobCollaboratorId,
+          jobId: tickets.ticketId,
+          status: tickets.ticketStatus,
+          collaboratorId: tickets.ticketAssigneeId,
+          meta: tickets.ticketMetaData,
         })
-        .from(jobs)
-        .where(eq(jobs.jobId, jobId))
+        .from(tickets)
+        .where(and(eq(tickets.ticketId, jobId), eq(tickets.ticketType, "JOB")))
         .limit(1);
 
       if (!existing) {
@@ -579,16 +567,33 @@ export const decideJob = async (
         return;
       }
 
-      res
-        .status(409)
-        .json({ error: "Job is no longer open for decision", job: existing });
+      if (existing.status !== "open" || existing.collaboratorId !== null) {
+        res.status(409).json({ error: "Job is no longer open for decision", job: existing });
+        return;
+      }
+
+      const newMeta = {
+        ...(existing.meta as any),
+        declineReason: reason || "",
+      };
+
+      const [updatedJob] = await db
+        .update(tickets)
+        .set({
+          ticketStatus: "declined",
+          ticketAssigneeId: null,
+          ticketMetaData: newMeta,
+          ticketUpdatedAt: now,
+        })
+        .where(eq(tickets.ticketId, jobId))
+        .returning();
+
+      res.json({
+        message: "Job declined successfully",
+        job: updatedJob,
+      });
       return;
     }
-
-    res.json({
-      message: "Job declined successfully",
-      job: updatedJob,
-    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
@@ -624,17 +629,17 @@ export const contactJobCustomer = async (
 
     const [jobDetail] = await db
       .select({
-        jobId: jobs.jobId,
-        customerId: jobs.jobCustomerId,
-        collaboratorId: jobs.jobCollaboratorId,
-        status: jobs.jobStatus,
+        jobId: tickets.ticketId,
+        customerId: tickets.ticketCreatorId,
+        collaboratorId: tickets.ticketAssigneeId,
+        status: tickets.ticketStatus,
         customerName: users.userDisplayName,
         customerMobile: users.userMobile,
         customerEmail: users.userEmail,
       })
-      .from(jobs)
-      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
-      .where(eq(jobs.jobId, jobId))
+      .from(tickets)
+      .leftJoin(users, eq(tickets.ticketCreatorId, users.userId))
+      .where(and(eq(tickets.ticketId, jobId), eq(tickets.ticketType, "JOB")))
       .limit(1);
 
     if (!jobDetail) {
@@ -656,20 +661,22 @@ export const contactJobCustomer = async (
     }
 
     const [contactRequest] = await db
-      .insert(jobContactRequests)
+      .insert(taskReplies)
       .values({
-        contactRequestJobId: jobId,
-        contactRequestCollaboratorId: userId,
-        contactRequestCustomerId: jobDetail.customerId,
-        contactRequestMessage: message,
-        contactRequestStatus: "sent",
-        contactRequestCreatedAt: new Date(),
+        ticketId: jobId,
+        senderId: userId,
+        message: message,
+        visibility: "internal",
+        createdAt: new Date(),
       })
       .returning();
 
     res.status(201).json({
-      message: "Contact request sent successfully (mock)",
-      contactRequest,
+      message: "Contact request sent successfully (via ticket replies)",
+      contactRequest: {
+        contactRequestId: contactRequest.replyId,
+        ...contactRequest
+      },
       customer: {
         userId: jobDetail.customerId,
         displayName: jobDetail.customerName,
@@ -709,37 +716,34 @@ export const getMyJobs = async (
     }
 
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
-    const conditions: SQL[] = [eq(jobs.jobCollaboratorId, userId)];
-
-    if (statusFilter) {
-      conditions.push(eq(jobs.jobStatus, statusFilter.toLowerCase()));
+    const status = statusFilter.toLowerCase();
+    const conditions: SQL[] = [eq(tickets.ticketAssigneeId, userId), eq(tickets.ticketType, "JOB")];
+    if (status) {
+      conditions.push(eq(tickets.ticketStatus, status));
     }
 
     const rows = await db
       .select({
-        jobId: jobs.jobId,
-        title: jobs.jobTitle,
-        category: jobs.jobCategory,
-        location: jobs.jobLocation,
-        deadline: jobs.jobDeadline,
-        price: jobs.jobPrice,
-        status: jobs.jobStatus,
-        completedAt: jobs.jobCompletedAt,
-        createdAt: jobs.jobCreatedAt,
-        updatedAt: jobs.jobUpdatedAt,
-        customerId: users.userId,
+        jobId: tickets.ticketId,
+        title: tickets.ticketTitle,
+        category: sql<string>`${tickets.ticketMetaData}->>'category'`,
+        location: sql<string>`${tickets.ticketMetaData}->>'location'`,
+        deadline: sql<string>`${tickets.ticketMetaData}->>'deadline'`,
+        price: sql<string>`${tickets.ticketMetaData}->>'price'`,
+        status: tickets.ticketStatus,
+        createdAt: tickets.ticketCreatedAt,
         customerName: users.userDisplayName,
       })
-      .from(jobs)
-      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
+      .from(tickets)
+      .leftJoin(users, eq(tickets.ticketCreatorId, users.userId))
       .where(and(...conditions))
-      .orderBy(desc(jobs.jobUpdatedAt), desc(jobs.jobCreatedAt))
+      .orderBy(desc(tickets.ticketCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(jobs)
+      .from(tickets)
       .where(and(...conditions));
 
     const totalItems = Number(countResult?.count ?? 0);
@@ -749,10 +753,6 @@ export const getMyJobs = async (
       data: rows.map((item) => ({
         ...item,
         progressPercent: getProgressPercent(item.status),
-        customer: {
-          userId: item.customerId,
-          displayName: item.customerName,
-        },
       })),
       meta: {
         page,
@@ -793,99 +793,61 @@ export const submitJobDeliverables = async (
       return;
     }
 
-    const [existingJob] = await db
+    const [jobDetail] = await db
       .select({
-        jobId: jobs.jobId,
-        status: jobs.jobStatus,
-        collaboratorId: jobs.jobCollaboratorId,
+        jobId: tickets.ticketId,
+        status: tickets.ticketStatus,
+        price: sql<string>`${tickets.ticketMetaData}->>'price'`,
+        customerId: tickets.ticketCreatorId,
       })
-      .from(jobs)
-      .where(eq(jobs.jobId, jobId))
+      .from(tickets)
+      .where(and(eq(tickets.ticketId, jobId), eq(tickets.ticketAssigneeId, userId), eq(tickets.ticketType, "JOB")))
       .limit(1);
 
-    if (!existingJob) {
-      res.status(404).json({ error: "Job not found" });
+    if (!jobDetail) {
+      res.status(404).json({ error: "Active job not found for this collaborator" });
       return;
     }
 
-    if (existingJob.collaboratorId !== userId) {
-      res.status(403).json({ error: "This job is not assigned to you" });
+    if (jobDetail.status !== "accepted") {
+      res.status(400).json({ error: "Only accepted jobs can have deliverables submitted" });
       return;
     }
 
-    if (existingJob.status !== "accepted") {
-      res.status(409).json({
-        error: "Only accepted jobs can be submitted",
-        currentStatus: existingJob.status,
-      });
-      return;
-    }
+    // 1. Update ticket status to completed
+    await db
+      .update(tickets)
+      .set({
+        ticketStatus: "completed",
+        ticketUpdatedAt: new Date(),
+        ticketResolvedAt: new Date(),
+      })
+      .where(eq(tickets.ticketId, jobId));
 
-    const now = new Date();
+    // 2. Insert into taskReplies as the deliverable
+    const [submission] = await db
+      .insert(taskReplies)
+      .values({
+        ticketId: jobId,
+        senderId: userId,
+        message: note || "Work submitted.",
+        attachments: fileUrls,
+        visibility: "internal",
+        createdAt: new Date(),
+      })
+      .returning();
 
-    const txResult = await db.transaction(async (tx) => {
-      const [completedJob] = await tx
-        .update(jobs)
-        .set({
-          jobStatus: "completed",
-          jobCompletedAt: now,
-          jobUpdatedAt: now,
-        })
-        .where(
-          and(
-            eq(jobs.jobId, jobId),
-            eq(jobs.jobStatus, "accepted"),
-            eq(jobs.jobCollaboratorId, userId),
-          ),
-        )
-        .returning();
-
-      if (!completedJob) {
-        throw new Error(JOB_STATE_CHANGED_ERROR);
-      }
-
-      const [deliverable] = await tx
-        .insert(jobDeliverables)
-        .values({
-          deliverableJobId: jobId,
-          deliverableCollaboratorId: userId,
-          deliverableFileUrls: fileUrls,
-          deliverableNote: note,
-          deliverableSubmittedAt: now,
-        })
-        .returning();
-
-      const [earningEntry] = await tx
-        .insert(earnings)
-        .values({
-          userId: userId,
-          sourceId: jobId,
-          amount: completedJob.jobPrice ?? "0",
-          type: "job",
-          status: "completed",
-          createdAt: now,
-        })
-        .returning();
-
-      return {
-        job: completedJob,
-        deliverable,
-        earningEntry,
-      };
-    });
+    // 3. Removed auto-ledger insertion per requirement: 
+    // "Collaborator đăng tin bán cây hộ chủ vườn, tiền nong thì tự thoả thuận với nhau ở bên ngoài"
 
     res.status(201).json({
-      message: "Job result submitted successfully",
-      ...txResult,
+      message: "Deliverables submitted and job marked as completed successfully",
+      submission: {
+        deliverableId: submission.replyId,
+        ...submission
+      },
     });
   } catch (error) {
-    if (error instanceof Error && error.message === JOB_STATE_CHANGED_ERROR) {
-      res.status(409).json({
-        error: "Job state changed while submitting deliverables. Please retry.",
-      });
-      return;
-    }
-
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -915,48 +877,54 @@ export const getCollaboratorEarnings = async (
     }
 
     const conditions: SQL[] = [
-      eq(earnings.userId, userId),
+      eq(ledgers.ledgerUserId, userId),
     ];
     if (from) {
-      conditions.push(gte(earnings.createdAt, from));
+      conditions.push(gte(ledgers.ledgerCreatedAt, from));
     }
     if (to) {
-      conditions.push(lte(earnings.createdAt, to));
+      conditions.push(lte(ledgers.ledgerCreatedAt, to));
     }
 
     const [summary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
         txCount: sql<number>`COUNT(*)`,
       })
-      .from(earnings)
+      .from(ledgers)
       .where(and(...conditions));
 
     const byType = await db
       .select({
-        type: earnings.type,
-        total: sql<string>`COALESCE(SUM(${earnings.amount}), 0)`,
+        type: sql<string>`${ledgers.ledgerMeta}->>'type'`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
         count: sql<number>`COUNT(*)`,
       })
-      .from(earnings)
+      .from(ledgers)
       .where(and(...conditions))
-      .groupBy(earnings.type)
-      .orderBy(asc(earnings.type));
+      .groupBy(sql`${ledgers.ledgerMeta}->>'type'`)
+      .orderBy(asc(sql`${ledgers.ledgerMeta}->>'type'`));
 
     const history = await db
       .select({
-        earningId: earnings.earningId,
-        sourceId: earnings.sourceId,
-        jobTitle: jobs.jobTitle,
-        amount: earnings.amount,
-        type: earnings.type,
-        status: earnings.status,
-        createdAt: earnings.createdAt,
+        earningId: ledgers.ledgerId,
+        sourceId: sql<number | null>`(${ledgers.ledgerMeta}->>'sourceId')::int`,
+        jobTitle: tickets.ticketTitle,
+        amount: ledgers.ledgerAmount,
+        type: sql<string>`${ledgers.ledgerMeta}->>'type'`,
+        status: ledgers.ledgerStatus,
+        createdAt: ledgers.ledgerCreatedAt,
       })
-      .from(earnings)
-      .leftJoin(jobs, eq(earnings.sourceId, jobs.jobId))
+      .from(ledgers)
+      .leftJoin(
+        tickets,
+        and(
+          eq(sql<number>`(${ledgers.ledgerMeta}->>'sourceId')::int`, tickets.ticketId),
+          eq(tickets.ticketType, "JOB")
+        )
+      )
       .where(and(...conditions))
-      .orderBy(desc(earnings.createdAt));
+      .orderBy(desc(ledgers.ledgerCreatedAt));
 
     const total = toNumber(summary?.total);
     const txCount = Number(summary?.txCount ?? 0);
@@ -997,16 +965,26 @@ export const getPayoutRequestHistory = async (
 
     const rows = await db
       .select()
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestUserId, userId))
-      .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      )
+      .orderBy(desc(transactions.transactionCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestUserId, userId));
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      );
 
     const totalItems = Number(countResult?.count ?? 0);
     const totalPages = Math.ceil(totalItems / limit);
@@ -1014,7 +992,11 @@ export const getPayoutRequestHistory = async (
     res.json({
       data: rows.map((item) => ({
         ...item,
-        payoutRequestAmount: toNumber(item.payoutRequestAmount),
+        payoutRequestAmount: toNumber(item.transactionAmount),
+        payoutRequestStatus: item.transactionStatus,
+        payoutRequestCreatedAt: item.transactionCreatedAt,
+        payoutRequestMethod: item.transactionProvider,
+        payoutRequestNote: (item.transactionMeta as any)?.note
       })),
       meta: {
         page,
@@ -1074,14 +1056,15 @@ export const createPayoutRequest = async (
     }
 
     const [createdRequest] = await db
-      .insert(payoutRequests)
+      .insert(transactions)
       .values({
-        payoutRequestUserId: userId,
-        payoutRequestAmount: amount.toFixed(2),
-        payoutRequestMethod: method,
-        payoutRequestStatus: "pending",
-        payoutRequestNote: note,
-        payoutRequestCreatedAt: new Date(),
+        transactionUserId: userId,
+        transactionType: "payout",
+        transactionAmount: amount.toFixed(2),
+        transactionProvider: method,
+        transactionStatus: "pending",
+        transactionMeta: { note },
+        transactionCreatedAt: new Date(),
       })
       .returning();
 
@@ -1089,7 +1072,11 @@ export const createPayoutRequest = async (
       message: "Payout request created successfully (mock)",
       payoutRequest: {
         ...createdRequest,
-        payoutRequestAmount: toNumber(createdRequest.payoutRequestAmount),
+        payoutRequestAmount: toNumber(createdRequest.transactionAmount),
+        payoutRequestStatus: createdRequest.transactionStatus,
+        payoutRequestCreatedAt: createdRequest.transactionCreatedAt,
+        payoutRequestMethod: createdRequest.transactionProvider,
+        payoutRequestNote: note
       },
       availableBalanceAfter: Number((availableBalance - amount).toFixed(2)),
     });
@@ -1260,11 +1247,21 @@ export const getPublicCollaboratorDetail = async (
     const portfolioPhotos: string[] = [];
     try {
       const deliverables = await db
-        .select({ urls: jobDeliverables.deliverableFileUrls })
-        .from(jobDeliverables)
-        .where(eq(jobDeliverables.deliverableCollaboratorId, targetUserId))
-        .orderBy(desc(jobDeliverables.deliverableSubmittedAt))
-        .limit(5);
+        .select({
+          urls: taskReplies.attachments,
+        })
+        .from(taskReplies)
+        .innerJoin(tickets, eq(taskReplies.ticketId, tickets.ticketId))
+        .where(
+          and(
+            eq(taskReplies.senderId, targetUserId),
+            eq(tickets.ticketType, "JOB"),
+            sql`${taskReplies.attachments} IS NOT NULL`,
+            sql`${taskReplies.attachments}::text <> '[]'`
+          )
+        )
+        .orderBy(desc(taskReplies.createdAt))
+        .limit(10);
 
       const hostPhotos = await db
         .select({ urls: hostContents.hostContentMediaUrls })

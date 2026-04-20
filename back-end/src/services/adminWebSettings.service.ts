@@ -34,7 +34,6 @@ export type AdminWebSettingsState = {
     articlePayoutAmount: number;
     viewBonusThreshold: number;
     viewBonusAmount: number;
-    minimumPayoutRequestAmount: number;
   };
 };
 
@@ -65,7 +64,6 @@ export const defaultAdminWebSettings: AdminWebSettingsState = {
     articlePayoutAmount: 300_000,
     viewBonusThreshold: 1_000,
     viewBonusAmount: 120_000,
-    minimumPayoutRequestAmount: 100_000,
   },
 };
 
@@ -197,13 +195,6 @@ export const normalizeAdminWebSettings = (
       normalizePositiveInteger(
         payload?.hostIncome?.viewBonusAmount,
         defaultAdminWebSettings.hostIncome.viewBonusAmount,
-      ),
-    ),
-    minimumPayoutRequestAmount: Math.max(
-      0,
-      normalizePositiveInteger(
-        payload?.hostIncome?.minimumPayoutRequestAmount,
-        defaultAdminWebSettings.hostIncome.minimumPayoutRequestAmount,
       ),
     ),
   },
