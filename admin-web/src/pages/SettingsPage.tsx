@@ -33,7 +33,6 @@ const DEFAULT_SETTINGS: SettingsState = {
     articlePayoutAmount: 300000,
     viewBonusThreshold: 1000,
     viewBonusAmount: 120000,
-    minimumPayoutRequestAmount: 100000,
   },
 };
 
@@ -119,9 +118,6 @@ const validateSettings = (settings: SettingsState) => {
     throw new Error("Tiền thưởng lượt xem không được âm.");
   }
 
-  if (settings.hostIncome.minimumPayoutRequestAmount < 0) {
-    throw new Error("Mức tối thiểu cho một yêu cầu chi trả không được âm.");
-  }
 };
 
 function SettingsPage() {
@@ -272,7 +268,7 @@ function SettingsPage() {
     <div className="settings-page">
       <PageHeader
         title="Thiết lập hệ thống"
-        description="Quản lý các quy tắc vận hành, kiểm duyệt, vòng đời bài đăng và chính sách thu nhập Host trên GreenMarket."
+        description="Quản lý các quy tắc vận hành, kiểm duyệt, vòng đời bài đăng và cấu hình chi trả cố định cho Host trên GreenMarket."
         actionLabel={isSaving ? "Đang lưu..." : "Lưu thay đổi"}
         onActionClick={() => void handleSave()}
       />
@@ -350,7 +346,7 @@ function SettingsPage() {
 
         <SectionCard
           title="Thu nhập Host"
-          description="Chốt mức tiền cố định cho mỗi bài, mốc thưởng lượt xem và mức tối thiểu cho một yêu cầu chi trả."
+          description="Chốt mức tiền cố định cho mỗi bài Host được admin duyệt và khoản thưởng cố định khi bài đạt mốc lượt xem."
         >
           <div className="settings-form settings-form--padded">
             <div className="settings-field">
@@ -370,7 +366,7 @@ function SettingsPage() {
                 disabled={isLoading || isSaving}
               />
               <small>
-                Khi bài Host được xuất bản hợp lệ, hệ thống sẽ ghi nhận đúng khoản
+                Khi bài Host được admin duyệt và xuất bản, hệ thống sẽ ghi nhận đúng khoản
                 tiền cố định này.
               </small>
             </div>
@@ -392,7 +388,7 @@ function SettingsPage() {
                 disabled={isLoading || isSaving}
               />
               <small>
-                Khi bài đạt mốc lượt xem này, hệ thống sẽ cộng một khoản thưởng cố định.
+                Khi bài đạt mốc lượt xem này, hệ thống sẽ cộng thêm một khoản thưởng cố định.
               </small>
             </div>
 
@@ -413,33 +409,10 @@ function SettingsPage() {
                 disabled={isLoading || isSaving}
               />
               <small>
-                Mỗi bài chỉ được cộng khoản thưởng này một lần khi chạm mốc.
+                Mỗi bài chỉ được cộng khoản thưởng này một lần khi chạm mốc đã cấu hình.
               </small>
             </div>
 
-            <div className="settings-field">
-              <label htmlFor="host-min-request">
-                Số tiền tối thiểu cho một yêu cầu chi trả (VND)
-              </label>
-              <input
-                id="host-min-request"
-                type="number"
-                min={0}
-                value={settings.hostIncome.minimumPayoutRequestAmount}
-                onChange={(event) =>
-                  handleInputChange(
-                    "hostIncome",
-                    "minimumPayoutRequestAmount",
-                    Number(event.target.value),
-                  )
-                }
-                disabled={isLoading || isSaving}
-              />
-              <small>
-                Dùng để hạn chế các yêu cầu chi trả quá nhỏ nếu đội vận hành muốn giữ
-                nhịp chuyển khoản theo tháng.
-              </small>
-            </div>
           </div>
         </SectionCard>
 

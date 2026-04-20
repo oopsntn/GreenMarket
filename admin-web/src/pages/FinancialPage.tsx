@@ -21,13 +21,11 @@ const statusLabels: Record<FinancialPayoutStatus | "all", string> = {
   all: "Tất cả trạng thái",
   pending: "Chờ chi trả",
   completed: "Đã chi trả",
-  rejected: "Từ chối",
 };
 
 const getStatusVariant = (status: FinancialPayoutStatus) => {
   if (status === "pending") return "pending" as const;
-  if (status === "completed") return "success" as const;
-  return "negative" as const;
+  return "success" as const;
 };
 
 const createToastId = () => Date.now() + Math.floor(Math.random() * 1000);
@@ -45,7 +43,6 @@ function FinancialPage() {
     totalRequests: 0,
     pendingRequests: 0,
     completedRequests: 0,
-    rejectedRequests: 0,
     pendingAmount: 0,
     completedAmount: 0,
     pendingAmountLabel: "0 VND",
@@ -117,14 +114,9 @@ function FinancialPage() {
         subtitle: `Đã chi ${summary.completedAmountLabel}`,
       },
       {
-        title: "Từ chối",
-        value: String(summary.rejectedRequests),
-        subtitle: "Các yêu cầu không đủ điều kiện để chi trả.",
-      },
-      {
-        title: "Tổng yêu cầu",
+        title: "Tổng đợt chi trả",
         value: String(summary.totalRequests),
-        subtitle: "Chỉ tính các yêu cầu chi trả thu nhập của Host.",
+        subtitle: "Các đợt chi trả nội bộ cho thu nhập Host.",
       },
     ],
     [summary],
@@ -161,23 +153,12 @@ function FinancialPage() {
     setDetailNote("");
   };
 
-  const handleProcess = async (action: "approve" | "reject") => {
+  const handleProcess = async () => {
     if (!detail) return;
 
     try {
       setIsProcessing(true);
-
-      if (action === "approve") {
-        await financialService.approvePayoutRequest(
-          detail.payoutRequestId,
-          detailNote,
-        );
-      } else {
-        await financialService.rejectPayoutRequest(
-          detail.payoutRequestId,
-          detailNote,
-        );
-      }
+      await financialService.approvePayoutRequest(detail.payoutRequestId, detailNote);
 
       await loadData();
       const refreshedDetail = await financialService.getPayoutRequestDetail(
@@ -195,16 +176,12 @@ function FinancialPage() {
             }
           : current,
       );
-      pushToast(
-        action === "approve"
-          ? "Đã xác nhận hoàn tất chi trả cho Host."
-          : "Đã từ chối yêu cầu chi trả.",
-      );
+      pushToast("Đã xác nhận hoàn tất đợt chi trả cho Host.");
     } catch (error) {
       pushToast(
         error instanceof Error
           ? error.message
-          : "Không thể xử lý yêu cầu chi trả.",
+          : "Không thể xử lý đợt chi trả.",
         "error",
       );
     } finally {
@@ -218,7 +195,7 @@ function FinancialPage() {
 
       <PageHeader
         title="Tài chính / Chi trả Host"
-        description="Theo dõi các yêu cầu chuyển khoản thủ công cho Host dựa trên số dư thu nhập đã ghi nhận trong hệ thống."
+        description="Theo dõi thu nhập Host đã ghi nhận từ bài được duyệt, các đợt chi trả nội bộ và xác nhận khi admin đã chuyển khoản thực tế."
       />
 
       <div className="financial-page__stats">
@@ -233,8 +210,8 @@ function FinancialPage() {
       </div>
 
       <SectionCard
-        title="Bộ lọc yêu cầu chi trả"
-        description="Tìm nhanh theo tên Host, email, số điện thoại hoặc mã yêu cầu."
+        title="Bộ lọc đợt chi trả"
+        description="Tìm nhanh theo tên Host, email, số điện thoại hoặc mã đợt chi trả."
       >
         <div className="financial-page__filters">
           <div className="financial-page__field financial-page__field--wide">
@@ -244,7 +221,7 @@ function FinancialPage() {
               className="financial-page__input"
               type="text"
               value={filters.keyword}
-              placeholder="Tên Host, email, số điện thoại hoặc mã yêu cầu"
+              placeholder="Tên Host, email, số điện thoại hoặc mã đợt chi trả"
               onChange={(event) =>
                 setFilters((current) => ({
                   ...current,
@@ -282,8 +259,8 @@ function FinancialPage() {
       </SectionCard>
 
       <SectionCard
-        title="Danh sách yêu cầu chi trả"
-        description="Mỗi yêu cầu tương ứng với một đợt admin chuyển khoản thủ công cho Host."
+        title="Danh sách đợt chi trả"
+        description="Mỗi dòng là một đợt chi trả nội bộ do hệ thống tổng hợp từ phần thu nhập Host chưa thanh toán."
       >
         {pageError ? (
           <p className="financial-page__message financial-page__message--error">
@@ -295,8 +272,8 @@ function FinancialPage() {
           <p className="financial-page__message">Đang tải dữ liệu chi trả Host...</p>
         ) : items.length === 0 ? (
           <EmptyState
-            title="Chưa có yêu cầu chi trả"
-            description="Khi Host gửi yêu cầu nhận tiền từ số dư đã ghi nhận, danh sách sẽ hiển thị tại đây."
+            title="Chưa có đợt chi trả"
+            description="Khi có thu nhập Host chưa được thanh toán, hệ thống sẽ tổng hợp và hiển thị tại đây."
           />
         ) : (
           <>
@@ -304,7 +281,7 @@ function FinancialPage() {
               <table className="financial-page__table">
                 <thead>
                   <tr>
-                    <th>Mã yêu cầu</th>
+                    <th>Mã đợt</th>
                     <th>Host</th>
                     <th>Vai trò</th>
                     <th>Số tiền</th>
@@ -390,8 +367,8 @@ function FinancialPage() {
 
       <BaseModal
         isOpen={Boolean(selectedItem)}
-        title="Chi tiết yêu cầu chi trả"
-        description="Kiểm tra số dư đã ghi nhận và các khoản thu nhập cấu thành trước khi xác nhận chuyển khoản."
+        title="Chi tiết đợt chi trả"
+        description="Kiểm tra thu nhập Host đã ghi nhận trước khi xác nhận đợt chuyển khoản thủ công."
         onClose={closeDetail}
         maxWidth="920px"
       >
@@ -409,10 +386,10 @@ function FinancialPage() {
 
             <div className="financial-page__detail-grid">
               <article className="financial-page__detail-card">
-                <h4>Thông tin yêu cầu</h4>
+                <h4>Thông tin đợt chi trả</h4>
                 <dl>
                   <div>
-                    <dt>Mã yêu cầu</dt>
+                    <dt>Mã đợt</dt>
                     <dd>#{detail.payoutRequestId}</dd>
                   </div>
                   <div>
@@ -424,7 +401,7 @@ function FinancialPage() {
                     <dd>{detail.audienceLabel}</dd>
                   </div>
                   <div>
-                    <dt>Số tiền yêu cầu</dt>
+                    <dt>Số tiền chi trả</dt>
                     <dd>{detail.amountLabel}</dd>
                   </div>
                   <div>
@@ -462,7 +439,7 @@ function FinancialPage() {
                     <dd>{detail.earningSummary.pendingBalanceLabel}</dd>
                   </div>
                   <div>
-                    <dt>Số dư có thể chi</dt>
+                    <dt>Còn phải chi</dt>
                     <dd>{detail.earningSummary.availableBalanceLabel}</dd>
                   </div>
                   <div>
@@ -483,19 +460,17 @@ function FinancialPage() {
 
             <div className="financial-page__detail-grid">
               <article className="financial-page__detail-card">
-                <h4>Cấu phần thu nhập</h4>
+                <h4>Nguồn thu nhập</h4>
                 {detail.sourceBreakdown.length === 0 ? (
                   <p className="financial-page__secondary-text">
-                    Chưa có dữ liệu cấu phần thu nhập.
+                    Chưa có dữ liệu nguồn thu nhập.
                   </p>
                 ) : (
                   <ul className="financial-page__list">
                     {detail.sourceBreakdown.map((item) => (
                       <li key={`${item.type}-${item.count}`}>
                         <span>{item.typeLabel}</span>
-                        <span>
-                          {item.amountLabel} · {item.count} phát sinh
-                        </span>
+                        <span>{item.amountLabel} · {item.count} phát sinh</span>
                       </li>
                     ))}
                   </ul>
@@ -526,10 +501,10 @@ function FinancialPage() {
             </div>
 
             <article className="financial-page__detail-card financial-page__detail-card--full">
-              <h4>Chi tiết khoản thu nhập</h4>
+                <h4>Chi tiết thu nhập đã ghi nhận</h4>
               {detail.sourceDetails.length === 0 ? (
                 <p className="financial-page__secondary-text">
-                  Chưa có khoản thu nhập chi tiết cho yêu cầu này.
+                  Chưa có khoản thu nhập chi tiết cho đợt này.
                 </p>
               ) : (
                 <div className="financial-page__source-list">
@@ -554,7 +529,7 @@ function FinancialPage() {
 
                       <dl className="financial-page__source-meta">
                         <div>
-                          <dt>Trạng thái ghi nhận</dt>
+                          <dt>Trạng thái bài / khoản ghi nhận</dt>
                           <dd className="financial-page__value-text">
                             {item.sourceStatusLabel}
                           </dd>
@@ -590,7 +565,7 @@ function FinancialPage() {
                 id="financial-admin-note"
                 className="financial-page__textarea"
                 value={detailNote}
-                placeholder="Ghi lại kết quả kiểm tra nội bộ hoặc lý do từ chối."
+                placeholder="Ghi lại xác nhận chuyển khoản thực tế hoặc ghi chú đối soát nội bộ."
                 onChange={(event) => setDetailNote(event.target.value)}
               />
             </div>
@@ -605,24 +580,14 @@ function FinancialPage() {
                 Đóng
               </button>
               {detail.status === "pending" ? (
-                <>
-                  <button
-                    type="button"
-                    className="financial-page__button financial-page__button--danger"
-                    onClick={() => void handleProcess("reject")}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? "Đang xử lý..." : "Từ chối"}
-                  </button>
-                  <button
-                    type="button"
-                    className="financial-page__button financial-page__button--primary"
-                    onClick={() => void handleProcess("approve")}
-                    disabled={isProcessing}
-                  >
-                    {isProcessing ? "Đang xử lý..." : "Xác nhận đã chi trả"}
-                  </button>
-                </>
+                <button
+                  type="button"
+                  className="financial-page__button financial-page__button--primary"
+                  onClick={() => void handleProcess()}
+                  disabled={isProcessing}
+                >
+                  {isProcessing ? "Đang xử lý..." : "Xác nhận đã chi trả"}
+                </button>
               ) : null}
             </div>
           </div>
