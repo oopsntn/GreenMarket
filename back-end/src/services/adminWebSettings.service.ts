@@ -30,6 +30,12 @@ export type AdminWebSettingsState = {
     maxFileSizeMb: number;
     enableImageCompression: boolean;
   };
+  hostIncome: {
+    articlePayoutAmount: number;
+    viewBonusThreshold: number;
+    viewBonusAmount: number;
+    minimumPayoutRequestAmount: number;
+  };
 };
 
 export const defaultAdminWebSettings: AdminWebSettingsState = {
@@ -55,11 +61,22 @@ export const defaultAdminWebSettings: AdminWebSettingsState = {
     maxFileSizeMb: 5,
     enableImageCompression: true,
   },
+  hostIncome: {
+    articlePayoutAmount: 300_000,
+    viewBonusThreshold: 1_000,
+    viewBonusAmount: 120_000,
+    minimumPayoutRequestAmount: 100_000,
+  },
 };
 
 const normalizeNumber = (value: unknown, fallback: number) => {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const normalizePositiveInteger = (value: unknown, fallback: number) => {
+  const numeric = Math.floor(normalizeNumber(value, fallback));
+  return numeric >= 0 ? numeric : fallback;
 };
 
 const normalizeBoolean = (value: unknown, fallback: boolean) =>
@@ -81,7 +98,7 @@ const normalizeKeywordList = (value: unknown) => {
   return Array.from(new Set(normalized));
 };
 
-const normalizeSettings = (
+export const normalizeAdminWebSettings = (
   payload: Partial<AdminWebSettingsState> | undefined,
 ): AdminWebSettingsState => ({
   general: {
@@ -105,41 +122,89 @@ const normalizeSettings = (
       defaultAdminWebSettings.moderation.bannedKeywordFilter,
     ),
     bannedKeywords: normalizeKeywordList(payload?.moderation?.bannedKeywords),
-    reportLimit: normalizeNumber(
-      payload?.moderation?.reportLimit,
-      defaultAdminWebSettings.moderation.reportLimit,
+    reportLimit: Math.max(
+      1,
+      normalizePositiveInteger(
+        payload?.moderation?.reportLimit,
+        defaultAdminWebSettings.moderation.reportLimit,
+      ),
     ),
   },
   postLifecycle: {
-    postExpiryDays: normalizeNumber(
-      payload?.postLifecycle?.postExpiryDays,
-      defaultAdminWebSettings.postLifecycle.postExpiryDays,
+    postExpiryDays: Math.max(
+      1,
+      normalizePositiveInteger(
+        payload?.postLifecycle?.postExpiryDays,
+        defaultAdminWebSettings.postLifecycle.postExpiryDays,
+      ),
     ),
-    restoreWindowDays: normalizeNumber(
-      payload?.postLifecycle?.restoreWindowDays,
-      defaultAdminWebSettings.postLifecycle.restoreWindowDays,
+    restoreWindowDays: Math.max(
+      1,
+      normalizePositiveInteger(
+        payload?.postLifecycle?.restoreWindowDays,
+        defaultAdminWebSettings.postLifecycle.restoreWindowDays,
+      ),
     ),
     allowAutoExpire: normalizeBoolean(
       payload?.postLifecycle?.allowAutoExpire,
       defaultAdminWebSettings.postLifecycle.allowAutoExpire,
     ),
-    postRateLimitPerHour: normalizeNumber(
-      payload?.postLifecycle?.postRateLimitPerHour,
-      defaultAdminWebSettings.postLifecycle.postRateLimitPerHour,
+    postRateLimitPerHour: Math.max(
+      1,
+      normalizePositiveInteger(
+        payload?.postLifecycle?.postRateLimitPerHour,
+        defaultAdminWebSettings.postLifecycle.postRateLimitPerHour,
+      ),
     ),
   },
   media: {
-    maxImagesPerPost: normalizeNumber(
-      payload?.media?.maxImagesPerPost,
-      defaultAdminWebSettings.media.maxImagesPerPost,
+    maxImagesPerPost: Math.max(
+      1,
+      normalizePositiveInteger(
+        payload?.media?.maxImagesPerPost,
+        defaultAdminWebSettings.media.maxImagesPerPost,
+      ),
     ),
-    maxFileSizeMb: normalizeNumber(
-      payload?.media?.maxFileSizeMb,
-      defaultAdminWebSettings.media.maxFileSizeMb,
+    maxFileSizeMb: Math.max(
+      1,
+      normalizePositiveInteger(
+        payload?.media?.maxFileSizeMb,
+        defaultAdminWebSettings.media.maxFileSizeMb,
+      ),
     ),
     enableImageCompression: normalizeBoolean(
       payload?.media?.enableImageCompression,
       defaultAdminWebSettings.media.enableImageCompression,
+    ),
+  },
+  hostIncome: {
+    articlePayoutAmount: Math.max(
+      0,
+      normalizePositiveInteger(
+        payload?.hostIncome?.articlePayoutAmount,
+        defaultAdminWebSettings.hostIncome.articlePayoutAmount,
+      ),
+    ),
+    viewBonusThreshold: Math.max(
+      1,
+      normalizePositiveInteger(
+        payload?.hostIncome?.viewBonusThreshold,
+        defaultAdminWebSettings.hostIncome.viewBonusThreshold,
+      ),
+    ),
+    viewBonusAmount: Math.max(
+      0,
+      normalizePositiveInteger(
+        payload?.hostIncome?.viewBonusAmount,
+        defaultAdminWebSettings.hostIncome.viewBonusAmount,
+      ),
+    ),
+    minimumPayoutRequestAmount: Math.max(
+      0,
+      normalizePositiveInteger(
+        payload?.hostIncome?.minimumPayoutRequestAmount,
+        defaultAdminWebSettings.hostIncome.minimumPayoutRequestAmount,
+      ),
     ),
   },
 });
@@ -157,7 +222,7 @@ export const adminWebSettingsService = {
       Partial<AdminWebSettingsState>
     >(SETTINGS_KEY, defaultAdminWebSettings);
 
-    return normalizeSettings(raw);
+    return normalizeAdminWebSettings(raw);
   },
 
   async getPublicSettings() {
@@ -178,7 +243,10 @@ export const adminWebSettingsService = {
     };
   },
 
-  findMatchedKeywords(inputValues: Array<string | null | undefined>, settings: AdminWebSettingsState) {
+  findMatchedKeywords(
+    inputValues: Array<string | null | undefined>,
+    settings: AdminWebSettingsState,
+  ) {
     if (!settings.moderation.bannedKeywordFilter) {
       return [];
     }
@@ -195,24 +263,27 @@ export const adminWebSettingsService = {
   },
 
   async assertPostRateLimit(userId: number, settings: AdminWebSettingsState) {
-    const hourlyLimit = Math.max(1, Number(settings.postLifecycle.postRateLimitPerHour || 0));
+    const hourlyLimit = Math.max(
+      1,
+      Number(settings.postLifecycle.postRateLimitPerHour || 0),
+    );
     const since = new Date(Date.now() - 60 * 60 * 1000);
 
     const [row] = await db
       .select({ total: count() })
       .from(posts)
       .where(
-        and(
-          eq(posts.postAuthorId, userId),
-          gte(posts.postCreatedAt, since),
-        ),
+        and(eq(posts.postAuthorId, userId), gte(posts.postCreatedAt, since)),
       );
 
     const total = Number(row?.total || 0);
     if (total >= hourlyLimit) {
-      const error = new Error(`Bạn đã đạt giới hạn ${hourlyLimit} bài đăng trong 1 giờ.`);
+      const error = new Error(
+        `Bạn đã đạt giới hạn ${hourlyLimit} bài đăng trong 1 giờ.`,
+      );
       (error as Error & { statusCode?: number; code?: string }).statusCode = 429;
-      (error as Error & { statusCode?: number; code?: string }).code = "POST_RATE_LIMIT_PER_HOUR_REACHED";
+      (error as Error & { statusCode?: number; code?: string }).code =
+        "POST_RATE_LIMIT_PER_HOUR_REACHED";
       throw error;
     }
   },

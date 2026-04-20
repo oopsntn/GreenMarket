@@ -9,6 +9,7 @@ import {
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { notificationService } from "../../services/notification.service.ts";
+import { hostIncomePolicyService } from "../../services/hostIncomePolicy.service.ts";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -307,6 +308,7 @@ export const updateAdminHostContentStatus = async (
         authorId: hostContents.hostContentAuthorId,
         title: hostContents.hostContentTitle,
         previousStatus: hostContents.hostContentStatus,
+        payoutAmount: hostContents.hostContentPayoutAmount,
       })
       .from(hostContents)
       .where(eq(hostContents.hostContentId, hostContentId))
@@ -324,10 +326,20 @@ export const updateAdminHostContentStatus = async (
       return;
     }
 
+    const hostIncomePolicy = await hostIncomePolicyService.getPolicy();
+    const nextPayoutAmount =
+      nextStatus === "published" &&
+      Number(currentContent.payoutAmount ?? 0) <= 0
+        ? hostIncomePolicy.articlePayoutAmount.toFixed(2)
+        : undefined;
+
     const [updated] = await db
       .update(hostContents)
       .set({
         hostContentStatus: nextStatus,
+        ...(nextPayoutAmount
+          ? { hostContentPayoutAmount: nextPayoutAmount }
+          : {}),
         hostContentUpdatedAt: new Date(),
       })
       .where(eq(hostContents.hostContentId, hostContentId))
@@ -361,6 +373,10 @@ export const updateAdminHostContentStatus = async (
         performedBy,
       },
     });
+
+    if (nextStatus === "published") {
+      await hostIncomePolicyService.syncForContentIds([hostContentId]);
+    }
 
     res.json({
       message: "Đã cập nhật trạng thái nội dung Host.",

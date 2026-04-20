@@ -20,12 +20,11 @@ import {
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { notificationService } from "../../services/notification.service.ts";
+import { hostIncomePolicyService } from "../../services/hostIncomePolicy.service.ts";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
-const MIN_PAYOUT_AMOUNT = 500_000;
-
 const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
   const parsedPage = Number(queryPage);
   const parsedLimit = Number(queryLimit);
@@ -53,9 +52,11 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
   try {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Chưa xác thực người dùng." });
       return;
     }
+
+    await hostIncomePolicyService.syncForUser(userId);
 
     // KPI Summary
     const [contentStats] = await db
@@ -82,7 +83,7 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
       .where(
         and(
           eq(payoutRequests.payoutRequestUserId, userId),
-          eq(payoutRequests.payoutRequestStatus, "completed")
+          sql`${payoutRequests.payoutRequestStatus} IN ('completed', 'pending')`
         )
       );
 
@@ -100,7 +101,7 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -109,9 +110,11 @@ export const getHostEarnings = async (req: AuthRequest, res: Response): Promise<
   try {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Chưa xác thực người dùng." });
       return;
     }
+
+    await hostIncomePolicyService.syncForUser(userId);
 
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
 
@@ -138,7 +141,7 @@ export const getHostEarnings = async (req: AuthRequest, res: Response): Promise<
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -147,7 +150,7 @@ export const getPayoutRequests = async (req: AuthRequest, res: Response): Promis
   try {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Chưa xác thực người dùng." });
       return;
     }
 
@@ -185,7 +188,7 @@ export const getPayoutRequests = async (req: AuthRequest, res: Response): Promis
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -193,21 +196,26 @@ export const createPayoutRequest = async (req: AuthRequest, res: Response): Prom
   try {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Chưa xác thực người dùng." });
       return;
     }
+
+    await hostIncomePolicyService.syncForUser(userId);
+    const policy = await hostIncomePolicyService.getPolicy();
 
     const amount = Number(req.body.amount);
     const method = req.body.method;
     const note = req.body.note;
 
-    if (!amount || amount < MIN_PAYOUT_AMOUNT) {
-      res.status(400).json({ error: `Amount must be at least ${MIN_PAYOUT_AMOUNT} VND` });
+    if (!amount || amount < policy.minimumPayoutRequestAmount) {
+      res.status(400).json({
+        error: `Số tiền yêu cầu phải từ ${policy.minimumPayoutRequestAmount.toLocaleString("vi-VN")} VND trở lên.`,
+      });
       return;
     }
 
     if (!method) {
-      res.status(400).json({ error: "Payout method is required" });
+      res.status(400).json({ error: "Phương thức chi trả là bắt buộc." });
       return;
     }
 
@@ -234,7 +242,7 @@ export const createPayoutRequest = async (req: AuthRequest, res: Response): Prom
     const availableBalance = toNumber(earningSummary?.available) - toNumber(payoutSummary?.total);
 
     if (amount > availableBalance) {
-      res.status(400).json({ error: "Insufficient available balance" });
+      res.status(400).json({ error: "Số dư có thể chi không đủ cho yêu cầu này." });
       return;
     }
 
@@ -262,12 +270,12 @@ export const createPayoutRequest = async (req: AuthRequest, res: Response): Prom
     };
 
     res.status(201).json({
-      message: "Payout request created successfully",
+      message: "Đã tạo yêu cầu chi trả thành công.",
       data: responseData,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -276,7 +284,7 @@ export const getContents = async (req: AuthRequest, res: Response): Promise<void
   try {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Chưa xác thực người dùng." });
       return;
     }
 
@@ -294,7 +302,7 @@ export const getContents = async (req: AuthRequest, res: Response): Promise<void
     res.json(rows);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -302,16 +310,19 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
   try {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Chưa xác thực người dùng." });
       return;
     }
 
-    const { title, description, body, category, mediaUrls, payoutAmount } = req.body;
+    const { title, description, body, category, mediaUrls } = req.body;
 
     if (!title) {
-      res.status(400).json({ error: "Title is required" });
+      res.status(400).json({ error: "Tiêu đề là bắt buộc." });
       return;
     }
+
+    const policy = await hostIncomePolicyService.getPolicy();
+    const PAYOUT_AMOUNT = policy.articlePayoutAmount;
 
     const [newContent] = await db
       .insert(hostContents)
@@ -322,20 +333,12 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
         hostContentBody: body,
         hostContentCategory: category,
         hostContentMediaUrls: mediaUrls || [],
-        hostContentPayoutAmount: payoutAmount?.toString(),
+        hostContentPayoutAmount: policy.articlePayoutAmount.toFixed(2),
         hostContentStatus: "published", // Default to published for demo
       })
       .returning();
 
-    // 1. Create earning for host
-    const PAYOUT_AMOUNT = 50000;
-    await db.insert(earnings).values({
-      userId: userId,
-      amount: PAYOUT_AMOUNT.toString(),
-      status: "available",
-      type: "article_payout",
-      sourceId: newContent.hostContentId,
-    });
+    await hostIncomePolicyService.syncForContentIds([newContent.hostContentId]);
 
     // 2. Notify host
     await notificationService.sendNotification({
@@ -349,7 +352,7 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
     res.status(201).json(newContent);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -359,7 +362,7 @@ export const updateContent = async (req: AuthRequest, res: Response): Promise<vo
     const contentId = parseId(req.params.id as string);
 
     if (!userId || !contentId) {
-      res.status(400).json({ error: "Invalid content ID" });
+      res.status(400).json({ error: "ID nội dung không hợp lệ." });
       return;
     }
 
@@ -378,14 +381,14 @@ export const updateContent = async (req: AuthRequest, res: Response): Promise<vo
       .returning();
 
     if (!updated) {
-      res.status(404).json({ error: "Content not found or not owned by you" });
+      res.status(404).json({ error: "Không tìm thấy nội dung hoặc bạn không có quyền chỉnh sửa." });
       return;
     }
 
     res.json(updated);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -395,7 +398,7 @@ export const deleteContent = async (req: AuthRequest, res: Response): Promise<vo
     const contentId = parseId(req.params.id as string);
 
     if (!userId || !contentId) {
-      res.status(400).json({ error: "Invalid content ID" });
+      res.status(400).json({ error: "ID nội dung không hợp lệ." });
       return;
     }
 
@@ -411,14 +414,14 @@ export const deleteContent = async (req: AuthRequest, res: Response): Promise<vo
       .returning();
 
     if (!deleted) {
-      res.status(404).json({ error: "Content not found or not owned by you" });
+      res.status(404).json({ error: "Không tìm thấy nội dung hoặc bạn không có quyền xóa." });
       return;
     }
 
     res.json({ message: "Content deleted successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -484,7 +487,7 @@ export const getPublicContents = async (req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -492,7 +495,7 @@ export const getPublicContentDetail = async (req: Request<{ id: string }>, res: 
   try {
     const contentId = parseId(req.params.id as string);
     if (!contentId) {
-      res.status(400).json({ error: "Invalid content ID" });
+      res.status(400).json({ error: "ID nội dung không hợp lệ." });
       return;
     }
 
@@ -523,7 +526,7 @@ export const getPublicContentDetail = async (req: Request<{ id: string }>, res: 
       .limit(1);
 
     if (!content) {
-      res.status(404).json({ error: "Content not found" });
+      res.status(404).json({ error: "Không tìm thấy nội dung." });
       return;
     }
 
@@ -541,7 +544,7 @@ export const getPublicContentDetail = async (req: Request<{ id: string }>, res: 
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -570,7 +573,7 @@ export const toggleFavoriteContent = async (req: AuthRequest, res: Response): Pr
       .limit(1);
 
     if (!content) {
-      res.status(404).json({ error: "Content not found" });
+      res.status(404).json({ error: "Không tìm thấy nội dung." });
       return;
     }
 
@@ -607,7 +610,7 @@ export const toggleFavoriteContent = async (req: AuthRequest, res: Response): Pr
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -615,7 +618,7 @@ export const getMyFavoriteContents = async (req: AuthRequest, res: Response): Pr
   try {
     const userId = req.user?.id;
     if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Chưa xác thực người dùng." });
       return;
     }
 
@@ -674,7 +677,7 @@ export const getMyFavoriteContents = async (req: AuthRequest, res: Response): Pr
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 

@@ -1033,7 +1033,10 @@ INSERT INTO payout_requests (
     payout_request_created_at,
     payout_request_processed_at
 ) VALUES
-(1, 9, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL);
+(1, 9, 500000, 'Bank transfer', 'pending', 'Weekly payout request (mock).', now() - interval '1 day', NULL),
+(2, 136, 400000, 'Bank transfer', 'pending', 'Yêu cầu nhận nhuận bút cho loạt bài News tháng này.', now() - interval '12 hours', NULL),
+(3, 136, 250000, 'Bank transfer', 'completed', 'Đã đối soát nội bộ và hoàn tất chi trả.', now() - interval '4 days', now() - interval '3 days'),
+(4, 136, 150000, 'Bank transfer', 'rejected', 'Tạm từ chối để chờ đối soát thêm kỳ thanh toán.', now() - interval '2 days', now() - interval '36 hours');
 
 -- Host Contents (Mock - Magazine Style)
 INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_description, host_content_body, host_content_category, host_content_media_urls, host_content_status, host_content_view_count, host_content_payout_amount) VALUES
@@ -1049,14 +1052,14 @@ Không chỉ xuất hiện trong sân vườn hay các khu biệt thự, Tùng L
 
 Bên cạnh đó, Tùng La Hán cũng gắn liền với hình ảnh của sự tĩnh tại và thiền định. Trong nhiều không gian kiến trúc mang phong cách Nhật Bản hay Trung Hoa, cây thường được đặt ở vị trí trung tâm như một điểm nhấn tinh thần, giúp cân bằng cảm xúc và tạo cảm giác an yên.
 
-Ngày nay, khi nhịp sống hiện đại ngày càng hối hả, sự hiện diện của Tùng La Hán như một lời nhắc nhở về giá trị của sự kiên nhẫn và bền bỉ. Đó không chỉ là một loài cây cảnh, mà còn là biểu tượng sống động của thời gian, của sự trưởng thành và của những điều bền vững vượt lên trên mọi biến đổi.', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format", "https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 1250, 500000.00),
+Ngày nay, khi nhịp sống hiện đại ngày càng hối hả, sự hiện diện của Tùng La Hán như một lời nhắc nhở về giá trị của sự kiên nhẫn và bền bỉ. Đó không chỉ là một loài cây cảnh, mà còn là biểu tượng sống động của thời gian, của sự trưởng thành và của những điều bền vững vượt lên trên mọi biến đổi.', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format", "https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 1250, 300000.00),
 (2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Mẹo vặt', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
-(3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Sự kiện', '[]', 'published', 450, 450000.00);
+(3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Sự kiện', '[]', 'published', 450, 300000.00);
 
 INSERT INTO earnings (earning_id, user_id, amount, status, type, source_id, created_at) VALUES
-(2, 136, 500000.00, 'available', 'article_payout', 1, now() - interval '5 days'),
+(2, 136, 300000.00, 'available', 'article_payout', 1, now() - interval '5 days'),
 (3, 136, 300000.00, 'available', 'article_payout', 2, now() - interval '4 days'),
-(4, 136, 450000.00, 'pending', 'article_payout', 3, now() - interval '3 days'),
+(4, 136, 300000.00, 'pending', 'article_payout', 3, now() - interval '3 days'),
 (5, 136, 120000.00, 'available', 'performance_bonus', 1, now() - interval '2 days');
 
 -- Shops
@@ -1073,6 +1076,15 @@ INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verifi
 (137, 'Vườn Tùng Cổ Đông Anh', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
     'Chuyên sưu tầm và chăm sóc bonsai tùng, sanh, si theo phong cách vườn Bắc bộ. Nhận tư vấn phối chậu và tạo dáng cây trưởng thành.',
     '/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
+
+INSERT INTO shop_collaborators (
+    shop_collaborators_id,
+    shop_collaborators_shop_id,
+    collaborator_id,
+    shop_collaborators_status,
+    shop_collaborators_created_at
+) VALUES
+(1, 1, 9, 'active', now() - interval '10 days');
 
 -- ============================================================
 -- CATEGORIES
@@ -1374,7 +1386,7 @@ INSERT INTO system_settings (system_setting_key, system_setting_value, system_se
 ('owner_posting_policy', '{"planTitle": "Gói Chủ Vườn Vĩnh Viễn", "autoApprove": true, "dailyPostLimit": 20, "postFeeAmount": 20000, "freeEditQuota": 4, "editFeeAmount": 5000, "features": ["Đăng bài ngay, không qua chờ duyệt", "Giới hạn 20 bài viết mỗi ngày", "4 lượt sửa bài miễn phí", "Phí đăng tin lẻ cực thấp"]}', 1),
 ('personal_posting_policy', '{"planTitle": "Gói Cá Nhân Theo Tháng", "autoApprove": true, "dailyPostLimit": 20, "postFeeAmount": 0, "freeEditQuota": 4, "editFeeAmount": 5000, "features": ["Dành cho người chơi nhỏ lẻ", "Đăng bài tự động duyệt trong chu kỳ", "Giới hạn 20 bài viết mỗi ngày", "4 lượt sửa bài miễn phí mỗi tháng"]}', 1),
 ('shop_vip_policy', '{"planTitle": "Gói Nhà Vườn VIP", "features": ["Xếp đầu danh sách nhà vườn", "Gắn nhãn VIP nổi bật trong danh sách nhà vườn", "Hiển thị viền vàng sang trọng cho shop", "Ưu tiên hỗ trợ từ đội ngũ vận hành"]}', 1),
-('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"Vietnamese"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true}}', 1),
+('admin_web_settings', '{"general":{"platformName":"GreenMarket","supportEmail":"support@greenmarket.vn","defaultLanguage":"Tiếng Việt"},"moderation":{"autoModeration":true,"bannedKeywordFilter":true,"reportLimit":5},"postLifecycle":{"postExpiryDays":30,"restoreWindowDays":7,"allowAutoExpire":true,"postRateLimitPerHour":10},"media":{"maxImagesPerPost":10,"maxFileSizeMb":5,"enableImageCompression":true},"hostIncome":{"articlePayoutAmount":300000,"viewBonusThreshold":1000,"viewBonusAmount":120000,"minimumPayoutRequestAmount":100000}}', 1),
 ('admin_template_builder_config', '{"templateName":"Mẫu đăng tin cây cảnh","categoryName":"Cây cảnh & Bonsai","usageNote":"Dùng để xem trước bố cục form đăng tin cho ngành cây cảnh trước khi đưa vào vận hành.","previewTitlePlaceholder":"Ví dụ: Sanh mini 8 năm tuổi, dáng trực","submitLabel":"Đăng tin cây cảnh (Xem trước)","fields":[{"id":"bonsai-style","type":"select","label":"Dáng cây (Thế cây)","placeholder":"Chọn dáng cây","helperText":"Giúp người đăng mô tả bố cục bonsai theo đúng cách gọi phổ biến.","required":true,"options":["Trực","Xiêu","Huyền","Hoành","Văn nhân"]},{"id":"pot-type","type":"select","label":"Loại chậu đi kèm","placeholder":"Chọn loại chậu","helperText":"Thể hiện tình trạng đi kèm chậu để người mua định giá rõ hơn.","required":true,"options":["Chậu gốm","Chậu đá","Bầu đất / túi ươm"]},{"id":"tree-age","type":"number","label":"Tuổi cây (ước lượng)","placeholder":"Ví dụ: 8","helperText":"Dùng để ước lượng độ trưởng thành của cây, hỗ trợ so sánh giá trị.","required":false,"options":[]}]}', 1),
 ('admin_ai_insight_settings', '{"autoDailySummary":true,"anomalyAlerts":true,"operatorDigest":false,"recommendationTone":"Balanced","confidenceThreshold":78,"promptVersion":"gm-admin-v1.4","reviewMode":"Required"}', 1);
 
@@ -1445,11 +1457,11 @@ INSERT INTO payment_txn (
     payment_txn_status,
     payment_txn_created_at
 ) VALUES
-(1, 1, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260101-001', 'success', '2026-01-01 09:00:00'),
-(2, 3, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260103-002', 'success', '2026-01-03 10:00:00'),
-(3, 9, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260105-003', 'success', '2026-01-05 11:00:00'),
-(4, 6, NULL, NULL, NULL, 250000, 'bank_transfer', 'GM-TXN-20260107-004', 'success', '2026-01-07 11:30:00'),
-(5, 2, NULL, NULL, NULL, 30000,  'bank_transfer', 'GM-TXN-20260403-005', 'success', '2026-04-03 18:58:00'),
+(1, 1, 5, NULL, 5, 250000, 'bank_transfer', 'GM-TXN-20260101-001', 'success', '2026-01-01 09:00:00'),
+(2, 3, 5, NULL, 5, 250000, 'bank_transfer', 'GM-TXN-20260103-002', 'success', '2026-01-03 10:00:00'),
+(3, 9, 5, NULL, 5, 250000, 'bank_transfer', 'GM-TXN-20260105-003', 'success', '2026-01-05 11:00:00'),
+(4, 6, 5, NULL, 5, 250000, 'bank_transfer', 'GM-TXN-20260107-004', 'success', '2026-01-07 11:30:00'),
+(5, 2, 6, NULL, 6, 30000,  'bank_transfer', 'GM-TXN-20260403-005', 'success', '2026-04-03 18:58:00'),
 (6, 1, 3, NULL, 3, 499000, 'bank_transfer', 'GM-TXN-20260316-006', 'success', '2026-03-16 18:58:00'),
 (7, 1, 2, 1, 2, 299000, 'bank_transfer', 'GM-TXN-20260304-007', 'success', '2026-03-04 15:30:00'),
 (8, 3, 1, 4, 1, 99000,  'bank_transfer', 'GM-TXN-20260311-008', 'success', '2026-03-11 13:40:00'),

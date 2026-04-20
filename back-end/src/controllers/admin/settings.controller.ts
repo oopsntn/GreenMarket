@@ -1,173 +1,39 @@
-﻿import { Response } from "express";
+import { Response } from "express";
 import { eq } from "drizzle-orm";
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
-import {
-  eventLogs,
-  users,
-} from "../../models/schema/index.ts";
+import { eventLogs, users } from "../../models/schema/index.ts";
 import { adminConfigStoreService } from "../../services/adminConfigStore.service.ts";
+import {
+  adminWebSettingsService,
+  defaultAdminWebSettings,
+  type AdminWebSettingsState,
+  normalizeAdminWebSettings,
+} from "../../services/adminWebSettings.service.ts";
 
 const SETTINGS_KEY = "admin_web_settings";
 
-type SupportedLanguage = "Tiáº¿ng Viá»‡t";
-
-type SettingsState = {
-  general: {
-    platformName: string;
-    supportEmail: string;
-    defaultLanguage: SupportedLanguage;
-  };
-  moderation: {
-    autoModeration: boolean;
-    bannedKeywordFilter: boolean;
-    bannedKeywords: string[];
-    reportLimit: number;
-  };
-  postLifecycle: {
-    postExpiryDays: number;
-    restoreWindowDays: number;
-    allowAutoExpire: boolean;
-    postRateLimitPerHour: number;
-  };
-  media: {
-    maxImagesPerPost: number;
-    maxFileSizeMb: number;
-    enableImageCompression: boolean;
-  };
-};
-
-const defaultSettings: SettingsState = {
-  general: {
-    platformName: "GreenMarket",
-    supportEmail: "support@greenmarket.vn",
-    defaultLanguage: "Tiáº¿ng Viá»‡t",
-  },
-  moderation: {
-    autoModeration: true,
-    bannedKeywordFilter: true,
-    bannedKeywords: ["lá»«a Ä‘áº£o", "spam", "vi pháº¡m", "cáº¥m"],
-    reportLimit: 5,
-  },
-  postLifecycle: {
-    postExpiryDays: 30,
-    restoreWindowDays: 7,
-    allowAutoExpire: true,
-    postRateLimitPerHour: 10,
-  },
-  media: {
-    maxImagesPerPost: 10,
-    maxFileSizeMb: 5,
-    enableImageCompression: true,
-  },
-};
-
-const normalizeNumber = (value: unknown, fallback: number) => {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : fallback;
-};
-
-const normalizeBoolean = (value: unknown, fallback: boolean) => {
-  return typeof value === "boolean" ? value : fallback;
-};
-
-const normalizeString = (value: unknown, fallback: string) => {
-  return typeof value === "string" && value.trim() ? value.trim() : fallback;
-};
-
-const normalizeKeywordList = (value: unknown) => {
-  if (!Array.isArray(value)) {
-    return defaultSettings.moderation.bannedKeywords;
-  }
-
-  const normalized = value
-    .filter((item) => typeof item === "string")
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  return Array.from(new Set(normalized));
-};
-
-const normalizeSettings = (payload: Partial<SettingsState> | undefined): SettingsState => ({
-  general: {
-    platformName: normalizeString(
-      payload?.general?.platformName,
-      defaultSettings.general.platformName,
-    ),
-    supportEmail: normalizeString(
-      payload?.general?.supportEmail,
-      defaultSettings.general.supportEmail,
-    ),
-    defaultLanguage: "Tiáº¿ng Viá»‡t",
-  },
-  moderation: {
-    autoModeration: normalizeBoolean(
-      payload?.moderation?.autoModeration,
-      defaultSettings.moderation.autoModeration,
-    ),
-    bannedKeywordFilter: normalizeBoolean(
-      payload?.moderation?.bannedKeywordFilter,
-      defaultSettings.moderation.bannedKeywordFilter,
-    ),
-    bannedKeywords: normalizeKeywordList(payload?.moderation?.bannedKeywords),
-    reportLimit: normalizeNumber(
-      payload?.moderation?.reportLimit,
-      defaultSettings.moderation.reportLimit,
-    ),
-  },
-  postLifecycle: {
-    postExpiryDays: normalizeNumber(
-      payload?.postLifecycle?.postExpiryDays,
-      defaultSettings.postLifecycle.postExpiryDays,
-    ),
-    restoreWindowDays: normalizeNumber(
-      payload?.postLifecycle?.restoreWindowDays,
-      defaultSettings.postLifecycle.restoreWindowDays,
-    ),
-    allowAutoExpire: normalizeBoolean(
-      payload?.postLifecycle?.allowAutoExpire,
-      defaultSettings.postLifecycle.allowAutoExpire,
-    ),
-    postRateLimitPerHour: normalizeNumber(
-      payload?.postLifecycle?.postRateLimitPerHour,
-      defaultSettings.postLifecycle.postRateLimitPerHour,
-    ),
-  },
-  media: {
-    maxImagesPerPost: normalizeNumber(
-      payload?.media?.maxImagesPerPost,
-      defaultSettings.media.maxImagesPerPost,
-    ),
-    maxFileSizeMb: normalizeNumber(
-      payload?.media?.maxFileSizeMb,
-      defaultSettings.media.maxFileSizeMb,
-    ),
-    enableImageCompression: normalizeBoolean(
-      payload?.media?.enableImageCompression,
-      defaultSettings.media.enableImageCompression,
-    ),
-  },
-});
-
-const validateSettings = (settings: SettingsState) => {
+const validateSettings = (settings: AdminWebSettingsState) => {
   if (!settings.general.platformName.trim()) {
-    throw new Error("TÃªn ná»n táº£ng lÃ  báº¯t buá»™c.");
+    throw new Error("Tên nền tảng là bắt buộc.");
   }
 
   if (!settings.general.supportEmail.includes("@")) {
-    throw new Error("Email há»— trá»£ khÃ´ng Ä‘Ãºng Ä‘á»‹nh dáº¡ng.");
+    throw new Error("Email hỗ trợ không đúng định dạng.");
   }
 
   if (settings.moderation.reportLimit < 1) {
-    throw new Error("Sá»‘ bÃ¡o cÃ¡o tá»‘i Ä‘a trÆ°á»›c khi kiá»ƒm tra thá»§ cÃ´ng pháº£i tá»« 1 trá»Ÿ lÃªn.");
+    throw new Error(
+      "Số báo cáo tối đa trước khi kiểm tra thủ công phải từ 1 trở lên.",
+    );
   }
 
   if (settings.postLifecycle.postExpiryDays < 1) {
-    throw new Error("Sá»‘ ngÃ y bÃ i Ä‘Äƒng tá»± háº¿t háº¡n pháº£i tá»« 1 trá»Ÿ lÃªn.");
+    throw new Error("Số ngày bài đăng tự hết hạn phải từ 1 trở lên.");
   }
 
   if (settings.postLifecycle.restoreWindowDays < 1) {
-    throw new Error("Sá»‘ ngÃ y khÃ´i phá»¥c tá»« thÃ¹ng rÃ¡c pháº£i tá»« 1 trá»Ÿ lÃªn.");
+    throw new Error("Số ngày khôi phục từ thùng rác phải từ 1 trở lên.");
   }
 
   if (
@@ -175,50 +41,62 @@ const validateSettings = (settings: SettingsState) => {
     settings.postLifecycle.postExpiryDays
   ) {
     throw new Error(
-      "Sá»‘ ngÃ y khÃ´i phá»¥c khÃ´ng Ä‘Æ°á»£c lá»›n hÆ¡n sá»‘ ngÃ y bÃ i Ä‘Äƒng tá»± háº¿t háº¡n.",
+      "Số ngày khôi phục không được lớn hơn số ngày bài đăng tự hết hạn.",
     );
   }
 
   if (settings.postLifecycle.postRateLimitPerHour < 1) {
-    throw new Error("Giá»›i háº¡n sá»‘ bÃ i Ä‘Äƒng má»—i giá» pháº£i tá»« 1 trá»Ÿ lÃªn.");
+    throw new Error("Giới hạn số bài đăng mỗi giờ phải từ 1 trở lên.");
   }
 
   if (settings.media.maxImagesPerPost < 1) {
-    throw new Error("Sá»‘ áº£nh tá»‘i Ä‘a má»—i bÃ i pháº£i tá»« 1 trá»Ÿ lÃªn.");
+    throw new Error("Số ảnh tối đa mỗi bài phải từ 1 trở lên.");
   }
 
   if (settings.media.maxFileSizeMb < 1) {
-    throw new Error("Dung lÆ°á»£ng tá»‡p tá»‘i Ä‘a pháº£i tá»« 1 MB trá»Ÿ lÃªn.");
+    throw new Error("Dung lượng tệp tối đa phải từ 1 MB trở lên.");
+  }
+
+  if (settings.hostIncome.articlePayoutAmount < 0) {
+    throw new Error("Nhuận bút cố định mỗi bài không được âm.");
+  }
+
+  if (settings.hostIncome.viewBonusThreshold < 1) {
+    throw new Error("Mốc lượt xem nhận thưởng phải từ 1 trở lên.");
+  }
+
+  if (settings.hostIncome.viewBonusAmount < 0) {
+    throw new Error("Tiền thưởng lượt xem không được âm.");
+  }
+
+  if (settings.hostIncome.minimumPayoutRequestAmount < 0) {
+    throw new Error("Số tiền tối thiểu cho một yêu cầu chi trả không được âm.");
   }
 };
 
-const summarizeSettingsChange = (previous: SettingsState, next: SettingsState) => {
+const summarizeSettingsChange = (
+  previous: AdminWebSettingsState,
+  next: AdminWebSettingsState,
+) => {
   const changes: string[] = [];
 
   if (previous.general.platformName !== next.general.platformName) {
     changes.push(
-      `TÃªn ná»n táº£ng: ${previous.general.platformName} -> ${next.general.platformName}`,
+      `Tên nền tảng: ${previous.general.platformName} -> ${next.general.platformName}`,
     );
   }
 
   if (previous.general.supportEmail !== next.general.supportEmail) {
     changes.push(
-      `Email há»— trá»£: ${previous.general.supportEmail} -> ${next.general.supportEmail}`,
+      `Email hỗ trợ: ${previous.general.supportEmail} -> ${next.general.supportEmail}`,
     );
   }
-
-  if (previous.general.defaultLanguage !== next.general.defaultLanguage) {
-    changes.push(
-      `NgÃ´n ngá»¯ máº·c Ä‘á»‹nh: ${previous.general.defaultLanguage} -> ${next.general.defaultLanguage}`,
-    );
-  }
-
 
   if (
     previous.moderation.autoModeration !== next.moderation.autoModeration
   ) {
     changes.push(
-      `Tá»± Ä‘á»™ng kiá»ƒm duyá»‡t: ${previous.moderation.autoModeration ? "Báº­t" : "Táº¯t"} -> ${next.moderation.autoModeration ? "Báº­t" : "Táº¯t"}`,
+      `Tự động kiểm duyệt: ${previous.moderation.autoModeration ? "Bật" : "Tắt"} -> ${next.moderation.autoModeration ? "Bật" : "Tắt"}`,
     );
   }
 
@@ -227,13 +105,13 @@ const summarizeSettingsChange = (previous: SettingsState, next: SettingsState) =
     next.moderation.bannedKeywordFilter
   ) {
     changes.push(
-      `Lá»c tá»« khÃ³a cáº¥m: ${previous.moderation.bannedKeywordFilter ? "Báº­t" : "Táº¯t"} -> ${next.moderation.bannedKeywordFilter ? "Báº­t" : "Táº¯t"}`,
+      `Lọc từ khóa cấm: ${previous.moderation.bannedKeywordFilter ? "Bật" : "Tắt"} -> ${next.moderation.bannedKeywordFilter ? "Bật" : "Tắt"}`,
     );
   }
 
   if (previous.moderation.reportLimit !== next.moderation.reportLimit) {
     changes.push(
-      `NgÆ°á»¡ng bÃ¡o cÃ¡o thá»§ cÃ´ng: ${previous.moderation.reportLimit} -> ${next.moderation.reportLimit}`,
+      `Ngưỡng báo cáo thủ công: ${previous.moderation.reportLimit} -> ${next.moderation.reportLimit}`,
     );
   }
 
@@ -242,7 +120,7 @@ const summarizeSettingsChange = (previous: SettingsState, next: SettingsState) =
     next.postLifecycle.postRateLimitPerHour
   ) {
     changes.push(
-      `Giá»›i háº¡n bÃ i Ä‘Äƒng má»—i giá»: ${previous.postLifecycle.postRateLimitPerHour} -> ${next.postLifecycle.postRateLimitPerHour}`,
+      `Giới hạn bài đăng mỗi giờ: ${previous.postLifecycle.postRateLimitPerHour} -> ${next.postLifecycle.postRateLimitPerHour}`,
     );
   }
 
@@ -250,7 +128,7 @@ const summarizeSettingsChange = (previous: SettingsState, next: SettingsState) =
     previous.postLifecycle.postExpiryDays !== next.postLifecycle.postExpiryDays
   ) {
     changes.push(
-      `NgÃ y tá»± háº¿t háº¡n: ${previous.postLifecycle.postExpiryDays} -> ${next.postLifecycle.postExpiryDays}`,
+      `Ngày tự hết hạn: ${previous.postLifecycle.postExpiryDays} -> ${next.postLifecycle.postExpiryDays}`,
     );
   }
 
@@ -259,7 +137,7 @@ const summarizeSettingsChange = (previous: SettingsState, next: SettingsState) =
     next.postLifecycle.restoreWindowDays
   ) {
     changes.push(
-      `NgÃ y khÃ´i phá»¥c: ${previous.postLifecycle.restoreWindowDays} -> ${next.postLifecycle.restoreWindowDays}`,
+      `Ngày khôi phục: ${previous.postLifecycle.restoreWindowDays} -> ${next.postLifecycle.restoreWindowDays}`,
     );
   }
 
@@ -268,19 +146,19 @@ const summarizeSettingsChange = (previous: SettingsState, next: SettingsState) =
     next.postLifecycle.allowAutoExpire
   ) {
     changes.push(
-      `Tá»± Ä‘á»™ng háº¿t háº¡n: ${previous.postLifecycle.allowAutoExpire ? "Báº­t" : "Táº¯t"} -> ${next.postLifecycle.allowAutoExpire ? "Báº­t" : "Táº¯t"}`,
+      `Tự động hết hạn: ${previous.postLifecycle.allowAutoExpire ? "Bật" : "Tắt"} -> ${next.postLifecycle.allowAutoExpire ? "Bật" : "Tắt"}`,
     );
   }
 
   if (previous.media.maxImagesPerPost !== next.media.maxImagesPerPost) {
     changes.push(
-      `Sá»‘ áº£nh tá»‘i Ä‘a: ${previous.media.maxImagesPerPost} -> ${next.media.maxImagesPerPost}`,
+      `Số ảnh tối đa: ${previous.media.maxImagesPerPost} -> ${next.media.maxImagesPerPost}`,
     );
   }
 
   if (previous.media.maxFileSizeMb !== next.media.maxFileSizeMb) {
     changes.push(
-      `Dung lÆ°á»£ng tá»‡p tá»‘i Ä‘a: ${previous.media.maxFileSizeMb} -> ${next.media.maxFileSizeMb}`,
+      `Dung lượng tệp tối đa: ${previous.media.maxFileSizeMb} -> ${next.media.maxFileSizeMb}`,
     );
   }
 
@@ -289,7 +167,42 @@ const summarizeSettingsChange = (previous: SettingsState, next: SettingsState) =
     next.media.enableImageCompression
   ) {
     changes.push(
-      `NÃ©n áº£nh: ${previous.media.enableImageCompression ? "Báº­t" : "Táº¯t"} -> ${next.media.enableImageCompression ? "Báº­t" : "Táº¯t"}`,
+      `Nén ảnh: ${previous.media.enableImageCompression ? "Bật" : "Tắt"} -> ${next.media.enableImageCompression ? "Bật" : "Tắt"}`,
+    );
+  }
+
+  if (
+    previous.hostIncome.articlePayoutAmount !==
+    next.hostIncome.articlePayoutAmount
+  ) {
+    changes.push(
+      `Nhuận bút cố định mỗi bài: ${previous.hostIncome.articlePayoutAmount} -> ${next.hostIncome.articlePayoutAmount}`,
+    );
+  }
+
+  if (
+    previous.hostIncome.viewBonusThreshold !==
+    next.hostIncome.viewBonusThreshold
+  ) {
+    changes.push(
+      `Mốc lượt xem nhận thưởng: ${previous.hostIncome.viewBonusThreshold} -> ${next.hostIncome.viewBonusThreshold}`,
+    );
+  }
+
+  if (
+    previous.hostIncome.viewBonusAmount !== next.hostIncome.viewBonusAmount
+  ) {
+    changes.push(
+      `Thưởng lượt xem cố định: ${previous.hostIncome.viewBonusAmount} -> ${next.hostIncome.viewBonusAmount}`,
+    );
+  }
+
+  if (
+    previous.hostIncome.minimumPayoutRequestAmount !==
+    next.hostIncome.minimumPayoutRequestAmount
+  ) {
+    changes.push(
+      `Mức tối thiểu một yêu cầu chi trả: ${previous.hostIncome.minimumPayoutRequestAmount} -> ${next.hostIncome.minimumPayoutRequestAmount}`,
     );
   }
 
@@ -297,12 +210,14 @@ const summarizeSettingsChange = (previous: SettingsState, next: SettingsState) =
   const nextKeywords = next.moderation.bannedKeywords.join(", ");
 
   if (previousKeywords !== nextKeywords) {
-    changes.push(`Tá»« khÃ³a cáº¥m: ${previousKeywords || "Trá»‘ng"} -> ${nextKeywords || "Trá»‘ng"}`);
+    changes.push(
+      `Từ khóa cấm: ${previousKeywords || "Trống"} -> ${nextKeywords || "Trống"}`,
+    );
   }
 
   return changes.length > 0
     ? changes.join(" | ")
-    : "KhÃ´ng cÃ³ thay Ä‘á»•i giÃ¡ trá»‹ nhÆ°ng cáº¥u hÃ¬nh Ä‘Ã£ Ä‘Æ°á»£c lÆ°u láº¡i.";
+    : "Không có thay đổi giá trị nhưng cấu hình đã được lưu lại.";
 };
 
 const logSettingsEvent = async (
@@ -310,7 +225,7 @@ const logSettingsEvent = async (
   eventType: "admin_settings_updated" | "admin_settings_reset",
   detail: string,
 ) => {
-  let performedBy = "Quáº£n trá»‹ viÃªn há»‡ thá»‘ng";
+  let performedBy = "Quản trị viên hệ thống";
 
   if (userId) {
     const [user] = await db
@@ -322,7 +237,7 @@ const logSettingsEvent = async (
       .where(eq(users.userId, userId))
       .limit(1);
 
-    performedBy = user?.displayName || user?.email || `NgÆ°á»i dÃ¹ng #${userId}`;
+    performedBy = user?.displayName || user?.email || `Người dùng #${userId}`;
   }
 
   await db.insert(eventLogs).values({
@@ -332,8 +247,8 @@ const logSettingsEvent = async (
     eventLogMeta: {
       action:
         eventType === "admin_settings_reset"
-          ? "KhÃ´i phá»¥c thiáº¿t láº­p há»‡ thá»‘ng"
-          : "Cáº­p nháº­t thiáº¿t láº­p há»‡ thá»‘ng",
+          ? "Khôi phục thiết lập hệ thống"
+          : "Cập nhật thiết lập hệ thống",
       detail,
       performedBy,
     },
@@ -345,15 +260,11 @@ export const getSettings = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const settings = await adminConfigStoreService.getJson<SettingsState>(
-      SETTINGS_KEY,
-      defaultSettings,
-    );
-
-    res.json(normalizeSettings(settings));
+    const settings = await adminWebSettingsService.getSettings();
+    res.json(settings);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Lá»—i mÃ¡y chá»§ ná»™i bá»™" });
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
   }
 };
 
@@ -362,13 +273,10 @@ export const updateSettings = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const currentSettings = normalizeSettings(
-      await adminConfigStoreService.getJson<SettingsState>(
-        SETTINGS_KEY,
-        defaultSettings,
-      ),
+    const currentSettings = await adminWebSettingsService.getSettings();
+    const nextSettings = normalizeAdminWebSettings(
+      req.body as Partial<AdminWebSettingsState>,
     );
-    const nextSettings = normalizeSettings(req.body as Partial<SettingsState>);
 
     validateSettings(nextSettings);
 
@@ -388,7 +296,7 @@ export const updateSettings = async (
   } catch (error) {
     console.error(error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Lá»—i mÃ¡y chá»§ ná»™i bá»™",
+      error: error instanceof Error ? error.message : "Lỗi máy chủ nội bộ",
     });
   }
 };
@@ -400,22 +308,21 @@ export const resetSettings = async (
   try {
     const savedSettings = await adminConfigStoreService.setJson(
       SETTINGS_KEY,
-      defaultSettings,
+      defaultAdminWebSettings,
       req.user?.id,
     );
 
     await logSettingsEvent(
       req.user?.id,
       "admin_settings_reset",
-      "Thiáº¿t láº­p há»‡ thá»‘ng Ä‘Ã£ Ä‘Æ°á»£c khÃ´i phá»¥c vá» giÃ¡ trá»‹ máº·c Ä‘á»‹nh.",
+      "Thiết lập hệ thống đã được khôi phục về giá trị mặc định.",
     );
 
     res.json(savedSettings);
   } catch (error) {
     console.error(error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Lá»—i mÃ¡y chá»§ ná»™i bá»™",
+      error: error instanceof Error ? error.message : "Lỗi máy chủ nội bộ",
     });
   }
 };
-

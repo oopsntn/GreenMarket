@@ -1,16 +1,18 @@
 import { Response } from "express";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
   businessRoles,
   earnings,
   eventLogs,
+  hostContents,
   payoutRequests,
   users,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { notificationService } from "../../services/notification.service.ts";
+import { hostIncomePolicyService } from "../../services/hostIncomePolicy.service.ts";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -18,6 +20,7 @@ const MAX_LIMIT = 100;
 const PAYOUT_EVENT_PREFIX = "admin_payout_request";
 
 type PayoutStatus = "pending" | "completed" | "rejected";
+type FundingStatus = "system_managed" | "not_required" | "recorded";
 
 type ProcessPayload = {
   adminNote?: string;
@@ -35,57 +38,24 @@ const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
   return { page, limit, offset };
 };
 
-const getPerformedBy = (req: AuthRequest) => {
-  return (
-    normalizeString(req.user?.name) ||
-    normalizeString(req.user?.email) ||
-    "Quản trị viên hệ thống"
-  );
-};
+const getPerformedBy = (req: AuthRequest) =>
+  normalizeString(req.user?.name) ||
+  normalizeString(req.user?.email) ||
+  "Quản trị viên hệ thống";
 
-const resolveAudienceLabel = (
-  roleCode: string | null,
-  roleTitle: string | null,
-) => {
-  const normalizedRoleCode = (roleCode || "").toUpperCase();
+const hostRoleCondition = () =>
+  eq(sql`upper(${businessRoles.businessRoleCode})`, "HOST");
 
-  if (normalizedRoleCode === "HOST") {
-    return "Host";
-  }
-
-  if (normalizedRoleCode === "COLLABORATOR") {
-    return "Cộng tác viên";
-  }
-
-  return roleTitle || "Người dùng";
-};
-
-const resolveAudienceFilter = (audience: string) => {
-  if (audience === "host") {
-    return eq(sql`upper(${businessRoles.businessRoleCode})`, "HOST");
-  }
-
-  if (audience === "collaborator") {
-    return eq(sql`upper(${businessRoles.businessRoleCode})`, "COLLABORATOR");
-  }
-
-  return undefined;
-};
+const resolveAudienceLabel = () => "Host";
 
 const buildBaseConditions = (req: AuthRequest) => {
   const status = normalizeString(req.query.status).toLowerCase();
-  const audience = normalizeString(req.query.audience).toLowerCase();
   const keyword = normalizeString(req.query.keyword);
 
-  const conditions = [];
+  const conditions = [hostRoleCondition()];
 
   if (status && status !== "all") {
     conditions.push(eq(payoutRequests.payoutRequestStatus, status));
-  }
-
-  const audienceCondition = resolveAudienceFilter(audience);
-  if (audienceCondition) {
-    conditions.push(audienceCondition);
   }
 
   if (keyword) {
@@ -99,7 +69,7 @@ const buildBaseConditions = (req: AuthRequest) => {
     );
   }
 
-  return conditions.length > 0 ? and(...conditions) : undefined;
+  return and(...conditions);
 };
 
 const buildNotificationMessage = (
@@ -108,12 +78,72 @@ const buildNotificationMessage = (
   adminNote: string,
 ) => {
   if (status === "completed") {
-    return `Yêu cầu rút ${amount.toLocaleString("vi-VN")} VND của bạn đã được quản trị viên xác nhận hoàn thành.`;
+    return `Yêu cầu nhận nhuận bút ${amount.toLocaleString("vi-VN")} VND của bạn đã được admin xác nhận hoàn thành.`;
   }
 
   return adminNote
-    ? `Yêu cầu rút tiền của bạn đã bị từ chối. Lý do: ${adminNote}`
-    : "Yêu cầu rút tiền của bạn đã bị từ chối. Vui lòng liên hệ quản trị viên để biết thêm chi tiết.";
+    ? `Yêu cầu nhận nhuận bút của bạn đã bị từ chối. Lý do: ${adminNote}`
+    : "Yêu cầu nhận nhuận bút của bạn đã bị từ chối. Vui lòng liên hệ admin để biết thêm chi tiết.";
+};
+
+const resolveSourceTypeLabel = (type: string | null) => {
+  switch ((type || "").toLowerCase()) {
+    case "article_payout":
+      return "Nhuận bút nội dung";
+    case "performance_bonus":
+      return "Thưởng hiệu suất";
+    default:
+      return "Nguồn thu khác";
+  }
+};
+
+const resolveHostContentStatusLabel = (status: string | null) => {
+  switch ((status || "").toLowerCase()) {
+    case "published":
+      return "Đã xuất bản";
+    case "pending_admin":
+      return "Chờ duyệt";
+    case "rejected":
+      return "Bị từ chối";
+    default:
+      return status || "Không xác định";
+  }
+};
+
+const resolveFundingStatusLabel = (status: FundingStatus) => {
+  if (status === "system_managed") {
+    return "Hệ thống tự chi trả";
+  }
+
+  return "Không cần đối soát thêm";
+};
+
+const getHostPayoutRequestById = async (requestId: number) => {
+  const [request] = await db
+    .select({
+      payoutRequestId: payoutRequests.payoutRequestId,
+      userId: payoutRequests.payoutRequestUserId,
+      amount: payoutRequests.payoutRequestAmount,
+      status: payoutRequests.payoutRequestStatus,
+      method: payoutRequests.payoutRequestMethod,
+      note: payoutRequests.payoutRequestNote,
+      createdAt: payoutRequests.payoutRequestCreatedAt,
+      processedAt: payoutRequests.payoutRequestProcessedAt,
+      userName: users.userDisplayName,
+      userEmail: users.userEmail,
+      userMobile: users.userMobile,
+      roleCode: businessRoles.businessRoleCode,
+    })
+    .from(payoutRequests)
+    .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
+    .leftJoin(
+      businessRoles,
+      eq(users.userBusinessRoleId, businessRoles.businessRoleId),
+    )
+    .where(and(eq(payoutRequests.payoutRequestId, requestId), hostRoleCondition()))
+    .limit(1);
+
+  return request;
 };
 
 const processPayoutRequestStatus = async (
@@ -127,35 +157,21 @@ const processPayoutRequestStatus = async (
     const normalizedNote = normalizeString(adminNote);
 
     if (!requestId) {
-      res.status(400).json({ error: "ID yêu cầu rút tiền không hợp lệ." });
+      res.status(400).json({ error: "ID yêu cầu không hợp lệ." });
       return;
     }
 
-    const [request] = await db
-      .select({
-        payoutRequestId: payoutRequests.payoutRequestId,
-        userId: payoutRequests.payoutRequestUserId,
-        amount: payoutRequests.payoutRequestAmount,
-        status: payoutRequests.payoutRequestStatus,
-        method: payoutRequests.payoutRequestMethod,
-        note: payoutRequests.payoutRequestNote,
-        userName: users.userDisplayName,
-        userEmail: users.userEmail,
-      })
-      .from(payoutRequests)
-      .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
-      .where(eq(payoutRequests.payoutRequestId, requestId))
-      .limit(1);
+    const request = await getHostPayoutRequestById(requestId);
 
     if (!request) {
-      res.status(404).json({ error: "Không tìm thấy yêu cầu rút tiền." });
+      res.status(404).json({ error: "Không tìm thấy yêu cầu nhuận bút Host." });
       return;
     }
 
     if (request.status !== "pending") {
-      res
-        .status(400)
-        .json({ error: "Chỉ có thể xử lý các yêu cầu đang ở trạng thái chờ." });
+      res.status(400).json({
+        error: "Chỉ có thể xử lý các yêu cầu đang ở trạng thái chờ.",
+      });
       return;
     }
 
@@ -181,8 +197,8 @@ const processPayoutRequestStatus = async (
       recipientId: request.userId,
       title:
         nextStatus === "completed"
-          ? "Yêu cầu rút tiền đã hoàn thành"
-          : "Yêu cầu rút tiền bị từ chối",
+          ? "Yêu cầu nhuận bút đã hoàn thành"
+          : "Yêu cầu nhuận bút bị từ chối",
       message: buildNotificationMessage(nextStatus, amountValue, normalizedNote),
       type: nextStatus === "completed" ? "success" : "warning",
       metaData: {
@@ -202,7 +218,7 @@ const processPayoutRequestStatus = async (
         requesterName:
           normalizeString(request.userName) ||
           normalizeString(request.userEmail) ||
-          `Người dùng #${request.userId}`,
+          `Host #${request.userId}`,
         amount: amountValue,
         method: request.method,
         previousStatus: request.status,
@@ -215,13 +231,13 @@ const processPayoutRequestStatus = async (
     res.json({
       message:
         nextStatus === "completed"
-          ? "Đã xác nhận hoàn thành yêu cầu rút tiền."
-          : "Đã từ chối yêu cầu rút tiền.",
+          ? "Đã xác nhận hoàn thành yêu cầu nhuận bút Host."
+          : "Đã từ chối yêu cầu nhuận bút Host.",
       data: updated,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Không thể xử lý yêu cầu rút tiền." });
+    res.status(500).json({ error: "Không thể xử lý yêu cầu nhuận bút Host." });
   }
 };
 
@@ -244,7 +260,6 @@ export const getAllPayoutRequests = async (
         userEmail: users.userEmail,
         userMobile: users.userMobile,
         roleCode: businessRoles.businessRoleCode,
-        roleTitle: businessRoles.businessRoleTitle,
         amount: payoutRequests.payoutRequestAmount,
         method: payoutRequests.payoutRequestMethod,
         status: payoutRequests.payoutRequestStatus,
@@ -302,10 +317,10 @@ export const getAllPayoutRequests = async (
         userName:
           normalizeString(row.userName) ||
           normalizeString(row.userEmail) ||
-          `Người dùng #${row.userId}`,
+          `Host #${row.userId}`,
         userEmail: row.userEmail,
         userMobile: row.userMobile,
-        audienceLabel: resolveAudienceLabel(row.roleCode, row.roleTitle),
+        audienceLabel: resolveAudienceLabel(),
         roleCode: row.roleCode,
         amount: Number(row.amount ?? 0),
         method: row.method,
@@ -331,7 +346,7 @@ export const getAllPayoutRequests = async (
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Không thể tải danh sách chi trả." });
+    res.status(500).json({ error: "Không thể tải danh sách nhuận bút Host." });
   }
 };
 
@@ -343,50 +358,40 @@ export const getPayoutRequestDetail = async (
     const requestId = parseId(req.params.id as string);
 
     if (!requestId) {
-      res.status(400).json({ error: "ID yêu cầu rút tiền không hợp lệ." });
+      res.status(400).json({ error: "ID yêu cầu không hợp lệ." });
       return;
     }
 
-    const [detail] = await db
-      .select({
-        payoutRequestId: payoutRequests.payoutRequestId,
-        userId: payoutRequests.payoutRequestUserId,
-        userName: users.userDisplayName,
-        userEmail: users.userEmail,
-        userMobile: users.userMobile,
-        roleCode: businessRoles.businessRoleCode,
-        roleTitle: businessRoles.businessRoleTitle,
-        amount: payoutRequests.payoutRequestAmount,
-        method: payoutRequests.payoutRequestMethod,
-        status: payoutRequests.payoutRequestStatus,
-        note: payoutRequests.payoutRequestNote,
-        createdAt: payoutRequests.payoutRequestCreatedAt,
-        processedAt: payoutRequests.payoutRequestProcessedAt,
-      })
-      .from(payoutRequests)
-      .leftJoin(users, eq(payoutRequests.payoutRequestUserId, users.userId))
-      .leftJoin(
-        businessRoles,
-        eq(users.userBusinessRoleId, businessRoles.businessRoleId),
-      )
-      .where(eq(payoutRequests.payoutRequestId, requestId))
-      .limit(1);
+    const detail = await getHostPayoutRequestById(requestId);
 
     if (!detail) {
-      res.status(404).json({ error: "Không tìm thấy yêu cầu rút tiền." });
+      res.status(404).json({ error: "Không tìm thấy yêu cầu nhuận bút Host." });
       return;
     }
+
+    await hostIncomePolicyService.syncForUser(detail.userId);
+    const hostIncomePolicy = await hostIncomePolicyService.getPolicy();
 
     const [earningSummary] = await db
       .select({
         totalEarned: sql<string>`coalesce(sum(${earnings.amount}), 0)`,
-        availableBalance:
+        availableEarnings:
           sql<string>`coalesce(sum(${earnings.amount}) filter (where ${earnings.status} = 'available'), 0)`,
-        pendingBalance:
+        pendingIncome:
           sql<string>`coalesce(sum(${earnings.amount}) filter (where ${earnings.status} = 'pending'), 0)`,
       })
       .from(earnings)
       .where(eq(earnings.userId, detail.userId));
+
+    const [payoutLedger] = await db
+      .select({
+        paidOutAmount:
+          sql<string>`coalesce(sum(${payoutRequests.payoutRequestAmount}) filter (where ${payoutRequests.payoutRequestStatus} = 'completed'), 0)`,
+        pendingPayoutAmount:
+          sql<string>`coalesce(sum(${payoutRequests.payoutRequestAmount}) filter (where ${payoutRequests.payoutRequestStatus} = 'pending'), 0)`,
+      })
+      .from(payoutRequests)
+      .where(eq(payoutRequests.payoutRequestUserId, detail.userId));
 
     const sourceBreakdown = await db
       .select({
@@ -398,6 +403,105 @@ export const getPayoutRequestDetail = async (
       .where(eq(earnings.userId, detail.userId))
       .groupBy(earnings.type)
       .orderBy(desc(sql`sum(${earnings.amount})`));
+
+    const earningEntries = await db
+      .select({
+        earningId: earnings.earningId,
+        amount: earnings.amount,
+        status: earnings.status,
+        type: earnings.type,
+        sourceId: earnings.sourceId,
+        createdAt: earnings.createdAt,
+      })
+      .from(earnings)
+      .where(eq(earnings.userId, detail.userId))
+      .orderBy(desc(earnings.createdAt), desc(earnings.earningId));
+
+    const hostContentSourceIds = Array.from(
+      new Set(
+        earningEntries
+          .filter((item) => item.type === "article_payout" && item.sourceId)
+          .map((item) => Number(item.sourceId)),
+      ),
+    );
+
+    const hostContentRows =
+      hostContentSourceIds.length === 0
+        ? []
+        : await db
+            .select({
+              hostContentId: hostContents.hostContentId,
+              hostContentTitle: hostContents.hostContentTitle,
+              hostContentStatus: hostContents.hostContentStatus,
+            })
+            .from(hostContents)
+            .where(inArray(hostContents.hostContentId, hostContentSourceIds));
+
+    const hostContentById = new Map(
+      hostContentRows.map((item) => [
+        item.hostContentId,
+        {
+          title: normalizeString(item.hostContentTitle),
+          status: item.hostContentStatus,
+        },
+      ]),
+    );
+
+    const sourceDetails = earningEntries.map((item) => {
+      const amount = Number(item.amount ?? 0);
+      const sourceType = normalizeString(item.type) || "other";
+      const sourceTypeLabel = resolveSourceTypeLabel(item.type);
+
+      if (item.type === "article_payout") {
+        const contentSource = hostContentById.get(Number(item.sourceId ?? -1));
+
+        return {
+          earningId: item.earningId,
+          sourceId: item.sourceId,
+          sourceType,
+          sourceTypeLabel,
+          sourceTitle:
+            contentSource?.title ||
+            (item.sourceId ? `Nội dung #${item.sourceId}` : "Nội dung chưa xác định"),
+          sourceStatus: contentSource?.status || null,
+          sourceStatusLabel: resolveHostContentStatusLabel(contentSource?.status || null),
+          amount,
+          createdAt: item.createdAt,
+          payerName: "GreenMarket",
+          payerEmail: null,
+          payerMobile: null,
+          payerLabel: "Đơn vị chi trả",
+          shopName: null,
+          fundingStatus: "system_managed" as FundingStatus,
+          fundingStatusLabel: resolveFundingStatusLabel("system_managed"),
+          fundingNote:
+            "Khoản này là nhuận bút nội dung Host do GreenMarket tự chi trả sau khi bài được ghi nhận hợp lệ.",
+        };
+      }
+
+      return {
+        earningId: item.earningId,
+        sourceId: item.sourceId,
+        sourceType,
+        sourceTypeLabel,
+        sourceTitle: item.sourceId
+          ? `Nguồn thu #${item.sourceId}`
+          : "Nguồn thu nội bộ",
+        sourceStatus: item.status,
+        sourceStatusLabel: item.status || "Không xác định",
+        amount,
+        createdAt: item.createdAt,
+        payerName: "GreenMarket",
+        payerEmail: null,
+        payerMobile: null,
+        payerLabel: "Đơn vị ghi nhận",
+        shopName: null,
+        fundingStatus: "not_required" as FundingStatus,
+        fundingStatusLabel: resolveFundingStatusLabel("not_required"),
+        fundingNote:
+          "Khoản này được GreenMarket ghi nhận nội bộ cho tài khoản Host và không đi qua luồng thanh toán giữa khách hàng với cộng tác viên.",
+      };
+    });
 
     const recentRequests = await db
       .select({
@@ -419,10 +523,10 @@ export const getPayoutRequestDetail = async (
         userName:
           normalizeString(detail.userName) ||
           normalizeString(detail.userEmail) ||
-          `Người dùng #${detail.userId}`,
+          `Host #${detail.userId}`,
         userEmail: detail.userEmail,
         userMobile: detail.userMobile,
-        audienceLabel: resolveAudienceLabel(detail.roleCode, detail.roleTitle),
+        audienceLabel: resolveAudienceLabel(),
         roleCode: detail.roleCode,
         amount: Number(detail.amount ?? 0),
         method: detail.method,
@@ -432,14 +536,29 @@ export const getPayoutRequestDetail = async (
         processedAt: detail.processedAt,
         earningSummary: {
           totalEarned: Number(earningSummary?.totalEarned ?? 0),
-          availableBalance: Number(earningSummary?.availableBalance ?? 0),
-          pendingBalance: Number(earningSummary?.pendingBalance ?? 0),
+          availableBalance: Math.max(
+            Number(earningSummary?.availableEarnings ?? 0) -
+              Number(payoutLedger?.paidOutAmount ?? 0) -
+              Number(payoutLedger?.pendingPayoutAmount ?? 0),
+            0,
+          ),
+          pendingBalance: Number(payoutLedger?.pendingPayoutAmount ?? 0),
+          pendingIncome: Number(earningSummary?.pendingIncome ?? 0),
+          paidOutAmount: Number(payoutLedger?.paidOutAmount ?? 0),
         },
         sourceBreakdown: sourceBreakdown.map((item) => ({
           type: item.type,
+          typeLabel: resolveSourceTypeLabel(item.type),
           amount: Number(item.amount ?? 0),
           count: Number(item.count ?? 0),
         })),
+        sourceDetails: sourceDetails.map((item) => ({
+          ...item,
+          amount: Number(item.amount ?? 0),
+        })),
+        requiresSourceConfirmation: sourceDetails.length > 0,
+        approvalHint:
+          `Chính sách hiện hành: mỗi bài Host được xuất bản sẽ ghi nhận ${hostIncomePolicy.articlePayoutAmount.toLocaleString("vi-VN")} VND; khi bài đạt từ ${hostIncomePolicy.viewBonusThreshold.toLocaleString("vi-VN")} lượt xem sẽ được cộng thêm ${hostIncomePolicy.viewBonusAmount.toLocaleString("vi-VN")} VND. GreenMarket chuyển khoản thủ công ngoài hệ thống và admin xác nhận lại sau khi đã chi trả.`,
         recentRequests: recentRequests.map((item) => ({
           payoutRequestId: item.payoutRequestId,
           amount: Number(item.amount ?? 0),
@@ -451,7 +570,7 @@ export const getPayoutRequestDetail = async (
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Không thể tải chi tiết yêu cầu rút tiền." });
+    res.status(500).json({ error: "Không thể tải chi tiết nhuận bút Host." });
   }
 };
 

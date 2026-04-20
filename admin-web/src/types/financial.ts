@@ -43,9 +43,31 @@ export type FinancialPayoutListResult = {
 
 export type FinancialSourceBreakdown = {
   type: string;
+  typeLabel: string;
   amount: number;
   amountLabel: string;
   count: number;
+};
+
+export type FinancialSourceDetail = {
+  earningId: number;
+  sourceId: number | null;
+  sourceType: string;
+  sourceTypeLabel: string;
+  sourceTitle: string;
+  sourceStatus: string | null;
+  sourceStatusLabel: string;
+  amount: number;
+  amountLabel: string;
+  createdAt: string;
+  payerName: string;
+  payerEmail: string | null;
+  payerMobile: string | null;
+  payerLabel: string;
+  shopName: string | null;
+  fundingStatus: string;
+  fundingStatusLabel: string;
+  fundingNote: string;
 };
 
 export type FinancialRecentRequest = {
@@ -81,8 +103,15 @@ export type FinancialPayoutDetail = {
     availableBalanceLabel: string;
     pendingBalance: number;
     pendingBalanceLabel: string;
+    pendingIncome: number;
+    pendingIncomeLabel: string;
+    paidOutAmount: number;
+    paidOutAmountLabel: string;
   };
   sourceBreakdown: FinancialSourceBreakdown[];
+  sourceDetails: FinancialSourceDetail[];
+  requiresSourceConfirmation: boolean;
+  approvalHint: string;
   recentRequests: FinancialRecentRequest[];
 };
 
