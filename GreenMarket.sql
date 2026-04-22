@@ -1038,9 +1038,9 @@ INSERT INTO users (
     user_status,
     user_business_role_id
 ) VALUES
-(1, '0978195419', 'Nguyễn Thành Nam', 'nguyenthanhnamidol@gmail.com', 'Yên Phong, Bắc Ninh', 'Marketplace account used for general buyer and seller demo flows.', 'active', 2),
-(2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'Hoàng Mai, Hà Nội', 'Shop owner account used to demonstrate host storefront behaviour.', 'active', 2),
-(3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'Nam Trực, Nam Định', 'Marketplace user account with host permissions for additional shop demo content.', 'active', 2),
+(1, '0978195419', 'Nguyễn Thành Nam', 'nguyenthanhnamidol@gmail.com', 'Yên Phong, Bắc Ninh', 'Marketplace account used for general buyer and seller demo flows.', 'active', 1),
+(2, '0982703398', 'Trần Văn Bonsai', 'bonsai.tran@gmail.com', 'Hoàng Mai, Hà Nội', 'Shop owner account used to demonstrate host storefront behaviour.', 'active', 1),
+(3, '0123456789', 'Lê Hoài Nam', 'hoainam.le@gmail.com', 'Nam Trực, Nam Định', 'Marketplace user account with host permissions for additional shop demo content.', 'active', 1),
 (4, '0912345678', 'Trần Thị Kiểng', 'kieng.tran@gmail.com', 'Chợ Lách, Bến Tre', 'Collaborator demo account for mobile job and earnings scenarios.', 'active', 3),
 (5, '0966778899', 'Phạm Quốc Huy', 'huy.pham@gmail.com', 'Đống Đa, Hà Nội', 'Manager demo account for moderation queue and report resolution.', 'active', 4),
 (6, '0935112233', 'Đặng Minh Tuấn', 'tuan.dang@gmail.com', 'Đông Anh, Hà Nội', 'Operations support demo account for internal task handling.', 'active', 5),

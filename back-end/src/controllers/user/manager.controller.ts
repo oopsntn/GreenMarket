@@ -13,6 +13,7 @@ import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
   eventLogs,
+  hostContents,
   posts,
   reports,
   shops,
@@ -32,12 +33,14 @@ const VALID_SHOP_STATUSES = ["blocked", "active"] as const;
 const VALID_REPORT_STATUSES = ["pending", "resolved", "dismissed"] as const;
 const VALID_SEVERITY_LEVELS = ["low", "medium", "high", "critical"] as const;
 const VALID_TARGET_TYPES = ["post", "shop", "report"] as const;
+const VALID_HOST_CONTENT_STATUSES = ["approved", "rejected"] as const;
 
 const MANAGER_POST_STATUS_EVENT = "manager_post_status_updated";
 const MANAGER_SHOP_STATUS_EVENT = "manager_shop_status_updated";
 const MANAGER_REPORT_RESOLVED_EVENT = "manager_report_resolved";
 const MANAGER_FEEDBACK_EVENT = "manager_feedback_sent";
 const MANAGER_ESCALATION_EVENT = "manager_escalation_created";
+const MANAGER_HOST_CONTENT_STATUS_EVENT = "manager_host_content_status_updated";
 
 const MANAGER_EVENT_TYPES = [
   MANAGER_POST_STATUS_EVENT,
@@ -45,11 +48,15 @@ const MANAGER_EVENT_TYPES = [
   MANAGER_REPORT_RESOLVED_EVENT,
   MANAGER_FEEDBACK_EVENT,
   MANAGER_ESCALATION_EVENT,
+  MANAGER_HOST_CONTENT_STATUS_EVENT,
 ] as const;
 
 const POST_STATE_CHANGED_ERROR = "POST_STATE_CHANGED";
 const SHOP_STATE_CHANGED_ERROR = "SHOP_STATE_CHANGED";
 const REPORT_STATE_CHANGED_ERROR = "REPORT_STATE_CHANGED";
+const HOST_CONTENT_STATE_CHANGED_ERROR = "HOST_CONTENT_STATE_CHANGED";
+
+type ManagerHostContentStatus = (typeof VALID_HOST_CONTENT_STATUSES)[number];
 
 type QueueType = (typeof VALID_QUEUE_TYPES)[number];
 type QueuePriority = (typeof VALID_SEVERITY_LEVELS)[number];
@@ -101,6 +108,8 @@ const HISTORY_ACTION_ALIAS: Record<string, ManagerEventType> = {
   report_resolve: MANAGER_REPORT_RESOLVED_EVENT,
   feedback: MANAGER_FEEDBACK_EVENT,
   escalation: MANAGER_ESCALATION_EVENT,
+  host_content: MANAGER_HOST_CONTENT_STATUS_EVENT,
+  host_content_status: MANAGER_HOST_CONTENT_STATUS_EVENT,
 };
 
 const SEVERE_REPORT_REASON_CODE_PARTS = [
@@ -254,8 +263,254 @@ const formatEventActionType = (eventType: string) => {
       return "feedback_sent";
     case MANAGER_ESCALATION_EVENT:
       return "escalation_created";
+    case MANAGER_HOST_CONTENT_STATUS_EVENT:
+      return "host_content_status_updated";
     default:
       return eventType;
+  }
+};
+
+export const getPendingHostContents = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const managerId = req.user?.id;
+    if (!managerId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
+
+    const rows = await db
+      .select({
+        hostContentId: hostContents.hostContentId,
+        hostContentTitle: hostContents.hostContentTitle,
+        hostContentDescription: hostContents.hostContentDescription,
+        hostContentTargetType: hostContents.hostContentTargetType,
+        hostContentTargetId: hostContents.hostContentTargetId,
+        hostContentMediaUrls: hostContents.hostContentMediaUrls,
+        hostContentStatus: hostContents.hostContentStatus,
+        hostContentCreatedAt: hostContents.hostContentCreatedAt,
+        hostContentUpdatedAt: hostContents.hostContentUpdatedAt,
+        authorId: users.userId,
+        authorName: users.userDisplayName,
+      })
+      .from(hostContents)
+      .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
+      .where(
+        and(
+          inArray(hostContents.hostContentStatus, ["pending", "published"]),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`,
+        ),
+      )
+      .orderBy(desc(hostContents.hostContentCreatedAt), desc(hostContents.hostContentId))
+      .limit(limit)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(hostContents)
+      .where(
+        and(
+          inArray(hostContents.hostContentStatus, ["pending", "published"]),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`,
+        ),
+      );
+
+    const totalItems = Number(countResult?.count ?? 0);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      data: rows,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getHostContentById = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const managerId = req.user?.id;
+    if (!managerId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const contentId = parseId(getStringParam(req.params.id));
+    if (!contentId) {
+      res.status(400).json({ error: "Invalid host content id" });
+      return;
+    }
+
+    const [row] = await db
+      .select({
+        hostContentId: hostContents.hostContentId,
+        hostContentTitle: hostContents.hostContentTitle,
+        hostContentDescription: hostContents.hostContentDescription,
+        hostContentBody: hostContents.hostContentBody,
+        hostContentTargetType: hostContents.hostContentTargetType,
+        hostContentTargetId: hostContents.hostContentTargetId,
+        hostContentTrackingUrl: hostContents.hostContentTrackingUrl,
+        hostContentMediaUrls: hostContents.hostContentMediaUrls,
+        hostContentStatus: hostContents.hostContentStatus,
+        hostContentCreatedAt: hostContents.hostContentCreatedAt,
+        hostContentUpdatedAt: hostContents.hostContentUpdatedAt,
+        authorId: users.userId,
+        authorName: users.userDisplayName,
+      })
+      .from(hostContents)
+      .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
+      .where(
+        and(
+          eq(hostContents.hostContentId, contentId),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`,
+        ),
+      )
+      .limit(1);
+
+    if (!row) {
+      res.status(404).json({ error: "Host content not found" });
+      return;
+    }
+
+    res.json({ data: row });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const updateManagerHostContentStatus = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const managerId = req.user?.id;
+    if (!managerId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const contentId = parseId(getStringParam(req.params.id));
+    if (!contentId) {
+      res.status(400).json({ error: "Invalid host content id" });
+      return;
+    }
+
+    const nextStatus = normalizeOptionalEnum(req.body?.status, VALID_HOST_CONTENT_STATUSES);
+    if (!nextStatus) {
+      res.status(400).json({
+        error: `status must be one of: ${VALID_HOST_CONTENT_STATUSES.join(", ")}`,
+      });
+      return;
+    }
+
+    const reason =
+      typeof req.body?.reason === "string" && req.body.reason.trim()
+        ? req.body.reason.trim()
+        : null;
+    const note =
+      typeof req.body?.note === "string" && req.body.note.trim()
+        ? req.body.note.trim()
+        : null;
+
+    const [existing] = await db
+      .select({
+        hostContentId: hostContents.hostContentId,
+        status: hostContents.hostContentStatus,
+      })
+      .from(hostContents)
+      .where(eq(hostContents.hostContentId, contentId))
+      .limit(1);
+
+    if (!existing) {
+      res.status(404).json({ error: "Host content not found" });
+      return;
+    }
+
+    const currentStatus = (existing.status ?? "").toLowerCase();
+    if (!["pending", "published"].includes(currentStatus)) {
+      res.status(409).json({
+        error: "Only pending host contents can be moderated",
+        currentStatus,
+      });
+      return;
+    }
+
+    const now = new Date();
+
+    const txResult = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(hostContents)
+        .set({
+          hostContentStatus: nextStatus as unknown as string,
+          hostContentUpdatedAt: now,
+        })
+        .where(
+          and(
+            eq(hostContents.hostContentId, contentId),
+            eq(hostContents.hostContentStatus, existing.status ?? ""),
+          ),
+        )
+        .returning({
+          hostContentId: hostContents.hostContentId,
+          hostContentStatus: hostContents.hostContentStatus,
+          hostContentUpdatedAt: hostContents.hostContentUpdatedAt,
+        });
+
+      if (!updated) {
+        throw new Error(HOST_CONTENT_STATE_CHANGED_ERROR);
+      }
+
+      const [actionLog] = await tx
+        .insert(eventLogs)
+        .values({
+          eventLogUserId: managerId,
+          eventLogEventType: MANAGER_HOST_CONTENT_STATUS_EVENT,
+          eventLogMeta: {
+            hostContentId: contentId,
+            fromStatus: currentStatus,
+            toStatus: nextStatus,
+            reason,
+            note,
+          },
+        })
+        .returning({
+          eventLogId: eventLogs.eventLogId,
+          eventLogEventType: eventLogs.eventLogEventType,
+          eventLogEventTime: eventLogs.eventLogEventTime,
+          eventLogMeta: eventLogs.eventLogMeta,
+        });
+
+      return { updated, actionLog };
+    });
+
+    res.json({
+      hostContent: txResult.updated,
+      actionLog: formatActionLog(txResult.actionLog),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === HOST_CONTENT_STATE_CHANGED_ERROR) {
+      res.status(409).json({
+        error: "Host content state changed while processing request. Please retry.",
+      });
+      return;
+    }
+
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 

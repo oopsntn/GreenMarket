@@ -12,7 +12,12 @@ export const hostContents = pgTable("host_contents", {
   hostContentTargetId: integer("host_content_target_id"), // post_id or shop_id
   hostContentTrackingUrl: text("host_content_tracking_url"),
   hostContentMediaUrls: jsonb("host_content_media_urls").default([]),
-  hostContentStatus: varchar("host_content_status", { length: 20 }).default("draft"), // 'draft', 'published'
+  // Moderation flow:
+  // - host creates -> pending
+  // - manager approves -> approved (becomes publicly visible)
+  // - manager rejects -> rejected
+  // - optional: draft (saved but not submitted)
+  hostContentStatus: varchar("host_content_status", { length: 20 }).default("pending"), // 'draft' | 'pending' | 'approved' | 'rejected'
   hostContentViewCount: integer("host_content_view_count").default(0),
   hostContentClickCount: integer("host_content_click_count").default(0),
   hostContentCreatedAt: timestamp("host_content_created_at").defaultNow(),
