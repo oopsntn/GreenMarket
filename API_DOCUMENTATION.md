@@ -46,6 +46,7 @@ Auth rules for all endpoints below:
 |---|---|---|---|---|
 | GET | `/api/collaborator/profile` | User token + `COLLABORATOR` | Get collaborator profile with availability and summary stats | none |
 | PATCH | `/api/collaborator/profile` | User token + `COLLABORATOR` | Update collaborator availability | optional: `availabilityStatus` (`available`, `busy`, `offline`), `availabilityNote` |
+| GET | `/api/collaborator/my-shops` | User token + `COLLABORATOR` | Get active shops that collaborator can act on behalf of | none |
 | GET | `/api/collaborator/jobs` | User token + `COLLABORATOR` | Get available jobs list (open + unassigned) | optional query: `keyword`, `category`, `location`, `page`, `limit` |
 | GET | `/api/collaborator/jobs/:id` | User token + `COLLABORATOR` | Get job detail (open jobs or assigned jobs) | path `id` |
 | POST | `/api/collaborator/jobs/:id/decision` | User token + `COLLABORATOR` | Accept or decline open job | `decision` (`accept`/`decline`), optional `reason` |

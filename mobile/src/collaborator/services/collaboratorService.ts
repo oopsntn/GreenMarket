@@ -28,6 +28,15 @@ export interface CollaboratorProfileResponse {
     stats: CollaboratorStats;
 }
 
+export interface CollaboratorActiveShop {
+    shopId: number;
+    shopName: string;
+    shopLogoUrl: string | null;
+    shopLocation: string | null;
+    ownerDisplayName: string | null;
+    joinedAt: string;
+}
+
 export interface Job {
     jobId: number;
     title: string;
@@ -37,11 +46,11 @@ export interface Job {
     price: string | number;
     status: string;
     createdAt: string;
-    customer: {
+    customer?: {
         userId: number;
         displayName: string | null;
         location?: string | null;
-    };
+    } | null;
     progressPercent?: number;
 }
 
@@ -52,6 +61,22 @@ export interface JobDetail extends Job {
     declineReason?: string | null;
     updatedAt: string;
 }
+
+const normalizeJob = (raw: any): Job => {
+    const customerFromApi = raw?.customer;
+    const customerNameFromApi = raw?.customerName;
+
+    const customer =
+        customerFromApi ||
+        (typeof customerNameFromApi === 'string' && customerNameFromApi.trim().length > 0
+            ? { userId: 0, displayName: customerNameFromApi }
+            : null);
+
+    return {
+        ...raw,
+        customer,
+    } as Job;
+};
 
 export interface EarningEntry {
     earningEntryId: number;
@@ -125,6 +150,11 @@ export const CollaboratorService = {
         return response.data;
     },
 
+    getMyActiveShops: async (): Promise<{ data: CollaboratorActiveShop[] }> => {
+        const response = await api.get('/collaborator/my-shops');
+        return response.data;
+    },
+
     respondToInvitation: async (id: number, action: 'accept' | 'reject') => {
         const response = await api.post(`/collaborator/invitations/${id}/respond`, { action });
         return response.data;
@@ -157,7 +187,13 @@ export const CollaboratorService = {
 
     getMyJobs: async (params?: { status?: string; page?: number; limit?: number }) => {
         const response = await api.get('/collaborator/my-jobs', { params });
-        return response.data;
+        const payload = response.data;
+
+        if (payload?.data && Array.isArray(payload.data)) {
+            payload.data = payload.data.map(normalizeJob);
+        }
+
+        return payload;
     },
 
     submitDeliverables: async (id: number, fileUrls: string[], note?: string) => {

@@ -18,6 +18,7 @@ export interface PostPayload {
     postPrice?: string | number;
     postLocation?: string;
     postContactPhone?: string;
+    shopId?: number;
     images?: string[];
     videos?: string[];
     attributes?: Array<{

@@ -17,6 +17,8 @@ import SubmitWorkScreen from '../screens/SubmitWorkScreen';
 import JobDetailScreen from '../screens/JobDetailScreen';
 import PayoutRequestScreen from '../screens/PayoutRequestScreen';
 import InvitationsScreen from '../screens/InvitationsScreen';
+import MyActiveShopsScreen from '../screens/MyActiveShopsScreen';
+import CreatePostLayout from '../../components/post/screen/CreatePostScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -64,6 +66,8 @@ const CollaboratorNavigator = () => {
       <Stack.Screen name="SubmitWork" component={SubmitWorkScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="PayoutRequest" component={PayoutRequestScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="Invitations" component={InvitationsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="MyActiveShops" component={MyActiveShopsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="CreateDelegatedPost" component={CreatePostLayout} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 };

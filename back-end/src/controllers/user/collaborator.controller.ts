@@ -1415,3 +1415,44 @@ export const respondToInvitation = async (
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+/**
+ * Get active shops that the current collaborator can act on behalf of.
+ */
+export const getMyActiveShops = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const rows = await db
+      .select({
+        shopId: shops.shopId,
+        shopName: shops.shopName,
+        shopLogoUrl: shops.shopLogoUrl,
+        shopLocation: shops.shopLocation,
+        ownerDisplayName: users.userDisplayName,
+        joinedAt: shopCollaborators.shopCollaboratorsCreatedAt,
+      })
+      .from(shopCollaborators)
+      .innerJoin(shops, eq(shopCollaborators.shopCollaboratorsShopId, shops.shopId))
+      .leftJoin(users, eq(shops.shopId, users.userId))
+      .where(
+        and(
+          eq(shopCollaborators.collaboratorId, userId),
+          eq(shopCollaborators.shopCollaboratorsStatus, "active"),
+        ),
+      )
+      .orderBy(desc(shopCollaborators.shopCollaboratorsCreatedAt));
+
+    res.json({ data: rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

@@ -19,7 +19,8 @@ import {
     ChevronRight,
     Circle,
     Bell,
-    MailOpen
+    MailOpen,
+    Building2
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CollaboratorService, CollaboratorProfileResponse } from '../services/collaboratorService';
@@ -233,6 +234,17 @@ const DashboardScreen = () => {
                                 <View style={styles.menuContent}>
                                     <Text style={styles.menuTitle}>Lời mời hợp tác</Text>
                                     <Text style={styles.menuDesc}>Xem và phản hồi lời mời từ các Chủ vườn</Text>
+                                </View>
+                                <ChevronRight color="#94A3B8" size={20} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MyActiveShops')}>
+                                <View style={[styles.menuIconWrap, { backgroundColor: '#ECFDF5' }]}>
+                                    <Building2 color="#16A34A" size={20} />
+                                </View>
+                                <View style={styles.menuContent}>
+                                    <Text style={styles.menuTitle}>Đăng bài cho Shop</Text>
+                                    <Text style={styles.menuDesc}>Chọn shop đang active để đăng bài (chờ chủ vườn duyệt)</Text>
                                 </View>
                                 <ChevronRight color="#94A3B8" size={20} />
                             </TouchableOpacity>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation, useRoute } from '@react-navigation/native'
 import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { AlertCircle, CheckCircle2, CircleDollarSign, ImagePlus, MapPin, Phone, Tag, X } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
@@ -11,7 +11,12 @@ import { useAuth } from '../../../context/AuthContext'
 
 const CreatePostLayout = () => {
     const navigation = useNavigation<any>()
-    const { state, actions } = useCreatePost()
+    const route = useRoute<any>()
+    const delegatedShopId = route.params?.shopId ? Number(route.params.shopId) : undefined
+    const delegatedShopName = route.params?.shopName ? String(route.params.shopName) : undefined
+    const isDelegated = !!delegatedShopId
+
+    const { state, actions } = useCreatePost({ shopId: delegatedShopId, shopName: delegatedShopName })
     const { shop } = useAuth()
     const isShop = !!shop && shop.shopStatus === 'active'
 
@@ -20,9 +25,11 @@ const CreatePostLayout = () => {
             <MobileLayout title="Thành công">
                 <View style={styles.successContainer}>
                     <CheckCircle2 size={80} color="#10b981" />
-                    <Text style={styles.successTitle}>Đăng tin thành công</Text>
+                    <Text style={styles.successTitle}>{isDelegated ? 'Đã gửi bài cho chủ vườn duyệt' : 'Đăng tin thành công'}</Text>
                     <Text style={styles.successSubtitle}>
-                        Tin đăng của bạn đã được tạo thành công. Bạn có thể xem lại trong danh sách tin.
+                        {isDelegated
+                            ? `Bài đăng đã được gửi thay mặt ${delegatedShopName || 'shop'}. Chủ vườn sẽ duyệt hoặc từ chối nội dung trước khi hiển thị công khai.`
+                            : 'Tin đăng của bạn đã được tạo thành công. Bạn có thể xem lại trong danh sách tin.'}
                     </Text>
                     <Button onPress={() => navigation.navigate('MyPost')} style={styles.successButton}>
                         Xem tin của tôi
@@ -41,7 +48,7 @@ const CreatePostLayout = () => {
 
     if (state.loadingPolicy || state.loadingInitialData) {
         return (
-            <MobileLayout title="Đăng tin mới" backButton={() => navigation.goBack()}>
+            <MobileLayout title={isDelegated ? 'Đăng bài cho shop' : 'Đăng tin mới'} backButton={() => navigation.goBack()}>
                 <ActivityIndicator style={{ marginTop: 80 }} color="#10b981" />
             </MobileLayout>
         )
@@ -49,7 +56,7 @@ const CreatePostLayout = () => {
 
     if (state.policy?.isLimitReached) {
         return (
-            <MobileLayout title="Đăng tin mới" scrollEnabled={true} backButton={() => navigation.goBack()}>
+            <MobileLayout title={isDelegated ? 'Đăng bài cho shop' : 'Đăng tin mới'} scrollEnabled={true} backButton={() => navigation.goBack()}>
                 <View style={styles.limitContainer}>
                     <AlertCircle size={60} color="#ef4444" style={{ marginBottom: 20 }} />
                     <Text style={styles.limitTitle}>Đã đạt giới hạn đăng tin</Text>
@@ -68,7 +75,17 @@ const CreatePostLayout = () => {
     }
 
     return (
-        <MobileLayout title="Đăng tin mới" scrollEnabled={true} backButton={() => navigation.goBack()}>
+        <MobileLayout title={isDelegated ? 'Đăng bài cho shop' : 'Đăng tin mới'} scrollEnabled={true} backButton={() => navigation.goBack()}>
+            {isDelegated ? (
+                <Card style={styles.delegatedCard}>
+                    <Text style={styles.delegatedTitle} numberOfLines={2}>
+                        Đăng thay mặt: {delegatedShopName || `Shop #${delegatedShopId}`}
+                    </Text>
+                    <Text style={styles.delegatedDesc}>
+                        Bài sẽ ở trạng thái chờ duyệt (`pending_owner`) cho đến khi chủ vườn gật hoặc lắc.
+                    </Text>
+                </Card>
+            ) : null}
             <Card style={styles.card}>
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Hình ảnh</Text>
@@ -241,6 +258,25 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
         marginTop: 16,
         padding: 16,
+    },
+    delegatedCard: {
+        marginHorizontal: 16,
+        marginTop: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#BBF7D0',
+        backgroundColor: '#F0FDF4',
+    },
+    delegatedTitle: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#065F46',
+        marginBottom: 6,
+    },
+    delegatedDesc: {
+        fontSize: 12,
+        color: '#047857',
+        lineHeight: 18,
     },
     sectionHeader: {
         flexDirection: 'row',
