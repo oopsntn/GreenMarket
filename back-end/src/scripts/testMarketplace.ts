@@ -1,5 +1,5 @@
 import { db } from "../config/db.ts";
-import { users, shops, posts, postImages, postAttributeValues, categories, attributes } from "../models/schema/index.ts";
+import { users, shops, posts, mediaAssets, postAttributeValues, categories, attributes } from "../models/schema/index.ts";
 import { eq } from "drizzle-orm";
 import { slugify } from "../utils/slugify.ts";
 
@@ -54,9 +54,11 @@ async function testMarketplace() {
         console.log("Created Post ID:", post.postId, "Status:", post.postStatus);
 
         // Add dummy image
-        await db.insert(postImages).values({
-            postId: post.postId,
-            imageUrl: "https://example.com/tung.jpg",
+        await db.insert(mediaAssets).values({
+            targetType: "post",
+            targetId: post.postId,
+            mediaType: "image",
+            url: "https://example.com/tung.jpg",
         });
 
         // Add attribute value

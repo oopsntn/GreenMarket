@@ -1,6 +1,6 @@
 import axios from "axios";
 import jwt from "jsonwebtoken";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { db } from "../../config/db";
 import {
   businessRoles,
@@ -9,7 +9,7 @@ import {
   reports,
   shops,
   users,
-  moderationFeedback,
+  notifications,
   escalations,
 } from "../../models/schema/index";
 
@@ -167,16 +167,18 @@ async function runManagerTests() {
     const [pendingReport] = await db
       .insert(reports)
       .values({
-        reporterId: reporter.userId,
-        postId: pendingPost.postId,
-        reportShopId: shop.shopId,
-        reportReasonCode: "fraud",
-        reportReason: "Suspected scam listing",
-        reportStatus: "pending",
+        ticketType: 'REPORT',
+        ticketCreatorId: reporter.userId,
+        ticketTargetType: 'post',
+        ticketTargetId: pendingPost.postId,
+        ticketMetaData: { note: "Suspected scam listing" },
+        ticketTitle: "fraud",
+        ticketContent: "Suspected scam listing",
+        ticketStatus: "pending",
       })
       .returning();
 
-    createdReportIds.push(pendingReport.reportId);
+    createdReportIds.push(pendingReport.ticketId);
 
     const managerToken = makeUserToken(manager.userId, manager.userMobile, "MANAGER");
     const plainToken = makeUserToken(plainUser.userId, plainUser.userMobile, "USER");
@@ -256,7 +258,7 @@ async function runManagerTests() {
     }
 
     const resolveReportRes = await managerClient.patch(
-      `/reports/${pendingReport.reportId}/resolve`,
+      `/reports/${pendingReport.ticketId}/resolve`,
       {
         status: "resolved",
         resolution: "Violation confirmed and post actioned",
@@ -266,7 +268,7 @@ async function runManagerTests() {
     assertStatus(resolveReportRes, 200, "PATCH /reports/:id/resolve");
 
     const duplicateResolveRes = await managerClient.patch(
-      `/reports/${pendingReport.reportId}/resolve`,
+      `/reports/${pendingReport.ticketId}/resolve`,
       {
         status: "dismissed",
         resolution: "Second resolution attempt",
@@ -283,14 +285,14 @@ async function runManagerTests() {
       templateId: "MOD-POST-WARN-01",
     });
     assertStatus(feedbackRes, 201, "POST /moderation-feedback");
-    if (!feedbackRes.data?.feedback?.feedbackId) {
-      throw new Error("Feedback response missing feedbackId.");
+    if (!feedbackRes.data?.feedback?.id) {
+      throw new Error("Feedback response missing id (notificationId).");
     }
 
     console.log("7) Escalation...");
     const escalationRes = await managerClient.post("/escalations", {
       targetType: "report",
-      targetId: pendingReport.reportId,
+      targetId: pendingReport.ticketId,
       severity: "high",
       reason: "Potential coordinated fraud pattern",
       evidenceUrls: ["https://evidence.local/manager-test-case-1"],
@@ -332,17 +334,22 @@ async function runManagerTests() {
 
       if (createdUserIds.length > 0) {
         await db
-          .delete(moderationFeedback)
-          .where(inArray(moderationFeedback.senderId, createdUserIds));
+          .delete(notifications)
+          .where(
+            or(
+              inArray(notifications.senderId, createdUserIds),
+              inArray(notifications.recipientId, createdUserIds)
+            )
+          );
         await db
           .delete(escalations)
-          .where(inArray(escalations.createdBy, createdUserIds));
+          .where(and(eq(escalations.ticketType, 'ESCALATION'), inArray(escalations.ticketCreatorId, createdUserIds)));
       }
 
       if (createdReportIds.length > 0) {
         await db
           .delete(reports)
-          .where(inArray(reports.reportId, createdReportIds));
+          .where(and(eq(reports.ticketType, 'REPORT'), inArray(reports.ticketId, createdReportIds)));
       }
 
       if (createdPostIds.length > 0) {

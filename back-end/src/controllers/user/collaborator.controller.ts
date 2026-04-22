@@ -15,12 +15,14 @@ import {
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
-  earningEntries,
-  jobContactRequests,
-  jobDeliverables,
-  jobs,
-  payoutRequests,
+  ledgers,
+  taskReplies,
+  tickets,
+  transactions,
+  shopCollaborators,
+  shops,
   users,
+  hostContents,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 
@@ -114,20 +116,21 @@ const getProgressPercent = (status: string | null | undefined) => {
 const calculateAvailableBalance = async (collaboratorId: number) => {
   const [earningSummary] = await db
     .select({
-      total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+      total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
     })
-    .from(earningEntries)
-    .where(eq(earningEntries.earningEntryCollaboratorId, collaboratorId));
+    .from(ledgers)
+    .where(eq(ledgers.ledgerUserId, collaboratorId));
 
   const [payoutSummary] = await db
     .select({
-      total: sql<string>`COALESCE(SUM(${payoutRequests.payoutRequestAmount}), 0)`,
+      total: sql<string>`COALESCE(SUM(${transactions.transactionAmount}), 0)`,
     })
-    .from(payoutRequests)
+    .from(transactions)
     .where(
       and(
-        eq(payoutRequests.payoutRequestCollaboratorId, collaboratorId),
-        inArray(payoutRequests.payoutRequestStatus, ["pending", "approved"]),
+        eq(transactions.transactionUserId, collaboratorId),
+        eq(transactions.transactionType, "payout"),
+        inArray(transactions.transactionStatus, ["pending", "success"]),
       ),
     );
 
@@ -173,18 +176,18 @@ export const getCollaboratorProfile = async (
     const [jobSummary] = await db
       .select({
         totalJobs: sql<number>`COUNT(*)`,
-        activeJobs: sql<number>`COALESCE(SUM(CASE WHEN ${jobs.jobStatus} = 'accepted' THEN 1 ELSE 0 END), 0)`,
-        completedJobs: sql<number>`COALESCE(SUM(CASE WHEN ${jobs.jobStatus} = 'completed' THEN 1 ELSE 0 END), 0)`,
+        activeJobs: sql<number>`COALESCE(SUM(CASE WHEN ${tickets.ticketStatus} = 'accepted' THEN 1 ELSE 0 END), 0)`,
+        completedJobs: sql<number>`COALESCE(SUM(CASE WHEN ${tickets.ticketStatus} = 'completed' THEN 1 ELSE 0 END), 0)`,
       })
-      .from(jobs)
-      .where(eq(jobs.jobCollaboratorId, userId));
+      .from(tickets)
+      .where(and(eq(tickets.ticketAssigneeId, userId), eq(tickets.ticketType, "JOB")));
 
     const [earningSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
       })
-      .from(earningEntries)
-      .where(eq(earningEntries.earningEntryCollaboratorId, userId));
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId));
 
     const availableBalance = await calculateAvailableBalance(userId);
 
@@ -319,46 +322,50 @@ export const getAvailableJobs = async (
       typeof req.query.location === "string" ? req.query.location.trim() : "";
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
 
-    const conditions: SQL[] = [eq(jobs.jobStatus, "open"), isNull(jobs.jobCollaboratorId)];
+    const conditions: SQL[] = [
+      eq(tickets.ticketType, "JOB"),
+      eq(tickets.ticketStatus, "open"),
+      isNull(tickets.ticketAssigneeId)
+    ];
 
     if (keyword) {
       conditions.push(
-        sql`(${jobs.jobTitle} ILIKE ${`%${keyword}%`} OR ${jobs.jobDescription} ILIKE ${`%${keyword}%`})`,
+        sql`(${tickets.ticketTitle} ILIKE ${`%${keyword}%`} OR ${tickets.ticketContent} ILIKE ${`%${keyword}%`})`,
       );
     }
 
     if (category) {
-      conditions.push(ilike(jobs.jobCategory, `%${category}%`));
+      conditions.push(sql`${tickets.ticketMetaData}->>'category' ILIKE ${`%${category}%`}`);
     }
 
     if (location) {
-      conditions.push(ilike(jobs.jobLocation, `%${location}%`));
+      conditions.push(sql`${tickets.ticketMetaData}->>'location' ILIKE ${`%${location}%`}`);
     }
 
     const rows = await db
       .select({
-        jobId: jobs.jobId,
-        title: jobs.jobTitle,
-        category: jobs.jobCategory,
-        location: jobs.jobLocation,
-        deadline: jobs.jobDeadline,
-        price: jobs.jobPrice,
-        status: jobs.jobStatus,
-        createdAt: jobs.jobCreatedAt,
+        jobId: tickets.ticketId,
+        title: tickets.ticketTitle,
+        category: sql<string>`${tickets.ticketMetaData}->>'category'`,
+        location: sql<string>`${tickets.ticketMetaData}->>'location'`,
+        deadline: sql<string>`${tickets.ticketMetaData}->>'deadline'`,
+        price: sql<string>`${tickets.ticketMetaData}->>'price'`,
+        status: tickets.ticketStatus,
+        createdAt: tickets.ticketCreatedAt,
         customerId: users.userId,
         customerName: users.userDisplayName,
         customerLocation: users.userLocation,
       })
-      .from(jobs)
-      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
+      .from(tickets)
+      .leftJoin(users, eq(tickets.ticketCreatorId, users.userId))
       .where(and(...conditions))
-      .orderBy(asc(jobs.jobDeadline), desc(jobs.jobCreatedAt))
+      .orderBy(sql`${tickets.ticketMetaData}->>'deadline' ASC`, desc(tickets.ticketCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(jobs)
+      .from(tickets)
       .where(and(...conditions));
 
     const totalItems = Number(countResult?.count ?? 0);
@@ -408,26 +415,26 @@ export const getJobDetail = async (
 
     const [jobDetail] = await db
       .select({
-        jobId: jobs.jobId,
-        customerId: jobs.jobCustomerId,
-        collaboratorId: jobs.jobCollaboratorId,
-        title: jobs.jobTitle,
-        category: jobs.jobCategory,
-        location: jobs.jobLocation,
-        deadline: jobs.jobDeadline,
-        price: jobs.jobPrice,
-        description: jobs.jobDescription,
-        requirements: jobs.jobRequirements,
-        status: jobs.jobStatus,
-        declineReason: jobs.jobDeclineReason,
-        createdAt: jobs.jobCreatedAt,
-        updatedAt: jobs.jobUpdatedAt,
+        jobId: tickets.ticketId,
+        customerId: tickets.ticketCreatorId,
+        collaboratorId: tickets.ticketAssigneeId,
+        title: tickets.ticketTitle,
+        category: sql<string>`${tickets.ticketMetaData}->>'category'`,
+        location: sql<string>`${tickets.ticketMetaData}->>'location'`,
+        deadline: sql<string>`${tickets.ticketMetaData}->>'deadline'`,
+        price: sql<string>`${tickets.ticketMetaData}->>'price'`,
+        description: tickets.ticketContent,
+        requirements: sql<any>`${tickets.ticketMetaData}->'requirements'`,
+        status: tickets.ticketStatus,
+        declineReason: sql<string>`${tickets.ticketMetaData}->>'declineReason'`,
+        createdAt: tickets.ticketCreatedAt,
+        updatedAt: tickets.ticketUpdatedAt,
         customerName: users.userDisplayName,
         customerLocation: users.userLocation,
       })
-      .from(jobs)
-      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
-      .where(eq(jobs.jobId, jobId))
+      .from(tickets)
+      .leftJoin(users, eq(tickets.ticketCreatorId, users.userId))
+      .where(and(eq(tickets.ticketId, jobId), eq(tickets.ticketType, "JOB")))
       .limit(1);
 
     if (!jobDetail) {
@@ -437,7 +444,8 @@ export const getJobDetail = async (
 
     const canView =
       jobDetail.status === "open" ||
-      jobDetail.collaboratorId === userId;
+      jobDetail.collaboratorId === userId ||
+      jobDetail.customerId === userId;
 
     if (!canView) {
       res.status(403).json({ error: "Access denied to this job detail" });
@@ -498,18 +506,18 @@ export const decideJob = async (
 
     if (decision === "accept") {
       const [updatedJob] = await db
-        .update(jobs)
+        .update(tickets)
         .set({
-          jobStatus: "accepted",
-          jobCollaboratorId: userId,
-          jobDeclineReason: null,
-          jobUpdatedAt: now,
+          ticketStatus: "accepted",
+          ticketAssigneeId: userId,
+          ticketUpdatedAt: now,
         })
         .where(
           and(
-            eq(jobs.jobId, jobId),
-            eq(jobs.jobStatus, "open"),
-            isNull(jobs.jobCollaboratorId),
+            eq(tickets.ticketId, jobId),
+            eq(tickets.ticketType, "JOB"),
+            eq(tickets.ticketStatus, "open"),
+            isNull(tickets.ticketAssigneeId),
           ),
         )
         .returning();
@@ -517,12 +525,12 @@ export const decideJob = async (
       if (!updatedJob) {
         const [existing] = await db
           .select({
-            jobId: jobs.jobId,
-            status: jobs.jobStatus,
-            collaboratorId: jobs.jobCollaboratorId,
+            jobId: tickets.ticketId,
+            status: tickets.ticketStatus,
+            collaboratorId: tickets.ticketAssigneeId,
           })
-          .from(jobs)
-          .where(eq(jobs.jobId, jobId))
+          .from(tickets)
+          .where(eq(tickets.ticketId, jobId))
           .limit(1);
 
         if (!existing) {
@@ -542,33 +550,16 @@ export const decideJob = async (
       });
       return;
     }
-
-    const [updatedJob] = await db
-      .update(jobs)
-      .set({
-        jobStatus: "declined",
-        jobCollaboratorId: null,
-        jobDeclineReason: reason,
-        jobUpdatedAt: now,
-      })
-      .where(
-        and(
-          eq(jobs.jobId, jobId),
-          eq(jobs.jobStatus, "open"),
-          isNull(jobs.jobCollaboratorId),
-        ),
-      )
-      .returning();
-
-    if (!updatedJob) {
+    if (decision === "decline") {
       const [existing] = await db
         .select({
-          jobId: jobs.jobId,
-          status: jobs.jobStatus,
-          collaboratorId: jobs.jobCollaboratorId,
+          jobId: tickets.ticketId,
+          status: tickets.ticketStatus,
+          collaboratorId: tickets.ticketAssigneeId,
+          meta: tickets.ticketMetaData,
         })
-        .from(jobs)
-        .where(eq(jobs.jobId, jobId))
+        .from(tickets)
+        .where(and(eq(tickets.ticketId, jobId), eq(tickets.ticketType, "JOB")))
         .limit(1);
 
       if (!existing) {
@@ -576,16 +567,33 @@ export const decideJob = async (
         return;
       }
 
-      res
-        .status(409)
-        .json({ error: "Job is no longer open for decision", job: existing });
+      if (existing.status !== "open" || existing.collaboratorId !== null) {
+        res.status(409).json({ error: "Job is no longer open for decision", job: existing });
+        return;
+      }
+
+      const newMeta = {
+        ...(existing.meta as any),
+        declineReason: reason || "",
+      };
+
+      const [updatedJob] = await db
+        .update(tickets)
+        .set({
+          ticketStatus: "declined",
+          ticketAssigneeId: null,
+          ticketMetaData: newMeta,
+          ticketUpdatedAt: now,
+        })
+        .where(eq(tickets.ticketId, jobId))
+        .returning();
+
+      res.json({
+        message: "Job declined successfully",
+        job: updatedJob,
+      });
       return;
     }
-
-    res.json({
-      message: "Job declined successfully",
-      job: updatedJob,
-    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
@@ -621,17 +629,17 @@ export const contactJobCustomer = async (
 
     const [jobDetail] = await db
       .select({
-        jobId: jobs.jobId,
-        customerId: jobs.jobCustomerId,
-        collaboratorId: jobs.jobCollaboratorId,
-        status: jobs.jobStatus,
+        jobId: tickets.ticketId,
+        customerId: tickets.ticketCreatorId,
+        collaboratorId: tickets.ticketAssigneeId,
+        status: tickets.ticketStatus,
         customerName: users.userDisplayName,
         customerMobile: users.userMobile,
         customerEmail: users.userEmail,
       })
-      .from(jobs)
-      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
-      .where(eq(jobs.jobId, jobId))
+      .from(tickets)
+      .leftJoin(users, eq(tickets.ticketCreatorId, users.userId))
+      .where(and(eq(tickets.ticketId, jobId), eq(tickets.ticketType, "JOB")))
       .limit(1);
 
     if (!jobDetail) {
@@ -653,20 +661,22 @@ export const contactJobCustomer = async (
     }
 
     const [contactRequest] = await db
-      .insert(jobContactRequests)
+      .insert(taskReplies)
       .values({
-        contactRequestJobId: jobId,
-        contactRequestCollaboratorId: userId,
-        contactRequestCustomerId: jobDetail.customerId,
-        contactRequestMessage: message,
-        contactRequestStatus: "sent",
-        contactRequestCreatedAt: new Date(),
+        ticketId: jobId,
+        senderId: userId,
+        message: message,
+        visibility: "internal",
+        createdAt: new Date(),
       })
       .returning();
 
     res.status(201).json({
-      message: "Contact request sent successfully (mock)",
-      contactRequest,
+      message: "Contact request sent successfully (via ticket replies)",
+      contactRequest: {
+        contactRequestId: contactRequest.replyId,
+        ...contactRequest
+      },
       customer: {
         userId: jobDetail.customerId,
         displayName: jobDetail.customerName,
@@ -706,37 +716,34 @@ export const getMyJobs = async (
     }
 
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
-    const conditions: SQL[] = [eq(jobs.jobCollaboratorId, userId)];
-
-    if (statusFilter) {
-      conditions.push(eq(jobs.jobStatus, statusFilter.toLowerCase()));
+    const status = statusFilter.toLowerCase();
+    const conditions: SQL[] = [eq(tickets.ticketAssigneeId, userId), eq(tickets.ticketType, "JOB")];
+    if (status) {
+      conditions.push(eq(tickets.ticketStatus, status));
     }
 
     const rows = await db
       .select({
-        jobId: jobs.jobId,
-        title: jobs.jobTitle,
-        category: jobs.jobCategory,
-        location: jobs.jobLocation,
-        deadline: jobs.jobDeadline,
-        price: jobs.jobPrice,
-        status: jobs.jobStatus,
-        completedAt: jobs.jobCompletedAt,
-        createdAt: jobs.jobCreatedAt,
-        updatedAt: jobs.jobUpdatedAt,
-        customerId: users.userId,
+        jobId: tickets.ticketId,
+        title: tickets.ticketTitle,
+        category: sql<string>`${tickets.ticketMetaData}->>'category'`,
+        location: sql<string>`${tickets.ticketMetaData}->>'location'`,
+        deadline: sql<string>`${tickets.ticketMetaData}->>'deadline'`,
+        price: sql<string>`${tickets.ticketMetaData}->>'price'`,
+        status: tickets.ticketStatus,
+        createdAt: tickets.ticketCreatedAt,
         customerName: users.userDisplayName,
       })
-      .from(jobs)
-      .leftJoin(users, eq(jobs.jobCustomerId, users.userId))
+      .from(tickets)
+      .leftJoin(users, eq(tickets.ticketCreatorId, users.userId))
       .where(and(...conditions))
-      .orderBy(desc(jobs.jobUpdatedAt), desc(jobs.jobCreatedAt))
+      .orderBy(desc(tickets.ticketCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(jobs)
+      .from(tickets)
       .where(and(...conditions));
 
     const totalItems = Number(countResult?.count ?? 0);
@@ -746,10 +753,6 @@ export const getMyJobs = async (
       data: rows.map((item) => ({
         ...item,
         progressPercent: getProgressPercent(item.status),
-        customer: {
-          userId: item.customerId,
-          displayName: item.customerName,
-        },
       })),
       meta: {
         page,
@@ -779,9 +782,9 @@ export const submitJobDeliverables = async (
 
     const fileUrls = Array.isArray(req.body?.fileUrls)
       ? req.body.fileUrls.filter(
-          (item: unknown): item is string =>
-            typeof item === "string" && item.trim().length > 0,
-        )
+        (item: unknown): item is string =>
+          typeof item === "string" && item.trim().length > 0,
+      )
       : [];
     const note = typeof req.body?.note === "string" ? req.body.note.trim() : null;
 
@@ -790,98 +793,61 @@ export const submitJobDeliverables = async (
       return;
     }
 
-    const [existingJob] = await db
+    const [jobDetail] = await db
       .select({
-        jobId: jobs.jobId,
-        status: jobs.jobStatus,
-        collaboratorId: jobs.jobCollaboratorId,
+        jobId: tickets.ticketId,
+        status: tickets.ticketStatus,
+        price: sql<string>`${tickets.ticketMetaData}->>'price'`,
+        customerId: tickets.ticketCreatorId,
       })
-      .from(jobs)
-      .where(eq(jobs.jobId, jobId))
+      .from(tickets)
+      .where(and(eq(tickets.ticketId, jobId), eq(tickets.ticketAssigneeId, userId), eq(tickets.ticketType, "JOB")))
       .limit(1);
 
-    if (!existingJob) {
-      res.status(404).json({ error: "Job not found" });
+    if (!jobDetail) {
+      res.status(404).json({ error: "Active job not found for this collaborator" });
       return;
     }
 
-    if (existingJob.collaboratorId !== userId) {
-      res.status(403).json({ error: "This job is not assigned to you" });
+    if (jobDetail.status !== "accepted") {
+      res.status(400).json({ error: "Only accepted jobs can have deliverables submitted" });
       return;
     }
 
-    if (existingJob.status !== "accepted") {
-      res.status(409).json({
-        error: "Only accepted jobs can be submitted",
-        currentStatus: existingJob.status,
-      });
-      return;
-    }
+    // 1. Update ticket status to completed
+    await db
+      .update(tickets)
+      .set({
+        ticketStatus: "completed",
+        ticketUpdatedAt: new Date(),
+        ticketResolvedAt: new Date(),
+      })
+      .where(eq(tickets.ticketId, jobId));
 
-    const now = new Date();
+    // 2. Insert into taskReplies as the deliverable
+    const [submission] = await db
+      .insert(taskReplies)
+      .values({
+        ticketId: jobId,
+        senderId: userId,
+        message: note || "Work submitted.",
+        attachments: fileUrls,
+        visibility: "internal",
+        createdAt: new Date(),
+      })
+      .returning();
 
-    const txResult = await db.transaction(async (tx) => {
-      const [completedJob] = await tx
-        .update(jobs)
-        .set({
-          jobStatus: "completed",
-          jobCompletedAt: now,
-          jobUpdatedAt: now,
-        })
-        .where(
-          and(
-            eq(jobs.jobId, jobId),
-            eq(jobs.jobStatus, "accepted"),
-            eq(jobs.jobCollaboratorId, userId),
-          ),
-        )
-        .returning();
-
-      if (!completedJob) {
-        throw new Error(JOB_STATE_CHANGED_ERROR);
-      }
-
-      const [deliverable] = await tx
-        .insert(jobDeliverables)
-        .values({
-          deliverableJobId: jobId,
-          deliverableCollaboratorId: userId,
-          deliverableFileUrls: fileUrls,
-          deliverableNote: note,
-          deliverableSubmittedAt: now,
-        })
-        .returning();
-
-      const [earningEntry] = await tx
-        .insert(earningEntries)
-        .values({
-          earningEntryCollaboratorId: userId,
-          earningEntryJobId: jobId,
-          earningEntryAmount: completedJob.jobPrice ?? "0",
-          earningEntryType: "job",
-          earningEntryCreatedAt: now,
-        })
-        .returning();
-
-      return {
-        job: completedJob,
-        deliverable,
-        earningEntry,
-      };
-    });
+    // 3. Removed auto-ledger insertion per requirement: 
+    // "Collaborator đăng tin bán cây hộ chủ vườn, tiền nong thì tự thoả thuận với nhau ở bên ngoài"
 
     res.status(201).json({
-      message: "Job result submitted successfully",
-      ...txResult,
+      message: "Deliverables submitted and job marked as completed successfully",
+      submission: {
+        deliverableId: submission.replyId,
+        ...submission
+      },
     });
   } catch (error) {
-    if (error instanceof Error && error.message === JOB_STATE_CHANGED_ERROR) {
-      res.status(409).json({
-        error: "Job state changed while submitting deliverables. Please retry.",
-      });
-      return;
-    }
-
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -911,47 +877,54 @@ export const getCollaboratorEarnings = async (
     }
 
     const conditions: SQL[] = [
-      eq(earningEntries.earningEntryCollaboratorId, userId),
+      eq(ledgers.ledgerUserId, userId),
     ];
     if (from) {
-      conditions.push(gte(earningEntries.earningEntryCreatedAt, from));
+      conditions.push(gte(ledgers.ledgerCreatedAt, from));
     }
     if (to) {
-      conditions.push(lte(earningEntries.earningEntryCreatedAt, to));
+      conditions.push(lte(ledgers.ledgerCreatedAt, to));
     }
 
     const [summary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
         txCount: sql<number>`COUNT(*)`,
       })
-      .from(earningEntries)
+      .from(ledgers)
       .where(and(...conditions));
 
     const byType = await db
       .select({
-        type: earningEntries.earningEntryType,
-        total: sql<string>`COALESCE(SUM(${earningEntries.earningEntryAmount}), 0)`,
+        type: sql<string>`${ledgers.ledgerMeta}->>'type'`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
         count: sql<number>`COUNT(*)`,
       })
-      .from(earningEntries)
+      .from(ledgers)
       .where(and(...conditions))
-      .groupBy(earningEntries.earningEntryType)
-      .orderBy(asc(earningEntries.earningEntryType));
+      .groupBy(sql`${ledgers.ledgerMeta}->>'type'`)
+      .orderBy(asc(sql`${ledgers.ledgerMeta}->>'type'`));
 
     const history = await db
       .select({
-        earningEntryId: earningEntries.earningEntryId,
-        jobId: earningEntries.earningEntryJobId,
-        jobTitle: jobs.jobTitle,
-        amount: earningEntries.earningEntryAmount,
-        type: earningEntries.earningEntryType,
-        createdAt: earningEntries.earningEntryCreatedAt,
+        earningId: ledgers.ledgerId,
+        sourceId: sql<number | null>`(${ledgers.ledgerMeta}->>'sourceId')::int`,
+        jobTitle: tickets.ticketTitle,
+        amount: ledgers.ledgerAmount,
+        type: sql<string>`${ledgers.ledgerMeta}->>'type'`,
+        status: ledgers.ledgerStatus,
+        createdAt: ledgers.ledgerCreatedAt,
       })
-      .from(earningEntries)
-      .leftJoin(jobs, eq(earningEntries.earningEntryJobId, jobs.jobId))
+      .from(ledgers)
+      .leftJoin(
+        tickets,
+        and(
+          eq(sql<number>`(${ledgers.ledgerMeta}->>'sourceId')::int`, tickets.ticketId),
+          eq(tickets.ticketType, "JOB")
+        )
+      )
       .where(and(...conditions))
-      .orderBy(desc(earningEntries.earningEntryCreatedAt));
+      .orderBy(desc(ledgers.ledgerCreatedAt));
 
     const total = toNumber(summary?.total);
     const txCount = Number(summary?.txCount ?? 0);
@@ -992,16 +965,26 @@ export const getPayoutRequestHistory = async (
 
     const rows = await db
       .select()
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestCollaboratorId, userId))
-      .orderBy(desc(payoutRequests.payoutRequestCreatedAt))
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      )
+      .orderBy(desc(transactions.transactionCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(payoutRequests)
-      .where(eq(payoutRequests.payoutRequestCollaboratorId, userId));
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      );
 
     const totalItems = Number(countResult?.count ?? 0);
     const totalPages = Math.ceil(totalItems / limit);
@@ -1009,7 +992,11 @@ export const getPayoutRequestHistory = async (
     res.json({
       data: rows.map((item) => ({
         ...item,
-        payoutRequestAmount: toNumber(item.payoutRequestAmount),
+        payoutRequestAmount: toNumber(item.transactionAmount),
+        payoutRequestStatus: item.transactionStatus,
+        payoutRequestCreatedAt: item.transactionCreatedAt,
+        payoutRequestMethod: item.transactionProvider,
+        payoutRequestNote: (item.transactionMeta as any)?.note
       })),
       meta: {
         page,
@@ -1069,14 +1056,15 @@ export const createPayoutRequest = async (
     }
 
     const [createdRequest] = await db
-      .insert(payoutRequests)
+      .insert(transactions)
       .values({
-        payoutRequestCollaboratorId: userId,
-        payoutRequestAmount: amount.toFixed(2),
-        payoutRequestMethod: method,
-        payoutRequestStatus: "pending",
-        payoutRequestNote: note,
-        payoutRequestCreatedAt: new Date(),
+        transactionUserId: userId,
+        transactionType: "payout",
+        transactionAmount: amount.toFixed(2),
+        transactionProvider: method,
+        transactionStatus: "pending",
+        transactionMeta: { note },
+        transactionCreatedAt: new Date(),
       })
       .returning();
 
@@ -1084,10 +1072,344 @@ export const createPayoutRequest = async (
       message: "Payout request created successfully (mock)",
       payoutRequest: {
         ...createdRequest,
-        payoutRequestAmount: toNumber(createdRequest.payoutRequestAmount),
+        payoutRequestAmount: toNumber(createdRequest.transactionAmount),
+        payoutRequestStatus: createdRequest.transactionStatus,
+        payoutRequestCreatedAt: createdRequest.transactionCreatedAt,
+        payoutRequestMethod: createdRequest.transactionProvider,
+        payoutRequestNote: note
       },
       availableBalanceAfter: Number((availableBalance - amount).toFixed(2)),
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+
+/**
+ * Get a public directory of collaborators for Garden Owners to browse.
+ * Masks contact info unless there is an active relationship.
+ */
+export const getPublicCollaborators = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
+
+    // 1. Get the requester's shop
+    const [ownerShop] = await db
+      .select({ shopId: shops.shopId })
+      .from(shops)
+      .where(eq(shops.shopId, userId))
+      .limit(1);
+
+    const shopId = ownerShop?.shopId || 0;
+
+    // 2. Build conditions for public listing
+    // Note: business_role_id 3 is COLLABORATOR
+    const conditions: SQL[] = [eq(users.userBusinessRoleId, 3), eq(users.userStatus, "active")];
+
+    const rows = await db
+      .select({
+        userId: users.userId,
+        displayName: users.userDisplayName,
+        avatarUrl: users.userAvatarUrl,
+        bio: users.userBio,
+        location: users.userLocation,
+        availabilityStatus: users.userAvailabilityStatus,
+        availabilityNote: users.userAvailabilityNote,
+        // Masking logic: returns mobile/email only if status is 'active' with the requester's shop
+        mobile: sql<string | null>`CASE WHEN ${shopCollaborators.shopCollaboratorsStatus} = 'active' THEN ${users.userMobile} ELSE NULL END`,
+        email: sql<string | null>`CASE WHEN ${shopCollaborators.shopCollaboratorsStatus} = 'active' THEN ${users.userEmail} ELSE NULL END`,
+        relationshipStatus: shopCollaborators.shopCollaboratorsStatus,
+      })
+      .from(users)
+      .leftJoin(
+        shopCollaborators,
+        and(
+          eq(users.userId, shopCollaborators.collaboratorId),
+          eq(shopCollaborators.shopCollaboratorsShopId, shopId)
+        )
+      )
+      .where(and(...conditions))
+      .orderBy(desc(users.userCreatedAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(and(...conditions));
+
+    const totalItems = Number(countResult?.count ?? 0);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    res.json({
+      data: rows,
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * Get full public profile of a collaborator including portfolio and stats.
+ */
+export const getPublicCollaboratorDetail = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const requesterId = req.user?.id;
+    const targetUserId = parseId(req.params.id as string);
+
+    if (!requesterId || !targetUserId) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    // 1. Get basic profile
+    const [profile] = await db
+      .select({
+        userId: users.userId,
+        displayName: users.userDisplayName,
+        avatarUrl: users.userAvatarUrl,
+        bio: users.userBio,
+        location: users.userLocation,
+        availabilityStatus: users.userAvailabilityStatus,
+        availabilityNote: users.userAvailabilityNote,
+      })
+      .from(users)
+      .where(and(eq(users.userId, targetUserId), eq(users.userBusinessRoleId, 3)))
+      .limit(1);
+
+    if (!profile) {
+      res.status(404).json({ error: "Collaborator not found" });
+      return;
+    }
+
+    // 2. Get relationship with current requester's shop
+    const [ownerShop] = await db
+      .select({ shopId: shops.shopId })
+      .from(shops)
+      .where(eq(shops.shopId, requesterId))
+      .limit(1);
+
+    const shopId = ownerShop?.shopId || 0;
+    console.log(`[getPublicCollaboratorDetail] Requester: ${requesterId}, Shop found: ${shopId}`);
+
+    const [relationship] = await db
+      .select({ status: shopCollaborators.shopCollaboratorsStatus })
+      .from(shopCollaborators)
+      .where(
+        and(
+          eq(shopCollaborators.collaboratorId, targetUserId),
+          eq(shopCollaborators.shopCollaboratorsShopId, shopId)
+        )
+      )
+      .limit(1);
+
+    // 3. Get Statistics (wrapped in try-catch to be extra safe)
+    let totalGardens = 0;
+    let totalPosts = 0;
+    try {
+      const [gardenResult] = await db
+        .select({ count: sql`count(distinct ${shopCollaborators.shopCollaboratorsShopId})` })
+        .from(shopCollaborators)
+        .where(and(eq(shopCollaborators.collaboratorId, targetUserId), eq(shopCollaborators.shopCollaboratorsStatus, "active")));
+      totalGardens = Number(gardenResult?.count || 0);
+
+      const [postResult] = await db
+        .select({ count: sql`count(*)` })
+        .from(hostContents)
+        .where(and(eq(hostContents.hostContentAuthorId, targetUserId), eq(hostContents.hostContentStatus, "published")));
+      totalPosts = Number(postResult?.count || 0);
+    } catch (err) {
+      console.error("Error fetching collaborator stats:", err);
+    }
+
+    // 4. Collect Portfolio Photos
+    const portfolioPhotos: string[] = [];
+    try {
+      const deliverables = await db
+        .select({
+          urls: taskReplies.attachments,
+        })
+        .from(taskReplies)
+        .innerJoin(tickets, eq(taskReplies.ticketId, tickets.ticketId))
+        .where(
+          and(
+            eq(taskReplies.senderId, targetUserId),
+            eq(tickets.ticketType, "JOB"),
+            sql`${taskReplies.attachments} IS NOT NULL`,
+            sql`${taskReplies.attachments}::text <> '[]'`
+          )
+        )
+        .orderBy(desc(taskReplies.createdAt))
+        .limit(10);
+
+      const hostPhotos = await db
+        .select({ urls: hostContents.hostContentMediaUrls })
+        .from(hostContents)
+        .where(and(eq(hostContents.hostContentAuthorId, targetUserId), eq(hostContents.hostContentStatus, "published")))
+        .orderBy(desc(hostContents.hostContentCreatedAt))
+        .limit(5);
+
+      deliverables.forEach(d => {
+        if (Array.isArray(d.urls)) {
+          d.urls.forEach(url => {
+            if (typeof url === 'string' && !portfolioPhotos.includes(url)) portfolioPhotos.push(url);
+          });
+        }
+      });
+      hostPhotos.forEach(p => {
+        if (Array.isArray(p.urls)) {
+          p.urls.forEach(url => {
+            if (typeof url === 'string' && !portfolioPhotos.includes(url)) portfolioPhotos.push(url);
+          });
+        }
+      });
+    } catch (err) {
+      console.error("Error fetching collaborator portfolio:", err);
+    }
+
+    // 5. Build final object (with masking if not active)
+    const [maskCheck] = await db
+      .select({
+        mobile: users.userMobile,
+        email: users.userEmail
+      })
+      .from(users)
+      .where(eq(users.userId, targetUserId))
+      .limit(1);
+
+    const isContactVisible = relationship?.status === 'active';
+
+    res.json({
+      ...profile,
+      mobile: isContactVisible ? maskCheck?.mobile : null,
+      email: isContactVisible ? maskCheck?.email : null,
+      relationshipStatus: relationship?.status || null,
+      stats: {
+        totalGardens,
+        totalPosts,
+      },
+      portfolioPhotos: portfolioPhotos.slice(0, 15),
+    });
+  } catch (error) {
+    console.error("Detailed error in getPublicCollaboratorDetail:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * Get pending collaborator invitations for the current CTV user.
+ */
+export const getMyInvitations = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const invitations = await db
+      .select({
+        invitationId: shopCollaborators.shopCollaboratorsId,
+        status: shopCollaborators.shopCollaboratorsStatus,
+        createdAt: shopCollaborators.shopCollaboratorsCreatedAt,
+        shopId: shops.shopId,
+        shopName: shops.shopName,
+        shopLogoUrl: shops.shopLogoUrl,
+        shopOwnerName: users.userDisplayName,
+      })
+      .from(shopCollaborators)
+      .innerJoin(shops, eq(shopCollaborators.shopCollaboratorsShopId, shops.shopId))
+      .innerJoin(users, eq(shops.shopId, users.userId))
+      .where(
+        and(
+          eq(shopCollaborators.collaboratorId, userId),
+          eq(shopCollaborators.shopCollaboratorsStatus, "pending")
+        )
+      )
+      .orderBy(desc(shopCollaborators.shopCollaboratorsCreatedAt));
+
+    res.json(invitations);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * Respond (accept/reject) to a shop invitation.
+ */
+export const respondToInvitation = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const invitationId = parseId(req.params.id as string);
+
+    if (!req.body) {
+      res.status(400).json({ error: "Request body is missing. Ensure you are sending JSON with Content-Type: application/json" });
+      return;
+    }
+
+    const { action } = req.body; // 'accept' or 'reject'
+
+    if (!userId || !invitationId) {
+      res.status(400).json({ error: "Invalid request" });
+      return;
+    }
+
+    if (!["accept", "reject"].includes(action)) {
+      res.status(400).json({ error: "Action must be 'accept' or 'reject'" });
+      return;
+    }
+
+    const newStatus = action === "accept" ? "active" : "rejected";
+
+    const [updated] = await db
+      .update(shopCollaborators)
+      .set({
+        shopCollaboratorsStatus: newStatus,
+        // In a real system we'd track updated at
+      })
+      .where(
+        and(
+          eq(shopCollaborators.shopCollaboratorsId, invitationId),
+          eq(shopCollaborators.collaboratorId, userId),
+          eq(shopCollaborators.shopCollaboratorsStatus, "pending")
+        )
+      )
+      .returning();
+
+    if (!updated) {
+      res.status(404).json({ error: "Invitation not found or no longer pending" });
+      return;
+    }
+
+    res.json({ message: `Invitation ${action}ed successfully`, status: newStatus });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });

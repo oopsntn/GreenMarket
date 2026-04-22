@@ -18,7 +18,7 @@ import {
   reports,
   shops,
   users,
-  moderationFeedback,
+  notifications,
   escalations,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
@@ -80,8 +80,6 @@ type QueueItem = {
 type TargetContext = {
   targetType: ModerationTargetType;
   targetId: number;
-  eventLogPostId: number | null;
-  eventLogShopId: number | null;
 };
 
 const POST_STATUS_TRANSITIONS: Record<string, ReadonlyArray<ManagerPostStatus>> = {
@@ -596,8 +594,6 @@ const ensureTargetExists = async (
     return {
       targetType,
       targetId,
-      eventLogPostId: post.postId,
-      eventLogShopId: null,
     };
   }
 
@@ -615,19 +611,15 @@ const ensureTargetExists = async (
     return {
       targetType,
       targetId,
-      eventLogPostId: null,
-      eventLogShopId: shop.shopId,
     };
   }
 
   const [report] = await db
     .select({
-      reportId: reports.reportId,
-      postId: reports.postId,
-      reportShopId: reports.reportShopId,
+      reportId: reports.ticketId,
     })
     .from(reports)
-    .where(eq(reports.reportId, targetId))
+    .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketId, targetId)))
     .limit(1);
 
   if (!report) {
@@ -637,8 +629,6 @@ const ensureTargetExists = async (
   return {
     targetType,
     targetId,
-    eventLogPostId: report.postId ?? null,
-    eventLogShopId: report.reportShopId ?? null,
   };
 };
 
@@ -685,24 +675,25 @@ export const getModerationQueue = async (
             .leftJoin(users, eq(posts.postAuthorId, users.userId))
             .where(inArray(posts.postStatus, ["pending", "approved", "rejected", "hidden"]))
         : Promise.resolve([]),
-      !queueTypeFilter || queueTypeFilter === "report"
-        ? db
-            .select({
-              reportId: reports.reportId,
-              reportStatus: reports.reportStatus,
-              reportReasonCode: reports.reportReasonCode,
-              reportReason: reports.reportReason,
-              reportCreatedAt: reports.reportCreatedAt,
-              reportUpdatedAt: reports.reportUpdatedAt,
-              reporterName: users.userDisplayName,
-              postTitle: posts.postTitle,
-              shopName: shops.shopName,
-            })
-            .from(reports)
-            .leftJoin(users, eq(reports.reporterId, users.userId))
-            .leftJoin(posts, eq(reports.postId, posts.postId))
-            .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
-        : Promise.resolve([]),
+        !queueTypeFilter || queueTypeFilter === "report"
+          ? db
+              .select({
+                reportId: reports.ticketId,
+                reportStatus: reports.ticketStatus,
+                reportReasonCode: reports.ticketTitle,
+                reportReason: reports.ticketContent,
+                reportCreatedAt: reports.ticketCreatedAt,
+                reportUpdatedAt: reports.ticketUpdatedAt,
+                reporterName: users.userDisplayName,
+                postTitle: posts.postTitle,
+                shopName: shops.shopName,
+              })
+              .from(reports)
+              .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+              .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+              .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+              .where(eq(reports.ticketType, 'REPORT'))
+          : Promise.resolve([]),
       !queueTypeFilter || queueTypeFilter === "shop"
         ? db
             .select({
@@ -909,9 +900,10 @@ export const updateManagerPostStatus = async (
 
       const [actionLog] = await tx
         .insert(eventLogs)
-        .values({
-          eventLogUserId: managerId,
-          eventLogPostId: postId,
+        .values([{
+          eventLogUserId: (managerId ?? null) as number | null,
+          eventLogTargetType: "post",
+          eventLogTargetId: postId,
           eventLogEventType: MANAGER_POST_STATUS_EVENT,
           eventLogMeta: {
             fromStatus: currentStatus,
@@ -919,7 +911,7 @@ export const updateManagerPostStatus = async (
             reason,
             note,
           },
-        })
+        }] as any[])
         .returning({
           eventLogId: eventLogs.eventLogId,
           eventLogEventType: eventLogs.eventLogEventType,
@@ -1058,9 +1050,10 @@ export const updateManagerShopStatus = async (
 
       const [actionLog] = await tx
         .insert(eventLogs)
-        .values({
-          eventLogUserId: managerId,
-          eventLogShopId: shopId,
+        .values([{
+          eventLogUserId: (managerId ?? null) as number | null,
+          eventLogTargetType: "shop",
+          eventLogTargetId: shopId,
           eventLogEventType: MANAGER_SHOP_STATUS_EVENT,
           eventLogMeta: {
             fromStatus: currentStatus,
@@ -1069,7 +1062,7 @@ export const updateManagerShopStatus = async (
             note,
             postsAssigned,
           },
-        })
+        }] as any[])
         .returning({
           eventLogId: eventLogs.eventLogId,
           eventLogEventType: eventLogs.eventLogEventType,
@@ -1124,34 +1117,34 @@ export const getManagerReports = async (
     }
 
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [eq(reports.ticketType, 'REPORT')];
     if (statusFilter) {
-      conditions.push(eq(reports.reportStatus, statusFilter));
+      conditions.push(eq(reports.ticketStatus, statusFilter));
     }
 
     const rows = await db
       .select({
-        reportId: reports.reportId,
-        reportStatus: reports.reportStatus,
-        reportReasonCode: reports.reportReasonCode,
-        reportReason: reports.reportReason,
-        reportNote: reports.reportNote,
-        adminNote: reports.adminNote,
-        reportCreatedAt: reports.reportCreatedAt,
-        reportUpdatedAt: reports.reportUpdatedAt,
-        reporterId: reports.reporterId,
-        postId: reports.postId,
-        reportShopId: reports.reportShopId,
+        reportId: reports.ticketId,
+        reportStatus: reports.ticketStatus,
+        reportReasonCode: reports.ticketTitle,
+        reportReason: reports.ticketContent,
+        reportNote: sql<string>`${reports.ticketMetaData}->>'note'`,
+        adminNote: reports.ticketResolutionNote,
+        reportCreatedAt: reports.ticketCreatedAt,
+        reportUpdatedAt: reports.ticketUpdatedAt,
+        reporterId: reports.ticketCreatorId,
+        postId: sql<number>`case when ${reports.ticketTargetType} = 'post' then ${reports.ticketTargetId} end`,
+        reportShopId: sql<number>`case when ${reports.ticketTargetType} = 'shop' then ${reports.ticketTargetId} end`,
         reporterName: users.userDisplayName,
         postTitle: posts.postTitle,
         shopName: shops.shopName,
       })
       .from(reports)
-      .leftJoin(users, eq(reports.reporterId, users.userId))
-      .leftJoin(posts, eq(reports.postId, posts.postId))
-      .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(reports.reportCreatedAt), desc(reports.reportId));
+      .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+      .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+      .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+      .where(and(...conditions))
+      .orderBy(desc(reports.ticketCreatedAt), desc(reports.ticketId));
 
     const filteredRows = rows
       .map((item) => ({
@@ -1215,11 +1208,11 @@ export const resolveManagerReport = async (
 
     const [existingReport] = await db
       .select({
-        reportId: reports.reportId,
-        status: reports.reportStatus,
+        reportId: reports.ticketId,
+        status: reports.ticketStatus,
       })
       .from(reports)
-      .where(eq(reports.reportId, reportId))
+      .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketId, reportId)))
       .limit(1);
 
     if (!existingReport) {
@@ -1243,16 +1236,17 @@ export const resolveManagerReport = async (
       const [updatedReport] = await tx
         .update(reports)
         .set({
-          reportStatus: status,
-          adminNote: decisionText,
-          reportUpdatedAt: now,
+          ticketStatus: status,
+          ticketResolutionNote: decisionText,
+          ticketUpdatedAt: now,
+          ticketResolvedAt: now,
         })
-        .where(and(eq(reports.reportId, reportId), eq(reports.reportStatus, "pending")))
+        .where(and(eq(reports.ticketId, reportId), eq(reports.ticketType, 'REPORT'), eq(reports.ticketStatus, 'pending')))
         .returning({
-          reportId: reports.reportId,
-          reportStatus: reports.reportStatus,
-          adminNote: reports.adminNote,
-          reportUpdatedAt: reports.reportUpdatedAt,
+          reportId: reports.ticketId,
+          reportStatus: reports.ticketStatus,
+          adminNote: reports.ticketResolutionNote,
+          reportUpdatedAt: reports.ticketUpdatedAt,
         });
 
       if (!updatedReport) {
@@ -1261,17 +1255,18 @@ export const resolveManagerReport = async (
 
       const [decisionLog] = await tx
         .insert(eventLogs)
-        .values({
-          eventLogUserId: managerId,
+        .values([{
+          eventLogUserId: (managerId ?? null) as number | null,
+          eventLogTargetType: "report",
+          eventLogTargetId: reportId,
           eventLogEventType: MANAGER_REPORT_RESOLVED_EVENT,
           eventLogMeta: {
-            reportId,
             fromStatus: currentStatus,
             toStatus: status,
             resolution,
             note,
           },
-        })
+        }] as any[])
         .returning({
           eventLogId: eventLogs.eventLogId,
           eventLogEventType: eventLogs.eventLogEventType,
@@ -1281,26 +1276,26 @@ export const resolveManagerReport = async (
 
       const [enrichedReport] = await tx
         .select({
-          reportId: reports.reportId,
-          reportStatus: reports.reportStatus,
-          reportReasonCode: reports.reportReasonCode,
-          reportReason: reports.reportReason,
-          reportNote: reports.reportNote,
-          adminNote: reports.adminNote,
-          reportCreatedAt: reports.reportCreatedAt,
-          reportUpdatedAt: reports.reportUpdatedAt,
-          reporterId: reports.reporterId,
-          postId: reports.postId,
-          reportShopId: reports.reportShopId,
+          reportId: reports.ticketId,
+          reportStatus: reports.ticketStatus,
+          reportReasonCode: reports.ticketTitle,
+          reportReason: reports.ticketContent,
+          reportNote: sql<string>`${reports.ticketMetaData}->>'note'`,
+          adminNote: reports.ticketResolutionNote,
+          reportCreatedAt: reports.ticketCreatedAt,
+          reportUpdatedAt: reports.ticketUpdatedAt,
+          reporterId: reports.ticketCreatorId,
+          postId: sql<number>`case when ${reports.ticketTargetType} = 'post' then ${reports.ticketTargetId} end`,
+          reportShopId: sql<number>`case when ${reports.ticketTargetType} = 'shop' then ${reports.ticketTargetId} end`,
           reporterName: users.userDisplayName,
           postTitle: posts.postTitle,
           shopName: shops.shopName,
         })
         .from(reports)
-        .leftJoin(users, eq(reports.reporterId, users.userId))
-        .leftJoin(posts, eq(reports.postId, posts.postId))
-        .leftJoin(shops, eq(reports.reportShopId, shops.shopId))
-        .where(eq(reports.reportId, reportId))
+        .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+        .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+        .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+        .where(eq(reports.ticketId, reportId))
         .limit(1);
 
       return {
@@ -1393,41 +1388,46 @@ export const createModerationFeedback = async (
       return;
     }
 
-    const [feedbackRow] = await db
-      .insert(moderationFeedback)
-      .values({
-        targetType,
-        targetId,
-        senderId: managerId,
-        recipientId: recipientUserId,
-        message,
-      })
+    const [notificationRow] = await db
+      .insert(notifications)
+      .values([{
+        recipientId: recipientUserId!,
+        senderId: (managerId ?? null) as number | null,
+        title: `Phản hồi kiểm duyệt: ${targetType === "post" ? "Bài đăng" : "Cửa hàng"}`,
+        message: message,
+        type: "moderation",
+        metaData: {
+          targetType,
+          targetId,
+          templateId,
+        },
+      }] as any[])
       .returning();
 
-    // Still keep event log for secondary tracking if needed, or just return success
-    await db.insert(eventLogs).values({
-      eventLogUserId: managerId,
-      eventLogPostId: targetContext.eventLogPostId,
-      eventLogShopId: targetContext.eventLogShopId,
+    // Still keep event log for secondary tracking
+    await db.insert(eventLogs).values([{
+      eventLogUserId: (managerId ?? null) as number | null,
+      eventLogTargetType: targetType,
+      eventLogTargetId: targetId,
       eventLogEventType: MANAGER_FEEDBACK_EVENT,
       eventLogMeta: {
-        feedbackId: feedbackRow.feedbackId,
+        notificationId: notificationRow.notificationId,
         targetType,
         targetId,
         recipientUserId,
         templateId,
       },
-    });
+    }] as any[]);
 
     res.status(201).json({
       feedback: {
-        feedbackId: feedbackRow.feedbackId,
+        id: notificationRow.notificationId,
         targetType,
         targetId,
         recipientUserId,
         message,
         templateId,
-        createdAt: feedbackRow.createdAt,
+        createdAt: notificationRow.createdAt,
       },
     });
   } catch (error) {
@@ -1492,8 +1492,8 @@ export const getManagerHistory = async (
         .select({
           eventLogId: eventLogs.eventLogId,
           eventLogUserId: eventLogs.eventLogUserId,
-          eventLogPostId: eventLogs.eventLogPostId,
-          eventLogShopId: eventLogs.eventLogShopId,
+          eventLogTargetType: eventLogs.eventLogTargetType,
+          eventLogTargetId: eventLogs.eventLogTargetId,
           eventLogEventType: eventLogs.eventLogEventType,
           eventLogEventTime: eventLogs.eventLogEventTime,
           eventLogMeta: eventLogs.eventLogMeta,
@@ -1512,22 +1512,6 @@ export const getManagerHistory = async (
 
     const data = rows.map((item) => {
       const meta = toRecord(item.eventLogMeta);
-      const metaTargetType =
-        typeof meta?.targetType === "string" ? meta.targetType : undefined;
-      const metaTargetId =
-        typeof meta?.targetId === "number"
-          ? meta.targetId
-          : typeof meta?.targetId === "string"
-            ? Number(meta.targetId)
-            : undefined;
-
-      const fallbackTargetType = item.eventLogPostId
-        ? "post"
-        : item.eventLogShopId
-          ? "shop"
-          : null;
-      const fallbackTargetId = item.eventLogPostId ?? item.eventLogShopId ?? null;
-
       return {
         logId: item.eventLogId,
         actionType: formatEventActionType(item.eventLogEventType ?? ""),
@@ -1538,11 +1522,9 @@ export const getManagerHistory = async (
           displayName: item.actorName,
         },
         target: {
-          targetType: metaTargetType ?? fallbackTargetType,
-          targetId: metaTargetId ?? fallbackTargetId,
+          targetType: item.eventLogTargetType,
+          targetId: item.eventLogTargetId,
         },
-        postId: item.eventLogPostId,
-        shopId: item.eventLogShopId,
         meta,
       };
     });
@@ -1615,7 +1597,7 @@ export const getManagerStatistics = async (
         db
           .select({ count: sql<number>`count(*)` })
           .from(reports)
-          .where(eq(reports.reportStatus, "pending")),
+          .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketStatus, "pending"))),
         db
           .select({ count: sql<number>`count(*)` })
           .from(shops)
@@ -1794,40 +1776,41 @@ export const createManagerEscalation = async (
     const [escalationRow] = await db
       .insert(escalations)
       .values({
-        targetType,
-        targetId,
-        createdBy: managerId,
-        severity: severity as any,
-        reason,
-        evidenceUrls,
-        status: "open",
+        ticketType: 'ESCALATION',
+        ticketTargetType: targetType,
+        ticketTargetId: targetId,
+        ticketCreatorId: managerId,
+        ticketPriority: severity as any,
+        ticketContent: reason,
+        ticketMetaData: { evidenceUrls },
+        ticketStatus: "open",
       })
       .returning();
 
-    await db.insert(eventLogs).values({
-      eventLogUserId: managerId,
-      eventLogPostId: targetContext.eventLogPostId,
-      eventLogShopId: targetContext.eventLogShopId,
+    await db.insert(eventLogs).values([{
+      eventLogUserId: (managerId ?? null) as number | null,
+      eventLogTargetType: targetType,
+      eventLogTargetId: targetId,
       eventLogEventType: MANAGER_ESCALATION_EVENT,
       eventLogMeta: {
-        escalationId: escalationRow.escalationId,
+        escalationId: escalationRow.ticketId,
         targetType,
         targetId,
         severity,
       },
-    });
+    }] as any[]);
 
     res.status(201).json({
       escalationTicket: {
-        escalationId: escalationRow.escalationId,
-        ticketCode: `ESC-${escalationRow.escalationId}`,
-        status: escalationRow.status,
+        escalationId: escalationRow.ticketId,
+        ticketCode: `ESC-${escalationRow.ticketId}`,
+        status: escalationRow.ticketStatus,
         targetType,
         targetId,
         severity,
         reason,
         evidenceUrls,
-        createdAt: escalationRow.createdAt,
+        createdAt: escalationRow.ticketCreatedAt,
       },
     });
   } catch (error) {

@@ -1,4 +1,5 @@
 import { Request } from "express";
+import { Shop } from "../models/schema/shops.ts";
 
 export interface JWTUserPayload {
     id: number;
@@ -12,4 +13,5 @@ export interface JWTUserPayload {
 
 export interface AuthRequest extends Request {
     user?: JWTUserPayload;
+    shop?: Shop;
 }

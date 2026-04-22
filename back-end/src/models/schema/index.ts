@@ -18,11 +18,6 @@ export {
   type NewQRSession,
 } from "./qr-sessions.ts";
 export {
-  otpRequests,
-  type OtpRequest,
-  type NewOtpRequest,
-} from "./otp-requests.ts";
-export {
   adminTemplates,
   type AdminTemplate,
   type NewAdminTemplate,
@@ -44,58 +39,43 @@ export {
 
 // Shop
 export { shops, type Shop, type NewShop } from "./shops.ts";
-export {
-  blockedShops,
-  type BlockedShop,
-  type NewBlockedShop,
-} from "./blocked-shops.ts";
+
 export {
   verifications,
   type Verification,
   type NewVerification,
 } from "./verifications.ts";
+export {
+  shopCollaborators,
+  type ShopCollaborator,
+  type NewShopCollaborator,
+} from "./shop-collaborators.ts";
 
 // Posts
 export { posts, type Post, type NewPost } from "./posts.ts";
-export {
-  postImages,
-  type PostImage,
-  type NewPostImage,
-} from "./post-images.ts";
-export {
-  postVideos,
-  type PostVideo,
-  type NewPostVideo,
-} from "./post-videos.ts";
 export {
   postAttributeValues,
   type PostAttributeValue,
   type NewPostAttributeValue,
 } from "./post-attribute-values.ts";
 export {
-  postCategories,
-  type PostCategory,
-  type NewPostCategory,
-} from "./post-categories.ts";
-export { postMeta, type PostMeta, type NewPostMeta } from "./post-meta.ts";
+  mediaAssets,
+  type MediaAsset,
+  type NewMediaAsset,
+} from "./media-assets.ts";
 export {
-  favoritePosts,
-  type FavoritePost,
-  type NewFavoritePost,
-} from "./favorite-posts.ts";
+  userFavorites,
+  type UserFavorite,
+  type NewUserFavorite,
+} from "./user-favorites.ts";
 
-// Report & Moderation
-export { reports, type Report, type NewReport } from "./reports.ts";
-export {
-  reportEvidence,
-  type ReportEvidence,
-  type NewReportEvidence,
-} from "./report-evidence.ts";
-export {
-  moderationActions,
-  type ModerationAction,
-  type NewModerationAction,
-} from "./moderation-actions.ts";
+// Tickets & Moderation
+export { tickets, type Ticket, type NewTicket } from "./tickets.ts";
+// Legacy aliases for tickets
+export { tickets as reports, type Ticket as Report, type Ticket as NewReport } from "./tickets.ts";
+export { tickets as operationTasks, type Ticket as OperationTask, type Ticket as NewOperationTask } from "./tickets.ts";
+export { tickets as escalations, type Ticket as Escalation, type Ticket as NewEscalation } from "./tickets.ts";
+export { tickets as jobs, type Ticket as Job, type NewTicket as NewJob } from "./tickets.ts";
 
 // Monetization
 export {
@@ -114,51 +94,27 @@ export {
   type NewPromotionPackagePrice,
 } from "./promotion-package-prices.ts";
 export {
-  promotionPackageAuditLog,
-  type PromotionPackageAuditLog,
-  type NewPromotionPackageAuditLog,
-} from "./promotion-package-audit-log.ts";
-export {
   postPromotions,
   type PostPromotion,
   type NewPostPromotion,
 } from "./post-promotions.ts";
 export {
-  paymentTxn,
-  type PaymentTxn,
-  type NewPaymentTxn,
-} from "./payment-txn.ts";
+  transactions,
+  type Transaction,
+  type NewTransaction,
+} from "./transactions.ts";
+export {
+  ledgers,
+  type Ledger,
+  type NewLedger,
+} from "./ledgers.ts";
 export {
   userPostingPlans,
   type UserPostingPlan,
   type NewUserPostingPlan,
 } from "./user-posting-plans.ts";
-export {
-  postingFeeLedger,
-  type PostingFeeLedger,
-  type NewPostingFeeLedger,
-} from "./posting-fee-ledger.ts";
-export { jobs, type Job, type NewJob } from "./jobs.ts";
-export {
-  jobDeliverables,
-  type JobDeliverable,
-  type NewJobDeliverable,
-} from "./job-deliverables.ts";
-export {
-  jobContactRequests,
-  type JobContactRequest,
-  type NewJobContactRequest,
-} from "./job-contact-requests.ts";
-export {
-  earningEntries,
-  type EarningEntry,
-  type NewEarningEntry,
-} from "./earning-entries.ts";
-export {
-  payoutRequests,
-  type PayoutRequest,
-  type NewPayoutRequest,
-} from "./payout-requests.ts";
+export { taskReplies as jobContactRequests, type TaskReply as JobContactRequest, type NewTaskReply as NewJobContactRequest } from "./task-replies.ts";
+export { taskReplies as jobDeliverables, type TaskReply as JobDeliverable, type NewTaskReply as NewJobDeliverable } from "./task-replies.ts";
 
 // Analytics
 export {
@@ -179,31 +135,18 @@ export {
 export { eventLogs, type EventLog, type NewEventLog } from "./event-logs.ts";
 
 // Manager & Operations
-export {
-  operationTasks,
-  type OperationTask,
-  type NewOperationTask,
-} from "./operation-tasks.ts";
+// Manager & Operations
 export {
   taskReplies,
   type TaskReply,
   type NewTaskReply,
 } from "./task-replies.ts";
 export {
-  moderationFeedback,
-  type ModerationFeedback,
-  type NewModerationFeedback,
-} from "./moderation-feedback.ts";
-export {
-  escalations,
-  type Escalation,
-  type NewEscalation,
-} from "./escalations.ts";
-export {
-  systemNotifications,
-  type SystemNotification,
-  type NewSystemNotification,
-} from "./system-notifications.ts";
+  notifications,
+  type Notification,
+  type NewNotification,
+} from "./notifications.ts";
+// Escalations (Handled by tickets alias)
 
 // Host
 export {
@@ -211,21 +154,6 @@ export {
   type HostContent,
   type NewHostContent,
 } from "./host-contents.ts";
-export {
-  favoriteContents,
-  type FavoriteContent,
-  type NewFavoriteContent,
-} from "./favorite-contents.ts";
-export {
-  hostEarnings,
-  type HostEarning,
-  type NewHostEarning,
-} from "./host-earnings.ts";
-export {
-  hostPayoutRequests,
-  type HostPayoutRequest,
-  type NewHostPayoutRequest,
-} from "./host-payout-requests.ts";
 
 // System
 export {
@@ -233,8 +161,3 @@ export {
   type SystemSetting,
   type NewSystemSetting,
 } from "./system-settings.ts";
-export {
-  adminSystemSettings,
-  type AdminSystemSetting,
-  type NewAdminSystemSetting,
-} from "./admin-system-settings.ts";

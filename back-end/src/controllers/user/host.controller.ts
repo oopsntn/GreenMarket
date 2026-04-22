@@ -12,22 +12,20 @@ import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
   hostContents,
-  hostEarnings,
-  hostPayoutRequests,
-  favoriteContents,
+  ledgers,
+  transactions,
+  userFavorites,
   users,
   posts,
   shops,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
+import { notificationService } from "../../services/notification.service.ts";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const MIN_PAYOUT_AMOUNT = 500_000;
-const PUBLIC_CONTENT_TARGET_TYPES = new Set(["post", "shop", "external"]);
-// Backward-compat: older rows may have status "published".
-const PUBLIC_HOST_CONTENT_STATUSES = ["approved", "published"] as const;
 
 const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
   const parsedPage = Number(queryPage);
@@ -65,7 +63,6 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
       .select({
         totalContents: sql<number>`COUNT(*)`,
         totalViews: sql<number>`COALESCE(SUM(${hostContents.hostContentViewCount}), 0)`,
-        totalClicks: sql<number>`COALESCE(SUM(${hostContents.hostContentClickCount}), 0)`,
       })
       .from(hostContents)
       .where(
@@ -78,21 +75,22 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
 
     const [earningSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${hostEarnings.hostEarningAmount}), 0)`,
-        available: sql<string>`COALESCE(SUM(CASE WHEN ${hostEarnings.hostEarningStatus} = 'available' THEN ${hostEarnings.hostEarningAmount} ELSE 0 END), 0)`,
+        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
+        available: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' AND ${ledgers.ledgerStatus} = 'available' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
       })
-      .from(hostEarnings)
-      .where(eq(hostEarnings.hostEarningHostId, userId));
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId));
 
     const [payoutSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${hostPayoutRequests.hostPayoutAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(${transactions.transactionAmount}), 0)`,
       })
-      .from(hostPayoutRequests)
+      .from(transactions)
       .where(
         and(
-          eq(hostPayoutRequests.hostPayoutHostId, userId),
-          eq(hostPayoutRequests.hostPayoutStatus, "completed")
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout"),
+          eq(transactions.transactionStatus, "success")
         )
       );
 
@@ -104,7 +102,6 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
       stats: {
         totalContents: Number(contentStats?.totalContents ?? 0),
         totalViews: Number(contentStats?.totalViews ?? 0),
-        totalClicks: Number(contentStats?.totalClicks ?? 0),
         totalEarnings,
         availableBalance,
       },
@@ -128,16 +125,16 @@ export const getHostEarnings = async (req: AuthRequest, res: Response): Promise<
 
     const rows = await db
       .select()
-      .from(hostEarnings)
-      .where(eq(hostEarnings.hostEarningHostId, userId))
-      .orderBy(desc(hostEarnings.hostEarningCreatedAt))
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId))
+      .orderBy(desc(ledgers.ledgerCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(hostEarnings)
-      .where(eq(hostEarnings.hostEarningHostId, userId));
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId));
 
     res.json({
       data: rows,
@@ -165,17 +162,36 @@ export const getPayoutRequests = async (req: AuthRequest, res: Response): Promis
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
 
     const rows = await db
-      .select()
-      .from(hostPayoutRequests)
-      .where(eq(hostPayoutRequests.hostPayoutHostId, userId))
-      .orderBy(desc(hostPayoutRequests.hostPayoutCreatedAt))
+      .select({
+        hostPayoutId: transactions.transactionId,
+        hostPayoutHostId: transactions.transactionUserId,
+        hostPayoutAmount: transactions.transactionAmount,
+        hostPayoutMethod: transactions.transactionProvider,
+        hostPayoutStatus: transactions.transactionStatus,
+        hostPayoutNote: sql<string>`${transactions.transactionMeta}->>'note'`,
+        hostPayoutProcessedAt: transactions.transactionUpdatedAt,
+        hostPayoutCreatedAt: transactions.transactionCreatedAt,
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      )
+      .orderBy(desc(transactions.transactionCreatedAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(hostPayoutRequests)
-      .where(eq(hostPayoutRequests.hostPayoutHostId, userId));
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout")
+        )
+      );
 
     res.json({
       data: rows,
@@ -216,20 +232,21 @@ export const createPayoutRequest = async (req: AuthRequest, res: Response): Prom
     // Check balance
     const [earningSummary] = await db
       .select({
-        available: sql<string>`COALESCE(SUM(CASE WHEN ${hostEarnings.hostEarningStatus} = 'available' THEN ${hostEarnings.hostEarningAmount} ELSE 0 END), 0)`,
+        available: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' AND ${ledgers.ledgerStatus} = 'available' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
       })
-      .from(hostEarnings)
-      .where(eq(hostEarnings.hostEarningHostId, userId));
+      .from(ledgers)
+      .where(eq(ledgers.ledgerUserId, userId));
 
     const [payoutSummary] = await db
       .select({
-        total: sql<string>`COALESCE(SUM(${hostPayoutRequests.hostPayoutAmount}), 0)`,
+        total: sql<string>`COALESCE(SUM(${transactions.transactionAmount}), 0)`,
       })
-      .from(hostPayoutRequests)
+      .from(transactions)
       .where(
         and(
-          eq(hostPayoutRequests.hostPayoutHostId, userId),
-          sql`${hostPayoutRequests.hostPayoutStatus} IN ('completed', 'pending')`
+          eq(transactions.transactionUserId, userId),
+          eq(transactions.transactionType, "payout"),
+          sql`${transactions.transactionStatus} IN ('success', 'pending')`
         )
       );
 
@@ -241,19 +258,32 @@ export const createPayoutRequest = async (req: AuthRequest, res: Response): Prom
     }
 
     const [newRequest] = await db
-      .insert(hostPayoutRequests)
+      .insert(transactions)
       .values({
-        hostPayoutHostId: userId,
-        hostPayoutAmount: amount.toString(),
-        hostPayoutMethod: method,
-        hostPayoutNote: note,
-        hostPayoutStatus: "pending",
+        transactionUserId: userId,
+        transactionType: "payout",
+        transactionAmount: amount.toFixed(2),
+        transactionProvider: method,
+        transactionMeta: { note },
+        transactionStatus: "pending",
+        transactionCreatedAt: new Date(),
       })
       .returning();
 
+    // Map back to old field names for frontend compatibility if necessary
+    const responseData = {
+      hostPayoutId: newRequest.transactionId,
+      hostPayoutHostId: newRequest.transactionUserId,
+      hostPayoutAmount: toNumber(newRequest.transactionAmount),
+      hostPayoutMethod: newRequest.transactionProvider,
+      hostPayoutStatus: newRequest.transactionStatus,
+      hostPayoutNote: note,
+      hostPayoutCreatedAt: newRequest.transactionCreatedAt,
+    };
+
     res.status(201).json({
       message: "Payout request created successfully",
-      data: newRequest,
+      data: responseData,
     });
   } catch (error) {
     console.error(error);
@@ -296,10 +326,10 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const { title, description, body, targetType, targetId, mediaUrls } = req.body;
+    const { title, description, body, category, mediaUrls, payoutAmount } = req.body;
 
-    if (!title || !targetType) {
-      res.status(400).json({ error: "Title and targetType are required" });
+    if (!title) {
+      res.status(400).json({ error: "Title is required" });
       return;
     }
 
@@ -310,26 +340,37 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
         hostContentTitle: title,
         hostContentDescription: description,
         hostContentBody: body,
-        hostContentTargetType: targetType,
-        hostContentTargetId: targetId,
+        hostContentCategory: category,
         hostContentMediaUrls: mediaUrls || [],
-        hostContentStatus: "pending",
+        hostContentPayoutAmount: payoutAmount?.toString(),
+        hostContentStatus: "published", // Default to published for demo
       })
       .returning();
 
-    // Generate tracking URL (Mock base URL)
-    const baseUrl = process.env.BASE_URL || "http://localhost:5000";
-    const trackingUrl = `${baseUrl}/api/host/tracking/${newContent.hostContentId}`;
-
-    await db
-      .update(hostContents)
-      .set({ hostContentTrackingUrl: trackingUrl })
-      .where(eq(hostContents.hostContentId, newContent.hostContentId));
-
-    res.status(201).json({
-      ...newContent,
-      hostContentTrackingUrl: trackingUrl,
+    // 1. Create earning for host
+    const PAYOUT_AMOUNT = 50000;
+    await db.insert(ledgers).values({
+      ledgerUserId: userId,
+      ledgerAmount: PAYOUT_AMOUNT.toString(),
+      ledgerType: "earning",
+      ledgerDirection: "CREDIT",
+      ledgerStatus: "available",
+      ledgerMeta: {
+        type: "article_payout",
+        sourceId: newContent.hostContentId
+      },
     });
+
+    // 2. Notify host
+    await notificationService.sendNotification({
+      recipientId: userId,
+      title: "Thu nhập mới!",
+      message: `Bạn vừa nhận được ${PAYOUT_AMOUNT.toLocaleString("vi-VN")} VND cho bài viết mới: "${title}".`,
+      type: "earning",
+      metaData: { contentId: newContent.hostContentId },
+    });
+
+    res.status(201).json(newContent);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });
@@ -405,97 +446,29 @@ export const deleteContent = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-// --- Tracking ---
-export const trackContentClick = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const contentId = parseId(req.params.id as string);
-    if (!contentId) {
-      res.status(400).json({ error: "Invalid content ID" });
-      return;
-    }
-
-    const [content] = await db
-      .select()
-      .from(hostContents)
-      .where(
-        and(
-          eq(hostContents.hostContentId, contentId),
-          inArray(hostContents.hostContentStatus, [...PUBLIC_HOST_CONTENT_STATUSES]),
-          sql`${hostContents.hostContentDeletedAt} IS NULL`,
-        ),
-      )
-      .limit(1);
-
-    if (!content) {
-      res.status(404).json({ error: "Content not found" });
-      return;
-    }
-
-    // Logging Click
-    await db
-      .update(hostContents)
-      .set({ hostContentClickCount: (content.hostContentClickCount || 0) + 1 })
-      .where(eq(hostContents.hostContentId, contentId));
-
-    // Log Earning (Mock: 5,000 VND per click)
-    await db
-      .insert(hostEarnings)
-      .values({
-        hostEarningHostId: content.hostContentAuthorId,
-        hostEarningAmount: "5000.00",
-        hostEarningStatus: "available",
-        hostEarningSourceType: "click",
-        hostEarningSourceId: contentId,
-      });
-
-    // Redirect Logic
-    const frontendBaseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-    let redirectUrl = frontendBaseUrl;
-
-    if (content.hostContentTargetType === "post" && content.hostContentTargetId) {
-       // Need to find post slug
-       const [post] = await db.select({ slug: posts.postSlug }).from(posts).where(eq(posts.postId, content.hostContentTargetId)).limit(1);
-       if (post) redirectUrl = `${frontendBaseUrl}/posts/detail/${post.slug}`;
-    } else if (content.hostContentTargetType === "shop" && content.hostContentTargetId) {
-       redirectUrl = `${frontendBaseUrl}/shops/${content.hostContentTargetId}`;
-    }
-
-    res.redirect(redirectUrl);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
 // --- Public Content APIs ---
 export const getPublicContents = async (req: Request, res: Response): Promise<void> => {
   try {
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
-    const search = (req.query.search as string) || "";
-    const targetType = (req.query.targetType as string) || "";
-    const normalizedTargetType = targetType.trim().toLowerCase();
+    const search = ((req.query.search as string) || "").trim();
+    const category = ((req.query.category as string) || "").trim();
 
-    const conditions = [
-      inArray(hostContents.hostContentStatus, [...PUBLIC_HOST_CONTENT_STATUSES]),
+    const conditions: any[] = [
+      eq(hostContents.hostContentStatus, "published"),
       sql`${hostContents.hostContentDeletedAt} IS NULL`,
     ];
 
-    if (search.trim()) {
+    if (search) {
       conditions.push(
         or(
-          ilike(hostContents.hostContentTitle, `%${search.trim()}%`),
-          ilike(hostContents.hostContentDescription, `%${search.trim()}%`)
-        )!
+          ilike(hostContents.hostContentTitle, `%${search}%`),
+          ilike(hostContents.hostContentDescription, `%${search}%`)
+        )
       );
     }
 
-    if (normalizedTargetType) {
-      if (!PUBLIC_CONTENT_TARGET_TYPES.has(normalizedTargetType)) {
-        res.status(400).json({ error: "targetType must be one of: post, shop" });
-        return;
-      }
-
-      conditions.push(eq(hostContents.hostContentTargetType, normalizedTargetType));
+    if (category) {
+      conditions.push(ilike(hostContents.hostContentCategory, `%${category}%`));
     }
 
     const rows = await db
@@ -504,11 +477,9 @@ export const getPublicContents = async (req: Request, res: Response): Promise<vo
         hostContentTitle: hostContents.hostContentTitle,
         hostContentDescription: hostContents.hostContentDescription,
         hostContentBody: hostContents.hostContentBody,
-        hostContentTargetType: hostContents.hostContentTargetType,
-        hostContentTargetId: hostContents.hostContentTargetId,
+        hostContentCategory: hostContents.hostContentCategory,
         hostContentMediaUrls: hostContents.hostContentMediaUrls,
         hostContentViewCount: hostContents.hostContentViewCount,
-        hostContentClickCount: hostContents.hostContentClickCount,
         hostContentCreatedAt: hostContents.hostContentCreatedAt,
         authorId: users.userId,
         authorName: users.userDisplayName,
@@ -517,7 +488,7 @@ export const getPublicContents = async (req: Request, res: Response): Promise<vo
       .from(hostContents)
       .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
       .where(and(...conditions))
-      .orderBy(desc(hostContents.hostContentCreatedAt))
+      .orderBy(desc(hostContents.hostContentCreatedAt), desc(hostContents.hostContentId))
       .limit(limit)
       .offset(offset);
 
@@ -555,12 +526,9 @@ export const getPublicContentDetail = async (req: Request<{ id: string }>, res: 
         hostContentTitle: hostContents.hostContentTitle,
         hostContentDescription: hostContents.hostContentDescription,
         hostContentBody: hostContents.hostContentBody,
-        hostContentTargetType: hostContents.hostContentTargetType,
-        hostContentTargetId: hostContents.hostContentTargetId,
-        hostContentTrackingUrl: hostContents.hostContentTrackingUrl,
+        hostContentCategory: hostContents.hostContentCategory,
         hostContentMediaUrls: hostContents.hostContentMediaUrls,
         hostContentViewCount: hostContents.hostContentViewCount,
-        hostContentClickCount: hostContents.hostContentClickCount,
         hostContentCreatedAt: hostContents.hostContentCreatedAt,
         hostContentUpdatedAt: hostContents.hostContentUpdatedAt,
         authorId: users.userId,
@@ -591,28 +559,9 @@ export const getPublicContentDetail = async (req: Request<{ id: string }>, res: 
       })
       .where(eq(hostContents.hostContentId, contentId));
 
-    // Fetch linked target details
-    let target: any = null;
-    if (content.hostContentTargetType === "post" && content.hostContentTargetId) {
-      const [post] = await db
-        .select({ postId: posts.postId, postTitle: posts.postTitle, postSlug: posts.postSlug })
-        .from(posts)
-        .where(eq(posts.postId, content.hostContentTargetId))
-        .limit(1);
-      target = post || null;
-    } else if (content.hostContentTargetType === "shop" && content.hostContentTargetId) {
-      const [shop] = await db
-        .select({ shopId: shops.shopId, shopName: shops.shopName, shopLogoUrl: shops.shopLogoUrl })
-        .from(shops)
-        .where(eq(shops.shopId, content.hostContentTargetId))
-        .limit(1);
-      target = shop || null;
-    }
-
     res.json({
       ...content,
       hostContentViewCount: (content.hostContentViewCount || 0) + 1,
-      target,
     });
   } catch (error) {
     console.error(error);
@@ -651,29 +600,32 @@ export const toggleFavoriteContent = async (req: AuthRequest, res: Response): Pr
 
     const [existing] = await db
       .select()
-      .from(favoriteContents)
+      .from(userFavorites)
       .where(
         and(
-          eq(favoriteContents.favoriteContentUserId, userId),
-          eq(favoriteContents.favoriteContentId, contentId)
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetId, contentId),
+          eq(userFavorites.targetType, "host_content")
         )
       )
       .limit(1);
 
     if (existing) {
       await db
-        .delete(favoriteContents)
+        .delete(userFavorites)
         .where(
           and(
-            eq(favoriteContents.favoriteContentUserId, userId),
-            eq(favoriteContents.favoriteContentId, contentId)
+            eq(userFavorites.userId, userId),
+            eq(userFavorites.targetId, contentId),
+            eq(userFavorites.targetType, "host_content")
           )
         );
       res.json({ message: "Content removed from bookmarks", isSaved: false });
     } else {
-      await db.insert(favoriteContents).values({
-        favoriteContentUserId: userId,
-        favoriteContentId: contentId,
+      await db.insert(userFavorites).values({
+        userId: userId,
+        targetId: contentId,
+        targetType: "host_content"
       });
       res.json({ message: "Content added to bookmarks", isSaved: true });
     }
@@ -695,11 +647,11 @@ export const getMyFavoriteContents = async (req: AuthRequest, res: Response): Pr
 
     const rows = await db
       .select({
-        favoriteCreatedAt: favoriteContents.favoriteContentCreatedAt,
+        favoriteCreatedAt: userFavorites.createdAt,
         hostContentId: hostContents.hostContentId,
         hostContentTitle: hostContents.hostContentTitle,
         hostContentDescription: hostContents.hostContentDescription,
-        hostContentTargetType: hostContents.hostContentTargetType,
+        hostContentCategory: hostContents.hostContentCategory,
         hostContentMediaUrls: hostContents.hostContentMediaUrls,
         hostContentViewCount: hostContents.hostContentViewCount,
         hostContentCreatedAt: hostContents.hostContentCreatedAt,
@@ -707,28 +659,30 @@ export const getMyFavoriteContents = async (req: AuthRequest, res: Response): Pr
         authorAvatar: users.userAvatarUrl,
         authorId: users.userId,
       })
-      .from(favoriteContents)
-      .innerJoin(hostContents, eq(favoriteContents.favoriteContentId, hostContents.hostContentId))
+      .from(userFavorites)
+      .innerJoin(hostContents, eq(userFavorites.targetId, hostContents.hostContentId))
       .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
       .where(
         and(
-          eq(favoriteContents.favoriteContentUserId, userId),
-          inArray(hostContents.hostContentStatus, [...PUBLIC_HOST_CONTENT_STATUSES]),
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetType, "host_content"),
+          eq(hostContents.hostContentStatus, "published"),
           sql`${hostContents.hostContentDeletedAt} IS NULL`
         )
       )
-      .orderBy(desc(favoriteContents.favoriteContentCreatedAt))
+      .orderBy(desc(userFavorites.createdAt))
       .limit(limit)
       .offset(offset);
 
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(favoriteContents)
-      .innerJoin(hostContents, eq(favoriteContents.favoriteContentId, hostContents.hostContentId))
+      .from(userFavorites)
+      .innerJoin(hostContents, eq(userFavorites.targetId, hostContents.hostContentId))
       .where(
         and(
-          eq(favoriteContents.favoriteContentUserId, userId),
-          inArray(hostContents.hostContentStatus, [...PUBLIC_HOST_CONTENT_STATUSES]),
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetType, "host_content"),
+          eq(hostContents.hostContentStatus, "published"),
           sql`${hostContents.hostContentDeletedAt} IS NULL`
         )
       );
@@ -759,11 +713,12 @@ export const checkIsContentSaved = async (req: AuthRequest, res: Response): Prom
 
     const [existing] = await db
       .select()
-      .from(favoriteContents)
+      .from(userFavorites)
       .where(
         and(
-          eq(favoriteContents.favoriteContentUserId, userId),
-          eq(favoriteContents.favoriteContentId, contentId)
+          eq(userFavorites.userId, userId),
+          eq(userFavorites.targetId, contentId),
+          eq(userFavorites.targetType, "host_content")
         )
       )
       .limit(1);

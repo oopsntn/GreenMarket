@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "../config/db.ts";
-import { systemNotifications } from "../models/schema/system-notifications.ts";
+import { notifications } from "../models/schema/notifications.ts";
 import { sendToUser, broadcastToAdmins } from "../config/socket.ts";
 
 export const notificationService = {
@@ -17,9 +17,10 @@ export const notificationService = {
     try {
       // 1. Save to database
       const [newNotification] = await db
-        .insert(systemNotifications)
+        .insert(notifications)
         .values({
           recipientId: data.recipientId,
+          senderId: data.metaData?.senderId || null,
           title: data.title,
           message: data.message,
           type: data.type || "system",
@@ -65,9 +66,9 @@ export const notificationService = {
    * Get notification history for a user
    */
   async getNotifications(userId: number, limit = 50) {
-    return await db.query.systemNotifications.findMany({
-      where: eq(systemNotifications.recipientId, userId),
-      orderBy: [desc(systemNotifications.createdAt)],
+    return await db.query.notifications.findMany({
+      where: eq(notifications.recipientId, userId),
+      orderBy: [desc(notifications.createdAt)],
       limit: limit,
     });
   },
@@ -77,12 +78,12 @@ export const notificationService = {
    */
   async markAsRead(notificationId: number, userId: number) {
     return await db
-      .update(systemNotifications)
+      .update(notifications)
       .set({ isRead: true })
       .where(
         and(
-          eq(systemNotifications.notificationId, notificationId),
-          eq(systemNotifications.recipientId, userId)
+          eq(notifications.notificationId, notificationId),
+          eq(notifications.recipientId, userId)
         )
       )
       .returning();
@@ -93,9 +94,9 @@ export const notificationService = {
    */
   async markAllAsRead(userId: number) {
     return await db
-      .update(systemNotifications)
+      .update(notifications)
       .set({ isRead: true })
-      .where(eq(systemNotifications.recipientId, userId))
+      .where(eq(notifications.recipientId, userId))
       .returning();
   }
 };

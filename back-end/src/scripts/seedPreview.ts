@@ -1,5 +1,5 @@
 import { db } from "../config/db.ts";
-import { users, categories, posts, shops, postImages } from "../models/schema/index.ts";
+import { users, categories, posts, shops } from "../models/schema/index.ts";
 import { slugify } from "../utils/slugify.ts";
 
 async function seedMarketplace() {

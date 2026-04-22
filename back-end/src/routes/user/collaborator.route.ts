@@ -11,26 +11,39 @@ import {
   getPayoutRequestHistory,
   submitJobDeliverables,
   updateCollaboratorAvailability,
+  getPublicCollaborators,
+  getPublicCollaboratorDetail,
+  getMyInvitations,
+  respondToInvitation,
 } from "../../controllers/user/collaborator.controller.ts";
 import {
   requireBusinessRole,
+  requireShop,
   verifyToken,
 } from "../../middlewares/authMiddleware.ts";
 
 const router = Router();
 
-router.use(verifyToken, requireBusinessRole("COLLABORATOR"));
+router.get("/profile", verifyToken, requireBusinessRole("COLLABORATOR"), getCollaboratorProfile);
+router.patch("/profile", verifyToken, requireBusinessRole("COLLABORATOR"), updateCollaboratorAvailability);
 
-router.get("/profile", getCollaboratorProfile);
-router.patch("/profile", updateCollaboratorAvailability);
-router.get("/jobs", getAvailableJobs);
-router.get("/jobs/:id", getJobDetail);
-router.post("/jobs/:id/decision", decideJob);
-router.post("/jobs/:id/contact", contactJobCustomer);
-router.get("/my-jobs", getMyJobs);
-router.post("/jobs/:id/deliverables", submitJobDeliverables);
-router.get("/earnings", getCollaboratorEarnings);
-router.get("/payout-requests", getPayoutRequestHistory);
-router.post("/payout-requests", createPayoutRequest);
+// Public/Owner discovery routes
+router.get("/public-list", verifyToken, requireShop, getPublicCollaborators);
+router.get("/public/:id", verifyToken, requireShop, getPublicCollaboratorDetail);
+
+// Invitation management
+router.get("/invitations", verifyToken, requireBusinessRole("COLLABORATOR"), getMyInvitations); // CTV check invites
+router.post("/invitations/:id/respond", verifyToken, requireBusinessRole("COLLABORATOR"), respondToInvitation); // CTV respond
+
+// CTV Job management
+router.get("/jobs", verifyToken, requireBusinessRole("COLLABORATOR"), getAvailableJobs);
+router.get("/jobs/:id", verifyToken, requireBusinessRole("COLLABORATOR"), getJobDetail);
+router.post("/jobs/:id/decision", verifyToken, requireBusinessRole("COLLABORATOR"), decideJob);
+router.post("/jobs/:id/contact", verifyToken, requireBusinessRole("COLLABORATOR"), contactJobCustomer);
+router.get("/my-jobs", verifyToken, requireBusinessRole("COLLABORATOR"), getMyJobs);
+router.post("/jobs/:id/deliverables", verifyToken, requireBusinessRole("COLLABORATOR"), submitJobDeliverables);
+router.get("/earnings", verifyToken, requireBusinessRole("COLLABORATOR"), getCollaboratorEarnings);
+router.get("/payout-requests", verifyToken, requireBusinessRole("COLLABORATOR"), getPayoutRequestHistory);
+router.post("/payout-requests", verifyToken, requireBusinessRole("COLLABORATOR"), createPayoutRequest);
 
 export default router;

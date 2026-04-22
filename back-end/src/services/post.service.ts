@@ -1,5 +1,5 @@
 import { db } from "../config/db.ts";
-import { posts, postImages, postPromotions, placementSlots } from "../models/schema/index.ts";
+import { posts, mediaAssets, postPromotions, placementSlots } from "../models/schema/index.ts";
 import { eq, and, or, ilike, gte, lte, sql, SQL, inArray, getTableColumns } from "drizzle-orm";
 import { GetPostsQueryDto } from "../dtos/post.ts";
 import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion.ts";
@@ -153,9 +153,20 @@ export class PostService {
 
         if (data.length > 0) {
             const postIds = data.map(p => p.postId as number);
-            const images = await db.select()
-                .from(postImages)
-                .where(inArray(postImages.postId, postIds));
+            const images = await db.select({
+                postId: mediaAssets.targetId,
+                imageId: mediaAssets.assetId,
+                imageUrl: mediaAssets.url,
+                imageSortOrder: mediaAssets.sortOrder,
+            })
+                .from(mediaAssets)
+                .where(
+                    and(
+                        eq(mediaAssets.targetType, "post"),
+                        eq(mediaAssets.mediaType, "image"),
+                        inArray(mediaAssets.targetId, postIds)
+                    )
+                );
                 
             const dataWithImages = data.map(post => ({
                 ...post,

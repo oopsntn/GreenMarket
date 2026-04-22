@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getPublicPosts, getCategories } from '../services/api';
-import { Leaf, Search, ShoppingBag, MapPin, ListFilter, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ShoppingBag, MapPin, ListFilter, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCurrencyInput } from '../hooks/useCurrencyInput';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
 
@@ -111,11 +111,10 @@ const Home: React.FC = () => {
     <Link
       key={post.postId}
       to={`/posts/detail/${post.postSlug}`}
-      className={`group rounded-3xl overflow-hidden transition-all duration-500 border block shadow-sm ${
-        post.isPromoted 
-          ? "bg-amber-50/50 border-amber-200 hover:shadow-amber-500/20 hover:border-amber-400 shadow-amber-100" 
+      className={`group rounded-3xl overflow-hidden transition-all duration-500 border block shadow-sm ${post.isPromoted
+          ? "bg-amber-50/50 border-amber-200 hover:shadow-amber-500/20 hover:border-amber-400 shadow-amber-100"
           : "bg-white border-slate-200 hover:shadow-2xl hover:shadow-emerald-500/10 hover:border-emerald-500/30"
-      }`}
+        }`}
     >
       <div className="aspect-square bg-slate-50 overflow-hidden relative border-b border-slate-100">
         {post.images && post.images.length > 0 ? (

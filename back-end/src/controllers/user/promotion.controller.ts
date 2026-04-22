@@ -4,6 +4,7 @@ import { eq, and, lte, or, isNull, gt, inArray, sql } from "drizzle-orm";
 import { promotionPackages } from "../../models/schema/promotion-packages";
 import { placementSlots } from "../../models/schema/placement-slots";
 import { promotionPackagePrices } from "../../models/schema/promotion-package-prices";
+import { postPromotions } from "../../models/schema/post-promotions";
 import { shops } from "../../models/schema/shops";
 import { type PromotionPackageParams } from "../../dtos/promotion";
 import { parseId } from "../../utils/parseId";
@@ -15,6 +16,16 @@ import {
 
 const queryPublishedPackages = async (slotType: "boost" | "shop_vip") => {
     const now = new Date();
+    const livePromotionCondition = and(
+        sql`${postPromotions.postPromotionEndAt} > NOW()`,
+        or(
+            eq(postPromotions.postPromotionStatus, "active"),
+            eq(postPromotions.postPromotionStatus, "scheduled"),
+            eq(postPromotions.postPromotionStatus, "paused"),
+            eq(postPromotions.postPromotionStatus, "pending"),
+        ),
+    );
+
     return db
         .select({
             promotionPackageId: promotionPackages.promotionPackageId,
@@ -24,10 +35,17 @@ const queryPublishedPackages = async (slotType: "boost" | "shop_vip") => {
             promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
             promotionPackageDisplayQuota: promotionPackages.promotionPackageDisplayQuota,
             promotionPackageDescription: promotionPackages.promotionPackageDescription,
+            slotId: placementSlots.placementSlotId,
             slotCode: placementSlots.placementSlotCode,
             slotTitle: placementSlots.placementSlotTitle,
             slotCapacity: placementSlots.placementSlotCapacity,
             slotRules: placementSlots.placementSlotRules,
+            currentUsage: sql<number>`(
+                SELECT COUNT(*)::int
+                FROM ${postPromotions}
+                WHERE ${postPromotions.postPromotionSlotId} = ${placementSlots.placementSlotId}
+                AND ${livePromotionCondition}
+            )`.mapWith(Number),
         })
         .from(promotionPackages)
         .innerJoin(placementSlots, eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId))

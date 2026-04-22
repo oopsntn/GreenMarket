@@ -134,6 +134,12 @@ export const userRequestOtp = async (
       return;
     }
 
+    const phoneRegex = /^\d{10}$/;
+    if (!phoneRegex.test(mobile)) {
+      res.status(400).json({ error: "Số điện thoại phải có đúng 10 chữ số" });
+      return;
+    }
+
     const sendResult = await verificationService.requestOTP(mobile, "phone");
 
     if (!sendResult.success) {

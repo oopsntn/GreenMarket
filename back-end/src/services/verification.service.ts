@@ -83,8 +83,13 @@ export class VerificationService {
         });
 
         if (type === "email") {
+            console.log(`[VERIFICATION SERVICE] Sending OTP email to ${normalizedTarget}...`);
             const emailResult = await emailService.sendOTPEmail(normalizedTarget, otpCode);
-            if (!emailResult.success) return emailResult;
+            if (!emailResult.success) {
+                console.error(`[VERIFICATION SERVICE] Email sending failed: ${emailResult.message}`);
+                return emailResult;
+            }
+            console.log(`[VERIFICATION SERVICE] Email sending reported success.`);
         } else {
             // Mock Phone
             console.log(`[VERIFICATION SERVICE] (MOCK) OTP for ${normalizedTarget}: ${otpCode}`);
@@ -103,11 +108,12 @@ export class VerificationService {
     async verifyOTP(target: string, otpCode: string, type: "email" | "phone"): Promise<{ success: boolean; message: string }> {
         const normalizedTarget = type === "phone" ? this.normalizePhone(target) : target.trim().toLowerCase();
         const code = otpCode.trim();
+        console.log(`[VERIFICATION SERVICE] Verifying ${type} OTP for ${normalizedTarget}...`);
 
-        // 1. Universal Mock Code (123456)
-        if (code === "123456") {
-            console.log(`[VERIFICATION SERVICE] (MOCK) Accepted 123456 for ${normalizedTarget}`);
-            return { success: true, message: "OTP verified (Mock)" };
+        // 1. Mock Code (RESTRICTED TO PHONE ONLY)
+        if (type === "phone" && code === "123456") {
+            console.log(`[VERIFICATION SERVICE] (MOCK) Accepted 123456 for phone: ${normalizedTarget}`);
+            return { success: true, message: "OTP verified (Mock Phone)" };
         }
 
         // 2. Phone + Twilio logic
@@ -148,6 +154,7 @@ export class VerificationService {
 
         // Compare using bcrypt
         const isValid = await bcrypt.compare(code, record.otpCode);
+        console.log(`[VERIFICATION SERVICE] DB comparison for ${normalizedTarget}: ${isValid ? "MATCH" : "MISMATCH"}`);
         if (!isValid) {
             return { success: false, message: "Invalid or expired OTP" };
         }

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { db } from "../../config/db";
-import { users, categories, posts, promotionPackages, promotionPackagePrices, placementSlots, paymentTxn, postPromotions, shops } from "../../models/schema/index";
-import { eq, desc } from "drizzle-orm";
+import { users, categories, posts, promotionPackages, promotionPackagePrices, placementSlots, transactions, postPromotions, shops } from "../../models/schema/index";
+import { eq, desc, sql } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { slugify } from "../../utils/slugify";
 import crypto from "crypto";
@@ -97,8 +97,8 @@ async function runUserMonetizationTests() {
             console.log("✅ Passed: Buy package returned MoMo URL.");
             
             // In a real flow, we'd redirect. Here we extract orderId from DB or mock it.
-            const [txn] = await db.select().from(paymentTxn).where(eq(paymentTxn.paymentTxnPostId, testPostId)).limit(1);
-            testOrderId = txn.paymentTxnProviderTxnId || "";
+            const [txn] = await db.select().from(transactions).where(eq(sql<number>`(${transactions.transactionMeta}->>'postId')::int`, testPostId)).limit(1);
+            testOrderId = txn.transactionProviderTxnId || "";
             console.log(`✅ Order ID: ${testOrderId}`);
         } else {
              console.log("❌ Failed: Payment URL not found in response.");

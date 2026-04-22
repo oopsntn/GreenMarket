@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db.ts";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, or, ilike, desc } from "drizzle-orm";
 import { shops, type Shop } from "../../models/schema/shops.ts";
-import { posts, postImages, eventLogs } from "../../models/schema/index.ts";
+import { posts, mediaAssets, eventLogs, shopCollaborators } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import { verificationService } from "../../services/verification.service.ts";
@@ -12,6 +12,7 @@ import {
     ownerDashboardService,
 } from "../../services/owner-dashboard.service.ts";
 import { postLifecycleService } from "../../services/postLifecycle.service.ts";
+import { notificationService } from "../../services/notification.service.ts";
 
 const SHOP_GALLERY_DELIMITER = "|";
 const SHOP_EVENT_VIEW = "shop_view";
@@ -93,6 +94,20 @@ const validateEmail = (email: string) => {
         );
 };
 
+const checkPhoneConflict = async (phone: string, currentUserId: number): Promise<string | null> => {
+    if (!phone) return null;
+    const [duplicateUser] = await db.select().from(users).where(eq(users.userMobile, phone)).limit(1);
+    if (duplicateUser && duplicateUser.userId !== currentUserId) {
+        return "Số điện thoại này đã được đăng ký tài khoản trên hệ thống bởi một người dùng khác.";
+    }
+    const duplicatePhones = await db.select().from(shops).where(sql`shop_phone ILIKE ${'%' + phone + '%'}`);
+    const isDuplicate = duplicatePhones.some(s => s.shopId !== currentUserId && s.shopPhone?.split('|').includes(phone));
+    if (isDuplicate) {
+        return "Số điện thoại này đã được một cửa hàng khác sử dụng làm liên hệ.";
+    }
+    return null;
+};
+
 export const registerShop = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const userId = req.user?.id;
@@ -122,6 +137,11 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
         const galleryArray = Array.isArray(shopGalleryImages) ? shopGalleryImages : [];
         if (galleryArray.length < 3) {
             errors.push("At least 3 detailed images (Gallery) are required");
+        }
+
+        const phoneRegex = /^\d{10}$/;
+        if (shopPhone && !phoneRegex.test(shopPhone)) {
+            errors.push("Số điện thoại phải có đúng 10 chữ số");
         }
 
         if (errors.length > 0) {
@@ -159,6 +179,14 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             defaultShopPhone = user?.userMobile || null;
         }
 
+        if (defaultShopPhone) {
+            const conflictMsg = await checkPhoneConflict(defaultShopPhone, userId);
+            if (conflictMsg) {
+                res.status(400).json({ error: conflictMsg });
+                return;
+            }
+        }
+
         const [newShop] = await db.insert(shops).values({
             shopId: userId,
             shopName,
@@ -176,6 +204,11 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             shopLng: shopLng ? String(shopLng) : null,
             shopStatus: "pending"
         }).returning();
+
+        // Automatically upgrade user to HOST business role
+        await db.update(users)
+            .set({ userBusinessRoleId: 2 })
+            .where(eq(users.userId, userId));
 
         res.status(201).json(withShopGallery(newShop));
     } catch (error) {
@@ -287,7 +320,8 @@ export const getPublicShopById = async (req: AuthRequest, res: Response): Promis
             if (shouldCountShopView(id, viewerKey)) {
                 db.insert(eventLogs)
                     .values({
-                        eventLogShopId: id,
+                        eventLogTargetType: "shop",
+                        eventLogTargetId: id,
                         eventLogUserId: viewerId ?? null,
                         eventLogEventType: SHOP_EVENT_VIEW,
                         eventLogMeta: { source: "shop_detail_page" },
@@ -305,9 +339,18 @@ export const getPublicShopById = async (req: AuthRequest, res: Response): Promis
         let postsWithImages = shopPosts.map(p => ({ ...p, images: [] as any[] }));
         if (shopPosts.length > 0) {
             const postIds = shopPosts.map(p => p.postId);
-            const images = await db.select()
-                .from(postImages)
-                .where(inArray(postImages.postId, postIds));
+            const images = await db.select({
+                postId: mediaAssets.targetId,
+                imageUrl: mediaAssets.url,
+            })
+                .from(mediaAssets)
+                .where(
+                    and(
+                        eq(mediaAssets.targetType, "post"),
+                        eq(mediaAssets.mediaType, "image"),
+                        inArray(mediaAssets.targetId, postIds)
+                    )
+                );
 
             postsWithImages = shopPosts.map(post => ({
                 ...post,
@@ -347,7 +390,8 @@ export const recordShopContactClick = async (req: Request<{ id: string }>, res: 
         }
 
         await db.insert(eventLogs).values({
-            eventLogShopId: shopId,
+            eventLogTargetType: "shop",
+            eventLogTargetId: shopId,
             eventLogEventType: SHOP_EVENT_CONTACT_CLICK,
             eventLogMeta: { source: "shop_contact_action" },
         });
@@ -486,12 +530,9 @@ export const requestVerificationOTP = async (req: AuthRequest, res: Response): P
 
         // Check for duplicates
         if (type === "phone") {
-            // Check if phone exists (using Drizzle's ILIKE for Postgres)
-            const duplicatePhones = await db.select().from(shops).where(sql`shop_phone ILIKE ${'%' + target + '%'}`);
-            // Exact match validation in backend since ILIKE could match substrings
-            const isDuplicate = duplicatePhones.some(s => s.shopPhone?.split('|').includes(target));
-            if (isDuplicate) {
-                res.status(400).json({ error: "Phone number is already in use by a shop" });
+            const conflictMsg = await checkPhoneConflict(target, userId);
+            if (conflictMsg) {
+                res.status(400).json({ error: conflictMsg });
                 return;
             }
         } else if (type === "email") {
@@ -561,6 +602,12 @@ export const addShopPhone = async (req: AuthRequest, res: Response): Promise<voi
         const { phone, otp } = req.body;
         if (!phone || !otp) { res.status(400).json({ error: "Missing phone or otp" }); return; }
 
+        const phoneRegex = /^\d{10}$/;
+        if (!phoneRegex.test(phone)) {
+            res.status(400).json({ error: "Số điện thoại phải có đúng 10 chữ số" });
+            return;
+        }
+
         const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
         if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
 
@@ -571,6 +618,12 @@ export const addShopPhone = async (req: AuthRequest, res: Response): Promise<voi
         }
         if (currentPhones.includes(phone)) {
             res.status(400).json({ error: "Phone number already exists in your shop." });
+            return;
+        }
+
+        const conflictMsg = await checkPhoneConflict(phone, userId);
+        if (conflictMsg) {
+            res.status(400).json({ error: conflictMsg });
             return;
         }
 
@@ -619,12 +672,348 @@ export const deleteShopPhone = async (req: AuthRequest, res: Response): Promise<
 
         await db.update(shops).set({ shopPhone: newPhoneString }).where(eq(shops.shopId, userId));
 
+        // SYNC: If the deleted phone was the primary userMobile, migrate to the new first shop phone
+        const [user] = await db.select().from(users).where(eq(users.userId, userId)).limit(1);
+        if (user && user.userMobile === phone) {
+            const nextPrimaryPhone = currentPhones[0]; 
+            if (nextPrimaryPhone) {
+                await db.update(users)
+                    .set({ userMobile: nextPrimaryPhone, userUpdatedAt: new Date() })
+                    .where(eq(users.userId, userId));
+            }
+        }
+
         // Send real Security Warning Email
         if (shop.shopEmail) {
             await verificationService.sendSecurityWarningEmail(shop.shopEmail, phone);
         }
 
         res.json({ message: "Phone number deleted successfully", shopPhone: newPhoneString });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// --- Collaborator Management (Invitations) ---
+
+/**
+ * Send an invitation to a user to become a collaborator for the shop.
+ */
+export const inviteCollaborator = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        const { userIdentifier } = req.body; // mobile or email
+
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        if (!userIdentifier) {
+            res.status(400).json({ error: "User identifier (mobile or email) is required" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        const inputId = parseId(userIdentifier);
+        const searchConditions = [
+            eq(users.userMobile, userIdentifier),
+            eq(users.userEmail, userIdentifier)
+        ];
+        if (inputId) searchConditions.push(eq(users.userId, inputId));
+
+        const [targetUser] = await db
+            .select()
+            .from(users)
+            .where(or(...searchConditions))
+            .limit(1);
+
+        if (!targetUser) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+
+        if (targetUser.userBusinessRoleId !== 3) {
+            res.status(400).json({ error: "User must be registered as a Collaborator by Admin first" });
+            return;
+        }
+
+        const [existing] = await db
+            .select()
+            .from(shopCollaborators)
+            .where(
+                and(
+                    eq(shopCollaborators.shopCollaboratorsShopId, shop.shopId),
+                    eq(shopCollaborators.collaboratorId, targetUser.userId)
+                )
+            )
+            .limit(1);
+
+        if (existing) {
+            res.status(400).json({ 
+                error: `User is already ${existing.shopCollaboratorsStatus === 'active' ? 'a collaborator' : 'invited'} for this shop` 
+            });
+            return;
+        }
+
+        await db.insert(shopCollaborators).values({
+            shopCollaboratorsShopId: shop.shopId,
+            collaboratorId: targetUser.userId,
+            shopCollaboratorsStatus: "pending",
+        });
+
+        res.status(201).json({ message: "Invitation sent successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+/**
+ * Remove a collaborator or cancel a pending invitation.
+ */
+export const removeCollaborator = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const collId = parseId(req.params.id as string);
+        if (!collId) {
+            res.status(400).json({ error: "Invalid collaborator ID" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        await db
+            .delete(shopCollaborators)
+            .where(
+                and(
+                    eq(shopCollaborators.shopCollaboratorsShopId, shop.shopId),
+                    eq(shopCollaborators.collaboratorId, collId)
+                )
+            );
+
+        res.json({ message: "Collaborator or invitation removed successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+/**
+ * Get the list of collaborators and pending invites for the shop.
+ */
+export const getShopCollaborators = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        const collaborators = await db
+            .select({
+                userId: users.userId,
+                displayName: users.userDisplayName,
+                mobile: users.userMobile,
+                avatarUrl: users.userAvatarUrl,
+                relationshipStatus: shopCollaborators.shopCollaboratorsStatus,
+                joinedAt: shopCollaborators.shopCollaboratorsCreatedAt,
+            })
+            .from(shopCollaborators)
+            .innerJoin(users, eq(shopCollaborators.collaboratorId, users.userId))
+            .where(eq(shopCollaborators.shopCollaboratorsShopId, shop.shopId))
+            .orderBy(desc(shopCollaborators.shopCollaboratorsCreatedAt));
+
+        res.json(collaborators);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+// --- Collaborator Post Approval ---
+
+export const getPendingOwnerPosts = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        const pendingPosts = await db
+            .select({
+                postId: posts.postId,
+                postTitle: posts.postTitle,
+                postSlug: posts.postSlug,
+                postStatus: posts.postStatus,
+                postCreatedAt: posts.postCreatedAt,
+                authorName: users.userDisplayName,
+                authorMobile: users.userMobile,
+            })
+            .from(posts)
+            .innerJoin(users, eq(posts.postAuthorId, users.userId))
+            .where(and(eq(posts.postShopId, shop.shopId), eq(posts.postStatus, "pending_owner")))
+            .orderBy(desc(posts.postCreatedAt));
+
+        res.json(pendingPosts);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const approveCollaboratorPost = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const postId = parseId(req.params.id as string);
+        if (!postId) {
+            res.status(400).json({ error: "Invalid post ID" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        // Verify post belongs to this shop and is pending_owner
+        const [post] = await db
+            .select()
+            .from(posts)
+            .where(and(eq(posts.postId, postId), eq(posts.postShopId, shop.shopId)))
+            .limit(1);
+
+        if (!post) {
+            res.status(404).json({ error: "Post not found for this shop" });
+            return;
+        }
+
+        if (post.postStatus !== "pending_owner") {
+            res.status(400).json({ error: "Only posts waiting for owner approval can be approved here" });
+            return;
+        }
+
+        await db
+            .update(posts)
+            .set({
+                postStatus: "approved",
+                postPublished: true,
+                postPublishedAt: new Date(),
+                postModeratedAt: new Date(),
+            })
+            .where(eq(posts.postId, postId));
+
+        // Notify collaborator
+        await notificationService.sendNotification({
+            recipientId: post.postAuthorId,
+            title: "Bài đăng đã được duyệt!",
+            message: `Bài đăng "${post.postTitle}" của bạn đã được chủ vườn [${shop.shopName}] phê duyệt và xuất bản.`,
+            type: "collaboration",
+            metaData: { postId: post.postId, shopId: shop.shopId }
+        }).catch(e => console.error("Failed to notify collaborator of approval:", e));
+
+        res.json({ message: "Post approved and published successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const rejectCollaboratorPost = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const postId = parseId(req.params.id as string);
+        if (!postId) {
+            res.status(400).json({ error: "Invalid post ID" });
+            return;
+        }
+
+        const { reason } = req.body;
+        if (!reason) {
+            res.status(400).json({ error: "Reason is required for rejection" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        const [post] = await db
+            .select()
+            .from(posts)
+            .where(and(eq(posts.postId, postId), eq(posts.postShopId, shop.shopId)))
+            .limit(1);
+
+        if (!post) {
+            res.status(404).json({ error: "Post not found for this shop" });
+            return;
+        }
+
+        if (post.postStatus !== "pending_owner") {
+            res.status(400).json({ error: "Only posts waiting for owner approval can be rejected here" });
+            return;
+        }
+
+        await db
+            .update(posts)
+            .set({
+                postStatus: "rejected",
+                postRejectedReason: reason,
+                postModeratedAt: new Date(),
+            })
+            .where(eq(posts.postId, postId));
+
+        // Notify collaborator
+        await notificationService.sendNotification({
+            recipientId: post.postAuthorId,
+            title: "Bài đăng bị từ chối",
+            message: `Tiếc quá! Bài đăng "${post.postTitle}" của bạn đã bị từ chối. Lý do: ${reason}`,
+            type: "collaboration",
+            metaData: { postId: post.postId, shopId: shop.shopId }
+        }).catch(e => console.error("Failed to notify collaborator of rejection:", e));
+
+        res.json({ message: "Post rejected successfully" });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });

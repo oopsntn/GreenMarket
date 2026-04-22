@@ -2,7 +2,7 @@ import { and, desc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
     eventLogs,
-    paymentTxn,
+    transactions,
     placementSlots,
     postPromotions,
     posts,
@@ -43,14 +43,14 @@ type RawPromotionRow = {
 };
 
 type LatestPaymentRecord = {
-    paymentTxnId: number;
-    paymentTxnPostId: number | null;
-    paymentTxnPackageId: number | null;
-    paymentTxnAmount: string | null;
-    paymentTxnProvider: string | null;
-    paymentTxnProviderTxnId: string | null;
-    paymentTxnStatus: string | null;
-    paymentTxnCreatedAt: Date | null;
+    transactionId: number;
+    transactionReferenceId: number | null;
+    transactionMeta: any;
+    transactionAmount: string | null;
+    transactionProvider: string | null;
+    transactionProviderTxnId: string | null;
+    transactionStatus: string | null;
+    transactionCreatedAt: Date | null;
 };
 
 type PromotionLifecycleStatus =
@@ -212,7 +212,7 @@ const getOwnerName = (item: RawPromotionRow) => {
 const getPaymentStatus = (
     latestPayment: LatestPaymentRecord | null,
 ): "Paid" | "Pending Verification" => {
-    return latestPayment?.paymentTxnStatus === "success"
+    return latestPayment?.transactionStatus === "success"
         ? "Paid"
         : "Pending Verification";
 };
@@ -620,29 +620,32 @@ const getLatestPaymentsByPostId = async (
     postIds: number[],
 ): Promise<Map<number, LatestPaymentRecord>> => {
     const uniqueIds = new Set(postIds);
-    const transactions = await db
+    const records = await db
         .select({
-            paymentTxnId: paymentTxn.paymentTxnId,
-            paymentTxnPostId: paymentTxn.paymentTxnPostId,
-            paymentTxnPackageId: paymentTxn.paymentTxnPackageId,
-            paymentTxnAmount: paymentTxn.paymentTxnAmount,
-            paymentTxnProvider: paymentTxn.paymentTxnProvider,
-            paymentTxnProviderTxnId: paymentTxn.paymentTxnProviderTxnId,
-            paymentTxnStatus: paymentTxn.paymentTxnStatus,
-            paymentTxnCreatedAt: paymentTxn.paymentTxnCreatedAt,
+            transactionId: transactions.transactionId,
+            transactionReferenceId: transactions.transactionReferenceId,
+            transactionMeta: transactions.transactionMeta,
+            transactionAmount: transactions.transactionAmount,
+            transactionProvider: transactions.transactionProvider,
+            transactionProviderTxnId: transactions.transactionProviderTxnId,
+            transactionStatus: transactions.transactionStatus,
+            transactionCreatedAt: transactions.transactionCreatedAt,
         })
-        .from(paymentTxn)
-        .orderBy(desc(paymentTxn.paymentTxnCreatedAt));
+        .from(transactions)
+        .where(eq(transactions.transactionReferenceType, 'package'))
+        .orderBy(desc(transactions.transactionCreatedAt));
 
     const latestByPostId = new Map<number, LatestPaymentRecord>();
 
-    transactions.forEach((item) => {
-        if (!item.paymentTxnPostId || !uniqueIds.has(item.paymentTxnPostId)) {
+    records.forEach((item) => {
+        const meta = item.transactionMeta as any;
+        const postId = meta?.postId;
+        if (!postId || !uniqueIds.has(postId)) {
             return;
         }
 
-        if (!latestByPostId.has(item.paymentTxnPostId)) {
-            latestByPostId.set(item.paymentTxnPostId, item);
+        if (!latestByPostId.has(postId)) {
+            latestByPostId.set(postId, item);
         }
     });
 
@@ -733,8 +736,8 @@ const logPromotionEvent = async (params: {
 }) => {
     await db.insert(eventLogs).values({
         eventLogUserId: params.userId,
-        eventLogPostId: params.postId,
-        eventLogSlotId: params.slotId,
+        eventLogTargetType: "post",
+        eventLogTargetId: params.postId,
         eventLogEventType: params.eventType,
         eventLogEventTime: new Date(),
         eventLogMeta: {
@@ -746,6 +749,7 @@ const logPromotionEvent = async (params: {
             moduleLabel: "Theo dõi quảng bá",
             targetType: "Chiến dịch quảng bá",
             targetName: params.targetName,
+            slotId: params.slotId, // Keep slotId in metadata for reference
         },
     });
 };
@@ -796,7 +800,7 @@ const mapRecordToPromotion = (
         startDate: formatDate(item.startAt),
         endDate: formatDate(item.endAt),
         status: promotionStatus,
-        budget: formatCurrencyLabel(item.latestPayment?.paymentTxnAmount ?? item.packagePrice),
+        budget: formatCurrencyLabel(item.latestPayment?.transactionAmount ?? item.packagePrice),
         note: buildPromotionNote(item, promotionStatus, paymentStatus),
         paymentStatus,
         handledBy: getHandledBy(lifecycleStatus),
@@ -950,9 +954,12 @@ const upsertPromotionPaymentSnapshot = async (
     );
     const [latestPayment] = await db
         .select()
-        .from(paymentTxn)
-        .where(eq(paymentTxn.paymentTxnPostId, item.postId))
-        .orderBy(desc(paymentTxn.paymentTxnCreatedAt))
+        .from(transactions)
+        .where(and(
+            eq(transactions.transactionReferenceType, 'package'),
+            eq(sql<number>`(${transactions.transactionMeta}->>'postId')::int`, item.postId)
+        ))
+        .orderBy(desc(transactions.transactionCreatedAt))
         .limit(1);
 
     const nextPaymentStatus = paymentStatus === "Paid" ? "success" : "pending";
@@ -961,28 +968,37 @@ const upsertPromotionPaymentSnapshot = async (
 
     if (latestPayment) {
         await db
-            .update(paymentTxn)
+            .update(transactions)
             .set({
-                paymentTxnPackageId: packageRecord.promotionPackageId,
-                paymentTxnPriceId: nextPriceId,
-                paymentTxnAmount: nextAmount,
-                paymentTxnStatus: nextPaymentStatus,
-                paymentTxnProvider: latestPayment.paymentTxnProvider || "ADMIN_ADJUSTMENT",
+                transactionReferenceId: packageRecord.promotionPackageId,
+                transactionAmount: nextAmount,
+                transactionStatus: nextPaymentStatus,
+                transactionProvider: latestPayment.transactionProvider || "ADMIN_ADJUSTMENT",
+                transactionMeta: { 
+                    ...(latestPayment.transactionMeta as any),
+                    priceId: nextPriceId,
+                    postId: item.postId
+                },
+                transactionUpdatedAt: new Date()
             })
-            .where(eq(paymentTxn.paymentTxnId, latestPayment.paymentTxnId));
+            .where(eq(transactions.transactionId, latestPayment.transactionId));
 
         return;
     }
 
-    await db.insert(paymentTxn).values({
-        paymentTxnUserId: item.buyerId,
-        paymentTxnPostId: item.postId,
-        paymentTxnPackageId: packageRecord.promotionPackageId,
-        paymentTxnPriceId: nextPriceId,
-        paymentTxnAmount: nextAmount,
-        paymentTxnProvider: "ADMIN_ADJUSTMENT",
-        paymentTxnProviderTxnId: `ADMIN-${item.postId}-${Date.now()}`,
-        paymentTxnStatus: nextPaymentStatus,
+    await db.insert(transactions).values({
+        transactionUserId: item.buyerId,
+        transactionType: "payment",
+        transactionReferenceType: "package",
+        transactionReferenceId: packageRecord.promotionPackageId,
+        transactionAmount: nextAmount,
+        transactionProvider: "ADMIN_ADJUSTMENT",
+        transactionProviderTxnId: `ADMIN-${item.postId}-${Date.now()}`,
+        transactionStatus: nextPaymentStatus,
+        transactionMeta: { 
+            postId: item.postId,
+            priceId: nextPriceId 
+        },
     });
 };
 

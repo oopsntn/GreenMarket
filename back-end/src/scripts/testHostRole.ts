@@ -85,13 +85,12 @@ async function testHostRole() {
     const createContentRes = await hostClient.post("/host/contents", {
       title: "Test Promotional Content",
       description: "This is a test content from automation script",
-      targetType: "shop",
-      targetId: 1,
+      category: "News",
       mediaUrls: ["https://example.com/image.jpg"]
     });
     assertStatus(createContentRes.status, 201, "Create content");
     const contentId = createContentRes.data.hostContentId;
-    console.log(`   Content created with ID: ${contentId}, Tracking URL: ${createContentRes.data.hostContentTrackingUrl}`);
+    console.log(`   Content created with ID: ${contentId}`);
 
     const listContentRes = await hostClient.get("/host/contents");
     assertStatus(listContentRes.status, 200, "List contents");
@@ -101,23 +100,11 @@ async function testHostRole() {
     });
     assertStatus(updateContentRes.status, 200, "Update content");
 
-    // 4. Tracking Logic
-    console.log("4. Tracking Logic Test...");
-    // Public endpoint, use raw axios to check redirect
-    const trackingRes = await axios.get(`${API_BASE}/host/tracking/${contentId}`, {
-      maxRedirects: 0,
-      validateStatus: (status) => status === 302,
-    });
-    assertStatus(trackingRes.status, 302, "Tracking redirect check");
-    console.log(`   Redirected to: ${trackingRes.headers.location}`);
-
-    // Verify click count increment
-    const afterTrackingRes = await hostClient.get("/host/contents");
-    const myContent = afterTrackingRes.data.find((c: any) => c.hostContentId === contentId);
-    if (myContent.hostContentClickCount < 1) {
-      throw new Error("Click count did not increment after tracking visit");
-    }
-    console.log("   Click count verified.");
+    // 4. View count check
+    console.log("4. View Count Test...");
+    const listRes = await hostClient.get("/host/contents");
+    const myContent = listRes.data.find((c: any) => c.hostContentId === contentId);
+    console.log(`   Content view count: ${myContent.hostContentViewCount}`);
 
     // 5. Cleanup
     console.log("5. Cleanup...");

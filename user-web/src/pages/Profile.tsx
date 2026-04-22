@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, Phone, Camera, Loader2, CheckCircle2, AlertCircle, Save, Store, ExternalLink, Mail, UploadCloud, X, Shield, Plus, Trash2, Facebook, Instagram, Youtube, Pencil, Settings, Wallet, LayoutDashboard, Bookmark } from 'lucide-react';
-import { updateProfile, updateShop, getProfile, uploadImages, requestShopVerificationOTP, verifyShopEmailOTP, addShopPhoneOTP, deleteShopPhone } from '../services/api';
+import { updateProfile, updateShop, getProfile, uploadImages, requestShopVerificationOTP, verifyShopEmailOTP, addShopPhoneOTP, deleteShopPhone, requestUserEmailOTP, verifyUserEmailOTP, removeUserEmailOTP } from '../services/api';
 import clsx from 'clsx';
 import AddressPicker from '../components/AddressPicker';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
@@ -16,6 +16,7 @@ const Profile: React.FC = () => {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
 
@@ -33,9 +34,11 @@ const Profile: React.FC = () => {
   const [shopInstagram, setShopInstagram] = useState('');
   const [shopYoutube, setShopYoutube] = useState('');
 
-  const [otpModalType, setOtpModalType] = useState<'email' | 'phone' | null>(null);
+  const [otpModalType, setOtpModalType] = useState<'email' | 'phone' | 'user_email' | null>(null);
+  const [otpActionType, setOtpActionType] = useState<'add' | 'change' | 'remove' | null>(null);
   const [otpValue, setOtpValue] = useState('');
   const [newPhoneValue, setNewPhoneValue] = useState('');
+  const [newEmailValue, setNewEmailValue] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -46,6 +49,16 @@ const Profile: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const shopGalleryInputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-hide message handler
+  useEffect(() => {
+    if (message) {
+      const timer = setTimeout(() => {
+        setMessage(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -55,6 +68,7 @@ const Profile: React.FC = () => {
         setAvatarUrl(data.userAvatarUrl || '');
         setMobile(data.userMobile || '');
         setEmail(data.userEmail || '');
+        setEmailVerified(data.userEmailVerified || false);
         setLocation(data.userLocation || '');
         setBio(data.userBio || '');
 
@@ -63,6 +77,13 @@ const Profile: React.FC = () => {
           setShopPhones(shop.shopPhone ? shop.shopPhone.split('|') : []);
           setShopEmail(shop.shopEmail || '');
           setShopEmailVerified(shop.shopEmailVerified || false);
+
+          // Sync shopEmail to UI display if personal email is missing
+          if (!data.userEmail && shop.shopEmail) {
+            setEmail(shop.shopEmail);
+            setEmailVerified(shop.shopEmailVerified || false);
+          }
+
           setShopLocation(shop.shopLocation || '');
           setShopDescription(shop.shopDescription || '');
           setShopLat(shop.shopLat);
@@ -155,7 +176,6 @@ const Profile: React.FC = () => {
 
         // Also update regular profile parts that might be shared (like avatar/email)
         await updateProfile({
-          userEmail: email,
           userDisplayName: shopName // Keep display name in sync with shop name for shop owners
         });
 
@@ -165,7 +185,6 @@ const Profile: React.FC = () => {
         const updateData = {
           userDisplayName: displayName,
           userAvatarUrl: avatarUrl,
-          userEmail: email,
           userLocation: location,
           userBio: bio
         };
@@ -185,6 +204,12 @@ const Profile: React.FC = () => {
 
   const handleRequestOTP = async (type: 'email' | 'phone', target: string) => {
     if (!target) return;
+
+    if (type === 'phone' && target.length !== 10) {
+      setMessage({ type: 'error', text: 'Số điện thoại phải có đúng 10 chữ số.' });
+      return;
+    }
+
     setOtpLoading(true);
     try {
       await requestShopVerificationOTP({ target, type });
@@ -210,13 +235,70 @@ const Profile: React.FC = () => {
         const res = await addShopPhoneOTP({ phone: newPhoneValue, otp: otpValue });
         setShopPhones(res.data.shopPhone.split('|'));
         setMessage({ type: 'success', text: 'Thêm số điện thoại thành công' });
+      } else if (otpModalType === 'user_email') {
+        if (otpActionType === 'add' || otpActionType === 'change') {
+          // If action is 'add' and email already exists, we are verifying the current/old one.
+          // If action is 'change' or 'add' (without existing email), we are verifying the new one.
+          const targetEmail = (otpActionType === 'add' && email) ? email : newEmailValue;
+
+          const res = await verifyUserEmailOTP({ email: targetEmail, otp: otpValue });
+          setMessage({ type: 'success', text: 'Xác thực Email thành công' });
+          setEmail(res.data.userEmail);
+          setEmailVerified(true);
+          if (shop) {
+            setShopEmail(res.data.userEmail);
+            setShopEmailVerified(true);
+          }
+        } else if (otpActionType === 'remove') {
+          await removeUserEmailOTP({ otp: otpValue });
+          setMessage({ type: 'success', text: 'Gỡ Email thành công' });
+          setEmail('');
+          setEmailVerified(false);
+          if (shop) {
+            setShopEmail('');
+            setShopEmailVerified(false);
+          }
+        }
       }
       setOtpModalType(null);
+      setOtpActionType(null);
       setOtpValue('');
       setNewPhoneValue('');
-      await refreshShop();
+      setNewEmailValue('');
     } catch (error: any) {
       setMessage({ type: 'error', text: error.response?.data?.error || 'Xác thực thất bại' });
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleUserEmailOTPRequest = async (action: 'add' | 'change' | 'remove') => {
+    // Logic: 
+    // - remove: use current email
+    // - add: if current email exists (unverified), use it (VERIFY existing). Else use newEmailValue (ADD new).
+    // - change: always use newEmailValue from modal (REPLACE existing).
+    const isVerifyingExisting = action === 'add' && email;
+    const targetEmail = action === 'remove' ? email :
+      isVerifyingExisting ? email : newEmailValue;
+
+    if (!targetEmail) return;
+
+    if (action === 'change' && targetEmail === email) {
+      setMessage({ type: 'error', text: 'Email mới không được trùng với Email hiện tại' });
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      if (otpModalType === 'user_email' || action === 'add' || action === 'remove') {
+        // If it's a personal email action
+        await requestUserEmailOTP({ email: targetEmail });
+        setMessage({ type: 'success', text: `Đã gửi mã xác minh đến ${targetEmail}` });
+        setOtpModalType('user_email');
+        setOtpActionType(action);
+      }
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.response?.data?.error || 'Không thể gửi OTP' });
     } finally {
       setOtpLoading(false);
     }
@@ -288,8 +370,10 @@ const Profile: React.FC = () => {
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email</span>
               <p className="text-base font-black text-slate-900 flex items-center gap-2">
-                {isGardenOwner ? shopEmail : email}
-                {isGardenOwner && shopEmailVerified && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                {isGardenOwner ? shopEmail : (email || 'Chưa cập nhật')}
+                {((isGardenOwner && shopEmailVerified) || (!isGardenOwner && emailVerified)) && (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                )}
               </p>
             </div>
             <div className="space-y-1">
@@ -405,16 +489,18 @@ const Profile: React.FC = () => {
               <p className="text-xs text-slate-500">Xem lại các bài báo và kiến thức đã lưu.</p>
             </Link>
 
-            <Link
-              to="/personal-dashboard"
-              className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <LayoutDashboard className="w-4 h-4 text-emerald-600" />
-                <p className="text-xs font-black uppercase tracking-wider text-slate-900">Dashboard cá nhân</p>
-              </div>
-              <p className="text-xs text-slate-500">Xem quá trình thanh toán và gói ưu tiên.</p>
-            </Link>
+            {!isGardenOwner && (
+              <Link
+                to="/personal-dashboard"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-emerald-50 hover:border-emerald-200 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <LayoutDashboard className="w-4 h-4 text-emerald-600" />
+                  <p className="text-xs font-black uppercase tracking-wider text-slate-900">Dashboard cá nhân</p>
+                </div>
+                <p className="text-xs text-slate-500">Xem quá trình thanh toán và gói ưu tiên.</p>
+              </Link>
+            )}
 
             <Link
               to="/my-posts"
@@ -480,20 +566,7 @@ const Profile: React.FC = () => {
 
         {/* Modal Body */}
         <div className="p-8 sm:p-12">
-          {message && (
-            <div className={clsx(
-              "mb-8 p-6 rounded-[2rem] flex items-center gap-4 animate-in fade-in slide-in-from-top-2",
-              message.type === 'success' ? "bg-emerald-50 text-emerald-600 border border-emerald-100/50 shadow-sm" : "bg-red-50 text-red-600 border border-red-100/50 shadow-sm"
-            )}>
-              <div className={clsx(
-                "p-2 rounded-xl",
-                message.type === 'success' ? "bg-emerald-500/10" : "bg-red-500/10"
-              )}>
-                {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
-              </div>
-              <span className="text-sm font-black uppercase tracking-tight leading-none">{message.text}</span>
-            </div>
-          )}
+
           <form onSubmit={handleSave} className="space-y-12">
             {/* Basic Section */}
             <div className="space-y-8">
@@ -633,28 +706,44 @@ const Profile: React.FC = () => {
                   </div>
                 )}
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                  <div className="relative flex-1">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="email"
-                      className="w-full bg-slate-50 border border-slate-200 pl-12 pr-4 py-4 rounded-2xl focus:border-emerald-500 outline-none transition-all text-sm font-bold"
-                      placeholder="Địa chỉ Email..."
-                      value={shop ? shopEmail : email}
-                      onChange={(e) => shop ? setShopEmail(e.target.value) : setEmail(e.target.value)}
-                    />
-                  </div>
-                  {shop && (
-                    shopEmailVerified ? (
-                      <div className="px-6 py-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest">
-                        <CheckCircle2 className="w-4 h-4" /> Email đã thông qua
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Địa chỉ Email xác thực</label>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                    <div className="relative flex-1">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+                      <input
+                        type="email"
+                        className="w-full bg-slate-50 border border-slate-100 pl-12 pr-4 py-4 rounded-2xl text-slate-500 opacity-80 text-sm font-bold cursor-not-allowed"
+                        placeholder="Chưa có địa chỉ Email..."
+                        value={email}
+                        readOnly
+                        disabled
+                      />
+                    </div>
+                    {email ? (
+                      <div className="flex items-center gap-2">
+                        {emailVerified ? (
+                          <div className="px-4 py-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest shrink-0">
+                            <CheckCircle2 className="w-4 h-4" /> Đã duyệt
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => handleUserEmailOTPRequest('add')} disabled={otpLoading} className="px-4 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200 shrink-0">
+                            {otpLoading && otpActionType === 'add' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác thực'}
+                          </button>
+                        )}
+                        <button type="button" onClick={() => { setOtpActionType('change'); setOtpModalType('user_email'); setNewEmailValue(''); }} className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 hover:bg-amber-100 transition-all active:scale-95 shadow-sm">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button type="button" onClick={() => handleUserEmailOTPRequest('remove')} disabled={otpLoading} className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-500 hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm">
+                          {otpLoading && otpActionType === 'remove' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </button>
                       </div>
                     ) : (
-                      <button type="button" onClick={() => handleRequestOTP('email', shopEmail)} disabled={otpLoading || !shopEmail} className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200">
-                        {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác thực ngay'}
+                      <button type="button" onClick={() => { setOtpActionType('add'); setOtpModalType('user_email'); setNewEmailValue(''); }} className="flex items-center justify-center gap-2 px-6 py-4 bg-white border border-slate-200 text-emerald-600 font-black uppercase text-[10px] tracking-widest hover:bg-emerald-50 hover:border-emerald-200 rounded-2xl transition-all active:scale-95 shadow-sm shrink-0">
+                        <Plus className="w-4 h-4" /> Thêm Email mới
                       </button>
-                    )
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -826,7 +915,7 @@ const Profile: React.FC = () => {
       {otpModalType && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-white border border-slate-200 p-10 rounded-[3rem] w-full max-w-md relative shadow-2xl animate-in zoom-in-95 duration-300">
-            <button onClick={() => setOtpModalType(null)} className="absolute top-8 right-8 text-slate-300 hover:text-slate-900 transition-colors bg-slate-50 rounded-full p-2 border border-slate-100">
+            <button onClick={() => { setOtpModalType(null); setOtpActionType(null); }} className="absolute top-8 right-8 text-slate-300 hover:text-slate-900 transition-colors bg-slate-50 rounded-full p-2 border border-slate-100">
               <X className="w-5 h-5" />
             </button>
 
@@ -835,25 +924,64 @@ const Profile: React.FC = () => {
                 <Shield className="w-8 h-8 text-emerald-600" />
               </div>
               <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">
-                {otpModalType === 'email' ? 'Xác thực Email' : 'Thêm số điện thoại'}
+                {otpModalType === 'email' ? 'Xác thực Email Shop' :
+                  otpModalType === 'phone' ? 'Thêm số điện thoại' :
+                    otpActionType === 'remove' ? 'Gỡ Email Cá Nhân' :
+                      otpActionType === 'change' ? 'Thay Đổi Email' : 'Xác thực Email Cá Nhân'}
               </h3>
               <p className="text-sm text-slate-500 mt-2 font-medium">Nhập mã xác thực 6 chữ số đã được gửi đến thiết bị của bạn.</p>
             </div>
 
-            {otpModalType === 'phone' && (
+            {(otpModalType === 'phone' || (otpModalType === 'user_email' && (otpActionType === 'change' || (otpActionType === 'add' && !email)))) && (
               <div className="mb-8 p-6 rounded-3xl bg-slate-50 border border-slate-100 space-y-4">
-                <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest block">Số điện thoại mới</label>
+                <label className="text-[10px] uppercase font-black text-slate-400 tracking-widest block">
+                  {otpModalType === 'phone' ? 'Số điện thoại mới' : 'Địa chỉ Email mới'}
+                </label>
                 <div className="relative group">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
-                  <input type="text" className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-2xl text-sm font-bold focus:border-emerald-500 outline-none transition-all text-slate-900" placeholder="09xxxx..." value={newPhoneValue} onChange={e => setNewPhoneValue(e.target.value)} />
+                  {otpModalType === 'phone' ? (
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                  ) : (
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                  )}
+                  <input
+                    type="text"
+                    className="w-full bg-white border border-slate-200 pl-12 pr-4 py-4 rounded-2xl text-sm font-bold focus:border-emerald-500 outline-none transition-all text-slate-900"
+                    placeholder={otpModalType === 'phone' ? "09xxxx..." : "email@example.com"}
+                    value={otpModalType === 'phone' ? newPhoneValue : newEmailValue}
+                    onChange={e => {
+                      if (otpModalType === 'phone') {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (val.length <= 10) setNewPhoneValue(val);
+                      } else {
+                        setNewEmailValue(e.target.value);
+                      }
+                    }}
+                  />
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRequestOTP('phone', newPhoneValue)}
-                  disabled={!newPhoneValue || otpLoading}
+                  onClick={() => otpModalType === 'phone' ? handleRequestOTP('phone', newPhoneValue) : handleUserEmailOTPRequest(otpActionType as 'add' | 'change')}
+                  disabled={(otpModalType === 'phone' ? !newPhoneValue : !newEmailValue) || otpLoading}
                   className="w-full py-4 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 text-slate-700 transition-all flex justify-center items-center gap-3 active:scale-95 shadow-sm"
                 >
                   {otpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Gửi mã OTP'}
+                </button>
+              </div>
+            )}
+
+            {/* If verifying existing email, just show the target and the code input */}
+            {otpModalType === 'user_email' && otpActionType === 'add' && email && (
+              <div className="mb-8 p-6 rounded-3xl bg-emerald-50/30 border border-emerald-100/50">
+                <p className="text-xs text-emerald-800 font-medium">
+                  Mã xác minh đang được gửi tới: <span className="font-bold underline">{email}</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleUserEmailOTPRequest('add')}
+                  className="mt-3 text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-700 underline tracking-widest"
+                  disabled={otpLoading}
+                >
+                  {otpLoading ? 'Đang gửi...' : 'Gửi lại mã'}
                 </button>
               </div>
             )}
@@ -868,6 +996,34 @@ const Profile: React.FC = () => {
                 {otpLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Xác nhận mã'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+ 
+      {/* Global Notifications (Always on top) */}
+      {message && (
+        <div className="fixed top-10 right-10 z-[100] animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className={clsx(
+            "p-6 rounded-[2rem] flex items-center gap-4 shadow-2xl backdrop-blur-md",
+            message.type === 'success'
+              ? "bg-emerald-500 text-white border border-emerald-400"
+              : "bg-rose-500 text-white border border-rose-400"
+          )}>
+            <div className="p-2 rounded-xl bg-white/20">
+              {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-70 leading-none mb-1">
+                {message.type === 'success' ? 'Thành công' : 'Thông báo lỗi'}
+              </span>
+              <span className="text-sm font-bold tracking-tight leading-none">{message.text}</span>
+            </div>
+            <button
+              onClick={() => setMessage(null)}
+              className="ml-2 p-1 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}

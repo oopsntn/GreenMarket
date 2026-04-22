@@ -10,7 +10,7 @@ import {
   operationTasks,
   taskReplies,
   escalations,
-  systemNotifications,
+  notifications,
 } from "../../models/schema/index";
 
 const BASE_URL = "http://localhost:5000/api";
@@ -76,12 +76,13 @@ async function createRealTaskFor(staffId: number, customerId: number) {
   const [task] = await db
     .insert(operationTasks)
     .values({
-      assigneeId: staffId,
-      customerId,
-      taskTitle: `Operations Test Task ${Date.now()}`,
-      taskType: "support",
-      taskStatus: "open",
-      taskPriority: "medium",
+      ticketType: 'SUPPORT',
+      ticketAssigneeId: staffId,
+      ticketCreatorId: customerId,
+      ticketTitle: `Operations Test Task ${Date.now()}`,
+      ticketContent: 'Support request context',
+      ticketStatus: "open",
+      ticketPriority: "medium",
     })
     .returning();
   return task;
@@ -146,7 +147,7 @@ async function runOperationsTests() {
     createdUserIds.push(reporter.userId, operationUser.userId, plainUser.userId);
 
     const task = await createRealTaskFor(operationUser.userId, reporter.userId);
-    selectedTaskId = task.taskId;
+    selectedTaskId = task.ticketId;
 
     const operationToken = makeUserToken(
       operationUser.userId,
@@ -263,9 +264,9 @@ async function runOperationsTests() {
       if (createdUserIds.length > 0) {
         // Cleanup replies, escalations, tasks first due to FKs
         await db.delete(taskReplies).where(inArray(taskReplies.senderId, createdUserIds));
-        await db.delete(escalations).where(inArray(escalations.createdBy, createdUserIds));
-        await db.delete(systemNotifications).where(inArray(systemNotifications.recipientId, createdUserIds));
-        await db.delete(operationTasks).where(inArray(operationTasks.assigneeId, createdUserIds));
+        await db.delete(escalations).where(and(eq(escalations.ticketType, 'ESCALATION'), inArray(escalations.ticketCreatorId, createdUserIds)));
+        await db.delete(notifications).where(inArray(notifications.recipientId, createdUserIds));
+        await db.delete(operationTasks).where(and(eq(operationTasks.ticketType, 'SUPPORT'), inArray(operationTasks.ticketAssigneeId, createdUserIds)));
 
         await db
           .delete(eventLogs)
@@ -275,7 +276,7 @@ async function runOperationsTests() {
       if (createdReportIds.length > 0) {
         await db
           .delete(reports)
-          .where(inArray(reports.reportId, createdReportIds));
+          .where(and(eq(reports.ticketType, 'REPORT'), inArray(reports.ticketId, createdReportIds)));
       }
 
       if (createdUserIds.length > 0) {

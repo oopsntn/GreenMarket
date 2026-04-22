@@ -13,16 +13,10 @@ import {
   Bookmark,
   Loader2,
   Eye,
-  MousePointerClick,
   Share2,
   User,
-  ShoppingBag,
-  Store,
-  ArrowRight,
 } from "lucide-react";
 import { resolveImageUrl } from "../utils/resolveImageUrl";
-
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const NewsDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -125,7 +119,6 @@ const NewsDetail: React.FC = () => {
   }
 
   const coverImage = content.hostContentMediaUrls?.[0] ? resolveImageUrl(content.hostContentMediaUrls[0]) : null;
-  const trackingUrl = `${API_BASE}/host/tracking/${content.hostContentId}`;
 
   return (
     <div className="bg-slate-50 min-h-screen pb-20">
@@ -140,6 +133,13 @@ const NewsDetail: React.FC = () => {
             Tin tức & Khuyến mãi
           </button>
 
+          <div className="flex items-center gap-2 mb-3">
+            {content.hostContentCategory && (
+              <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-wider border border-emerald-100">
+                {content.hostContentCategory}
+              </span>
+            )}
+          </div>
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 leading-tight mb-6">
             {content.hostContentTitle}
           </h1>
@@ -217,8 +217,29 @@ const NewsDetail: React.FC = () => {
                 {content.hostContentDescription}
               </p>
 
-              <div className="text-slate-800 leading-8 whitespace-pre-wrap font-medium">
-                {content.hostContentBody || "Nội dung bài viết đang được cập nhật..."}
+              <div className="text-slate-800 leading-8 font-medium">
+                {content.hostContentBody ? (
+                  content.hostContentBody.split(/(!\[.*?\]\(.*?\))/g).map((part, index) => {
+                    const match = part.match(/!\[(.*?)\]\((.*?)\)/);
+                    if (match) {
+                      const alt = match[1];
+                      const url = match[2];
+                      return (
+                        <div key={index} className="my-8 rounded-3xl overflow-hidden border border-slate-200 shadow-md">
+                          <img src={resolveImageUrl(url)} alt={alt} className="w-full h-auto object-cover" />
+                          {alt && <p className="text-center text-xs text-slate-500 mt-3 italic">{alt}</p>}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={index} className="whitespace-pre-wrap mb-4">
+                        {part}
+                      </div>
+                    );
+                  })
+                ) : (
+                  "Nội dung bài viết đang được cập nhật..."
+                )}
               </div>
             </div>
 
@@ -232,63 +253,21 @@ const NewsDetail: React.FC = () => {
                 ))}
               </div>
             )}
-
-            {user?.id === content.authorId && (
-              <div className="mt-12 pt-8 border-t border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-400 text-sm">
-                  <MousePointerClick className="w-4 h-4" />
-                  <span>{content.hostContentClickCount || 0} lượt tương tác sản phẩm</span>
-                </div>
-              </div>
-            )}
           </article>
 
-          {/* Sidebar / Target Recommendation */}
+          {/* Sidebar */}
           <aside className="lg:col-span-4 space-y-6">
-            {content.target ? (
-              <div className="sticky top-24">
-                <div className="bg-emerald-900 rounded-[2rem] p-6 text-white shadow-xl shadow-emerald-900/20 relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-150 transition-transform duration-700" />
-
-                  <div className="relative z-10">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-wider mb-4">
-                      {content.hostContentTargetType === "post" ? <ShoppingBag className="w-3 h-3" /> : <Store className="w-3 h-3" />}
-                      Gợi ý từ bài viết
-                    </span>
-
-                    <h3 className="text-xl font-black uppercase leading-tight tracking-tight mb-6">
-                      {content.hostContentTargetType === "post" ? content.target.postTitle : content.target.shopName}
-                    </h3>
-
-                    {content.hostContentTargetType === "shop" && content.target.shopLogoUrl && (
-                      <div className="w-20 h-20 rounded-2xl bg-white p-1 mb-6">
-                        <img src={resolveImageUrl(content.target.shopLogoUrl)} alt="Shop" className="w-full h-full object-contain rounded-xl" />
-                      </div>
-                    )}
-
-                    <a
-                      href={trackingUrl}
-                      className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-white text-emerald-900 font-black uppercase text-sm tracking-wide hover:bg-emerald-50 transition-colors group/btn"
-                    >
-                      {content.hostContentTargetType === "post" ? "Xem sản phẩm" : "Ghé thăm shop"}
-                      <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                    </a>
-                  </div>
-                </div>
-
-                <div className="mt-6 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-                  <h4 className="text-slate-900 font-black uppercase tracking-tight text-xs mb-4">Về GreenMarket</h4>
-                  <p className="text-slate-500 text-xs leading-5">
-                    GreenMarket là sàn thương mại điện tử chuyên về cây cảnh, giúp kết nối người yêu thiên nhiên với những nhà vườn uy tín nhất.
-                  </p>
-                  <Link to="/home" className="text-emerald-700 text-xs font-bold mt-4 inline-block hover:underline">
-                    Trang chủ hệ thống
-                  </Link>
-                </div>
+            <div className="sticky top-24">
+              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                <h4 className="text-slate-900 font-black uppercase tracking-tight text-xs mb-4">Về GreenMarket</h4>
+                <p className="text-slate-500 text-xs leading-5">
+                  GreenMarket là sàn thương mại điện tử chuyên về cây cảnh, giúp kết nối người yêu thiên nhiên với những nhà vườn uy tín nhất.
+                </p>
+                <Link to="/home" className="text-emerald-700 text-xs font-bold mt-4 inline-block hover:underline">
+                  Trang chủ hệ thống
+                </Link>
               </div>
-            ) : (
-              <></>
-            )}
+            </div>
           </aside>
         </div>
       </div>
