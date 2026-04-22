@@ -6,6 +6,7 @@ import {
   integer,
   text,
   jsonb,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 import { businessRoles } from "./business-roles.ts";
@@ -15,7 +16,8 @@ export const users = pgTable("users", {
   userMobile: varchar("user_mobile", { length: 15 }).unique().notNull(),
   userDisplayName: varchar("user_display_name", { length: 80 }),
   userAvatarUrl: text("user_avatar_url"),
-  userEmail: varchar("user_email", { length: 255 }),
+  userEmail: varchar("user_email", { length: 255 }).unique(),
+  userEmailVerified: boolean("user_email_verified").default(false),
   userLocation: varchar("user_location", { length: 255 }),
   userBio: text("user_bio"),
   userAvailabilityStatus: varchar("user_availability_status", { length: 20 })

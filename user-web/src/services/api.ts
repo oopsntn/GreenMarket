@@ -240,10 +240,13 @@ export const getProfile = () => api.get('/profile');
 export const updateProfile = (data: {
   userDisplayName?: string;
   userAvatarUrl?: string;
-  userEmail?: string;
   userLocation?: string;
   userBio?: string;
 }) => api.patch('/profile', data);
+
+export const requestUserEmailOTP = (data: { email: string }) => api.post('/profile/email/request-otp', data);
+export const verifyUserEmailOTP = (data: { email: string; otp: string }) => api.post('/profile/email/verify', data);
+export const removeUserEmailOTP = (data: { otp: string }) => api.post('/profile/email/remove', data);
 
 // Create Post
 export const createPost = (data: any) => api.post("/posts", data);
