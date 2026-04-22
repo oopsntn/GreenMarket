@@ -121,8 +121,10 @@ export const postService = {
         return response.data
     },
 
-    uploadMedia: async (mediaUris: string[] = []): Promise<UploadResponse> => {
-        try {
+    uploadMedia: async (mediaUris: string[] = [], options: UploadOptions = {}): Promise<UploadResponse> => {
+        const retries = Number.isFinite(options.retries) ? Math.max(0, Number(options.retries)) : 2
+
+        const attemptUpload = async () => {
             const formData = new FormData()
 
             for (const uri of mediaUris) {
@@ -153,20 +155,52 @@ export const postService = {
                 },
                 body: formData,
             })
-            console.log('Upload status:', response.status)
-            const data = await response.json()
-            if (!data?.urls) {
+            const status = response.status
+            let data: any = null
+            try {
+                data = await response.json()
+            } catch {
+                data = null
+            }
+
+            if (!response.ok) {
+                const message =
+                    (data && (data.error || data.message)) ||
+                    `Upload failed with status ${status}`
+                const err: any = new Error(message)
+                err.status = status
+                err.data = data
+                throw err
+            }
+
+            if (!data?.urls || !Array.isArray(data.urls)) {
                 throw new Error('Invalid upload response')
             }
-            return data
-        } catch (error: any) {
-            console.error('uploadMedia failed:', {
-                message: error?.message,
-                status: error?.response?.status,
-                data: error?.response?.data,
-            })
-            throw error
+
+            return data as UploadResponse
         }
+
+        let lastError: any = null
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                return await attemptUpload()
+            } catch (error: any) {
+                lastError = error
+                const waitMs = Math.min(4000, 800 * Math.pow(2, attempt)) // 0.8s, 1.6s, 3.2s...
+                console.error('uploadMedia failed (attempt):', {
+                    attempt: attempt + 1,
+                    retries: retries + 1,
+                    message: error?.message,
+                    status: error?.status,
+                    data: error?.data,
+                })
+                if (attempt < retries) {
+                    await new Promise((resolve) => setTimeout(resolve, waitMs))
+                }
+            }
+        }
+
+        throw lastError || new Error('Upload failed')
     },
 
     getCategories: async () => {

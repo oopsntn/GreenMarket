@@ -32,11 +32,9 @@ const ReasonModal: React.FC<ReasonModalProps> = ({
   const [reason, setReason] = useState('');
 
   const handleConfirm = () => {
-    if (reason.trim()) {
-      onSubmit(reason);
-      setReason('');
-      onClose();
-    }
+    onSubmit(reason.trim());
+    setReason('');
+    onClose();
   };
 
   return (
@@ -74,7 +72,6 @@ const ReasonModal: React.FC<ReasonModalProps> = ({
             <TouchableOpacity
               style={[styles.button, styles.confirmButton, { backgroundColor: confirmColor }]}
               onPress={handleConfirm}
-              disabled={!reason.trim()}
             >
               <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
             </TouchableOpacity>

@@ -25,6 +25,7 @@
     "expo-status-bar": "~55.0.5",
     "expo-web-browser": "^55.0.13",
     "lucide-react-native": "^1.7.0",
+    "mobile": "link:",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.4",
