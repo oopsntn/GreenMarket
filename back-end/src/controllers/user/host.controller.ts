@@ -27,6 +27,8 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const MIN_PAYOUT_AMOUNT = 500_000;
 
+const PUBLIC_HOST_CONTENT_STATUSES = ["published"] as const;
+
 const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
   const parsedPage = Number(queryPage);
   const parsedLimit = Number(queryLimit);
