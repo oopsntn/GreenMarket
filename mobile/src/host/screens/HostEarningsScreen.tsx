@@ -232,7 +232,7 @@ const HostEarningsScreen = () => {
 
       <FlatList
         data={filteredEarnings}
-        keyExtractor={(item) => item.hostEarningId.toString()}
+        keyExtractor={(item, index) => String(item.hostEarningId ?? `${index}-${item.hostEarningCreatedAt ?? ''}`)}
         renderItem={renderEarning}
         contentContainerStyle={styles.listContent}
         refreshControl={
