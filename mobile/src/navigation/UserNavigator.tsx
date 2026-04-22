@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Home, Plus, Settings } from 'lucide-react-native';
+import { Home, Plus, Settings, Store, Newspaper } from 'lucide-react-native';
 
 // Screens
 import HomeScreen from '../components/Home/screen/HomeScreen';
@@ -13,6 +13,8 @@ import ShoDetailScreen from '../components/shop/screen/ShopDetailScreen';
 import RegisterShopScreen from '../components/shop/screen/RegisterShop';
 import EditShopScreen from '../components/shop/screen/EditShopScreen';
 import BrowseShopsScreen from '../components/shop/screen/BrowseShopsScreen';
+import NurseryListScreen from '../components/shop/screen/NurseryListScreen';
+import NewsListScreen from '../components/news/screen/NewsListScreen';
 import PublicShopDetailScreen from '../components/shop/screen/PublicShopDetailScreen';
 import PostDetailScreen from '../components/post/screen/PostDetailScreen';
 import SavedPostsScreen from '../components/post/screen/SavedPostsScreen';
@@ -24,6 +26,7 @@ import ShopCollaboratorsScreen from '@/components/shop/screen/ShopCollaboratorsS
 import CollaboratorPublicListScreen from '@/components/shop/screen/CollaboratorPublicListScreen';
 import PublicCollaboratorDetailScreen from '@/components/shop/screen/PublicCollaboratorDetailScreen';
 import PendingOwnerPostsScreen from '@/components/shop/screen/PendingOwnerPostsScreen';
+import HostNewsDetailScreen from '@/host/screens/HostNewsDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -77,6 +80,10 @@ const MainTabsNavigator = () => {
             icon = <Home color={color} size={size} />;
           } else if (route.name === 'CreatePost') {
             icon = <Plus color={color} size={size} />;
+          } else if (route.name === 'NurseryList') {
+            icon = <Store color={color} size={size} />;
+          } else if (route.name === 'News') {
+            icon = <Newspaper color={color} size={size} />;
           } else if (route.name === 'SettingsStack') {
             icon = <Settings color={color} size={size} />;
           }
@@ -96,6 +103,20 @@ const MainTabsNavigator = () => {
         component={CreatePostLayout}
         options={{
           tabBarLabel: 'Đăng tin',
+        }}
+      />
+      <Tab.Screen
+        name="NurseryList"
+        component={NurseryListScreen}
+        options={{
+          tabBarLabel: 'Nhà vườn',
+        }}
+      />
+      <Tab.Screen
+        name="News"
+        component={NewsListScreen}
+        options={{
+          tabBarLabel: 'Tin tức',
         }}
       />
       <Tab.Screen
@@ -125,6 +146,9 @@ const UserNavigator = () => {
       <RootStack.Screen name="MyPost" component={MyPostLayout} />
       <RootStack.Screen name="MyShop" component={ShoDetailScreen} />
       <RootStack.Screen name="BrowseShops" component={BrowseShopsScreen} />
+      <RootStack.Screen name="NurseryList" component={NurseryListScreen} />
+      <RootStack.Screen name="News" component={NewsListScreen} />
+      <RootStack.Screen name="NewsDetail" component={HostNewsDetailScreen} />
       <RootStack.Screen name="RegisterShop" component={RegisterShopScreen} />
       <RootStack.Screen name="EditShop" component={EditShopScreen} />
       <RootStack.Screen name="CreateReport" component={CreateReportScreen} />

@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 import { ArrowLeft, CalendarDays, ExternalLink, Store, ShoppingBag, User } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -152,6 +153,8 @@ const HostNewsDetailScreen = ({ route }: any) => {
   );
 };
 
+const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
@@ -162,7 +165,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'white',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingTop: 14 + STATUS_BAR_OFFSET,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },

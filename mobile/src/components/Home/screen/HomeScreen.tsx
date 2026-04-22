@@ -13,7 +13,7 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
-import { Menu, Search, MapPin, Heart } from 'lucide-react-native';
+import { Menu, Search, MapPin } from 'lucide-react-native';
 import { postService } from '../../post/service/postService';
 import { useNavigation } from '@react-navigation/native';
 import FilterDrawer from '../components/FilterDrawer';
@@ -31,6 +31,8 @@ interface Post {
   postPrice: number;
   postLocation?: string;
   images?: Array<{ imageUrl: string }>;
+  isPromoted?: boolean;
+  promotionPriority?: number;
 }
 
 const HomeScreen = () => {
@@ -142,7 +144,7 @@ const HomeScreen = () => {
 
     return (
       <TouchableOpacity
-        style={styles.postCard}
+        style={[styles.postCard, item.isPromoted ? styles.promotedCard : null]}
         onPress={() => navigation.navigate('PostDetail', { slug: item.postSlug })}
       >
         <View style={styles.imageContainer}>
@@ -156,9 +158,6 @@ const HomeScreen = () => {
               <Text style={styles.placeholderText}>Không có ảnh</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.favoriteButton}>
-            <Heart size={20} color="#10b981" fill="#10b981" />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.postInfo}>
@@ -308,6 +307,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  promotedCard: {
+    borderColor: '#FBBF24',
+    shadowColor: '#F59E0B',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 4,
+  },
   imageContainer: {
     position: 'relative',
     width: '100%',
@@ -329,19 +335,6 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: '#999',
     fontSize: 12,
-  },
-  favoriteButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#fff',
-    padding: 6,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   postInfo: {
     padding: 12,

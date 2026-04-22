@@ -41,7 +41,7 @@ const CreatePostLayout = () => {
 
     if (state.loadingPolicy || state.loadingInitialData) {
         return (
-            <MobileLayout title="Đăng tin mới" backButton={() => navigation.goBack()}>
+            <MobileLayout title="Đăng tin mới">
                 <ActivityIndicator style={{ marginTop: 80 }} color="#10b981" />
             </MobileLayout>
         )
@@ -49,7 +49,7 @@ const CreatePostLayout = () => {
 
     if (state.policy?.isLimitReached) {
         return (
-            <MobileLayout title="Đăng tin mới" scrollEnabled={true} backButton={() => navigation.goBack()}>
+            <MobileLayout title="Đăng tin mới" scrollEnabled={true}>
                 <View style={styles.limitContainer}>
                     <AlertCircle size={60} color="#ef4444" style={{ marginBottom: 20 }} />
                     <Text style={styles.limitTitle}>Đã đạt giới hạn đăng tin</Text>
@@ -68,7 +68,7 @@ const CreatePostLayout = () => {
     }
 
     return (
-        <MobileLayout title="Đăng tin mới" scrollEnabled={true} backButton={() => navigation.goBack()}>
+        <MobileLayout title="Đăng tin mới" scrollEnabled={true}>
             <Card style={styles.card}>
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Hình ảnh</Text>
