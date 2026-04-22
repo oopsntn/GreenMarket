@@ -43,6 +43,7 @@ export const paymentService = {
         try {
             const res = await api.get('/promotions/packages');
             const packages: PromotionPackage[] = Array.isArray(res.data) ? res.data : [];
+
             return packages.find(p => p.slotCode === 'SHOP_VIP') ?? null;
         } catch {
             return null;

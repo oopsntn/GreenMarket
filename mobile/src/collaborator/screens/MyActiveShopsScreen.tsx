@@ -13,6 +13,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Building2, ChevronRight, PlusCircle } from 'lucide-react-native';
 import { CollaboratorActiveShop, CollaboratorService } from '../services/collaboratorService';
 import { resolveImageUrl } from '../../utils/resolveImageUrl';
+import { API_BASE_URL } from '../../config/api';
 
 const MyActiveShopsScreen = () => {
     const navigation = useNavigation<any>();
@@ -27,7 +28,22 @@ const MyActiveShopsScreen = () => {
             const res = await CollaboratorService.getMyActiveShops();
             setShops(Array.isArray(res?.data) ? res.data : []);
         } catch (e: any) {
-            setError(e?.response?.data?.error || 'Không thể tải danh sách shop đang cộng tác.');
+            const status = e?.response?.status;
+            const serverError = e?.response?.data?.error || e?.response?.data?.message;
+            const fallback = typeof e?.message === 'string' ? e.message : 'Không thể tải danh sách shop đang cộng tác.';
+
+            console.error('[MyActiveShops] getMyActiveShops failed:', {
+                status,
+                url: `${API_BASE_URL}/collaborator/my-shops`,
+                data: e?.response?.data,
+                message: e?.message,
+            });
+
+            if (status === 404) {
+                setError(`Server hiện tại chưa có API /collaborator/my-shops. (${API_BASE_URL})`);
+            } else {
+                setError(serverError || fallback);
+            }
         } finally {
             setLoading(false);
             setRefreshing(false);

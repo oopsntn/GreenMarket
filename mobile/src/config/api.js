@@ -18,10 +18,28 @@ const getApiBaseUrl = () => {
   const DEV_API_URL = `http://10.0.2.2:${API_PORT}/api`; // Android Emulator
   const DEVICE_API_URL = `http://${API_IP}:${API_PORT}/api`; // Physical Android Device
 
+  const isProbablyAndroidEmulator = () => {
+    if (Platform.OS !== 'android') return false;
+
+    const constants = Platform.constants || {};
+    const fingerprint = typeof constants.Fingerprint === 'string' ? constants.Fingerprint.toLowerCase() : '';
+    const model = typeof constants.Model === 'string' ? constants.Model.toLowerCase() : '';
+    const brand = typeof constants.Brand === 'string' ? constants.Brand.toLowerCase() : '';
+
+    return (
+      fingerprint.includes('generic') ||
+      fingerprint.includes('unknown') ||
+      fingerprint.includes('emulator') ||
+      model.includes('sdk_gphone') ||
+      model.includes('android sdk built for') ||
+      brand.includes('generic')
+    );
+  };
+
   // Heuristic:
-  // - In development, if API_IP is not explicitly set (still default), prefer emulator URL on Android.
-  // - Otherwise keep using DEVICE_API_URL for physical devices / configured hosts.
-  if (__DEV__ && Platform.OS === 'android' && !process.env.EXPO_PUBLIC_API_IP) {
+  // - In development, only use 10.0.2.2 when running on Android emulator.
+  // - Physical devices must use a reachable LAN/WAN IP (EXPO_PUBLIC_API_IP or default).
+  if (__DEV__ && Platform.OS === 'android' && !process.env.EXPO_PUBLIC_API_IP && isProbablyAndroidEmulator()) {
     return DEV_API_URL;
   }
 

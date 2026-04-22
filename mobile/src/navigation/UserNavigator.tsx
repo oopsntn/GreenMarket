@@ -163,7 +163,7 @@ const UserNavigator = () => {
       <RootStack.Screen name="PersonalDashboard" component={PersonalDashboardScreen} />
       <RootStack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
       <RootStack.Screen name="Packages" component={PackagesScreen} />
-      
+
       {/* Collaborator Screens For Shop Owner */}
       <RootStack.Screen name="ShopCollaborators" component={ShopCollaboratorsScreen} />
       <RootStack.Screen name="CollaboratorPublicList" component={CollaboratorPublicListScreen} />

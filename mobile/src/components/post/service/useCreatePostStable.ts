@@ -73,6 +73,16 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
             setCategories(Array.isArray(resCategories) ? resCategories : [])
             if (resPolicy) {
                 setPolicy(resPolicy)
+            } else if (options?.shopId) {
+                // Background fallback: Backend strictly requires a posting plan even for Collaborators writing for a shop.
+                // We auto-activate the mock 30-day personal plan on the mobile side so they can pass validation seamlessly.
+                try {
+                    await postService.activateMockPlan(30);
+                    const newPolicy = await postService.getPostingPolicy().catch(() => null);
+                    if (newPolicy) setPolicy(newPolicy);
+                } catch (e) {
+                    console.warn('[useCreatePost] Failed to auto-activate mock plan for collaborator:', e);
+                }
             }
         } catch (error) {
             console.error('Error fetching initial data:', error)

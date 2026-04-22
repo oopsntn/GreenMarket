@@ -155,6 +155,19 @@ export const postService = {
                 body: formData,
             })
             console.log('Upload status:', response.status)
+            
+            if (!response.ok) {
+                let errorData = null;
+                try { errorData = await response.json(); } catch(e) {}
+                throw {
+                    response: {
+                        status: response.status,
+                        data: errorData || { error: 'Lỗi tải ảnh/video từ máy chủ' }
+                    },
+                    message: 'Network error or bad response'
+                };
+            }
+
             const data = await response.json()
             if (!data?.urls) {
                 throw new Error('Invalid upload response')

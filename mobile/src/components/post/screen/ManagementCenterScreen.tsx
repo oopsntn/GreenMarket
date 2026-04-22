@@ -1,15 +1,36 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ListOrdered, Package, Trash2 } from 'lucide-react-native';
+import { ListOrdered, Package, Store, Trash2 } from 'lucide-react-native';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const ManagementCenterScreen = () => {
   const navigation = useNavigation<any>();
+  const { shop } = useAuth();
+  const canEnterHostMode = !!shop?.shopId && shop.shopStatus === 'active';
 
   return (
     <MobileLayout title="Trung tâm quản lý" scrollEnabled={true}>
       <View style={styles.container}>
+        {canEnterHostMode ? (
+          <TouchableOpacity
+            style={styles.rowItem}
+            onPress={() => navigation.navigate('HostMode')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.rowLeft}>
+              <View style={[styles.rowIcon, { backgroundColor: '#ECFDF5', borderColor: '#BBF7D0' }]}>
+                <Store size={18} color="#16A34A" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>Chế độ Chủ shop</Text>
+                <Text style={styles.rowDesc}>Vào bảng điều khiển & doanh thu.</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ) : null}
+
         <TouchableOpacity
           style={styles.rowItem}
           onPress={() => navigation.navigate('Packages')}
