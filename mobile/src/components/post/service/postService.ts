@@ -117,6 +117,11 @@ export const postService = {
         return response.data
     },
 
+    restorePost: async (postId: number) => {
+        const response = await api.post(`/posts/${postId}/restore`)
+        return response.data
+    },
+
     uploadMedia: async (mediaUris: string[] = []): Promise<UploadResponse> => {
         try {
             const formData = new FormData()

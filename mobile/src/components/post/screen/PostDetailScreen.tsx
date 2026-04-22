@@ -113,18 +113,25 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   if (loading) return <View style={styles.center}><Text>Đang tải...</Text></View>;
   if (!post) return <View style={styles.center}><Text>Không tìm thấy tin đăng hoặc đã bị xóa.</Text></View>;
 
-  const media = [
-    ...(post?.images || []).map((i: any) => {
-      return { type: 'image', url: resolveImageUrl(i.imageUrl) };
-    }),
-    ...(post?.videos || []).map((v: any) => {
-      return { type: 'video', url: resolveImageUrl(v.videoUrl) };
-    })
-  ]
+  const normalizeMediaUrl = (raw: unknown): string => {
+    if (!raw) return '';
+    if (typeof raw === 'string') return resolveImageUrl(raw);
+    if (typeof raw === 'object') {
+      const record = raw as Record<string, unknown>;
+      const url =
+        (typeof record.imageUrl === 'string' && record.imageUrl) ||
+        (typeof record.videoUrl === 'string' && record.videoUrl) ||
+        (typeof record.url === 'string' && record.url) ||
+        '';
+      return resolveImageUrl(url);
+    }
+    return resolveImageUrl(String(raw));
+  };
 
-  // Debug log
-  console.log('📸 Post data:', { images: post?.images, videos: post?.videos });
-  console.log('📸 Media array:', media);
+  const media = [
+    ...(post?.images || []).map((i: any) => ({ type: 'image', url: normalizeMediaUrl(i) })),
+    ...(post?.videos || []).map((v: any) => ({ type: 'video', url: normalizeMediaUrl(v) })),
+  ]
 
   const contactPhone = post?.shop?.shopPhone || post?.shop?.phones?.[0] || post?.postContactPhone || ''
 

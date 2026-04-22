@@ -23,7 +23,10 @@ import {
     Trophy,
     LayoutDashboard,
     Heart,
-    Briefcase
+    Briefcase,
+    Bookmark,
+    Grid3X3,
+    Zap
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ProfileAvatar } from '../component/ProfileAvatar';
@@ -180,21 +183,62 @@ const ProfileScreen = () => {
 
                     {/* 4. Action Banner (Shop Related) */}
                     <View style={styles.shopBannerArea}>
-                        <TouchableOpacity
-                            style={styles.savedPostsButton}
-                            onPress={() => navigation.navigate('SavedPosts')}
-                        >
-                            <Heart color="#dc2626" size={20} />
-                            <Text style={styles.savedPostsText}>Bài đăng đã lưu</Text>
-                        </TouchableOpacity>
+                        <View style={styles.utilitiesSection}>
+                            <View style={styles.utilitiesHeader}>
+                                <View style={styles.utilitiesHeaderIcon}>
+                                    <Zap size={18} color="#16A34A" />
+                                </View>
+                                <Text style={styles.utilitiesHeaderTitle}>LIÊN KẾT TIỆN ÍCH</Text>
+                            </View>
 
-                        <TouchableOpacity
-                            style={[styles.savedPostsButton, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', marginTop: 12 }]}
-                            onPress={() => navigation.navigate('Packages')}
-                        >
-                            <LayoutDashboard color="#16a34a" size={20} />
-                            <Text style={[styles.savedPostsText, { color: '#16a34a' }]}>Cửa hàng tính năng</Text>
-                        </TouchableOpacity>
+                            <View style={styles.utilitiesGrid}>
+                                <TouchableOpacity
+                                    style={styles.utilitiesCard}
+                                    onPress={() => navigation.navigate('SavedPosts')}
+                                    activeOpacity={0.9}
+                                >
+                                    <Bookmark color="#16A34A" size={18} />
+                                    <Text style={styles.utilitiesTitle}>SẢN PHẨM ĐÃ LƯU</Text>
+                                    <Text style={styles.utilitiesDesc}>Mở lại nhanh các sản phẩm bạn đã đánh dấu.</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.utilitiesCard}
+                                    onPress={() => navigation.navigate('NewsBookmarks')}
+                                    activeOpacity={0.9}
+                                >
+                                    <Heart color="#16A34A" size={18} />
+                                    <Text style={styles.utilitiesTitle}>TIN TỨC ĐÃ LƯU</Text>
+                                    <Text style={styles.utilitiesDesc}>Xem lại các bài báo và kiến thức đã lưu.</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.utilitiesCard}
+                                    onPress={() => navigation.navigate('PersonalDashboard')}
+                                    activeOpacity={0.9}
+                                >
+                                    <Grid3X3 color="#16A34A" size={18} />
+                                    <Text style={styles.utilitiesTitle}>DASHBOARD CÁ NHÂN</Text>
+                                    <Text style={styles.utilitiesDesc}>Xem quá trình thanh toán và gói ưu tiên.</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.utilitiesCard}
+                                    onPress={() => {
+                                        if (hasNoShop) {
+                                            navigation.navigate('RegisterShop')
+                                            return
+                                        }
+                                        navigation.navigate('MyShop')
+                                    }}
+                                    activeOpacity={0.9}
+                                >
+                                    <Store color="#16A34A" size={18} />
+                                    <Text style={styles.utilitiesTitle}>MỞ NHÀ VƯỜN</Text>
+                                    <Text style={styles.utilitiesDesc}>Đăng ký nhà vườn để mở thêm quyền bán hàng.</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
                         {isCollaborator && (
                             <TouchableOpacity
@@ -219,85 +263,26 @@ const ProfileScreen = () => {
                             </TouchableOpacity>
                         )}
 
-                        {isActiveShop ? (
-                            <View style={styles.shopActionsGrid}>
-                                <TouchableOpacity
-                                    style={[styles.shopActionButton, { backgroundColor: '#10b981' }]}
-                                    onPress={() => navigation.navigate('MyShop')}
+                        {isPendingShop ? (
+                            <TouchableOpacity
+                                style={[styles.beShopBanner, { borderColor: '#fef08a' }]}
+                                onPress={() => CustomAlert('Chờ duyệt', 'Hồ sơ cửa hàng của bạn đang được duyệt bởi ban quản trị.')}
+                            >
+                                <LinearGradient
+                                    colors={['#fff', '#fefce8']}
+                                    style={styles.beShopGrad}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
                                 >
-                                    <Store color="white" size={20} />
-                                    <Text style={styles.shopActionText}>Cửa hàng của tôi</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[styles.shopActionButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#10b981' }]}
-                                    onPress={() => navigation.navigate('MyPost')}
-                                >
-                                    <FileText color="#10b981" size={20} />
-                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Quản lý tin đăng</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ) : isPendingShop ? (
-                            <>
-                                <TouchableOpacity
-                                    style={[styles.beShopBanner, { borderColor: '#fef08a' }]}
-                                    onPress={() => CustomAlert('Chờ duyệt', 'Hồ sơ cửa hàng của bạn đang được duyệt bởi ban quản trị.')}
-                                >
-                                    <LinearGradient
-                                        colors={['#fff', '#fefce8']}
-                                        style={styles.beShopGrad}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                    >
-                                        <View style={[styles.beShopIcon, { shadowColor: '#eab308' }]}>
-                                            <Store color="#eab308" size={24} />
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={[styles.beShopTitle, { color: '#ca8a04' }]}>Đang chờ duyệt</Text>
-                                            <Text style={[styles.beShopDesc, { color: '#a16207' }]}>Hồ sơ cửa hàng đang được xét duyệt</Text>
-                                        </View>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.shopActionButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#10b981' }]}
-                                    onPress={() => navigation.navigate('MyPost')}
-                                >
-                                    <FileText color="#10b981" size={20} />
-                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Quản lý tin đăng</Text>
-                                </TouchableOpacity>
-                            </>
-                        ) : hasNoShop ? (
-                            <>
-                                <TouchableOpacity
-                                    style={styles.beShopBanner}
-                                    onPress={() => navigation.navigate('RegisterShop')}
-                                >
-                                    <LinearGradient
-                                        colors={['#fff', '#f0fdf4']}
-                                        style={styles.beShopGrad}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                    >
-                                        <View style={styles.beShopIcon}>
-                                            <Store color="#10b981" size={24} />
-                                        </View>
-                                        <View style={{ flex: 1 }}>
-                                            <Text style={styles.beShopTitle}>Trở thành người bán!</Text>
-                                            <Text style={styles.beShopDesc}>Bắt đầu kinh doanh với các sản phẩm xanh</Text>
-                                        </View>
-                                        <ChevronRight color="#10b981" size={20} />
-                                    </LinearGradient>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[styles.shopActionButton, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#10b981' }]}
-                                    onPress={() => navigation.navigate('MyPost')}
-                                >
-                                    <FileText color="#10b981" size={20} />
-                                    <Text style={[styles.shopActionText, { color: '#065f46' }]}>Quản lý tin đăng</Text>
-                                </TouchableOpacity>
-                            </>
-
+                                    <View style={[styles.beShopIcon, { shadowColor: '#eab308' }]}>
+                                        <Store color="#eab308" size={24} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[styles.beShopTitle, { color: '#ca8a04' }]}>Đang chờ duyệt</Text>
+                                        <Text style={[styles.beShopDesc, { color: '#a16207' }]}>Hồ sơ cửa hàng đang được xét duyệt</Text>
+                                    </View>
+                                </LinearGradient>
+                            </TouchableOpacity>
                         ) : null}
                     </View>
 
@@ -469,6 +454,66 @@ const styles = StyleSheet.create({
         color: '#be123c',
         fontWeight: '800',
         fontSize: 14,
+    },
+    utilitiesSection: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 22,
+        padding: 14,
+    },
+    utilitiesHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+        marginBottom: 12,
+    },
+    utilitiesHeaderIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        backgroundColor: '#ECFDF5',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    utilitiesHeaderTitle: {
+        fontSize: 13,
+        fontWeight: '900',
+        letterSpacing: 1,
+        color: '#0F172A',
+        textTransform: 'uppercase',
+    },
+    utilitiesGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    utilitiesCard: {
+        width: '48%',
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 16,
+        padding: 12,
+        gap: 6,
+    },
+    utilitiesTitle: {
+        marginTop: 2,
+        fontSize: 11,
+        fontWeight: '900',
+        color: '#0F172A',
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+    },
+    utilitiesDesc: {
+        fontSize: 10,
+        lineHeight: 14,
+        fontWeight: '600',
+        color: '#64748B',
     },
     shopActionsGrid: {
         flexDirection: 'row',

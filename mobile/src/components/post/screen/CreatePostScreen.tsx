@@ -48,7 +48,7 @@ const CreatePostLayout = () => {
 
     if (state.loadingPolicy || state.loadingInitialData) {
         return (
-            <MobileLayout title={isDelegated ? 'Đăng bài cho shop' : 'Đăng tin mới'} backButton={() => navigation.goBack()}>
+            <MobileLayout title="Đăng tin mới">
                 <ActivityIndicator style={{ marginTop: 80 }} color="#10b981" />
             </MobileLayout>
         )
@@ -56,7 +56,7 @@ const CreatePostLayout = () => {
 
     if (state.policy?.isLimitReached) {
         return (
-            <MobileLayout title={isDelegated ? 'Đăng bài cho shop' : 'Đăng tin mới'} scrollEnabled={true} backButton={() => navigation.goBack()}>
+            <MobileLayout title="Đăng tin mới" scrollEnabled={true}>
                 <View style={styles.limitContainer}>
                     <AlertCircle size={60} color="#ef4444" style={{ marginBottom: 20 }} />
                     <Text style={styles.limitTitle}>Đã đạt giới hạn đăng tin</Text>
@@ -75,17 +75,7 @@ const CreatePostLayout = () => {
     }
 
     return (
-        <MobileLayout title={isDelegated ? 'Đăng bài cho shop' : 'Đăng tin mới'} scrollEnabled={true} backButton={() => navigation.goBack()}>
-            {isDelegated ? (
-                <Card style={styles.delegatedCard}>
-                    <Text style={styles.delegatedTitle} numberOfLines={2}>
-                        Đăng thay mặt: {delegatedShopName || `Shop #${delegatedShopId}`}
-                    </Text>
-                    <Text style={styles.delegatedDesc}>
-                        Bài sẽ ở trạng thái chờ duyệt (`pending_owner`) cho đến khi chủ vườn gật hoặc lắc.
-                    </Text>
-                </Card>
-            ) : null}
+        <MobileLayout title="Đăng tin mới" scrollEnabled={true}>
             <Card style={styles.card}>
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Hình ảnh</Text>

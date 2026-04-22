@@ -16,7 +16,7 @@ const PostTabs = ({ activeTab, onTabChange, hasShop, styles }: PostTabsProps) =>
         onPress={() => onTabChange('personal')}
       >
         <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>
-          Cá nhân
+          Tin cá nhân
         </Text>
       </TouchableOpacity>
 
