@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { LogOut, User, ChevronRight } from 'lucide-react-native';
+import { LayoutDashboard, LogOut, User, ChevronRight } from 'lucide-react-native';
 import { useAuth } from '../../../context/AuthContext';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 
@@ -28,6 +28,10 @@ const UserSettingsScreen = ({ navigation }: any) => {
     navigation.navigate('Profile');
   };
 
+  const handleManagementCenterPress = () => {
+    navigation.navigate('ManagementCenter');
+  };
+
   return (
     <MobileLayout
       title="Settings"
@@ -48,6 +52,18 @@ const UserSettingsScreen = ({ navigation }: any) => {
             <View style={styles.menuItemLeft}>
               <User size={20} color="#22C55E" />
               <Text style={styles.menuItemText}>Profile</Text>
+            </View>
+            <ChevronRight size={20} color="#d1d5db" />
+          </TouchableOpacity>
+
+          {/* Management Center Menu Item */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleManagementCenterPress}
+          >
+            <View style={styles.menuItemLeft}>
+              <LayoutDashboard size={20} color="#22C55E" />
+              <Text style={styles.menuItemText}>Trung tâm quản lý</Text>
             </View>
             <ChevronRight size={20} color="#d1d5db" />
           </TouchableOpacity>

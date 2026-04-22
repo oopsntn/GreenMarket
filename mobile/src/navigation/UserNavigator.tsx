@@ -6,19 +6,23 @@ import { Home, Plus, Settings, Store, Newspaper } from 'lucide-react-native';
 // Screens
 import HomeScreen from '../components/Home/screen/HomeScreen';
 import CreatePostLayout from '../components/post/screen/CreatePostScreen';
+import ManagementCenterScreen from '../components/post/screen/ManagementCenterScreen';
 import UserSettingsScreen from '../components/settings/screen/UserSettingsScreen';
 import ProfileScreen from '../components/profile/screen/ProfileScreen';
 import MyPostLayout from '../components/post/screen/MyPostLayout';
+import PostTrashScreen from '../components/post/screen/PostTrashScreen';
 import ShoDetailScreen from '../components/shop/screen/ShopDetailScreen';
 import RegisterShopScreen from '../components/shop/screen/RegisterShop';
 import EditShopScreen from '../components/shop/screen/EditShopScreen';
 import BrowseShopsScreen from '../components/shop/screen/BrowseShopsScreen';
 import NurseryListScreen from '../components/shop/screen/NurseryListScreen';
 import NewsListScreen from '../components/news/screen/NewsListScreen';
+import NewsBookmarksScreen from '../components/news/screen/NewsBookmarksScreen';
 import PublicShopDetailScreen from '../components/shop/screen/PublicShopDetailScreen';
 import PostDetailScreen from '../components/post/screen/PostDetailScreen';
 import SavedPostsScreen from '../components/post/screen/SavedPostsScreen';
 import PromotePostScreen from '../components/payment/screen/PromotePostScreen';
+import PersonalDashboardScreen from '../components/payment/screen/PersonalDashboardScreen';
 import CreateReportScreen from '../components/report/screen/CreateReportService';
 import ShopDashboardScreen from '@/components/shop/screen/ShopDashboardScreen';
 import PackagesScreen from '@/components/shop/screen/PackagesScreen';
@@ -140,19 +144,23 @@ const UserNavigator = () => {
       <RootStack.Screen name="MainTabs" component={MainTabsNavigator} />
       <RootStack.Screen name="CreatePost" component={CreatePostLayout} />
       <RootStack.Screen name="Profile" component={ProfileScreen} />
+      <RootStack.Screen name="ManagementCenter" component={ManagementCenterScreen} />
       <RootStack.Screen name="PostDetail" component={PostDetailScreen} />
       <RootStack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} />
       <RootStack.Screen name="SavedPosts" component={SavedPostsScreen} />
       <RootStack.Screen name="MyPost" component={MyPostLayout} />
+      <RootStack.Screen name="PostTrash" component={PostTrashScreen} />
       <RootStack.Screen name="MyShop" component={ShoDetailScreen} />
       <RootStack.Screen name="BrowseShops" component={BrowseShopsScreen} />
       <RootStack.Screen name="NurseryList" component={NurseryListScreen} />
       <RootStack.Screen name="News" component={NewsListScreen} />
+      <RootStack.Screen name="NewsBookmarks" component={NewsBookmarksScreen} />
       <RootStack.Screen name="NewsDetail" component={HostNewsDetailScreen} />
       <RootStack.Screen name="RegisterShop" component={RegisterShopScreen} />
       <RootStack.Screen name="EditShop" component={EditShopScreen} />
       <RootStack.Screen name="CreateReport" component={CreateReportScreen} />
       <RootStack.Screen name="PromotePost" component={PromotePostScreen} />
+      <RootStack.Screen name="PersonalDashboard" component={PersonalDashboardScreen} />
       <RootStack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
       <RootStack.Screen name="Packages" component={PackagesScreen} />
       

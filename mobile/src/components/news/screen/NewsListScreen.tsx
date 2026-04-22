@@ -11,10 +11,11 @@ import {
   View,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { CalendarDays, Search } from 'lucide-react-native';
+import { CalendarDays, Heart, Search } from 'lucide-react-native';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import { resolveImageUrl } from '@/utils/resolveImageUrl';
 import { HostPublicContent, newsService } from '../service/newsService';
+import CustomAlert from '../../../utils/AlertHelper';
 
 const formatDate = (iso: string | null | undefined) => {
   if (!iso) return 'N/A';
@@ -41,6 +42,8 @@ const NewsListScreen = () => {
   const [items, setItems] = useState<HostPublicContent[]>([]);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [savedMap, setSavedMap] = useState<Record<number, boolean>>({});
+  const [savingId, setSavingId] = useState<number | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 400);
@@ -74,6 +77,53 @@ const NewsListScreen = () => {
 
   const data = useMemo(() => items.filter((x) => x && typeof x.hostContentId === 'number'), [items]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const fetchSaved = async () => {
+      if (data.length === 0) {
+        setSavedMap({});
+        return;
+      }
+
+      const checks = await Promise.all(
+        data.map(async (item) => {
+          try {
+            const isSaved = await newsService.checkSaved(item.hostContentId);
+            return [item.hostContentId, isSaved] as const;
+          } catch {
+            return [item.hostContentId, false] as const;
+          }
+        }),
+      );
+
+      if (cancelled) return;
+
+      const next: Record<number, boolean> = {};
+      for (const [id, isSaved] of checks) next[id] = isSaved;
+      setSavedMap(next);
+    };
+
+    fetchSaved();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data]);
+
+  const handleToggleSaved = async (contentId: number) => {
+    if (savingId) return;
+    setSavingId(contentId);
+    try {
+      const next = await newsService.toggleSaved(contentId);
+      setSavedMap((prev) => ({ ...prev, [contentId]: next }));
+      CustomAlert('Thành công', next ? 'Đã lưu tin tức thành công.' : 'Đã bỏ lưu tin tức.');
+    } catch (e) {
+      console.error('Toggle saved failed:', e);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   return (
     <MobileLayout scrollEnabled={false} title="Tin tức">
       <View style={styles.searchWrap}>
@@ -101,12 +151,22 @@ const NewsListScreen = () => {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
           renderItem={({ item }) => {
             const cover = getCover(item);
+            const isSaved = Boolean(savedMap[item.hostContentId]);
             return (
               <TouchableOpacity
                 style={styles.row}
                 activeOpacity={0.9}
                 onPress={() => navigation.navigate('NewsDetail', { hostContentId: item.hostContentId })}
               >
+                <TouchableOpacity
+                  style={[styles.heartBtn, isSaved ? styles.heartBtnActive : null]}
+                  onPress={() => handleToggleSaved(item.hostContentId)}
+                  activeOpacity={0.9}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Heart size={16} color={isSaved ? '#DC2626' : '#94A3B8'} fill={isSaved ? '#DC2626' : 'transparent'} />
+                </TouchableOpacity>
+
                 <View style={styles.thumbWrap}>
                   {cover ? (
                     <Image source={{ uri: cover }} style={styles.thumb} />
@@ -187,6 +247,25 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 16,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  heartBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heartBtnActive: {
+    borderColor: '#FECACA',
+    backgroundColor: '#FFF1F2',
   },
   thumbWrap: {
     width: 108,

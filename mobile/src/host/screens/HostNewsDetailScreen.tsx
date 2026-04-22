@@ -91,7 +91,7 @@ const HostNewsDetailScreen = ({ route }: any) => {
 
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={22} color="#0F172A" />
+          <ArrowLeft size={22} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>Tin tức chi tiết</Text>
         <View style={{ width: 38 }} />
@@ -163,12 +163,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#2e7d32',
     paddingHorizontal: 16,
     paddingTop: 14 + STATUS_BAR_OFFSET,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: 'rgba(255,255,255,0.15)',
   },
   backBtn: {
     width: 38,
@@ -176,9 +176,9 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.18)',
   },
-  headerTitle: { fontSize: 16, fontWeight: '800', color: '#0F172A', flex: 1, textAlign: 'center' },
+  headerTitle: { fontSize: 16, fontWeight: '800', color: 'white', flex: 1, textAlign: 'center' },
   scroll: { paddingBottom: 24 },
   cover: { width: '100%', height: 220, backgroundColor: '#E2E8F0' },
   card: {

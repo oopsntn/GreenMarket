@@ -61,5 +61,15 @@ export const newsService = {
       },
     };
   },
+
+  checkSaved: async (contentId: number): Promise<boolean> => {
+    const res = await api.get<{ isSaved?: boolean }>(`/host/favorites/${contentId}/check`);
+    return Boolean(res.data?.isSaved);
+  },
+
+  toggleSaved: async (contentId: number): Promise<boolean> => {
+    const res = await api.post<{ isSaved?: boolean }>(`/host/favorites/${contentId}`);
+    return Boolean(res.data?.isSaved);
+  },
 };
 
