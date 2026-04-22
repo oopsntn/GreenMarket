@@ -695,6 +695,71 @@ export const deleteShopPhone = async (req: AuthRequest, res: Response): Promise<
     }
 };
 
+/**
+ * PATCH /api/shops/phones/primary
+ * Đổi số điện thoại chính (phones[0]) sang một số đã có trong danh sách.
+ * Xác thực qua email OTP của shop để đảm bảo an toàn.
+ * Sau khi xác thực, cập nhật cả shops.shopPhone (reorder) và users.userMobile
+ * để số mới trở thành SĐT đăng nhập OTP.
+ */
+export const setPrimaryPhone = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+        const { phone, emailOtp } = req.body;
+        if (!phone || !emailOtp) {
+            res.status(400).json({ error: "Missing phone or emailOtp" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) { res.status(404).json({ error: "Shop not found" }); return; }
+
+        if (!shop.shopEmail || !shop.shopEmailVerified) {
+            res.status(400).json({ error: "Bạn phải xác thực email cửa hàng trước khi đổi số điện thoại chính." });
+            return;
+        }
+
+        let currentPhones = shop.shopPhone ? shop.shopPhone.split('|') : [];
+        if (!currentPhones.includes(phone)) {
+            res.status(400).json({ error: "Số điện thoại không nằm trong danh sách của cửa hàng." });
+            return;
+        }
+        if (currentPhones[0] === phone) {
+            res.status(400).json({ error: "Số điện thoại này đã là số chính." });
+            return;
+        }
+
+        // Verify email OTP to confirm owner identity
+        const result = await verificationService.verifyOTP(shop.shopEmail, emailOtp, "email");
+        if (!result.success) {
+            res.status(400).json({ error: result.message });
+            return;
+        }
+
+        // Reorder: bring chosen phone to front, keep rest in order
+        const reordered = [phone, ...currentPhones.filter(p => p !== phone)];
+        const newPhoneString = reordered.join('|');
+
+        // Update shop phone list
+        await db.update(shops).set({ shopPhone: newPhoneString }).where(eq(shops.shopId, userId));
+
+        // Update users.userMobile so OTP login works with new primary phone
+        await db.update(users).set({ userMobile: phone, userUpdatedAt: new Date() }).where(eq(users.userId, userId));
+
+        // Send security warning to shop email
+        if (shop.shopEmail) {
+            await verificationService.sendSecurityWarningEmail(shop.shopEmail, `Số điện thoại chính đã được đổi thành ${phone}`);
+        }
+
+        res.json({ message: "Đã đổi số điện thoại chính thành công", shopPhone: newPhoneString, primaryPhone: phone });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
 // --- Collaborator Management (Invitations) ---
 
 /**

@@ -30,6 +30,9 @@ const getApiBaseUrl = () => {
 
 export const API_BASE_URL = getApiBaseUrl();
 
+// User-web frontend URL — dùng để share bài đăng, deeplink
+export const WEB_BASE_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://greenmarket.vn';
+
 // Extract base server URL (without /api) for images and uploads
 export const getServerBaseUrl = () => {
   // Extract base URL from API_BASE_URL (remove /api suffix)

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { View, Image, FlatList, Dimensions, StyleSheet, TouchableOpacity } from 'react-native';
 import { Play } from 'lucide-react-native';
+import { resolveImageUrl } from '@/utils/resolveImageUrl';
 
 const { width } = Dimensions.get('window');
 
@@ -35,7 +36,7 @@ export const MediaGallery = ({ media }: { media: any[] }) => {
                     <View style={styles.slide}>
                         {item.type === 'image' ? (
                             <Image
-                                source={{ uri: item.url }}
+                                source={{ uri: resolveImageUrl(item.url) }}
                                 style={styles.image}
                                 onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
                             />

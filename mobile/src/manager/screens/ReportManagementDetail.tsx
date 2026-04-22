@@ -17,7 +17,9 @@ import {
   ShieldAlert,
   CheckCircle,
   XCircle,
-  ExternalLink
+  ExternalLink,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
 import managerService, { ReportModerationData } from '../services/ManagerService';
@@ -29,6 +31,8 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [actionType, setActionType] = useState<'resolved' | 'dismissed' | 'escalated' | null>(null);
+  const [postAction, setPostAction] = useState<'approved' | 'rejected' | null>(null);
+  const [processingPost, setProcessingPost] = useState(false);
 
   useEffect(() => {
     fetchReport();
@@ -53,10 +57,40 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
     setIsModalVisible(true);
   };
 
+  // Xử lý bài đăng bị báo cáo trực tiếp (duyệt hoặc từ chối)
+  const handleModeratePost = (action: 'approved' | 'rejected') => {
+    if (!report?.postId) {
+      CustomAlert('Lỗi', 'Báo cáo này không liên kết với bài đăng nào.');
+      return;
+    }
+    setPostAction(action);
+    setIsModalVisible(true);
+    setActionType(null); // Đảm bảo modal biết đây là luồng post, không phải report
+  };
   const onSubmitNote = async (note: string) => {
-    if (!actionType) return;
+    if (!actionType && !postAction) return;
 
     try {
+      // Luồng 1: Kiểm duyệt bài đăng bị báo cáo
+      if (postAction && report?.postId) {
+        setProcessingPost(true);
+        await managerService.updatePostStatus(report.postId, postAction, note || undefined);
+        // Sau khi xử lý bài, auto-resolve report
+        await managerService.resolveReport(
+          reportId,
+          'resolved',
+          `Bài đăng đã được ${postAction === 'approved' ? 'duyệt' : 'từ chối'} bởi quản lý`,
+          note
+        );
+        CustomAlert(
+          'Hoàn tất',
+          `Bài đăng đã được ${postAction === 'approved' ? '✅ duyệt' : '❌ từ chối'} và báo cáo đã được giải quyết.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+        return;
+      }
+
+      // Luồng 2: Xử lý report (resolve/dismiss/escalate)
       if (actionType === 'escalated') {
         await managerService.escalate({
           targetType: 'report',
@@ -64,8 +98,8 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
           severity: 'high',
           reason: note
         });
-        CustomAlert('Escalated', `The report has been escalated. Reason: ${note}`);
-      } else {
+        CustomAlert('Escalated', `Report đã được leo thang. Lý do: ${note}`);
+      } else if (actionType) {
         await managerService.resolveReport(
           reportId,
           actionType,
@@ -73,13 +107,16 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
           note
         );
         CustomAlert(
-          actionType === 'resolved' ? 'Resolved' : 'Dismissed',
-          `The action has been saved with note: ${note}`,
+          actionType === 'resolved' ? 'Giải quyết' : 'Bỏ qua',
+          `Đã lưu với ghi chú: ${note}`,
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
       }
     } catch (error) {
       CustomAlert('Lỗi', 'Không thể xử lý báo cáo này.');
+    } finally {
+      setProcessingPost(false);
+      setPostAction(null);
     }
   };
 
@@ -171,30 +208,81 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
       </ScrollView>
 
       <View style={styles.bottomActions}>
-        <TouchableOpacity style={[styles.btn, styles.dismissBtn]} onPress={() => handleAction('dismissed')}>
-          <XCircle size={20} color="#64748B" />
-          <Text style={[styles.btnText, styles.dismissBtnText]}>Bỏ qua</Text>
-        </TouchableOpacity>
+        {/* Nếu report liên kết với bài đăng: hiện nút duyệt/từ chối bài trực tiếp */}
+        {report?.postId ? (
+          <>
+            <TouchableOpacity
+              style={[styles.btn, styles.rejectPostBtn]}
+              disabled={processingPost}
+              onPress={() => handleModeratePost('rejected')}
+            >
+              <ThumbsDown size={18} color="#EF4444" />
+              <Text style={[styles.btnText, { color: '#EF4444' }]}>Từ chối bài</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.btn, styles.escalateBtn]} onPress={() => handleAction('escalated')}>
-          <Flag size={20} color="white" />
-          <Text style={[styles.btnText, styles.escalateBtnText]}>Leo thang</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, styles.approvePostBtn]}
+              disabled={processingPost}
+              onPress={() => handleModeratePost('approved')}
+            >
+              <ThumbsUp size={18} color="white" />
+              <Text style={[styles.btnText, styles.approveBtnText]}>Duyệt bài</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.btn, styles.resolveBtn]} onPress={() => handleAction('resolved')}>
-          <CheckCircle size={20} color="white" />
-          <Text style={[styles.btnText, styles.resolveBtnText]}>Giải quyết</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, styles.dismissBtn]}
+              onPress={() => handleAction('dismissed')}
+            >
+              <XCircle size={18} color="#64748B" />
+              <Text style={[styles.btnText, styles.dismissBtnText]}>Bỏ qua BC</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity style={[styles.btn, styles.dismissBtn]} onPress={() => handleAction('dismissed')}>
+              <XCircle size={20} color="#64748B" />
+              <Text style={[styles.btnText, styles.dismissBtnText]}>Bỏ qua</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.btn, styles.escalateBtn]} onPress={() => handleAction('escalated')}>
+              <Flag size={20} color="white" />
+              <Text style={[styles.btnText, styles.escalateBtnText]}>Leo thang</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.btn, styles.resolveBtn]} onPress={() => handleAction('resolved')}>
+              <CheckCircle size={20} color="white" />
+              <Text style={[styles.btnText, styles.resolveBtnText]}>Giải quyết</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <ReasonModal
         visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
+        onClose={() => { setIsModalVisible(false); setPostAction(null); }}
         onSubmit={onSubmitNote}
-        title={actionType === 'resolved' ? 'Giải quyết báo cáo' : actionType === 'escalated' ? 'Leo thang báo cáo' : 'Bỏ qua báo cáo'}
-        placeholder={actionType === 'escalated' ? 'Nhập lý do leo thang...' : 'Nhập ghi chú xử lý...'}
-        confirmLabel={actionType === 'resolved' ? 'Giải quyết' : actionType === 'escalated' ? 'Leo thang' : 'Bỏ qua'}
-        confirmColor={actionType === 'resolved' ? '#22C55E' : actionType === 'escalated' ? '#F59E0B' : '#94A3B8'}
+        title={
+          postAction === 'approved' ? 'Duyệt bài đăng' :
+          postAction === 'rejected' ? 'Từ chối bài đăng' :
+          actionType === 'resolved' ? 'Giải quyết báo cáo' :
+          actionType === 'escalated' ? 'Leo thang báo cáo' : 'Bỏ qua báo cáo'
+        }
+        placeholder={
+          postAction ? 'Nhập lý do kiểm duyệt (tùy chọn)...' :
+          actionType === 'escalated' ? 'Nhập lý do leo thang...' : 'Nhập ghi chú xử lý...'
+        }
+        confirmLabel={
+          postAction === 'approved' ? 'Xác nhận duyệt' :
+          postAction === 'rejected' ? 'Xác nhận từ chối' :
+          actionType === 'resolved' ? 'Giải quyết' :
+          actionType === 'escalated' ? 'Leo thang' : 'Bỏ qua'
+        }
+        confirmColor={
+          postAction === 'approved' ? '#22C55E' :
+          postAction === 'rejected' ? '#EF4444' :
+          actionType === 'resolved' ? '#22C55E' :
+          actionType === 'escalated' ? '#F59E0B' : '#94A3B8'
+        }
       />
     </SafeAreaView>
   );
@@ -325,6 +413,9 @@ const styles = StyleSheet.create({
   escalateBtnText: { color: 'white' },
   resolveBtn: { backgroundColor: '#22C55E' },
   resolveBtnText: { color: 'white' },
+  rejectPostBtn: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' },
+  approvePostBtn: { backgroundColor: '#22C55E' },
+  approveBtnText: { color: 'white' },
 });
 
 export default ReportManagementDetail;

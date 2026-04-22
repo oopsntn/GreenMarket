@@ -88,13 +88,23 @@ const ShoDetailScreen = () => {
                                 >
                                     Đăng tin mới
                                 </Button>
-                                <Button
-                                    testID="my-shop-manage-posts-button"
-                                    onPress={() => navigation.navigate('MyPost')}
-                                    style={styles.primaryButton}
-                                >
-                                    Quản lý tin đăng
-                                </Button>
+                                <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                                    <Button
+                                        testID="my-shop-manage-posts-button"
+                                        onPress={() => navigation.navigate('MyPost')}
+                                        style={[styles.primaryButton, { flex: 1 }]}
+                                    >
+                                        Quản lý tin đăng
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onPress={() => navigation.navigate('ShopCollaborators')}
+                                        style={[styles.outlineButton, { flex: 1, backgroundColor: '#ECFDF5' }]}
+                                        textStyle={{ color: '#10b981' }}
+                                    >
+                                        Quản lý CTV
+                                    </Button>
+                                </View>
                             </View>
 
                             <View style={styles.sectionHeader}>

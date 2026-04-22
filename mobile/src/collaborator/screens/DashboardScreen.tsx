@@ -18,7 +18,8 @@ import {
     Settings,
     ChevronRight,
     Circle,
-    Bell
+    Bell,
+    MailOpen
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CollaboratorService, CollaboratorProfileResponse } from '../services/collaboratorService';
@@ -116,6 +117,8 @@ const DashboardScreen = () => {
         stats: { totalJobs: 0, activeJobs: 0, completedJobs: 0, totalEarnings: 0, availableBalance: 0 }
     };
 
+    const displayName = profile?.displayName || user?.userDisplayName || 'Cộng tác viên';
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
@@ -128,7 +131,7 @@ const DashboardScreen = () => {
                     <View style={styles.headerTop}>
                         <View>
                             <Text style={styles.welcomeText}>Xin chào,</Text>
-                            <Text style={styles.nameText}>{profile.displayName || 'Cộng tác viên'}</Text>
+                            <Text style={styles.nameText}>{displayName}</Text>
                         </View>
                         <TouchableOpacity style={styles.notificationBtn}>
                             <Bell color="white" size={24} />
@@ -167,11 +170,11 @@ const DashboardScreen = () => {
                                 <View style={styles.statusBadge}>
                                     <Circle
                                         size={10}
-                                        fill={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
-                                        color={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
+                                        fill={profile?.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
+                                        color={profile?.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
                                     />
                                     <Text style={styles.statusText}>
-                                        {profile.availabilityStatus?.toUpperCase()}
+                                        {profile?.availabilityStatus?.toUpperCase() || 'OFFLINE'}
                                     </Text>
                                 </View>
                             </View>
@@ -219,6 +222,17 @@ const DashboardScreen = () => {
                                 <View style={styles.menuContent}>
                                     <Text style={styles.menuTitle}>Tìm việc mới</Text>
                                     <Text style={styles.menuDesc}>Khám phá các yêu cầu chưa có người nhận</Text>
+                                </View>
+                                <ChevronRight color="#94A3B8" size={20} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Invitations')}>
+                                <View style={[styles.menuIconWrap, { backgroundColor: '#FEF3C7' }]}>
+                                    <MailOpen color="#D97706" size={20} />
+                                </View>
+                                <View style={styles.menuContent}>
+                                    <Text style={styles.menuTitle}>Lời mời hợp tác</Text>
+                                    <Text style={styles.menuDesc}>Xem và phản hồi lời mời từ các Chủ vườn</Text>
                                 </View>
                                 <ChevronRight color="#94A3B8" size={20} />
                             </TouchableOpacity>

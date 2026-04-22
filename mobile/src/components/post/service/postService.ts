@@ -179,6 +179,11 @@ export const postService = {
         return response.data
     },
 
+    toggleVisibility: async (postId: number) => {
+        const response = await api.patch(`/posts/${postId}/toggle-visibility`)
+        return response.data
+    },
+
     activateMockPlan: async (durationDays: number = 30) => {
         const response = await api.post('/posts/personal-plan/mock-activate', { durationDays })
         return response.data

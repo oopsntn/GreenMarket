@@ -178,12 +178,27 @@ const managerService = {
     },
 
     getPostById: async (id: number | string): Promise<PostModerationData> => {
-        const rows = await fetchAllQueueItems('post');
-        const item = rows.find((row) => Number(row.targetId) === Number(id));
-        if (!item) {
-            throw new Error('Post not found');
+        // Tìm trong pending post queue trước
+        const pendingRows = await fetchAllQueueItems('post');
+        const found = pendingRows.find((row) => Number(row.targetId) === Number(id));
+        if (found) return normalizePost(found);
+
+        // Fallback: tìm trong toàn bộ moderation queue (không lọc type)
+        // cho phép tìm bài đã approved/rejected/hidden từ context báo cáo
+        let allPage = 1;
+        let allTotalPages = 1;
+        while (allPage <= allTotalPages) {
+            const response = await api.get('/manager/moderation/queue', {
+                params: { page: allPage, limit: 100 }, // Không truyền type
+            });
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            const match = data.find((row: any) => Number(row.targetId) === Number(id) && row.type === 'post');
+            if (match) return normalizePost(match);
+            allTotalPages = Number(response.data?.meta?.totalPages || 1);
+            allPage += 1;
         }
-        return normalizePost(item);
+
+        throw new Error('Post not found');
     },
 
     updatePostStatus: async (id: number | string, status: 'approved' | 'rejected' | 'hidden', reason?: string, note?: string) => {

@@ -184,8 +184,8 @@ const EarningsScreen = () => {
                             {earnings.length === 0 ? (
                                 <Text style={styles.emptyText}>Chưa có giao dịch thu nhập nào.</Text>
                             ) : (
-                                earnings.map((item) => (
-                                    <View key={item.earningEntryId} style={styles.historyItem}>
+                                earnings.map((item, index) => (
+                                    <View key={item.earningEntryId || `earning-${index}`} style={styles.historyItem}>
                                         <View style={styles.historyIconWrap}>
                                             <ArrowDownLeft color="#10B981" size={20} />
                                         </View>
@@ -205,8 +205,8 @@ const EarningsScreen = () => {
                             {payouts.length === 0 ? (
                                 <Text style={styles.emptyText}>Chưa có yêu cầu rút tiền nào.</Text>
                             ) : (
-                                payouts.map((item) => (
-                                    <View key={item.payoutRequestId} style={styles.historyItem}>
+                                payouts.map((item, index) => (
+                                    <View key={item.payoutRequestId || `payout-${index}`} style={styles.historyItem}>
                                         <View style={[styles.historyIconWrap, { backgroundColor: '#FEF2F2' }]}>
                                             <ArrowUpRight color="#EF4444" size={20} />
                                         </View>

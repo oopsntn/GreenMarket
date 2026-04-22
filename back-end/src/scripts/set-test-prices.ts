@@ -17,7 +17,7 @@ import {
   PERSONAL_PLAN_SLOT_CODE,
 } from "../constants/promotion.ts";
 
-const TEST_PRICE_VND = "15000"; // Giá test — thay đổi tuỳ ý (min 1000)
+const TEST_PRICE_VND = "10000"; // Giá test — thay đổi tuỳ ý (min 1000)
 
 async function setPriceForSlot(slotCode: string, newPrice: string) {
   const [slot] = await db
