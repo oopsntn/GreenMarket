@@ -20,8 +20,8 @@ import HomeScreen from '../../components/Home/screen/HomeScreen';
 import PostDetailScreen from '../../components/post/screen/PostDetailScreen';
 import PublicShopDetailScreen from '../../components/shop/screen/PublicShopDetailScreen';
 import BrowseShopsScreen from '../../components/shop/screen/BrowseShopsScreen';
-import UserSettingsScreen from '../../components/settings/screen/UserSettingsScreen';
-import ProfileScreen from '../../components/profile/screen/ProfileScreen';
+import HostSettingsScreen from '../screens/HostSettingsScreen';
+import HostProfileScreen from '../screens/HostProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -29,8 +29,8 @@ const Stack = createNativeStackNavigator();
 const HostSettingsStack = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="SettingsTab" component={UserSettingsScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="SettingsTab" component={HostSettingsScreen} />
+      <Stack.Screen name="Profile" component={HostProfileScreen} />
     </Stack.Navigator>
   );
 };
