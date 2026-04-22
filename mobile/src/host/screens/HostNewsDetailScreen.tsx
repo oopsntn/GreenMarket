@@ -11,10 +11,12 @@ import {
   View,
   Platform,
 } from 'react-native';
-import { ArrowLeft, CalendarDays, ExternalLink, Store, ShoppingBag, User } from 'lucide-react-native';
+import { ArrowLeft, CalendarDays, ExternalLink, Store, ShoppingBag, Trash2, User } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { hostService, HostPublicContentDetail } from '../services/hostService';
 import { resolveImageUrl } from '../../utils/resolveImageUrl';
+import { useAuth } from '../../context/AuthContext';
+import CustomAlert from '../../utils/AlertHelper';
 
 const formatDateTime = (iso: string | null) => {
   if (!iso) return 'N/A';
@@ -31,11 +33,13 @@ const formatDateTime = (iso: string | null) => {
 
 const HostNewsDetailScreen = ({ route }: any) => {
   const navigation = useNavigation<any>();
+  const { user } = useAuth();
   const { hostContentId } = route.params;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [content, setContent] = useState<HostPublicContentDetail | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -65,6 +69,51 @@ const HostNewsDetailScreen = ({ route }: any) => {
     const first = content?.hostContentMediaUrls?.[0];
     return first ? resolveImageUrl(first) : null;
   }, [content?.hostContentMediaUrls]);
+
+  const canDeleteOwnContent =
+    user?.businessRoleCode === 'HOST' &&
+    Number(content?.authorId) > 0 &&
+    Number(content?.authorId) === Number(user?.id);
+
+  const handleDeleteContent = () => {
+    if (!content?.hostContentId || deleting || !canDeleteOwnContent) {
+      return;
+    }
+
+    CustomAlert(
+      'Xóa bài đăng',
+      'Bạn có chắc muốn xóa bài đăng tin tức này không?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await hostService.deleteContent(content.hostContentId);
+              CustomAlert('Thành công', 'Bài đăng đã được xóa.', [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.goBack(),
+                },
+              ]);
+            } catch (e: any) {
+              const message =
+                typeof e === 'object' &&
+                e &&
+                typeof e?.response?.data?.error === 'string'
+                  ? e.response.data.error
+                  : 'Không thể xóa bài đăng.';
+              CustomAlert('Lỗi', message);
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const openLinkedTarget = () => {
     if (!content) return;
@@ -135,6 +184,22 @@ const HostNewsDetailScreen = ({ route }: any) => {
               {content.hostContentBody || 'Nội dung bài viết đang được cập nhật...'}
             </Text>
 
+            {canDeleteOwnContent ? (
+              <TouchableOpacity
+                style={[styles.deleteBtn, deleting ? styles.deleteBtnDisabled : null]}
+                onPress={handleDeleteContent}
+                disabled={deleting}
+                activeOpacity={0.85}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Trash2 size={16} color="white" />
+                )}
+                <Text style={styles.deleteBtnText}>{deleting ? 'Đang xóa...' : 'Xóa bài đăng'}</Text>
+              </TouchableOpacity>
+            ) : null}
+
             {(content.hostContentTargetType === 'post' || content.hostContentTargetType === 'shop') ? (
               <TouchableOpacity style={styles.targetBtn} onPress={openLinkedTarget} activeOpacity={0.8}>
                 {content.hostContentTargetType === 'post' ? (
@@ -204,6 +269,25 @@ const styles = StyleSheet.create({
   },
   descriptionText: { color: '#065F46', fontWeight: '700', lineHeight: 20 },
   bodyText: { marginTop: 12, color: '#0F172A', fontWeight: '600', lineHeight: 22 },
+  deleteBtn: {
+    marginTop: 16,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  deleteBtnDisabled: {
+    opacity: 0.7,
+  },
+  deleteBtnText: {
+    color: 'white',
+    fontWeight: '800',
+    fontSize: 13,
+  },
   targetBtn: {
     marginTop: 16,
     borderRadius: 14,

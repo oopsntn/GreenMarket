@@ -29,7 +29,11 @@ const HostContentModerationList = ({ navigation }: any) => {
     try {
       setLoading(true);
       const data = await managerService.getPendingHostContents();
-      setItems(data.filter((x) => String(x.hostContentStatus || '').toLowerCase() === 'pending'));
+      setItems(
+        data.filter((x) =>
+          ['pending', 'pending_admin'].includes(String(x.hostContentStatus || '').toLowerCase()),
+        ),
+      );
     } catch (error) {
       console.error(error);
       const status =

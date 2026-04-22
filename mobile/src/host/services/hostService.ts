@@ -183,6 +183,11 @@ export const hostService = {
     return normalizeContent(response.data);
   },
 
+  deleteContent: async (id: number | string): Promise<{ message?: string }> => {
+    const response = await api.delete<{ message?: string }>(`/host/contents/${id}`);
+    return response.data;
+  },
+
   getPublicContentDetail: async (id: number | string): Promise<HostPublicContentDetail> => {
     const response = await api.get<HostPublicContentDetail>(`/host/public/contents/${id}`);
     const row = response.data as any;
