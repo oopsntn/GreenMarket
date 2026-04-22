@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { uploadMedia } from "../controllers/upload.controller.ts";
-import { upload, uploadImagesOnly, validateFileSizes } from "../middlewares/upload.middleware.ts";
+import { uploadMedia } from "../controllers/upload.controller";
+import { upload, uploadImagesOnly, validateFileSizes } from "../middlewares/upload.middleware";
 
 const router = Router();
 

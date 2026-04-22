@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { createPayment, createShopRegistrationPayment, createShopVipPayment, createPersonalPackagePayment, vnpayReturn, vnpayIpn, getTransactionHistory } from "../../controllers/user/payment.controller.ts";
-import { verifyToken } from "../../middlewares/authMiddleware.ts";
+import { createPayment, createShopRegistrationPayment, createShopVipPayment, createPersonalPackagePayment, vnpayReturn, vnpayIpn, getTransactionHistory } from "../../controllers/user/payment.controller";
+import { verifyToken } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

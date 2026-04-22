@@ -5,7 +5,7 @@
  */
 import "dotenv/config";
 import { and, eq, isNull } from "drizzle-orm";
-import { db } from "../config/db.ts";
+import { db } from "../config/db";
 import {
   placementSlots,
   promotionPackages,

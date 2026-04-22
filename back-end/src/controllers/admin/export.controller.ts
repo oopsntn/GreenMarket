@@ -1,6 +1,6 @@
 import { Response } from "express";
-import { AuthRequest } from "../../dtos/auth.ts";
-import { adminReportingService } from "../../services/adminReporting.service.ts";
+import { AuthRequest } from "../../dtos/auth";
+import { adminReportingService } from "../../services/adminReporting.service";
 
 const getGeneratedBy = (req: AuthRequest) =>
     req.user?.email || req.user?.mobile || "Quản trị viên hệ thống";

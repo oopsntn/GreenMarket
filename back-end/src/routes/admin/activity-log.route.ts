@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { requireRoles } from "../../middlewares/authMiddleware.ts";
-import { getActivityLogs } from "../../controllers/admin/activity-log.controller.ts";
+import { requireRoles } from "../../middlewares/authMiddleware";
+import { getActivityLogs } from "../../controllers/admin/activity-log.controller";
 
 const router = Router();
 

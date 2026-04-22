@@ -1,5 +1,5 @@
-import { db } from "../config/db.ts";
-import { users } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { users } from "../models/schema/index";
 import { eq } from "drizzle-orm";
 
 async function testUserProfile() {

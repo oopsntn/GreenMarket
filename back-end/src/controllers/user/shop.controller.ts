@@ -1,18 +1,18 @@
 import { Request, Response } from "express";
-import { db } from "../../config/db.ts";
+import { db } from "../../config/db";
 import { eq, and, inArray, sql, or, ilike, desc } from "drizzle-orm";
-import { shops, type Shop } from "../../models/schema/shops.ts";
-import { posts, mediaAssets, eventLogs, shopCollaborators } from "../../models/schema/index.ts";
-import { parseId } from "../../utils/parseId.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
-import { verificationService } from "../../services/verification.service.ts";
-import { users } from "../../models/schema/users.ts";
+import { shops, type Shop } from "../../models/schema/shops";
+import { posts, mediaAssets, eventLogs, shopCollaborators } from "../../models/schema/index";
+import { parseId } from "../../utils/parseId";
+import { AuthRequest } from "../../dtos/auth";
+import { verificationService } from "../../services/verification.service";
+import { users } from "../../models/schema/users";
 import {
     OwnerDashboardError,
     ownerDashboardService,
 } from "../../services/owner-dashboard.service.ts";
-import { postLifecycleService } from "../../services/postLifecycle.service.ts";
-import { notificationService } from "../../services/notification.service.ts";
+import { postLifecycleService } from "../../services/postLifecycle.service";
+import { notificationService } from "../../services/notification.service";
 
 const SHOP_GALLERY_DELIMITER = "|";
 const SHOP_EVENT_VIEW = "shop_view";

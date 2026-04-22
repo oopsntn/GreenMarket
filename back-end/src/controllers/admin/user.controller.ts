@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { asc, desc, eq } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { users, businessRoles, eventLogs } from "../../models/schema/index.ts";
-import { parseId } from "../../utils/parseId.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { db } from "../../config/db";
+import { users, businessRoles, eventLogs } from "../../models/schema/index";
+import { parseId } from "../../utils/parseId";
+import { AuthRequest } from "../../dtos/auth";
 
 const getPerformedBy = (req: AuthRequest) =>
   req.user?.email || req.user?.mobile || "Quản trị viên hệ thống";

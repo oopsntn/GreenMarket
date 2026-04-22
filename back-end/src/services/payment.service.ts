@@ -1,5 +1,5 @@
 import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
-import { db } from "../config/db.ts";
+import { db } from "../config/db";
 import {
   transactions,
   type Transaction,
@@ -10,7 +10,7 @@ import {
   promotionPackages,
   shops,
 } from "../models/schema/index.ts";
-import { parseId } from "../utils/parseId.ts";
+import { parseId } from "../utils/parseId";
 import {
   createVNPayPaymentRequest,
   validateVNPayConfig,
@@ -23,9 +23,9 @@ import {
   SHOP_REGISTRATION_SLOT_CODE,
   PERSONAL_PLAN_SLOT_CODE,
 } from "../constants/promotion.ts";
-import { readSettingNumber } from "../controllers/user/pricing-config.controller.ts";
-import { postingPolicyService } from "./posting-policy.service.ts";
-import { notificationService } from "./notification.service.ts";
+import { readSettingNumber } from "../controllers/user/pricing-config.controller";
+import { postingPolicyService } from "./posting-policy.service";
+import { notificationService } from "./notification.service";
 
 export class PaymentServiceError extends Error {
   statusCode: number;

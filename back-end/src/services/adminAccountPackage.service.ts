@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
-import { db } from "../config/db.ts";
-import { SHOP_VIP_SLOT_CODE } from "../constants/promotion.ts";
+import { db } from "../config/db";
+import { SHOP_VIP_SLOT_CODE } from "../constants/promotion";
 import {
   DEFAULTS,
   readSettingJson,

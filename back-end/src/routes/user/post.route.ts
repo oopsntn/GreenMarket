@@ -14,7 +14,7 @@ import {
   togglePostVisibility,
   updatePost,
 } from "../../controllers/user/post.controller.ts";
-import { verifyToken } from "../../middlewares/authMiddleware.ts";
+import { verifyToken } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

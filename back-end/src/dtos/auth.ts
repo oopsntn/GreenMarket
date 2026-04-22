@@ -1,5 +1,5 @@
 import { Request } from "express";
-import { Shop } from "../models/schema/shops.ts";
+import { Shop } from "../models/schema/shops";
 
 export interface JWTUserPayload {
     id: number;

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { db } from "../../config/db.ts";
+import { db } from "../../config/db";
 import { eq } from "drizzle-orm";
-import { systemSettings } from "../../models/schema/index.ts";
+import { systemSettings } from "../../models/schema/index";
 
 /**
  * Default values used as fallback when system_settings keys are missing.

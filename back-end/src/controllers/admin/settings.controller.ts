@@ -1,12 +1,12 @@
 ﻿import { Response } from "express";
 import { eq } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { db } from "../../config/db";
+import { AuthRequest } from "../../dtos/auth";
 import {
   eventLogs,
   users,
 } from "../../models/schema/index.ts";
-import { adminConfigStoreService } from "../../services/adminConfigStore.service.ts";
+import { adminConfigStoreService } from "../../services/adminConfigStore.service";
 
 const SETTINGS_KEY = "admin_web_settings";
 

@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
-import { db } from "../config/db.ts";
-import { SHOP_VIP_SLOT_CODE } from "../constants/promotion.ts";
+import { db } from "../config/db";
+import { SHOP_VIP_SLOT_CODE } from "../constants/promotion";
 import {
   transactions,
   placementSlots,
@@ -13,7 +13,7 @@ import {
   adminAccountPackageService,
   type AccountPackageCode,
 } from "./adminAccountPackage.service.ts";
-import { POSTING_PLAN_CODES } from "./posting-policy.service.ts";
+import { POSTING_PLAN_CODES } from "./posting-policy.service";
 
 type TrackingStatus = "permanent" | "active" | "expiring_soon";
 

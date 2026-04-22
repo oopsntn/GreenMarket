@@ -1,10 +1,10 @@
 import { Response } from "express";
 import { and, count, eq, ne } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
-import { posts, reports, mediaAssets } from "../../models/schema/index.ts";
-import { adminWebSettingsService } from "../../services/adminWebSettings.service.ts";
-import { notificationService } from "../../services/notification.service.ts";
+import { db } from "../../config/db";
+import { AuthRequest } from "../../dtos/auth";
+import { posts, reports, mediaAssets } from "../../models/schema/index";
+import { adminWebSettingsService } from "../../services/adminWebSettings.service";
+import { notificationService } from "../../services/notification.service";
 
 export const submitReport = async (
   req: AuthRequest,

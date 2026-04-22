@@ -5,7 +5,7 @@ import {
     getShopCollaborators, inviteCollaborator, removeCollaborator,
     getPendingOwnerPosts, approveCollaboratorPost, rejectCollaboratorPost
 } from "../../controllers/user/shop.controller.ts";
-import { optionalVerifyToken, verifyToken } from "../../middlewares/authMiddleware.ts";
+import { optionalVerifyToken, verifyToken } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

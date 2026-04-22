@@ -3,7 +3,7 @@ import {
   getAllPayoutRequests,
   processPayoutRequest,
 } from "../../controllers/admin/financial.controller.ts";
-import { requireRoles } from "../../middlewares/authMiddleware.ts";
+import { requireRoles } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

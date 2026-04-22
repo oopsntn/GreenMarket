@@ -1,6 +1,6 @@
 import { pgTable, serial, varchar, text, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
-import { users } from "./users.ts";
+import { users } from "./users";
 
 export const tickets = pgTable("tickets", {
     ticketId: serial("ticket_id").primaryKey(),

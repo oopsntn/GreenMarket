@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { getReports, getReportById, resolveReport } from "../../controllers/admin/report.controller.ts";
-import { requireRoles } from "../../middlewares/authMiddleware.ts";
+import { getReports, getReportById, resolveReport } from "../../controllers/admin/report.controller";
+import { requireRoles } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

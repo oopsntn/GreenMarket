@@ -1,7 +1,7 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPServer } from "http";
 import jwt from "jsonwebtoken";
-import { JWTUserPayload } from "../dtos/auth.ts";
+import { JWTUserPayload } from "../dtos/auth";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
 
