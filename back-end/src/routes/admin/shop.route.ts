@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { getShops, createShop, getShopById, updateShopStatus, deleteShop, verifyShop } from "../../controllers/admin/shop.controller.ts";
-import { requireRoles } from "../../middlewares/authMiddleware.ts";
+import { getShops, createShop, getShopById, updateShopStatus, deleteShop, verifyShop } from "../../controllers/admin/shop.controller";
+import { requireRoles } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

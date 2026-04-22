@@ -9,7 +9,7 @@ import {
   boolean,
 } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
-import { businessRoles } from "./business-roles.ts";
+import { businessRoles } from "./business-roles";
 
 export const users = pgTable("users", {
   userId: serial("user_id").primaryKey(),

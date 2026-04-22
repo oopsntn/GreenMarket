@@ -1,6 +1,6 @@
 import { pgTable, serial, integer, varchar, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
-import { users } from "./users.ts";
+import { users } from "./users";
 
 export const notifications = pgTable("notifications", {
     notificationId: serial("notification_id").primaryKey(),

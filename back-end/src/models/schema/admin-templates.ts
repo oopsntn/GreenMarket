@@ -7,7 +7,7 @@ import {
   integer,
 } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
-import { admins } from "./admins.ts";
+import { admins } from "./admins";
 
 export const adminTemplates = pgTable("admin_templates", {
   templateId: serial("template_id").primaryKey(),

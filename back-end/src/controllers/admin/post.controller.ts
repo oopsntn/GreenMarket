@@ -1,14 +1,14 @@
 import { Request, Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "../../config/db";
-import { AuthRequest } from "../../dtos/auth.ts";
-import { eventLogs, users, mediaAssets } from "../../models/schema/index.ts";
+import { AuthRequest } from "../../dtos/auth";
+import { eventLogs, users, mediaAssets } from "../../models/schema/index";
 import { postAttributeValues } from "../../models/schema/post-attribute-values";
 import { posts, type NewPost } from "../../models/schema/posts";
 import { parseId } from "../../utils/parseId";
 import { slugify } from "../../utils/slugify";
-import { postLifecycleService } from "../../services/postLifecycle.service.ts";
-import { notificationService } from "../../services/notification.service.ts";
+import { postLifecycleService } from "../../services/postLifecycle.service";
+import { notificationService } from "../../services/notification.service";
 
 const getPostActionLabel = (status: string) => {
     switch (status.toLowerCase()) {

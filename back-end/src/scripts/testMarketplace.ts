@@ -1,7 +1,7 @@
-import { db } from "../config/db.ts";
-import { users, shops, posts, mediaAssets, postAttributeValues, categories, attributes } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { users, shops, posts, mediaAssets, postAttributeValues, categories, attributes } from "../models/schema/index";
 import { eq } from "drizzle-orm";
-import { slugify } from "../utils/slugify.ts";
+import { slugify } from "../utils/slugify";
 
 async function testMarketplace() {
     console.log("--- Starting Marketplace Integration Test ---");

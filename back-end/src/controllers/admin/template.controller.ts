@@ -1,14 +1,14 @@
 import { Request, Response } from "express";
 import { desc, eq } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { db } from "../../config/db";
+import { AuthRequest } from "../../dtos/auth";
 import {
   adminTemplates,
   type AdminTemplate,
 } from "../../models/schema/admin-templates.ts";
-import { eventLogs, users } from "../../models/schema/index.ts";
-import { adminConfigStoreService } from "../../services/adminConfigStore.service.ts";
-import { parseId } from "../../utils/parseId.ts";
+import { eventLogs, users } from "../../models/schema/index";
+import { adminConfigStoreService } from "../../services/adminConfigStore.service";
+import { parseId } from "../../utils/parseId";
 
 const TEMPLATE_METADATA_KEY = "admin_template_metadata_map";
 

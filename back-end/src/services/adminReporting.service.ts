@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import ExcelJS from "exceljs";
-import { db } from "../config/db.ts";
+import { db } from "../config/db";
 import {
     attributes,
     categories,
@@ -18,7 +18,7 @@ import {
     adminPlacementSlotCatalogService,
     type AdminPlacementSlotCatalogItem,
 } from "./adminPlacementSlotCatalog.service.ts";
-import { adminPromotionService } from "./adminPromotion.service.ts";
+import { adminPromotionService } from "./adminPromotion.service";
 
 type DateRange = {
     from: Date | null;

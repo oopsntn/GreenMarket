@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireRoles } from "../../middlewares/authMiddleware.ts";
+import { requireRoles } from "../../middlewares/authMiddleware";
 import {
   generateAIInsight,
   getAIInsightHistory,

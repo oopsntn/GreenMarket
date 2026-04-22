@@ -1,6 +1,6 @@
-import { db } from "../config/db.ts";
+import { db } from "../config/db";
 import { eq, and } from "drizzle-orm";
-import { users, shops, shopCollaborators, posts } from "../models/schema/index.ts";
+import { users, shops, shopCollaborators, posts } from "../models/schema/index";
 
 async function testCollaboratorFlow() {
     console.log("🚀 Starting Collaborator Flow Test...");

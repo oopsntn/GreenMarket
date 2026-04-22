@@ -6,6 +6,7 @@ import {
   sql,
   ilike,
   or,
+  inArray,
 } from "drizzle-orm";
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
@@ -25,6 +26,8 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
 const MIN_PAYOUT_AMOUNT = 500_000;
+
+const PUBLIC_HOST_CONTENT_STATUSES = ["published"] as const;
 
 const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
   const parsedPage = Number(queryPage);
@@ -64,7 +67,13 @@ export const getHostDashboard = async (req: AuthRequest, res: Response): Promise
         totalViews: sql<number>`COALESCE(SUM(${hostContents.hostContentViewCount}), 0)`,
       })
       .from(hostContents)
-      .where(eq(hostContents.hostContentAuthorId, userId));
+      .where(
+        and(
+          eq(hostContents.hostContentAuthorId, userId),
+          inArray(hostContents.hostContentStatus, [...PUBLIC_HOST_CONTENT_STATUSES]),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`,
+        ),
+      );
 
     const [earningSummary] = await db
       .select({
@@ -533,7 +542,7 @@ export const getPublicContentDetail = async (req: Request<{ id: string }>, res: 
       .where(
         and(
           eq(hostContents.hostContentId, contentId),
-          eq(hostContents.hostContentStatus, "published"),
+          inArray(hostContents.hostContentStatus, [...PUBLIC_HOST_CONTENT_STATUSES]),
           sql`${hostContents.hostContentDeletedAt} IS NULL`
         )
       )
@@ -580,7 +589,7 @@ export const toggleFavoriteContent = async (req: AuthRequest, res: Response): Pr
       .where(
         and(
           eq(hostContents.hostContentId, contentId),
-          eq(hostContents.hostContentStatus, "published"),
+          inArray(hostContents.hostContentStatus, [...PUBLIC_HOST_CONTENT_STATUSES]),
           sql`${hostContents.hostContentDeletedAt} IS NULL`
         )
       )

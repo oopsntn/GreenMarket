@@ -10,7 +10,7 @@ import {
     or,
 } from "drizzle-orm";
 import { db } from "../../config/db";
-import { eventLogs } from "../../models/schema/index.ts";
+import { eventLogs } from "../../models/schema/index";
 import { promotionPackages } from "../../models/schema/promotion-packages";
 import { promotionPackagePrices } from "../../models/schema/promotion-package-prices";
 import { placementSlots } from "../../models/schema/placement-slots";

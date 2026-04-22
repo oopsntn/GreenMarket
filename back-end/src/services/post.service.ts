@@ -1,9 +1,9 @@
-import { db } from "../config/db.ts";
-import { posts, mediaAssets, postPromotions, placementSlots } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { posts, mediaAssets, postPromotions, placementSlots } from "../models/schema/index";
 import { eq, and, or, ilike, gte, lte, sql, SQL, inArray, getTableColumns } from "drizzle-orm";
-import { GetPostsQueryDto } from "../dtos/post.ts";
-import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion.ts";
-import { postLifecycleService } from "./postLifecycle.service.ts";
+import { GetPostsQueryDto } from "../dtos/post";
+import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion";
+import { postLifecycleService } from "./postLifecycle.service";
 
 export class PostService {
     static async getPublicPosts(query: GetPostsQueryDto) {

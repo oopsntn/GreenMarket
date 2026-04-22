@@ -12,8 +12,8 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { db } from "../../config/db";
+import { AuthRequest } from "../../dtos/auth";
 import {
   ledgers,
   taskReplies,
@@ -24,7 +24,7 @@ import {
   users,
   hostContents,
 } from "../../models/schema/index.ts";
-import { parseId } from "../../utils/parseId.ts";
+import { parseId } from "../../utils/parseId";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;

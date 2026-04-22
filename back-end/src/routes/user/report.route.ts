@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { submitReport } from "../../controllers/user/report.controller.ts";
-import { verifyToken } from "../../middlewares/authMiddleware.ts";
+import { submitReport } from "../../controllers/user/report.controller";
+import { verifyToken } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

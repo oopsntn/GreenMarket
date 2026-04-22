@@ -1,7 +1,7 @@
 import { pgTable, serial, timestamp, integer, varchar, uniqueIndex } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
-import { users } from "./users.ts";
-import { shops } from "./shops.ts";
+import { users } from "./users";
+import { shops } from "./shops";
 
 export const shopCollaborators = pgTable("shop_collaborators", {
   shopCollaboratorsId: serial("shop_collaborators_id").primaryKey(),

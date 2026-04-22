@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { eq, inArray } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { admins, adminRoles, roles } from "../../models/schema/index.ts";
-import { parseId } from "../../utils/parseId.ts";
+import { db } from "../../config/db";
+import { admins, adminRoles, roles } from "../../models/schema/index";
+import { parseId } from "../../utils/parseId";
 
 export const getRoles = async (_req: Request, res: Response): Promise<void> => {
     try {

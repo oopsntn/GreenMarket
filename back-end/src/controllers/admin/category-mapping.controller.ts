@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import { and, asc, eq } from "drizzle-orm";
-import { db } from "../../config/db.ts";
+import { db } from "../../config/db";
 import {
   attributes,
   categories,
   categoryAttributes,
   type NewCategoryAttribute,
 } from "../../models/schema/index.ts";
-import { parseId } from "../../utils/parseId.ts";
+import { parseId } from "../../utils/parseId";
 
 type CategoryMappingPayload = {
   categoryId?: number;

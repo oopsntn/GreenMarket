@@ -1,5 +1,5 @@
-import { db } from "../config/db.ts";
-import { posts } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { posts } from "../models/schema/index";
 import { eq, and } from "drizzle-orm";
 
 async function autoApprove() {

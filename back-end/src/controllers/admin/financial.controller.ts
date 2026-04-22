@@ -5,14 +5,14 @@ import {
   eq,
   sql,
 } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { db } from "../../config/db";
+import { AuthRequest } from "../../dtos/auth";
 import {
   transactions,
   users,
 } from "../../models/schema/index.ts";
-import { parseId } from "../../utils/parseId.ts";
-import { notificationService } from "../../services/notification.service.ts";
+import { parseId } from "../../utils/parseId";
+import { notificationService } from "../../services/notification.service";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;

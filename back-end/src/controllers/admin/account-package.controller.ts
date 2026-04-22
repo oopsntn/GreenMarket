@@ -1,10 +1,10 @@
 import { Response } from "express";
-import type { AuthRequest } from "../../dtos/auth.ts";
+import type { AuthRequest } from "../../dtos/auth";
 import {
   AdminAccountPackageError,
   adminAccountPackageService,
 } from "../../services/adminAccountPackage.service.ts";
-import { adminAccountPackageTrackingService } from "../../services/adminAccountPackageTracking.service.ts";
+import { adminAccountPackageTrackingService } from "../../services/adminAccountPackageTracking.service";
 
 export const getAccountPackages = async (
   _req: AuthRequest,
