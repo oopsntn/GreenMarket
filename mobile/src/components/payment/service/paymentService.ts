@@ -31,7 +31,8 @@ export const paymentService = {
     buyPackage: async (postId: number, packageId: number): Promise<PaymentIntentResponse> => {
         const response = await api.post('/payment/buy-package', {
             postId,
-            packageId
+            packageId,
+            platform: 'mobile'
         });
         return response.data;
     },
@@ -54,17 +55,17 @@ export const paymentService = {
     },
 
     buyShopVipPackage: async () => {
-        const response = await api.post('/payment/buy-shop-vip');
+        const response = await api.post('/payment/buy-shop-vip', { platform: 'mobile' });
         return response.data;
     },
 
     buyPersonalPackage: async () => {
-        const response = await api.post('/payment/buy-personal');
+        const response = await api.post('/payment/buy-personal', { platform: 'mobile' });
         return response.data;
     },
 
     createShopPaymentIntent: async (): Promise<{ paymentUrl: string }> => {
-        const response = await api.post<{ paymentUrl: string }>('/payment/register-shop');
+        const response = await api.post<{ paymentUrl: string }>('/payment/register-shop', { platform: 'mobile' });
         return response.data;
     }
 };

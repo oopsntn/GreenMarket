@@ -73,6 +73,7 @@ export const createPayment = async (
       postIdRaw: req.body?.postId,
       packageIdRaw: req.body?.packageId,
       ipAddr: req.ip || "127.0.0.1",
+      platform: req.body?.platform,
     });
 
     res.json({ paymentUrl });
@@ -109,7 +110,7 @@ export const createShopRegistrationPayment = async (
       return;
     }
 
-    const { paymentUrl } = await paymentService.createShopPaymentIntent(userId, req.ip || "127.0.0.1");
+    const { paymentUrl } = await paymentService.createShopPaymentIntent(userId, req.ip || "127.0.0.1", req.body?.platform);
     res.json({ paymentUrl });
   } catch (error) {
     if (error instanceof PaymentServiceError) {
@@ -132,7 +133,7 @@ export const createShopVipPayment = async (
       return;
     }
 
-    const { paymentUrl } = await paymentService.createShopVipPaymentIntent(userId, req.ip || "127.0.0.1");
+    const { paymentUrl } = await paymentService.createShopVipPaymentIntent(userId, req.ip || "127.0.0.1", req.body?.platform);
     res.json({ paymentUrl });
   } catch (error) {
     if (error instanceof PaymentServiceError) {
@@ -155,7 +156,7 @@ export const createPersonalPackagePayment = async (
       return;
     }
 
-    const { paymentUrl } = await paymentService.createPersonalPackagePaymentIntent(userId, req.ip || "127.0.0.1");
+    const { paymentUrl } = await paymentService.createPersonalPackagePaymentIntent(userId, req.ip || "127.0.0.1", req.body?.platform);
     res.json({ paymentUrl });
   } catch (error) {
     if (error instanceof PaymentServiceError) {
@@ -177,22 +178,24 @@ export const vnpayReturn = async (req: Request, res: Response): Promise<void> =>
     
     const mapped = mapCallbackToFrontend(result);
 
-    const redirectUrl = buildFrontendPaymentResultUrl({
+    const platform = req.query.platform === "mobile" ? "mobile" : "web";
+    const redirectUrl = buildPaymentResultRedirectUrl({
       status: mapped.status,
       code: mapped.code,
       txnRef: mapped.txnRef,
       message: mapped.message,
-    });
+    }, platform);
 
     res.redirect(302, redirectUrl);
   } catch (error) {
-    console.error("MoMo Return Error:", error);
+    console.error("VNPay Return Error:", error);
 
-    const redirectUrl = buildFrontendPaymentResultUrl({
+    const platform = req.query.platform === "mobile" ? "mobile" : "web";
+    const redirectUrl = buildPaymentResultRedirectUrl({
       status: "failed",
       code: "99",
       message: "system_error",
-    });
+    }, platform);
     res.redirect(302, redirectUrl);
   }
 };

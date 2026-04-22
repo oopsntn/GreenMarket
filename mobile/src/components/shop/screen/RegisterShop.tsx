@@ -8,8 +8,6 @@ import Input from '../../Reused/Input/Input'
 import Button from '../../Reused/Button/Button'
 import { ShopService } from '../service/shopService'
 import CustomAlert from '../../../utils/AlertHelper'
-import { ProfileService } from '../../profile/service/ProfileService'
-import { postService } from '../../post/service/postService'
 import AddressPicker from '../components/AddressPicker'
 import { useAuth } from '../../../context/AuthContext'
 import { resolveImageUrl } from '../../../utils/resolveImageUrl'
@@ -219,11 +217,11 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
             try {
                 if (localLogoUri) {
-                    const logoRes = await ProfileService.uploadAvatar(localLogoUri)
+                    const logoRes = await ShopService.uploadShopLogo(localLogoUri)
                     if (logoRes?.urls?.[0]) uploadedLogoUrl = logoRes.urls[0]
                 }
                 if (localGalleryUris.length > 0) {
-                    const galleryRes = await postService.uploadMedia(localGalleryUris)
+                    const galleryRes = await ShopService.uploadShopGallery(localGalleryUris)
                     if (galleryRes?.urls?.length) uploadedGalleryUrls = galleryRes.urls
                 }
             } catch (uploadErr: any) {
