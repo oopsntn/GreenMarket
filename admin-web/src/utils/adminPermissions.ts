@@ -253,7 +253,7 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
       },
       {
         label: "Tài chính / Chi trả",
-        hint: "Xử lý yêu cầu rút tiền của Host và cộng tác viên.",
+        hint: "Theo dõi và xác nhận chi trả thủ công cho Host.",
         path: "/financial",
         moduleKey: "financial",
       },

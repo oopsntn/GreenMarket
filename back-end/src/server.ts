@@ -11,7 +11,6 @@ import categoryRoutes from "./routes/admin/category.route.ts";
 import attributeRoutes from "./routes/admin/attribute.route.ts";
 import categoryMappingRoutes from "./routes/admin/category-mapping.route.ts";
 import templateRoutes from "./routes/admin/template.route.ts";
-import templateBuilderRoutes from "./routes/admin/template-builder.route.ts";
 import postRoutes from "./routes/admin/post.route.ts";
 import shopRoutes from "./routes/admin/shop.route.ts";
 import reportRoutes from "./routes/admin/report.route.ts";
@@ -93,12 +92,6 @@ app.use(
   categoryMappingRoutes,
 );
 app.use("/api/admin/templates", verifyToken, isAdmin, templateRoutes);
-app.use(
-  "/api/admin/template-builder",
-  verifyToken,
-  isAdmin,
-  templateBuilderRoutes,
-);
 app.use("/api/admin/posts", verifyToken, isAdmin, postRoutes);
 app.use("/api/admin/shops", verifyToken, isAdmin, shopRoutes);
 app.use("/api/admin/reports", verifyToken, isAdmin, reportRoutes);

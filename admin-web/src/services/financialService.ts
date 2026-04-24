@@ -97,7 +97,7 @@ type FinancialDetailApiResponse = {
 };
 
 const repairMojibake = (value: string) => {
-  if (!value || !/[ÃƒÃ‚Ã¡ÂºÃ¡Â»Ã„]/.test(value)) {
+  if (!value || !/[ÃƒÆ’Ãƒâ€šÃƒÂ¡Ã‚ÂºÃƒÂ¡Ã‚Â»Ãƒâ€ž]/.test(value)) {
     return value;
   }
 
@@ -200,7 +200,11 @@ const translateSourceTypeLabel = (type: string, typeLabel?: string | null) => {
     bonus: "Thưởng đạt mốc lượt xem",
   };
 
-  return labels[normalized] || repairMojibake(typeLabel?.trim() || "") || repairMojibake(type);
+  return (
+    labels[normalized] ||
+    repairMojibake(typeLabel?.trim() || "") ||
+    repairMojibake(type)
+  );
 };
 
 const translateSourceStatusLabel = (
@@ -217,7 +221,12 @@ const translateSourceStatusLabel = (
     completed: "Hoàn thành",
   };
 
-  return labels[normalized] || repairMojibake(statusLabel?.trim() || "") || repairMojibake(status?.trim() || "") || "--";
+  return (
+    labels[normalized] ||
+    repairMojibake(statusLabel?.trim() || "") ||
+    repairMojibake(status?.trim() || "") ||
+    "--"
+  );
 };
 
 const translateFundingNote = (value: string | null | undefined) => {
@@ -264,7 +273,10 @@ const translateSourceTitle = (value: string | null | undefined) => {
 
 const translateApprovalHint = (value: string | null | undefined) => {
   const raw = repairMojibake(value?.trim() || "");
-  return raw || "Admin chuyển khoản thủ công ngoài hệ thống và xác nhận lại sau khi đã chi trả.";
+  return (
+    raw ||
+    "Admin chuyển khoản thủ công ngoài hệ thống và xác nhận lại sau khi đã chi trả."
+  );
 };
 
 const normalizeRequest = (
@@ -305,7 +317,10 @@ const normalizeSourceDetail = (
   ...item,
   sourceTitle: translateSourceTitle(item.sourceTitle),
   sourceTypeLabel: translateSourceTypeLabel(item.sourceType, item.sourceTypeLabel),
-  sourceStatusLabel: translateSourceStatusLabel(item.sourceStatus, item.sourceStatusLabel),
+  sourceStatusLabel: translateSourceStatusLabel(
+    item.sourceStatus,
+    item.sourceStatusLabel,
+  ),
   payerName: repairMojibake(item.payerName),
   payerEmail: repairMojibake(item.payerEmail || "") || null,
   payerMobile: repairMojibake(item.payerMobile || "") || null,

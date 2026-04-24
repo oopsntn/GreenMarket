@@ -7,7 +7,7 @@ import type {
 import { getAdminProfile } from "../utils/adminSession";
 
 const repairMojibake = (value: string) => {
-  if (!value || !/[ÃÂáºá»Ä]/.test(value)) {
+  if (!value || !/[ÃƒÃ‚Ã¡ÂºÃ¡Â»Ã„]/.test(value)) {
     return value;
   }
 

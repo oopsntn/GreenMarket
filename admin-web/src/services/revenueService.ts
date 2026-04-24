@@ -67,8 +67,7 @@ const isUnknownValue = (value: string) => {
   return (
     !normalized ||
     normalized.includes("unknown") ||
-    normalized.includes("chưa xác định") ||
-    normalized.includes("xác định")
+    normalized.includes("chua xac dinh")
   );
 };
 

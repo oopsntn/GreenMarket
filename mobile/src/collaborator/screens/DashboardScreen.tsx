@@ -14,7 +14,6 @@ import {
     LayoutDashboard,
     Briefcase,
     CheckCircle2,
-    Wallet,
     Settings,
     ChevronRight,
     Circle,
@@ -46,6 +45,12 @@ const DashboardScreen = () => {
     const [data, setData] = useState<CollaboratorProfileResponse | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const getAvailabilityLabel = (status?: string) => {
+        if (status === 'available') return 'Sẵn sàng';
+        if (status === 'busy') return 'Đang bận';
+        return 'Ngoại tuyến';
+    };
+
     const fetchData = async () => {
         try {
             setError(null);
@@ -53,7 +58,7 @@ const DashboardScreen = () => {
             setData(res);
         } catch (error: any) {
             console.error('Error fetching collaborator profile:', error);
-            setError(error?.response?.data?.error || 'Unable to load collaborator dashboard.');
+            setError(error?.response?.data?.error || 'Không thể tải trang cộng tác viên lúc này.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -77,7 +82,7 @@ const DashboardScreen = () => {
             fetchData();
         } catch (error: any) {
             console.error('Error updating availability:', error);
-            setError(error?.response?.data?.error || 'Unable to update availability right now.');
+            setError(error?.response?.data?.error || 'Không thể cập nhật trạng thái làm việc lúc này.');
         }
     };
     const handleLogout = () => {
@@ -104,7 +109,7 @@ const DashboardScreen = () => {
                 <View style={styles.center}>
                     <Text style={styles.errorText}>{error}</Text>
                     <TouchableOpacity style={styles.retryBtn} onPress={fetchData}>
-                        <Text style={styles.retryBtnText}>Retry</Text>
+                        <Text style={styles.retryBtnText}>Tải lại</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -137,18 +142,13 @@ const DashboardScreen = () => {
 
                     {/* Balance Card */}
                     <View style={styles.balanceCard}>
-                        <View>
-                            <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
-                            <Text style={styles.balanceValue}>
-                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(stats.availableBalance)}
+                        <View style={styles.policyCardContent}>
+                            <Text style={styles.balanceLabel}>THANH TOÁN CỘNG TÁC</Text>
+                            <Text style={styles.policyTitle}>Thanh toán trực tiếp ngoài hệ thống</Text>
+                            <Text style={styles.policyText}>
+                                GreenMarket chỉ hỗ trợ kết nối và theo dõi công việc cộng tác. Chi phí cộng tác sẽ do khách hàng và cộng tác viên tự liên hệ, thỏa thuận và thanh toán trực tiếp.
                             </Text>
                         </View>
-                        <TouchableOpacity
-                            style={styles.withdrawBtn}
-                            onPress={() => navigation.navigate('PayoutRequest', { balance: stats.availableBalance })}
-                        >
-                            <Text style={styles.withdrawBtnText}>Rút tiền</Text>
-                        </TouchableOpacity>
                     </View>
                 </LinearGradient>
 
@@ -171,7 +171,7 @@ const DashboardScreen = () => {
                                         color={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
                                     />
                                     <Text style={styles.statusText}>
-                                        {profile.availabilityStatus?.toUpperCase()}
+                                        {getAvailabilityLabel(profile.availabilityStatus)}
                                     </Text>
                                 </View>
                             </View>
@@ -219,17 +219,6 @@ const DashboardScreen = () => {
                                 <View style={styles.menuContent}>
                                     <Text style={styles.menuTitle}>Tìm việc mới</Text>
                                     <Text style={styles.menuDesc}>Khám phá các yêu cầu chưa có người nhận</Text>
-                                </View>
-                                <ChevronRight color="#94A3B8" size={20} />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Wallet', { initialTab: 'payouts' })}>
-                                <View style={[styles.menuIconWrap, { backgroundColor: '#EFF6FF' }]}>
-                                    <Wallet color="#3B82F6" size={20} />
-                                </View>
-                                <View style={styles.menuContent}>
-                                    <Text style={styles.menuTitle}>Lịch sử rút tiền</Text>
-                                    <Text style={styles.menuDesc}>Xem lịch sử giao dịch của bạn</Text>
                                 </View>
                                 <ChevronRight color="#94A3B8" size={20} />
                             </TouchableOpacity>
@@ -294,14 +283,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     balanceCard: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.1)',
         padding: 20,
         borderRadius: 20,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
+    },
+    policyCardContent: {
+        gap: 6,
     },
     balanceLabel: {
         color: '#D1FAE5',
@@ -315,16 +304,16 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         marginTop: 4,
     },
-    withdrawBtn: {
-        backgroundColor: 'white',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 12,
+    policyTitle: {
+        color: 'white',
+        fontSize: 20,
+        fontWeight: '800',
     },
-    withdrawBtnText: {
-        color: '#16A34A',
-        fontWeight: '700',
-        fontSize: 14,
+    policyText: {
+        color: '#DCFCE7',
+        fontSize: 13,
+        lineHeight: 20,
+        fontWeight: '500',
     },
     content: {
         paddingHorizontal: 24,

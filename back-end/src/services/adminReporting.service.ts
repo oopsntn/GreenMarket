@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+﻿import { and, desc, eq, sql } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import { db } from "../config/db.ts";
 import {
@@ -391,7 +391,7 @@ const buildExportContent = (
     }
 
     return {
-        content: toDelimitedContent(rows, format, columns),
+        content: "\uFEFF" + toDelimitedContent(rows, format, columns),
         contentEncoding: "utf-8" as const,
     };
 };
@@ -1139,13 +1139,30 @@ export const adminReportingService = {
         let columns: ExportColumn[] = [];
 
         if (payload.module === "Users") {
-            const allUsers = await db.select().from(users);
+            reportName = "Xuất danh sách người dùng";
+            const allUsers = await db
+                .select({
+                    userId: users.userId,
+                    userDisplayName: users.userDisplayName,
+                    userEmail: users.userEmail,
+                    userMobile: users.userMobile,
+                    userStatus: users.userStatus,
+                    userBusinessRoleId: users.userBusinessRoleId,
+                    userCreatedAt: users.userCreatedAt,
+                    businessRoleTitle: businessRoles.businessRoleTitle,
+                })
+                .from(users)
+                .leftJoin(
+                    businessRoles,
+                    eq(users.userBusinessRoleId, businessRoles.businessRoleId),
+                );
             columns = [
                 { key: "userId", header: "Mã người dùng", width: 16 },
                 { key: "displayName", header: "Tên hiển thị", width: 28 },
                 { key: "email", header: "Email", width: 32 },
                 { key: "mobile", header: "Số điện thoại", width: 18 },
                 { key: "status", header: "Trạng thái", width: 18 },
+                { key: "businessRole", header: "Mã vai trò nghiệp vụ", width: 28 },
                 { key: "createdAt", header: "Ngày tạo", width: 18 },
             ];
             rows = allUsers.map((item) => ({
@@ -1154,14 +1171,20 @@ export const adminReportingService = {
                 email: item.userEmail ?? "",
                 mobile: item.userMobile,
                 status: item.userStatus ?? "",
+                businessRole:
+                    item.userBusinessRoleId && item.businessRoleTitle
+                        ? `${item.userBusinessRoleId} (${item.businessRoleTitle})`
+                        : item.userBusinessRoleId ?? "",
                 createdAt: formatDate(item.userCreatedAt),
             }));
         } else if (payload.module === "Categories") {
+            reportName = "Xuất danh mục";
             const allCategories = await db.select().from(categories);
             columns = [
                 { key: "categoryId", header: "Mã danh mục", width: 16 },
                 { key: "title", header: "Tên danh mục", width: 28 },
                 { key: "slug", header: "Slug", width: 24 },
+                { key: "parentCategoryId", header: "Mã danh mục cha", width: 18 },
                 { key: "published", header: "Đang hiển thị", width: 18 },
                 { key: "createdAt", header: "Ngày tạo", width: 18 },
             ];
@@ -1169,16 +1192,19 @@ export const adminReportingService = {
                 categoryId: item.categoryId,
                 title: item.categoryTitle ?? "",
                 slug: item.categorySlug ?? "",
+                parentCategoryId: item.categoryParentId ?? "",
                 published: item.categoryPublished ?? false,
                 createdAt: formatDate(item.categoryCreatedAt),
             }));
         } else if (payload.module === "Attributes") {
+            reportName = "Xuất thuộc tính";
             const allAttributes = await db.select().from(attributes);
             columns = [
                 { key: "attributeId", header: "Mã thuộc tính", width: 16 },
                 { key: "code", header: "Mã", width: 20 },
                 { key: "title", header: "Tên thuộc tính", width: 28 },
                 { key: "dataType", header: "Kiểu dữ liệu", width: 20 },
+                { key: "options", header: "Tùy chọn", width: 42 },
                 { key: "published", header: "Đang hiển thị", width: 18 },
                 { key: "createdAt", header: "Ngày tạo", width: 18 },
             ];
@@ -1187,39 +1213,56 @@ export const adminReportingService = {
                 code: item.attributeCode ?? "",
                 title: item.attributeTitle ?? "",
                 dataType: item.attributeDataType ?? "",
+                options:
+                    item.attributeOptions === null || item.attributeOptions === undefined
+                        ? ""
+                        : typeof item.attributeOptions === "string"
+                            ? item.attributeOptions
+                            : JSON.stringify(item.attributeOptions),
                 published: item.attributePublished ?? false,
                 createdAt: formatDate(item.attributeCreatedAt),
             }));
         } else if (payload.module === "Promotions") {
+            reportName = "Xuất đơn quảng bá";
             const promotions = await adminPromotionService.getPromotions();
             columns = [
                 { key: "id", header: "Mã chiến dịch", width: 16 },
+                { key: "postId", header: "Mã bài đăng", width: 14 },
                 { key: "postTitle", header: "Bài đăng", width: 36 },
                 { key: "owner", header: "Chủ sở hữu", width: 28 },
+                { key: "packageId", header: "Mã gói", width: 12 },
                 { key: "slot", header: "Vị trí hiển thị", width: 22 },
                 { key: "packageName", header: "Gói áp dụng", width: 24 },
                 { key: "startDate", header: "Bắt đầu", width: 16 },
                 { key: "endDate", header: "Kết thúc", width: 16 },
                 { key: "status", header: "Trạng thái", width: 18 },
                 { key: "paymentStatus", header: "Thanh toán", width: 18 },
+                { key: "handledBy", header: "Người xử lý", width: 16 },
                 { key: "budget", header: "Ngân sách", width: 18 },
+                { key: "warnings", header: "Cảnh báo", width: 42 },
+                { key: "note", header: "Ghi chú", width: 42 },
             ];
             rows = promotions
                 .filter((item) => doesRangeOverlap(item.startDate, item.endDate, range))
                 .map((item) => ({
                     id: item.id,
+                    postId: item.postId,
                     postTitle: item.postTitle,
                     owner: item.owner,
+                    packageId: item.packageId,
                     slot: item.slot,
                     packageName: item.packageName,
                     startDate: item.startDate,
                     endDate: item.endDate,
                     status: item.status,
                     paymentStatus: item.paymentStatus,
+                    handledBy: item.handledBy,
                     budget: item.budget,
+                    warnings: item.warnings.join(" | "),
+                    note: item.note,
                 }));
         } else if (payload.module === "Analytics") {
-            reportName = "Analytics Export";
+            reportName = "Xuất báo cáo phân tích";
             const analytics = await this.getAnalyticsSummary(payload.fromDate, payload.toDate);
             columns = [
                 { key: "id", header: "Mã vị trí", width: 14 },
@@ -1228,6 +1271,8 @@ export const adminReportingService = {
                 { key: "clicks", header: "Lượt nhấp", width: 16 },
                 { key: "ctr", header: "CTR", width: 12 },
                 { key: "revenue", header: "Doanh thu", width: 18 },
+                { key: "dateFrom", header: "Từ ngày", width: 16 },
+                { key: "dateTo", header: "Đến ngày", width: 16 },
             ];
             rows = analytics.topPlacements.map((item) => ({
                 id: item.id,
@@ -1236,8 +1281,11 @@ export const adminReportingService = {
                 clicks: item.clicks,
                 ctr: item.ctr,
                 revenue: item.revenue,
+                dateFrom: payload.fromDate ?? "",
+                dateTo: payload.toDate ?? "",
             }));
         } else {
+            reportName = "Xuất dữ liệu mẫu nội dung";
             columns = [
                 { key: "message", header: "Ghi chú", width: 96 },
             ];
@@ -1288,23 +1336,48 @@ export const adminReportingService = {
     },
 
     async createFinancialExport(payload: FinancialExportPayload): Promise<ExportFileResult> {
-        let reportName = payload.reportType;
+        let reportName: string = payload.reportType;
         let rows: Array<Record<string, unknown>> = [];
+        let columns: ExportColumn[] = [];
 
         if (payload.reportType === "Revenue Summary") {
+            reportName = "Xuất báo cáo doanh thu";
             const revenue = await this.getRevenueSummary(payload.fromDate, payload.toDate);
+            columns = [
+                { key: "id", header: "STT", width: 10 },
+                { key: "packageName", header: "Tên gói", width: 28 },
+                { key: "slot", header: "Vị trí hiển thị", width: 24 },
+                { key: "orders", header: "Số đơn", width: 12 },
+                { key: "revenue", header: "Doanh thu", width: 18 },
+                { key: "dateFrom", header: "Từ ngày", width: 16 },
+                { key: "dateTo", header: "Đến ngày", width: 16 },
+            ];
             rows = revenue.rows.map((item) => ({
                 id: item.id,
                 packageName: item.packageName,
                 slot: item.slot,
                 orders: item.orders,
                 revenue: item.revenue,
+                dateFrom: payload.fromDate ?? "",
+                dateTo: payload.toDate ?? "",
             }));
         } else if (payload.reportType === "Customer Spending Report") {
+            reportName = "Xuất báo cáo chi tiêu khách hàng";
             const customerSpending = await this.getCustomerSpendingSummary(
                 payload.fromDate,
                 payload.toDate,
             );
+            columns = [
+                { key: "id", header: "Mã khách hàng", width: 16 },
+                { key: "customerName", header: "Tên khách hàng", width: 28 },
+                { key: "email", header: "Email", width: 32 },
+                { key: "totalOrders", header: "Tổng số đơn", width: 14 },
+                { key: "totalSpent", header: "Tổng chi tiêu", width: 18 },
+                { key: "avgOrderValue", header: "Chi tiêu trung bình / đơn", width: 22 },
+                { key: "lastPurchase", header: "Lần mua gần nhất", width: 18 },
+                { key: "dateFrom", header: "Từ ngày", width: 16 },
+                { key: "dateTo", header: "Đến ngày", width: 16 },
+            ];
             rows = customerSpending.rows.map((item) => ({
                 id: item.id,
                 customerName: item.customerName,
@@ -1313,30 +1386,61 @@ export const adminReportingService = {
                 totalSpent: item.totalSpent,
                 avgOrderValue: item.avgOrderValue,
                 lastPurchase: item.lastPurchase,
+                dateFrom: payload.fromDate ?? "",
+                dateTo: payload.toDate ?? "",
             }));
         } else {
+            reportName = "Xuất báo cáo hiệu suất quảng bá";
             const boostedPosts = await adminPromotionService.getBoostedPosts();
             const range = parseDateRange(payload.fromDate, payload.toDate);
+            columns = [
+                { key: "id", header: "Mã chiến dịch", width: 16 },
+                { key: "campaignCode", header: "Mã quảng bá", width: 18 },
+                { key: "postTitle", header: "Bài đăng", width: 36 },
+                { key: "ownerName", header: "Chủ sở hữu", width: 28 },
+                { key: "slot", header: "Vị trí hiển thị", width: 24 },
+                { key: "packageName", header: "Gói áp dụng", width: 24 },
+                { key: "status", header: "Trạng thái", width: 16 },
+                { key: "reviewStatus", header: "Trạng thái duyệt", width: 18 },
+                { key: "deliveryHealth", header: "Sức khỏe phân phối", width: 20 },
+                { key: "assignedOperator", header: "Phụ trách", width: 20 },
+                { key: "startDate", header: "Bắt đầu", width: 16 },
+                { key: "endDate", header: "Kết thúc", width: 16 },
+                { key: "impressions", header: "Lượt hiển thị", width: 16 },
+                { key: "clicks", header: "Lượt nhấp", width: 14 },
+                { key: "quotaUsed", header: "Quota đã dùng", width: 16 },
+                { key: "lastOptimizedAt", header: "Tối ưu gần nhất", width: 18 },
+                { key: "notes", header: "Ghi chú", width: 42 },
+            ];
             rows = boostedPosts
                 .filter((item) => doesRangeOverlap(item.startDate, item.endDate, range))
                 .map((item) => ({
                     id: item.id,
                     campaignCode: item.campaignCode,
+                    postTitle: item.postTitle,
+                    ownerName: item.ownerName,
                     slot: item.slot,
                     packageName: item.packageName,
                     status: item.status,
+                    reviewStatus: item.reviewStatus,
+                    deliveryHealth: item.deliveryHealth,
+                    assignedOperator: item.assignedOperator,
+                    startDate: item.startDate,
+                    endDate: item.endDate,
                     impressions: item.impressions,
                     clicks: item.clicks,
                     quotaUsed: `${item.usedQuota}/${item.totalQuota}`,
+                    lastOptimizedAt: item.lastOptimizedAt,
+                    notes: item.notes,
                 }));
         }
 
         const exportFile = payload.format === "XLSX"
             ? {
-                content: await buildXlsxBase64(rows, reportName),
+                content: await buildXlsxBase64(rows, reportName, columns),
                 contentEncoding: "base64" as const,
             }
-            : buildExportContent(rows, payload.format, reportName);
+            : buildExportContent(rows, payload.format, reportName, columns);
         const fileExtension = payload.format === "CSV" ? "csv" : "xlsx";
         const fileName = `${payload.reportType.toLowerCase().replace(/\s+/g, "-")}.${fileExtension}`;
 
@@ -1370,3 +1474,4 @@ export const adminReportingService = {
         };
     },
 };
+

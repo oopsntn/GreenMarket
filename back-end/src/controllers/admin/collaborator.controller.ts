@@ -25,6 +25,13 @@ type UpdateCollaboratorStatusPayload = {
   note?: string;
 };
 
+const ALLOWED_STATUS_TRANSITIONS: Record<CollaboratorStatus, CollaboratorStatus[]> = {
+  pending: ["active", "rejected"],
+  active: ["removed"],
+  rejected: ["pending", "active"],
+  removed: ["pending", "active"],
+};
+
 const normalizeString = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
@@ -421,6 +428,33 @@ export const updateAdminCollaboratorStatus = async (
 
     if (!relationship) {
       res.status(404).json({ error: "Không tìm thấy quan hệ cộng tác này." });
+      return;
+    }
+
+    const previousStatus = relationship.previousStatus as CollaboratorStatus;
+    if (previousStatus === nextStatus) {
+      res.json({
+        message: "Trạng thái cộng tác không thay đổi.",
+        data: {
+          relationshipStatus: previousStatus,
+          relationshipStatusLabel: resolveRelationshipStatusLabel(previousStatus),
+        },
+      });
+      return;
+    }
+
+    const allowedNextStatuses = ALLOWED_STATUS_TRANSITIONS[previousStatus] ?? [];
+    if (!allowedNextStatuses.includes(nextStatus)) {
+      res.status(400).json({
+        error: `Không thể chuyển trạng thái từ ${resolveRelationshipStatusLabel(previousStatus)} sang ${resolveRelationshipStatusLabel(nextStatus)}.`,
+      });
+      return;
+    }
+
+    if ((nextStatus === "rejected" || nextStatus === "removed") && !note) {
+      res.status(400).json({
+        error: "Vui lòng nhập ghi chú khi từ chối hoặc kết thúc cộng tác.",
+      });
       return;
     }
 

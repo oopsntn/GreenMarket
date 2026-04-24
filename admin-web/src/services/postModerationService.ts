@@ -97,12 +97,9 @@ const mapPostToUi = (
             typeof item.templateAudit.templateId === "number"
               ? item.templateAudit.templateId
               : null,
-          templateName:
-            item.templateAudit.templateName?.trim() || null,
-          templateType:
-            item.templateAudit.templateType?.trim() || null,
-          finalMessage:
-            item.templateAudit.finalMessage?.trim() || null,
+          templateName: item.templateAudit.templateName?.trim() || null,
+          templateType: item.templateAudit.templateType?.trim() || null,
+          finalMessage: item.templateAudit.finalMessage?.trim() || null,
         }
       : null,
 });

@@ -12,7 +12,7 @@ type LegacyActivityLogItem = {
 };
 
 const repairMojibake = (value: string) => {
-  if (!value || !/[ÃÂáºá»Ä]/.test(value)) {
+  if (!value || !/[ÃƒÃ‚Ã¡ÂºÃ¡Â»Ã„]/.test(value)) {
     return value;
   }
 
@@ -159,7 +159,10 @@ const translateResult = (value: string) => {
     return "Đã ghi nhận";
   }
 
-  return RESULT_LABELS[normalizeTextKey(normalized)] || translateKnownPhrases(humanizeCode(normalized));
+  return (
+    RESULT_LABELS[normalizeTextKey(normalized)] ||
+    translateKnownPhrases(humanizeCode(normalized))
+  );
 };
 
 const translateActor = (value: string) => {
@@ -282,7 +285,9 @@ const normalizeLog = (item: unknown): ActivityLogItem => {
         ? item.severity
         : "trung bình",
     detail:
-      typeof item.detail === "string" ? translateDetail(item.detail) : "Bản ghi không có thêm chi tiết.",
+      typeof item.detail === "string"
+        ? translateDetail(item.detail)
+        : "Bản ghi không có thêm chi tiết.",
     relatedIds: item.relatedIds ?? {
       userId: null,
       postId: null,

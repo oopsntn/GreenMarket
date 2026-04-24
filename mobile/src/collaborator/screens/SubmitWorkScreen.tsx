@@ -70,14 +70,14 @@ const SubmitWorkScreen = () => {
             const uploadedUrls = Array.isArray(uploadRes?.urls) ? uploadRes.urls : [];
 
             if (uploadedUrls.length !== images.length) {
-                throw new Error('Some files failed to upload.');
+                throw new Error('Một số tệp chưa tải lên thành công.');
             }
 
             await CollaboratorService.submitDeliverables(jobId, uploadedUrls, note);
             
             Alert.alert(
-                'Hoàn thành công việc', 
-                'Kết quả công việc của bạn đã được nộp thành công!',
+                'Đã nộp kết quả', 
+                'Kết quả công việc đã được gửi lên hệ thống. Hãy liên hệ trực tiếp với khách hàng để xác nhận hoàn tất và trao đổi thanh toán.',
                 [{ text: 'Tuyệt vời!', onPress: () => navigation.navigate('CollaboratorMain', { screen: 'MyWork' }) }]
             );
         } catch (error: any) {
@@ -114,7 +114,7 @@ const SubmitWorkScreen = () => {
                             <Text style={styles.sectionTitle}>Tài liệu kết quả</Text>
                             <Text style={styles.sectionCount}>{images.length}/5</Text>
                         </View>
-                        <Text style={styles.sectionDesc}>Tải lên bằng chứng, ảnh chụp màn hình hoặc file kết quả.</Text>
+                        <Text style={styles.sectionDesc}>Tải lên bằng chứng, ảnh chụp màn hình hoặc file kết quả để khách hàng dễ đối chiếu.</Text>
 
                         <View style={styles.imageGrid}>
                             {images.map((uri, index) => (
@@ -140,10 +140,10 @@ const SubmitWorkScreen = () => {
                     </View>
 
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Ghi chú hoàn thành</Text>
+                        <Text style={styles.sectionTitle}>Ghi chú bàn giao</Text>
                         <TextInput
                             style={styles.noteInput}
-                            placeholder="Thêm nhận xét hoặc hướng dẫn cho khách hàng..."
+                            placeholder="Thêm nhận xét hoặc hướng dẫn để khách hàng xác nhận công việc..."
                             placeholderTextColor="#94A3B8"
                             multiline
                             numberOfLines={4}
@@ -165,7 +165,7 @@ const SubmitWorkScreen = () => {
                         ) : (
                             <>
                                 <CheckCircle color="white" size={20} />
-                                <Text style={styles.submitBtnText}>Hoàn thành & Kết thúc công việc</Text>
+                                <Text style={styles.submitBtnText}>Nộp kết quả công việc</Text>
                             </>
                         )}
                     </TouchableOpacity>

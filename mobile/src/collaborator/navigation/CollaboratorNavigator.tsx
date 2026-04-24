@@ -49,7 +49,7 @@ const CollaboratorTabs = () => {
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Tổng quan' }} />
       <Tab.Screen name="Explore" component={AvailableJobsScreen} options={{ tabBarLabel: 'Tìm việc' }} />
       <Tab.Screen name="MyWork" component={MyJobsScreen} options={{ tabBarLabel: 'Việc của tôi' }} />
-      <Tab.Screen name="Wallet" component={EarningsScreen} options={{ tabBarLabel: 'Ví tiền' }} />
+      <Tab.Screen name="Wallet" component={EarningsScreen} options={{ tabBarLabel: 'Hướng dẫn' }} />
     </Tab.Navigator>
   );
 };
