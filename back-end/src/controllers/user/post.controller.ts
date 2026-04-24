@@ -801,7 +801,12 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
         }
 
         // Fetch related images
-        const images = await db.select().from(mediaAssets).where(
+        const images = await db.select({
+            assetId: mediaAssets.assetId,
+            imageUrl: mediaAssets.url,
+            sortOrder: mediaAssets.sortOrder,
+            metaData: mediaAssets.metaData
+        }).from(mediaAssets).where(
             and(
                 eq(mediaAssets.targetType, "post"),
                 eq(mediaAssets.targetId, post.postId),
@@ -810,7 +815,12 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
         );
 
         // Fetch related videos
-        const videos = await db.select().from(mediaAssets).where(
+        const videos = await db.select({
+            assetId: mediaAssets.assetId,
+            videoUrl: mediaAssets.url,
+            sortOrder: mediaAssets.sortOrder,
+            metaData: mediaAssets.metaData
+        }).from(mediaAssets).where(
             and(
                 eq(mediaAssets.targetType, "post"),
                 eq(mediaAssets.targetId, post.postId),
