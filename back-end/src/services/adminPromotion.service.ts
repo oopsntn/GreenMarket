@@ -330,10 +330,6 @@ const buildPromotionNote = (
         return "Chi\u1ebfn d\u1ecbch \u0111\u00e3 d\u00f9ng h\u1ebft quota v\u00e0 ho\u00e0n t\u1ea5t tr\u01b0\u1edbc khi h\u1ebft th\u1eddi gian ch\u1ea1y.";
     }
 
-    if (false && promotionStatus === "Completed") {
-        return "Chiáº¿n dá»‹ch Ä‘Ã£ dÃ¹ng háº¿t quota vÃ  hoÃ n táº¥t trÆ°á»›c khi háº¿t thá»i gian cháº¡y.";
-    }
-
     if (promotionStatus === "Expired") {
         return "Chiến dịch đã hết thời gian chạy và không còn hoạt động.";
     }

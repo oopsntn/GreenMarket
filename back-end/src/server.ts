@@ -11,7 +11,6 @@ import categoryRoutes from "./routes/admin/category.route.ts";
 import attributeRoutes from "./routes/admin/attribute.route.ts";
 import categoryMappingRoutes from "./routes/admin/category-mapping.route.ts";
 import templateRoutes from "./routes/admin/template.route.ts";
-import templateBuilderRoutes from "./routes/admin/template-builder.route.ts";
 import postRoutes from "./routes/admin/post.route.ts";
 import shopRoutes from "./routes/admin/shop.route.ts";
 import reportRoutes from "./routes/admin/report.route.ts";
@@ -31,7 +30,10 @@ import adminExportRoutes from "./routes/admin/export.route.ts";
 import adminSettingsRoutes from "./routes/admin/settings.route.ts";
 import adminAIInsightRoutes from "./routes/admin/ai-insight.route.ts";
 import adminActivityLogRoutes from "./routes/admin/activity-log.route.ts";
+import adminNotificationRoutes from "./routes/admin/notification.route.ts";
 import adminFinancialRoutes from "./routes/admin/financial.route.ts";
+import adminCollaboratorRoutes from "./routes/admin/collaborator.route.ts";
+import adminHostContentRoutes from "./routes/admin/host-content.route.ts";
 import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
 import userReportRoutes from "./routes/user/report.route.ts";
@@ -90,12 +92,6 @@ app.use(
   categoryMappingRoutes,
 );
 app.use("/api/admin/templates", verifyToken, isAdmin, templateRoutes);
-app.use(
-  "/api/admin/template-builder",
-  verifyToken,
-  isAdmin,
-  templateBuilderRoutes,
-);
 app.use("/api/admin/posts", verifyToken, isAdmin, postRoutes);
 app.use("/api/admin/shops", verifyToken, isAdmin, shopRoutes);
 app.use("/api/admin/reports", verifyToken, isAdmin, reportRoutes);
@@ -150,7 +146,25 @@ app.use(
   isAdmin,
   adminActivityLogRoutes,
 );
+app.use(
+  "/api/admin/notifications",
+  verifyToken,
+  isAdmin,
+  adminNotificationRoutes,
+);
 app.use("/api/admin/financial", verifyToken, isAdmin, adminFinancialRoutes);
+app.use(
+  "/api/admin/collaborators",
+  verifyToken,
+  isAdmin,
+  adminCollaboratorRoutes,
+);
+app.use(
+  "/api/admin/host-contents",
+  verifyToken,
+  isAdmin,
+  adminHostContentRoutes,
+);
 
 // User Routes
 app.use("/api/shops", userShopRoutes);

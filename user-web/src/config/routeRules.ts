@@ -47,7 +47,7 @@ export const routeRules: RouteRule[] = [
     rules: {
       requiresAuth: true,
       requiresNoShop: true,
-      deniedMessage: "Đây là trang cho cá nhân. Chủ vườn vui lòng sử dụng Manage Shop Dashboard."
+      deniedMessage: "Đây là trang cho tài khoản cá nhân. Chủ vườn vui lòng sử dụng bảng điều khiển nhà vườn."
     }
   },
   {

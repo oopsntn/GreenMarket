@@ -62,8 +62,7 @@ export const boostedPostService = {
     const data = await apiClient.request<BoostedPostApiResponse[]>(
       "/api/admin/boosted-posts",
       {
-        defaultErrorMessage:
-          "Không thể tải danh sách gói quảng bá.",
+        defaultErrorMessage: "Không thể tải danh sách quảng bá.",
       },
     );
 
@@ -86,22 +85,22 @@ export const boostedPostService = {
       {
         title: "Đang phân phối",
         value: String(activeCount),
-        subtitle: "Số gói đang hiển thị tại các vị trí quảng bá",
+        subtitle: "Số lượt quảng bá đang hiển thị tại các vị trí quảng bá",
       },
       {
         title: "Đã lên lịch",
         value: String(scheduledCount),
-        subtitle: "Gói đã được xếp lịch và chờ đến ngày chạy",
+        subtitle: "Lượt quảng bá đã được xếp lịch và chờ đến ngày chạy",
       },
       {
         title: "Cần rà soát",
         value: String(needsReviewCount),
-        subtitle: "Gói cần kiểm tra lại nội dung hoặc cách phân phối",
+        subtitle: "Lượt quảng bá cần kiểm tra lại nội dung hoặc cách phân phối",
       },
       {
         title: "Có rủi ro",
         value: String(atRiskCount),
-        subtitle: "Gói có tiến độ hiển thị thấp hơn mức an toàn",
+        subtitle: "Lượt quảng bá có tiến độ hiển thị thấp hơn mức an toàn",
       },
       {
         title: "CTR TB / Quota đã dùng",
@@ -121,8 +120,7 @@ export const boostedPostService = {
       {
         method: "PATCH",
         includeJsonContentType: true,
-        defaultErrorMessage:
-          "Không thể cập nhật trạng thái bài đang quảng bá.",
+        defaultErrorMessage: "Không thể cập nhật trạng thái quảng bá.",
         body: JSON.stringify({ status }),
       },
     );

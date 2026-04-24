@@ -28,7 +28,7 @@ const MyJobsScreen = () => {
             setJobs(res.data);
         } catch (error: any) {
             console.error('Error fetching my jobs:', error);
-            setError(error?.response?.data?.error || 'Unable to load your jobs.');
+            setError(error?.response?.data?.error || 'Không thể tải danh sách công việc của bạn.');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -60,10 +60,10 @@ const MyJobsScreen = () => {
 
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>{error || 'No jobs found in this section.'}</Text>
+            <Text style={styles.emptyText}>{error || 'Chưa có công việc nào trong mục này.'}</Text>
             {error ? (
                 <TouchableOpacity style={styles.retryBtn} onPress={onRefresh}>
-                    <Text style={styles.retryBtnText}>Retry</Text>
+                    <Text style={styles.retryBtnText}>Tải lại</Text>
                 </TouchableOpacity>
             ) : null}
         </View>

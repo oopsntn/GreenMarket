@@ -14,9 +14,11 @@ import type {
   GeneralExportModule,
 } from "../types/export";
 import {
+  coerceDateRange,
   DEFAULT_REPORT_FROM_DATE,
   DEFAULT_REPORT_TO_DATE,
   formatDateRangeLabel,
+  getTodayDateValue,
 } from "../utils/dateRange";
 import "./ExportPage.css";
 
@@ -95,6 +97,7 @@ function ExportPage() {
 
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const today = getTodayDateValue();
   const generalDateRangeLabel = formatDateRangeLabel(
     generalFromDate,
     generalToDate,
@@ -103,6 +106,35 @@ function ExportPage() {
     financialFromDate,
     financialToDate,
   );
+
+  const handleGeneralFromDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, generalToDate, "from", today);
+    setGeneralFromDate(nextValue);
+    setGeneralToDate(counterpartValue);
+  };
+
+  const handleGeneralToDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, generalFromDate, "to", today);
+    setGeneralToDate(nextValue);
+    setGeneralFromDate(counterpartValue);
+  };
+
+  const handleFinancialFromDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(
+      value,
+      financialToDate,
+      "from",
+      today,
+    );
+    setFinancialFromDate(nextValue);
+    setFinancialToDate(counterpartValue);
+  };
+
+  const handleFinancialToDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, financialFromDate, "to", today);
+    setFinancialToDate(nextValue);
+    setFinancialFromDate(counterpartValue);
+  };
 
   const filteredHistory = useMemo(() => {
     const keyword = historySearchKeyword.trim().toLowerCase();
@@ -260,14 +292,17 @@ function ExportPage() {
                   label: "Từ ngày",
                   type: "date",
                   value: generalFromDate,
-                  onChange: setGeneralFromDate,
+                  max: generalToDate || today,
+                  onChange: handleGeneralFromDateChange,
                 },
                 {
                   id: "general-to-date",
                   label: "Đến ngày",
                   type: "date",
                   value: generalToDate,
-                  onChange: setGeneralToDate,
+                  min: generalFromDate || undefined,
+                  max: today,
+                  onChange: handleGeneralToDateChange,
                 },
                 {
                   id: "general-format",
@@ -313,14 +348,17 @@ function ExportPage() {
                   label: "Từ ngày",
                   type: "date",
                   value: financialFromDate,
-                  onChange: setFinancialFromDate,
+                  max: financialToDate || today,
+                  onChange: handleFinancialFromDateChange,
                 },
                 {
                   id: "financial-to-date",
                   label: "Đến ngày",
                   type: "date",
                   value: financialToDate,
-                  onChange: setFinancialToDate,
+                  min: financialFromDate || undefined,
+                  max: today,
+                  onChange: handleFinancialToDateChange,
                 },
                 {
                   id: "financial-format",

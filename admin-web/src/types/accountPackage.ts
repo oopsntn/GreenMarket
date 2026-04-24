@@ -15,6 +15,7 @@ export type AccountPackage = {
   cycleLabel: string;
   price: number;
   priceLabel: string;
+  maxSales: number | null;
   description: string;
   features: string[];
   durationDays: number | null;
@@ -28,6 +29,8 @@ export type AccountPackageCatalog = {
 };
 
 export type AccountPackageFormState = {
+  title: string;
   price: string;
+  maxSales: number;
   durationDays: number;
 };

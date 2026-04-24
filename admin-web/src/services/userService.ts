@@ -17,7 +17,7 @@ const DEFAULT_ADMIN_NAME = "Quản trị viên hệ thống";
 
 const ROLE_LABELS: Record<AssignableUserRole, string> = {
   User: "Người dùng",
-  Host: "Chủ shop",
+  Host: "Chủ vườn",
   Collaborator: "Cộng tác viên",
   Manager: "Quản lý",
   "Operation Staff": "Nhân viên vận hành",
@@ -152,7 +152,11 @@ const mapRoleLabelToUiRole = (
     return "Collaborator";
   }
 
-  if (normalized.includes("host") || normalized.includes("chủ shop")) {
+  if (
+    normalized.includes("host") ||
+    normalized.includes("chủ shop") ||
+    normalized.includes("chủ vườn")
+  ) {
     return "Host";
   }
 
@@ -268,7 +272,7 @@ const buildFallbackActivityLogs = (
     logs.push({
       id: 1,
       action: "Tạo tài khoản",
-      detail: "Tài khoản người dùng đã được tạo trong hệ thống marketplace.",
+      detail: "Tài khoản người dùng đã được tạo trong hệ thống sàn.",
       performedBy: "Hệ thống",
       performedAt: registrationDateTime,
     });
@@ -423,7 +427,7 @@ export const userService = {
       {
         title: "Tổng tài khoản",
         value: String(users.length),
-        subtitle: "Toàn bộ tài khoản marketplace",
+        subtitle: "Toàn bộ tài khoản trên sàn",
       },
       {
         title: "Tài khoản hoạt động",

@@ -9,7 +9,7 @@ const translateRoleTitle = (value: string) => {
   const normalized = value.trim().toLowerCase();
 
   if (normalized === "user") return "Người dùng";
-  if (normalized === "host") return "Chủ shop";
+  if (normalized === "host") return "Chủ vườn";
   if (normalized === "collaborator") return "Cộng tác viên";
   if (normalized === "manager") return "Quản lý";
   if (normalized === "operation staff") return "Nhân viên vận hành";
@@ -59,7 +59,8 @@ const translateText = (value: string | null | undefined) => {
     "Review promotion package options": "Xem và đánh giá các gói quảng bá",
     "Create and maintain listings": "Tạo và duy trì bài đăng",
     "Manage shop content": "Quản lý nội dung shop",
-    "Request payout for host earnings": "Gửi yêu cầu rút doanh thu của chủ shop",
+    "Request payout for host earnings": "Theo dõi thu nhập Host đã được duyệt",
+    "Track approved article income": "Theo dõi thu nhập bài Host đã được duyệt",
     "Purchase promotion packages": "Mua gói quảng bá",
     "Track shop analytics": "Theo dõi phân tích của shop",
     "Prepare content and media for listings":
@@ -128,7 +129,7 @@ const defaultRoleCatalog: Array<{
   },
   {
     code: "HOST",
-    title: "Chủ shop",
+    title: "Chủ vườn",
     audienceGroup: "Marketplace",
     accessScope:
       "Vận hành shop cây cảnh, đăng bài, quản lý hồ sơ shop và mua gói quảng bá.",
@@ -150,12 +151,12 @@ const defaultRoleCatalog: Array<{
     title: "Cộng tác viên",
     audienceGroup: "Marketplace",
     accessScope:
-      "Hỗ trợ Chủ shop chuẩn bị nội dung, cập nhật bài đăng và quản lý hình ảnh hoặc video.",
+      "Hỗ trợ Chủ vườn chuẩn bị nội dung, cập nhật bài đăng và quản lý hình ảnh hoặc video.",
     summary:
-      "Vai trò cộng tác vận hành do Chủ shop phân công để hỗ trợ duy trì chất lượng bài đăng và nội dung shop.",
+      "Vai trò cộng tác vận hành do Chủ vườn phân công để hỗ trợ duy trì chất lượng bài đăng và nội dung cửa hàng.",
     responsibilities: [
       "Chuẩn bị nội dung và media cho bài đăng",
-      "Cập nhật thông tin bài đăng thay cho Chủ shop",
+      "Cập nhật thông tin bài đăng thay cho Chủ vườn",
       "Phối hợp với quản lý hoặc nhân viên vận hành khi có phản hồi kiểm duyệt",
     ],
     capabilities: [
@@ -342,3 +343,4 @@ export const roleManagementService = {
     return this.fetchRoles();
   },
 };
+

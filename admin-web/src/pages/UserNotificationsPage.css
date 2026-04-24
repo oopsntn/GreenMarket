@@ -1,0 +1,384 @@
+.user-notifications-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.user-notifications-page__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.user-notifications-page__stat-card {
+  border: 1px solid rgba(214, 229, 214, 0.95);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 26px 28px;
+  box-shadow: 0 18px 44px rgba(29, 92, 46, 0.08);
+}
+
+.user-notifications-page__stat-card h3 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  color: #1f4f37;
+}
+
+.user-notifications-page__stat-card p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #6b8472;
+}
+
+.user-notifications-page__stat-value {
+  display: inline-flex;
+  margin-top: 16px;
+  font-size: 46px;
+  font-weight: 900;
+  line-height: 1;
+  color: #1f4f37;
+}
+
+.user-notifications-page__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 24px;
+}
+
+.user-notifications-page__form,
+.user-notifications-page__preview,
+.user-notifications-page__history {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.user-notifications-page__scope-list,
+.user-notifications-page__type-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.user-notifications-page__scope-button,
+.user-notifications-page__type-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: 16px;
+  border: 1px solid rgba(187, 215, 188, 0.95);
+  background: rgba(241, 247, 241, 0.92);
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #3f604b;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.user-notifications-page__scope-button:hover,
+.user-notifications-page__type-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(29, 92, 46, 0.08);
+}
+
+.user-notifications-page__scope-button--active,
+.user-notifications-page__type-button--active {
+  border-color: rgba(47, 127, 58, 0.96);
+  background: rgba(46, 125, 50, 0.12);
+  color: #1f6a30;
+}
+
+.user-notifications-page__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+
+.user-notifications-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.user-notifications-page__field--full {
+  grid-column: 1 / -1;
+}
+
+.user-notifications-page__field label {
+  font-size: 15px;
+  font-weight: 800;
+  color: #31543f;
+}
+
+.user-notifications-page__field small {
+  margin-top: -2px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6e8475;
+}
+
+.user-notifications-page__input,
+.user-notifications-page__select,
+.user-notifications-page__textarea {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(211, 226, 210, 0.95);
+  background: rgba(251, 253, 251, 0.96);
+  padding: 15px 18px;
+  font-size: 15px;
+  color: #214531;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.user-notifications-page__input:focus,
+.user-notifications-page__select:focus,
+.user-notifications-page__textarea:focus {
+  outline: none;
+  border-color: rgba(67, 148, 81, 0.96);
+  box-shadow: 0 0 0 4px rgba(104, 176, 116, 0.14);
+  background: #fff;
+}
+
+.user-notifications-page__textarea {
+  min-height: 148px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.user-notifications-page__broadcast-note,
+.user-notifications-page__template-preview,
+.user-notifications-page__preview-card {
+  border-radius: 24px;
+  border: 1px solid rgba(220, 233, 220, 0.95);
+  background: linear-gradient(
+    135deg,
+    rgba(248, 252, 248, 0.96),
+    rgba(241, 247, 241, 0.92)
+  );
+  padding: 22px 24px;
+}
+
+.user-notifications-page__broadcast-note h4,
+.user-notifications-page__template-preview h4,
+.user-notifications-page__preview-card h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: #204f37;
+}
+
+.user-notifications-page__broadcast-note p,
+.user-notifications-page__template-preview p,
+.user-notifications-page__preview-card p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #617a68;
+}
+
+.user-notifications-page__template-meta,
+.user-notifications-page__preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.user-notifications-page__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 0 14px;
+  background: rgba(233, 244, 233, 0.96);
+  color: #2f7443;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.user-notifications-page__preview-message {
+  margin-top: 16px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #294838;
+  font-size: 15px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.user-notifications-page__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.user-notifications-page__button {
+  min-height: 48px;
+  border-radius: 18px;
+  padding: 0 22px;
+  border: 1px solid rgba(210, 224, 210, 0.94);
+  background: rgba(244, 248, 244, 0.96);
+  color: #3e5c4a;
+  font-size: 15px;
+  font-weight: 800;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.user-notifications-page__button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(29, 92, 46, 0.08);
+}
+
+.user-notifications-page__button--primary {
+  border-color: rgba(44, 117, 57, 0.96);
+  background: linear-gradient(135deg, #2f8a3e, #236f34);
+  color: #fff;
+}
+
+.user-notifications-page__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
+.user-notifications-page__message {
+  margin: 0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.user-notifications-page__message--error {
+  border: 1px solid rgba(239, 195, 195, 0.94);
+  background: rgba(255, 243, 243, 0.96);
+  color: #b54d4d;
+}
+
+.user-notifications-page__history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.user-notifications-page__history-item {
+  border-radius: 24px;
+  border: 1px solid rgba(219, 233, 219, 0.95);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 22px 24px;
+}
+
+.user-notifications-page__history-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.user-notifications-page__history-header h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: #234d37;
+}
+
+.user-notifications-page__history-header p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #6b8272;
+}
+
+.user-notifications-page__history-message {
+  margin-top: 16px;
+  border-radius: 18px;
+  background: rgba(247, 250, 247, 0.92);
+  padding: 16px 18px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #365442;
+  white-space: pre-wrap;
+}
+
+.user-notifications-page__history-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 20px;
+  margin-top: 16px;
+}
+
+.user-notifications-page__history-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.user-notifications-page__history-meta-item span:first-child {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8aa090;
+}
+
+.user-notifications-page__history-meta-item span:last-child {
+  font-size: 14px;
+  font-weight: 700;
+  color: #35513f;
+}
+
+.user-notifications-page__history-pagination {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.user-notifications-page__history-pagination button {
+  min-width: 104px;
+}
+
+@media (max-width: 1100px) {
+  .user-notifications-page__stats,
+  .user-notifications-page__layout,
+  .user-notifications-page__history-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .user-notifications-page__fields,
+  .user-notifications-page__history-header {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .user-notifications-page__actions,
+  .user-notifications-page__history-pagination {
+    justify-content: stretch;
+    flex-direction: column;
+  }
+
+  .user-notifications-page__history-pagination button,
+  .user-notifications-page__button {
+    width: 100%;
+  }
+}

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../config/db";
 import { AuthRequest } from "../../dtos/auth.ts";
+import { adminTemplates } from "../../models/schema/admin-templates.ts";
 import {
   tickets as reports,
   posts,
@@ -16,9 +17,11 @@ import { parseId } from "../../utils/parseId";
 const reportSelection = {
   reportId: reports.ticketId,
   reporterId: reports.ticketCreatorId,
-  postId: sql<number>`case when ${reports.ticketTargetType} = 'post' then ${reports.ticketTargetId} end`,
-  reportShopId: sql<number>`case when ${reports.ticketTargetType} = 'shop' then ${reports.ticketTargetId} end`,
-  reportReasonCode: reports.ticketTitle,
+  postId:
+    sql<number>`case when ${reports.ticketTargetType} = 'post' then ${reports.ticketTargetId} end`,
+  reportShopId:
+    sql<number>`case when ${reports.ticketTargetType} = 'shop' then ${reports.ticketTargetId} end`,
+  reportReasonCode: sql<string>`${reports.ticketMetaData}->>'reason_code'`,
   reportReason: reports.ticketContent,
   reportNote: sql<string>`${reports.ticketMetaData}->>'note'`,
   reportStatus: reports.ticketStatus,
@@ -31,9 +34,7 @@ const reportSelection = {
   shopName: shops.shopName,
 };
 
-const attachEvidenceToReports = async <T extends { reportId: number }>(
-  items: T[],
-) => {
+const attachEvidenceToReports = async <T extends { reportId: number }>(items: T[]) => {
   if (items.length === 0) {
     return items.map((item) => ({ ...item, evidenceUrls: [] as string[] }));
   }
@@ -63,6 +64,71 @@ const attachEvidenceToReports = async <T extends { reportId: number }>(
     ...item,
     evidenceUrls: evidenceMap.get(item.reportId) ?? [],
   }));
+};
+
+const getTemplateAuditMeta = async (templateId?: number) => {
+  if (typeof templateId !== "number" || !Number.isFinite(templateId)) {
+    return null;
+  }
+
+  const [template] = await db
+    .select({
+      templateId: adminTemplates.templateId,
+      templateName: adminTemplates.templateName,
+      templateType: adminTemplates.templateType,
+    })
+    .from(adminTemplates)
+    .where(eq(adminTemplates.templateId, templateId))
+    .limit(1);
+
+  return template ?? null;
+};
+
+type TemplateAuditLogMeta = {
+  templateId?: number | null;
+  templateName?: string | null;
+  templateType?: string | null;
+  finalMessage?: string | null;
+};
+
+const getReportTemplateAuditMeta = async (reportId: number) => {
+  const eventRows = await db
+    .select({
+      eventLogMeta: eventLogs.eventLogMeta,
+    })
+    .from(eventLogs)
+    .where(
+      inArray(eventLogs.eventLogEventType, [
+        "admin_report_resolved",
+        "admin_report_dismissed",
+      ]),
+    )
+    .orderBy(desc(eventLogs.eventLogEventTime), desc(eventLogs.eventLogId))
+    .limit(50);
+
+  const matchedEvent = eventRows.find((row) => {
+    if (!row.eventLogMeta || typeof row.eventLogMeta !== "object") {
+      return false;
+    }
+
+    const meta = row.eventLogMeta as Record<string, unknown>;
+    return meta.reportId === reportId;
+  });
+
+  const meta = (matchedEvent?.eventLogMeta ?? null) as
+    | (TemplateAuditLogMeta & Record<string, unknown>)
+    | null;
+
+  if (!meta?.templateName && !meta?.templateId) {
+    return null;
+  }
+
+  return {
+    templateId: typeof meta.templateId === "number" ? meta.templateId : null,
+    templateName: typeof meta.templateName === "string" ? meta.templateName : null,
+    templateType: typeof meta.templateType === "string" ? meta.templateType : null,
+    finalMessage: typeof meta.finalMessage === "string" ? meta.finalMessage : null,
+  };
 };
 
 const closePromotionsForResolvedReport = async (
@@ -97,16 +163,14 @@ const closePromotionsForResolvedReport = async (
     .set({
       postPromotionStatus: "closed",
     })
-    .where(
-      inArray(postPromotions.postPromotionId, closablePromotionIds),
-    )
+    .where(inArray(postPromotions.postPromotionId, closablePromotionIds))
     .returning({
       id: postPromotions.postPromotionId,
     });
 
   if (closedPromotions.length > 0) {
     await db.insert(eventLogs).values({
-      eventLogUserId: null, // Should ideally be admin ID if available
+      eventLogUserId: null,
       eventLogTargetType: "post",
       eventLogTargetId: postId,
       eventLogEventType: "admin_boosted_post_closed",
@@ -124,18 +188,27 @@ const closePromotionsForResolvedReport = async (
   return closedPromotions.length;
 };
 
-export const getReports = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
+export const getReports = async (_req: Request, res: Response): Promise<void> => {
   try {
     const allReports = await db
       .select(reportSelection)
       .from(reports)
       .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
-      .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
-      .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
-      .where(eq(reports.ticketType, 'REPORT'))
+      .leftJoin(
+        posts,
+        and(
+          eq(reports.ticketTargetType, "post"),
+          eq(reports.ticketTargetId, posts.postId),
+        ),
+      )
+      .leftJoin(
+        shops,
+        and(
+          eq(reports.ticketTargetType, "shop"),
+          eq(reports.ticketTargetId, shops.shopId),
+        ),
+      )
+      .where(eq(reports.ticketType, "REPORT"))
       .orderBy(desc(reports.ticketCreatedAt), desc(reports.ticketId));
 
     res.json(await attachEvidenceToReports(allReports));
@@ -160,9 +233,21 @@ export const getReportById = async (
       .select(reportSelection)
       .from(reports)
       .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
-      .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
-      .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
-      .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketId, idNumber)))
+      .leftJoin(
+        posts,
+        and(
+          eq(reports.ticketTargetType, "post"),
+          eq(reports.ticketTargetId, posts.postId),
+        ),
+      )
+      .leftJoin(
+        shops,
+        and(
+          eq(reports.ticketTargetType, "shop"),
+          eq(reports.ticketTargetId, shops.shopId),
+        ),
+      )
+      .where(and(eq(reports.ticketType, "REPORT"), eq(reports.ticketId, idNumber)))
       .limit(1);
 
     if (!report) {
@@ -171,7 +256,12 @@ export const getReportById = async (
     }
 
     const [reportWithEvidence] = await attachEvidenceToReports([report]);
-    res.json(reportWithEvidence);
+    const templateAudit = await getReportTemplateAuditMeta(idNumber);
+
+    res.json({
+      ...reportWithEvidence,
+      templateAudit,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
@@ -180,7 +270,11 @@ export const getReportById = async (
 
 export const resolveReport = async (
   req: AuthRequest &
-    Request<{ id: string }, {}, { status: string; adminNote?: string }>,
+    Request<
+      { id: string },
+      {},
+      { status: string; adminNote?: string; templateId?: number }
+    >,
   res: Response,
 ): Promise<void> => {
   try {
@@ -190,7 +284,7 @@ export const resolveReport = async (
       return;
     }
 
-    const { status, adminNote } = req.body;
+    const { status, adminNote, templateId } = req.body;
     const normalizedStatus = status?.trim().toLowerCase();
     if (normalizedStatus !== "resolved" && normalizedStatus !== "dismissed") {
       res.status(400).json({ error: "Trạng thái báo cáo không hợp lệ" });
@@ -202,15 +296,21 @@ export const resolveReport = async (
       req.user?.email?.trim() ||
       "Quản trị viên hệ thống";
 
+    const selectedTemplate = await getTemplateAuditMeta(templateId);
+    if (templateId !== undefined && !selectedTemplate) {
+      res.status(400).json({ error: "Mẫu nội dung không hợp lệ" });
+      return;
+    }
+
     const [updatedReport] = await db
       .update(reports)
       .set({
         ticketStatus: normalizedStatus as "resolved" | "dismissed",
         ticketResolutionNote: adminNote,
         ticketUpdatedAt: new Date(),
-        ticketResolvedAt: normalizedStatus === 'resolved' ? new Date() : null,
+        ticketResolvedAt: normalizedStatus === "resolved" ? new Date() : null,
       })
-      .where(and(eq(reports.ticketType, 'REPORT'), eq(reports.ticketId, idNumber)))
+      .where(and(eq(reports.ticketType, "REPORT"), eq(reports.ticketId, idNumber)))
       .returning({
         ticketId: reports.ticketId,
         ticketTargetId: reports.ticketTargetId,
@@ -218,19 +318,24 @@ export const resolveReport = async (
         ticketCreatorId: reports.ticketCreatorId,
       });
 
-    // Alias for legacy consumption in subsequent logic
-    const updatedReportLegacy = {
-      ...updatedReport,
-      reportId: updatedReport.ticketId,
-      postId: updatedReport.ticketTargetType === 'post' ? updatedReport.ticketTargetId : null,
-      reportShopId: updatedReport.ticketTargetType === 'shop' ? updatedReport.ticketTargetId : null,
-      reporterId: updatedReport.ticketCreatorId
-    };
-
     if (!updatedReport) {
       res.status(404).json({ error: "Không tìm thấy báo cáo" });
       return;
     }
+
+    const updatedReportLegacy = {
+      ...updatedReport,
+      reportId: updatedReport.ticketId,
+      postId:
+        updatedReport.ticketTargetType === "post"
+          ? updatedReport.ticketTargetId
+          : null,
+      reportShopId:
+        updatedReport.ticketTargetType === "shop"
+          ? updatedReport.ticketTargetId
+          : null,
+      reporterId: updatedReport.ticketCreatorId,
+    };
 
     const closedPromotionCount =
       normalizedStatus === "resolved"
@@ -244,8 +349,20 @@ export const resolveReport = async (
       .select(reportSelection)
       .from(reports)
       .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
-      .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
-      .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+      .leftJoin(
+        posts,
+        and(
+          eq(reports.ticketTargetType, "post"),
+          eq(reports.ticketTargetId, posts.postId),
+        ),
+      )
+      .leftJoin(
+        shops,
+        and(
+          eq(reports.ticketTargetType, "shop"),
+          eq(reports.ticketTargetId, shops.shopId),
+        ),
+      )
       .where(eq(reports.ticketId, updatedReport.ticketId))
       .limit(1);
 
@@ -260,14 +377,22 @@ export const resolveReport = async (
 
     await db.insert(eventLogs).values({
       eventLogUserId: null,
-      eventLogTargetType: updatedReportLegacy.postId ? "post" : (updatedReportLegacy.reportShopId ? "shop" : "report"),
-      eventLogTargetId: updatedReportLegacy.postId || updatedReportLegacy.reportShopId || updatedReportLegacy.reportId,
+      eventLogTargetType: updatedReportLegacy.postId
+        ? "post"
+        : updatedReportLegacy.reportShopId
+          ? "shop"
+          : "report",
+      eventLogTargetId:
+        updatedReportLegacy.postId ||
+        updatedReportLegacy.reportShopId ||
+        updatedReportLegacy.reportId,
       eventLogEventType:
         normalizedStatus === "resolved"
           ? "admin_report_resolved"
           : "admin_report_dismissed",
       eventLogEventTime: new Date(),
       eventLogMeta: {
+        reportId: updatedReportLegacy.reportId,
         action: actionLabel,
         detail: adminNote?.trim()
           ? `Báo cáo #${updatedReportLegacy.reportId} đã được cập nhật sang trạng thái ${statusLabel}.${promotionDetailSuffix} Ghi chú: ${adminNote.trim()}`
@@ -275,17 +400,29 @@ export const resolveReport = async (
         performedBy,
         actorRole: "Quản trị viên",
         status: normalizedStatus,
+        templateId: selectedTemplate?.templateId ?? null,
+        templateName: selectedTemplate?.templateName ?? null,
+        templateType: selectedTemplate?.templateType ?? null,
+        finalMessage: adminNote?.trim() || null,
         reporterId: updatedReportLegacy.reporterId,
       },
     });
 
     if (!enrichedReport) {
-      res.json(updatedReport);
+      res.json(updatedReportLegacy);
       return;
     }
 
     const [reportWithEvidence] = await attachEvidenceToReports([enrichedReport]);
-    res.json(reportWithEvidence);
+    res.json({
+      ...reportWithEvidence,
+      templateAudit: {
+        templateId: selectedTemplate?.templateId ?? null,
+        templateName: selectedTemplate?.templateName ?? null,
+        templateType: selectedTemplate?.templateType ?? null,
+        finalMessage: adminNote?.trim() || null,
+      },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Lỗi máy chủ nội bộ" });
