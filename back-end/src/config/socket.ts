@@ -22,7 +22,8 @@ export const initSocket = (server: HTTPServer): SocketIOServer => {
     const token = socket.handshake.auth.token || socket.handshake.headers.authorization;
     
     if (!token) {
-      return next(new Error("Authentication error: No token provided"));
+      // Allow unauthenticated connections for QR login
+      return next();
     }
 
     const cleanToken = token.startsWith("Bearer ") ? token.slice(7) : token;
@@ -32,7 +33,9 @@ export const initSocket = (server: HTTPServer): SocketIOServer => {
       (socket as any).user = decoded;
       next();
     } catch (err) {
-      return next(new Error("Authentication error: Invalid token"));
+      // If token is invalid, we still allow connection but without user data
+      // (Or we could return error if we want strictness, but for QR web client, we need them to connect)
+      next();
     }
   });
 
@@ -54,6 +57,12 @@ export const initSocket = (server: HTTPServer): SocketIOServer => {
         console.log(`Admin ${userId} joined admin-room`);
       }
     }
+
+    // QR Login: Web client joins a room based on sessionId
+    socket.on("join-qr-session", (sessionId: string) => {
+      socket.join(`qr-session-${sessionId}`);
+      console.log(`Socket ${socket.id} joined QR session room: qr-session-${sessionId}`);
+    });
 
     socket.on("disconnect", () => {
       if (user && user.id) {
@@ -83,6 +92,14 @@ export const sendToUser = (userId: number, event: string, data: any) => {
     socketIds.forEach((id) => {
       io!.to(id).emit(event, data);
     });
+    return true;
+  }
+  return false;
+};
+
+export const emitToQRSession = (sessionId: string, event: string, data: any) => {
+  if (io) {
+    io.to(`qr-session-${sessionId}`).emit(event, data);
     return true;
   }
   return false;
