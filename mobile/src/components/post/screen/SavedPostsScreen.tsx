@@ -30,18 +30,18 @@ const SavedPostsScreen = () => {
     }, [navigation])
 
     return (
-        <MobileLayout title="Saved Posts" backButton={() => navigation.goBack()} scrollEnabled={false}>
+        <MobileLayout title="Bài Đăng đã lưu" backButton={() => navigation.goBack()} scrollEnabled={false}>
             {loading ? (
                 <ActivityIndicator style={{ marginTop: 50 }} color="#10b981" />
             ) : (
-                <FlatList 
+                <FlatList
                     data={posts}
                     contentContainerStyle={{ padding: 16 }}
                     renderItem={({ item }) => (
                         <PostItem
                             item={item.post || item}
-                            onEdit={() => {}}
-                            onDelete={() => {}}
+                            onEdit={() => { }}
+                            onDelete={() => { }}
                             styles={styles}
                         />
                     )}
