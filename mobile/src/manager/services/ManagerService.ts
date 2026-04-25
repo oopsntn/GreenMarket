@@ -57,6 +57,23 @@ export interface ReportModerationData {
     severity?: ModerationPriority;
 }
 
+export type HostContentModerationStatus = 'pending' | 'approved' | 'rejected' | string;
+
+export interface HostContentModerationData {
+    hostContentId: number;
+    hostContentTitle: string;
+    hostContentDescription?: string | null;
+    hostContentBody?: string | null;
+    hostContentTargetType?: string | null;
+    hostContentTargetId?: number | null;
+    hostContentMediaUrls?: any;
+    hostContentStatus: HostContentModerationStatus;
+    hostContentCreatedAt?: string | null;
+    hostContentUpdatedAt?: string | null;
+    authorId?: number | null;
+    authorName?: string | null;
+}
+
 type DashboardOverview = {
     statCards?: Array<{ title: string; value: string }>;
     summary?: { title: string; description: string };
@@ -161,12 +178,27 @@ const managerService = {
     },
 
     getPostById: async (id: number | string): Promise<PostModerationData> => {
-        const rows = await fetchAllQueueItems('post');
-        const item = rows.find((row) => Number(row.targetId) === Number(id));
-        if (!item) {
-            throw new Error('Post not found');
+        // Tìm trong pending post queue trước
+        const pendingRows = await fetchAllQueueItems('post');
+        const found = pendingRows.find((row) => Number(row.targetId) === Number(id));
+        if (found) return normalizePost(found);
+
+        // Fallback: tìm trong toàn bộ moderation queue (không lọc type)
+        // cho phép tìm bài đã approved/rejected/hidden từ context báo cáo
+        let allPage = 1;
+        let allTotalPages = 1;
+        while (allPage <= allTotalPages) {
+            const response = await api.get('/manager/moderation/queue', {
+                params: { page: allPage, limit: 100 }, // Không truyền type
+            });
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            const match = data.find((row: any) => Number(row.targetId) === Number(id) && row.type === 'post');
+            if (match) return normalizePost(match);
+            allTotalPages = Number(response.data?.meta?.totalPages || 1);
+            allPage += 1;
         }
-        return normalizePost(item);
+
+        throw new Error('Post not found');
     },
 
     updatePostStatus: async (id: number | string, status: 'approved' | 'rejected' | 'hidden', reason?: string, note?: string) => {
@@ -249,6 +281,65 @@ const managerService = {
 
     escalate: async (data: { targetType: string; targetId: number | string; severity: string; reason: string; evidenceUrls?: string[] }) => {
         const response = await api.post('/manager/escalations', data);
+        return response.data;
+    },
+
+    getPendingHostContents: async (): Promise<HostContentModerationData[]> => {
+        let page = 1;
+        let totalPages = 1;
+        const rows: HostContentModerationData[] = [];
+
+        while (page <= totalPages) {
+            const response = await api.get('/manager/host-contents/pending', {
+                params: { page, limit: 100 },
+            });
+
+            const data = Array.isArray(response.data?.data) ? response.data.data : [];
+            rows.push(...data);
+
+            totalPages = Number(response.data?.meta?.totalPages || 1);
+            page += 1;
+        }
+
+        return rows.map((item: any) => ({
+            hostContentId: item.hostContentId,
+            hostContentTitle: item.hostContentTitle,
+            hostContentDescription: item.hostContentDescription ?? null,
+            hostContentTargetType: item.hostContentTargetType ?? null,
+            hostContentTargetId: item.hostContentTargetId ?? null,
+            hostContentMediaUrls: item.hostContentMediaUrls,
+            hostContentStatus: normalizeStatus(item.hostContentStatus) || 'pending',
+            hostContentCreatedAt: item.hostContentCreatedAt ?? null,
+            hostContentUpdatedAt: item.hostContentUpdatedAt ?? null,
+            authorId: item.authorId ?? null,
+            authorName: item.authorName ?? null,
+        }));
+    },
+
+    getHostContentById: async (id: number | string): Promise<HostContentModerationData> => {
+        const response = await api.get(`/manager/host-contents/${id}`);
+        const row = response.data?.data;
+        if (!row) {
+            throw new Error('Host content not found');
+        }
+        return {
+            hostContentId: row.hostContentId,
+            hostContentTitle: row.hostContentTitle,
+            hostContentDescription: row.hostContentDescription ?? null,
+            hostContentBody: row.hostContentBody ?? null,
+            hostContentTargetType: row.hostContentTargetType ?? null,
+            hostContentTargetId: row.hostContentTargetId ?? null,
+            hostContentMediaUrls: row.hostContentMediaUrls,
+            hostContentStatus: normalizeStatus(row.hostContentStatus) || 'pending',
+            hostContentCreatedAt: row.hostContentCreatedAt ?? null,
+            hostContentUpdatedAt: row.hostContentUpdatedAt ?? null,
+            authorId: row.authorId ?? null,
+            authorName: row.authorName ?? null,
+        };
+    },
+
+    updateHostContentStatus: async (id: number | string, status: 'approved' | 'rejected', reason?: string, note?: string) => {
+        const response = await api.patch(`/manager/host-contents/${id}/status`, { status, reason, note });
         return response.data;
     },
 };

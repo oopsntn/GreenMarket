@@ -2,7 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import { createServer } from "http";
-import { initSocket } from "./config/socket.ts";
+import { initSocket } from "./config/socket";
 
 dotenv.config();
 

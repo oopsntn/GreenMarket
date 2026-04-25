@@ -5,7 +5,7 @@ import {
   updateUserStatus,
   assignUserBusinessRole,
 } from "../../controllers/admin/user.controller.ts";
-import { requireRoles } from "../../middlewares/authMiddleware.ts";
+import { requireRoles } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

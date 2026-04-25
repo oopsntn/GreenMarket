@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
 import { and, eq, sql } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { posts } from "../../models/schema/posts.ts";
-import { shops, type NewShop } from "../../models/schema/shops.ts";
-import { users } from "../../models/schema/users.ts";
-import { parseId } from "../../utils/parseId.ts";
+import { db } from "../../config/db";
+import { posts } from "../../models/schema/posts";
+import { shops, type NewShop } from "../../models/schema/shops";
+import { users } from "../../models/schema/users";
+import { parseId } from "../../utils/parseId";
 
 type AdminShopStatus = "Pending" | "Active" | "Suspended" | "Rejected";
 type DbShopStatus = "pending" | "active" | "blocked" | "closed";

@@ -37,8 +37,24 @@ const useMyPost = () => {
     }, [user?.id])
 
     useEffect(() => {
-        setActiveTab(shop ? 'shop' : 'personal')
-    }, [shop?.shopId])
+        const hasShopPosts = posts.some((post) => post.postShopId !== null)
+
+        setActiveTab((currentTab) => {
+            if (currentTab === 'shop' && !shop && !hasShopPosts) {
+                return 'personal'
+            }
+
+            if (currentTab === 'personal' && !shop && hasShopPosts && posts.every((post) => post.postShopId !== null)) {
+                return 'shop'
+            }
+
+            if (currentTab === 'personal' && shop && posts.every((post) => post.postShopId !== null)) {
+                return 'shop'
+            }
+
+            return currentTab
+        })
+    }, [posts, shop?.shopId])
 
     const handleDelete = (postId: number) => {
         CustomAlert(
@@ -130,8 +146,10 @@ const useMyPost = () => {
         return post.postShopId === null
     })
 
+    const hasShopPosts = posts.some((post) => post.postShopId !== null)
+
     return {
-        state: { posts: filteredPosts, loading, activeTab, shop, editingPost, saving },
+        state: { posts: filteredPosts, loading, activeTab, shop, editingPost, saving, hasShopPosts },
         actions: { setActiveTab, handleDelete, handleUpdate, setEditingPost, fetchPosts }
     }
 }

@@ -31,7 +31,17 @@ const PostManagementList = ({ navigation }: any) => {
       setPosts(data.filter((p) => p.postStatus === 'pending'));
     } catch (error) {
       console.error(error);
-      CustomAlert('Lỗi', 'Không thể tải danh sách tin chờ duyệt.');
+      const status =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as any).response?.status === 'number'
+          ? (error as any).response.status
+          : null;
+      CustomAlert(
+        'Lỗi',
+        status ? `Không thể tải danh sách tin chờ duyệt. (HTTP ${status})` : 'Không thể tải danh sách tin chờ duyệt.',
+      );
     } finally {
       setLoading(false);
     }

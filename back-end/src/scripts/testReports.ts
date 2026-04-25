@@ -1,7 +1,7 @@
-import { db } from "../config/db.ts";
-import { users, posts, categories, reports } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { users, posts, categories, reports } from "../models/schema/index";
 import { eq } from "drizzle-orm";
-import { slugify } from "../utils/slugify.ts";
+import { slugify } from "../utils/slugify";
 
 async function testReports() {
     console.log("--- Starting Reports Integration Test ---");

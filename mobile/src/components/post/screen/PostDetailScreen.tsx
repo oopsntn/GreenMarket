@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { Linking, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { postService } from '../service/postService'
-import { AlertCircle, ExternalLink, Eye, Heart, MapPin, Maximize2, MessageCircle, Phone, Share2, ShieldCheck, Store } from 'lucide-react-native'
+import { AlertCircle, Bookmark, ExternalLink, Eye, MapPin, Maximize2, MessageCircle, Phone, Share2, ShieldCheck, Store } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Button from '../../Reused/Button/Button'
 import { MediaGallery } from '../components/MediaGallery'
 import Card from '../../Reused/Card/Card'
 import { resolveImageUrl } from '../../../utils/resolveImageUrl'
+import { WEB_BASE_URL } from '../../../config/api'
 
 interface Props {
   route: any,
@@ -49,9 +50,12 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
 
   const handleShare = async () => {
     try {
+      const slug = post?.postSlug || post?.postId
+      const webUrl = `${WEB_BASE_URL}/san-pham/${slug}`
       await Share.share({
-        message: `Xem thử tin này: ${post?.postTitle} trên GreenMarket`,
-        url: `https://yourdomain.com/post/${post?.postSlug}`
+        message: `${post?.postTitle}\n${webUrl}`,
+        url: webUrl,  // iOS chỉ hiển thị url khi dùng AirDrop/Messages
+        title: post?.postTitle || 'GreenMarket',
       });
     } catch (error) {
       console.error(error);
@@ -109,18 +113,25 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   if (loading) return <View style={styles.center}><Text>Đang tải...</Text></View>;
   if (!post) return <View style={styles.center}><Text>Không tìm thấy tin đăng hoặc đã bị xóa.</Text></View>;
 
-  const media = [
-    ...(post?.images || []).map((i: any) => {
-      return { type: 'image', url: resolveImageUrl(i.imageUrl) };
-    }),
-    ...(post?.videos || []).map((v: any) => {
-      return { type: 'video', url: resolveImageUrl(v.videoUrl) };
-    })
-  ]
+  const normalizeMediaUrl = (raw: unknown): string => {
+    if (!raw) return '';
+    if (typeof raw === 'string') return resolveImageUrl(raw);
+    if (typeof raw === 'object') {
+      const record = raw as Record<string, unknown>;
+      const url =
+        (typeof record.imageUrl === 'string' && record.imageUrl) ||
+        (typeof record.videoUrl === 'string' && record.videoUrl) ||
+        (typeof record.url === 'string' && record.url) ||
+        '';
+      return resolveImageUrl(url);
+    }
+    return resolveImageUrl(String(raw));
+  };
 
-  // Debug log
-  console.log('📸 Post data:', { images: post?.images, videos: post?.videos });
-  console.log('📸 Media array:', media);
+  const media = [
+    ...(post?.images || []).map((i: any) => ({ type: 'image', url: normalizeMediaUrl(i) })),
+    ...(post?.videos || []).map((v: any) => ({ type: 'video', url: normalizeMediaUrl(v) })),
+  ]
 
   const contactPhone = post?.shop?.shopPhone || post?.shop?.phones?.[0] || post?.postContactPhone || ''
 
@@ -134,7 +145,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
         <Share2 size={24} color="#fff" />
       </TouchableOpacity>
       <TouchableOpacity onPress={handleToggleSave}>
-        <Heart size={24} color={isSaved ? "#ff4d4f" : "#fff"} fill={isSaved ? "#ff4d4f" : "transparent"} />
+        <Bookmark size={24} color={isSaved ? '#10b981' : '#fff'} fill={isSaved ? '#10b981' : 'transparent'} />
       </TouchableOpacity>
     </View>
   );
@@ -193,7 +204,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           </View>
 
           <Text style={styles.priceText}>
-            {new Intl.NumberFormat('en-US').format(post?.postPrice || 0)}
+            {new Intl.NumberFormat('vi-VN').format(Number(post?.postPrice || 0))}
             <Text style={styles.priceUnit}> VND</Text>
           </Text>
         </View>

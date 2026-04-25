@@ -1,20 +1,59 @@
 import { getServerBaseUrl } from '../config/api';
 
-export const resolveImageUrl = (url: string | undefined | null) => {
-    if (!url) {
+type ResolveImageOptions = {
+    debugLabel?: string;
+}
+
+const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
+const DATA_URL_PATTERN = /^data:/i;
+
+const normalizeServerBase = () => {
+    const serverBase = getServerBaseUrl();
+    return serverBase.endsWith('/') ? serverBase.slice(0, -1) : serverBase;
+}
+
+export const resolveImageUrl = (
+    url: string | undefined | null,
+    options?: ResolveImageOptions,
+) => {
+    const rawUrl = typeof url === 'string' ? url.trim() : '';
+
+    if (!rawUrl) {
         return '';
     }
 
-    if (url.startsWith('http')) {
-        return url;
+    if (ABSOLUTE_URL_PATTERN.test(rawUrl) || DATA_URL_PATTERN.test(rawUrl)) {
+        return rawUrl;
     }
 
-    // Xóa dấu / ở đầu nếu có để tránh / bị double
-    const cleanPath = url.startsWith('/') ? url.slice(1) : url;
-    
-    // Đảm bảo getServerBaseUrl() đã loại bỏ trailing slash
-    const serverBase = getServerBaseUrl();
-    const cleanServerBase = serverBase.endsWith('/') ? serverBase.slice(0, -1) : serverBase;
+    if (rawUrl.startsWith('//')) {
+        return `https:${rawUrl}`;
+    }
 
-    return `${cleanServerBase}/${cleanPath}`;
+    const cleanPath = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
+    const resolvedUrl = `${normalizeServerBase()}${cleanPath}`;
+
+    if (__DEV__) {
+        console.log('[Media Resolve]', {
+            label: options?.debugLabel || 'image',
+            rawUrl,
+            resolvedUrl,
+        });
+    }
+
+    return resolvedUrl;
+};
+
+export const logMediaResolveError = (
+    label: string,
+    url: string | undefined | null,
+    error?: unknown,
+) => {
+    const resolvedUrl = resolveImageUrl(url, { debugLabel: label });
+    console.error('[Media Resolve Error]', {
+        label,
+        rawUrl: url ?? null,
+        resolvedUrl,
+        error,
+    });
 };

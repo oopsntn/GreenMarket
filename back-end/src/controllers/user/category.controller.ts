@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { db } from "../../config/db";
 import { eq, and } from "drizzle-orm";
-import { categories, categoryAttributes, attributes } from "../../models/schema/index.ts";
+import { categories, categoryAttributes, attributes } from "../../models/schema/index";
 import { parseId } from "../../utils/parseId";
 
 export const getCategories = async (req: Request, res: Response): Promise<void> => {

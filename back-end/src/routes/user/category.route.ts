@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getCategories, getCategoryAttributes } from "../../controllers/user/category.controller.ts";
+import { getCategories, getCategoryAttributes } from "../../controllers/user/category.controller";
 
 const router = Router();
 

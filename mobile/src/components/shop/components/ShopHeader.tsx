@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react'
-import { FlatList, Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useState, useMemo } from 'react'
+import { Dimensions, FlatList, Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Camera, ExternalLink, MapPin, MessageCircle, Phone, Play, Store, User } from 'lucide-react-native'
 import { ShopService } from '../service/shopService'
+import { logMediaResolveError, resolveImageUrl } from '../../../utils/resolveImageUrl'
 
 interface ShopHeaderProps {
     shop: any;
@@ -9,13 +10,18 @@ interface ShopHeaderProps {
     styles?: any;
 }
 
+const SCREEN_W = Dimensions.get('window').width
+
 const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
-    const gallery = useMemo(() => {
-        if (!shop.shopGalleryImages) return [];
-        return typeof shop.shopGalleryImages === 'string'
-            ? shop.shopGalleryImages.split('|')
-            : shop.shopGalleryImages;
-    }, [shop.shopGalleryImages]);
+    const [activeGalleryIndex, setActiveGalleryIndex] = useState(0)
+
+    const gallery: string[] = useMemo(() => {
+        if (!shop?.shopGalleryImages) return []
+        if (Array.isArray(shop.shopGalleryImages)) return shop.shopGalleryImages.filter(Boolean)
+        if (typeof shop.shopGalleryImages === 'string')
+            return shop.shopGalleryImages.split('|').map((s: string) => s.trim()).filter(Boolean)
+        return []
+    }, [shop?.shopGalleryImages])
 
     if (!shop) return null
 
@@ -32,7 +38,6 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
         const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0
         const location = encodeURIComponent(shop.shopLocation || label)
 
-        //1. Chay tren trinh duyet web thi mo Google Maps voi query la dia chi hoac lat/lng
         if (Platform.OS === 'web') {
             const url = 'https://www.google.com/maps/search/?api=1&query='
             let webUrl = `${url}${location}`
@@ -43,19 +48,17 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
             return;
         }
 
-        //2. Chay tren Mobile thi mo app Maps mac dinh tren may voi query la dia chi hoac lat/lng
         let mobileUrl = ''
         if (Platform.OS === 'ios') {
             mobileUrl = hasCoords ? `http://maps.apple.com/?ll=${lat},${lng}&q=${label}` : `http://maps.apple.com/?q=${location}`
         } else if (Platform.OS === 'android') {
             mobileUrl = hasCoords ? `geo:${lat},${lng}?q=${label}` : `geo:0,0?q=${location}`
         }
-        //Neu may khong co app Maps mac dinh thi mo Google Maps tren trinh duyet
+
         Linking.openURL(mobileUrl).catch(() => {
             const fallbackUrl = hasCoords ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : `https://www.google.com/maps/search/?api=1&query=${location}`
             Linking.openURL(fallbackUrl)
         })
-
     }
 
     const makeCall = () => {
@@ -79,24 +82,57 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
     return (
         <View style={styles.headerCard}>
             {gallery.length > 0 ? (
-                <FlatList
-                    data={gallery}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={({ item }) => (
-                        <Image source={{ uri: item }} style={styles.coverImage} />
+                <View>
+                    <FlatList
+                        data={gallery}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        keyExtractor={(_, index) => index.toString()}
+                        onMomentumScrollEnd={(e) => {
+                            const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W)
+                            setActiveGalleryIndex(idx)
+                        }}
+                        renderItem={({ item }) => (
+                            <Image
+                                source={{ uri: resolveImageUrl(item, { debugLabel: 'shop-gallery-image' }) }}
+                                style={[styles.coverImage, { width: SCREEN_W }]}
+                                resizeMode="cover"
+                                onError={(error) => logMediaResolveError('shop-gallery-image', item, error?.nativeEvent)}
+                            />
+                        )}
+                    />
+                    {gallery.length > 1 && (
+                        <View style={styles.dotRow}>
+                            {gallery.map((_, i) => (
+                                <View
+                                    key={i}
+                                    style={[
+                                        styles.dot,
+                                        i === activeGalleryIndex && styles.dotActive
+                                    ]}
+                                />
+                            ))}
+                        </View>
                     )}
-                />
+                </View>
             ) : shop.shopCoverUrl ? (
-                <Image source={{ uri: shop.shopCoverUrl }} style={styles.coverImage} />
+                <Image
+                    source={{ uri: resolveImageUrl(shop.shopCoverUrl, { debugLabel: 'shop-cover-image' }) }}
+                    style={[styles.coverImage, { width: SCREEN_W }]}
+                    resizeMode="cover"
+                    onError={(error) => logMediaResolveError('shop-cover-image', shop.shopCoverUrl, error?.nativeEvent)}
+                />
             ) : null}
 
             <View style={styles.headerTop}>
                 <View style={styles.shopAvatar}>
                     {shop.shopLogoUrl ? (
-                        <Image source={{ uri: shop.shopLogoUrl }} style={styles.logoImage} />
+                        <Image
+                            source={{ uri: resolveImageUrl(shop.shopLogoUrl, { debugLabel: 'shop-logo-image' }) }}
+                            style={styles.logoImage}
+                            onError={(error) => logMediaResolveError('shop-logo-image', shop.shopLogoUrl, error?.nativeEvent)}
+                        />
                     ) : (
                         <Store size={36} color="#10b981" />
                     )}
@@ -141,7 +177,6 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
                 </TouchableOpacity>
             ) : null}
 
-            {/* 3. Social Media Icons (Bổ sung nếu có link FB/Insta) */}
             <View style={styles.socialMediaRow}>
                 {shop.shopFacebook && (
                     <TouchableOpacity onPress={() => Linking.openURL(shop.shopFacebook)}>
@@ -158,7 +193,6 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
                         <Play size={20} color="#FF0000" />
                     </TouchableOpacity>
                 )}
-                {/* Tương tự cho Instagram, Youtube */}
             </View>
 
             {!isOwner ? (
@@ -197,8 +231,26 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     coverImage: {
-        width: '100%',
-        height: 140,
+        height: 160,
+    },
+    dotRow: {
+        position: 'absolute',
+        bottom: 8,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    dot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+    },
+    dotActive: {
+        backgroundColor: '#fff',
+        width: 16,
     },
     headerTop: {
         flexDirection: 'row',
@@ -338,7 +390,6 @@ const styles = StyleSheet.create({
         gap: 15,
         marginBottom: 10,
     },
-
 })
 
 export default ShopHeader

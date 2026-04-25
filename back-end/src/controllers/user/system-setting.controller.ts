@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { adminWebSettingsService } from "../../services/adminWebSettings.service.ts";
+import { adminWebSettingsService } from "../../services/adminWebSettings.service";
 
 export const getPublicSystemSettings = async (
   _req: Request,

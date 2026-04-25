@@ -1,6 +1,6 @@
 import { pgTable, serial, varchar, text, timestamp, integer, jsonb, numeric } from "drizzle-orm/pg-core";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
-import { users } from "./users.ts";
+import { users } from "./users";
 
 export const hostContents = pgTable("host_contents", {
   hostContentId: serial("host_content_id").primaryKey(),

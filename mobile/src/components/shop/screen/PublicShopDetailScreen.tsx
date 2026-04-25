@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import ShopHeader from '../components/ShopHeader'
 import Card from '../../Reused/Card/Card'
 import { ShopService } from '../service/shopService'
+import { logMediaResolveError, resolveImageUrl } from '../../../utils/resolveImageUrl'
 
 const PublicShopDetailScreen = ({ route }: any) => {
     const navigation = useNavigation<any>()
@@ -37,6 +38,9 @@ const PublicShopDetailScreen = ({ route }: any) => {
         )
     }
 
+    const approvedPosts = Array.isArray(shop?.posts)
+        ? shop.posts.filter((p: any) => p.postStatus === 'approved')
+        : []
 
     return (
         <MobileLayout scrollEnabled={false} title="Chi tiết cửa hàng" backButton={() => navigation.goBack()}>
@@ -47,21 +51,39 @@ const PublicShopDetailScreen = ({ route }: any) => {
                 </View>
             ) : (
                 <FlatList
-                    data={Array.isArray(shop.posts) ? shop.posts.filter((p: any) => p.postStatus === 'approved') : []}
+                    data={approvedPosts}
                     keyExtractor={(item) => item.postId.toString()}
                     refreshing={loading}
                     onRefresh={fetchShop}
                     ListHeaderComponent={<ShopHeader shop={shop} isOwner={false} />}
                     contentContainerStyle={{ paddingBottom: 100 }}
-                    renderItem={({ item }) => (
-                        <Card onClick={() => navigation.navigate('PostDetail', { slug: item.postSlug })} style={styles.postCard}>
-                            <Text style={styles.postTitle}>{item.postTitle}</Text>
-                            <Text style={styles.postPrice}>
-                                {new Intl.NumberFormat('en-US').format(Number(item.postPrice || 0))} VND
-                            </Text>
-                            <Text style={styles.postMeta}>Trạng thái: {item.postStatus || 'đã duyệt'}</Text>
-                        </Card>
-                    )}
+                    renderItem={({ item }) => {
+                        const firstImage = item?.images?.[0]?.imageUrl || '';
+                        const resolvedImage = resolveImageUrl(firstImage, { debugLabel: 'public-shop-post-image' });
+
+                        return (
+                            <Card onClick={() => navigation.navigate('PostDetail', { slug: item.postSlug })} style={styles.postCard}>
+                                <View style={styles.postRow}>
+                                    {resolvedImage ? (
+                                        <Image
+                                            source={{ uri: resolvedImage }}
+                                            style={styles.postImage}
+                                            onError={(error) => logMediaResolveError('public-shop-post-image', firstImage, error?.nativeEvent)}
+                                        />
+                                    ) : (
+                                        <View style={styles.postImagePlaceholder} />
+                                    )}
+                                    <View style={styles.postInfo}>
+                                        <Text style={styles.postTitle} numberOfLines={2}>{item.postTitle}</Text>
+                                        <Text style={styles.postPrice}>
+                                            {new Intl.NumberFormat('vi-VN').format(Number(item.postPrice || 0))}đ
+                                        </Text>
+                                        <Text style={styles.postMeta}>{item.postLocation || 'Chưa cập nhật vị trí'}</Text>
+                                    </View>
+                                </View>
+                            </Card>
+                        )
+                    }}
                     ListEmptyComponent={
                         <View style={styles.emptyList}>
                             <Text style={styles.emptyText}>Cửa hàng này chưa có tin đăng nào được duyệt.</Text>
@@ -78,6 +100,26 @@ const styles = StyleSheet.create({
         marginHorizontal: 20,
         marginBottom: 12,
         padding: 14,
+    },
+    postRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    postImage: {
+        width: 84,
+        height: 84,
+        borderRadius: 12,
+        backgroundColor: '#E2E8F0',
+    },
+    postImagePlaceholder: {
+        width: 84,
+        height: 84,
+        borderRadius: 12,
+        backgroundColor: '#F1F5F9',
+    },
+    postInfo: {
+        flex: 1,
+        justifyContent: 'center',
     },
     postTitle: {
         fontSize: 15,

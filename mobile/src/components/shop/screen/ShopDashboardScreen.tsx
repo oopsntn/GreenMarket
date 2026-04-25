@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react'
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import { ArrowRight, BadgeDollarSign, BarChart3, Eye, FileText, MessageCircle, Rocket, Store, Wallet } from 'lucide-react-native'
+import { ArrowRight, BadgeDollarSign, BarChart3, Eye, FileText, MessageCircle, Rocket, Store, Wallet, Users, UserPlus, ClipboardCheck } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Card from '../../Reused/Card/Card'
 import Button from '../../Reused/Button/Button'
@@ -189,6 +189,50 @@ const ShopDashboardScreen = () => {
                                 </Card>
                             ))}
                         </View>
+
+                        {/* Collaborator Management Section */}
+                        <Card style={styles.sectionCard}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionTitle}>Cộng tác viên</Text>
+                            </View>
+                            <View style={styles.collabActionsRow}>
+                                <TouchableOpacity 
+                                    style={styles.collabActionBtn}
+                                    onPress={() => navigation.navigate('ShopCollaborators')}
+                                >
+                                    <View style={[styles.collabIconWrap, { backgroundColor: '#E0F2FE' }]}>
+                                        <Users size={20} color="#0284C7" />
+                                    </View>
+                                    <Text style={styles.collabActionText}>Quản lý CTV</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    style={styles.collabActionBtn}
+                                    onPress={() => navigation.navigate('CollaboratorPublicList')}
+                                >
+                                    <View style={[styles.collabIconWrap, { backgroundColor: '#FEF08A' }]}>
+                                        <UserPlus size={20} color="#CA8A04" />
+                                    </View>
+                                    <Text style={styles.collabActionText}>Tìm CTV</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity 
+                                    style={styles.collabActionBtn}
+                                    onPress={() => navigation.navigate('PendingOwnerPosts')}
+                                >
+                                    <View style={[styles.collabIconWrap, { backgroundColor: '#DCFCE7' }]}>
+                                        <ClipboardCheck size={20} color="#16A34A" />
+                                        {/* Display badge if pendingPosts > 0 */}
+                                        {(summary.pendingPosts ?? 0) > 0 && (
+                                            <View style={styles.badgeCount}>
+                                                <Text style={styles.badgeCountText}>{summary.pendingPosts}</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    <Text style={styles.collabActionText}>Duyệt bài</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </Card>
 
                         <Card style={styles.sectionCard}>
                             <View style={styles.sectionHeader}>
@@ -421,6 +465,52 @@ const styles = StyleSheet.create({
     emptyInline: {
         color: '#64748b',
         lineHeight: 20,
+    },
+    collabActionsRow: {
+        flexDirection: 'row',
+        gap: 12,
+        justifyContent: 'space-between',
+    },
+    collabActionBtn: {
+        flex: 1,
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#F8FAFC',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+    },
+    collabIconWrap: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
+        position: 'relative',
+    },
+    collabActionText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#334155',
+        textAlign: 'center',
+    },
+    badgeCount: {
+        position: 'absolute',
+        top: -6,
+        right: -6,
+        backgroundColor: '#EF4444',
+        borderRadius: 10,
+        minWidth: 20,
+        height: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 4,
+    },
+    badgeCountText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold',
     },
 })
 

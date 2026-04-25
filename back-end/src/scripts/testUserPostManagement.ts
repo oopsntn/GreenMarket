@@ -1,7 +1,7 @@
-import { db } from "../config/db.ts";
-import { users, categories, posts } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { users, categories, posts } from "../models/schema/index";
 import { eq } from "drizzle-orm";
-import { slugify } from "../utils/slugify.ts";
+import { slugify } from "../utils/slugify";
 import axios from "axios";
 
 const BASE_URL = "http://localhost:5000/api/posts";

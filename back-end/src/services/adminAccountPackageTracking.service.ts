@@ -17,7 +17,7 @@ import {
   adminAccountPackageService,
   type AccountPackageCode,
 } from "./adminAccountPackage.service.ts";
-import { POSTING_PLAN_CODES } from "./posting-policy.service.ts";
+import { POSTING_PLAN_CODES } from "./posting-policy.service";
 
 type TrackingStatus = "permanent" | "active" | "expiring_soon";
 

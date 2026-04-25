@@ -6,6 +6,7 @@ import {
   ClipboardCheck,
   Store,
   AlertTriangle,
+  Megaphone,
   Settings
 } from 'lucide-react-native';
 
@@ -13,6 +14,8 @@ import {
 import DashboardScreen from '../screens/DashboardScreen';
 import PostManagementList from '../screens/PostManagementList';
 import PostManagementDetail from '../screens/PostManagementDetail';
+import HostContentModerationList from '../screens/HostContentModerationList';
+import HostContentModerationDetail from '../screens/HostContentModerationDetail';
 import ShopManagementList from '../screens/ShopManagementList';
 import ShopManagementDetail from '../screens/ShopManagementDetail';
 import ReportManagementList from '../screens/ReportManagementList';
@@ -43,6 +46,7 @@ const ManagerTabs = () => {
           let icon;
           if (route.name === 'Dashboard') icon = <LayoutDashboard color={color} size={size} />;
           else if (route.name === 'Posts') icon = <ClipboardCheck color={color} size={size} />;
+          else if (route.name === 'HostContents') icon = <Megaphone color={color} size={size} />;
           else if (route.name === 'Shops') icon = <Store color={color} size={size} />;
           else if (route.name === 'Reports') icon = <AlertTriangle color={color} size={size} />;
           else if (route.name === 'Settings') icon = <Settings color={color} size={size} />;
@@ -51,9 +55,10 @@ const ManagerTabs = () => {
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Tổng quan' }} />
-      <Tab.Screen name="Posts" component={PostManagementList} options={{ tabBarLabel: 'Bài đăng', tabBarBadge: 5 }} />
+      <Tab.Screen name="Posts" component={PostManagementList} options={{ tabBarLabel: 'Bài đăng' }} />
+      <Tab.Screen name="HostContents" component={HostContentModerationList} options={{ tabBarLabel: 'Host' }} />
       <Tab.Screen name="Shops" component={ShopManagementList} options={{ tabBarLabel: 'Cửa hàng' }} />
-      <Tab.Screen name="Reports" component={ReportManagementList} options={{ tabBarLabel: 'Báo cáo', tabBarBadge: 3 }} />
+      <Tab.Screen name="Reports" component={ReportManagementList} options={{ tabBarLabel: 'Báo cáo' }} />
       <Tab.Screen name="Settings" component={ManagerSettingsScreen} options={{ tabBarLabel: 'Cài đặt' }} />
     </Tab.Navigator>
   );
@@ -69,6 +74,11 @@ const ManagerNavigator = () => {
       <Stack.Screen
         name="PostManagementDetail"
         component={PostManagementDetail}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="HostContentModerationDetail"
+        component={HostContentModerationDetail}
         options={{ animation: 'slide_from_right' }}
       />
       <Stack.Screen

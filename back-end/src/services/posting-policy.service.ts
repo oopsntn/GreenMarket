@@ -7,7 +7,7 @@ import {
   lte,
   sql,
 } from "drizzle-orm";
-import { db } from "../config/db.ts";
+import { db } from "../config/db";
 import {
   ledgers,
   posts,
@@ -58,7 +58,7 @@ export type PostingFeeRecord = {
   amount: number;
   createdAt: Date | null;
 };
-import { readSettingJson } from "../controllers/user/pricing-config.controller.ts";
+import { readSettingJson } from "../controllers/user/pricing-config.controller";
 
 const OWNER_LIFETIME_DEFAULT_POLICY: BasePostingPolicy = {
   planCode: POSTING_PLAN_CODES.GARDEN_OWNER_LIFETIME,

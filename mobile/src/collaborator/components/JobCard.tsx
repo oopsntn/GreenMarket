@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { MapPin, Calendar, Clock, ChevronRight } from 'lucide-react-native';
+import { MapPin, Calendar, ChevronRight } from 'lucide-react-native';
 import { Job } from '../services/collaboratorService';
 
 interface JobCardProps {
@@ -9,16 +9,21 @@ interface JobCardProps {
 }
 
 const JobCard = ({ job, onPress }: JobCardProps) => {
+    const customerName = job.customer?.displayName?.trim() || 'Khách hàng';
+    const customerInitial = customerName.charAt(0) || 'K';
+
     const formattedPrice = new Intl.NumberFormat('vi-VN', {
         style: 'currency',
         currency: 'VND',
     }).format(Number(job.price));
 
-    const deadline = new Date(job.deadline).toLocaleDateString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-    });
+    const deadline = job.deadline
+        ? new Date(job.deadline).toLocaleDateString('vi-VN', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+          })
+        : '--/--/----';
 
     return (
         <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
@@ -45,9 +50,9 @@ const JobCard = ({ job, onPress }: JobCardProps) => {
             <View style={styles.customerRow}>
                 <View style={styles.customerInfo}>
                     <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>{job.customer.displayName?.charAt(0) || 'K'}</Text>
+                        <Text style={styles.avatarText}>{customerInitial}</Text>
                     </View>
-                    <Text style={styles.customerName}>{job.customer.displayName || 'Khách hàng'}</Text>
+                    <Text style={styles.customerName}>{customerName}</Text>
                 </View>
                 <ChevronRight size={18} color="#94A3B8" />
             </View>

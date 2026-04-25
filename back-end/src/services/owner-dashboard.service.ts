@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { db } from "../config/db.ts";
+import { db } from "../config/db";
 import {
   eventLogs,
   transactions,
@@ -9,7 +9,7 @@ import {
   promotionPackages,
   shops,
 } from "../models/schema/index.ts";
-import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion.ts";
+import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion";
 
 const SHOP_EVENT_VIEW = "shop_view";
 const SHOP_EVENT_CONTACT_CLICK = "shop_contact_click";

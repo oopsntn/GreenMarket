@@ -1,18 +1,18 @@
 import { Request, Response } from "express";
-import { db } from "../../config/db.ts";
+import { db } from "../../config/db";
 import { eq, and, sql, inArray, or } from "drizzle-orm";
-import { posts, mediaAssets, postAttributeValues, shops, type Post, categories, attributes, users, userFavorites, postPromotions, promotionPackages, placementSlots, shopCollaborators } from "../../models/schema/index.ts";
-import { slugify } from "../../utils/slugify.ts";
-import { parseId } from "../../utils/parseId.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { posts, mediaAssets, postAttributeValues, shops, type Post, categories, attributes, users, userFavorites, postPromotions, promotionPackages, placementSlots, shopCollaborators } from "../../models/schema/index";
+import { slugify } from "../../utils/slugify";
+import { parseId } from "../../utils/parseId";
+import { AuthRequest } from "../../dtos/auth";
 import {
     PostingPolicyError,
     postingPolicyService,
 } from "../../services/posting-policy.service.ts";
-import { adminWebSettingsService } from "../../services/adminWebSettings.service.ts";
-import { postLifecycleService } from "../../services/postLifecycle.service.ts";
-import { notificationService } from "../../services/notification.service.ts";
-import { BOOST_POST_SLOT_PREFIX } from "../../constants/promotion.ts";
+import { adminWebSettingsService } from "../../services/adminWebSettings.service";
+import { postLifecycleService } from "../../services/postLifecycle.service";
+import { notificationService } from "../../services/notification.service";
+import { BOOST_POST_SLOT_PREFIX } from "../../constants/promotion";
 
 const actionCache = new Set<string>();
 const SHOP_GALLERY_DELIMITER = "|";
@@ -759,8 +759,8 @@ export const togglePostVisibility = async (req: AuthRequest, res: Response): Pro
 
 // --- Buyer / Public Flow ---
 
-import { PostService } from "../../services/post.service.ts";
-import { GetPostsQueryDto } from "../../dtos/post.ts";
+import { PostService } from "../../services/post.service";
+import { GetPostsQueryDto } from "../../dtos/post";
 
 export const getPublicPosts = async (req: Request, res: Response): Promise<void> => {
     try {

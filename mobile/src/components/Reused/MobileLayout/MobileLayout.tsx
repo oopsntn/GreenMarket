@@ -11,8 +11,7 @@ import {
     ViewStyle,
     KeyboardAvoidingView
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Home } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 // Nếu dùng Expo: npx expo install expo-linear-gradient
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -39,8 +38,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
     containerStyle,
     scrollEnabled = false
 }) => {
-
-    const navigation = useNavigation<any>();
+    const statusBarOffset = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
     // Tach phan noi dung ben trong Header ra de dung chung
     const renderHeaderContent = () => (
@@ -66,9 +64,6 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
             <View style={styles.rightAction}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     {rightAction}
-                    <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                        <Home size={24} color={headerStyle === 'default' ? '#fff' : '#333'} />
-                    </TouchableOpacity>
                 </View>
             </View>
         </View>
@@ -82,6 +77,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({
 
         const combinedHeaderStyle = [
             styles.header,
+            { paddingTop: 10 + Math.max(0, statusBarOffset - 6) },
             isTransparent && styles.headerTransparent,
             !isGradient && !isTransparent && styles.headerDefault
         ]
@@ -154,9 +150,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 12,
         zIndex: 10,
-        ...Platform.select({
-            android: { paddingTop: 12 }, 
-        }),
     },
     headerDefault: {
         backgroundColor: '#2e7d32',

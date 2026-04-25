@@ -9,7 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { type InferInsertModel, type InferSelectModel } from "drizzle-orm";
-import { users } from "./users.ts";
+import { users } from "./users";
 
 export const userPostingPlans = pgTable(
   "user_posting_plans",

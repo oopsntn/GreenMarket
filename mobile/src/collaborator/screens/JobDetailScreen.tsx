@@ -101,6 +101,10 @@ const JobDetailScreen = () => {
         currency: 'VND',
     }).format(Number(data.price));
 
+    const customerName = data.customer?.displayName?.trim() || 'Khách hàng';
+    const customerInitial = customerName.charAt(0) || 'K';
+    const customerLocation = data.customer?.location?.trim() || 'Khách hàng đã xác thực';
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" />
@@ -179,11 +183,11 @@ const JobDetailScreen = () => {
                         <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
                         <View style={styles.customerCard}>
                             <View style={styles.customerAvatar}>
-                                <Text style={styles.avatarText}>{data.customer.displayName?.charAt(0)}</Text>
+                                <Text style={styles.avatarText}>{customerInitial}</Text>
                             </View>
                             <View style={styles.customerInfo}>
-                                <Text style={styles.customerName}>{data.customer.displayName}</Text>
-                                <Text style={styles.customerLocation}>{data.customer.location || 'Khách hàng đã xác thực'}</Text>
+                                <Text style={styles.customerName}>{customerName}</Text>
+                                <Text style={styles.customerLocation}>{customerLocation}</Text>
                             </View>
                         </View>
                     </View>

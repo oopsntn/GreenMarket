@@ -2,8 +2,8 @@ import axios from "axios";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { inArray, eq } from "drizzle-orm";
-import { db } from "../config/db.ts";
-import { admins, adminRoles, roles } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { admins, adminRoles, roles } from "../models/schema/index";
 
 const API_BASE = "http://localhost:5000/api/admin";
 const AUTH_BASE = "http://localhost:5000/api/auth";
