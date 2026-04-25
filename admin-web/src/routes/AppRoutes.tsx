@@ -15,9 +15,12 @@ import AttributesPage from "../pages/AttributesPage";
 import BoostedPostsPage from "../pages/BoostedPostsPage";
 import CategoriesPage from "../pages/CategoriesPage";
 import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage";
+import CollaboratorsPage from "../pages/CollaboratorsPage";
 import CustomerSpendingPage from "../pages/CustomerSpendingPage";
 import DashboardPage from "../pages/DashboardPage";
 import ExportPage from "../pages/ExportPage";
+import FinancialPage from "../pages/FinancialPage";
+import HostContentsPage from "../pages/HostContentsPage";
 import LoginPage from "../pages/LoginPage";
 import PlacementSlotsPage from "../pages/PlacementSlotsPage";
 import PostsModerationPage from "../pages/PostsModerationPage";
@@ -28,8 +31,8 @@ import RevenuePage from "../pages/RevenuePage";
 import RolesManagementPage from "../pages/RolesManagementPage";
 import SettingsPage from "../pages/SettingsPage";
 import ShopsPage from "../pages/ShopsPage";
-import TemplateBuilderPage from "../pages/TemplateBuilderPage";
 import TemplatesPage from "../pages/TemplatesPage";
+import UserNotificationsPage from "../pages/UserNotificationsPage";
 import UsersPage from "../pages/UsersPage";
 import {
   canAccessAdminModule,
@@ -94,6 +97,21 @@ function AppRoutes() {
               <Route path="users" element={<UsersPage />} />
             </Route>
 
+            <Route
+              element={<ProtectedModuleRoute moduleKey="collaborators" />}
+            >
+              <Route path="collaborators" element={<CollaboratorsPage />} />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="userNotifications" />}
+            >
+              <Route
+                path="user-notifications"
+                element={<UserNotificationsPage />}
+              />
+            </Route>
+
             <Route element={<ProtectedModuleRoute moduleKey="activityLog" />}>
               <Route path="activity-log" element={<ActivityLogPage />} />
             </Route>
@@ -114,6 +132,12 @@ function AppRoutes() {
                 path="reports-moderation"
                 element={<ReportsModerationPage />}
               />
+            </Route>
+
+            <Route
+              element={<ProtectedModuleRoute moduleKey="hostContents" />}
+            >
+              <Route path="host-contents" element={<HostContentsPage />} />
             </Route>
 
             <Route
@@ -148,15 +172,6 @@ function AppRoutes() {
 
             <Route element={<ProtectedModuleRoute moduleKey="templates" />}>
               <Route path="templates" element={<TemplatesPage />} />
-            </Route>
-
-            <Route
-              element={<ProtectedModuleRoute moduleKey="templateBuilder" />}
-            >
-              <Route
-                path="template-builder"
-                element={<TemplateBuilderPage />}
-              />
             </Route>
 
             <Route element={<ProtectedModuleRoute moduleKey="settings" />}>
@@ -218,6 +233,10 @@ function AppRoutes() {
 
             <Route element={<ProtectedModuleRoute moduleKey="revenue" />}>
               <Route path="revenue" element={<RevenuePage />} />
+            </Route>
+
+            <Route element={<ProtectedModuleRoute moduleKey="financial" />}>
+              <Route path="financial" element={<FinancialPage />} />
             </Route>
 
             <Route

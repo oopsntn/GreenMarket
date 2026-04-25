@@ -6,6 +6,8 @@ export type FilterField = {
   type?: "select" | "date";
   value: string;
   onChange: (value: string) => void;
+  min?: string;
+  max?: string;
   options?: string[];
   optionLabels?: Record<string, string>;
 };
@@ -26,6 +28,8 @@ function FilterBar({ fields }: FilterBarProps) {
               id={field.id}
               type="date"
               value={field.value}
+              min={field.min}
+              max={field.max}
               onChange={(event) => field.onChange(event.target.value)}
             />
           ) : (

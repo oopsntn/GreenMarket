@@ -28,7 +28,7 @@ const ProtectedRoute: React.FC<{
       } else if (rules?.requiresShop && !hasActiveShop) {
         blockMessage = rules.deniedMessage || "Trang này yêu cầu hồ sơ Nhà vườn đang hoạt động.";
       } else if (rules?.requiresNoShop && hasActiveShop) {
-        blockMessage = rules.deniedMessage || "Chủ vườn vui lòng sử dụng Manage Shop Dashboard.";
+        blockMessage = rules.deniedMessage || "Chủ vườn vui lòng sử dụng bảng điều khiển nhà vườn.";
       } else if (allowedRoles && !allowedRoles.includes(user?.businessRoleCode || '')) {
         blockMessage = rules?.deniedMessage || "Bạn không có quyền truy cập chức năng này.";
       }

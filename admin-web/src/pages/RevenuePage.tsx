@@ -10,48 +10,16 @@ import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { exportService } from "../services/exportService";
 import { revenueService } from "../services/revenueService";
 import {
+  coerceDateRange,
   DEFAULT_REPORT_FROM_DATE,
   DEFAULT_REPORT_TO_DATE,
   formatDateRangeLabel,
+  getTodayDateValue,
 } from "../utils/dateRange";
 import "./RevenuePage.css";
 
 const PAGE_SIZE = 5;
 const ALL_SLOTS_FILTER = "Tất cả vị trí";
-
-const SUMMARY_TITLE_LABELS: Record<string, string> = {
-  "Total Revenue": "Tổng doanh thu",
-  "Active Packages": "Gói có phát sinh doanh thu",
-  "Avg. Order Value": "Giá trị đơn hàng trung bình",
-  "Top Slot Revenue": "Vị trí có doanh thu cao nhất",
-};
-
-const SUMMARY_NOTE_LABELS: Record<string, string> = {
-  "successful order(s) in period": "đơn hàng thành công trong kỳ",
-  "Packages with paid orders in period": "gói có đơn thanh toán thành công trong kỳ",
-  "Average successful package payment": "giá trị trung bình của một đơn thanh toán thành công",
-  "No paid orders in period": "không có đơn thanh toán thành công trong kỳ",
-};
-
-const SLOT_LABELS: Record<string, string> = {
-  "Home Top": "Vị trí 1 trang chủ",
-  "Category Top": "Vị trí 2 trang chủ",
-  "Search Boost": "Vị trí 3 trang chủ",
-};
-
-const translateSummaryTitle = (value: string) => SUMMARY_TITLE_LABELS[value] || value;
-
-const translateSummaryNote = (value: string) => {
-  let translated = value;
-
-  Object.entries(SUMMARY_NOTE_LABELS).forEach(([source, target]) => {
-    translated = translated.replace(source, target);
-  });
-
-  return translated;
-};
-
-const translateSlot = (value: string) => SLOT_LABELS[value] || value;
 
 function RevenuePage() {
   const [revenueData, setRevenueData] = useState(
@@ -66,9 +34,32 @@ function RevenuePage() {
   const [page, setPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const today = getTodayDateValue();
 
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const slotCatalog = revenueData.slotCatalog;
+
+  const handleFromDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(
+      value,
+      toDate,
+      "from",
+      today,
+    );
+    setFromDate(nextValue);
+    setToDate(counterpartValue);
+  };
+
+  const handleToDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(
+      value,
+      fromDate,
+      "to",
+      today,
+    );
+    setToDate(nextValue);
+    setFromDate(counterpartValue);
+  };
 
   useEffect(() => {
     const loadRevenue = async () => {
@@ -96,8 +87,8 @@ function RevenuePage() {
 
   const slotFilterOptions = useMemo(() => {
     const slotLabels = [
-      ...slotCatalog.map((item) => translateSlot(item.label)),
-      ...revenueData.rows.map((item) => translateSlot(item.slot)),
+      ...slotCatalog.map((item) => item.label),
+      ...revenueData.rows.map((item) => item.slot),
     ];
 
     return [ALL_SLOTS_FILTER, ...new Set(slotLabels)];
@@ -113,13 +104,12 @@ function RevenuePage() {
     const keyword = searchKeyword.trim().toLowerCase();
 
     return revenueData.rows.filter((row) => {
-      const translatedSlot = translateSlot(row.slot);
       const matchesSlot =
-        slotFilter === ALL_SLOTS_FILTER || translatedSlot === slotFilter;
+        slotFilter === ALL_SLOTS_FILTER || row.slot === slotFilter;
       const matchesKeyword =
         !keyword ||
         row.packageName.toLowerCase().includes(keyword) ||
-        translatedSlot.toLowerCase().includes(keyword);
+        row.slot.toLowerCase().includes(keyword);
 
       return matchesSlot && matchesKeyword;
     });
@@ -181,14 +171,14 @@ function RevenuePage() {
     <div className="revenue-page">
       <PageHeader
         title="Doanh thu"
-        description="Theo dõi doanh thu gói quảng bá theo vị trí hiển thị, gói bán và giai đoạn kinh doanh."
+        description="Theo dõi doanh thu từ gói quảng bá, gói tài khoản / shop và phần chi phí chi trả Host / News trong cùng kỳ dữ liệu."
         actionLabel={isExporting ? "Đang xuất..." : "Xuất báo cáo doanh thu"}
         onActionClick={() => void handleExportRevenueReport()}
       />
 
       <SectionCard
         title="Bộ lọc doanh thu"
-        description="Thu hẹp khoảng thời gian báo cáo và phạm vi vị trí hiển thị."
+        description="Thu hẹp khoảng thời gian báo cáo và phạm vi vị trí hiển thị cần xem."
       >
         <FilterBar
           fields={[
@@ -197,14 +187,17 @@ function RevenuePage() {
               label: "Từ ngày",
               type: "date",
               value: fromDate,
-              onChange: setFromDate,
+              max: toDate || today,
+              onChange: handleFromDateChange,
             },
             {
               id: "revenue-to-date",
               label: "Đến ngày",
               type: "date",
               value: toDate,
-              onChange: setToDate,
+              min: fromDate || undefined,
+              max: today,
+              onChange: handleToDateChange,
             },
             {
               id: "revenue-slot-filter",
@@ -219,10 +212,10 @@ function RevenuePage() {
       </SectionCard>
 
       <SearchToolbar
-        placeholder="Tìm theo tên gói hoặc vị trí hiển thị"
+        placeholder="Tìm theo tên gói hoặc phạm vi hiển thị"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
-        filterSummary={`Bộ lọc hiện tại: ${slotFilter} • ${dateRangeLabel} • ${slotCatalog.length} vị trí đã cấu hình`}
+        filterSummary={`Bộ lọc hiện tại: ${slotFilter} • ${dateRangeLabel} • ${slotCatalog.length} nhóm hiển thị đã cấu hình`}
       />
 
       {isLoading ? (
@@ -241,9 +234,9 @@ function RevenuePage() {
           {revenueData.summaryCards.map((card) => (
             <SectionCard key={card.title}>
               <StatCard
-                title={translateSummaryTitle(card.title)}
-                value={translateSlot(card.value)}
-                subtitle={`${translateSummaryNote(card.note)} • ${dateRangeLabel}`}
+                title={card.title}
+                value={card.value}
+                subtitle={`${card.note} • ${dateRangeLabel}`}
               />
             </SectionCard>
           ))}
@@ -267,7 +260,7 @@ function RevenuePage() {
         ) : filteredRows.length === 0 ? (
           <EmptyState
             title="Không có dòng doanh thu phù hợp"
-            description="Không có dữ liệu doanh thu gói nào khớp với bộ lọc hiện tại."
+            description="Không có dữ liệu doanh thu nào khớp với bộ lọc hiện tại."
           />
         ) : (
           <div className="revenue-table-section">
@@ -277,7 +270,7 @@ function RevenuePage() {
                   <tr>
                     <th>ID</th>
                     <th>Tên gói</th>
-                    <th>Vị trí hiển thị</th>
+                    <th>Phạm vi hiển thị</th>
                     <th>Đơn hàng</th>
                     <th>Doanh thu</th>
                   </tr>
@@ -289,7 +282,7 @@ function RevenuePage() {
                       <td>#{row.id}</td>
                       <td>{row.packageName}</td>
                       <td>
-                        <StatusBadge label={translateSlot(row.slot)} variant="slot" />
+                        <StatusBadge label={row.slot} variant="slot" />
                       </td>
                       <td>{row.orders}</td>
                       <td>{row.revenue}</td>

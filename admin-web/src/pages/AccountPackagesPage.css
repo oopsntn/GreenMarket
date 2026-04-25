@@ -244,6 +244,35 @@
   gap: 18px;
 }
 
+.account-package-form__summary {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #dce9dd;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fbfefb 0%, #f4faf4 100%);
+}
+
+.account-package-form__summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-package-form__summary span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #5d7263;
+}
+
+.account-package-form__summary strong {
+  font-size: 16px;
+  line-height: 1.5;
+  color: #1b4332;
+}
+
 .account-package-form > label {
   display: flex;
   flex-direction: column;
@@ -270,6 +299,12 @@
 
 .account-package-form > label input:disabled {
   background-color: #f5f7f4;
+}
+
+.account-package-form > label small {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6b7b6d;
 }
 
 .account-package-form__wide,
@@ -329,6 +364,10 @@
     grid-template-columns: 1fr;
   }
 
+  .account-package-form__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .account-packages-pagination {
     flex-direction: column;
     align-items: flex-start;
@@ -338,6 +377,10 @@
 
 @media (max-width: 900px) {
   .account-packages-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .account-package-form__summary {
     grid-template-columns: 1fr;
   }
 }

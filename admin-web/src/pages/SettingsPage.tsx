@@ -29,6 +29,11 @@ const DEFAULT_SETTINGS: SettingsState = {
     maxFileSizeMb: 5,
     enableImageCompression: true,
   },
+  hostIncome: {
+    articlePayoutAmount: 300000,
+    viewBonusThreshold: 1000,
+    viewBonusAmount: 120000,
+  },
 };
 
 const normalizeSettings = (payload: Partial<SettingsState> | undefined): SettingsState => ({
@@ -40,7 +45,7 @@ const normalizeSettings = (payload: Partial<SettingsState> | undefined): Setting
     ...DEFAULT_SETTINGS.moderation,
     ...(payload?.moderation ?? {}),
     bannedKeywords: Array.isArray(payload?.moderation?.bannedKeywords)
-      ? payload?.moderation?.bannedKeywords
+      ? payload.moderation.bannedKeywords
       : DEFAULT_SETTINGS.moderation.bannedKeywords,
   },
   postLifecycle: {
@@ -51,10 +56,14 @@ const normalizeSettings = (payload: Partial<SettingsState> | undefined): Setting
     ...DEFAULT_SETTINGS.media,
     ...(payload?.media ?? {}),
   },
+  hostIncome: {
+    ...DEFAULT_SETTINGS.hostIncome,
+    ...(payload?.hostIncome ?? {}),
+  },
 });
 
-const normalizeKeywordList = (value: string) => {
-  return Array.from(
+const normalizeKeywordList = (value: string) =>
+  Array.from(
     new Set(
       value
         .split(/\r?\n|,/)
@@ -62,7 +71,6 @@ const normalizeKeywordList = (value: string) => {
         .filter(Boolean),
     ),
   );
-};
 
 const validateSettings = (settings: SettingsState) => {
   if (!settings.general.platformName.trim()) {
@@ -98,6 +106,18 @@ const validateSettings = (settings: SettingsState) => {
     throw new Error("Giới hạn số bài đăng mỗi giờ phải từ 1 trở lên.");
   }
 
+  if (settings.hostIncome.articlePayoutAmount < 0) {
+    throw new Error("Nhuận bút cố định mỗi bài không được âm.");
+  }
+
+  if (settings.hostIncome.viewBonusThreshold < 1) {
+    throw new Error("Mốc lượt xem để nhận thưởng phải từ 1 trở lên.");
+  }
+
+  if (settings.hostIncome.viewBonusAmount < 0) {
+    throw new Error("Tiền thưởng lượt xem không được âm.");
+  }
+
 };
 
 function SettingsPage() {
@@ -111,21 +131,14 @@ function SettingsPage() {
   const [formError, setFormError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const isDirty = useMemo(() => {
-    return JSON.stringify(settings) !== JSON.stringify(savedSettings);
-  }, [savedSettings, settings]);
+  const isDirty = useMemo(
+    () => JSON.stringify(settings) !== JSON.stringify(savedSettings),
+    [savedSettings, settings],
+  );
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
-
-    setToasts((prev) => [
-      ...prev,
-      {
-        id: toastId,
-        message,
-        tone,
-      },
-    ]);
+    setToasts((prev) => [...prev, { id: toastId, message, tone }]);
 
     window.setTimeout(() => {
       setToasts((prev) => prev.filter((toast) => toast.id !== toastId));
@@ -147,9 +160,7 @@ function SettingsPage() {
       setKeywordInput(nextSettings.moderation.bannedKeywords.join("\n"));
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Không thể tải thiết lập hệ thống.";
+        error instanceof Error ? error.message : "Không thể tải thiết lập hệ thống.";
       setFormError(message);
       showToast(message, "error");
     } finally {
@@ -164,7 +175,6 @@ function SettingsPage() {
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!isDirty) return;
-
       event.preventDefault();
       event.returnValue = "";
     };
@@ -219,9 +229,7 @@ function SettingsPage() {
       showToast("Đã lưu thiết lập hệ thống thành công.");
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Không thể lưu thiết lập hệ thống.";
+        error instanceof Error ? error.message : "Không thể lưu thiết lập hệ thống.";
       setFormError(message);
       showToast(message, "error");
     } finally {
@@ -238,9 +246,7 @@ function SettingsPage() {
 
     try {
       setIsSaving(true);
-      const defaultSettings = normalizeSettings(
-        await settingsService.resetSettings(),
-      );
+      const defaultSettings = normalizeSettings(await settingsService.resetSettings());
       setSettings(defaultSettings);
       setSavedSettings(defaultSettings);
       setKeywordInput(defaultSettings.moderation.bannedKeywords.join("\n"));
@@ -262,14 +268,16 @@ function SettingsPage() {
     <div className="settings-page">
       <PageHeader
         title="Thiết lập hệ thống"
-        description="Quản lý các quy tắc vận hành, kiểm duyệt, vòng đời bài đăng và giới hạn tải lên cho GreenMarket."
+        description="Quản lý các quy tắc vận hành, kiểm duyệt, vòng đời bài đăng và cấu hình chi trả cố định cho Host trên GreenMarket."
         actionLabel={isSaving ? "Đang lưu..." : "Lưu thay đổi"}
         onActionClick={() => void handleSave()}
       />
 
       <div className="settings-toolbar">
         <div className="settings-toolbar__status">
-          {isDirty ? "Bạn có thay đổi chưa lưu." : "Thiết lập đã đồng bộ với máy chủ."}
+          {isDirty
+            ? "Bạn có thay đổi chưa lưu."
+            : "Thiết lập đã đồng bộ với máy chủ."}
         </div>
 
         <button
@@ -285,9 +293,7 @@ function SettingsPage() {
       {formError ? <div className="settings-error-banner">{formError}</div> : null}
 
       {isLoading ? (
-        <div className="settings-info-banner">
-          Đang tải thiết lập từ API quản trị...
-        </div>
+        <div className="settings-info-banner">Đang tải thiết lập từ API quản trị...</div>
       ) : null}
 
       <div className="settings-stack">
@@ -333,7 +339,78 @@ function SettingsPage() {
                 readOnly
                 disabled
               />
-              <small>Admin web hiện chỉ hỗ trợ tiếng Việt và không cho phép đổi sang ngôn ngữ khác.</small>
+              <small>Admin web hiện chỉ hỗ trợ tiếng Việt.</small>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Thu nhập Host"
+          description="Chốt mức tiền cố định cho mỗi bài Host được admin duyệt và khoản thưởng cố định khi bài đạt mốc lượt xem."
+        >
+          <div className="settings-form settings-form--padded">
+            <div className="settings-field">
+              <label htmlFor="host-article-payout">Nhuận bút cố định mỗi bài (VND)</label>
+              <input
+                id="host-article-payout"
+                type="number"
+                min={0}
+                value={settings.hostIncome.articlePayoutAmount}
+                onChange={(event) =>
+                  handleInputChange(
+                    "hostIncome",
+                    "articlePayoutAmount",
+                    Number(event.target.value),
+                  )
+                }
+                disabled={isLoading || isSaving}
+              />
+              <small>
+                Khi bài Host được admin duyệt và xuất bản, hệ thống sẽ ghi nhận đúng khoản
+                tiền cố định này.
+              </small>
+            </div>
+
+            <div className="settings-field">
+              <label htmlFor="host-view-threshold">Mốc lượt xem nhận thưởng</label>
+              <input
+                id="host-view-threshold"
+                type="number"
+                min={1}
+                value={settings.hostIncome.viewBonusThreshold}
+                onChange={(event) =>
+                  handleInputChange(
+                    "hostIncome",
+                    "viewBonusThreshold",
+                    Number(event.target.value),
+                  )
+                }
+                disabled={isLoading || isSaving}
+              />
+              <small>
+                Khi bài đạt mốc lượt xem này, hệ thống sẽ cộng thêm một khoản thưởng cố định.
+              </small>
+            </div>
+
+            <div className="settings-field">
+              <label htmlFor="host-view-bonus">Thưởng cố định khi đạt mốc view (VND)</label>
+              <input
+                id="host-view-bonus"
+                type="number"
+                min={0}
+                value={settings.hostIncome.viewBonusAmount}
+                onChange={(event) =>
+                  handleInputChange(
+                    "hostIncome",
+                    "viewBonusAmount",
+                    Number(event.target.value),
+                  )
+                }
+                disabled={isLoading || isSaving}
+              />
+              <small>
+                Mỗi bài chỉ được cộng khoản thưởng này một lần khi chạm mốc đã cấu hình.
+              </small>
             </div>
 
           </div>
@@ -347,7 +424,9 @@ function SettingsPage() {
             <div className="settings-toggle">
               <div>
                 <strong>Tự động kiểm duyệt cơ bản</strong>
-                <span>Tự động gắn cờ nội dung có dấu hiệu vi phạm để admin rà soát.</span>
+                <span>
+                  Tự động gắn cờ nội dung có dấu hiệu vi phạm để admin rà soát.
+                </span>
               </div>
               <input
                 type="checkbox"
@@ -392,7 +471,10 @@ function SettingsPage() {
                 disabled={isLoading || isSaving}
                 placeholder="Mỗi dòng một từ khóa. Ví dụ: lừa đảo, spam, cấm"
               />
-              <small>Mỗi dòng hoặc mỗi dấu phẩy là một từ khóa. Hệ thống sẽ tự loại bỏ giá trị trùng.</small>
+              <small>
+                Mỗi dòng hoặc mỗi dấu phẩy là một từ khóa. Hệ thống sẽ tự loại bỏ giá
+                trị trùng.
+              </small>
             </div>
 
             <div className="settings-field">
@@ -498,11 +580,13 @@ function SettingsPage() {
                 }
                 disabled={isLoading || isSaving}
               />
-              <small>Dùng để giới hạn spam và tránh người dùng đăng quá nhiều bài trong 1 giờ.</small>
+              <small>
+                Dùng để giới hạn spam và tránh người dùng đăng quá nhiều bài trong 1
+                giờ.
+              </small>
             </div>
           </div>
         </SectionCard>
-
       </div>
 
       <ToastContainer toasts={toasts} onClose={removeToast} />

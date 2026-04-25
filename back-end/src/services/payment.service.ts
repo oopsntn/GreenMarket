@@ -82,6 +82,49 @@ const getLivePromotionCondition = () =>
     ),
   );
 
+const countSuccessfulPackageSales = async (
+  executor: typeof db | any,
+  packageId: number,
+) => {
+  const [usage] = await executor
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.transactionType, "payment"),
+        eq(transactions.transactionStatus, "success"),
+        eq(transactions.transactionReferenceType, "package"),
+        eq(transactions.transactionReferenceId, packageId),
+      ),
+    );
+
+  return Number(usage?.count ?? 0);
+};
+
+const assertPackageSalesAvailable = async (params: {
+  executor: typeof db | any;
+  packageId: number;
+  maxSales: number;
+  message: string;
+}) => {
+  if (!Number.isFinite(params.maxSales) || params.maxSales <= 0) {
+    return;
+  }
+
+  const soldCount = await countSuccessfulPackageSales(
+    params.executor,
+    params.packageId,
+  );
+
+  if (soldCount >= params.maxSales) {
+    throw new PaymentServiceError(
+      409,
+      "ACCOUNT_PACKAGE_SOLD_OUT",
+      params.message,
+    );
+  }
+};
+
 const activatePromotionForTransaction = async (
   tx: any,
   txn: Transaction,
@@ -326,6 +369,7 @@ const handleNonPostPackageActivation = async (
   const [pkg] = await tx
     .select({
       slotCode: placementSlots.placementSlotCode,
+      maxSales: promotionPackages.promotionPackageMaxPosts,
     })
     .from(promotionPackages)
     .innerJoin(
@@ -336,6 +380,22 @@ const handleNonPostPackageActivation = async (
     .limit(1);
 
   if (!pkg) return;
+
+  const maxSales = Number(pkg.maxSales ?? 0);
+  if (maxSales > 0) {
+    const soldCount = await countSuccessfulPackageSales(
+      tx,
+      txn.transactionReferenceId!,
+    );
+
+    if (soldCount > maxSales) {
+      throw new PaymentServiceError(
+        409,
+        "ACCOUNT_PACKAGE_SOLD_OUT",
+        "Gói tài khoản / shop này đã đạt số lượt bán tối đa.",
+      );
+    }
+  }
 
   switch (pkg.slotCode) {
     case SHOP_VIP_SLOT_CODE:
@@ -510,6 +570,7 @@ const findPublishedPackageBySlotCode = async (slotCode: string) => {
       promotionPackageId: promotionPackages.promotionPackageId,
       promotionPackagePublished: promotionPackages.promotionPackagePublished,
       promotionPackageDurationDays: promotionPackages.promotionPackageDurationDays,
+      promotionPackageMaxPosts: promotionPackages.promotionPackageMaxPosts,
       promotionPackagePriceId: promotionPackagePrices.priceId,
       promotionPackagePrice: promotionPackagePrices.price,
       placementSlotPublished: placementSlots.placementSlotPublished,
@@ -554,6 +615,12 @@ export const paymentService = {
 
     const pkg = await findPublishedPackageBySlotCode(SHOP_REGISTRATION_SLOT_CODE);
     if (!pkg) throw new PaymentServiceError(404, "SHOP_REG_PACKAGE_NOT_FOUND", "Goi dang ky nha vuon chua duoc cau hinh.");
+    await assertPackageSalesAvailable({
+      executor: db,
+      packageId: pkg.promotionPackageId,
+      maxSales: Number(pkg.promotionPackageMaxPosts ?? 0),
+      message: "Gói Chủ Vườn Vĩnh Viễn đã đạt số lượt bán tối đa.",
+    });
 
     const finalAmount = toSafeIntegerAmount(pkg.promotionPackagePrice);
     const orderId = createOrderId();
@@ -593,6 +660,12 @@ export const paymentService = {
 
     const pkg = await findPublishedPackageBySlotCode(PERSONAL_PLAN_SLOT_CODE);
     if (!pkg) throw new PaymentServiceError(404, "PERSONAL_PLAN_PACKAGE_NOT_FOUND", "Goi ca nhan chua duoc cau hinh.");
+    await assertPackageSalesAvailable({
+      executor: db,
+      packageId: pkg.promotionPackageId,
+      maxSales: Number(pkg.promotionPackageMaxPosts ?? 0),
+      message: "Gói Cá Nhân Theo Tháng đã đạt số lượt bán tối đa.",
+    });
 
     const finalAmount = toSafeIntegerAmount(pkg.promotionPackagePrice);
     const orderId = createOrderId();
@@ -664,6 +737,12 @@ export const paymentService = {
         "Goi Nha Vuon VIP hien khong kha dung.",
       );
     }
+    await assertPackageSalesAvailable({
+      executor: db,
+      packageId: vipPackage.promotionPackageId,
+      maxSales: Number(vipPackage.promotionPackageMaxPosts ?? 0),
+      message: "Gói Nhà Vườn VIP đã đạt số lượt bán tối đa.",
+    });
 
     const vipDurationDays = Number(vipPackage.promotionPackageDurationDays || 0);
     if (!Number.isFinite(vipDurationDays) || vipDurationDays <= 0) {

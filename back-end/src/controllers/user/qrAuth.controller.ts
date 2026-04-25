@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../../config/db";
 import { qrSessions, users } from "../../models/schema";
 import { AuthRequest } from "../../dtos/auth";
+import { emitToQRSession } from "../../config/socket";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
 
@@ -110,6 +111,10 @@ export const scanQR = async (req: AuthRequest, res: Response): Promise<void> => 
 
         if (session.status === "pending") {
             await db.update(qrSessions).set({ status: "scanned" }).where(eq(qrSessions.id, sessionId));
+            
+            // Notify web client via socket
+            emitToQRSession(sessionId, "qr-status-updated", { status: "scanned" });
+            
             res.json({ message: "QR Scanned successfully. Waiting for authorization." });
             return;
         }
@@ -144,6 +149,27 @@ export const authorizeQR = async (req: AuthRequest, res: Response): Promise<void
                 userId: mobileUserId 
             }).where(eq(qrSessions.id, sessionId));
             
+            // Generate JWT for web client to send via socket
+            const [user] = await db.select().from(users).where(eq(users.userId, mobileUserId));
+            if (user) {
+                const token = jwt.sign(
+                    { id: user.userId, mobile: user.userMobile, role: "user" },
+                    JWT_SECRET,
+                    { expiresIn: "7d" }
+                );
+
+                // Notify web client with token
+                emitToQRSession(sessionId, "qr-status-updated", { 
+                    status: "authorized",
+                    token,
+                    user: {
+                        id: user.userId,
+                        mobile: user.userMobile,
+                        name: user.userDisplayName
+                    }
+                });
+            }
+
             res.json({ message: "Login authorized successfully for web client" });
             return;
         }

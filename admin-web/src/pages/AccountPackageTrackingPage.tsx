@@ -30,6 +30,12 @@ const getStatusVariant = (status: AccountPackageTrackingStatus) => {
   return "success" as const;
 };
 
+const getLatestPaymentAmountText = (row: AccountPackageTrackingRow) =>
+  row.latestPaymentAmountLabel || "Không có lịch sử";
+
+const getLatestPaymentTimeText = (row: AccountPackageTrackingRow) =>
+  row.latestPaymentAt || "Kích hoạt từ hệ thống";
+
 function AccountPackageTrackingPage() {
   const [payload, setPayload] = useState<AccountPackageTrackingPayload>({
     summary: {
@@ -251,7 +257,10 @@ function AccountPackageTrackingPage() {
             description="Vui lòng chờ trong khi hệ thống tổng hợp người dùng và shop đang dùng gói."
           />
         ) : pageError ? (
-          <EmptyState title="Không thể tải dữ liệu theo dõi" description={pageError} />
+          <EmptyState
+            title="Không thể tải dữ liệu theo dõi"
+            description={pageError}
+          />
         ) : filteredRows.length === 0 ? (
           <EmptyState
             title="Không tìm thấy dữ liệu phù hợp"
@@ -281,7 +290,7 @@ function AccountPackageTrackingPage() {
                         <div className="account-package-tracking-table__primary">
                           <strong>{row.packageTitle}</strong>
                           <span>
-                            {row.packageGroupLabel} · {row.cycleLabel}
+                            {row.packageGroupLabel} • {row.cycleLabel}
                           </span>
                         </div>
                       </td>
@@ -289,7 +298,7 @@ function AccountPackageTrackingPage() {
                         <div className="account-package-tracking-table__primary">
                           <strong>{row.holderName}</strong>
                           <span>
-                            {row.accountName || "Không có tên tài khoản"} ·{" "}
+                            {row.accountName || "Không có tên tài khoản"} •{" "}
                             {row.email || row.phone || "Chưa có liên hệ"}
                           </span>
                         </div>
@@ -299,8 +308,8 @@ function AccountPackageTrackingPage() {
                       <td>{row.expiresAt || "Không hết hạn"}</td>
                       <td>
                         <div className="account-package-tracking-table__payment">
-                          <strong>{row.latestPaymentAmountLabel || "Chưa có"}</strong>
-                          <span>{row.latestPaymentAt || "Chưa ghi nhận"}</span>
+                          <strong>{getLatestPaymentAmountText(row)}</strong>
+                          <span>{getLatestPaymentTimeText(row)}</span>
                         </div>
                       </td>
                       <td>
@@ -338,9 +347,7 @@ function AccountPackageTrackingPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
-                    setPage((prev) => Math.min(totalPages, prev + 1))
-                  }
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={page === totalPages}
                 >
                   Tiếp
@@ -354,7 +361,7 @@ function AccountPackageTrackingPage() {
       <BaseModal
         isOpen={isDetailOpen}
         title="Chi tiết người đang dùng gói"
-        description="Xem gói đang dùng, dữ liệu liên hệ, thời gian hiệu lực và giao dịch gần nhất."
+        description="Xem gói đang dùng, dữ liệu liên hệ, thời gian hiệu lực và lịch sử thanh toán gần nhất."
         onClose={closeDetail}
         maxWidth="840px"
       >
@@ -386,11 +393,11 @@ function AccountPackageTrackingPage() {
             </div>
             <div>
               <span>Thanh toán gần nhất</span>
-              <strong>{selectedRow.latestPaymentAmountLabel || "Chưa có"}</strong>
+              <strong>{getLatestPaymentAmountText(selectedRow)}</strong>
             </div>
             <div>
               <span>Thời điểm thanh toán</span>
-              <strong>{selectedRow.latestPaymentAt || "Chưa ghi nhận"}</strong>
+              <strong>{getLatestPaymentTimeText(selectedRow)}</strong>
             </div>
             <div>
               <span>Email</span>
@@ -407,8 +414,8 @@ function AccountPackageTrackingPage() {
             <div>
               <span>Mã người dùng / shop</span>
               <strong>
-                User #{selectedRow.userId}
-                {selectedRow.shopId ? ` · Shop #${selectedRow.shopId}` : ""}
+                Người dùng #{selectedRow.userId}
+                {selectedRow.shopId ? ` • Cửa hàng #${selectedRow.shopId}` : ""}
               </strong>
             </div>
             <div className="account-package-tracking-modal__wide">

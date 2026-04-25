@@ -1,7 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import {
-  isHomepageBoostSlotCode,
-} from "../types/placementSlot";
+import { isHomepageBoostSlotCode } from "../types/placementSlot";
 import type {
   PlacementSlot,
   PlacementSlotApiResponse,
@@ -9,6 +7,12 @@ import type {
   PlacementSlotStatus,
   PlacementSlotSummaryCard,
 } from "../types/placementSlot";
+
+const SLOT_LABELS: Record<string, string> = {
+  "Home Top": "Vị trí 1 trang chủ",
+  "Category Top": "Vị trí 2 trang chủ",
+  "Search Boost": "Vị trí 3 trang chủ",
+};
 
 const emptyPlacementSlotForm: PlacementSlotFormState = {
   name: "",
@@ -21,6 +25,8 @@ const emptyPlacementSlotForm: PlacementSlotFormState = {
 };
 
 const normalizeText = (value: string) => value.trim();
+const translateSlotLabel = (value: string | null | undefined) =>
+  SLOT_LABELS[value?.trim() || ""] || value?.trim() || "";
 
 const sortPlacementSlots = (slots: PlacementSlot[]) =>
   [...slots].sort((left, right) => left.id - right.id);
@@ -100,7 +106,8 @@ const mapRulesToUi = (rules: Record<string, unknown> | null) => {
 };
 
 const mapApiSlotToUi = (item: PlacementSlotApiResponse): PlacementSlot => {
-  const title = item.placementSlotTitle?.trim() || "Vị trí chưa đặt tên";
+  const title =
+    translateSlotLabel(item.placementSlotTitle?.trim()) || "Vị trí chưa đặt tên";
   const code = item.placementSlotCode?.trim() || "";
   const mappedRules = mapRulesToUi(item.placementSlotRules);
   const inferredScope = inferScopeFromSlot(code, title);

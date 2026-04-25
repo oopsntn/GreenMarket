@@ -188,8 +188,7 @@ function BoostedPostsPage() {
         !keyword ||
         item.campaignCode.toLowerCase().includes(keyword) ||
         item.postTitle.toLowerCase().includes(keyword) ||
-        item.ownerName.toLowerCase().includes(keyword) ||
-        item.assignedOperator.toLowerCase().includes(keyword);
+        item.ownerName.toLowerCase().includes(keyword);
 
       const matchesSlot =
         selectedSlotFilter === "All" || item.slot === selectedSlotFilter;
@@ -343,7 +342,7 @@ function BoostedPostsPage() {
     <div className="boosted-posts-page">
       <PageHeader
         title="Theo dõi quảng bá"
-        description="Theo dõi mã quảng bá, trạng thái chạy, CTR và đội phụ trách của từng lượt quảng bá. Việc đóng hẳn chỉ được xử lý ở luồng báo cáo."
+        description="Theo dõi mã quảng bá, trạng thái chạy, CTR và quota của từng lượt quảng bá. Việc đóng hẳn chỉ được xử lý ở luồng báo cáo."
       />
 
       <div className="boosted-posts-summary-grid">
@@ -358,7 +357,7 @@ function BoostedPostsPage() {
       </div>
 
       <SearchToolbar
-        placeholder="Tìm theo mã quảng bá, tên cây, chủ sở hữu hoặc đội phụ trách"
+        placeholder="Tìm theo mã quảng bá, tên cây hoặc chủ sở hữu"
         searchValue={searchKeyword}
         onSearchChange={setSearchKeyword}
         onFilterClick={() => setShowFilters((prev) => !prev)}
@@ -458,7 +457,7 @@ function BoostedPostsPage() {
 
       <SectionCard
         title="Danh sách quảng bá"
-        description="Theo dõi CTR, quota đã dùng, đội phụ trách và mức độ thu hút của từng lượt quảng bá."
+        description="Theo dõi CTR, quota đã dùng và mức độ thu hút của từng lượt quảng bá."
       >
         {isLoading ? (
           <EmptyState
@@ -489,7 +488,6 @@ function BoostedPostsPage() {
                     <th>Duyệt</th>
                     <th>CTR</th>
                     <th>Quota đã dùng</th>
-                    <th>Đội phụ trách</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -527,12 +525,6 @@ function BoostedPostsPage() {
                       </td>
                       <td>{formatCtr(item.clicks, item.impressions)}</td>
                       <td>{formatQuotaUsage(item.usedQuota, item.totalQuota)}</td>
-                      <td>
-                        <div className="boosted-posts-cell">
-                          <strong>{item.assignedOperator}</strong>
-                          <span>{item.lastOptimizedAt}</span>
-                        </div>
-                      </td>
                       <td>
                         <div className="boosted-posts-actions">
                           <button
@@ -603,7 +595,7 @@ function BoostedPostsPage() {
       <BaseModal
         isOpen={isViewModalOpen}
         title="Chi tiết quảng bá"
-        description="Theo dõi chỉ số chạy, đội phụ trách và ghi chú vận hành của lượt quảng bá."
+        description="Theo dõi chỉ số chạy, trạng thái duyệt và ghi chú vận hành của lượt quảng bá."
         onClose={closeViewModal}
         maxWidth="760px"
       >
@@ -623,15 +615,6 @@ function BoostedPostsPage() {
               <div className="boosted-posts-modal__field">
                 <label>Chủ sở hữu</label>
                 <input type="text" value={selectedPost.ownerName} disabled />
-              </div>
-
-              <div className="boosted-posts-modal__field">
-                <label>Đội phụ trách</label>
-                <input
-                  type="text"
-                  value={selectedPost.assignedOperator}
-                  disabled
-                />
               </div>
 
               <div className="boosted-posts-modal__field">

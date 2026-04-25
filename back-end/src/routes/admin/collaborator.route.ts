@@ -1,27 +1,29 @@
 import { Router } from "express";
 import { requireRoles } from "../../middlewares/authMiddleware";
 import {
-  getTemplateBuilderPreset,
-  resetTemplateBuilderPreset,
-  saveTemplateBuilderPreset,
-} from "../../controllers/admin/template-builder.controller.ts";
+  getAdminCollaboratorDetail,
+  getAdminCollaborators,
+  updateAdminCollaboratorStatus,
+} from "../../controllers/admin/collaborator.controller.ts";
 
 const router = Router();
 
 router.get(
-  "/preset",
+  "/",
   requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
-  getTemplateBuilderPreset,
+  getAdminCollaborators,
 );
-router.put(
-  "/preset",
+
+router.get(
+  "/:id",
   requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
-  saveTemplateBuilderPreset,
+  getAdminCollaboratorDetail,
 );
-router.post(
-  "/preset/reset",
+
+router.patch(
+  "/:id/status",
   requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
-  resetTemplateBuilderPreset,
+  updateAdminCollaboratorStatus,
 );
 
 export default router;

@@ -1,230 +1,60 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    ActivityIndicator,
-    RefreshControl,
     SafeAreaView,
-    FlatList,
+    TouchableOpacity,
 } from 'react-native';
-import { 
-    Wallet, 
-    ArrowUpRight, 
-    ArrowDownLeft, 
-    ChevronRight,
-    TrendingUp,
-    Clock,
-    CheckCircle2,
-    XCircle,
-    AlertCircle
-} from 'lucide-react-native';
-import { CollaboratorService, EarningEntry, PayoutRequest } from '../services/collaboratorService';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-
-const StatusBadge = ({ status }: { status: string }) => {
-    let color = '#94A3B8';
-    let bgColor = '#F1F5F9';
-    let Icon = Clock;
-
-    if (status === 'approved' || status === 'completed') {
-        color = '#10B981';
-        bgColor = '#ECFDF5';
-        Icon = CheckCircle2;
-    } else if (status === 'rejected' || status === 'cancelled') {
-        color = '#EF4444';
-        bgColor = '#FEF2F2';
-        Icon = XCircle;
-    } else if (status === 'pending') {
-        color = '#F59E0B';
-        bgColor = '#FFFBEB';
-        Icon = AlertCircle;
-    }
-
-    return (
-        <View style={[styles.statusBadge, { backgroundColor: bgColor }]}>
-            <Icon color={color} size={12} />
-            <Text style={[styles.statusText, { color }]}>{status.toUpperCase()}</Text>
-        </View>
-    );
-};
+import { CircleHelp, Handshake, Briefcase, ArrowRight } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 
 const EarningsScreen = () => {
     const navigation = useNavigation<any>();
-    const route = useRoute<any>();
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'earnings' | 'payouts'>(route.params?.initialTab === 'payouts' ? 'payouts' : 'earnings');
-    const [error, setError] = useState<string | null>(null);
-    
-    const [earnings, setEarnings] = useState<EarningEntry[]>([]);
-    const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
-    const [stats, setStats] = useState({ availableBalance: 0, totalEarnings: 0 });
-
-    const fetchData = async () => {
-        try {
-            setError(null);
-            const [profileRes, earningsRes, payoutsRes] = await Promise.all([
-                CollaboratorService.getProfile(),
-                CollaboratorService.getEarnings(),
-                CollaboratorService.getPayoutRequests(),
-            ]);
-            
-            setStats(profileRes.stats);
-            setEarnings(earningsRes.data || []);
-            setPayouts(payoutsRes.data || []);
-        } catch (error: any) {
-            console.error('Error fetching earnings data:', error);
-            setError(error?.response?.data?.error || 'Unable to load wallet data right now.');
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
-    useEffect(() => {
-        if (route.params?.initialTab === 'earnings' || route.params?.initialTab === 'payouts') {
-            setActiveTab(route.params.initialTab);
-        }
-    }, [route.params?.initialTab]);
-
-    const onRefresh = () => {
-        setRefreshing(true);
-        fetchData();
-    };
-
-    const formatCurrency = (amount: number | string) => {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-        }).format(Number(amount));
-    };
-
-    if (loading) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#16A34A" />
-            </View>
-        );
-    }
-
-    if (error && earnings.length === 0 && payouts.length === 0) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.center}>
-                    <Text style={styles.errorText}>{error}</Text>
-                    <TouchableOpacity style={styles.retryBtn} onPress={fetchData}>
-                        <Text style={styles.retryBtnText}>Retry</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
-        );
-    }
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView 
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Balance Card Section */}
-                <LinearGradient colors={['#111827', '#1F2937']} style={styles.balanceHeader}>
-                    <View style={styles.balanceInfo}>
-                        <Text style={styles.balanceTitle}>Số dư khả dụng</Text>
-                        <Text style={styles.balanceAmount}>{formatCurrency(stats.availableBalance)}</Text>
-                        <View style={styles.totalEarningsRow}>
-                            <TrendingUp color="#10B981" size={16} />
-                            <Text style={styles.totalEarningsText}>
-                                Tổng thu nhập: {formatCurrency(stats.totalEarnings)}
+            <View style={styles.content}>
+                <View style={styles.heroCard}>
+                    <CircleHelp color="#16A34A" size={28} />
+                    <Text style={styles.heroTitle}>Thanh toán cộng tác không đi qua hệ thống</Text>
+                    <Text style={styles.heroText}>
+                        GreenMarket chỉ hỗ trợ kết nối cộng tác viên với khách hàng và theo dõi tiến độ công việc. Việc báo giá, thanh toán và đối soát sẽ do hai bên tự liên hệ trực tiếp.
+                    </Text>
+                </View>
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Bạn nên làm gì sau khi nhận việc?</Text>
+
+                    <View style={styles.stepCard}>
+                        <Handshake color="#0F766E" size={20} />
+                        <View style={styles.stepBody}>
+                            <Text style={styles.stepTitle}>Trao đổi rõ phạm vi công việc</Text>
+                            <Text style={styles.stepText}>
+                                Chốt trước với khách hàng về đầu việc, thời gian, chi phí và cách thanh toán.
                             </Text>
                         </View>
                     </View>
 
-                    <TouchableOpacity 
-                        style={styles.payoutBtn}
-                        onPress={() => navigation.navigate('PayoutRequest', { balance: stats.availableBalance })}
-                    >
-                        <ArrowUpRight color="black" size={20} />
-                        <Text style={styles.payoutBtnText}>Rút tiền</Text>
-                    </TouchableOpacity>
-                </LinearGradient>
-
-                <View style={styles.content}>
-                    {error ? (
-                        <View style={styles.inlineError}>
-                            <Text style={styles.inlineErrorText}>{error}</Text>
+                    <View style={styles.stepCard}>
+                        <Briefcase color="#2563EB" size={20} />
+                        <View style={styles.stepBody}>
+                            <Text style={styles.stepTitle}>Nộp kết quả trên app để lưu dấu vết công việc</Text>
+                            <Text style={styles.stepText}>
+                                Sau khi hoàn thành, hãy tải kết quả lên để khách hàng tiện đối chiếu và liên hệ tiếp.
+                            </Text>
                         </View>
-                    ) : null}
-                    {/* Tabs */}
-                    <View style={styles.tabContainer}>
-                        <TouchableOpacity 
-                            style={[styles.tab, activeTab === 'earnings' && styles.activeTab]}
-                            onPress={() => setActiveTab('earnings')}
-                        >
-                            <Text style={[styles.tabText, activeTab === 'earnings' && styles.activeTabText]}>Thu nhập</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            style={[styles.tab, activeTab === 'payouts' && styles.activeTab]}
-                            onPress={() => setActiveTab('payouts')}
-                        >
-                            <Text style={[styles.tabText, activeTab === 'payouts' && styles.activeTabText]}>Rút tiền</Text>
-                        </TouchableOpacity>
                     </View>
-
-                    {/* History List */}
-                    {activeTab === 'earnings' ? (
-                        <View style={styles.listContainer}>
-                            {earnings.length === 0 ? (
-                                <Text style={styles.emptyText}>Chưa có giao dịch thu nhập nào.</Text>
-                            ) : (
-                                earnings.map((item, index) => (
-                                    <View key={item.earningEntryId || `earning-${index}`} style={styles.historyItem}>
-                                        <View style={styles.historyIconWrap}>
-                                            <ArrowDownLeft color="#10B981" size={20} />
-                                        </View>
-                                        <View style={styles.historyInfo}>
-                                            <Text style={styles.historyTitle}>{item.jobTitle || item.type}</Text>
-                                            <Text style={styles.historyDate}>
-                                                {item.jobTitle ? `${item.type} · ` : ''}{new Date(item.createdAt).toLocaleDateString()}
-                                            </Text>
-                                        </View>
-                                        <Text style={styles.earningsAmount}>+{formatCurrency(item.amount)}</Text>
-                                    </View>
-                                ))
-                            )}
-                        </View>
-                    ) : (
-                        <View style={styles.listContainer}>
-                            {payouts.length === 0 ? (
-                                <Text style={styles.emptyText}>Chưa có yêu cầu rút tiền nào.</Text>
-                            ) : (
-                                payouts.map((item, index) => (
-                                    <View key={item.payoutRequestId || `payout-${index}`} style={styles.historyItem}>
-                                        <View style={[styles.historyIconWrap, { backgroundColor: '#FEF2F2' }]}>
-                                            <ArrowUpRight color="#EF4444" size={20} />
-                                        </View>
-                                        <View style={styles.historyInfo}>
-                                            <Text style={styles.historyTitle}>{item.payoutRequestMethod}</Text>
-                                            <StatusBadge status={item.payoutRequestStatus} />
-                                        </View>
-                                        <View style={{ alignItems: 'flex-end' }}>
-                                            <Text style={styles.payoutAmount}>-{formatCurrency(item.payoutRequestAmount)}</Text>
-                                            <Text style={styles.historyDate}>{new Date(item.payoutRequestCreatedAt).toLocaleDateString()}</Text>
-                                        </View>
-                                    </View>
-                                ))
-                            )}
-                        </View>
-                    )}
                 </View>
-            </ScrollView>
+
+                <TouchableOpacity
+                    style={styles.primaryButton}
+                    onPress={() => navigation.navigate('Explore')}
+                >
+                    <Text style={styles.primaryButtonText}>Tiếp tục tìm việc</Text>
+                    <ArrowRight color="white" size={18} />
+                </TouchableOpacity>
+            </View>
         </SafeAreaView>
     );
 };
@@ -234,191 +64,84 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F8FAFC',
     },
-    center: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    balanceHeader: {
-        margin: 20,
-        padding: 24,
-        borderRadius: 32,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 5,
-    },
-    balanceInfo: {
-        flex: 1,
-    },
-    balanceTitle: {
-        color: '#94A3B8',
-        fontSize: 12,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    balanceAmount: {
-        color: 'white',
-        fontSize: 26,
-        fontWeight: '800',
-        marginVertical: 4,
-    },
-    totalEarningsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 8,
-    },
-    totalEarningsText: {
-        color: '#10B981',
-        fontSize: 11,
-        fontWeight: '600',
-    },
-    payoutBtn: {
-        backgroundColor: 'white',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    payoutBtnText: {
-        color: 'black',
-        fontWeight: '700',
-        fontSize: 14,
-    },
     content: {
-        paddingHorizontal: 20,
-    },
-    tabContainer: {
-        flexDirection: 'row',
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 6,
-        marginBottom: 24,
-    },
-    tab: {
         flex: 1,
-        paddingVertical: 10,
-        alignItems: 'center',
-        borderRadius: 12,
+        padding: 24,
+        gap: 20,
     },
-    activeTab: {
-        backgroundColor: '#F1F5F9',
+    heroCard: {
+        backgroundColor: 'white',
+        borderRadius: 28,
+        padding: 24,
+        gap: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#ECFDF5',
     },
-    tabText: {
+    heroTitle: {
+        fontSize: 22,
+        lineHeight: 30,
+        fontWeight: '800',
+        color: '#111827',
+    },
+    heroText: {
         fontSize: 14,
-        fontWeight: '700',
-        color: '#94A3B8',
+        lineHeight: 22,
+        color: '#475569',
+        fontWeight: '500',
     },
-    activeTabText: {
+    section: {
+        gap: 12,
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '800',
         color: '#1E293B',
     },
-    listContainer: {
+    stepCard: {
+        flexDirection: 'row',
+        gap: 14,
         backgroundColor: 'white',
-        borderRadius: 24,
-        padding: 16,
+        borderRadius: 22,
+        padding: 18,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.03,
-        shadowRadius: 10,
+        shadowRadius: 8,
         elevation: 1,
     },
-    historyItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F8FAFC',
-    },
-    historyIconWrap: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        backgroundColor: '#F0FDF4',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    historyInfo: {
+    stepBody: {
         flex: 1,
+        gap: 4,
     },
-    historyTitle: {
+    stepTitle: {
         fontSize: 15,
         fontWeight: '700',
         color: '#1E293B',
     },
-    historyDate: {
-        fontSize: 12,
-        color: '#94A3B8',
-        marginTop: 2,
-    },
-    earningsAmount: {
-        fontSize: 15,
-        fontWeight: '800',
-        color: '#10B981',
-    },
-    payoutAmount: {
-        fontSize: 15,
-        fontWeight: '800',
-        color: '#EF4444',
-    },
-    statusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 6,
-        marginTop: 4,
-        alignSelf: 'flex-start',
-    },
-    statusText: {
-        fontSize: 9,
-        fontWeight: '800',
-    },
-    emptyText: {
-        textAlign: 'center',
-        paddingVertical: 40,
-        color: '#94A3B8',
-        fontSize: 14,
-    },
-    errorText: {
-        fontSize: 14,
-        color: '#B91C1C',
-        textAlign: 'center',
-        marginBottom: 16,
-        paddingHorizontal: 24,
-    },
-    retryBtn: {
-        backgroundColor: '#111827',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 12,
-    },
-    retryBtnText: {
-        color: 'white',
-        fontWeight: '700',
-    },
-    inlineError: {
-        backgroundColor: '#FEF2F2',
-        borderWidth: 1,
-        borderColor: '#FECACA',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        marginBottom: 16,
-    },
-    inlineErrorText: {
-        color: '#B91C1C',
+    stepText: {
         fontSize: 13,
-        fontWeight: '600',
+        lineHeight: 20,
+        color: '#64748B',
+    },
+    primaryButton: {
+        marginTop: 'auto',
+        height: 56,
+        borderRadius: 18,
+        backgroundColor: '#16A34A',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+    },
+    primaryButtonText: {
+        color: 'white',
+        fontSize: 15,
+        fontWeight: '800',
     },
 });
 
