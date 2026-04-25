@@ -14,12 +14,19 @@ type AccountPackageApiResponse = {
   scopeLabel: string;
   cycleLabel: string;
   price: number;
+  maxSales: number | null;
   description: string;
   features: string[];
   durationDays: number | null;
   durationEditable: boolean;
   updatedAt: string | null;
   statusLabel: AccountPackageStatus;
+};
+
+const GROUP_LABELS: Record<string, string> = {
+  Shop: "Nhà vườn VIP",
+  "Shop VIP": "Nhà vườn VIP",
+  VIP: "Nhà vườn VIP",
 };
 
 const formatCurrencyLabel = (value: number | string | null | undefined) => {
@@ -51,11 +58,14 @@ const formatDateTimeLabel = (value: string | null | undefined) => {
   }).format(parsed);
 };
 
+const translateGroupLabel = (value: string) => GROUP_LABELS[value] || value;
+
 const normalizePackage = (
   item: AccountPackageApiResponse,
 ): AccountPackage => ({
   ...item,
   title: item.title.trim(),
+  groupLabel: translateGroupLabel(item.groupLabel),
   description: item.description.trim(),
   features: item.features.filter(Boolean),
   priceLabel: formatCurrencyLabel(item.price),
@@ -84,7 +94,7 @@ export const accountPackageService = {
       {
         title: "Gói tài khoản",
         value: String(accountPackages),
-        subtitle: "Giá được đọc từ pricing config hiện có.",
+        subtitle: "Giá và giới hạn bán được đồng bộ theo cấu hình hiện có.",
       },
       {
         title: "Gói có sửa thời hạn",
@@ -96,7 +106,9 @@ export const accountPackageService = {
 
   getEmptyForm(selectedPackage: AccountPackage | null): AccountPackageFormState {
     return {
+      title: selectedPackage?.title ?? "",
       price: selectedPackage ? String(selectedPackage.price) : "",
+      maxSales: selectedPackage?.maxSales ?? 1,
       durationDays: selectedPackage?.durationDays ?? 90,
     };
   },
@@ -125,8 +137,25 @@ export const accountPackageService = {
       throw new Error("Giá gói phải lớn hơn 0.");
     }
 
-    const payload: { price: number; durationDays?: number } = {
+    const title = formState.title.trim();
+    if (!title) {
+      throw new Error("Tên gói không được để trống.");
+    }
+
+    const maxSales = Number(formState.maxSales);
+    if (!Number.isFinite(maxSales) || maxSales <= 0) {
+      throw new Error("Số lượt bán tối đa phải lớn hơn 0.");
+    }
+
+    const payload: {
+      title: string;
+      price: number;
+      maxSales: number;
+      durationDays?: number;
+    } = {
+      title,
       price,
+      maxSales: Math.floor(maxSales),
     };
 
     if (currentPackage.durationEditable) {

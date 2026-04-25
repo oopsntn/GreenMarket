@@ -20,6 +20,12 @@ const emptyPromotionPackageForm: PromotionPackageFormState = {
   description: "",
 };
 
+const SLOT_LABELS: Record<string, string> = {
+  "Home Top": "Vị trí 1 trang chủ",
+  "Category Top": "Vị trí 2 trang chủ",
+  "Search Boost": "Vị trí 3 trang chủ",
+};
+
 const normalizeText = (value: string) => value.trim();
 
 const parseCurrencyValue = (value: string) => {
@@ -34,17 +40,20 @@ const formatCurrencyLabel = (value: string | number | null) => {
     return "0 VND";
   }
 
-  return `${numeric.toLocaleString("en-US")} VND`;
+  return `${numeric.toLocaleString("vi-VN")} VND`;
 };
+
+const translateSlotLabel = (value: string | null | undefined) =>
+  SLOT_LABELS[value?.trim() || ""] || value?.trim() || "";
 
 const mapSlotToUi = (
   slotCode: string | null,
   slotTitle: string | null,
 ): PromotionPackage["slot"] => {
-  const normalizedTitle = slotTitle?.trim();
+  const normalizedTitle = translateSlotLabel(slotTitle);
   if (normalizedTitle) return normalizedTitle;
 
-  const normalizedCode = slotCode?.trim();
+  const normalizedCode = translateSlotLabel(slotCode);
   if (normalizedCode) return normalizedCode;
 
   return "Vị trí chưa đặt tên";
@@ -192,7 +201,7 @@ export const promotionPackageService = {
       },
       {
         title: "Giá cao nhất",
-        value: highestPrice.toLocaleString("en-US"),
+        value: formatCurrencyLabel(highestPrice),
         subtitle: "Mức giá cao nhất trong các gói hiện có",
       },
       {

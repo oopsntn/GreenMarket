@@ -15,6 +15,12 @@ export type ApiReportModerationResponse = {
   reportStatus: string;
   adminNote: string | null;
   evidenceUrls?: string[] | null;
+  templateAudit?: {
+    templateId?: number | null;
+    templateName?: string | null;
+    templateType?: string | null;
+    finalMessage?: string | null;
+  } | null;
   reportCreatedAt: string | null;
   reportUpdatedAt: string | null;
 };
@@ -33,4 +39,10 @@ export type ReportModerationItem = {
   status: ReportModerationStatus;
   createdAt: string;
   updatedAt: string;
+  templateAudit: {
+    templateId: number | null;
+    templateName: string | null;
+    templateType: string | null;
+    finalMessage: string | null;
+  } | null;
 };

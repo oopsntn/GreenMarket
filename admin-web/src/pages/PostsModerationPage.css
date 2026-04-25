@@ -31,7 +31,8 @@
 
 .posts-moderation-filters__field select,
 .posts-moderation-detail__field input,
-.posts-moderation-form textarea {
+.posts-moderation-form textarea,
+.posts-moderation-form__select {
   border: 1px solid #d7e6d9;
   border-radius: 12px;
   background-color: #fcfffc;
@@ -50,6 +51,21 @@
   padding: 12px 14px;
   resize: vertical;
   line-height: 1.6;
+}
+
+.posts-moderation-form__select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #486150 50%),
+    linear-gradient(135deg, #486150 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
 }
 
 .posts-moderation-table-wrapper {
@@ -235,12 +251,137 @@
   gap: 16px;
 }
 
+.posts-moderation-form__picker-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: -8px;
+}
+
+.posts-moderation-form__picker-meta span,
+.posts-moderation-form__picker-meta small,
+.posts-moderation-form__hint {
+  color: #68786b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .posts-moderation-form__target,
 .posts-moderation-empty-state {
   padding: 18px;
   border: 1px dashed #d7e6d9;
   border-radius: 16px;
   background-color: #fcfffc;
+  color: #5e7062;
+  line-height: 1.6;
+}
+
+.posts-moderation-form__template-list {
+  display: grid;
+  gap: 12px;
+}
+
+.posts-moderation-form__template-empty {
+  padding: 16px 18px;
+  border: 1px dashed #d7e6d9;
+  border-radius: 16px;
+  background-color: #fcfffc;
+  color: #5e7062;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.posts-moderation-form__template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid #dfeadf;
+  border-radius: 16px;
+  background: #fcfffc;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.posts-moderation-form__template-card:hover {
+  border-color: #b8d3bf;
+  box-shadow: 0 10px 24px rgba(39, 72, 52, 0.08);
+  transform: translateY(-1px);
+}
+
+.posts-moderation-form__template-card--selected {
+  border-color: #2f7b49;
+  background: linear-gradient(180deg, #fcfffc 0%, #f1faf1 100%);
+  box-shadow: 0 14px 28px rgba(47, 123, 73, 0.12);
+}
+
+.posts-moderation-form__template-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.posts-moderation-form__template-card-header strong {
+  color: #1b4332;
+  font-size: 15px;
+}
+
+.posts-moderation-form__template-card-header span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background-color: #edf7ee;
+  color: #1b5e20;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.posts-moderation-form__template-card p,
+.posts-moderation-form__template-card small {
+  margin: 0;
+  color: #5e7062;
+  line-height: 1.6;
+}
+
+.posts-moderation-form__template-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #dfeadf;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fcfffc 0%, #f6fbf5 100%);
+}
+
+.posts-moderation-form__template-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.posts-moderation-form__template-header strong {
+  color: #1b4332;
+  font-size: 14px;
+}
+
+.posts-moderation-form__template-header span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background-color: #edf7ee;
+  color: #1b5e20;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.posts-moderation-form__template-preview p,
+.posts-moderation-form__template-preview small {
+  margin: 0;
   color: #5e7062;
   line-height: 1.6;
 }

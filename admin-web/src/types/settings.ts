@@ -26,9 +26,16 @@ export type MediaSettings = {
   enableImageCompression: boolean;
 };
 
+export type HostIncomeSettings = {
+  articlePayoutAmount: number;
+  viewBonusThreshold: number;
+  viewBonusAmount: number;
+};
+
 export type SettingsState = {
   general: GeneralSettings;
   moderation: ModerationSettings;
   postLifecycle: PostLifecycleSettings;
   media: MediaSettings;
+  hostIncome: HostIncomeSettings;
 };

@@ -90,6 +90,18 @@ const mapPostToUi = (
           }))
           .filter((attribute) => attribute.id > 0)
       : [],
+  templateAudit:
+    "templateAudit" in item && item.templateAudit
+      ? {
+          templateId:
+            typeof item.templateAudit.templateId === "number"
+              ? item.templateAudit.templateId
+              : null,
+          templateName: item.templateAudit.templateName?.trim() || null,
+          templateType: item.templateAudit.templateType?.trim() || null,
+          finalMessage: item.templateAudit.finalMessage?.trim() || null,
+        }
+      : null,
 });
 
 const mapStatusToApi = (status: PostModerationStatus) => status.toLowerCase();
@@ -121,6 +133,7 @@ export const postModerationService = {
     postId: number,
     status: Extract<PostModerationStatus, "Approved" | "Rejected" | "Pending">,
     reason?: string,
+    templateId?: number,
   ): Promise<PostModerationItem> {
     const adminProfile = getAdminProfile();
 
@@ -134,6 +147,7 @@ export const postModerationService = {
           status: mapStatusToApi(status),
           adminName: adminProfile?.name,
           ...(reason?.trim() ? { reason: reason.trim() } : {}),
+          ...(typeof templateId === "number" ? { templateId } : {}),
         }),
       },
     );
@@ -141,7 +155,11 @@ export const postModerationService = {
     return mapPostToUi(data);
   },
 
-  async hidePost(postId: number, reason?: string): Promise<PostModerationItem> {
+  async hidePost(
+    postId: number,
+    reason?: string,
+    templateId?: number,
+  ): Promise<PostModerationItem> {
     const adminProfile = getAdminProfile();
 
     const data = await apiClient.request<{
@@ -154,6 +172,7 @@ export const postModerationService = {
         adminId: adminProfile?.id,
         adminName: adminProfile?.name,
         ...(reason?.trim() ? { reason: reason.trim() } : {}),
+        ...(typeof templateId === "number" ? { templateId } : {}),
       }),
     });
 

@@ -92,12 +92,14 @@ export const accountPackageTrackingService = {
       {
         title: "Nhóm tài khoản",
         value: String(summary.accountTracked),
-        subtitle: "Chủ vườn vĩnh viễn và Cá nhân theo tháng đang hoạt động.",
+        subtitle:
+          "Chủ vườn vĩnh viễn và Cá nhân theo tháng đang còn hiệu lực.",
       },
       {
-        title: "Nhóm shop",
+        title: "Nhóm shop VIP",
         value: String(summary.shopTracked),
-        subtitle: "Các shop đang active hoặc còn VIP để vận hành.",
+        subtitle:
+          "Các shop đang có gói VIP còn hiệu lực trên Danh sách nhà vườn.",
       },
       {
         title: "Sắp hết hạn",

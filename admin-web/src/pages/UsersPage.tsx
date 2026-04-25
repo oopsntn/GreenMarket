@@ -45,7 +45,7 @@ type StatusActionState = {
 
 const roleLabelMap: Record<AssignableUserRole, string> = {
   User: "Người dùng",
-  Host: "Chủ shop",
+  Host: "Chủ vườn",
   Collaborator: "Cộng tác viên",
   Manager: "Quản lý",
   "Operation Staff": "Nhân viên vận hành",
@@ -334,7 +334,7 @@ function UsersPage() {
   return (
     <div className="users-page">
       <PageHeader
-        title="Quản lý người dùng marketplace"
+        title="Quản lý người dùng trên sàn"
         description="Quản lý tài khoản người dùng, trạng thái truy cập và vai trò nghiệp vụ theo mô hình mỗi người dùng chỉ có một vai trò."
         actionLabel="Tải lại danh sách"
         onActionClick={() => void loadUsers(true)}
@@ -533,7 +533,7 @@ function UsersPage() {
       <div className="users-insight-grid">
         <SectionCard
           title="Tổng quan độ đầy đủ hồ sơ"
-          description="Theo dõi độ đầy đủ của email, địa chỉ và tình trạng đăng nhập của người dùng marketplace."
+          description="Theo dõi độ đầy đủ của email, địa chỉ và tình trạng đăng nhập của người dùng trên sàn."
         >
           <div className="users-role-overview">
             <div className="users-role-card">

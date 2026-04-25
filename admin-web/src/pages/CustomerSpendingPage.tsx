@@ -11,9 +11,11 @@ import { customerSpendingService } from "../services/customerSpendingService";
 import { exportService } from "../services/exportService";
 import type { CustomerSpendingRow } from "../types/customerSpending";
 import {
+  coerceDateRange,
   DEFAULT_REPORT_FROM_DATE,
   DEFAULT_REPORT_TO_DATE,
   formatDateRangeLabel,
+  getTodayDateValue,
 } from "../utils/dateRange";
 import "./CustomerSpendingPage.css";
 
@@ -53,9 +55,22 @@ function CustomerSpendingPage() {
   const [page, setPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const today = getTodayDateValue();
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const summaryCards = customerSpendingData.summaryCards;
   const rows = customerSpendingData.rows;
+
+  const handleFromDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, toDate, "from", today);
+    setFromDate(nextValue);
+    setToDate(counterpartValue);
+  };
+
+  const handleToDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, fromDate, "to", today);
+    setToDate(nextValue);
+    setFromDate(counterpartValue);
+  };
 
   useEffect(() => {
     const loadCustomerSpending = async () => {
@@ -183,20 +198,23 @@ function CustomerSpendingPage() {
       >
         <FilterBar
           fields={[
-            {
-              id: "customer-spending-from-date",
-              label: "Từ ngày",
-              type: "date",
-              value: fromDate,
-              onChange: setFromDate,
-            },
-            {
-              id: "customer-spending-to-date",
-              label: "Đến ngày",
-              type: "date",
-              value: toDate,
-              onChange: setToDate,
-            },
+          {
+            id: "customer-spending-from-date",
+            label: "Từ ngày",
+            type: "date",
+            value: fromDate,
+            max: toDate || today,
+            onChange: handleFromDateChange,
+          },
+          {
+            id: "customer-spending-to-date",
+            label: "Đến ngày",
+            type: "date",
+            value: toDate,
+            min: fromDate || undefined,
+            max: today,
+            onChange: handleToDateChange,
+          },
             {
               id: "customer-segment",
               label: "Nhóm khách hàng",

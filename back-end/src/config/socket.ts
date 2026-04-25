@@ -2,6 +2,7 @@ import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPServer } from "http";
 import jwt from "jsonwebtoken";
 import { JWTUserPayload } from "../dtos/auth.ts";
+import type { ExtendedError } from "socket.io/dist/namespace";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
 
@@ -18,7 +19,7 @@ export const initSocket = (server: HTTPServer): SocketIOServer => {
     },
   });
 
-  io.use((socket: Socket, next) => {
+  io.use((socket: Socket, next: (err?: ExtendedError) => void) => {
     const token = socket.handshake.auth.token || socket.handshake.headers.authorization;
     
     if (!token) {

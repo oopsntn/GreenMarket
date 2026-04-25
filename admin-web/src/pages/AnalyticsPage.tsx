@@ -8,9 +8,11 @@ import StatCard from "../components/StatCard";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { analyticsService } from "../services/analyticsService";
 import {
+  coerceDateRange,
   DEFAULT_REPORT_FROM_DATE,
   DEFAULT_REPORT_TO_DATE,
   formatDateRangeLabel,
+  getTodayDateValue,
 } from "../utils/dateRange";
 import "./AnalyticsPage.css";
 
@@ -68,11 +70,24 @@ function AnalyticsPage() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const today = getTodayDateValue();
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const kpiCards = analyticsData.kpiCards;
   const placementRows = analyticsData.topPlacements;
   const dailyTraffic = analyticsData.dailyTraffic;
   const slotCatalog = analyticsData.slotCatalog;
+
+  const handleFromDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, toDate, "from", today);
+    setFromDate(nextValue);
+    setToDate(counterpartValue);
+  };
+
+  const handleToDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, fromDate, "to", today);
+    setToDate(nextValue);
+    setFromDate(counterpartValue);
+  };
 
   useEffect(() => {
     const loadAnalytics = async () => {
@@ -348,20 +363,23 @@ function AnalyticsPage() {
       >
         <FilterBar
           fields={[
-            {
-              id: "analytics-from-date",
-              label: "Từ ngày",
-              type: "date",
-              value: fromDate,
-              onChange: setFromDate,
-            },
-            {
-              id: "analytics-to-date",
-              label: "Đến ngày",
-              type: "date",
-              value: toDate,
-              onChange: setToDate,
-            },
+          {
+            id: "analytics-from-date",
+            label: "Từ ngày",
+            type: "date",
+            value: fromDate,
+            max: toDate || today,
+            onChange: handleFromDateChange,
+          },
+          {
+            id: "analytics-to-date",
+            label: "Đến ngày",
+            type: "date",
+            value: toDate,
+            min: fromDate || undefined,
+            max: today,
+            onChange: handleToDateChange,
+          },
             {
               id: "analytics-metric-scope",
               label: "Phạm vi vị trí",

@@ -168,7 +168,7 @@ const buildInsightOverview = async (
   const [dashboard, analytics, revenue, customerSpending, boostedPosts] = await Promise.all([
     adminReportingService.getDashboardOverview(fromDate, toDate),
     adminReportingService.getAnalyticsSummary(fromDate, toDate),
-    adminReportingService.getRevenueSummary(fromDate, toDate),
+    adminReportingService.getRevenueSummaryWithHostCosts(fromDate, toDate),
     adminReportingService.getCustomerSpendingSummary(fromDate, toDate),
     adminPromotionService.getBoostedPosts(),
   ]);
@@ -292,7 +292,7 @@ const buildTrendRows = async (
 ): Promise<AITrendScoreRow[]> => {
   const [analytics, revenue, customerSpending, boostedPosts] = await Promise.all([
     adminReportingService.getAnalyticsSummary(fromDate, toDate),
-    adminReportingService.getRevenueSummary(fromDate, toDate),
+    adminReportingService.getRevenueSummaryWithHostCosts(fromDate, toDate),
     adminReportingService.getCustomerSpendingSummary(fromDate, toDate),
     adminPromotionService.getBoostedPosts(),
   ]);
@@ -456,6 +456,20 @@ const buildAdminInsightPrompt = async ({
     buildTrendRows(fromDate, toDate),
   ]);
 
+  const toneLead =
+    tone === "Conservative"
+      ? "Ưu tiên giữ an toàn vận hành, rà soát rủi ro trước khi mở rộng thay đổi."
+      : tone === "Aggressive"
+        ? "Ưu tiên tăng trưởng, đẩy nhanh các cơ hội đang có tín hiệu tốt."
+        : "Cân bằng giữa tăng trưởng và kiểm soát rủi ro, ưu tiên các bước có thể triển khai ngay.";
+
+  const toneAction =
+    tone === "Conservative"
+      ? "Giữ thay đổi ở quy mô nhỏ và xác minh thêm trước khi tăng ngân sách hoặc mở rộng vận hành."
+      : tone === "Aggressive"
+        ? "Có thể tăng nhịp thử nghiệm ở các nhóm đang cho tín hiệu tốt để chốt cơ hội sớm."
+        : "Triển khai theo từng bước, vừa quan sát dữ liệu vừa điều chỉnh để tránh lệch vận hành.";
+
   return [
     "Bạn là trợ lý chiến lược cho admin GreenMarket.",
     "Viết hoàn toàn bằng tiếng Việt, giọng chuyên nghiệp, ngắn gọn, dễ quét.",
@@ -496,11 +510,13 @@ const buildFallbackInsightDetail = async ({
   fromDate,
   toDate,
   focus,
+  tone,
   confidenceThreshold,
 }: {
   fromDate?: string;
   toDate?: string;
   focus: AIInsightFocus;
+  tone: AIInsightSettings["recommendationTone"];
   confidenceThreshold: number;
 }) => {
   const [overview, trendRows] = await Promise.all([
@@ -517,6 +533,20 @@ const buildFallbackInsightDetail = async ({
   const watchRows = relevantTrendRows.filter(
     (item) => item.momentum === "Stable",
   );
+
+  const toneLead =
+    tone === "Conservative"
+      ? "Ưu tiên giữ an toàn vận hành, rà soát rủi ro trước khi mở rộng thay đổi."
+      : tone === "Aggressive"
+        ? "Ưu tiên tăng trưởng, đẩy nhanh các cơ hội đang có tín hiệu tốt."
+        : "Cân bằng giữa tăng trưởng và kiểm soát rủi ro, ưu tiên các bước có thể triển khai ngay.";
+
+  const toneAction =
+    tone === "Conservative"
+      ? "Giữ thay đổi ở quy mô nhỏ và xác minh thêm trước khi tăng ngân sách hoặc mở rộng vận hành."
+      : tone === "Aggressive"
+        ? "Có thể tăng nhịp thử nghiệm ở các nhóm đang cho tín hiệu tốt để chốt cơ hội sớm."
+        : "Triển khai theo từng bước, vừa quan sát dữ liệu vừa điều chỉnh để tránh lệch vận hành.";
 
   const executiveItems = overview.executiveSummary.slice(0, 3);
   const topMetricItems = overview.topRows
@@ -563,12 +593,14 @@ const buildFallbackInsightDetail = async ({
 
   return [
     "TÓM TẮT ĐIỀU HÀNH:",
+    `- ${toneLead}`,
     ...safeExecutiveItems.map((item) => `- ${item}`),
     "CHỈ SỐ CHÍNH:",
     ...safeMetricItems.map((item) => `- ${item}`),
     "RỦI RO CẦN LƯU Ý:",
     ...riskItems.map((item) => `- ${item}`),
     "HÀNH ĐỘNG ĐỀ XUẤT:",
+    `- ${toneAction}`,
     ...safeRecommendationItems.map((item) => `- ${item}`),
     "DỮ LIỆU DÙNG ĐỂ KẾT LUẬN:",
     ...safeEvidenceItems.map((item) => `- ${item}`),
@@ -708,6 +740,7 @@ export const generateAIInsight = async (req: AuthRequest, res: Response): Promis
           fromDate,
           toDate,
           focus,
+          tone: isRecommendationTone(tone) ? tone : defaultSettings.recommendationTone,
           confidenceThreshold: normalizedThreshold,
         }),
         model: "fallback-local-v1",

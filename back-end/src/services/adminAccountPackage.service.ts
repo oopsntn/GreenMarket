@@ -1,6 +1,10 @@
 import { and, desc, eq, gt, isNull, lte, or } from "drizzle-orm";
 import { db } from "../config/db.ts";
-import { SHOP_VIP_SLOT_CODE } from "../constants/promotion.ts";
+import {
+  PERSONAL_PLAN_SLOT_CODE,
+  SHOP_REGISTRATION_SLOT_CODE,
+  SHOP_VIP_SLOT_CODE,
+} from "../constants/promotion.ts";
 import {
   DEFAULTS,
   readSettingJson,
@@ -35,6 +39,7 @@ export type AdminAccountPackage = {
   price: number;
   description: string;
   features: string[];
+  maxSales: number | null;
   durationDays: number | null;
   durationEditable: boolean;
   updatedAt: Date | null;
@@ -106,6 +111,35 @@ const normalizeFeatures = (
     .filter(Boolean);
 };
 
+const readJsonSettingWithMeta = async <T>(
+  key: string,
+  fallback: T,
+): Promise<{ value: T; updatedAt: Date | null }> => {
+  const [row] = await db
+    .select({
+      value: systemSettings.systemSettingValue,
+      updatedAt: systemSettings.systemSettingUpdatedAt,
+    })
+    .from(systemSettings)
+    .where(eq(systemSettings.systemSettingKey, key))
+    .limit(1);
+
+  return {
+    value: (() => {
+      if (!row?.value) {
+        return fallback;
+      }
+
+      try {
+        return JSON.parse(row.value) as T;
+      } catch {
+        return fallback;
+      }
+    })(),
+    updatedAt: row?.updatedAt ?? null,
+  };
+};
+
 const readNumberSettingWithMeta = async (key: string, fallback: number) => {
   const [row] = await db
     .select({
@@ -152,7 +186,46 @@ const upsertNumberSetting = async (
   return now;
 };
 
-const findVipPackage = async () => {
+const upsertJsonSetting = async (
+  key: string,
+  value: unknown,
+  updatedBy: number | null,
+) => {
+  const now = new Date();
+
+  await db
+    .insert(systemSettings)
+    .values({
+      systemSettingKey: key,
+      systemSettingValue: JSON.stringify(value),
+      systemSettingUpdatedBy: updatedBy,
+      systemSettingUpdatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: systemSettings.systemSettingKey,
+      set: {
+        systemSettingValue: JSON.stringify(value),
+        systemSettingUpdatedBy: updatedBy,
+        systemSettingUpdatedAt: now,
+      },
+    });
+
+  return now;
+};
+
+const getLatestUpdatedAt = (...values: Array<Date | null | undefined>) => {
+  const filtered = values.filter(
+    (value): value is Date => value instanceof Date && !Number.isNaN(value.getTime()),
+  );
+
+  if (!filtered.length) {
+    return null;
+  }
+
+  return new Date(Math.max(...filtered.map((item) => item.getTime())));
+};
+
+const findPackageBySlotCode = async (slotCode: string) => {
   const now = new Date();
 
   const [pkg] = await db
@@ -161,6 +234,7 @@ const findVipPackage = async () => {
       title: promotionPackages.promotionPackageTitle,
       description: promotionPackages.promotionPackageDescription,
       durationDays: promotionPackages.promotionPackageDurationDays,
+      maxPosts: promotionPackages.promotionPackageMaxPosts,
       published: promotionPackages.promotionPackagePublished,
       priceId: promotionPackagePrices.priceId,
       price: promotionPackagePrices.price,
@@ -190,7 +264,7 @@ const findVipPackage = async () => {
     )
     .where(
       and(
-        eq(placementSlots.placementSlotCode, SHOP_VIP_SLOT_CODE),
+        eq(placementSlots.placementSlotCode, slotCode),
         isNull(promotionPackages.promotionPackageDeletedAt),
       ),
     )
@@ -204,7 +278,7 @@ const findVipPackage = async () => {
   return pkg ?? null;
 };
 
-const setVipPackagePrice = async (params: {
+const setPackagePrice = async (params: {
   tx: any;
   packageId: number;
   price: number;
@@ -265,17 +339,22 @@ const logAccountPackageEvent = async (params: {
 };
 
 const buildOwnerPackage = async (): Promise<AdminAccountPackage> => {
-  const [priceSetting, policy] = await Promise.all([
+  const [priceSetting, policySetting, packageMeta] = await Promise.all([
     readNumberSettingWithMeta(
       OWNER_SETTING_KEY,
       DEFAULTS.shop_registration_price,
     ),
-    readSettingJson<PolicyConfig>(OWNER_POLICY_KEY, DEFAULTS.owner_policy),
+    readJsonSettingWithMeta<PolicyConfig>(OWNER_POLICY_KEY, DEFAULTS.owner_policy),
+    findPackageBySlotCode(SHOP_REGISTRATION_SLOT_CODE),
   ]);
+  const policy = policySetting.value;
 
   return {
     code: "OWNER_LIFETIME",
-    title: policy.planTitle?.trim() || "Gói Chủ Vườn Vĩnh Viễn",
+    title:
+      policy.planTitle?.trim() ||
+      packageMeta?.title?.trim() ||
+      "Gói Chủ Vườn Vĩnh Viễn",
     groupLabel: "Tài khoản / shop",
     scopeLabel: "Mở shop và vận hành tài khoản chủ vườn",
     cycleLabel: "Vĩnh viễn",
@@ -283,28 +362,38 @@ const buildOwnerPackage = async (): Promise<AdminAccountPackage> => {
     description:
       "Nâng cấp tài khoản lên chủ vườn để mở shop và vận hành bán hàng lâu dài.",
     features: normalizeFeatures(policy.features, DEFAULT_OWNER_FEATURES),
+    maxSales: packageMeta?.maxPosts ?? 1,
     durationDays: null,
     durationEditable: false,
-    updatedAt: priceSetting.updatedAt,
+    updatedAt: getLatestUpdatedAt(
+      priceSetting.updatedAt,
+      policySetting.updatedAt,
+      packageMeta?.effectiveFrom ?? null,
+    ),
     statusLabel: "Cố định",
   };
 };
 
 const buildPersonalPackage = async (): Promise<AdminAccountPackage> => {
-  const [priceSetting, policy] = await Promise.all([
+  const [priceSetting, policySetting, packageMeta] = await Promise.all([
     readNumberSettingWithMeta(
       PERSONAL_SETTING_KEY,
       DEFAULTS.personal_monthly_price,
     ),
-    readSettingJson<PolicyConfig>(
+    readJsonSettingWithMeta<PolicyConfig>(
       PERSONAL_POLICY_KEY,
       DEFAULTS.personal_policy,
     ),
+    findPackageBySlotCode(PERSONAL_PLAN_SLOT_CODE),
   ]);
+  const policy = policySetting.value;
 
   return {
     code: "PERSONAL_MONTHLY",
-    title: policy.planTitle?.trim() || "Gói Cá Nhân Theo Tháng",
+    title:
+      policy.planTitle?.trim() ||
+      packageMeta?.title?.trim() ||
+      "Gói Cá Nhân Theo Tháng",
     groupLabel: "Tài khoản",
     scopeLabel: "Quyền đăng bài cá nhân",
     cycleLabel: "Theo tháng",
@@ -312,16 +401,21 @@ const buildPersonalPackage = async (): Promise<AdminAccountPackage> => {
     description:
       "Dùng cho tài khoản cá nhân đăng bài thường xuyên nhưng chưa mở shop.",
     features: normalizeFeatures(policy.features, DEFAULT_PERSONAL_FEATURES),
+    maxSales: packageMeta?.maxPosts ?? 1,
     durationDays: 30,
     durationEditable: false,
-    updatedAt: priceSetting.updatedAt,
+    updatedAt: getLatestUpdatedAt(
+      priceSetting.updatedAt,
+      policySetting.updatedAt,
+      packageMeta?.effectiveFrom ?? null,
+    ),
     statusLabel: "Cố định",
   };
 };
 
 const buildVipPackage = async (): Promise<AdminAccountPackage> => {
   const [vipPackage, policy] = await Promise.all([
-    findVipPackage(),
+    findPackageBySlotCode(SHOP_VIP_SLOT_CODE),
     readSettingJson<PolicyConfig>(
       SHOP_VIP_POLICY_KEY,
       DEFAULTS.shop_vip_policy,
@@ -353,6 +447,7 @@ const buildVipPackage = async (): Promise<AdminAccountPackage> => {
       vipPackage.description?.trim() ||
       "Ưu tiên hiển thị shop trong danh sách nhà vườn và tăng nhận diện cho shop.",
     features: normalizeFeatures(policy.features, DEFAULT_VIP_FEATURES),
+    maxSales: vipPackage.maxPosts ?? 1,
     durationDays: vipPackage.durationDays ?? null,
     durationEditable: true,
     updatedAt: vipPackage.effectiveFrom ?? null,
@@ -391,25 +486,82 @@ export const adminAccountPackageService = {
 
   async updatePackage(params: {
     code: AccountPackageCode;
+    title: unknown;
     price: unknown;
+    maxSales: unknown;
     durationDays?: unknown;
     adminId: number | null;
     adminEmail: string | null;
   }): Promise<AdminAccountPackage> {
+    const parsedTitle = String(params.title ?? "").trim();
+    if (!parsedTitle) {
+      throw new AdminAccountPackageError(400, "Tên gói không được để trống.");
+    }
+
     const parsedPrice = parsePositiveNumber(params.price);
     if (!parsedPrice) {
       throw new AdminAccountPackageError(400, "Giá gói phải lớn hơn 0.");
     }
 
+    const parsedMaxSales = parsePositiveInteger(params.maxSales);
+    if (!parsedMaxSales) {
+      throw new AdminAccountPackageError(
+        400,
+        "Số lượt bán tối đa phải lớn hơn 0.",
+      );
+    }
+
     if (params.code === "OWNER_LIFETIME") {
       const previous = await this.getPackageByCode(params.code);
-      await upsertNumberSetting(OWNER_SETTING_KEY, parsedPrice, params.adminId);
+      const packageMeta = await findPackageBySlotCode(SHOP_REGISTRATION_SLOT_CODE);
+      if (!packageMeta) {
+        throw new AdminAccountPackageError(
+          404,
+          "Chưa cấu hình gói nền cho Chủ Vườn Vĩnh Viễn.",
+        );
+      }
+
+      const policy = await readSettingJson<PolicyConfig>(
+        OWNER_POLICY_KEY,
+        DEFAULTS.owner_policy,
+      );
+      const nextPolicy = {
+        ...policy,
+        planTitle: parsedTitle,
+      };
+
+      await db.transaction(async (tx) => {
+        await upsertNumberSetting(OWNER_SETTING_KEY, parsedPrice, params.adminId);
+        await upsertJsonSetting(OWNER_POLICY_KEY, nextPolicy, params.adminId);
+
+        await tx
+          .update(promotionPackages)
+          .set({
+            promotionPackageTitle: parsedTitle,
+            promotionPackageMaxPosts: parsedMaxSales,
+          })
+          .where(eq(promotionPackages.promotionPackageId, packageMeta.packageId));
+
+        if (parsedPrice !== previous.price) {
+          await setPackagePrice({
+            tx,
+            packageId: packageMeta.packageId,
+            price: parsedPrice,
+            adminId: params.adminId,
+            note: "Cập nhật giá gói OWNER_LIFETIME từ admin",
+          });
+        }
+      });
 
       await logAccountPackageEvent({
         code: params.code,
-        title: previous.title,
+        title: parsedTitle,
         performedBy: params.adminEmail,
-        detail: `Đã cập nhật giá ${previous.title}: ${previous.price.toLocaleString("vi-VN")} -> ${parsedPrice.toLocaleString("vi-VN")} VND.`,
+        detail:
+          `Đã cập nhật ${previous.title}. ` +
+          `Tên gói: ${previous.title} -> ${parsedTitle}. ` +
+          `Giá: ${previous.price.toLocaleString("vi-VN")} -> ${parsedPrice.toLocaleString("vi-VN")} VND. ` +
+          `Số lượt bán tối đa: ${(previous.maxSales ?? 0).toLocaleString("vi-VN")} -> ${parsedMaxSales.toLocaleString("vi-VN")}.`,
       });
 
       return this.getPackageByCode(params.code);
@@ -417,17 +569,58 @@ export const adminAccountPackageService = {
 
     if (params.code === "PERSONAL_MONTHLY") {
       const previous = await this.getPackageByCode(params.code);
-      await upsertNumberSetting(
-        PERSONAL_SETTING_KEY,
-        parsedPrice,
-        params.adminId,
+      const packageMeta = await findPackageBySlotCode(PERSONAL_PLAN_SLOT_CODE);
+      if (!packageMeta) {
+        throw new AdminAccountPackageError(
+          404,
+          "Chưa cấu hình gói nền cho Cá Nhân Theo Tháng.",
+        );
+      }
+      const policy = await readSettingJson<PolicyConfig>(
+        PERSONAL_POLICY_KEY,
+        DEFAULTS.personal_policy,
       );
+      const nextPolicy = {
+        ...policy,
+        planTitle: parsedTitle,
+      };
+
+      await db.transaction(async (tx) => {
+        await upsertNumberSetting(
+          PERSONAL_SETTING_KEY,
+          parsedPrice,
+          params.adminId,
+        );
+        await upsertJsonSetting(PERSONAL_POLICY_KEY, nextPolicy, params.adminId);
+
+        await tx
+          .update(promotionPackages)
+          .set({
+            promotionPackageTitle: parsedTitle,
+            promotionPackageMaxPosts: parsedMaxSales,
+          })
+          .where(eq(promotionPackages.promotionPackageId, packageMeta.packageId));
+
+        if (parsedPrice !== previous.price) {
+          await setPackagePrice({
+            tx,
+            packageId: packageMeta.packageId,
+            price: parsedPrice,
+            adminId: params.adminId,
+            note: "Cập nhật giá gói PERSONAL_MONTHLY từ admin",
+          });
+        }
+      });
 
       await logAccountPackageEvent({
         code: params.code,
-        title: previous.title,
+        title: parsedTitle,
         performedBy: params.adminEmail,
-        detail: `Đã cập nhật giá ${previous.title}: ${previous.price.toLocaleString("vi-VN")} -> ${parsedPrice.toLocaleString("vi-VN")} VND.`,
+        detail:
+          `Đã cập nhật ${previous.title}. ` +
+          `Tên gói: ${previous.title} -> ${parsedTitle}. ` +
+          `Giá: ${previous.price.toLocaleString("vi-VN")} -> ${parsedPrice.toLocaleString("vi-VN")} VND. ` +
+          `Số lượt bán tối đa: ${(previous.maxSales ?? 0).toLocaleString("vi-VN")} -> ${parsedMaxSales.toLocaleString("vi-VN")}.`,
       });
 
       return this.getPackageByCode(params.code);
@@ -449,7 +642,7 @@ export const adminAccountPackageService = {
       );
     }
 
-    const vipPackage = await findVipPackage();
+    const vipPackage = await findPackageBySlotCode(SHOP_VIP_SLOT_CODE);
     if (!vipPackage) {
       throw new AdminAccountPackageError(
         404,
@@ -460,22 +653,37 @@ export const adminAccountPackageService = {
     const previous = await this.getPackageByCode("SHOP_VIP");
 
     await db.transaction(async (tx) => {
-      if (parsedDuration && parsedDuration !== (vipPackage.durationDays ?? 0)) {
-        await tx
-          .update(promotionPackages)
-          .set({
-            promotionPackageDurationDays: parsedDuration,
-          })
-          .where(eq(promotionPackages.promotionPackageId, vipPackage.packageId));
-      }
+      await upsertJsonSetting(
+        SHOP_VIP_POLICY_KEY,
+        {
+          ...(await readSettingJson<PolicyConfig>(
+            SHOP_VIP_POLICY_KEY,
+            DEFAULTS.shop_vip_policy,
+          )),
+          planTitle: parsedTitle,
+        },
+        params.adminId,
+      );
 
-      await setVipPackagePrice({
-        tx,
-        packageId: vipPackage.packageId,
-        price: parsedPrice,
-        adminId: params.adminId,
-        note: "Cập nhật giá gói SHOP_VIP từ admin",
-      });
+      await tx
+        .update(promotionPackages)
+        .set({
+          promotionPackageTitle: parsedTitle,
+          promotionPackageDurationDays:
+            parsedDuration ?? vipPackage.durationDays ?? undefined,
+          promotionPackageMaxPosts: parsedMaxSales,
+        })
+        .where(eq(promotionPackages.promotionPackageId, vipPackage.packageId));
+
+      if (parsedPrice !== previous.price) {
+        await setPackagePrice({
+          tx,
+          packageId: vipPackage.packageId,
+          price: parsedPrice,
+          adminId: params.adminId,
+          note: "Cập nhật giá gói SHOP_VIP từ admin",
+        });
+      }
     });
 
     const durationDetail =
@@ -485,9 +693,14 @@ export const adminAccountPackageService = {
 
     await logAccountPackageEvent({
       code: "SHOP_VIP",
-      title: previous.title,
+      title: parsedTitle,
       performedBy: params.adminEmail,
-      detail: `Đã cập nhật giá ${previous.title}: ${previous.price.toLocaleString("vi-VN")} -> ${parsedPrice.toLocaleString("vi-VN")} VND.${durationDetail}`,
+      detail:
+        `Đã cập nhật ${previous.title}. ` +
+        `Tên gói: ${previous.title} -> ${parsedTitle}. ` +
+        `Giá: ${previous.price.toLocaleString("vi-VN")} -> ${parsedPrice.toLocaleString("vi-VN")} VND. ` +
+        `Số lượt bán tối đa: ${(previous.maxSales ?? 0).toLocaleString("vi-VN")} -> ${parsedMaxSales.toLocaleString("vi-VN")}.` +
+        durationDetail,
     });
 
     return this.getPackageByCode("SHOP_VIP");
