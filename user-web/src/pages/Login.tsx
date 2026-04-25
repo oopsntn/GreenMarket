@@ -21,6 +21,7 @@ const Login: React.FC = () => {
   const [qrSessionId, setQrSessionId] = useState<string | null>(null);
   const [qrStatus, setQrStatus] = useState<'pending' | 'scanned' | 'authorized' | 'expired'>('pending');
   const socketRef = useRef<any>(null);
+  const refreshTimerRef = useRef<any>(null);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -57,6 +58,13 @@ const Login: React.FC = () => {
         console.log("Disconnected from socket server");
       });
 
+      // Auto refresh after 5 minutes
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = setTimeout(() => {
+        console.log("QR Session expired, refreshing...");
+        initQr();
+      }, 2 * 60 * 1000);
+
     } catch (error) {
       console.error("QR Generate failed", error);
     } finally {
@@ -73,11 +81,19 @@ const Login: React.FC = () => {
         socketRef.current.disconnect();
         socketRef.current = null;
       }
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
     }
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
+      }
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
       }
     };
   }, [loginMethod]);
@@ -222,7 +238,7 @@ const Login: React.FC = () => {
                 {qrStatus === 'scanned' ? (
                   <><Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> Đang chờ xác nhận...</>
                 ) : (
-                  "Mã sẽ tự động làm mới sau 5 phút"
+                  "Mã sẽ tự động làm mới sau 2 phút"
                 )}
               </p>
             )}
