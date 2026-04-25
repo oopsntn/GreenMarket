@@ -137,6 +137,24 @@ const normalizeShopCoordinates = (shop: ShopDetail | null) => {
     }
 }
 
+const logShopRequest = (label: string, method: string, path: string, extra?: Record<string, unknown>) => {
+    console.log(`[ShopService.${label}]`, {
+        method,
+        url: `${API_BASE_URL}${path}`,
+        ...extra,
+    })
+}
+
+const logShopError = (label: string, path: string, error: any, extra?: Record<string, unknown>) => {
+    console.error(`[ShopService.${label}] failed`, {
+        url: `${API_BASE_URL}${path}`,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+        ...extra,
+    })
+}
+
 export const ShopService = {
     getAllShops: async (params?: { page?: number; limit?: number }) => {
         const response = await api.get('/shops/browse', { params })
@@ -250,13 +268,29 @@ export const ShopService = {
 
     // ─── Cộng tác viên (Owner side) ──────────────────────────────────────
     getCollaborators: async (): Promise<ShopCollaborator[]> => {
-        const response = await api.get('/shops/collaborators/all')
-        return Array.isArray(response.data) ? response.data : []
+        const path = '/shops/collaborators/all'
+        try {
+            logShopRequest('getCollaborators', 'GET', path)
+            const response = await api.get(path)
+            return Array.isArray(response.data) ? response.data : []
+        } catch (error: any) {
+            logShopError('getCollaborators', path, error)
+            throw error
+        }
     },
 
     inviteCollaborator: async (userIdentifier: string) => {
-        const response = await api.post('/shops/collaborators/invite', { userIdentifier })
-        return response.data
+        const path = '/shops/collaborators/invite'
+        try {
+            logShopRequest('inviteCollaborator', 'POST', path, {
+                payload: { userIdentifier },
+            })
+            const response = await api.post(path, { userIdentifier })
+            return response.data
+        } catch (error: any) {
+            logShopError('inviteCollaborator', path, error, { userIdentifier })
+            throw error
+        }
     },
 
     removeCollaborator: async (collaboratorUserId: number) => {
@@ -266,18 +300,42 @@ export const ShopService = {
 
     // ─── Duyệt bài CTV (Owner side) ──────────────────────────────────────
     getPendingOwnerPosts: async (): Promise<PendingOwnerPost[]> => {
-        const response = await api.get('/shops/collaborators/posts/pending')
-        return Array.isArray(response.data) ? response.data : []
+        const path = '/shops/collaborators/posts/pending'
+        try {
+            logShopRequest('getPendingOwnerPosts', 'GET', path)
+            const response = await api.get(path)
+            return Array.isArray(response.data) ? response.data : []
+        } catch (error: any) {
+            logShopError('getPendingOwnerPosts', path, error)
+            throw error
+        }
     },
 
     approveCollaboratorPost: async (postId: number) => {
-        const response = await api.post(`/shops/collaborators/posts/${postId}/approve`)
-        return response.data
+        const path = `/shops/collaborators/posts/${postId}/approve`
+        try {
+            logShopRequest('approveCollaboratorPost', 'POST', path, { postId })
+            const response = await api.post(path)
+            return response.data
+        } catch (error: any) {
+            logShopError('approveCollaboratorPost', path, error, { postId })
+            throw error
+        }
     },
 
     rejectCollaboratorPost: async (postId: number, reason: string) => {
-        const response = await api.post(`/shops/collaborators/posts/${postId}/reject`, { reason })
-        return response.data
+        const path = `/shops/collaborators/posts/${postId}/reject`
+        try {
+            logShopRequest('rejectCollaboratorPost', 'POST', path, {
+                postId,
+                payload: { reason },
+            })
+            const response = await api.post(path, { reason })
+            return response.data
+        } catch (error: any) {
+            logShopError('rejectCollaboratorPost', path, error, { postId, reason })
+            throw error
+        }
     },
 
     // ─── Hình Ảnh Shop ──────────────────────────────────────

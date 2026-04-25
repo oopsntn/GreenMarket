@@ -126,6 +126,50 @@ const RegisterShopScreen = ({ navigation }: any) => {
         }
     }
 
+    /** Chụp một ảnh gallery bằng camera rồi thêm vào danh sách */
+    const pickGalleryImageFromCamera = async () => {
+        const remaining = 4 - localGalleryUris.length
+        if (remaining <= 0) return
+
+        const permission = await ImagePicker.requestCameraPermissionsAsync()
+        if (!permission.granted) {
+            CustomAlert('Lỗi', 'Vui lòng cấp quyền truy cập máy ảnh')
+            return
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            quality: 0.7,
+        })
+
+        if (!result.canceled && result.assets?.[0]) {
+            setLocalGalleryUris((prev) => [...prev, result.assets[0].uri].slice(0, 4))
+        }
+    }
+
+    const handlePickGallery = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Hủy', 'Chọn từ thư viện', 'Chụp ảnh'],
+                    cancelButtonIndex: 0,
+                },
+                (index) => {
+                    if (index === 1) pickGalleryImages()
+                    if (index === 2) pickGalleryImageFromCamera()
+                }
+            )
+            return
+        }
+
+        const { Alert } = require('react-native')
+        Alert.alert('Chọn ảnh cửa hàng', '', [
+            { text: 'Hủy', style: 'cancel' },
+            { text: 'Chọn từ thư viện', onPress: pickGalleryImages },
+            { text: 'Chụp ảnh', onPress: pickGalleryImageFromCamera },
+        ])
+    }
+
     const handleAddressChange = (addr: string) => {
         setFormData((prev) => ({ ...prev, shopLocation: addr }))
     }
@@ -174,7 +218,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
     const pollShopActivation = async (maxRetries = 6, delayMs = 2500) => {
         for (let i = 0; i < maxRetries; i++) {
-            await new Promise(resolve => setTimeout(resolve, delayMs))
+            await new Promise((resolve: any) => setTimeout(resolve, delayMs))
             await refreshShop()
         }
     }
@@ -462,7 +506,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         {localGalleryUris.length < 4 && (
                             <TouchableOpacity
                                 style={styles.addGalleryBtn}
-                                onPress={pickGalleryImages}
+                                onPress={handlePickGallery}
                                 disabled={isSubmitting}
                             >
                                 <Plus size={24} color="#94a3b8" />

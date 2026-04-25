@@ -1,24 +1,21 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { 
-  LayoutDashboard, 
-  MapPin, 
-  Briefcase, 
-  Wallet 
+import {
+  Building2,
+  FileText,
+  LayoutDashboard,
+  MailOpen,
 } from 'lucide-react-native';
 
-// Import Screens
 import DashboardScreen from '../screens/DashboardScreen';
-import AvailableJobsScreen from '../screens/AvailableJobsScreen';
-import MyJobsScreen from '../screens/MyJobsScreen';
-import EarningsScreen from '../screens/EarningsScreen';
-import SubmitWorkScreen from '../screens/SubmitWorkScreen';
-import JobDetailScreen from '../screens/JobDetailScreen';
-import PayoutRequestScreen from '../screens/PayoutRequestScreen';
 import InvitationsScreen from '../screens/InvitationsScreen';
 import MyActiveShopsScreen from '../screens/MyActiveShopsScreen';
 import CreatePostLayout from '../../components/post/screen/CreatePostScreen';
+import MyPostLayout from '../../components/post/screen/MyPostLayout';
+import PublicShopDetailScreen from '../../components/shop/screen/PublicShopDetailScreen';
+import PostDetailScreen from '../../components/post/screen/PostDetailScreen';
+import NotificationsScreen from '../../components/notification/screen/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -40,19 +37,42 @@ const CollaboratorTabs = () => {
           fontWeight: '600',
         },
         tabBarIcon: ({ color, size }) => {
-          let icon;
-          if (route.name === 'Dashboard') icon = <LayoutDashboard color={color} size={size} />;
-          else if (route.name === 'Explore') icon = <MapPin color={color} size={size} />;
-          else if (route.name === 'MyWork') icon = <Briefcase color={color} size={size} />;
-          else if (route.name === 'Wallet') icon = <Wallet color={color} size={size} />;
-          return icon;
+          if (route.name === 'Dashboard') {
+            return <LayoutDashboard color={color} size={size} />;
+          }
+
+          if (route.name === 'InvitationsTab') {
+            return <MailOpen color={color} size={size} />;
+          }
+
+          if (route.name === 'MyShopsTab') {
+            return <Building2 color={color} size={size} />;
+          }
+
+          return <FileText color={color} size={size} />;
         },
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Tổng quan' }} />
-      <Tab.Screen name="Explore" component={AvailableJobsScreen} options={{ tabBarLabel: 'Tìm việc' }} />
-      <Tab.Screen name="MyWork" component={MyJobsScreen} options={{ tabBarLabel: 'Việc của tôi' }} />
-      <Tab.Screen name="Wallet" component={EarningsScreen} options={{ tabBarLabel: 'Hướng dẫn' }} />
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{ tabBarLabel: 'Tổng quan' }}
+      />
+      <Tab.Screen
+        name="InvitationsTab"
+        component={InvitationsScreen}
+        options={{ tabBarLabel: 'Lời mời' }}
+      />
+      <Tab.Screen
+        name="MyShopsTab"
+        component={MyActiveShopsScreen}
+        options={{ tabBarLabel: 'Shop' }}
+      />
+      <Tab.Screen
+        name="MyPostsTab"
+        component={MyPostLayout}
+        options={{ tabBarLabel: 'Bài đăng' }}
+      />
     </Tab.Navigator>
   );
 };
@@ -61,13 +81,13 @@ const CollaboratorNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="CollaboratorMain" component={CollaboratorTabs} />
-      {/* Detail screens go here */}
-      <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="SubmitWork" component={SubmitWorkScreen} options={{ animation: 'slide_from_bottom' }} />
-      <Stack.Screen name="PayoutRequest" component={PayoutRequestScreen} options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="Invitations" component={InvitationsScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="MyActiveShops" component={MyActiveShopsScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="MyPost" component={MyPostLayout} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="CreateDelegatedPost" component={CreatePostLayout} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="PostDetail" component={PostDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 };

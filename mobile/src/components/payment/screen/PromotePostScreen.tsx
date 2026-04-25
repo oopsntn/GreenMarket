@@ -189,7 +189,7 @@ const PromotePostScreen = ({ route }: any) => {
                                         </View>
 
                                         <Text style={styles.pkgPrice}>
-                                            {new Intl.NumberFormat('en-US').format(pkg.promotionPackagePrice)} VND
+                                            {new Intl.NumberFormat('vi-VN').format(pkg.promotionPackagePrice)}đ
                                         </Text>
                                     </View>
 

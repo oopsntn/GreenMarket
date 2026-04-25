@@ -62,6 +62,8 @@ export interface PaginatedResponse<T> {
   };
 }
 
+export type PaginationMeta = PaginatedResponse<unknown>['meta'];
+
 export type HostPublicContentTargetType = HostContentTargetType;
 
 export interface HostPublicContentTarget {

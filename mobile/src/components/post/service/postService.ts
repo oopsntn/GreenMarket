@@ -95,10 +95,16 @@ export const postService = {
 
     createPost: async (postData: PostPayload) => {
         try {
+            console.log('[PostService.createPost]', {
+                url: `${API_BASE_URL}/posts`,
+                method: 'POST',
+                payload: postData,
+            })
             const response = await api.post('/posts', postData)
             return response.data
         } catch (error: any) {
             console.error('createPost failed:', {
+                url: `${API_BASE_URL}/posts`,
                 status: error?.response?.status,
                 data: error?.response?.data,
                 payload: postData,
@@ -125,6 +131,13 @@ export const postService = {
     uploadMedia: async (mediaUris: string[] = []): Promise<UploadResponse> => {
         try {
             const formData = new FormData()
+
+            console.log('[PostService.uploadMedia]', {
+                url: `${API_BASE_URL}/upload`,
+                method: 'POST',
+                mediaCount: mediaUris.length,
+                mediaUris,
+            })
 
             for (const uri of mediaUris) {
                 const { fileName, mimeType } = getFileInfo(uri)
@@ -154,7 +167,7 @@ export const postService = {
                 },
                 body: formData,
             })
-            console.log('Upload status:', response.status)
+            console.log('[PostService.uploadMedia] Response status:', response.status)
             
             if (!response.ok) {
                 let errorData = null;
@@ -172,9 +185,11 @@ export const postService = {
             if (!data?.urls) {
                 throw new Error('Invalid upload response')
             }
+            console.log('[PostService.uploadMedia] Response data:', data)
             return data
         } catch (error: any) {
             console.error('uploadMedia failed:', {
+                url: `${API_BASE_URL}/upload`,
                 message: error?.message,
                 status: error?.response?.status,
                 data: error?.response?.data,
@@ -200,11 +215,6 @@ export const postService = {
 
     toggleVisibility: async (postId: number) => {
         const response = await api.patch(`/posts/${postId}/toggle-visibility`)
-        return response.data
-    },
-
-    activateMockPlan: async (durationDays: number = 30) => {
-        const response = await api.post('/posts/personal-plan/mock-activate', { durationDays })
         return response.data
     }
 }

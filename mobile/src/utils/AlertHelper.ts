@@ -7,7 +7,10 @@ const CustomAlert = (
     buttons: AlertButton[] = [] // Xác định đây là mảng các AlertButton
 ) => {
     if (Platform.OS === 'web') {
-        const confirmed = window.confirm(`${title}\n\n${message}`);
+        const webWindow = globalThis as typeof globalThis & {
+            confirm?: (text?: string) => boolean;
+        };
+        const confirmed = webWindow.confirm ? webWindow.confirm(`${title}\n\n${message}`) : true;
 
         if (confirmed && buttons.length > 0) {
             // Lấy nút cuối cùng (thường là nút OK/Xác nhận)
