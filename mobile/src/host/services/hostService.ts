@@ -41,17 +41,6 @@ export interface HostEarning {
   hostEarningCreatedAt: string | null;
 }
 
-export interface HostPayoutRequest {
-  hostPayoutId: number;
-  hostPayoutHostId: number;
-  hostPayoutAmount: string;
-  hostPayoutMethod: string;
-  hostPayoutStatus: string;
-  hostPayoutNote: string | null;
-  hostPayoutProcessedAt: string | null;
-  hostPayoutCreatedAt: string | null;
-}
-
 export interface PaginatedResponse<T> {
   data: T[];
   meta: {
@@ -95,15 +84,19 @@ export interface HostPublicContentDetail {
 export interface CreateHostContentPayload {
   title: string;
   description: string;
-  targetType: HostContentTargetType;
-  targetId?: number;
+  category?: string;
+  body?: string;
   mediaUrls?: string[];
+  payoutAmount?: number;
 }
 
-export interface CreateHostPayoutPayload {
-  amount: number;
-  method: string;
-  note?: string;
+export interface UpdateHostContentPayload {
+  title?: string;
+  description?: string | null;
+  category?: string | null;
+  body?: string | null;
+  mediaUrls?: string[];
+  payoutAmount?: number | null;
 }
 
 export interface UploadMediaResponse {
@@ -183,6 +176,11 @@ export const hostService = {
     return normalizeContent(response.data);
   },
 
+  updateContent: async (id: number | string, payload: UpdateHostContentPayload): Promise<HostContent> => {
+    const response = await api.patch<HostContent>(`/host/contents/${id}`, payload);
+    return normalizeContent(response.data);
+  },
+
   deleteContent: async (id: number | string): Promise<{ message?: string }> => {
     const response = await api.delete<{ message?: string }>(`/host/contents/${id}`);
     return response.data;
@@ -211,25 +209,6 @@ export const hostService = {
         totalItems: Number(response.data?.meta?.totalItems || 0),
       },
     };
-  },
-
-  getPayoutRequests: async (page = 1, limit = 20): Promise<PaginatedResponse<HostPayoutRequest>> => {
-    const response = await api.get<PaginatedResponse<HostPayoutRequest>>('/host/payout-requests', {
-      params: { page, limit },
-    });
-    return {
-      data: Array.isArray(response.data?.data) ? response.data.data : [],
-      meta: {
-        page: Number(response.data?.meta?.page || 1),
-        limit: Number(response.data?.meta?.limit || 20),
-        totalItems: Number(response.data?.meta?.totalItems || 0),
-      },
-    };
-  },
-
-  createPayoutRequest: async (payload: CreateHostPayoutPayload): Promise<HostPayoutRequest> => {
-    const response = await api.post<{ data: HostPayoutRequest }>('/host/payout-requests', payload);
-    return response.data.data;
   },
 
   uploadMedia: async (fileUris: string[] = []): Promise<UploadMediaResponse> => {

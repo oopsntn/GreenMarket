@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,24 +12,27 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Eye, Image as ImageIcon, Plus, Send, X } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import CustomAlert from '../../utils/AlertHelper';
-import { hostService, HostContentTargetType } from '../services/hostService';
-
-const TARGET_OPTIONS: Array<{ label: string; value: HostContentTargetType }> = [
-  { label: 'Post', value: 'post' },
-  { label: 'Shop', value: 'shop' },
-  { label: 'External', value: 'external' },
-];
+import { hostService, HostContent } from '../services/hostService';
 
 const MAX_MEDIA = 5;
+const DEFAULT_HOST_CONTENT_CATEGORY = 'Tin tức';
 
 const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
+type MediaItem = {
+  uri: string;
+  source: 'local' | 'remote';
+};
+
 const CreatePromotionalContentScreen = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const editContent = route.params?.editContent as HostContent | undefined;
+  const isEditMode = Boolean(editContent?.hostContentId);
 
   const handleBack = () => {
     if (navigation.canGoBack()) {
@@ -40,28 +43,40 @@ const CreatePromotionalContentScreen = () => {
     navigation.navigate('Dashboard');
   };
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [ctaLink, setCtaLink] = useState('');
-  const [targetType, setTargetType] = useState<HostContentTargetType>('external');
-  const [targetId, setTargetId] = useState('');
-  const [mediaUris, setMediaUris] = useState<string[]>([]);
+  const [title, setTitle] = useState(editContent?.hostContentTitle || '');
+  const [description, setDescription] = useState(editContent?.hostContentDescription || '');
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>(
+    (editContent?.hostContentMediaUrls || []).slice(0, MAX_MEDIA).map((uri) => ({
+      uri,
+      source: 'remote',
+    })),
+  );
   const [showPreview, setShowPreview] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const descriptionWithCta = useMemo(() => {
-    const base = description.trim();
-    const cta = ctaLink.trim();
-
-    if (!cta) {
-      return base;
+  useEffect(() => {
+    if (!editContent?.hostContentId) {
+      return;
     }
 
-    return `${base}\n\nCTA: ${cta}`;
-  }, [description, ctaLink]);
+    setTitle(editContent.hostContentTitle || '');
+    setDescription(editContent.hostContentDescription || '');
+    setMediaItems(
+      (editContent.hostContentMediaUrls || []).slice(0, MAX_MEDIA).map((uri) => ({
+        uri,
+        source: 'remote',
+      })),
+    );
+    setShowPreview(false);
+  }, [editContent?.hostContentId]);
 
   const handlePickMedia = async () => {
+    const remainingSlots = MAX_MEDIA - mediaItems.length;
+    if (remainingSlots <= 0) {
+      return;
+    }
+
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       CustomAlert('Thông báo', 'Vui lòng cấp quyền truy cập thư viện ảnh.');
@@ -72,7 +87,7 @@ const CreatePromotionalContentScreen = () => {
       allowsEditing: false,
       allowsMultipleSelection: true,
       quality: 0.8,
-      selectionLimit: MAX_MEDIA,
+      selectionLimit: remainingSlots,
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
     });
 
@@ -80,21 +95,24 @@ const CreatePromotionalContentScreen = () => {
       return;
     }
 
-    const picked = result.assets.map((asset) => asset.uri);
-    setMediaUris((prev) => [...prev, ...picked].slice(0, MAX_MEDIA));
+    const picked = result.assets.map((asset) => asset.uri).slice(0, remainingSlots);
+    setMediaItems((prev) => [
+      ...prev,
+      ...picked.map((uri) => ({
+        uri,
+        source: 'local' as const,
+      })),
+    ]);
   };
 
   const removeMedia = (index: number) => {
-    setMediaUris((prev) => prev.filter((_, i) => i !== index));
+    setMediaItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setCtaLink('');
-    setTargetType('external');
-    setTargetId('');
-    setMediaUris([]);
+    setMediaItems([]);
     setShowPreview(false);
   };
 
@@ -109,32 +127,60 @@ const CreatePromotionalContentScreen = () => {
       return;
     }
 
-    const parsedTargetId = Number(targetId);
-    const canUseTargetId = Number.isFinite(parsedTargetId) && parsedTargetId > 0;
-
     setSubmitting(true);
     try {
+      const localMediaUris = mediaItems
+        .filter((item) => item.source === 'local')
+        .map((item) => item.uri);
+
+      const existingMediaUrls = mediaItems
+        .filter((item) => item.source === 'remote')
+        .map((item) => item.uri);
+
       setUploading(true);
-      const uploaded = mediaUris.length > 0 ? await hostService.uploadMedia(mediaUris) : { urls: [] };
+      const uploaded = localMediaUris.length > 0 ? await hostService.uploadMedia(localMediaUris) : { urls: [] };
+      const finalMediaUrls = [...existingMediaUrls, ...uploaded.urls];
       setUploading(false);
 
-      await hostService.createContent({
-        title: title.trim(),
-        description: descriptionWithCta,
-        targetType,
-        ...(canUseTargetId ? { targetId: parsedTargetId } : {}),
-        mediaUrls: uploaded.urls,
-      });
+      if (isEditMode && editContent?.hostContentId) {
+        await hostService.updateContent(editContent.hostContentId, {
+          title: title.trim(),
+          description: description.trim(),
+          category: DEFAULT_HOST_CONTENT_CATEGORY,
+          mediaUrls: finalMediaUrls,
+        });
 
-      CustomAlert('Đã gửi kiểm duyệt', 'Nội dung của bạn đang chờ manager duyệt. Sau khi duyệt, bài sẽ hiển thị trên dashboard.', [
-        {
-          text: 'OK',
-          onPress: () => {
-            resetForm();
-            navigation.navigate('Dashboard');
+        CustomAlert('Đã cập nhật', 'Tin tức đã được cập nhật thành công.', [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+                return;
+              }
+
+              navigation.navigate('Dashboard');
+            },
           },
-        },
-      ]);
+        ]);
+      } else {
+        await hostService.createContent({
+          title: title.trim(),
+          description: description.trim(),
+          category: DEFAULT_HOST_CONTENT_CATEGORY,
+          mediaUrls: finalMediaUrls,
+        });
+
+        CustomAlert('Đã gửi kiểm duyệt', 'Nội dung của bạn đang chờ manager duyệt. Sau khi duyệt, bài sẽ hiển thị trên dashboard.', [
+          {
+            text: 'OK',
+            onPress: () => {
+              resetForm();
+              navigation.navigate('Dashboard');
+            },
+          },
+        ]);
+      }
     } catch (error: unknown) {
       setUploading(false);
       const message =
@@ -142,8 +188,8 @@ const CreatePromotionalContentScreen = () => {
         error !== null &&
         'response' in error &&
         typeof (error as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
-          ? (error as { response?: { data?: { error?: string } } }).response?.data?.error || 'Không thể tạo nội dung quảng bá.'
-          : 'Không thể tạo nội dung quảng bá.';
+          ? (error as { response?: { data?: { error?: string } } }).response?.data?.error || 'Không thể lưu nội dung quảng bá.'
+          : 'Không thể lưu nội dung quảng bá.';
 
       CustomAlert('Lỗi', message);
     } finally {
@@ -161,7 +207,7 @@ const CreatePromotionalContentScreen = () => {
           <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
             <ArrowLeft color="#0F172A" size={22} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Tạo nội dung quảng bá</Text>
+          <Text style={styles.headerTitle}>{isEditMode ? 'Chỉnh sửa tin tức' : 'Tạo nội dung quảng bá'}</Text>
           <View style={{ width: 38 }} />
         </View>
 
@@ -186,58 +232,10 @@ const CreatePromotionalContentScreen = () => {
               onChangeText={setDescription}
             />
 
-            <Text style={styles.label}>Link CTA (tuỳ chọn)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="https://example.com"
-              value={ctaLink}
-              onChangeText={setCtaLink}
-              autoCapitalize="none"
-            />
-            <Text style={styles.helperText}>
-              Hệ thống backend hiện chưa có field CTA riêng, app sẽ lưu CTA vào phần mô tả để đảm bảo không mất dữ liệu.
-            </Text>
-
-            <Text style={styles.label}>Đối tượng nội dung</Text>
-            <View style={styles.targetRow}>
-              {TARGET_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  onPress={() => setTargetType(option.value)}
-                  style={[
-                    styles.targetBtn,
-                    targetType === option.value && styles.targetBtnActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.targetText,
-                      targetType === option.value && styles.targetTextActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {(targetType === 'post' || targetType === 'shop') ? (
-              <>
-                <Text style={styles.label}>Target ID (tuỳ chọn)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="VD: 12"
-                  keyboardType="number-pad"
-                  value={targetId}
-                  onChangeText={setTargetId}
-                />
-              </>
-            ) : null}
-
-            <Text style={styles.label}>Tệp đính kèm ({mediaUris.length}/{MAX_MEDIA})</Text>
+            <Text style={styles.label}>Tệp đính kèm ({mediaItems.length}/{MAX_MEDIA})</Text>
             <View style={styles.mediaGrid}>
-              {mediaUris.map((uri, index) => (
-                <View key={`${uri}_${index}`} style={styles.mediaItem}>
+              {mediaItems.map((item, index) => (
+                <View key={`${item.uri}_${index}`} style={styles.mediaItem}>
                   <ImageIcon color="#64748B" size={20} />
                   <Text style={styles.mediaName} numberOfLines={1}>
                     {`Ảnh ${index + 1}`}
@@ -251,7 +249,7 @@ const CreatePromotionalContentScreen = () => {
                 </View>
               ))}
 
-              {mediaUris.length < MAX_MEDIA ? (
+              {mediaItems.length < MAX_MEDIA ? (
                 <TouchableOpacity style={styles.addMediaBtn} onPress={handlePickMedia}>
                   <Plus color="#16A34A" size={18} />
                   <Text style={styles.addMediaText}>Thêm media</Text>
@@ -280,7 +278,7 @@ const CreatePromotionalContentScreen = () => {
                 ) : (
                   <>
                     <Send size={16} color="white" />
-                    <Text style={styles.submitText}>Đăng nội dung</Text>
+                    <Text style={styles.submitText}>{isEditMode ? 'Lưu thay đổi' : 'Đăng nội dung'}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -296,14 +294,8 @@ const CreatePromotionalContentScreen = () => {
               <Text style={styles.previewLabel}>Nội dung</Text>
               <Text style={styles.previewValue}>{description || '(Chưa nhập)'}</Text>
 
-              <Text style={styles.previewLabel}>CTA</Text>
-              <Text style={styles.previewValue}>{ctaLink || '(Không có)'}</Text>
-
               <Text style={styles.previewLabel}>Media</Text>
-              <Text style={styles.previewValue}>{`${mediaUris.length} file`}</Text>
-
-              <Text style={styles.previewLabel}>Target</Text>
-              <Text style={styles.previewValue}>{`${targetType}${targetId ? ` #${targetId}` : ''}`}</Text>
+              <Text style={styles.previewValue}>{`${mediaItems.length} file`}</Text>
             </View>
           ) : null}
         </ScrollView>
@@ -372,37 +364,6 @@ const styles = StyleSheet.create({
   textArea: {
     minHeight: 100,
     paddingTop: 10,
-  },
-  helperText: {
-    marginTop: 6,
-    color: '#64748B',
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  targetRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 2,
-  },
-  targetBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 999,
-    alignItems: 'center',
-    paddingVertical: 9,
-  },
-  targetBtnActive: {
-    borderColor: '#16A34A',
-    backgroundColor: '#ECFDF5',
-  },
-  targetText: {
-    color: '#334155',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  targetTextActive: {
-    color: '#166534',
   },
   mediaGrid: {
     marginTop: 4,

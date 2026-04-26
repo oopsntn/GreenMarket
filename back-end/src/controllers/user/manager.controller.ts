@@ -14,6 +14,7 @@ import { AuthRequest } from "../../dtos/auth.ts";
 import {
   eventLogs,
   hostContents,
+  ledgers,
   posts,
   reports,
   shops,
@@ -22,6 +23,7 @@ import {
   escalations,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
+import { notificationService } from "../../services/notification.service.ts";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -33,7 +35,9 @@ const VALID_SHOP_STATUSES = ["blocked", "active"] as const;
 const VALID_REPORT_STATUSES = ["pending", "resolved", "dismissed"] as const;
 const VALID_SEVERITY_LEVELS = ["low", "medium", "high", "critical"] as const;
 const VALID_TARGET_TYPES = ["post", "shop", "report"] as const;
-const VALID_HOST_CONTENT_STATUSES = ["approved", "rejected"] as const;
+// host_contents.host_content_status values: pending_admin, published, rejected
+// Mobile manager sends `approved` to mean publish.
+const VALID_HOST_CONTENT_STATUSES = ["approved", "published", "rejected"] as const;
 
 const MANAGER_POST_STATUS_EVENT = "manager_post_status_updated";
 const MANAGER_SHOP_STATUS_EVENT = "manager_shop_status_updated";
@@ -297,7 +301,7 @@ export const getPendingHostContents = async (
       .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
       .where(
         and(
-          inArray(hostContents.hostContentStatus, ["pending", "published"]),
+          inArray(hostContents.hostContentStatus, ["pending_admin"]),
           sql`${hostContents.hostContentDeletedAt} IS NULL`,
         ),
       )
@@ -310,7 +314,7 @@ export const getPendingHostContents = async (
       .from(hostContents)
       .where(
         and(
-          inArray(hostContents.hostContentStatus, ["pending", "published"]),
+          inArray(hostContents.hostContentStatus, ["pending_admin"]),
           sql`${hostContents.hostContentDeletedAt} IS NULL`,
         ),
       );
@@ -434,7 +438,7 @@ export const updateManagerHostContentStatus = async (
     }
 
     const currentStatus = (existing.status ?? "").toLowerCase();
-    if (!["pending", "published"].includes(currentStatus)) {
+    if (currentStatus !== "pending_admin") {
       res.status(409).json({
         error: "Only pending host contents can be moderated",
         currentStatus,
@@ -442,13 +446,14 @@ export const updateManagerHostContentStatus = async (
       return;
     }
 
+    const nextDbStatus = nextStatus === "approved" ? "published" : nextStatus;
     const now = new Date();
 
     const txResult = await db.transaction(async (tx) => {
       const [updated] = await tx
         .update(hostContents)
         .set({
-          hostContentStatus: nextStatus as unknown as string,
+          hostContentStatus: nextDbStatus as unknown as string,
           hostContentUpdatedAt: now,
         })
         .where(
@@ -461,10 +466,49 @@ export const updateManagerHostContentStatus = async (
           hostContentId: hostContents.hostContentId,
           hostContentStatus: hostContents.hostContentStatus,
           hostContentUpdatedAt: hostContents.hostContentUpdatedAt,
+          hostContentAuthorId: hostContents.hostContentAuthorId,
+          hostContentTitle: hostContents.hostContentTitle,
+          hostContentPayoutAmount: hostContents.hostContentPayoutAmount,
         });
 
       if (!updated) {
         throw new Error(HOST_CONTENT_STATE_CHANGED_ERROR);
+      }
+
+      // When manager approves, the host content becomes published.
+      // Only then should we credit earnings & notify the host.
+      if (nextDbStatus === "published") {
+        const payoutAmount = Number(updated.hostContentPayoutAmount ?? 0) || 50000;
+
+        await tx.insert(ledgers).values({
+          ledgerUserId: updated.hostContentAuthorId!,
+          ledgerAmount: String(payoutAmount),
+          ledgerType: "earning",
+          ledgerDirection: "CREDIT",
+          ledgerStatus: "available",
+          ledgerReferenceType: "host_content",
+          ledgerReferenceId: updated.hostContentId,
+          ledgerMeta: {
+            type: "host_content_payout",
+            sourceId: updated.hostContentId,
+            moderatedBy: managerId,
+          },
+        } as any);
+
+        // Notification is non-critical: if it fails, we still want moderation to succeed.
+        try {
+          await notificationService.sendNotification({
+            recipientId: updated.hostContentAuthorId!,
+            title: "Nội dung đã được duyệt",
+            message: `Nội dung "${updated.hostContentTitle}" đã được duyệt và hiển thị. Bạn nhận được ${payoutAmount.toLocaleString(
+              "vi-VN",
+            )} VND.`,
+            type: "earning",
+            metaData: { contentId: updated.hostContentId, senderId: managerId },
+          });
+        } catch (notifyError) {
+          console.error("Failed to notify host after moderation:", notifyError);
+        }
       }
 
       const [actionLog] = await tx

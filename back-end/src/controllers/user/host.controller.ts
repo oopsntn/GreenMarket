@@ -20,7 +20,6 @@ import {
   shops,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
-import { notificationService } from "../../services/notification.service.ts";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -335,6 +334,15 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
+    const normalizedMediaUrls = Array.isArray(mediaUrls)
+      ? mediaUrls.filter((item: unknown): item is string => typeof item === "string" && item.trim().length > 0)
+      : typeof mediaUrls === "string"
+        ? mediaUrls
+            .split("|")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : [];
+
     const [newContent] = await db
       .insert(hostContents)
       .values({
@@ -343,34 +351,12 @@ export const createContent = async (req: AuthRequest, res: Response): Promise<vo
         hostContentDescription: description,
         hostContentBody: body,
         hostContentCategory: category,
-        hostContentMediaUrls: mediaUrls || [],
+        hostContentMediaUrls: normalizedMediaUrls,
         hostContentPayoutAmount: payoutAmount?.toString(),
-        hostContentStatus: "published", // Default to published for demo
+        // Must be pending so manager can moderate it
+        hostContentStatus: "pending_admin",
       })
       .returning();
-
-    // 1. Create earning for host
-    const PAYOUT_AMOUNT = 50000;
-    await db.insert(ledgers).values({
-      ledgerUserId: userId,
-      ledgerAmount: PAYOUT_AMOUNT.toString(),
-      ledgerType: "earning",
-      ledgerDirection: "CREDIT",
-      ledgerStatus: "available",
-      ledgerMeta: {
-        type: "article_payout",
-        sourceId: newContent.hostContentId
-      },
-    });
-
-    // 2. Notify host
-    await notificationService.sendNotification({
-      recipientId: userId,
-      title: "Thu nhập mới!",
-      message: `Bạn vừa nhận được ${PAYOUT_AMOUNT.toLocaleString("vi-VN")} VND cho bài viết mới: "${title}".`,
-      type: "earning",
-      metaData: { contentId: newContent.hostContentId },
-    });
 
     res.status(201).json(newContent);
   } catch (error) {
@@ -389,10 +375,74 @@ export const updateContent = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
+    const payload =
+      req.body && typeof req.body === "object"
+        ? (req.body as Record<string, unknown>)
+        : {};
+
+    if (
+      "hostContentStatus" in payload ||
+      "status" in payload ||
+      "host_content_status" in payload
+    ) {
+      res.status(403).json({
+        error:
+          "Host is not allowed to change content status directly. Please wait for manager moderation.",
+      });
+      return;
+    }
+
+    const updateData: Record<string, unknown> = {};
+
+    if (typeof payload.title === "string") {
+      const title = payload.title.trim();
+      if (!title) {
+        res.status(400).json({ error: "Title cannot be empty" });
+        return;
+      }
+      updateData.hostContentTitle = title;
+    }
+
+    if (typeof payload.description === "string" || payload.description === null) {
+      updateData.hostContentDescription = payload.description;
+    }
+
+    if (typeof payload.body === "string" || payload.body === null) {
+      updateData.hostContentBody = payload.body;
+    }
+
+    if (typeof payload.category === "string" || payload.category === null) {
+      updateData.hostContentCategory = payload.category;
+    }
+
+    if (Array.isArray(payload.mediaUrls)) {
+      updateData.hostContentMediaUrls = payload.mediaUrls.filter(
+        (item): item is string => typeof item === "string",
+      );
+    }
+
+    if (payload.payoutAmount !== undefined) {
+      if (payload.payoutAmount === null || payload.payoutAmount === "") {
+        updateData.hostContentPayoutAmount = null;
+      } else {
+        const payoutAmount = Number(payload.payoutAmount);
+        if (!Number.isFinite(payoutAmount) || payoutAmount < 0) {
+          res.status(400).json({ error: "Invalid payout amount" });
+          return;
+        }
+        updateData.hostContentPayoutAmount = payoutAmount.toString();
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      res.status(400).json({ error: "No valid fields to update" });
+      return;
+    }
+
     const [updated] = await db
       .update(hostContents)
       .set({
-        ...req.body,
+        ...updateData,
         hostContentUpdatedAt: new Date(),
       })
       .where(

@@ -17,7 +17,7 @@ import {
   CircleDollarSign,
   Eye,
   Megaphone,
-  MousePointerClick,
+  Pencil,
   Trash2,
   Wallet,
 } from 'lucide-react-native';
@@ -142,6 +142,10 @@ const HostDashboardScreen = () => {
     navigation.navigate('HostNewsDetail', { hostContentId: item.hostContentId });
   };
 
+  const handleEditContent = (item: HostContent) => {
+    navigation.navigate('HostEditContent', { editContent: item });
+  };
+
   const handleDeleteContent = (item: HostContent) => {
     if (deletingId !== null) {
       return;
@@ -225,12 +229,6 @@ const HostDashboardScreen = () => {
           <View style={styles.balanceBox}>
             <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
             <Text style={styles.balanceValue}>{formatCurrency(stats.availableBalance)}</Text>
-            <TouchableOpacity
-              style={styles.withdrawBtn}
-              onPress={() => navigation.navigate('Payout')}
-            >
-              <Text style={styles.withdrawBtnText}>Rút tiền</Text>
-            </TouchableOpacity>
           </View>
         </LinearGradient>
 
@@ -253,12 +251,6 @@ const HostDashboardScreen = () => {
               value={String(stats.totalViews)}
               icon={Eye}
               color="#2563EB"
-            />
-            <StatsCard
-              label="Lượt click"
-              value={String(stats.totalClicks)}
-              icon={MousePointerClick}
-              color="#F59E0B"
             />
             <StatsCard
               label="Thu nhập"
@@ -326,11 +318,20 @@ const HostDashboardScreen = () => {
                         <Eye size={14} color="#475569" />
                         <Text style={styles.metricText}>{item.hostContentViewCount}</Text>
                       </View>
-                      <View style={styles.metricItem}>
-                        <MousePointerClick size={14} color="#475569" />
-                        <Text style={styles.metricText}>{item.hostContentClickCount}</Text>
-                      </View>
                     </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.editBtn,
+                        deletingId !== null ? styles.deleteBtnDisabled : null,
+                      ]}
+                      onPress={() => handleEditContent(item)}
+                      disabled={deletingId !== null}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Pencil size={15} color="white" />
+                      <Text style={styles.editBtnText}>Edit</Text>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
                       style={[
@@ -435,19 +436,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     marginTop: 6,
-  },
-  withdrawBtn: {
-    marginTop: 10,
-    alignSelf: 'flex-start',
-    backgroundColor: 'white',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 999,
-  },
-  withdrawBtnText: {
-    color: '#166534',
-    fontWeight: '700',
-    fontSize: 12,
   },
   content: {
     padding: 16,
@@ -601,8 +589,23 @@ const styles = StyleSheet.create({
     gap: 4,
     backgroundColor: '#DC2626',
   },
+  editBtn: {
+    height: 30,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    backgroundColor: '#0EA5E9',
+  },
   deleteBtnDisabled: {
     opacity: 0.65,
+  },
+  editBtnText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '700',
   },
   deleteBtnText: {
     color: 'white',
