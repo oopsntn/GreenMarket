@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Bell, ClipboardList, TimerReset, Workflow } from 'lucide-react-native';
+import { Bell, ClipboardList, TimerReset } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -164,11 +164,7 @@ const OperationsDashboardScreen = () => {
           <View style={styles.quickActionRow}>
             <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Tasks')}>
               <ClipboardList size={16} color="#166534" />
-              <Text style={styles.actionText}>Task Queue</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Workload')}>
-              <Workflow size={16} color="#166534" />
-              <Text style={styles.actionText}>Workload</Text>
+              <Text style={styles.actionText}>Công việc</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('Notifications')}>
               <Bell size={16} color="#166534" />
@@ -177,7 +173,7 @@ const OperationsDashboardScreen = () => {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Assigned Tasks gần nhất</Text>
+            <Text style={styles.sectionTitle}>Công việc gần nhất</Text>
 
             {tasks.length === 0 ? (
               <View style={styles.emptyWrap}>
@@ -196,7 +192,7 @@ const OperationsDashboardScreen = () => {
                       {task.title}
                     </Text>
                     <Text style={styles.taskMeta}>
-                      {`${task.type} • ${task.priority} • ${task.customerName || 'N/A'}`}
+                      {task.customerName || 'Khách hàng'}
                     </Text>
                     <Text style={styles.taskDate}>{formatDateTime(task.updatedAt || task.createdAt)}</Text>
                   </View>

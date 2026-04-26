@@ -271,6 +271,28 @@ export const createOperationTaskReply = async (req: AuthRequest, res: Response):
       })
       .returning();
 
+    // Send notification to the ticket creator (user)
+    try {
+      const [ticket] = await db
+        .select({ creatorId: operationTasks.ticketCreatorId, title: operationTasks.ticketTitle })
+        .from(operationTasks)
+        .where(eq(operationTasks.ticketId, taskId))
+        .limit(1);
+
+      if (ticket?.creatorId && ticket.creatorId !== userId) {
+        const { notificationService } = await import("../../services/notification.service");
+        await notificationService.sendNotification({
+          recipientId: ticket.creatorId,
+          title: "Phản hồi yêu cầu hỗ trợ",
+          message: `Yêu cầu "${ticket.title || 'Hỗ trợ'}" đã được phản hồi: "${message.substring(0, 100)}"`,
+          type: "info",
+          metaData: { ticketId: taskId, type: "support_reply" }
+        });
+      }
+    } catch (notifErr) {
+      console.error("Reply notification failed:", notifErr);
+    }
+
     res.status(201).json({
       message: "Reply added successfully",
       reply: newReply,

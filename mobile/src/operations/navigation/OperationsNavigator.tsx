@@ -1,10 +1,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Bell, ClipboardList, Home, LayoutDashboard, Settings, Workflow } from 'lucide-react-native';
+import { Bell, ClipboardList, Home, LayoutDashboard, Settings } from 'lucide-react-native';
 import OperationsDashboardScreen from '../screens/OperationsDashboardScreen';
 import OperationsTasksScreen from '../screens/OperationsTasksScreen';
-import OperationsWorkloadScreen from '../screens/OperationsWorkloadScreen';
 import OperationsNotificationsScreen from '../screens/OperationsNotificationsScreen';
 import OperationTaskDetailScreen from '../screens/OperationTaskDetailScreen';
 
@@ -60,7 +59,6 @@ const OperationsTabs = () => {
           if (route.name === 'Dashboard') icon = <LayoutDashboard color={color} size={size} />;
           else if (route.name === 'Marketplace') icon = <Home color={color} size={size} />;
           else if (route.name === 'Tasks') icon = <ClipboardList color={color} size={size} />;
-          else if (route.name === 'Workload') icon = <Workflow color={color} size={size} />;
           else if (route.name === 'Notifications') icon = <Bell color={color} size={size} />;
           else if (route.name === 'SettingsStack') icon = <Settings color={color} size={size} />;
           return icon;
@@ -70,7 +68,6 @@ const OperationsTabs = () => {
       <Tab.Screen name="Dashboard" component={OperationsDashboardScreen} options={{ tabBarLabel: 'Tổng quan' }} />
       <Tab.Screen name="Marketplace" component={OperationsMarketplaceStack} options={{ tabBarLabel: 'Cây cảnh' }} />
       <Tab.Screen name="Tasks" component={OperationsTasksScreen} options={{ tabBarLabel: 'Công việc' }} />
-      <Tab.Screen name="Workload" component={OperationsWorkloadScreen} options={{ tabBarLabel: 'Workload' }} />
       <Tab.Screen
         name="Notifications"
         component={OperationsNotificationsScreen}

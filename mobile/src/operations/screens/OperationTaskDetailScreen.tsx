@@ -215,8 +215,6 @@ const OperationTaskDetailScreen = () => {
 
         <View style={styles.card}>
           <Text style={styles.taskTitle}>{detail.task.taskTitle}</Text>
-          <Text style={styles.taskMeta}>{`Trạng thái: ${detail.task.taskStatus}`}</Text>
-          <Text style={styles.taskMeta}>{`Mức ưu tiên: ${detail.task.taskPriority}`}</Text>
         </View>
 
         <View style={styles.card}>
