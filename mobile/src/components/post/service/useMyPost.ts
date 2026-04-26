@@ -26,7 +26,7 @@ const useMyPost = () => {
             setPosts(Array.isArray(res) ? res : [])
         } catch (e) {
             console.error('Error fetching posts:', e)
-            CustomAlert('Error', 'Unable to load the post list.')
+            CustomAlert('Lỗi', 'Không thể tải danh sách bài viết.')
         } finally {
             setLoading(false)
         }
@@ -58,12 +58,12 @@ const useMyPost = () => {
 
     const handleDelete = (postId: number) => {
         CustomAlert(
-            'Confirm deletion',
-            'Are you sure you want to delete this post?',
+            'Xác nhận xóa',
+            'Bạn có chắc chắn muốn xóa bài đăng này không?',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Delete',
+                    text: 'Xóa',
                     style: 'destructive',
                     onPress: async () => {
                         try {
@@ -72,10 +72,10 @@ const useMyPost = () => {
                             if (editingPost?.postId === postId) {
                                 setEditingPost(null)
                             }
-                            CustomAlert('Success', 'Post deleted successfully.')
+                            CustomAlert('Thành công', 'Bài viết đã bị xóa thành công.')
                         } catch (e) {
                             console.error('Error deleting post:', e)
-                            CustomAlert('Error', 'Failed to delete the post.')
+                            CustomAlert('Lỗi', 'Không thể xóa bài đăng.')
                         }
                     }
                 }
@@ -92,23 +92,23 @@ const useMyPost = () => {
         postContactPhone: string;
     }) => {
         if (!data.postTitle.trim()) {
-            CustomAlert('Missing information', 'Please enter the post title.')
+            CustomAlert('Thông tin bị thiếu', 'Vui lòng nhập tiêu đề bài viết.')
             return
         }
 
         if (!data.categoryId) {
-            CustomAlert('Missing information', 'Please select a category.')
+            CustomAlert('Thông tin bị thiếu', 'Vui lòng chọn một danh mục.')
             return
         }
 
         if (!data.postPrice.trim() || Number.isNaN(Number(data.postPrice)) || Number(data.postPrice) < 0) {
-            CustomAlert('Invalid price', 'The price must be a number greater than or equal to 0.')
+            CustomAlert('Giá không hợp lệ', 'Giá phải là một số lớn hơn hoặc bằng 0.')
             return
         }
 
         // Constraints mentioned in plan
         if (data.postContent.length > 2000) {
-            CustomAlert('Value too long', 'The description cannot exceed 2000 characters.')
+            CustomAlert('Thông tin quá dài', 'Phần mô tả không được vượt quá 2000 ký tự.')
             return
         }
 
@@ -128,11 +128,11 @@ const useMyPost = () => {
                     : post
             )))
             setEditingPost(null)
-            CustomAlert('Success', 'Post updated successfully.')
+            CustomAlert('Success', 'Bài viết đã được cập nhật thành công.')
             await fetchPosts() // Refresh to ensure data consistency
         } catch (e) {
-            console.error('Error updating post:', e)
-            CustomAlert('Error', 'Update failed. Please try again.')
+            console.error('Lỗi khi cập nhật bài viết:', e)
+            CustomAlert('Lỗi', 'Cập nhật thất bại. Vui lòng thử lại.')
         } finally {
             setSaving(false)
         }
