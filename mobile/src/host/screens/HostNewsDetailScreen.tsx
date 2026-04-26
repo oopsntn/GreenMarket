@@ -18,6 +18,18 @@ import { resolveImageUrl } from '../../utils/resolveImageUrl';
 import { useAuth } from '../../context/AuthContext';
 import CustomAlert from '../../utils/AlertHelper';
 
+type BodySegment =
+  | {
+      type: 'text';
+      value: string;
+    }
+  | {
+      type: 'image';
+      value: string;
+    };
+
+const IMAGE_MARKDOWN_PATTERN = /!\[[^\]]*\]\(([^)]+)\)/g;
+
 const formatDateTime = (iso: string | null) => {
   if (!iso) return 'N/A';
   const d = new Date(iso);
@@ -29,6 +41,48 @@ const formatDateTime = (iso: string | null) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(d);
+};
+
+const parseContentBodySegments = (rawValue: string | null | undefined): BodySegment[] => {
+  const source = typeof rawValue === 'string' ? rawValue.trim() : '';
+  if (!source) {
+    return [];
+  }
+
+  const segments: BodySegment[] = [];
+  let lastIndex = 0;
+
+  for (const match of source.matchAll(IMAGE_MARKDOWN_PATTERN)) {
+    const matchedText = match[0] || '';
+    const imageUrl = (match[1] || '').trim();
+    const startIndex = match.index ?? 0;
+
+    if (startIndex > lastIndex) {
+      const textBlock = source.slice(lastIndex, startIndex).trim();
+      if (textBlock) {
+        segments.push({ type: 'text', value: textBlock });
+      }
+    }
+
+    if (imageUrl) {
+      segments.push({ type: 'image', value: imageUrl });
+    }
+
+    lastIndex = startIndex + matchedText.length;
+  }
+
+  if (lastIndex < source.length) {
+    const textBlock = source.slice(lastIndex).trim();
+    if (textBlock) {
+      segments.push({ type: 'text', value: textBlock });
+    }
+  }
+
+  if (segments.length === 0) {
+    segments.push({ type: 'text', value: source });
+  }
+
+  return segments;
 };
 
 const HostNewsDetailScreen = ({ route }: any) => {
@@ -69,6 +123,11 @@ const HostNewsDetailScreen = ({ route }: any) => {
     const first = content?.hostContentMediaUrls?.[0];
     return first ? resolveImageUrl(first) : null;
   }, [content?.hostContentMediaUrls]);
+
+  const bodySegments = useMemo(
+    () => parseContentBodySegments(content?.hostContentBody),
+    [content?.hostContentBody],
+  );
 
   const canDeleteOwnContent =
     user?.businessRoleCode === 'HOST' &&
@@ -180,9 +239,31 @@ const HostNewsDetailScreen = ({ route }: any) => {
               </View>
             ) : null}
 
-            <Text style={styles.bodyText}>
-              {content.hostContentBody || 'Nội dung bài viết đang được cập nhật...'}
-            </Text>
+            <View style={styles.bodySection}>
+              {bodySegments.length === 0 ? (
+                <Text style={styles.bodyText}>Nội dung bài viết đang được cập nhật...</Text>
+              ) : (
+                bodySegments.map((segment, index) => {
+                  if (segment.type === 'image') {
+                    return (
+                      <View key={`body-segment-${index}`} style={styles.bodyImageWrap}>
+                        <Image
+                          source={{ uri: resolveImageUrl(segment.value) }}
+                          style={styles.bodyImage}
+                          resizeMode="cover"
+                        />
+                      </View>
+                    );
+                  }
+
+                  return (
+                    <Text key={`body-segment-${index}`} style={styles.bodyText}>
+                      {segment.value}
+                    </Text>
+                  );
+                })
+              )}
+            </View>
 
             {canDeleteOwnContent ? (
               <TouchableOpacity
@@ -268,7 +349,24 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   descriptionText: { color: '#065F46', fontWeight: '700', lineHeight: 20 },
-  bodyText: { marginTop: 12, color: '#0F172A', fontWeight: '600', lineHeight: 22 },
+  bodySection: {
+    marginTop: 12,
+    gap: 12,
+  },
+  bodyText: {
+    color: '#0F172A',
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  bodyImageWrap: {
+    marginVertical: 2,
+  },
+  bodyImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+  },
   deleteBtn: {
     marginTop: 16,
     borderRadius: 12,

@@ -20,6 +20,8 @@ export interface HostContent {
   hostContentAuthorId: number;
   hostContentTitle: string;
   hostContentDescription: string | null;
+  hostContentBody: string | null;
+  hostContentCategory: string | null;
   hostContentTargetType: HostContentTargetType;
   hostContentTargetId: number | null;
   hostContentTrackingUrl: string | null;
@@ -229,7 +231,7 @@ export const hostService = {
     }
 
     const token = await AsyncStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/upload`, {
+    const response = await fetch(`${API_BASE_URL}/upload/images`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

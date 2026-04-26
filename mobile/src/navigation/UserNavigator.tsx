@@ -32,6 +32,7 @@ import PublicCollaboratorDetailScreen from '@/components/shop/screen/PublicColla
 import PendingOwnerPostsScreen from '@/components/shop/screen/PendingOwnerPostsScreen';
 import HostNewsDetailScreen from '@/host/screens/HostNewsDetailScreen';
 import NotificationsScreen from '@/components/notification/screen/NotificationsScreen';
+import HostNavigator from '@/host/navigation/HostNavigator';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -146,6 +147,7 @@ const UserNavigator = () => {
       <RootStack.Screen name="CreatePost" component={CreatePostLayout} />
       <RootStack.Screen name="Profile" component={ProfileScreen} />
       <RootStack.Screen name="ManagementCenter" component={ManagementCenterScreen} />
+      <RootStack.Screen name="HostMode" component={HostNavigator} />
       <RootStack.Screen name="PostDetail" component={PostDetailScreen} />
       <RootStack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} />
       <RootStack.Screen name="SavedPosts" component={SavedPostsScreen} />

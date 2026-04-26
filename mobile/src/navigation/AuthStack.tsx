@@ -55,9 +55,7 @@ const AuthStack = () => {
       case "OPERATION_STAFF":
         return <OperationsNavigator />;
       case "HOST":
-        // HOST is a shop-owner capability, but should not force users into the Host UI on app relaunch.
-        // Keep default user experience and let users enter Host mode explicitly from the Management Center.
-        return <UserNavigator />;
+        return <HostNavigator />;
       default:
         return <UserNavigator />;
     }
