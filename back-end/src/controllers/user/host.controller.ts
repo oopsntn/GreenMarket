@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
@@ -11,6 +11,9 @@ import {
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { hostIncomePolicyService } from "../../services/hostIncomePolicy.service.ts";
+
+const PUBLIC_HOST_CONTENT_STATUSES = ["published"];
+
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
