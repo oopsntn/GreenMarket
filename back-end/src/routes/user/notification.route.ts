@@ -4,7 +4,7 @@ import {
   markNotificationAsRead, 
   markAllNotificationsAsRead 
 } from "../../controllers/user/notification.controller.ts";
-import { verifyToken } from "../../middlewares/authMiddleware.ts";
+import { verifyToken } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

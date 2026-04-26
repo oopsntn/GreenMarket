@@ -8,6 +8,8 @@ export type VNPayConfig = {
     ipnUrl: string;
     frontendUrl: string;
     frontendPaymentResultPath: string;
+    mobileUrl: string;
+    mobilePaymentResultPath: string;
 };
 
 const getEnv = (key: string, defaultValue = ""): string => {
@@ -23,6 +25,8 @@ export const getVNPayConfig = (): VNPayConfig => {
         ipnUrl: getEnv("VNPAY_IPN_URL").trim(),
         frontendUrl: getEnv("FRONTEND_URL", "http://localhost:5173").trim(),
         frontendPaymentResultPath: getEnv("FRONTEND_PAYMENT_RESULT_PATH", "/payment-result").trim(),
+        mobileUrl: getEnv("MOBILE_URL", "exp://127.0.0.1:8081").trim(),
+        mobilePaymentResultPath: getEnv("MOBILE_PAYMENT_RESULT_PATH", "/--/payment-result").trim(),
     };
 };
 
@@ -60,7 +64,8 @@ export const createVNPayPaymentRequest = async (
     amount: number,
     orderId: string,
     orderInfo: string,
-    ipAddr: string
+    ipAddr: string,
+    platform: "web" | "mobile" = "web"
 ): Promise<{ payUrl: string }> => {
     const config = getVNPayConfig();
 
@@ -72,7 +77,13 @@ export const createVNPayPaymentRequest = async (
     const tmnCode = config.tmnCode;
     const secretKey = config.hashSecret;
     const vnpUrl = config.apiUrl;
-    const returnUrl = config.redirectUrl;
+    let returnUrl = config.redirectUrl;
+
+    if (platform === "mobile") {
+        const urlObj = new URL(returnUrl);
+        urlObj.searchParams.set("platform", "mobile");
+        returnUrl = urlObj.toString();
+    }
 
     const date = new Date();
     // format to yyyyMMddHHmmss
@@ -122,11 +133,18 @@ export const createVNPayPaymentRequest = async (
 
 export const verifyVNPaySignature = (query: Record<string, any>): boolean => {
     const config = getVNPayConfig();
-    let vnp_Params = { ...query };
-    let secureHash = vnp_Params['vnp_SecureHash'];
+    // VNPay only signs its own `vnp_` parameters.
+    // Our return URL may include extra params (e.g. `platform=mobile`) which must be excluded,
+    // otherwise signature verification will always fail.
+    const secureHashRaw = query["vnp_SecureHash"];
+    const secureHash = typeof secureHashRaw === "string" ? secureHashRaw : String(secureHashRaw ?? "");
 
-    delete vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHashType'];
+    let vnp_Params: Record<string, any> = {};
+    for (const [key, value] of Object.entries(query || {})) {
+        if (!key.startsWith("vnp_")) continue;
+        if (key === "vnp_SecureHash" || key === "vnp_SecureHashType") continue;
+        vnp_Params[key] = value;
+    }
 
     vnp_Params = sortObject(vnp_Params);
 
@@ -141,14 +159,20 @@ export const verifyVNPaySignature = (query: Record<string, any>): boolean => {
 };
 
 
-export const buildFrontendPaymentResultUrl = (payload: {
-    status: "success" | "failed";
-    code?: string;
-    txnRef?: string;
-    message?: string;
-}): string => {
+export const buildPaymentResultRedirectUrl = (
+    payload: {
+        status: "success" | "failed";
+        code?: string;
+        txnRef?: string;
+        message?: string;
+    },
+    platform: "web" | "mobile" = "web"
+): string => {
     const config = getVNPayConfig();
-    const baseUrl = new URL(config.frontendPaymentResultPath, config.frontendUrl);
+    const baseUrl = new URL(
+        platform === "mobile" ? config.mobilePaymentResultPath : config.frontendPaymentResultPath,
+        platform === "mobile" ? config.mobileUrl : config.frontendUrl
+    );
     baseUrl.searchParams.set("status", payload.status);
 
     if (payload.code) baseUrl.searchParams.set("code", payload.code);

@@ -17,13 +17,13 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
     const navigation = useNavigation<any>()
 
     const handlePress = () => {
-        if (item.postStatus === 'pending') {
-            CustomAlert('Tin đang chờ duyệt', 'Tin đăng này đang được quản lý xét duyệt. Vui lòng kiểm tra lại sau.')
+        if (item.postStatus === 'pending' || item.postStatus === 'pending_owner') {
+            CustomAlert('Tin đang chờ duyệt', 'Tin đăng này đang được kiểm duyệt. Vui lòng kiểm tra lại sau.')
             return
         }
 
         if (item.postStatus === 'rejected') {
-            onEdit(item) // Open edit modal directly as requested
+            onEdit(item)
             return
         }
 
@@ -40,7 +40,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                 <View style={styles.imgPlaceholder}>
                     {item.images && item.images.length > 0 ? (
                         <Image
-                            source={{ uri: resolveImageUrl(item.images[0].imageUrl) }}
+                            source={{ uri: resolveImageUrl(item.images[0].imageUrl, { debugLabel: 'post-item-image' }) }}
                             style={{ width: '100%', height: '100%' }}
                         />
                     ) : (
@@ -51,7 +51,7 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                 <View style={styles.info}>
                     <Text style={styles.postTitle} numberOfLines={1}>{item.postTitle}</Text>
                     <Text style={styles.postPrice}>
-                        {new Intl.NumberFormat('en-US').format(item.postPrice)} VND
+                        {new Intl.NumberFormat('vi-VN').format(Number(item.postPrice || 0))}đ
                     </Text>
                     {renderStatus && renderStatus(item.postStatus)}
                     {item.postStatus === 'rejected' && item.postRejectedReason && (
@@ -62,8 +62,8 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                 </View>
 
                 <View style={styles.actions}>
-                    <TouchableOpacity 
-                        style={[styles.actionBtn, !isApproved && { opacity: 0.3 }]} 
+                    <TouchableOpacity
+                        style={[styles.actionBtn, !isApproved && { opacity: 0.3 }]}
                         onPress={() => isApproved && navigation.navigate('PromotePost', { post: item })}
                         disabled={!isApproved}
                     >
@@ -84,20 +84,19 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
 }
 
 const localStyles = StyleSheet.create({
-    rejectReason: { 
-        marginTop: 6, 
-        padding: 6, 
-        backgroundColor: '#fef2f2', 
-        borderRadius: 6, 
-        borderWidth: 1, 
-        borderColor: '#fee2e2' 
+    rejectReason: {
+        marginTop: 6,
+        padding: 6,
+        backgroundColor: '#fef2f2',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#fee2e2'
     },
-    rejectText: { 
-        fontSize: 10, 
-        color: '#b91c1c', 
-        fontWeight: '600' 
+    rejectText: {
+        fontSize: 10,
+        color: '#b91c1c',
+        fontWeight: '600'
     }
 })
 
 export default PostItem
-

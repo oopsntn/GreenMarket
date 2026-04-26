@@ -7,7 +7,7 @@ import {
   verifyAndAddUserEmail,
   removeUserEmail
 } from "../../controllers/user/profile.controller.ts";
-import { verifyToken } from "../../middlewares/authMiddleware.ts";
+import { verifyToken } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

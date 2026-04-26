@@ -1,6 +1,6 @@
 import { Response } from "express";
-import { adminPromotionService } from "../../services/adminPromotion.service.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { adminPromotionService } from "../../services/adminPromotion.service";
+import { AuthRequest } from "../../dtos/auth";
 import { parseId } from "../../utils/parseId";
 
 export const getBoostedPosts = async (

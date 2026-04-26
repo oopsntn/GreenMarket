@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { eq, asc } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { businessRoles, users } from "../../models/schema/index.ts";
-import { parseId } from "../../utils/parseId.ts";
+import { db } from "../../config/db";
+import { businessRoles, users } from "../../models/schema/index";
+import { parseId } from "../../utils/parseId";
 
 type BusinessRolePayload = {
   businessRoleCode?: string;

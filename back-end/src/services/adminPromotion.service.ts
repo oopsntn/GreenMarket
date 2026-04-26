@@ -1,5 +1,5 @@
 import { and, desc, eq, gt, inArray, isNull, lte, or, sql } from "drizzle-orm";
-import { db } from "../config/db.ts";
+import { db } from "../config/db";
 import {
     eventLogs,
     transactions,
@@ -16,7 +16,7 @@ import {
     mapPlacementSlotScope,
     type AdminPlacementSlotScope,
 } from "./adminPlacementSlotCatalog.service.ts";
-import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion.ts";
+import { BOOST_POST_SLOT_PREFIX } from "../constants/promotion";
 
 type RawPromotionRow = {
     promotionId: number;

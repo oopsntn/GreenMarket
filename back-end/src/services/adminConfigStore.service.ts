@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { db } from "../config/db.ts";
-import { systemSettings } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { systemSettings } from "../models/schema/index";
 
 const parseJsonValue = <T>(value: string | null | undefined, fallback: T): T => {
   if (!value) return fallback;

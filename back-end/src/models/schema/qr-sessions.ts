@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, uuid, integer } from "drizzle-orm/pg-core";
-import { users } from "./users.ts";
+import { users } from "./users";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 
 export const qrSessions = pgTable("qr_sessions", {

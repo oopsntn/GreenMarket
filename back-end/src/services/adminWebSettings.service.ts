@@ -1,7 +1,7 @@
 import { and, count, eq, gte } from "drizzle-orm";
-import { db } from "../config/db.ts";
-import { adminConfigStoreService } from "./adminConfigStore.service.ts";
-import { posts } from "../models/schema/posts.ts";
+import { db } from "../config/db";
+import { adminConfigStoreService } from "./adminConfigStore.service";
+import { posts } from "../models/schema/posts";
 
 const SETTINGS_KEY = "admin_web_settings";
 

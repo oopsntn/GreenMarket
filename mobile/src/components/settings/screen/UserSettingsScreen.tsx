@@ -1,11 +1,29 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { LogOut, User, ChevronRight } from 'lucide-react-native';
+import { Bell, LayoutDashboard, LogOut, User, ChevronRight } from 'lucide-react-native';
 import { useAuth } from '../../../context/AuthContext';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
+import { useFocusEffect } from '@react-navigation/native';
+import { notificationService } from '../../notification/service/notificationService';
 
 const UserSettingsScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadUnreadCount = async () => {
+        try {
+          const count = await notificationService.getUnreadCount();
+          setUnreadCount(count);
+        } catch (error) {
+          console.error('Failed to load unread count:', error);
+        }
+      };
+
+      loadUnreadCount();
+    }, []),
+  );
 
   const handleLogout = () => {
     Alert.alert(
@@ -26,6 +44,14 @@ const UserSettingsScreen = ({ navigation }: any) => {
 
   const handleProfilePress = () => {
     navigation.navigate('Profile');
+  };
+
+  const handleManagementCenterPress = () => {
+    navigation.navigate('ManagementCenter');
+  };
+
+  const handleNotificationsPress = () => {
+    navigation.navigate('Notifications');
   };
 
   return (
@@ -50,6 +76,36 @@ const UserSettingsScreen = ({ navigation }: any) => {
               <Text style={styles.menuItemText}>Profile</Text>
             </View>
             <ChevronRight size={20} color="#d1d5db" />
+          </TouchableOpacity>
+
+          {/* Management Center Menu Item */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleManagementCenterPress}
+          >
+            <View style={styles.menuItemLeft}>
+              <LayoutDashboard size={20} color="#22C55E" />
+              <Text style={styles.menuItemText}>Trung tâm quản lý</Text>
+            </View>
+            <ChevronRight size={20} color="#d1d5db" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleNotificationsPress}
+          >
+            <View style={styles.menuItemLeft}>
+              <Bell size={20} color="#22C55E" />
+              <Text style={styles.menuItemText}>Thông báo</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              {unreadCount > 0 ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              ) : null}
+              <ChevronRight size={20} color="#d1d5db" />
+            </View>
           </TouchableOpacity>
 
           {/* Logout Menu Item */}
@@ -117,10 +173,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  menuItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   menuItemText: {
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
+  },
+  badge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '800',
   },
   menuItemTextDanger: {
     color: '#ff4d4f',

@@ -32,6 +32,9 @@ importers:
       expo-barcode-scanner:
         specifier: ~13.0.1
         version: 13.0.1(expo@55.0.13)
+      expo-file-system:
+        specifier: ^55.0.16
+        version: 55.0.16(expo@55.0.13)(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))
       expo-image-picker:
         specifier: ~55.0.18
         version: 55.0.18(expo@55.0.13)

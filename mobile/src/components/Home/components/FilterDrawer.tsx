@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   TextInput,
   Dimensions,
   SafeAreaView,
+  Animated,
+  Easing,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 
@@ -59,24 +61,34 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({
   onClear,
   onClose,
 }) => {
+  const drawerWidth = useMemo(() => Dimensions.get('window').width * 0.75, []);
+  const translateX = useRef(new Animated.Value(-drawerWidth)).current;
+
+  useEffect(() => {
+    Animated.timing(translateX, {
+      toValue: visible ? 0 : -drawerWidth,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [drawerWidth, translateX, visible]);
+
   return (
     <Modal
       visible={visible}
       transparent={true}
-      animationType="slide"
+      animationType="none"
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.overlay}>
-          {/* Semi-transparent background */}
-          <TouchableOpacity
-            style={styles.backdrop}
-            activeOpacity={1}
-            onPress={onClose}
-          />
-
           {/* Drawer Content */}
-          <View style={styles.drawer}>
+          <Animated.View
+            style={[
+              styles.drawer,
+              { width: drawerWidth, transform: [{ translateX }] },
+            ]}
+          >
             {/* Header */}
             <View style={styles.drawerHeader}>
               <Text style={styles.drawerTitle}>Bộ lọc</Text>
@@ -216,7 +228,14 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({
                 <Text style={styles.applyButtonText}>Lọc cây</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
+
+          {/* Semi-transparent background */}
+          <TouchableOpacity
+            style={styles.backdrop}
+            activeOpacity={1}
+            onPress={onClose}
+          />
         </View>
       </SafeAreaView>
     </Modal>
@@ -237,7 +256,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   drawer: {
-    width: Dimensions.get('window').width * 0.75,
     backgroundColor: '#fff',
     flexDirection: 'column',
   },

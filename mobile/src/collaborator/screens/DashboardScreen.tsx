@@ -1,90 +1,102 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    TouchableOpacity,
-    ActivityIndicator,
     RefreshControl,
     SafeAreaView,
+    ScrollView,
     StatusBar,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import {
-    LayoutDashboard,
-    Briefcase,
-    CheckCircle2,
-    Settings,
+    Bell,
+    Building2,
     ChevronRight,
-    Circle,
-    Bell
+    FileText,
+    LogOut,
+    MailOpen,
+    UserCheck,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CollaboratorService, CollaboratorProfileResponse } from '../services/collaboratorService';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { CollaboratorProfileResponse, CollaboratorService } from '../services/collaboratorService';
+import { notificationService } from '../../components/notification/service/notificationService';
 import { useAuth } from '../../context/AuthContext';
 import CustomAlert from '@/utils/AlertHelper';
 
-const StatsCard = ({ title, value, icon: Icon, color }: any) => (
-    <View style={styles.statsCard}>
-        <View style={[styles.statsIconContainer, { backgroundColor: `${color}15` }]}>
-            <Icon color={color} size={20} />
-        </View>
-        <View style={styles.statsInfo}>
-            <Text style={styles.statsValue}>{value}</Text>
-            <Text style={styles.statsLabel}>{title}</Text>
-        </View>
+const StatCard = ({ title, value, helper }: { title: string; value: number; helper: string }) => (
+    <View style={styles.statCard}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statTitle}>{title}</Text>
+        <Text style={styles.statHelper}>{helper}</Text>
     </View>
+);
+
+const QuickAction = ({
+    title,
+    description,
+    icon,
+    onPress,
+}: {
+    title: string;
+    description: string;
+    icon: React.ReactNode;
+    onPress: () => void;
+}) => (
+    <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.85}>
+        <View style={styles.menuIconWrap}>{icon}</View>
+        <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>{title}</Text>
+            <Text style={styles.menuDesc}>{description}</Text>
+        </View>
+        <ChevronRight color="#94A3B8" size={20} />
+    </TouchableOpacity>
 );
 
 const DashboardScreen = () => {
     const navigation = useNavigation<any>();
     const { user, logout } = useAuth();
-    const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [data, setData] = useState<CollaboratorProfileResponse | null>(null);
+    const [profileData, setProfileData] = useState<CollaboratorProfileResponse | null>(null);
+    const [invitationCount, setInvitationCount] = useState(0);
+    const [activeShopCount, setActiveShopCount] = useState(0);
+    const [unreadCount, setUnreadCount] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
-    const getAvailabilityLabel = (status?: string) => {
-        if (status === 'available') return 'Sẵn sàng';
-        if (status === 'busy') return 'Đang bận';
-        return 'Ngoại tuyến';
-    };
-
-    const fetchData = async () => {
+    const loadDashboard = async () => {
         try {
             setError(null);
-            const res = await CollaboratorService.getProfile();
-            setData(res);
+            const [profileRes, invitationsRes, shopsRes, unreadRes] = await Promise.all([
+                CollaboratorService.getProfile(),
+                CollaboratorService.getMyInvitations(),
+                CollaboratorService.getMyActiveShops(),
+                notificationService.getUnreadCount(),
+            ]);
+
+            setProfileData(profileRes);
+            setInvitationCount(Array.isArray(invitationsRes) ? invitationsRes.length : 0);
+            setActiveShopCount(Array.isArray(shopsRes?.data) ? shopsRes.data.length : 0);
+            setUnreadCount(unreadRes);
         } catch (error: any) {
-            console.error('Error fetching collaborator profile:', error);
+            console.error('Error fetching collaborator dashboard:', error);
             setError(error?.response?.data?.error || 'Không thể tải trang cộng tác viên lúc này.');
         } finally {
-            setLoading(false);
             setRefreshing(false);
         }
     };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadDashboard();
+        }, []),
+    );
 
-    const onRefresh = () => {
+    const handleRefresh = () => {
         setRefreshing(true);
-        fetchData();
+        loadDashboard();
     };
 
-    const toggleAvailability = async () => {
-        if (!data) return;
-        const nextStatus = data.profile.availabilityStatus === 'available' ? 'busy' : 'available';
-        try {
-            await CollaboratorService.updateAvailability({ availabilityStatus: nextStatus });
-            fetchData();
-        } catch (error: any) {
-            console.error('Error updating availability:', error);
-            setError(error?.response?.data?.error || 'Không thể cập nhật trạng thái làm việc lúc này.');
-        }
-    };
     const handleLogout = () => {
         CustomAlert(
             'Đăng xuất',
@@ -95,60 +107,78 @@ const DashboardScreen = () => {
             ]
         );
     };
-    if (loading) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#16A34A" />
-            </View>
-        );
-    }
 
-    if (error && !data) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.center}>
-                    <Text style={styles.errorText}>{error}</Text>
-                    <TouchableOpacity style={styles.retryBtn} onPress={fetchData}>
-                        <Text style={styles.retryBtnText}>Tải lại</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
-        );
-    }
+    const toggleAvailability = async () => {
+        if (!profileData?.profile) return;
 
-    const { profile, stats } = data || {
-        profile: { availabilityStatus: 'offline', displayName: user?.userDisplayName },
-        stats: { totalJobs: 0, activeJobs: 0, completedJobs: 0, totalEarnings: 0, availableBalance: 0 }
+        const nextStatus =
+            profileData.profile.availabilityStatus === 'available' ? 'busy' : 'available';
+
+        try {
+            await CollaboratorService.updateAvailability({ availabilityStatus: nextStatus });
+            await loadDashboard();
+        } catch (error: any) {
+            CustomAlert(
+                'Lỗi',
+                error?.response?.data?.error || 'Không thể cập nhật trạng thái làm việc lúc này.',
+            );
+        }
     };
+
+    const displayName =
+        profileData?.profile?.displayName ||
+        user?.userDisplayName ||
+        'Cộng tác viên';
+
+    const availabilityLabel =
+        profileData?.profile?.availabilityStatus === 'available'
+            ? 'Sẵn sàng hợp tác'
+            : 'Tạm bận';
 
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" />
             <ScrollView
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header Section */}
                 <LinearGradient colors={['#064E3B', '#16A34A']} style={styles.header}>
                     <View style={styles.headerTop}>
-                        <View>
+                        <View style={{ flex: 1 }}>
                             <Text style={styles.welcomeText}>Xin chào,</Text>
-                            <Text style={styles.nameText}>{profile.displayName || 'Cộng tác viên'}</Text>
+                            <Text style={styles.nameText}>{displayName}</Text>
+                            <Text style={styles.subtitleText}>
+                                Tập trung nhận lời mời từ chủ shop và đăng bài thay mặt shop đang hợp tác.
+                            </Text>
                         </View>
-                        <TouchableOpacity style={styles.notificationBtn}>
-                            <Bell color="white" size={24} />
+
+                        <TouchableOpacity
+                            style={styles.notificationBtn}
+                            onPress={() => navigation.navigate('Notifications')}
+                        >
+                            <Bell color="white" size={22} />
+                            {unreadCount > 0 ? (
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                                </View>
+                            ) : null}
                         </TouchableOpacity>
                     </View>
 
-                    {/* Balance Card */}
-                    <View style={styles.balanceCard}>
-                        <View style={styles.policyCardContent}>
-                            <Text style={styles.balanceLabel}>THANH TOÁN CỘNG TÁC</Text>
-                            <Text style={styles.policyTitle}>Thanh toán trực tiếp ngoài hệ thống</Text>
-                            <Text style={styles.policyText}>
-                                GreenMarket chỉ hỗ trợ kết nối và theo dõi công việc cộng tác. Chi phí cộng tác sẽ do khách hàng và cộng tác viên tự liên hệ, thỏa thuận và thanh toán trực tiếp.
+                    <View style={styles.profileCard}>
+                        <Text style={styles.profileLabel}>TRẠNG THÁI HỢP TÁC</Text>
+                        <Text style={styles.profileStatus}>{availabilityLabel}</Text>
+                        <Text style={styles.profileText}>
+                            Trạng thái này sẽ hiển thị cho chủ shop khi họ xem danh sách cộng tác viên công khai.
+                        </Text>
+
+                        <TouchableOpacity style={styles.profileAction} onPress={toggleAvailability}>
+                            <Text style={styles.profileActionText}>
+                                {profileData?.profile?.availabilityStatus === 'available'
+                                    ? 'Đặt tạm bận'
+                                    : 'Đặt sẵn sàng'}
                             </Text>
-                        </View>
+                        </TouchableOpacity>
                     </View>
                 </LinearGradient>
 
@@ -159,80 +189,52 @@ const DashboardScreen = () => {
                         </View>
                     ) : null}
 
-                    {/* Availability Section */}
-                    <View style={styles.section}>
-                        <View style={styles.availabilityBox}>
-                            <View style={styles.availabilityInfo}>
-                                <Text style={styles.sectionTitle}>Trạng thái làm việc</Text>
-                                <View style={styles.statusBadge}>
-                                    <Circle
-                                        size={10}
-                                        fill={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
-                                        color={profile.availabilityStatus === 'available' ? '#22C55E' : '#EF4444'}
-                                    />
-                                    <Text style={styles.statusText}>
-                                        {getAvailabilityLabel(profile.availabilityStatus)}
-                                    </Text>
-                                </View>
-                            </View>
-                            <TouchableOpacity
-                                style={[
-                                    styles.toggleBtn,
-                                    { backgroundColor: profile.availabilityStatus === 'available' ? '#FEE2E2' : '#DCFCE7' }
-                                ]}
-                                onPress={toggleAvailability}
-                            >
-                                <Text style={[
-                                    styles.toggleText,
-                                    { color: profile.availabilityStatus === 'available' ? '#EF4444' : '#16A34A' }
-                                ]}>
-                                    {profile.availabilityStatus === 'available' ? 'Đặt bận' : 'Sẵn sàng'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    {/* Stats Grid */}
-                    <View style={styles.statsGrid}>
-                        <StatsCard
-                            title="Đang làm"
-                            value={stats.activeJobs}
-                            icon={Briefcase}
-                            color="#3B82F6"
+                    <View style={styles.statsRow}>
+                        <StatCard
+                            title="Lời mời"
+                            value={invitationCount}
+                            helper="Đang chờ phản hồi"
                         />
-                        <StatsCard
-                            title="Đã xong"
-                            value={stats.completedJobs}
-                            icon={CheckCircle2}
-                            color="#10B981"
+                        <StatCard
+                            title="Shop đang hợp tác"
+                            value={activeShopCount}
+                            helper="Có thể đăng bài thay mặt"
                         />
                     </View>
 
-                    {/* Quick Access */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Truy cập nhanh</Text>
                         <View style={styles.menuList}>
-                            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Explore')}>
-                                <View style={styles.menuIconWrap}>
-                                    <LayoutDashboard color="#16A34A" size={20} />
-                                </View>
-                                <View style={styles.menuContent}>
-                                    <Text style={styles.menuTitle}>Tìm việc mới</Text>
-                                    <Text style={styles.menuDesc}>Khám phá các yêu cầu chưa có người nhận</Text>
-                                </View>
-                                <ChevronRight color="#94A3B8" size={20} />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-                                <View style={[styles.menuIconWrap, { backgroundColor: '#FEF2F2' }]}>
-                                    <Settings color="#EF4444" size={20} />
-                                </View>
-                                <View style={styles.menuContent}>
-                                    <Text style={[styles.menuTitle, { color: '#EF4444' }]}>Đăng xuất</Text>
-                                    <Text style={styles.menuDesc}>Thoát khỏi tài khoản hiện tại</Text>
-                                </View>
-                                <ChevronRight color="#CBD5E1" size={20} />
-                            </TouchableOpacity>
+                            <QuickAction
+                                title="Lời mời hợp tác"
+                                description="Xem và chấp nhận hoặc từ chối lời mời từ chủ shop"
+                                icon={<MailOpen color="#16A34A" size={20} />}
+                                onPress={() => navigation.navigate('Invitations')}
+                            />
+                            <QuickAction
+                                title="Shop đang hợp tác"
+                                description="Xem thông tin shop, liên hệ Zalo và chọn shop để đăng bài"
+                                icon={<Building2 color="#16A34A" size={20} />}
+                                onPress={() => navigation.navigate('MyActiveShops')}
+                            />
+                            <QuickAction
+                                title="Bài đăng của tôi"
+                                description="Theo dõi bài đã đăng thay mặt shop và trạng thái duyệt bài"
+                                icon={<FileText color="#16A34A" size={20} />}
+                                onPress={() => navigation.navigate('MyPost')}
+                            />
+                            <QuickAction
+                                title="Thông báo"
+                                description="Theo dõi duyệt bài, thay đổi hợp tác và cập nhật thanh toán"
+                                icon={<UserCheck color="#16A34A" size={20} />}
+                                onPress={() => navigation.navigate('Notifications')}
+                            />
+                            <QuickAction
+                                title="Đăng xuất"
+                                description="Thoát khỏi tài khoản hiện tại"
+                                icon={<LogOut color="#EF4444" size={20} />}
+                                onPress={handleLogout}
+                            />
                         </View>
                     </View>
                 </View>
@@ -246,11 +248,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#F8FAFC',
     },
-    center: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     header: {
         paddingTop: 20,
         paddingHorizontal: 24,
@@ -261,8 +258,9 @@ const styles = StyleSheet.create({
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         marginBottom: 24,
+        gap: 12,
     },
     welcomeText: {
         color: '#D1FAE5',
@@ -274,134 +272,136 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: '800',
     },
+    subtitleText: {
+        marginTop: 8,
+        color: '#DCFCE7',
+        fontSize: 13,
+        lineHeight: 20,
+    },
     notificationBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
+        width: 46,
+        height: 46,
+        borderRadius: 14,
         backgroundColor: 'rgba(255,255,255,0.15)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    balanceCard: {
-        backgroundColor: 'rgba(255,255,255,0.1)',
+    badge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        minWidth: 20,
+        height: 20,
+        borderRadius: 999,
+        backgroundColor: '#ef4444',
+        paddingHorizontal: 5,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: '#064E3B',
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: '800',
+    },
+    profileCard: {
+        backgroundColor: 'rgba(255,255,255,0.12)',
         padding: 20,
         borderRadius: 20,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.2)',
     },
-    policyCardContent: {
-        gap: 6,
-    },
-    balanceLabel: {
+    profileLabel: {
         color: '#D1FAE5',
         fontSize: 12,
-        fontWeight: '600',
+        fontWeight: '700',
         textTransform: 'uppercase',
     },
-    balanceValue: {
+    profileStatus: {
+        marginTop: 8,
         color: 'white',
         fontSize: 22,
         fontWeight: '800',
-        marginTop: 4,
     },
-    policyTitle: {
-        color: 'white',
-        fontSize: 20,
-        fontWeight: '800',
-    },
-    policyText: {
+    profileText: {
+        marginTop: 8,
         color: '#DCFCE7',
         fontSize: 13,
         lineHeight: 20,
-        fontWeight: '500',
+    },
+    profileAction: {
+        marginTop: 14,
+        alignSelf: 'flex-start',
+        backgroundColor: '#fff',
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 12,
+    },
+    profileActionText: {
+        color: '#065F46',
+        fontSize: 13,
+        fontWeight: '700',
     },
     content: {
         paddingHorizontal: 24,
         marginTop: -50,
+        paddingBottom: 28,
     },
-    section: {
+    inlineError: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        marginBottom: 16,
+    },
+    inlineErrorText: {
+        color: '#B91C1C',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    statsRow: {
+        flexDirection: 'row',
+        gap: 14,
         marginBottom: 24,
     },
-    availabilityBox: {
-        backgroundColor: 'white',
-        padding: 20,
+    statCard: {
+        flex: 1,
+        backgroundColor: '#fff',
         borderRadius: 24,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        padding: 16,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
         elevation: 2,
     },
-    availabilityInfo: {
-        flex: 1,
+    statValue: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#0F172A',
+    },
+    statTitle: {
+        marginTop: 6,
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#0F172A',
+    },
+    statHelper: {
+        marginTop: 4,
+        fontSize: 11,
+        color: '#64748B',
+    },
+    section: {
+        marginBottom: 24,
     },
     sectionTitle: {
         fontSize: 16,
         fontWeight: '700',
         color: '#1E293B',
         marginBottom: 12,
-    },
-    statusBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    statusText: {
-        fontSize: 11,
-        fontWeight: '800',
-        color: '#64748B',
-        letterSpacing: 0.5,
-    },
-    toggleBtn: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 12,
-    },
-    toggleText: {
-        fontWeight: '700',
-        fontSize: 13,
-    },
-    statsGrid: {
-        flexDirection: 'row',
-        gap: 16,
-        marginBottom: 24,
-    },
-    statsCard: {
-        flex: 1,
-        backgroundColor: 'white',
-        padding: 16,
-        borderRadius: 24,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
-    },
-    statsIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    statsInfo: {
-        flex: 1,
-    },
-    statsValue: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#1E293B',
-    },
-    statsLabel: {
-        fontSize: 11,
-        color: '#64748B',
-        fontWeight: '500',
     },
     menuList: {
         backgroundColor: 'white',
@@ -439,37 +439,6 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#64748B',
         marginTop: 2,
-    },
-    errorText: {
-        fontSize: 14,
-        color: '#B91C1C',
-        textAlign: 'center',
-        marginBottom: 16,
-        paddingHorizontal: 24,
-    },
-    retryBtn: {
-        backgroundColor: '#111827',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 12,
-    },
-    retryBtnText: {
-        color: 'white',
-        fontWeight: '700',
-    },
-    inlineError: {
-        backgroundColor: '#FEF2F2',
-        borderWidth: 1,
-        borderColor: '#FECACA',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        marginBottom: 16,
-    },
-    inlineErrorText: {
-        color: '#B91C1C',
-        fontSize: 13,
-        fontWeight: '600',
     },
 });
 

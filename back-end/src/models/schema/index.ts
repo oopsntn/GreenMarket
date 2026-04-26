@@ -1,6 +1,6 @@
 // Auth
-export { admins, type Admin, type NewAdmin } from "./admins.ts";
-export { roles, type Role, type NewRole } from "./roles.ts";
+export { admins, type Admin, type NewAdmin } from "./admins";
+export { roles, type Role, type NewRole } from "./roles";
 export {
   adminRoles,
   type AdminRole,
@@ -11,7 +11,7 @@ export {
   type BusinessRole,
   type NewBusinessRole,
 } from "./business-roles.ts";
-export { users, type User, type NewUser } from "./users.ts";
+export { users, type User, type NewUser } from "./users";
 export {
   qrSessions,
   type QRSession,
@@ -24,8 +24,8 @@ export {
 } from "./admin-templates.ts";
 
 // Content
-export { categories, type Category, type NewCategory } from "./categories.ts";
-export { attributes, type Attribute, type NewAttribute } from "./attributes.ts";
+export { categories, type Category, type NewCategory } from "./categories";
+export { attributes, type Attribute, type NewAttribute } from "./attributes";
 export {
   categoryAttributes,
   type CategoryAttribute,
@@ -38,7 +38,7 @@ export {
 } from "./banned-keywords.ts";
 
 // Shop
-export { shops, type Shop, type NewShop } from "./shops.ts";
+export { shops, type Shop, type NewShop } from "./shops";
 
 export {
   verifications,
@@ -52,7 +52,7 @@ export {
 } from "./shop-collaborators.ts";
 
 // Posts
-export { posts, type Post, type NewPost } from "./posts.ts";
+export { posts, type Post, type NewPost } from "./posts";
 export {
   postAttributeValues,
   type PostAttributeValue,
@@ -70,12 +70,12 @@ export {
 } from "./user-favorites.ts";
 
 // Tickets & Moderation
-export { tickets, type Ticket, type NewTicket } from "./tickets.ts";
+export { tickets, type Ticket, type NewTicket } from "./tickets";
 // Legacy aliases for tickets
-export { tickets as reports, type Ticket as Report, type Ticket as NewReport } from "./tickets.ts";
-export { tickets as operationTasks, type Ticket as OperationTask, type Ticket as NewOperationTask } from "./tickets.ts";
-export { tickets as escalations, type Ticket as Escalation, type Ticket as NewEscalation } from "./tickets.ts";
-export { tickets as jobs, type Ticket as Job, type NewTicket as NewJob } from "./tickets.ts";
+export { tickets as reports, type Ticket as Report, type Ticket as NewReport } from "./tickets";
+export { tickets as operationTasks, type Ticket as OperationTask, type Ticket as NewOperationTask } from "./tickets";
+export { tickets as escalations, type Ticket as Escalation, type Ticket as NewEscalation } from "./tickets";
+export { tickets as jobs, type Ticket as Job, type NewTicket as NewJob } from "./tickets";
 
 // Monetization
 export {
@@ -113,8 +113,8 @@ export {
   type UserPostingPlan,
   type NewUserPostingPlan,
 } from "./user-posting-plans.ts";
-export { taskReplies as jobContactRequests, type TaskReply as JobContactRequest, type NewTaskReply as NewJobContactRequest } from "./task-replies.ts";
-export { taskReplies as jobDeliverables, type TaskReply as JobDeliverable, type NewTaskReply as NewJobDeliverable } from "./task-replies.ts";
+export { taskReplies as jobContactRequests, type TaskReply as JobContactRequest, type NewTaskReply as NewJobContactRequest } from "./task-replies";
+export { taskReplies as jobDeliverables, type TaskReply as JobDeliverable, type NewTaskReply as NewJobDeliverable } from "./task-replies";
 
 // Analytics
 export {
@@ -132,7 +132,7 @@ export {
   type AiInsight,
   type NewAiInsight,
 } from "./ai-insights.ts";
-export { eventLogs, type EventLog, type NewEventLog } from "./event-logs.ts";
+export { eventLogs, type EventLog, type NewEventLog } from "./event-logs";
 
 // Manager & Operations
 // Manager & Operations

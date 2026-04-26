@@ -1,7 +1,7 @@
 import { Response } from "express";
-import { db } from "../../config/db.ts";
+import { db } from "../../config/db";
 import { eq, desc, inArray, and, ne } from "drizzle-orm";
-import { verificationService } from "../../services/verification.service.ts";
+import { verificationService } from "../../services/verification.service";
 import {
   users,
   shops,

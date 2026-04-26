@@ -1,12 +1,12 @@
 import { desc } from "drizzle-orm";
 import { Response } from "express";
-import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
-import { aiInsights, users } from "../../models/schema/index.ts";
-import { adminConfigStoreService } from "../../services/adminConfigStore.service.ts";
-import { adminPromotionService } from "../../services/adminPromotion.service.ts";
-import { adminReportingService } from "../../services/adminReporting.service.ts";
-import { geminiAIService } from "../../services/geminiAI.service.ts";
+import { db } from "../../config/db";
+import { AuthRequest } from "../../dtos/auth";
+import { aiInsights, users } from "../../models/schema/index";
+import { adminConfigStoreService } from "../../services/adminConfigStore.service";
+import { adminPromotionService } from "../../services/adminPromotion.service";
+import { adminReportingService } from "../../services/adminReporting.service";
+import { geminiAIService } from "../../services/geminiAI.service";
 
 const AI_INSIGHT_SETTINGS_KEY = "admin_ai_insight_settings";
 

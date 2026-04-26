@@ -1,25 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  SafeAreaView,
   ActivityIndicator,
   RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-  ClipboardCheck,
-  Store,
   AlertTriangle,
-  Users,
   ChevronRight,
-  TrendingUp,
+  ClipboardCheck,
   Clock,
-  LayoutDashboard
+  History,
+  LayoutDashboard,
+  Store,
+  TrendingUp,
+  Users,
 } from 'lucide-react-native';
 import managerService from '../services/ManagerService';
 
@@ -37,7 +38,7 @@ const DashboardScreen = ({ navigation }: any) => {
       setLoading(true);
       const data = await managerService.getDashboardOverview();
       setStats(data.statCards ?? []);
-      setSummary(data.summary ?? []);
+      setSummary(data.summary ?? null);
     } catch (error) {
       console.error(error);
     } finally {
@@ -47,9 +48,9 @@ const DashboardScreen = ({ navigation }: any) => {
 
   const getIconForStat = (title: string) => {
     const lowerTitle = title.toLowerCase();
-    if (lowerTitle.includes('post')) return <ClipboardCheck color="#10B981" size={24} />;
-    if (lowerTitle.includes('shop')) return <Store color="#3B82F6" size={24} />;
-    if (lowerTitle.includes('report')) return <AlertTriangle color="#EF4444" size={24} />;
+    if (lowerTitle.includes('bài')) return <ClipboardCheck color="#10B981" size={24} />;
+    if (lowerTitle.includes('cửa')) return <Store color="#3B82F6" size={24} />;
+    if (lowerTitle.includes('báo cáo')) return <AlertTriangle color="#EF4444" size={24} />;
     return <Users color="#8B5CF6" size={24} />;
   };
 
@@ -71,10 +72,7 @@ const DashboardScreen = ({ navigation }: any) => {
           <RefreshControl refreshing={loading} onRefresh={fetchDashboardData} tintColor="#22C55E" />
         }
       >
-        <LinearGradient
-          colors={['#166534', '#22C55E']}
-          style={styles.header}
-        >
+        <LinearGradient colors={['#166534', '#22C55E']} style={styles.header}>
           <View style={styles.headerTop}>
             <View>
               <Text style={styles.welcomeText}>Bảng điều khiển</Text>
@@ -86,9 +84,9 @@ const DashboardScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.mainStatsContainer}>
-            <Text style={styles.summaryTitle}>{summary?.title || "Tổng quan"}</Text>
+            <Text style={styles.summaryTitle}>{summary?.title || 'Tổng quan kiểm duyệt'}</Text>
             <Text style={styles.summaryDesc}>
-              {summary?.description || "Đang tải hoạt động mới nhất..."}
+              {summary?.description || 'Đang tải dữ liệu moderation mới nhất...'}
             </Text>
           </View>
         </LinearGradient>
@@ -106,24 +104,18 @@ const DashboardScreen = ({ navigation }: any) => {
             ))}
           </View>
 
-          <Text style={styles.sectionTitle}>Phím tắt công việc</Text>
+          <Text style={styles.sectionTitle}>Lối tắt công việc</Text>
 
           <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => navigation.navigate('Posts')}
-            >
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Posts')}>
               <View style={[styles.actionIcon, { backgroundColor: '#F0FDF4' }]}>
                 <ClipboardCheck color="#22C55E" size={24} />
               </View>
-              <Text style={styles.actionLabel}>Kiểm duyệt tin</Text>
+              <Text style={styles.actionLabel}>Kiểm duyệt bài đăng</Text>
               <ChevronRight color="#CBD5E1" size={18} />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => navigation.navigate('Shops')}
-            >
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Shops')}>
               <View style={[styles.actionIcon, { backgroundColor: '#EFF6FF' }]}>
                 <Store color="#3B82F6" size={24} />
               </View>
@@ -131,14 +123,33 @@ const DashboardScreen = ({ navigation }: any) => {
               <ChevronRight color="#CBD5E1" size={18} />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => navigation.navigate('Reports')}
-            >
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('Reports')}>
               <View style={[styles.actionIcon, { backgroundColor: '#FEF2F2' }]}>
                 <AlertTriangle color="#EF4444" size={24} />
               </View>
               <Text style={styles.actionLabel}>Quản lý báo cáo</Text>
+              <ChevronRight color="#CBD5E1" size={18} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('ModerationStatistics')}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#ECFDF5' }]}>
+                <TrendingUp color="#166534" size={24} />
+              </View>
+              <Text style={styles.actionLabel}>Thống kê kiểm duyệt</Text>
+              <ChevronRight color="#CBD5E1" size={18} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => navigation.navigate('ModerationHistory')}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#F8FAFC' }]}>
+                <History color="#475569" size={24} />
+              </View>
+              <Text style={styles.actionLabel}>Lịch sử thao tác</Text>
               <ChevronRight color="#CBD5E1" size={18} />
             </TouchableOpacity>
           </View>
@@ -150,7 +161,7 @@ const DashboardScreen = ({ navigation }: any) => {
             </View>
             <View style={styles.activityRow}>
               <Clock size={16} color="#64748B" />
-              <Text style={styles.activityText}>Bạn có các mục đang chờ xử lý.</Text>
+              <Text style={styles.activityText}>Bạn đang có các mục chờ xử lý trong hàng đợi moderation.</Text>
             </View>
           </View>
         </View>
@@ -323,6 +334,7 @@ const styles = StyleSheet.create({
   activityText: {
     fontSize: 14,
     color: '#475569',
+    flex: 1,
   },
 });
 

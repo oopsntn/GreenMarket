@@ -8,8 +8,8 @@ async function testBonsaiSystem() {
         console.log("--- Starting Bonsai Product & Attribute Test ---");
 
         // 1. Create a temporary user for authoring
-        const { users } = await import("../models/schema/users.ts");
-        const { db } = await import("../config/db.ts");
+        const { users } = await import("../models/schema/users");
+        const { db } = await import("../config/db");
         const [user] = await db.insert(users).values({
             userMobile: "0999888777",
             userDisplayName: "Admin Test User",

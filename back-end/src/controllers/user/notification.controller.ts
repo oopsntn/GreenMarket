@@ -1,6 +1,6 @@
 import { Response } from "express";
-import { AuthRequest } from "../../dtos/auth.ts";
-import { notificationService } from "../../services/notification.service.ts";
+import { AuthRequest } from "../../dtos/auth";
+import { notificationService } from "../../services/notification.service";
 
 export const getMyNotifications = async (req: AuthRequest, res: Response) => {
   try {

@@ -1,5 +1,5 @@
-import { db } from "../config/db.ts";
-import { placementSlots } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { placementSlots } from "../models/schema/index";
 
 export type AdminPlacementSlotLabel = string;
 
