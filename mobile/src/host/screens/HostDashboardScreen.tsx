@@ -222,7 +222,6 @@ const HostDashboardScreen = () => {
             <View>
               <Text style={styles.greeting}>Xin chào,</Text>
               <Text style={styles.userName}>{user?.userDisplayName || 'Host'}</Text>
-              <Text style={styles.subTitle}>Theo dõi hiệu suất và thu nhập nội dung</Text>
             </View>
           </View>
 
@@ -258,32 +257,6 @@ const HostDashboardScreen = () => {
               icon={CircleDollarSign}
               color="#9333EA"
             />
-          </View>
-
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => navigation.navigate('CreateContent')}
-            >
-              <Megaphone size={18} color="#166534" />
-              <Text style={styles.actionText}>Tạo nội dung</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => navigation.navigate('Earnings')}
-            >
-              <Wallet size={18} color="#166534" />
-              <Text style={styles.actionText}>Thu nhập</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => navigation.navigate('Earnings')}
-            >
-              <BarChart3 size={18} color="#166534" />
-              <Text style={styles.actionText}>Phân tích</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>

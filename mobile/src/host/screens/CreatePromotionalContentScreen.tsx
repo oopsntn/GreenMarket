@@ -343,7 +343,7 @@ const CreatePromotionalContentScreen = () => {
       >
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-            <ArrowLeft color="#0F172A" size={22} />
+            <ArrowLeft color="#FFFFFF" size={22} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{isEditMode ? 'Chỉnh sửa tin tức' : 'Tạo nội dung quảng bá'}</Text>
           <View style={{ width: 38 }} />
@@ -536,12 +536,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#2e7d32',
     paddingHorizontal: 16,
     paddingTop: 14 + STATUS_BAR_OFFSET,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#2e7d32',
   },
   backBtn: {
     width: 38,
@@ -549,12 +549,12 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#FFFFFF',
   },
   scroll: {
     padding: 16,

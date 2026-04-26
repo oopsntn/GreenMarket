@@ -163,10 +163,16 @@ export const getHostEarnings = async (
     await hostIncomePolicyService.syncForUser(userId);
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
 
+    const earningsWhereClause = and(
+      eq(ledgers.ledgerUserId, userId),
+      eq(ledgers.ledgerType, "earning"),
+      eq(ledgers.ledgerDirection, "CREDIT"),
+    );
+
     const rows = await db
       .select()
       .from(ledgers)
-      .where(eq(ledgers.ledgerUserId, userId))
+      .where(earningsWhereClause)
       .orderBy(desc(ledgers.ledgerCreatedAt), desc(ledgers.ledgerId))
       .limit(limit)
       .offset(offset);
@@ -174,7 +180,7 @@ export const getHostEarnings = async (
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(ledgers)
-      .where(eq(ledgers.ledgerUserId, userId));
+      .where(earningsWhereClause);
 
     res.json({
       data: rows,
