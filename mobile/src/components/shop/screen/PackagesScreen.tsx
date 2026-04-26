@@ -57,7 +57,7 @@ const PackagesScreen = () => {
                     }
                 } catch (error) {
                     console.error('Error fetching packages info:', error);
-                    CustomAlert('Lỗi', 'Không thể tải thông tin các gói.');
+                    CustomAlert('Thông báo', 'Không thể tải thông tin các gói.');
                 } finally {
                     setLoading(false);
                 }
@@ -84,7 +84,7 @@ const PackagesScreen = () => {
 
     const handleOpenPayment = async (paymentUrl?: string) => {
         if (!paymentUrl) {
-            CustomAlert('Lỗi', 'Không tạo được liên kết thanh toán.');
+            CustomAlert('Thông báo', 'Không tạo được liên kết thanh toán.');
             return;
         }
 
@@ -98,7 +98,7 @@ const PackagesScreen = () => {
             const res = await paymentService.buyShopVipPackage();
             await handleOpenPayment(res.paymentUrl);
         } catch (error: any) {
-            CustomAlert('Lỗi', error?.response?.data?.error || 'Đã xảy ra lỗi khi tạo thanh toán VIP.');
+            CustomAlert('Thông báo', error?.response?.data?.error || 'Đã xảy ra lỗi khi tạo thanh toán VIP.');
         } finally {
             setProcessing(false);
         }
@@ -110,7 +110,7 @@ const PackagesScreen = () => {
             const res = await paymentService.buyPersonalPackage();
             await handleOpenPayment(res.paymentUrl);
         } catch (error: any) {
-            CustomAlert('Lỗi', error?.response?.data?.error || 'Đã xảy ra lỗi khi tạo thanh toán gói cá nhân.');
+            CustomAlert('Thông báo', error?.response?.data?.error || 'Đã xảy ra lỗi khi tạo thanh toán gói cá nhân.');
         } finally {
             setProcessing(false);
         }
