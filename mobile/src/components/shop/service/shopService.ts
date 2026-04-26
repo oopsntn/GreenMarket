@@ -112,6 +112,36 @@ export interface ShopDashboardResponse {
     recentPayments?: ShopDashboardPayment[];
 }
 
+const normalizeDashboardPayment = (item: any): ShopDashboardPayment => {
+    const amountValue = item?.amount ?? item?.paymentTxnAmount ?? item?.transactionAmount ?? 0
+
+    return {
+        paymentId: item?.paymentId ?? item?.paymentTxnId ?? item?.transactionId,
+        paymentStatus: item?.paymentStatus ?? item?.paymentTxnStatus ?? item?.status,
+        amount: Number(amountValue),
+        createdAt: item?.createdAt ?? item?.paymentTxnCreatedAt ?? item?.transactionCreatedAt,
+        updatedAt: item?.updatedAt ?? item?.paymentTxnUpdatedAt ?? item?.transactionUpdatedAt,
+        packageTitle: item?.packageTitle,
+        promotionPackageTitle: item?.promotionPackageTitle,
+        postTitle: item?.postTitle,
+        orderId: item?.orderId ?? item?.paymentTxnProviderTxnId,
+        transactionId: item?.transactionId ?? item?.paymentTxnProviderTxnId,
+    }
+}
+
+const normalizeDashboardResponse = (response: any): ShopDashboardResponse => {
+    const recentPaymentsRaw = Array.isArray(response?.recentPayments) ? response.recentPayments : []
+    const recentPayments = recentPaymentsRaw.map(normalizeDashboardPayment)
+
+    console.log('[ShopDashboard] Raw recent payments', recentPaymentsRaw)
+    console.log('[ShopDashboard] Normalized recent payments', recentPayments)
+
+    return {
+        ...response,
+        recentPayments,
+    }
+}
+
 const normalizeShopCoordinates = (shop: ShopDetail | null) => {
     if (!shop) return null
 
@@ -203,7 +233,7 @@ export const ShopService = {
 
     getDashboard: async (): Promise<ShopDashboardResponse> => {
         const response = await api.get('/shops/dashboard')
-        return response.data
+        return normalizeDashboardResponse(response.data)
     },
 
     createShop: async (data: ShopPayload) => {

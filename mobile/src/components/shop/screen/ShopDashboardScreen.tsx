@@ -45,6 +45,11 @@ const ShopDashboardScreen = () => {
     const recentPayments = Array.isArray(dashboard?.recentPayments) ? dashboard?.recentPayments : []
     const shop = dashboard?.shop
 
+    const formatCurrency = (value?: number | string) => {
+        const amount = Number(value ?? 0)
+        return `${new Intl.NumberFormat('vi-VN').format(Number.isFinite(amount) ? amount : 0)}đ`
+    }
+
     const statCards = [
         { label: 'Tổng tin', value: summary.totalPosts ?? 0, icon: <FileText size={18} color="#047857" /> },
         { label: 'Tin đã duyệt', value: summary.approvedPosts ?? 0, icon: <Store size={18} color="#047857" /> },
@@ -119,7 +124,7 @@ const ShopDashboardScreen = () => {
 
             <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.amountText}>
-                    {new Intl.NumberFormat('en-US').format(Number(item.amount || 0))} VND
+                    {formatCurrency(item.amount)}
                 </Text>
                 <Text style={styles.paymentStatus}>{item.paymentStatus || 'Chờ xử lý'}</Text>
             </View>
@@ -515,3 +520,5 @@ const styles = StyleSheet.create({
 })
 
 export default ShopDashboardScreen
+
+
