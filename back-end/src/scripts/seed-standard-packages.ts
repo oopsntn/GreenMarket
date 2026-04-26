@@ -1,8 +1,8 @@
-import { db } from "../config/db.ts";
-import { placementSlots, promotionPackages, promotionPackagePrices } from "../models/schema/index.ts";
-import { SHOP_REGISTRATION_SLOT_CODE, PERSONAL_PLAN_SLOT_CODE } from "../constants/promotion.ts";
+import { db } from "../config/db";
+import { placementSlots, promotionPackages, promotionPackagePrices } from "../models/schema/index";
+import { SHOP_REGISTRATION_SLOT_CODE, PERSONAL_PLAN_SLOT_CODE } from "../constants/promotion";
 import { eq } from "drizzle-orm";
-import { readSettingNumber } from "../controllers/user/pricing-config.controller.ts";
+import { readSettingNumber } from "../controllers/user/pricing-config.controller";
 
 async function seed() {
   console.log("--- Seeding Standard Packages ---");

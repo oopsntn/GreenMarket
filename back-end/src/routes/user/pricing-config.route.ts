@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getPricingConfig } from "../../controllers/user/pricing-config.controller.ts";
+import { getPricingConfig } from "../../controllers/user/pricing-config.controller";
 
 const router = Router();
 

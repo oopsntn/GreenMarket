@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Card from '../../Reused/Card/Card';
 import Input from '../../Reused/Input/Input';
@@ -195,4 +195,3 @@ const styles = StyleSheet.create({
 })
 
 export default EditPostModal
-

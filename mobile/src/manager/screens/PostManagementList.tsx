@@ -1,18 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
+  ActivityIndicator,
   FlatList,
-  TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Check, X, Clock, ChevronRight, CheckCircle2 } from 'lucide-react-native';
+import { Check, CheckCircle2, ChevronRight, Clock, X } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
 import managerService, { PostModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+
+const priorityMap: Record<string, string> = {
+  low: 'Thấp',
+  medium: 'Trung bình',
+  high: 'Cao',
+  critical: 'Khẩn cấp',
+};
 
 const PostManagementList = ({ navigation }: any) => {
   const [posts, setPosts] = useState<PostModerationData[]>([]);
@@ -31,14 +38,26 @@ const PostManagementList = ({ navigation }: any) => {
       setPosts(data.filter((p) => p.postStatus === 'pending'));
     } catch (error) {
       console.error(error);
-      CustomAlert('Lỗi', 'Không thể tải danh sách tin chờ duyệt.');
+      const status =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as any).response?.status === 'number'
+          ? (error as any).response.status
+          : null;
+      CustomAlert(
+        'Lỗi',
+        status
+          ? `Không thể tải danh sách bài đăng chờ duyệt. (HTTP ${status})`
+          : 'Không thể tải danh sách bài đăng chờ duyệt.',
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleApprove = (id: number) => {
-    CustomAlert('Duyệt tin', 'Bạn có muốn duyệt tin này không?', [
+    CustomAlert('Duyệt bài đăng', 'Bạn có muốn duyệt bài đăng này không?', [
       { text: 'Hủy', style: 'cancel' },
       {
         text: 'Duyệt',
@@ -46,11 +65,11 @@ const PostManagementList = ({ navigation }: any) => {
           try {
             await managerService.updatePostStatus(id, 'approved');
             setPosts((current) => current.filter((p) => p.postId !== id));
-            CustomAlert('Thành công', 'Tin đăng đã được duyệt.');
+            CustomAlert('Thành công', 'Bài đăng đã được duyệt.');
           } catch (error) {
-            CustomAlert('Lỗi', 'Không thể duyệt tin này.');
+            CustomAlert('Lỗi', 'Không thể duyệt bài đăng này.');
           }
-        }
+        },
       },
     ]);
   };
@@ -66,9 +85,9 @@ const PostManagementList = ({ navigation }: any) => {
     try {
       await managerService.updatePostStatus(selectedPost.postId, 'rejected', reason);
       setPosts((current) => current.filter((p) => p.postId !== selectedPost.postId));
-      CustomAlert('Thành công', `Tin đăng "${selectedPost.postTitle}" đã bị từ chối.`);
+      CustomAlert('Thành công', `Bài đăng "${selectedPost.postTitle}" đã bị từ chối.`);
     } catch (error) {
-      CustomAlert('Lỗi', 'Không thể từ chối tin này.');
+      CustomAlert('Lỗi', 'Không thể từ chối bài đăng này.');
     }
   };
 
@@ -85,11 +104,13 @@ const PostManagementList = ({ navigation }: any) => {
               <Clock size={12} color="#D97706" />
               <Text style={styles.pendingText}>Chờ duyệt</Text>
             </View>
-            <Text style={styles.timeText}>{item.postCreatedAt ? new Date(item.postCreatedAt).toLocaleDateString() : 'No date'}</Text>
+            <Text style={styles.timeText}>
+              {item.postCreatedAt ? new Date(item.postCreatedAt).toLocaleDateString('vi-VN') : 'Không có ngày'}
+            </Text>
           </View>
           <Text style={styles.postTitle} numberOfLines={2}>{item.postTitle}</Text>
           <Text style={styles.metaText}>{item.authorName || item.summary || 'Không có thông tin tác giả'}</Text>
-          <Text style={styles.priorityText}>Độ ưu tiên: {item.priority}</Text>
+          <Text style={styles.priorityText}>Độ ưu tiên: {priorityMap[item.priority] || item.priority}</Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
       </View>
@@ -112,7 +133,7 @@ const PostManagementList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.title}>Kiểm duyệt tin đăng</Text>
+        <Text style={styles.title}>Kiểm duyệt bài đăng</Text>
         <TouchableOpacity onPress={fetchPosts} style={styles.iconCircle}>
           <Clock size={22} color="#64748B" />
         </TouchableOpacity>
@@ -134,7 +155,7 @@ const PostManagementList = ({ navigation }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#CBD5E1" strokeWidth={1} />
-              <Text style={styles.emptyText}>Tuyệt vời! Không có tin nào chờ duyệt.</Text>
+              <Text style={styles.emptyText}>Không có bài đăng nào đang chờ duyệt.</Text>
             </View>
           }
         />
@@ -145,8 +166,8 @@ const PostManagementList = ({ navigation }: any) => {
         onClose={() => setRejectModalVisible(false)}
         onSubmit={onSubmitReject}
         title="Lý do từ chối"
-        placeholder="Giải thích lý do từ chối tin đăng này..."
-        confirmLabel="Từ chối tin"
+        placeholder="Giải thích lý do từ chối bài đăng này..."
+        confirmLabel="Từ chối bài"
       />
     </SafeAreaView>
   );
@@ -207,7 +228,7 @@ const styles = StyleSheet.create({
   timeText: { fontSize: 11, color: '#94A3B8' },
   postTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B', marginBottom: 6 },
   metaText: { fontSize: 13, color: '#64748B', marginBottom: 4 },
-  priorityText: { fontSize: 12, color: '#475569', textTransform: 'capitalize' },
+  priorityText: { fontSize: 12, color: '#475569' },
   cardActions: {
     flexDirection: 'row',
     borderTopWidth: 1,

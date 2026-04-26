@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
+  ActivityIndicator,
   FlatList,
-  TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Flag, User, Calendar, ChevronRight, CheckCircle2 } from 'lucide-react-native';
+import { Calendar, CheckCircle2, ChevronRight, Flag, User } from 'lucide-react-native';
 import managerService, { ReportModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+
+const severityColor = (value?: string) =>
+  value === 'high' || value === 'critical' ? '#EF4444' : '#3B82F6';
 
 const ReportManagementList = ({ navigation }: any) => {
   const [reports, setReports] = useState<ReportModerationData[]>([]);
@@ -41,14 +44,14 @@ const ReportManagementList = ({ navigation }: any) => {
       activeOpacity={0.7}
     >
       <View style={styles.cardHeader}>
-        <View style={[styles.priorityIndicator, { backgroundColor: item.severity === 'high' || item.severity === 'critical' ? '#EF4444' : '#3B82F6' }]} />
+        <View style={[styles.priorityIndicator, { backgroundColor: severityColor(item.severity) }]} />
         <View style={styles.reportInfo}>
           <View style={styles.reporteeRow}>
             <User size={14} color="#64748B" />
             <Text style={styles.reporteeName}>{item.reporterDisplayName || 'Người báo cáo không xác định'}</Text>
           </View>
           <Text style={styles.targetName} numberOfLines={1}>
-            {item.postTitle ? `Tin: ${item.postTitle}` : item.shopName ? `Cửa hàng: ${item.shopName}` : `Báo cáo #${item.reportId}`}
+            {item.postTitle ? `Bài đăng: ${item.postTitle}` : item.shopName ? `Cửa hàng: ${item.shopName}` : `Báo cáo #${item.reportId}`}
           </Text>
         </View>
         <ChevronRight color="#CBD5E1" size={20} />
@@ -56,16 +59,23 @@ const ReportManagementList = ({ navigation }: any) => {
 
       <View style={styles.reasonContainer}>
         <Flag size={14} color="#EF4444" strokeWidth={2} />
-        <Text style={styles.reasonText} numberOfLines={2}>{item.reportReason || item.reportReasonCode || 'Không có lý do'}</Text>
+        <Text style={styles.reasonText} numberOfLines={2}>
+          {item.reportReason || item.reportReasonCode || 'Không có lý do'}
+        </Text>
       </View>
 
       <View style={styles.cardFooter}>
         <View style={styles.timeRow}>
           <Calendar size={14} color="#94A3B8" />
-          <Text style={styles.timeText}>{item.reportCreatedAt ? new Date(item.reportCreatedAt).toLocaleDateString() : 'Không có ngày'}</Text>
+          <Text style={styles.timeText}>
+            {item.reportCreatedAt ? new Date(item.reportCreatedAt).toLocaleDateString('vi-VN') : 'Không có ngày'}
+          </Text>
         </View>
-        <TouchableOpacity style={styles.resolveBtn} onPress={() => navigation.navigate('ReportManagementDetail', { reportId: item.reportId })}>
-          <Text style={styles.resolveBtnText}>Xem ngay</Text>
+        <TouchableOpacity
+          style={styles.resolveBtn}
+          onPress={() => navigation.navigate('ReportManagementDetail', { reportId: item.reportId })}
+        >
+          <Text style={styles.resolveBtnText}>Xem chi tiết</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>

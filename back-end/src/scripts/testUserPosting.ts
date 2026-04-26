@@ -1,7 +1,7 @@
-import { db } from "../config/db.ts";
-import { users, categories, posts, shops } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { users, categories, posts, shops } from "../models/schema/index";
 import { eq } from "drizzle-orm";
-import { slugify } from "../utils/slugify.ts";
+import { slugify } from "../utils/slugify";
 
 async function testUserPosting() {
     console.log("--- Starting User Posting Integration Test ---");

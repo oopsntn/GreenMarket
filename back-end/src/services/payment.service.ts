@@ -1,5 +1,5 @@
 import { and, desc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
-import { db } from "../config/db.ts";
+import { db } from "../config/db";
 import {
   transactions,
   type Transaction,
@@ -10,7 +10,7 @@ import {
   promotionPackages,
   shops,
 } from "../models/schema/index.ts";
-import { parseId } from "../utils/parseId.ts";
+import { parseId } from "../utils/parseId";
 import {
   createVNPayPaymentRequest,
   validateVNPayConfig,
@@ -23,9 +23,9 @@ import {
   SHOP_REGISTRATION_SLOT_CODE,
   PERSONAL_PLAN_SLOT_CODE,
 } from "../constants/promotion.ts";
-import { readSettingNumber } from "../controllers/user/pricing-config.controller.ts";
-import { postingPolicyService } from "./posting-policy.service.ts";
-import { notificationService } from "./notification.service.ts";
+import { readSettingNumber } from "../controllers/user/pricing-config.controller";
+import { postingPolicyService } from "./posting-policy.service";
+import { notificationService } from "./notification.service";
 
 export class PaymentServiceError extends Error {
   statusCode: number;
@@ -599,7 +599,7 @@ const findPublishedPackageBySlotCode = async (slotCode: string) => {
 };
 
 export const paymentService = {
-  async createShopPaymentIntent(userId: number, ipAddr: string): Promise<{ paymentUrl: string }> {
+  async createShopPaymentIntent(userId: number, ipAddr: string, platform: "web" | "mobile" = "web"): Promise<{ paymentUrl: string }> {
     const configCheck = validateVNPayConfig();
     if (!configCheck.isValid) {
       throw new PaymentServiceError(
@@ -626,7 +626,7 @@ export const paymentService = {
     const orderId = createOrderId();
     const orderInfo = `PayShopReg${userId}`;
 
-    const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr);
+    const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr, platform);
 
     await db.insert(transactions).values({
       transactionUserId: userId,
@@ -643,7 +643,7 @@ export const paymentService = {
     return { paymentUrl: payUrl };
   },
 
-  async createPersonalPackagePaymentIntent(userId: number, ipAddr: string): Promise<{ paymentUrl: string }> {
+  async createPersonalPackagePaymentIntent(userId: number, ipAddr: string, platform: "web" | "mobile" = "web"): Promise<{ paymentUrl: string }> {
     const configCheck = validateVNPayConfig();
     if (!configCheck.isValid) {
       throw new PaymentServiceError(
@@ -671,7 +671,7 @@ export const paymentService = {
     const orderId = createOrderId();
     const orderInfo = `PayPersonalPkg${userId}`;
 
-    const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr);
+    const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr, platform);
 
     await db.insert(transactions).values({
       transactionUserId: userId,
@@ -688,7 +688,7 @@ export const paymentService = {
     return { paymentUrl: payUrl };
   },
 
-  async createShopVipPaymentIntent(userId: number, ipAddr: string): Promise<{ paymentUrl: string }> {
+  async createShopVipPaymentIntent(userId: number, ipAddr: string, platform: "web" | "mobile" = "web"): Promise<{ paymentUrl: string }> {
     const configCheck = validateVNPayConfig();
     if (!configCheck.isValid) {
       throw new PaymentServiceError(
@@ -770,6 +770,7 @@ export const paymentService = {
       orderId,
       orderInfo,
       ipAddr,
+      platform,
     );
 
     await db.insert(transactions).values({
@@ -792,8 +793,9 @@ export const paymentService = {
     postIdRaw: unknown;
     packageIdRaw: unknown;
     ipAddr: string;
+    platform?: "web" | "mobile";
   }): Promise<{ paymentUrl: string }> {
-    const { userId, postIdRaw, packageIdRaw, ipAddr } = params;
+    const { userId, postIdRaw, packageIdRaw, ipAddr, platform = "web" } = params;
 
     const configCheck = validateVNPayConfig();
     if (!configCheck.isValid) {
@@ -988,7 +990,7 @@ export const paymentService = {
     const requestId = orderId;
     const orderInfo = `PayPromotionPkg${pkg.promotionPackageId}Post${parsedPostId}`;
 
-    const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr);
+    const { payUrl } = await createVNPayPaymentRequest(finalAmount, orderId, orderInfo, ipAddr, platform);
 
     await db.insert(transactions).values({
       transactionUserId: userId,

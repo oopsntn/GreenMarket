@@ -68,7 +68,13 @@ export const getHostDashboard = async (
           sql<number>`COALESCE(SUM(${hostContents.hostContentViewCount}), 0)`,
       })
       .from(hostContents)
-      .where(eq(hostContents.hostContentAuthorId, userId));
+      .where(
+        and(
+          eq(hostContents.hostContentAuthorId, userId),
+          inArray(hostContents.hostContentStatus, [...PUBLIC_HOST_CONTENT_STATUSES]),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`,
+        ),
+      );
 
     const [earningSummary] = await db
       .select({

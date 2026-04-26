@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
-import { db } from "../config/db.ts";
-import { notifications } from "../models/schema/notifications.ts";
-import { sendToUser, broadcastToAdmins } from "../config/socket.ts";
+import { db } from "../config/db";
+import { notifications } from "../models/schema/notifications";
+import { sendToUser, broadcastToAdmins } from "../config/socket";
 
 export const notificationService = {
   /**

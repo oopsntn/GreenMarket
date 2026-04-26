@@ -6,6 +6,8 @@ import UserNavigator from "./UserNavigator";
 import ManagerNavigator from "../manager/navigation/ManagerNavigator";
 import SuccessToast from "../components/SuccessToast";
 import CollaboratorNavigator from "@/collaborator/navigation/CollaboratorNavigator";
+import HostNavigator from "../host/navigation/HostNavigator";
+import OperationsNavigator from "../operations/navigation/OperationsNavigator";
 
 const AuthStack = () => {
   const { token, user, loading } = useAuth();
@@ -49,7 +51,13 @@ const AuthStack = () => {
       case "MANAGER":
         return <ManagerNavigator />;
       case "COLLABORATOR":
-        return <CollaboratorNavigator />
+        return <CollaboratorNavigator />;
+      case "OPERATION_STAFF":
+        return <OperationsNavigator />;
+      case "HOST":
+        // HOST is a shop-owner capability, but should not force users into the Host UI on app relaunch.
+        // Keep default user experience and let users enter Host mode explicitly from the Management Center.
+        return <UserNavigator />;
       default:
         return <UserNavigator />;
     }

@@ -1,8 +1,8 @@
 import { Response } from "express";
 import { desc, eq } from "drizzle-orm";
-import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
-import { eventLogs, users } from "../../models/schema/index.ts";
+import { db } from "../../config/db";
+import { AuthRequest } from "../../dtos/auth";
+import { eventLogs, users } from "../../models/schema/index";
 
 type EventLogMeta = {
   action?: string;

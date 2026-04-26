@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, Image, TouchableOpacity } from 'react-native';
+import { ActionSheetIOS, Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import Input from '../../Reused/Input/Input';
 import Button from '../../Reused/Button/Button';
@@ -8,9 +8,11 @@ import CustomAlert from '../../../utils/AlertHelper';
 import { useAuth } from '../../../context/AuthContext';
 import AddressPicker from '../components/AddressPicker';
 import { ProfileService } from '../../profile/service/ProfileService';
+import { postService } from '../../post/service/postService';
 import * as ImagePicker from 'expo-image-picker'
-import { Camera, ImageIcon, Play, Plus, User, X, Phone as PhoneIcon } from 'lucide-react-native';
+import { Camera, ImageIcon, Play, Plus, User, X, Phone as PhoneIcon, ShieldCheck, Mail } from 'lucide-react-native';
 import PhoneManagementModal from '../components/PhoneManagementModal';
+import EmailVerificationModal from '../components/EmailVerificationModal';
 import { resolveImageUrl } from '../../../utils/resolveImageUrl';
 
 const EditShopScreen = ({ route, navigation }: any) => {
@@ -19,6 +21,8 @@ const EditShopScreen = ({ route, navigation }: any) => {
     const [loading, setLoading] = useState(false);
     const [uploadingImage, setUpLoadingImage] = useState(false);
     const [showPhoneModal, setShowPhoneModal] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [shopEmailVerified, setShopEmailVerified] = useState<boolean>(shop?.shopEmailVerified ?? false);
     const [phones, setPhones] = useState<string[]>(
         shop?.phones || (shop?.shopPhone ? String(shop.shopPhone).split('|').map((item: string) => item.trim()).filter(Boolean) : [])
     );
@@ -53,38 +57,99 @@ const EditShopScreen = ({ route, navigation }: any) => {
             return;
         }
 
+        const isGallery = field === 'shopGalleryImages';
+        const isLogo = field === 'shopLogoUrl';
+
         const result = await ImagePicker.launchImageLibraryAsync({
-            allowsEditing: field !== 'shopGalleryImages', // Gallery không cần crop
-            aspect: field === 'shopLogoUrl' ? [1, 1] : [16, 9],
-            selectionLimit: 4, // Chỉ cho phép chọn tối đa 4 ảnh cho gallery
+            allowsEditing: isLogo,                       // crop vuông chỉ cho logo
+            aspect: isLogo ? [1, 1] : undefined,
+            allowsMultipleSelection: isGallery,          // FIX: bật multi-select cho gallery
+            selectionLimit: isGallery ? Math.max(1, 4 - formData.shopGalleryImages.length) : 1,
             quality: 0.7,
         });
 
-        if (!result.canceled) {
+        if (!result.canceled && result.assets?.length) {
             try {
                 setUpLoadingImage(true);
-                const uploadRes = await ProfileService.uploadAvatar(result.assets[0].uri);
-                if (uploadRes?.urls?.[0]) {
-                    const newUrl = uploadRes.urls[0];
-                    // Xử lý riêng cho Gallery (Push vào mảng)
-                    if (field === 'shopGalleryImages') {
+
+                if (isGallery) {
+                    // FIX: upload nhiều ảnh cùng lúc bằng postService.uploadMedia
+                    const uris = result.assets.map((a) => a.uri);
+                    const uploadRes = await postService.uploadMedia(uris);
+                    if (uploadRes?.urls?.length) {
                         setFormData((prev) => ({
                             ...prev,
-                            shopGalleryImages: [...prev.shopGalleryImages, newUrl].slice(0, 4) // Giới hạn 4 ảnh
+                            shopGalleryImages: [...prev.shopGalleryImages, ...uploadRes.urls].slice(0, 4),
                         }));
-                    } else {
-                        // Xử lý cho Logo/Cover (Ghi đè string)
-                        setFormData((prev) => ({ ...prev, [field]: newUrl }));
                     }
-                    return;
+                } else {
+                    // Logo / Cover: upload 1 ảnh
+                    const uploadRes = await ProfileService.uploadAvatar(result.assets[0].uri);
+                    if (uploadRes?.urls?.[0]) {
+                        setFormData((prev) => ({ ...prev, [field]: uploadRes.urls[0] }));
+                    }
                 }
-
             } catch (e) {
                 CustomAlert('Lỗi', 'Không thể tải ảnh lên');
             } finally {
                 setUpLoadingImage(false);
             }
         }
+    };
+
+    const pickGalleryImageFromCamera = async () => {
+        const remaining = 4 - formData.shopGalleryImages.length;
+        if (remaining <= 0) return;
+
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+            CustomAlert('Yêu cầu quyền truy cập', 'Vui lòng cấp quyền truy cập máy ảnh để chụp ảnh');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            quality: 0.7,
+        });
+
+        if (!result.canceled && result.assets?.[0]) {
+            try {
+                setUpLoadingImage(true);
+                const uploadRes = await postService.uploadMedia([result.assets[0].uri]);
+                if (uploadRes?.urls?.[0]) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        shopGalleryImages: [...prev.shopGalleryImages, uploadRes.urls[0]].slice(0, 4),
+                    }));
+                }
+            } catch (e) {
+                CustomAlert('Lỗi', 'Không thể tải ảnh lên');
+            } finally {
+                setUpLoadingImage(false);
+            }
+        }
+    };
+
+    const handlePickGalleryImage = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Hủy', 'Chọn từ thư viện', 'Chụp ảnh'],
+                    cancelButtonIndex: 0,
+                },
+                (index) => {
+                    if (index === 1) pickImage('shopGalleryImages');
+                    if (index === 2) pickGalleryImageFromCamera();
+                }
+            );
+            return;
+        }
+
+        Alert.alert('Chọn ảnh cửa hàng', '', [
+            { text: 'Hủy', style: 'cancel' },
+            { text: 'Chọn từ thư viện', onPress: () => pickImage('shopGalleryImages') },
+            { text: 'Chụp ảnh', onPress: pickGalleryImageFromCamera },
+        ]);
     };
 
     const handleUpdate = async () => {
@@ -188,7 +253,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     {formData.shopGalleryImages.length < 4 && (
                         <TouchableOpacity
                             style={styles.addGalleryBtn}
-                            onPress={() => pickImage('shopGalleryImages')}
+                            onPress={handlePickGalleryImage}
                         >
                             <Plus size={24} color="#94a3b8" />
                         </TouchableOpacity>
@@ -200,13 +265,33 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     onChangeText={(txt) => setFormData({ ...formData, shopName: txt })}
                 />
 
-                <Input
-                    label="Email cửa hàng"
-                    value={formData.shopEmail}
-                    onChangeText={(txt) => setFormData({ ...formData, shopEmail: txt })}
-                    type="email-address"
-                    placeholder="Ví dụ: admin@greenmarket.com"
-                />
+                {/* ─── Email + xác thực ─── */}
+                <Text style={styles.label}>Email cửa hàng</Text>
+                <View style={styles.emailRow}>
+                    <View style={{ flex: 1 }}>
+                        <Input
+                            placeholder="Ví dụ: admin@greenmarket.com"
+                            value={formData.shopEmail}
+                            onChangeText={(txt) => setFormData({ ...formData, shopEmail: txt })}
+                            type="email-address"
+                        />
+                    </View>
+                    <TouchableOpacity
+                        style={[
+                            styles.verifyEmailBtn,
+                            shopEmailVerified ? styles.verifyEmailBtnVerified : styles.verifyEmailBtnPending,
+                        ]}
+                        onPress={() => setShowEmailModal(true)}
+                    >
+                        <ShieldCheck size={16} color={shopEmailVerified ? '#10b981' : '#64748b'} />
+                        <Text style={[
+                            styles.verifyEmailBtnText,
+                            { color: shopEmailVerified ? '#10b981' : '#64748b' },
+                        ]}>
+                            {shopEmailVerified ? 'Đã xác thực' : 'Xác thực'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
 
                 <Input
                     label="Số điện thoại chính"
@@ -216,13 +301,13 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     disabled
                 />
 
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.managePhoneBtn}
                     onPress={() => setShowPhoneModal(true)}
                 >
                     <PhoneIcon size={16} color="#3b82f6" />
                     <Text style={styles.managePhoneText}>
-                        Quản lý các số điện thoại phụ ({phones.length}/3)
+                        Quản lý số điện thoại ({phones.length}/3)
                     </Text>
                 </TouchableOpacity>
 
@@ -239,8 +324,13 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     label="Địa chỉ cửa hàng"
                     address={formData.shopLocation}
                     onAddressChange={(addr) => setFormData({ ...formData, shopLocation: addr })}
-                    onLocationSelect={(addr, lat, lng) => {
-                        setFormData({ ...formData, shopLocation: addr, shopLat: lat, shopLng: lng })
+                    onLocationConfirmed={(data) => {
+                        setFormData(prev => ({
+                            ...prev,
+                            shopLocation: data.fullAddress,
+                            shopLat: data.lat,
+                            shopLng: data.lng,
+                        }))
                     }}
                 />
 
@@ -274,11 +364,27 @@ const EditShopScreen = ({ route, navigation }: any) => {
                 </Button>
             </ScrollView>
 
-            <PhoneManagementModal 
+            <PhoneManagementModal
                 visible={showPhoneModal}
                 onClose={() => setShowPhoneModal(false)}
                 phones={phones}
-                onPhonesChange={setPhones}
+                shopEmail={formData.shopEmail}
+                shopEmailVerified={shopEmailVerified}
+                onPhonesChange={(newPhones) => {
+                    setPhones(newPhones);
+                    // Cập nhật SĐT chính hiển thị
+                    if (newPhones[0]) setFormData(prev => ({ ...prev, shopPhone: newPhones[0] }))
+                }}
+            />
+            <EmailVerificationModal
+                visible={showEmailModal}
+                onClose={() => setShowEmailModal(false)}
+                currentEmail={formData.shopEmail}
+                isVerified={shopEmailVerified}
+                onVerified={(verifiedEmail) => {
+                    setFormData(prev => ({ ...prev, shopEmail: verifiedEmail }));
+                    setShopEmailVerified(true);
+                }}
             />
         </MobileLayout>
     );
@@ -314,7 +420,35 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginLeft: 8,
         fontSize: 14,
-    }
+    },
+    emailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: -8,
+        marginBottom: 8,
+    },
+    verifyEmailBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+    verifyEmailBtnVerified: {
+        backgroundColor: '#f0fdf4',
+        borderColor: '#bbf7d0',
+    },
+    verifyEmailBtnPending: {
+        backgroundColor: '#f8fafc',
+        borderColor: '#e2e8f0',
+    },
+    verifyEmailBtnText: {
+        fontSize: 11,
+        fontWeight: '700',
+    },
 });
 
 export default EditShopScreen;

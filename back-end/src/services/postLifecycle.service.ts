@@ -1,7 +1,7 @@
 import { and, eq, isNull, lte, sql } from "drizzle-orm";
-import { db } from "../config/db.ts";
-import { posts, type Post } from "../models/schema/index.ts";
-import { adminWebSettingsService, type AdminWebSettingsState } from "./adminWebSettings.service.ts";
+import { db } from "../config/db";
+import { posts, type Post } from "../models/schema/index";
+import { adminWebSettingsService, type AdminWebSettingsState } from "./adminWebSettings.service";
 
 const TRASH_META_PREFIX = "__TRASH_META__:";
 

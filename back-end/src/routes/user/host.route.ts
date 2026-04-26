@@ -14,7 +14,7 @@ import {
   getMyFavoriteContents,
   checkIsContentSaved,
 } from "../../controllers/user/host.controller.ts";
-import { verifyToken, requireBusinessRole } from "../../middlewares/authMiddleware.ts";
+import { verifyToken, requireBusinessRole } from "../../middlewares/authMiddleware";
 
 const router = Router();
 

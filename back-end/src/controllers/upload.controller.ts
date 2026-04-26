@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { storageService } from "../services/storage.service.ts";
+import { storageService } from "../services/storage.service";
 
 export const uploadMedia = async (req: Request, res: Response): Promise<void> => {
     try {

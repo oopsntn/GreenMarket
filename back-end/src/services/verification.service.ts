@@ -1,7 +1,7 @@
-import { db } from "../config/db.ts";
-import { verifications } from "../models/schema/verifications.ts";
+import { db } from "../config/db";
+import { verifications } from "../models/schema/verifications";
 import { eq, and, gt, desc } from "drizzle-orm";
-import { emailService } from "./email.service.ts";
+import { emailService } from "./email.service";
 import twilio from "twilio";
 import bcrypt from "bcrypt";
 

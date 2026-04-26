@@ -1,6 +1,6 @@
 import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 import { pgTable, serial, integer, varchar, decimal, timestamp, jsonb, text } from "drizzle-orm/pg-core";
-import { users } from "./users.ts";
+import { users } from "./users";
 
 export const ledgers = pgTable("ledgers", {
     ledgerId: serial("ledger_id").primaryKey(),

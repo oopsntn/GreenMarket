@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
-import { db } from "../config/db.ts";
-import { users, posts, shops, transactions } from "../models/schema/index.ts";
-import { paymentService } from "../services/payment.service.ts";
+import { db } from "../config/db";
+import { users, posts, shops, transactions } from "../models/schema/index";
+import { paymentService } from "../services/payment.service";
 
 async function verifyMigration() {
     console.log("🚀 Starting Post Migration Verification...");

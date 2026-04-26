@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { db } from "../config/db.ts";
+import { db } from "../config/db";
 import { sql } from "drizzle-orm";
 
 async function checkPromotionTable() {

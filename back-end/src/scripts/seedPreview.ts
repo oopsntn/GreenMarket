@@ -1,6 +1,6 @@
-import { db } from "../config/db.ts";
-import { users, categories, posts, shops } from "../models/schema/index.ts";
-import { slugify } from "../utils/slugify.ts";
+import { db } from "../config/db";
+import { users, categories, posts, shops } from "../models/schema/index";
+import { slugify } from "../utils/slugify";
 
 async function seedMarketplace() {
     console.log("--- Seeding Marketplace for Frontend Preview ---");

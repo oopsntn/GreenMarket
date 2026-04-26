@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { adminReportingService } from "../../services/adminReporting.service.ts";
+import { adminReportingService } from "../../services/adminReporting.service";
 
 export const getDashboardOverview = async (
     req: Request<{}, {}, {}, { fromDate?: string; toDate?: string }>,

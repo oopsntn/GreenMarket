@@ -1,8 +1,8 @@
 import { Response, NextFunction, RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { AuthRequest, JWTUserPayload } from "../dtos/auth";
-import { db } from "../config/db.ts";
-import { businessRoles, users, shops } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { businessRoles, users, shops } from "../models/schema/index";
 import { eq, and } from "drizzle-orm";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";

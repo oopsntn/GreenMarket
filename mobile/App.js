@@ -1,14 +1,15 @@
 import React from "react";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView, StyleSheet } from "react-native";
+import { LogBox, SafeAreaView, StyleSheet } from "react-native";
 import { AuthProvider } from "./src/context/AuthContext";
 import RootNavigator from "./src/navigation/AppNavigator";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
+if (__DEV__) {
+  LogBox.ignoreAllLogs(true);
+  console.error = () => {};
+}
 
 export default function App() {
-
-  AsyncStorage.multiRemove(['token', 'user']);
-
   return (
     <AuthProvider>
       <SafeAreaView style={styles.container}>

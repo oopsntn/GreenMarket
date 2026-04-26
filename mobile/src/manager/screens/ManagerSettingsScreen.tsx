@@ -1,27 +1,23 @@
-﻿import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { LogOut, User } from 'lucide-react-native';
+import React from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BarChart3, History, LogOut, User } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import MobileLayout from '../../components/Reused/MobileLayout/MobileLayout';
 
-const ManagerSettingsScreen = () => {
+const ManagerSettingsScreen = ({ navigation }: any) => {
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    Alert.alert(
-      'Đăng xuất',
-      'Bạn có chắc muốn đăng xuất không?',
-      [
-        { text: 'Hủy', onPress: () => {} },
-        {
-          text: 'Đăng xuất',
-          onPress: async () => {
-            await logout();
-          },
-          style: 'destructive',
+    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [
+      { text: 'Hủy', onPress: () => {} },
+      {
+        text: 'Đăng xuất',
+        onPress: async () => {
+          await logout();
         },
-      ]
-    );
+        style: 'destructive',
+      },
+    ]);
   };
 
   return (
@@ -41,21 +37,49 @@ const ManagerSettingsScreen = () => {
 
         <View style={styles.section}>
           <View style={styles.sectionTitle}>
-            <Text style={styles.sectionTitleText}>Account</Text>
+            <Text style={styles.sectionTitleText}>Kiểm duyệt</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('ModerationStatistics')}
+          >
+            <BarChart3 size={20} color="#166534" />
+            <Text style={styles.menuItemText}>Thống kê kiểm duyệt</Text>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemSubtext}>Xem số lượng hàng đợi và khối lượng xử lý</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('ModerationHistory')}
+          >
+            <History size={20} color="#334155" />
+            <Text style={styles.menuItemText}>Lịch sử kiểm duyệt</Text>
+            <View style={styles.menuItemRight}>
+              <Text style={styles.menuItemSubtext}>Theo dõi các thao tác đã thực hiện</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionTitle}>
+            <Text style={styles.sectionTitleText}>Tài khoản</Text>
           </View>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
             <LogOut size={20} color="#ff4d4f" />
-            <Text style={styles.menuItemText}>Sign out</Text>
+            <Text style={styles.menuItemText}>Đăng xuất</Text>
             <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemSubtext}>Your data stays safe</Text>
+              <Text style={styles.menuItemSubtext}>Dữ liệu của bạn vẫn được giữ an toàn</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         <View style={[styles.section, styles.footer]}>
           <Text style={styles.appVersion}>GreenMarket Quản lý v1.0.0</Text>
-          <Text style={styles.copyright}>� 2024 GreenMarket. All rights reserved.</Text>
+          <Text style={styles.copyright}>2024 GreenMarket. All rights reserved.</Text>
         </View>
       </ScrollView>
     </MobileLayout>
@@ -134,10 +158,12 @@ const styles = StyleSheet.create({
   },
   menuItemRight: {
     alignItems: 'flex-end',
+    maxWidth: 140,
   },
   menuItemSubtext: {
     fontSize: 12,
     color: '#9ca3af',
+    textAlign: 'right',
   },
   footer: {
     marginBottom: 32,

@@ -1,5 +1,5 @@
-import { db } from "../config/db.ts";
-import { categories, attributes, categoryAttributes } from "../models/schema/index.ts";
+import { db } from "../config/db";
+import { categories, attributes, categoryAttributes } from "../models/schema/index";
 
 async function seed() {
     console.log("🌱 Seeding sample data...");
