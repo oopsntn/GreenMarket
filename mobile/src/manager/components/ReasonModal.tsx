@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 
 interface ReasonModalProps {
@@ -32,20 +32,19 @@ const ReasonModal: React.FC<ReasonModalProps> = ({
   const [reason, setReason] = useState('');
 
   const handleConfirm = () => {
-    if (reason.trim()) {
-      onSubmit(reason);
-      setReason('');
-      onClose();
-    }
+    if (!reason.trim()) return;
+    onSubmit(reason);
+    setReason('');
+    onClose();
+  };
+
+  const handleClose = () => {
+    setReason('');
+    onClose();
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.centeredView}
@@ -64,10 +63,7 @@ const ReasonModal: React.FC<ReasonModalProps> = ({
           />
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onClose}
-            >
+            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={handleClose}>
               <Text style={styles.cancelButtonText}>Hủy</Text>
             </TouchableOpacity>
 

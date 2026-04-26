@@ -21,6 +21,8 @@ import ShopManagementDetail from '../screens/ShopManagementDetail';
 import ReportManagementList from '../screens/ReportManagementList';
 import ReportManagementDetail from '../screens/ReportManagementDetail';
 import ManagerSettingsScreen from '../screens/ManagerSettingsScreen';
+import ModerationHistoryScreen from '../screens/ModerationHistoryScreen';
+import ModerationStatisticsScreen from '../screens/ModerationStatisticsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -56,7 +58,7 @@ const ManagerTabs = () => {
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ tabBarLabel: 'Tổng quan' }} />
       <Tab.Screen name="Posts" component={PostManagementList} options={{ tabBarLabel: 'Bài đăng' }} />
-      <Tab.Screen name="HostContents" component={HostContentModerationList} options={{ tabBarLabel: 'Host' }} />
+      <Tab.Screen name="HostContents" component={HostContentModerationList} options={{ tabBarLabel: 'Nội dung host' }} />
       <Tab.Screen name="Shops" component={ShopManagementList} options={{ tabBarLabel: 'Cửa hàng' }} />
       <Tab.Screen name="Reports" component={ReportManagementList} options={{ tabBarLabel: 'Báo cáo' }} />
       <Tab.Screen name="Settings" component={ManagerSettingsScreen} options={{ tabBarLabel: 'Cài đặt' }} />
@@ -89,6 +91,16 @@ const ManagerNavigator = () => {
       <Stack.Screen
         name="ReportManagementDetail"
         component={ReportManagementDetail}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="ModerationHistory"
+        component={ModerationHistoryScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="ModerationStatistics"
+        component={ModerationStatisticsScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>

@@ -42,7 +42,7 @@ export const useProfile = () => {
         try {
             const data = await ProfileService.getProfile()
             if (!data) {
-                throw new Error('Profile data is empty')
+                throw new Error('Thông tin hồ sơ trống')
             }
 
             setFormData({
@@ -58,8 +58,8 @@ export const useProfile = () => {
                 shopDescription: shop?.shopDescription || '',
             })
         } catch (error) {
-            console.error('Failed to load profile:', error)
-            Alert.alert('Error', 'Unable to load profile information')
+            console.error('Không thể tải hồ sơ:', error)
+            Alert.alert('Lỗi', 'Không thể tải thông tin hồ sơ')
         } finally {
             setLoading(false)
         }
@@ -85,15 +85,15 @@ export const useProfile = () => {
 
         if (shop) {
             if (!normalizedData.shopName) {
-                Alert.alert('Missing information', 'Shop name is required')
+                Alert.alert('Thông tin bị thiếu', 'Tên cửa hàng là bắt buộc')
                 return
             }
             if (!normalizedData.shopLocation) {
-                Alert.alert('Missing information', 'Shop address is required')
+                Alert.alert('Thông tin bị thiếu', 'Cần có địa chỉ cửa hàng.')
                 return
             }
         } else if (!normalizedData.displayName) {
-            Alert.alert('Missing information', 'Display name is required')
+            Alert.alert('Thông tin bị thiếu', 'Tên hiển thị là bắt buộc')
             return
         }
 
@@ -142,10 +142,10 @@ export const useProfile = () => {
                 }))
             }
 
-            Alert.alert('Success', 'Information updated successfully')
+            Alert.alert('Thành công', 'Thông tin đã được cập nhật thành công.')
         } catch (error) {
             console.error('Failed to save profile:', error)
-            Alert.alert('Error', 'Update failed')
+            Alert.alert('Lỗi', 'Cập nhật thất bại')
         } finally {
             setSaving(false)
         }
