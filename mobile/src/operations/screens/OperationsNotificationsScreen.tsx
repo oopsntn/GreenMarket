@@ -11,10 +11,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { BellRing } from 'lucide-react-native';
 import CustomAlert from '../../utils/AlertHelper';
 import { operationsService, OperationNotification } from '../services/operationsService';
+import { api } from '../../config/api';
 
 type FilterMode = 'all' | 'unread';
 
@@ -34,6 +35,7 @@ const formatDateTime = (value: string | null) => {
 const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const OperationsNotificationsScreen = () => {
+  const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterMode>('all');
@@ -107,7 +109,21 @@ const OperationsNotificationsScreen = () => {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[styles.card, !item.isRead && styles.cardUnread]}
-            onPress={() => CustomAlert(item.title, item.message)}
+            onPress={() => {
+              // Mark as read locally
+              setNotifications((prev) =>
+                prev.map((n) =>
+                  n.notificationId === item.notificationId ? { ...n, isRead: true } : n
+                )
+              );
+              // Mark as read on server
+              api.patch(`/notifications/${item.notificationId}/read`).catch(() => {});
+              // Navigate to TaskDetail if metaData has ticketId
+              const ticketId = (item.metaData as any)?.ticketId;
+              if (ticketId) {
+                navigation.navigate('TaskDetail', { taskId: ticketId });
+              }
+            }}
           >
             <View style={styles.cardTop}>
               <View style={styles.iconWrap}>

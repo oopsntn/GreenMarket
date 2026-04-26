@@ -26,10 +26,10 @@ import {
 type OptionValue<T extends string> = T | 'all';
 
 const STATUS_OPTIONS: Array<{ label: string; value: OptionValue<OperationTaskStatus> }> = [
-  { label: 'All', value: 'all' },
-  { label: 'Open', value: 'open' },
-  { label: 'In progress', value: 'in_progress' },
-  { label: 'Closed', value: 'closed' },
+  { label: 'Tất cả', value: 'all' },
+  { label: 'Mới', value: 'open' },
+  { label: 'Đang xử lý', value: 'in_progress' },
+  { label: 'Đã đóng', value: 'closed' },
 ];
 
 const TYPE_OPTIONS: Array<{ label: string; value: OptionValue<OperationTaskType> }> = [
@@ -79,16 +79,12 @@ const OperationsTasksScreen = () => {
   const [meta, setMeta] = useState<PaginationMeta>(defaultMeta);
 
   const [statusFilter, setStatusFilter] = useState<OptionValue<OperationTaskStatus>>('all');
-  const [typeFilter, setTypeFilter] = useState<OptionValue<OperationTaskType>>('all');
-  const [priorityFilter, setPriorityFilter] = useState<OptionValue<OperationTaskPriority>>('all');
 
   const requestFilters = useMemo(
     () => ({
       status: statusFilter === 'all' ? undefined : statusFilter,
-      type: typeFilter === 'all' ? undefined : typeFilter,
-      priority: priorityFilter === 'all' ? undefined : priorityFilter,
     }),
-    [priorityFilter, statusFilter, typeFilter]
+    [statusFilter]
   );
 
   const fetchTasks = useCallback(
@@ -154,8 +150,8 @@ const OperationsTasksScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.pageTitle}>Assigned Tasks</Text>
-        <Text style={styles.pageSubtitle}>{`${meta.totalItems} task`}</Text>
+        <Text style={styles.pageTitle}>Công việc</Text>
+        <Text style={styles.pageSubtitle}>{`${meta.totalItems} công việc`}</Text>
       </View>
 
       <View style={styles.filtersWrap}>
@@ -167,34 +163,6 @@ const OperationsTasksScreen = () => {
               onPress={() => setStatusFilter(item.value)}
             >
               <Text style={[styles.filterText, statusFilter === item.value && styles.filterTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.filterLine}>
-          {TYPE_OPTIONS.map((item) => (
-            <TouchableOpacity
-              key={`type_${item.value}`}
-              style={[styles.filterBtn, typeFilter === item.value && styles.filterBtnActive]}
-              onPress={() => setTypeFilter(item.value)}
-            >
-              <Text style={[styles.filterText, typeFilter === item.value && styles.filterTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.filterLine}>
-          {PRIORITY_OPTIONS.map((item) => (
-            <TouchableOpacity
-              key={`priority_${item.value}`}
-              style={[styles.filterBtn, priorityFilter === item.value && styles.filterBtnActive]}
-              onPress={() => setPriorityFilter(item.value)}
-            >
-              <Text style={[styles.filterText, priorityFilter === item.value && styles.filterTextActive]}>
                 {item.label}
               </Text>
             </TouchableOpacity>

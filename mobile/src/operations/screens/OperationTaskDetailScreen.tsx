@@ -198,9 +198,9 @@ const OperationTaskDetailScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <ArrowLeft color="#0F172A" size={22} />
+          <ArrowLeft color="#fff" size={22} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Task Detail</Text>
+        <Text style={styles.headerTitle}>Chi tiết công việc</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -209,12 +209,19 @@ const OperationTaskDetailScreen = () => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.card}>
+          <Text style={styles.customerName}>{(detail.task as any).customerName || 'Khách hàng'}</Text>
+          <Text style={styles.taskMeta}>{formatDateTime(detail.task.createdAt)}</Text>
+        </View>
+
+        <View style={styles.card}>
           <Text style={styles.taskTitle}>{detail.task.taskTitle}</Text>
-          <Text style={styles.taskMeta}>{`${detail.task.taskType} • ${detail.task.taskPriority}`}</Text>
-          <Text style={styles.taskMeta}>{`Task ID: ${detail.task.taskId}`}</Text>
-          <Text style={styles.taskMeta}>{`Target ID: ${detail.task.relatedTargetId || '-'}`}</Text>
-          <Text style={styles.taskMeta}>{`Created: ${formatDateTime(detail.task.createdAt)}`}</Text>
-          <Text style={styles.taskMeta}>{`Updated: ${formatDateTime(detail.task.updatedAt)}`}</Text>
+          <Text style={styles.taskMeta}>{`Trạng thái: ${detail.task.taskStatus}`}</Text>
+          <Text style={styles.taskMeta}>{`Mức ưu tiên: ${detail.task.taskPriority}`}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Nội dung từ khách hàng</Text>
+          <Text style={styles.taskNote}>{detail.task.taskNote || 'Không có nội dung.'}</Text>
         </View>
 
         <View style={styles.card}>
@@ -419,9 +426,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   header: {
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    backgroundColor: '#2e7d32',
     paddingHorizontal: 16,
     paddingTop: 12 + STATUS_BAR_OFFSET,
     paddingBottom: 12,
@@ -433,12 +438,12 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#0F172A',
+    color: '#fff',
     fontSize: 17,
     fontWeight: '800',
   },
@@ -453,6 +458,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: 'white',
     padding: 12,
+  },
+  customerName: {
+    color: '#0F172A',
+    fontSize: 16,
+    fontWeight: '900',
   },
   taskTitle: {
     color: '#0F172A',
@@ -469,6 +479,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     marginBottom: 8,
+  },
+  taskNote: {
+    color: '#334155',
+    fontSize: 13,
+    lineHeight: 20,
   },
   fieldLabel: {
     color: '#334155',

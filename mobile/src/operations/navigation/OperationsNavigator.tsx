@@ -13,8 +13,8 @@ import HomeScreen from '../../components/Home/screen/HomeScreen';
 import PostDetailScreen from '../../components/post/screen/PostDetailScreen';
 import PublicShopDetailScreen from '../../components/shop/screen/PublicShopDetailScreen';
 import BrowseShopsScreen from '../../components/shop/screen/BrowseShopsScreen';
-import UserSettingsScreen from '../../components/settings/screen/UserSettingsScreen';
-import ProfileScreen from '../../components/profile/screen/ProfileScreen';
+import OperationsSettingsScreen from '../screens/OperationsSettingsScreen';
+import OperationsProfileScreen from '../screens/OperationsProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -22,8 +22,8 @@ const Stack = createNativeStackNavigator();
 const OperationsSettingsStack = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="SettingsTab" component={UserSettingsScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="SettingsTab" component={OperationsSettingsScreen} />
+      <Stack.Screen name="Profile" component={OperationsProfileScreen} />
     </Stack.Navigator>
   );
 };

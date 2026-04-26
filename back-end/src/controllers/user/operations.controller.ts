@@ -149,8 +149,11 @@ export const getOperationTaskDetail = async (req: AuthRequest, res: Response): P
         createdAt: operationTasks.ticketCreatedAt,
         updatedAt: operationTasks.ticketUpdatedAt,
         assigneeId: operationTasks.ticketAssigneeId,
+        creatorId: operationTasks.ticketCreatorId,
+        customerName: users.userDisplayName,
       })
       .from(operationTasks)
+      .leftJoin(users, eq(operationTasks.ticketCreatorId, users.userId))
       .where(and(eq(operationTasks.ticketId, taskId), eq(operationTasks.ticketAssigneeId, userId)))
       .limit(1);
 
