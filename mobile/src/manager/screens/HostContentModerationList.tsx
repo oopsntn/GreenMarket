@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Check, ChevronRight, Clock, X, CheckCircle2 } from 'lucide-react-native';
+import { Check, CheckCircle2, ChevronRight, Clock, X } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
 import managerService, { HostContentModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
@@ -63,7 +63,7 @@ const HostContentModerationList = ({ navigation }: any) => {
   };
 
   const handleApprove = (id: number) => {
-    CustomAlert('Duyệt nội dung', 'Bạn có muốn duyệt nội dung này không?', [
+    CustomAlert('Duyệt nội dung host', 'Bạn có muốn duyệt nội dung này không?', [
       { text: 'Hủy', style: 'cancel' },
       {
         text: 'Duyệt',
@@ -129,7 +129,7 @@ const HostContentModerationList = ({ navigation }: any) => {
               <Text style={styles.pendingText}>Chờ duyệt</Text>
             </View>
             <Text style={styles.timeText}>
-              {item.hostContentCreatedAt ? new Date(item.hostContentCreatedAt).toLocaleDateString() : 'No date'}
+              {item.hostContentCreatedAt ? new Date(item.hostContentCreatedAt).toLocaleDateString('vi-VN') : 'Không có ngày'}
             </Text>
           </View>
           <Text style={styles.title} numberOfLines={2}>{item.hostContentTitle}</Text>
@@ -158,7 +158,7 @@ const HostContentModerationList = ({ navigation }: any) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Duyệt nội dung Host</Text>
+        <Text style={styles.headerTitle}>Duyệt nội dung host</Text>
         <TouchableOpacity onPress={fetchItems} style={styles.iconCircle}>
           <Clock size={22} color="#64748B" />
         </TouchableOpacity>
@@ -180,7 +180,7 @@ const HostContentModerationList = ({ navigation }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <CheckCircle2 size={64} color="#CBD5E1" strokeWidth={1} />
-              <Text style={styles.emptyText}>Tuyệt vời! Không có nội dung host nào chờ duyệt.</Text>
+              <Text style={styles.emptyText}>Không có nội dung host nào đang chờ duyệt.</Text>
             </View>
           }
         />
@@ -279,4 +279,3 @@ const styles = StyleSheet.create({
 });
 
 export default HostContentModerationList;
-

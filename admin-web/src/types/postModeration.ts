@@ -36,6 +36,12 @@ export type ApiModerationPostDetailResponse = ApiModerationPostResponse & {
     attributeId?: number | null;
     attributeValue?: string | null;
   }>;
+  templateAudit?: {
+    templateId?: number | null;
+    templateName?: string | null;
+    templateType?: string | null;
+    finalMessage?: string | null;
+  } | null;
 };
 
 export type PostModerationAttribute = {
@@ -62,4 +68,10 @@ export type PostModerationItem = {
   rejectedReason: string;
   images: string[];
   attributes: PostModerationAttribute[];
+  templateAudit: {
+    templateId: number | null;
+    templateName: string | null;
+    templateType: string | null;
+    finalMessage: string | null;
+  } | null;
 };

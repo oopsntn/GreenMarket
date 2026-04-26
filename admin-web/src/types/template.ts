@@ -41,24 +41,3 @@ export type TemplateListResponse = {
   page: number;
   pageSize: number;
 };
-
-export type TemplateBuilderFieldType = "text" | "number" | "select";
-
-export type TemplateBuilderField = {
-  id: string;
-  type: TemplateBuilderFieldType;
-  label: string;
-  placeholder: string;
-  helperText: string;
-  required: boolean;
-  options: string[];
-};
-
-export type TemplateBuilderPreset = {
-  templateName: string;
-  categoryName: string;
-  usageNote: string;
-  previewTitlePlaceholder: string;
-  submitLabel: string;
-  fields: TemplateBuilderField[];
-};

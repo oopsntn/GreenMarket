@@ -1,102 +1,154 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Dimensions } from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { MapPin, Mail, Phone, Briefcase, Award, Star, Info, MailPlus } from 'lucide-react-native';
-import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
-import { CollaboratorService } from '../../../collaborator/services/collaboratorService';
-import { ShopService } from '../../shop/service/shopService';
-import CustomAlert from '../../../utils/AlertHelper';
-import Button from '../../Reused/Button/Button';
-import { resolveImageUrl } from '../../../utils/resolveImageUrl';
+import React, { useCallback, useState } from 'react'
+import {
+    Dimensions,
+    Image,
+    Linking,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native'
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
+import { Award, Briefcase, Info, Mail, MailPlus, MapPin, MessageCircle, Phone } from 'lucide-react-native'
+import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
+import { CollaboratorService } from '../../../collaborator/services/collaboratorService'
+import { ShopService } from '../../shop/service/shopService'
+import CustomAlert from '../../../utils/AlertHelper'
+import Button from '../../Reused/Button/Button'
+import { logMediaResolveError, resolveImageUrl } from '../../../utils/resolveImageUrl'
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get('window')
 
 const PublicCollaboratorDetailScreen = () => {
-    const navigation = useNavigation<any>();
-    const route = useRoute<any>();
-    const collaboratorId = route.params?.id;
+    const navigation = useNavigation<any>()
+    const route = useRoute<any>()
+    const collaboratorId = route.params?.id
 
-    const [profile, setProfile] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [inviting, setInviting] = useState(false);
+    const [profile, setProfile] = useState<any>(null)
+    const [loading, setLoading] = useState(true)
+    const [inviting, setInviting] = useState(false)
 
     const fetchDetail = async () => {
         try {
-            const data = await CollaboratorService.getPublicCollaboratorDetail(collaboratorId);
-            setProfile(data);
+            const data = await CollaboratorService.getPublicCollaboratorDetail(collaboratorId)
+            setProfile(data)
         } catch (error: any) {
-            CustomAlert('Lỗi', 'Không thể tải thông tin cộng tác viên');
-            navigation.goBack();
+            CustomAlert('Lỗi', 'Không thể tải thông tin cộng tác viên')
+            navigation.goBack()
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
 
     useFocusEffect(
         useCallback(() => {
             if (collaboratorId) {
-                fetchDetail();
+                fetchDetail()
             }
-        }, [collaboratorId])
-    );
+        }, [collaboratorId]),
+    )
 
     const handleInvite = async () => {
-        if (!profile?.userId) return;
-        
-        setInviting(true);
+        if (!profile?.userId) return
+
+        setInviting(true)
         try {
-            // Need an identifier to invite, we'll use userId by sending it to API
-            await ShopService.inviteCollaborator(profile.userId.toString());
-            CustomAlert('Thành công', 'Đã gửi lời mời cộng tác thành công');
-            fetchDetail(); // Refresh to update relationship status
+            await ShopService.inviteCollaborator(profile.userId.toString())
+            CustomAlert('Thành công', 'Đã gửi lời mời cộng tác thành công')
+            fetchDetail()
         } catch (error: any) {
-            CustomAlert('Lỗi', error?.response?.data?.error || 'Không thể gửi lời mời');
+            CustomAlert('Lỗi', error?.response?.data?.error || 'Không thể gửi lời mời')
         } finally {
-            setInviting(false);
+            setInviting(false)
         }
-    };
+    }
+
+    const openZalo = async () => {
+        if (!profile?.mobile) {
+            CustomAlert('Thông báo', 'Cộng tác viên này chưa có số điện thoại để mở Zalo.')
+            return
+        }
+
+        try {
+            await Linking.openURL(`https://zalo.me/${String(profile.mobile).replace(/\s+/g, '')}`)
+        } catch (error) {
+            console.error('Failed to open collaborator zalo:', error)
+            CustomAlert('Lỗi', 'Không thể mở Zalo lúc này.')
+        }
+    }
+
+    const makeCall = async () => {
+        if (!profile?.mobile) {
+            CustomAlert('Thông báo', 'Cộng tác viên này chưa có số điện thoại liên hệ.')
+            return
+        }
+
+        try {
+            await Linking.openURL(`tel:${String(profile.mobile).replace(/\s+/g, '')}`)
+        } catch (error) {
+            console.error('Failed to call collaborator:', error)
+            CustomAlert('Lỗi', 'Không thể mở ứng dụng gọi điện.')
+        }
+    }
+
+    const sendMail = async () => {
+        if (!profile?.email) {
+            CustomAlert('Thông báo', 'Cộng tác viên này chưa có email công khai.')
+            return
+        }
+
+        try {
+            await Linking.openURL(`mailto:${profile.email}`)
+        } catch (error) {
+            console.error('Failed to open mail app:', error)
+            CustomAlert('Lỗi', 'Không thể mở ứng dụng email.')
+        }
+    }
 
     if (loading || !profile) {
         return (
-            <MobileLayout title="Hồ sơ Cộng tác viên" backButton={() => navigation.goBack()}>
+            <MobileLayout title="Hồ sơ cộng tác viên" backButton={() => navigation.goBack()}>
                 <Text style={styles.loadingText}>Đang tải...</Text>
             </MobileLayout>
-        );
+        )
     }
 
-    const isOnline = profile.availabilityStatus === 'available';
-    const isActive = profile.relationshipStatus === 'active';
-    const isPending = profile.relationshipStatus === 'pending';
-    
-    // Masked contact info logic is handled by backend, but we show UI states here
-    const canSeeContact = isActive;
+    const isOnline = profile.availabilityStatus === 'available'
+    const isActive = profile.relationshipStatus === 'active'
+    const isPending = profile.relationshipStatus === 'pending'
 
     return (
-        <MobileLayout title="Hồ sơ Cộng tác viên" backButton={() => navigation.goBack()}>
+        <MobileLayout title="Hồ sơ cộng tác viên" backButton={() => navigation.goBack()}>
             <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-                {/* Header Profile */}
                 <View style={styles.header}>
                     <View style={styles.avatarWrapper}>
-                        <Image 
-                            source={{ uri: resolveImageUrl(profile.avatarUrl) }} 
-                            style={styles.avatar} 
-                        />
+                        {profile.avatarUrl ? (
+                            <Image
+                                source={{ uri: resolveImageUrl(profile.avatarUrl, { debugLabel: 'collaborator-avatar' }) }}
+                                style={styles.avatar}
+                                onError={(error) => logMediaResolveError('collaborator-avatar', profile.avatarUrl, error?.nativeEvent)}
+                            />
+                        ) : (
+                            <View style={[styles.avatar, styles.avatarFallback]}>
+                                <Briefcase size={36} color="#16A34A" />
+                            </View>
+                        )}
                         <View style={[styles.statusBadge, { backgroundColor: isOnline ? '#10B981' : '#F59E0B' }]}>
                             <Text style={styles.statusText}>{isOnline ? 'Sẵn sàng' : 'Đang bận'}</Text>
                         </View>
                     </View>
-                    
+
                     <Text style={styles.name}>{profile.displayName || 'Người dùng ẩn danh'}</Text>
-                    
-                    {profile.location && (
+
+                    {profile.location ? (
                         <View style={styles.locationRow}>
                             <MapPin size={14} color="#64748B" />
                             <Text style={styles.locationText}>{profile.location}</Text>
                         </View>
-                    )}
+                    ) : null}
                 </View>
 
-                {/* Stats */}
                 <View style={styles.statsContainer}>
                     <View style={styles.statBox}>
                         <Briefcase size={20} color="#0EA5E9" />
@@ -105,31 +157,30 @@ const PublicCollaboratorDetailScreen = () => {
                     </View>
                     <View style={styles.divider} />
                     <View style={styles.statBox}>
-                        <FileTextIcon size={20} color="#8B5CF6" />
+                        <Award size={20} color="#8B5CF6" />
                         <Text style={styles.statValue}>{profile.stats?.totalPosts || 0}</Text>
-                        <Text style={styles.statLabel}>Bài viết</Text>
+                        <Text style={styles.statLabel}>Nội dung đã làm</Text>
                     </View>
                 </View>
 
-                {/* Contact Alert / Action */}
                 <View style={styles.actionSection}>
                     {!isActive ? (
                         <>
                             <View style={styles.contactMask}>
                                 <Info size={20} color="#D97706" />
                                 <Text style={styles.maskText}>
-                                    Thông tin liên hệ được bảo mật. Bạn cần gửi lời mời và được CTV này chấp nhận để xem số điện thoại và email.
+                                    Thông tin liên hệ được bảo mật. Bạn cần gửi lời mời và được cộng tác viên chấp nhận để xem số điện thoại hoặc email.
                                 </Text>
                             </View>
-                            <Button 
-                                fullWidth 
+                            <Button
+                                fullWidth
                                 icon={<MailPlus size={18} color="white" />}
                                 onPress={handleInvite}
                                 loading={inviting}
                                 disabled={inviting || isPending}
                                 style={isPending ? { backgroundColor: '#94A3B8' } : {}}
                             >
-                                {isPending ? 'Đã gửi lời mời (Chờ duyệt)' : 'Mời vào Shop của tôi'}
+                                {isPending ? 'Đã gửi lời mời (chờ phản hồi)' : 'Mời vào shop của tôi'}
                             </Button>
                         </>
                     ) : (
@@ -139,17 +190,33 @@ const PublicCollaboratorDetailScreen = () => {
                                 <Phone size={18} color="#047857" />
                                 <Text style={styles.contactInfo}>{profile.mobile || 'Không có số điện thoại'}</Text>
                             </View>
-                            {profile.email && (
+                            {profile.email ? (
                                 <View style={styles.contactRow}>
                                     <Mail size={18} color="#047857" />
                                     <Text style={styles.contactInfo}>{profile.email}</Text>
                                 </View>
-                            )}
+                            ) : null}
+
+                            <View style={styles.contactActions}>
+                                <TouchableOpacity style={styles.contactActionBtn} onPress={openZalo}>
+                                    <MessageCircle size={16} color="#0EA5E9" />
+                                    <Text style={styles.contactActionText}>Zalo</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.contactActionBtn} onPress={makeCall}>
+                                    <Phone size={16} color="#047857" />
+                                    <Text style={styles.contactActionText}>Gọi điện</Text>
+                                </TouchableOpacity>
+                                {profile.email ? (
+                                    <TouchableOpacity style={styles.contactActionBtn} onPress={sendMail}>
+                                        <Mail size={16} color="#7C3AED" />
+                                        <Text style={styles.contactActionText}>Email</Text>
+                                    </TouchableOpacity>
+                                ) : null}
+                            </View>
                         </View>
                     )}
                 </View>
 
-                {/* Bio */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Giới thiệu</Text>
                     <Text style={styles.bioText}>
@@ -157,43 +224,44 @@ const PublicCollaboratorDetailScreen = () => {
                     </Text>
                 </View>
 
-                {/* Availability Note */}
-                {profile.availabilityNote && (
+                {profile.availabilityNote ? (
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Ghi chú từ CTV</Text>
+                        <Text style={styles.sectionTitle}>Ghi chú từ cộng tác viên</Text>
                         <View style={styles.noteBox}>
                             <Text style={styles.noteText}>{profile.availabilityNote}</Text>
                         </View>
                     </View>
-                )}
+                ) : null}
 
-                {/* Portfolio */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Dự án & Năng lực (Portfolio)</Text>
-                    {profile.portfolioPhotos && profile.portfolioPhotos.length > 0 ? (
+                    <Text style={styles.sectionTitle}>Portfolio</Text>
+                    {Array.isArray(profile.portfolioPhotos) && profile.portfolioPhotos.length > 0 ? (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.portfolioScroll}>
                             {profile.portfolioPhotos.map((url: string, index: number) => (
-                                <Image 
-                                    key={index} 
-                                    source={{ uri: resolveImageUrl(url) }} 
-                                    style={styles.portfolioImg} 
+                                <Image
+                                    key={`${url}-${index}`}
+                                    source={{ uri: resolveImageUrl(url, { debugLabel: 'collaborator-portfolio' }) }}
+                                    style={styles.portfolioImg}
+                                    onError={(error) => logMediaResolveError('collaborator-portfolio', url, error?.nativeEvent)}
                                 />
                             ))}
                         </ScrollView>
                     ) : (
-                        <Text style={styles.emptyText}>CTV này chưa có hình ảnh portfolio nào công khai.</Text>
+                        <Text style={styles.emptyText}>Cộng tác viên này chưa có portfolio công khai.</Text>
                     )}
                 </View>
-                
+
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Phạm vi backend đang hỗ trợ</Text>
+                    <Text style={styles.noteText}>
+                        Mobile hiện hiển thị đúng dữ liệu mà backend public collaborator API trả về: bio, availability, portfolio ảnh, tổng shop hợp tác, tổng nội dung đã làm và contact khi quan hệ đã active.
+                    </Text>
+                </View>
+
                 <View style={{ height: 40 }} />
             </ScrollView>
         </MobileLayout>
-    );
-};
-
-// Helper icon
-const FileTextIcon = (props: any) => {
-    return <Award {...props} />; // Fallback if FileText is not imported correctly anywhere
+    )
 }
 
 const styles = StyleSheet.create({
@@ -228,6 +296,10 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
+    },
+    avatarFallback: {
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     statusBadge: {
         position: 'absolute',
@@ -293,6 +365,7 @@ const styles = StyleSheet.create({
     statLabel: {
         fontSize: 12,
         color: '#64748B',
+        textAlign: 'center',
     },
     actionSection: {
         padding: 16,
@@ -331,6 +404,28 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginLeft: 12,
     },
+    contactActions: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 16,
+    },
+    contactActionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'white',
+        borderWidth: 1,
+        borderColor: '#D1FAE5',
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+    },
+    contactActionText: {
+        color: '#0F172A',
+        fontWeight: '700',
+        fontSize: 12,
+    },
     section: {
         paddingTop: 16,
         paddingHorizontal: 16,
@@ -359,15 +454,15 @@ const styles = StyleSheet.create({
     noteText: {
         fontSize: 14,
         color: '#334155',
-        fontStyle: 'italic',
+        lineHeight: 22,
     },
     portfolioScroll: {
         flexDirection: 'row',
         paddingBottom: 8,
     },
     portfolioImg: {
-        width: 120,
-        height: 120,
+        width: Math.min(width * 0.34, 132),
+        height: Math.min(width * 0.34, 132),
         borderRadius: 8,
         marginRight: 12,
         backgroundColor: '#E2E8F0',
@@ -377,6 +472,6 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
         fontStyle: 'italic',
     },
-});
+})
 
-export default PublicCollaboratorDetailScreen;
+export default PublicCollaboratorDetailScreen

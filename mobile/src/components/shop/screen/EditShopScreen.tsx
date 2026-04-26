@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, Image, TouchableOpacity } from 'react-native';
+import { ActionSheetIOS, Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import Input from '../../Reused/Input/Input';
 import Button from '../../Reused/Button/Button';
@@ -95,6 +95,61 @@ const EditShopScreen = ({ route, navigation }: any) => {
                 setUpLoadingImage(false);
             }
         }
+    };
+
+    const pickGalleryImageFromCamera = async () => {
+        const remaining = 4 - formData.shopGalleryImages.length;
+        if (remaining <= 0) return;
+
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+            CustomAlert('Yêu cầu quyền truy cập', 'Vui lòng cấp quyền truy cập máy ảnh để chụp ảnh');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            quality: 0.7,
+        });
+
+        if (!result.canceled && result.assets?.[0]) {
+            try {
+                setUpLoadingImage(true);
+                const uploadRes = await postService.uploadMedia([result.assets[0].uri]);
+                if (uploadRes?.urls?.[0]) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        shopGalleryImages: [...prev.shopGalleryImages, uploadRes.urls[0]].slice(0, 4),
+                    }));
+                }
+            } catch (e) {
+                CustomAlert('Lỗi', 'Không thể tải ảnh lên');
+            } finally {
+                setUpLoadingImage(false);
+            }
+        }
+    };
+
+    const handlePickGalleryImage = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Hủy', 'Chọn từ thư viện', 'Chụp ảnh'],
+                    cancelButtonIndex: 0,
+                },
+                (index) => {
+                    if (index === 1) pickImage('shopGalleryImages');
+                    if (index === 2) pickGalleryImageFromCamera();
+                }
+            );
+            return;
+        }
+
+        Alert.alert('Chọn ảnh cửa hàng', '', [
+            { text: 'Hủy', style: 'cancel' },
+            { text: 'Chọn từ thư viện', onPress: () => pickImage('shopGalleryImages') },
+            { text: 'Chụp ảnh', onPress: pickGalleryImageFromCamera },
+        ]);
     };
 
     const handleUpdate = async () => {
@@ -198,7 +253,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
                     {formData.shopGalleryImages.length < 4 && (
                         <TouchableOpacity
                             style={styles.addGalleryBtn}
-                            onPress={() => pickImage('shopGalleryImages')}
+                            onPress={handlePickGalleryImage}
                         >
                             <Plus size={24} color="#94a3b8" />
                         </TouchableOpacity>

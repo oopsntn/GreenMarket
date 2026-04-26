@@ -83,13 +83,22 @@ const normalizeUser = (rawUser: unknown): User | null => {
     }
 }
 
+const shouldBootstrapShop = (businessRoleCode: string | null | undefined) => {
+    return !['COLLABORATOR', 'MANAGER', 'OPERATION_STAFF'].includes(String(businessRoleCode || '').toUpperCase())
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null)
     const [shop, setShop] = useState<Shop | null>(null)
     const [token, setToken] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
 
-    const fetchShop = useCallback(async () => {
+    const fetchShop = useCallback(async (businessRoleCode?: string | null) => {
+        if (!shouldBootstrapShop(businessRoleCode)) {
+            setShop(null)
+            return
+        }
+
         try {
             const res = await ShopService.getMyShop()
             console.log('Shop data from API:', res)
@@ -130,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setToken(storedToken)
                     setUser(parsedUser)
 
-                    await fetchShop()
+                    await fetchShop(parsedUser.businessRoleCode)
                     return
                 }
             }
@@ -164,7 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await AsyncStorage.setItem('token', newToken)
             await AsyncStorage.setItem('user', JSON.stringify(normalizedUser))
 
-            await fetchShop()
+            await fetchShop(normalizedUser.businessRoleCode)
         } catch (e) {
             console.error('Error saving login data:', e);
         }
@@ -188,8 +197,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [user])
 
     const refreshShop = useCallback(async () => {
-        if (user?.id) await fetchShop()
-    }, [fetchShop, user?.id])
+        if (user?.id) await fetchShop(user.businessRoleCode)
+    }, [fetchShop, user?.businessRoleCode, user?.id])
 
     return (
         <AuthContext.Provider value={{ user, shop, token, login, logout, updateUser, refreshShop, loading, isAuthenticated: !!token }}>

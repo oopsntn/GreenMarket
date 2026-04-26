@@ -1,14 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Location from 'expo-location';
-import { MapPin, Navigation, Search, CheckCircle2 } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { CheckCircle2, MapPin, Navigation, Search } from 'lucide-react-native';
 
 import Input from '../../Reused/Input/Input';
 import CustomAlert from '../../../utils/AlertHelper';
-import {
-    reverseGeocode,
-    geocodeAddress,
-} from '../service/addressService';
+import { geocodeAddress, reverseGeocode } from '../service/addressService';
 
 export interface ConfirmedAddress {
     fullAddress: string;
@@ -36,15 +34,16 @@ const AddressPicker = ({
     const [loadingCurrentLocation, setLoadingCurrentLocation] = useState(false);
     const [loadingSearch, setLoadingSearch] = useState(false);
     const [confirmedLocation, setConfirmedLocation] = useState<ConfirmedAddress | null>(null);
+    const [candidateLocation, setCandidateLocation] = useState<ConfirmedAddress | null>(null);
 
     const hasAddressInput = useMemo(() => address.trim().length > 0, [address]);
 
-    const confirmByCoordinates = async (lat: number, lng: number, fallbackAddress?: string) => {
+    const resolveConfirmedAddress = async (lat: number, lng: number, fallbackAddress?: string) => {
         const reversed = await reverseGeocode(lat, lng);
 
         if (!reversed?.full?.trim() && !fallbackAddress?.trim()) {
             CustomAlert('Lỗi', 'Không thể xác định địa chỉ từ vị trí đã chọn.');
-            return;
+            return null;
         }
 
         const payload: ConfirmedAddress = {
@@ -57,9 +56,20 @@ const AddressPicker = ({
             lng,
         };
 
+        return payload;
+    };
+
+    const applyConfirmedLocation = (payload: ConfirmedAddress) => {
+        setCandidateLocation(null);
         setConfirmedLocation(payload);
         onAddressChange(payload.fullAddress);
         onLocationConfirmed(payload);
+    };
+
+    const openPreviewMap = async (lat: number, lng: number) => {
+        const query = encodeURIComponent(`${lat},${lng}`);
+        const mapUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+        await WebBrowser.openBrowserAsync(mapUrl);
     };
 
     const handleUseCurrentLocation = async () => {
@@ -78,8 +88,11 @@ const AddressPicker = ({
             });
 
             const { latitude, longitude } = location.coords;
+            const payload = await resolveConfirmedAddress(latitude, longitude);
 
-            await confirmByCoordinates(latitude, longitude);
+            if (!payload) return;
+
+            applyConfirmedLocation(payload);
             CustomAlert('Thành công', 'Đã lấy vị trí hiện tại và cập nhật địa chỉ.');
         } catch (error) {
             console.error('getCurrentLocation failed:', error);
@@ -108,8 +121,13 @@ const AddressPicker = ({
                 return;
             }
 
-            await confirmByCoordinates(geo.lat, geo.lng, address.trim());
-            CustomAlert('Thành công', 'Đã xác định vị trí từ địa chỉ nhập tay.');
+            const payload = await resolveConfirmedAddress(geo.lat, geo.lng, address.trim());
+
+            if (!payload) return;
+
+            setConfirmedLocation(null);
+            setCandidateLocation(payload);
+            await openPreviewMap(payload.lat, payload.lng);
         } catch (error) {
             console.error('handleSearchOnMap failed:', error);
             CustomAlert('Lỗi', 'Không thể tìm vị trí từ địa chỉ đã nhập.');
@@ -128,6 +146,7 @@ const AddressPicker = ({
                 onChangeText={(text: string) => {
                     onAddressChange(text);
                     setConfirmedLocation(null);
+                    setCandidateLocation(null);
                 }}
             />
 
@@ -164,8 +183,39 @@ const AddressPicker = ({
             </View>
 
             <Text style={styles.hintText}>
-                Hãy ưu tiên nhập địa chỉ shop rồi bấm "Tìm theo địa chỉ". Nút vị trí hiện tại chỉ nên dùng khi bạn đang đứng đúng tại shop.
+                Hãy ưu tiên nhập địa chỉ shop rồi bấm "Tìm theo địa chỉ". Hệ thống sẽ mở bản đồ ngoài app để bạn kiểm tra pin trước khi xác nhận. Nút vị trí hiện tại chỉ nên dùng khi bạn đang đứng đúng tại shop.
             </Text>
+
+            {candidateLocation ? (
+                <View style={styles.candidateBox}>
+                    <View style={styles.confirmHeader}>
+                        <MapPin size={16} color="#2563eb" />
+                        <Text style={[styles.confirmTitle, styles.candidateTitle]}>Vị trí tìm được từ địa chỉ</Text>
+                    </View>
+
+                    <Text style={[styles.confirmAddress, styles.candidateAddress]}>{candidateLocation.fullAddress}</Text>
+
+                    <Text style={[styles.coordinateText, styles.candidateCoordinate]}>
+                        Tọa độ: {candidateLocation.lat.toFixed(6)}, {candidateLocation.lng.toFixed(6)}
+                    </Text>
+
+                    <View style={styles.candidateActions}>
+                        <TouchableOpacity
+                            style={[styles.inlineActionBtn, styles.inlineActionSecondary]}
+                            onPress={() => openPreviewMap(candidateLocation.lat, candidateLocation.lng)}
+                        >
+                            <Text style={[styles.inlineActionText, styles.inlineActionSecondaryText]}>Mở lại bản đồ</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.inlineActionBtn, styles.inlineActionPrimary]}
+                            onPress={() => applyConfirmedLocation(candidateLocation)}
+                        >
+                            <Text style={[styles.inlineActionText, styles.inlineActionPrimaryText]}>Xác nhận vị trí này</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            ) : null}
 
             {confirmedLocation ? (
                 <View style={styles.confirmBox}>
@@ -224,6 +274,14 @@ const styles = StyleSheet.create({
         lineHeight: 16,
         color: '#64748b',
     },
+    candidateBox: {
+        marginTop: 12,
+        padding: 12,
+        borderRadius: 14,
+        backgroundColor: '#eff6ff',
+        borderWidth: 1,
+        borderColor: '#bfdbfe',
+    },
     confirmBox: {
         marginTop: 12,
         padding: 12,
@@ -243,17 +301,57 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: '#166534',
     },
+    candidateTitle: {
+        color: '#1d4ed8',
+    },
     confirmAddress: {
         fontSize: 13,
         lineHeight: 18,
         color: '#14532d',
         fontWeight: '500',
     },
+    candidateAddress: {
+        color: '#1e3a8a',
+    },
     coordinateText: {
         marginTop: 8,
         fontSize: 11,
         color: '#15803d',
         fontWeight: '700',
+    },
+    candidateCoordinate: {
+        color: '#2563eb',
+    },
+    candidateActions: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 12,
+    },
+    inlineActionBtn: {
+        flex: 1,
+        minHeight: 40,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 10,
+    },
+    inlineActionPrimary: {
+        backgroundColor: '#2563eb',
+    },
+    inlineActionSecondary: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#93c5fd',
+    },
+    inlineActionText: {
+        fontSize: 12,
+        fontWeight: '800',
+    },
+    inlineActionPrimaryText: {
+        color: '#fff',
+    },
+    inlineActionSecondaryText: {
+        color: '#2563eb',
     },
 });
 

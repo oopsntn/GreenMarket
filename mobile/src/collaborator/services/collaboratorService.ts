@@ -28,6 +28,15 @@ export interface CollaboratorProfileResponse {
     stats: CollaboratorStats;
 }
 
+export interface CollaboratorActiveShop {
+    shopId: number;
+    shopName: string;
+    shopLogoUrl: string | null;
+    shopLocation: string | null;
+    ownerDisplayName: string | null;
+    joinedAt: string;
+}
+
 export interface Job {
     jobId: number;
     title: string;
@@ -37,11 +46,11 @@ export interface Job {
     price: string | number;
     status: string;
     createdAt: string;
-    customer: {
+    customer?: {
         userId: number;
         displayName: string | null;
         location?: string | null;
-    };
+    } | null;
     progressPercent?: number;
 }
 
@@ -52,6 +61,22 @@ export interface JobDetail extends Job {
     declineReason?: string | null;
     updatedAt: string;
 }
+
+const normalizeJob = (raw: any): Job => {
+    const customerFromApi = raw?.customer;
+    const customerNameFromApi = raw?.customerName;
+
+    const customer =
+        customerFromApi ||
+        (typeof customerNameFromApi === 'string' && customerNameFromApi.trim().length > 0
+            ? { userId: 0, displayName: customerNameFromApi }
+            : null);
+
+    return {
+        ...raw,
+        customer,
+    } as Job;
+};
 
 export interface EarningEntry {
     earningEntryId: number;
@@ -104,35 +129,114 @@ const getFileInfo = (uri: string) => {
     return { fileName, mimeType }
 }
 
+const logCollaboratorRequest = (label: string, method: string, path: string, extra?: Record<string, unknown>) => {
+    console.log(`[CollaboratorService.${label}]`, {
+        method,
+        url: `${API_BASE_URL}${path}`,
+        ...extra,
+    })
+}
+
+const logCollaboratorError = (label: string, path: string, error: any, extra?: Record<string, unknown>) => {
+    console.error(`[CollaboratorService.${label}] failed`, {
+        url: `${API_BASE_URL}${path}`,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+        ...extra,
+    })
+}
+
 export const CollaboratorService = {
     getProfile: async (): Promise<CollaboratorProfileResponse> => {
-        const response = await api.get('/collaborator/profile');
-        return response.data;
+        const path = '/collaborator/profile'
+        try {
+            logCollaboratorRequest('getProfile', 'GET', path)
+            const response = await api.get(path);
+            return response.data;
+        } catch (error: any) {
+            logCollaboratorError('getProfile', path, error)
+            throw error
+        }
     },
 
     getPublicCollaborators: async (params?: { page?: number; limit?: number }) => {
-        const response = await api.get('/collaborator/public-list', { params });
-        return response.data;
+        const path = '/collaborator/public-list'
+        try {
+            logCollaboratorRequest('getPublicCollaborators', 'GET', path, { params })
+            const response = await api.get(path, { params });
+            return response.data;
+        } catch (error: any) {
+            logCollaboratorError('getPublicCollaborators', path, error, { params })
+            throw error
+        }
     },
 
     getPublicCollaboratorDetail: async (id: number) => {
-        const response = await api.get(`/collaborator/public/${id}`);
-        return response.data;
+        const path = `/collaborator/public/${id}`
+        try {
+            logCollaboratorRequest('getPublicCollaboratorDetail', 'GET', path, { collaboratorId: id })
+            const response = await api.get(path);
+            return response.data;
+        } catch (error: any) {
+            logCollaboratorError('getPublicCollaboratorDetail', path, error, { collaboratorId: id })
+            throw error
+        }
     },
 
     getMyInvitations: async () => {
-        const response = await api.get('/collaborator/invitations');
-        return response.data;
+        const path = '/collaborator/invitations'
+        try {
+            logCollaboratorRequest('getMyInvitations', 'GET', path)
+            const response = await api.get(path);
+            return response.data;
+        } catch (error: any) {
+            logCollaboratorError('getMyInvitations', path, error)
+            throw error
+        }
+    },
+
+    getMyActiveShops: async (): Promise<{ data: CollaboratorActiveShop[] }> => {
+        const path = '/collaborator/my-shops'
+        try {
+            logCollaboratorRequest('getMyActiveShops', 'GET', path)
+            const response = await api.get(path);
+            return response.data;
+        } catch (error: any) {
+            logCollaboratorError('getMyActiveShops', path, error)
+            throw error
+        }
     },
 
     respondToInvitation: async (id: number, action: 'accept' | 'reject') => {
-        const response = await api.post(`/collaborator/invitations/${id}/respond`, { action });
-        return response.data;
+        const path = `/collaborator/invitations/${id}/respond`
+        try {
+            logCollaboratorRequest('respondToInvitation', 'POST', path, {
+                invitationId: id,
+                payload: { action },
+            })
+            const response = await api.post(path, { action });
+            console.log('[CollaboratorService.respondToInvitation] Relationship update result:', response.data)
+            return response.data;
+        } catch (error: any) {
+            logCollaboratorError('respondToInvitation', path, error, {
+                invitationId: id,
+                action,
+            })
+            throw error
+        }
     },
 
     updateAvailability: async (data: { availabilityStatus?: string; availabilityNote?: string }) => {
-        const response = await api.patch('/collaborator/profile', data);
-        return response.data;
+        const path = '/collaborator/profile'
+        try {
+            logCollaboratorRequest('updateAvailability', 'PATCH', path, { payload: data })
+            const response = await api.patch(path, data);
+            return response.data;
+        } catch (error: any) {
+            logCollaboratorError('updateAvailability', path, error, { payload: data })
+            throw error
+        }
     },
 
     getAvailableJobs: async (params?: { keyword?: string; category?: string; location?: string; page?: number; limit?: number }) => {
@@ -157,7 +261,13 @@ export const CollaboratorService = {
 
     getMyJobs: async (params?: { status?: string; page?: number; limit?: number }) => {
         const response = await api.get('/collaborator/my-jobs', { params });
-        return response.data;
+        const payload = response.data;
+
+        if (payload?.data && Array.isArray(payload.data)) {
+            payload.data = payload.data.map(normalizeJob);
+        }
+
+        return payload;
     },
 
     submitDeliverables: async (id: number, fileUrls: string[], note?: string) => {

@@ -204,7 +204,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           </View>
 
           <Text style={styles.priceText}>
-            {new Intl.NumberFormat('en-US').format(post?.postPrice || 0)}
+            {new Intl.NumberFormat('vi-VN').format(Number(post?.postPrice || 0))}
             <Text style={styles.priceUnit}> VND</Text>
           </Text>
         </View>

@@ -1,29 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
-  View,
-  ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  ActivityIndicator,
+  View,
 } from 'react-native';
 import {
   ArrowLeft,
+  CheckCircle,
+  ExternalLink,
   Flag,
-  User,
   MessageSquare,
   ShieldAlert,
-  CheckCircle,
-  XCircle,
-  ExternalLink,
+  ThumbsDown,
   ThumbsUp,
-  ThumbsDown
+  User,
+  XCircle,
 } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
 import managerService, { ReportModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+
+const statusLabelMap: Record<string, string> = {
+  pending: 'Chờ xử lý',
+  resolved: 'Đã giải quyết',
+  dismissed: 'Đã bỏ qua',
+};
+
+const severityLabelMap: Record<string, string> = {
+  low: 'Thấp',
+  medium: 'Trung bình',
+  high: 'Cao',
+  critical: 'Khẩn cấp',
+};
 
 const ReportManagementDetail = ({ route, navigation }: any) => {
   const { reportId } = route.params;
@@ -57,59 +70,58 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
     setIsModalVisible(true);
   };
 
-  // Xử lý bài đăng bị báo cáo trực tiếp (duyệt hoặc từ chối)
   const handleModeratePost = (action: 'approved' | 'rejected') => {
     if (!report?.postId) {
       CustomAlert('Lỗi', 'Báo cáo này không liên kết với bài đăng nào.');
       return;
     }
+
     setPostAction(action);
+    setActionType(null);
     setIsModalVisible(true);
-    setActionType(null); // Đảm bảo modal biết đây là luồng post, không phải report
   };
+
   const onSubmitNote = async (note: string) => {
     if (!actionType && !postAction) return;
 
     try {
-      // Luồng 1: Kiểm duyệt bài đăng bị báo cáo
       if (postAction && report?.postId) {
         setProcessingPost(true);
         await managerService.updatePostStatus(report.postId, postAction, note || undefined);
-        // Sau khi xử lý bài, auto-resolve report
         await managerService.resolveReport(
           reportId,
           'resolved',
           `Bài đăng đã được ${postAction === 'approved' ? 'duyệt' : 'từ chối'} bởi quản lý`,
-          note
+          note,
         );
+
         CustomAlert(
           'Hoàn tất',
-          `Bài đăng đã được ${postAction === 'approved' ? '✅ duyệt' : '❌ từ chối'} và báo cáo đã được giải quyết.`,
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          `Bài đăng đã được ${postAction === 'approved' ? 'duyệt' : 'từ chối'} và báo cáo đã được giải quyết.`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
         );
         return;
       }
 
-      // Luồng 2: Xử lý report (resolve/dismiss/escalate)
       if (actionType === 'escalated') {
         await managerService.escalate({
           targetType: 'report',
           targetId: reportId,
           severity: 'high',
-          reason: note
+          reason: note,
         });
-        CustomAlert('Escalated', `Report đã được leo thang. Lý do: ${note}`);
+        CustomAlert('Đã leo thang', `Báo cáo đã được chuyển cấp xử lý.\nLý do: ${note}`);
       } else if (actionType) {
         await managerService.resolveReport(
           reportId,
           actionType,
-          actionType === 'resolved' ? 'Report reviewed and resolved' : 'Report reviewed and dismissed',
-          note
+          actionType === 'resolved' ? 'Báo cáo đã được xem xét và giải quyết' : 'Báo cáo đã được xem xét và bỏ qua',
+          note,
         );
         CustomAlert(
-          actionType === 'resolved' ? 'Giải quyết' : 'Bỏ qua',
-          `Đã lưu với ghi chú: ${note}`,
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          actionType === 'resolved' ? 'Đã giải quyết' : 'Đã bỏ qua',
+          `Đã lưu ghi chú xử lý: ${note}`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
         );
       }
     } catch (error) {
@@ -146,9 +158,11 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         <View style={styles.statusSection}>
           <View style={styles.statusBadge}>
             <ShieldAlert size={16} color="#EF4444" />
-            <Text style={styles.statusText}>{report.reportStatus}</Text>
+            <Text style={styles.statusText}>{statusLabelMap[report.reportStatus] || report.reportStatus}</Text>
           </View>
-          <Text style={styles.createdAt}>{report.reportCreatedAt ? new Date(report.reportCreatedAt).toLocaleString() : 'Không có ngày'}</Text>
+          <Text style={styles.createdAt}>
+            {report.reportCreatedAt ? new Date(report.reportCreatedAt).toLocaleString('vi-VN') : 'Không có ngày'}
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -160,7 +174,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Tin/Cửa hàng bị báo cáo</Text>
+          <Text style={styles.label}>Mục bị báo cáo</Text>
           <TouchableOpacity
             style={styles.targetBox}
             onPress={() => {
@@ -169,8 +183,10 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
             }}
           >
             <View style={styles.targetInfo}>
-              <Text style={styles.targetType}>{report.postId ? 'Tin đăng' : 'Cửa hàng'}</Text>
-              <Text style={styles.targetTitle}>{report.postTitle || report.shopName || 'Mục tiêu không xác định'}</Text>
+              <Text style={styles.targetType}>{report.postId ? 'Bài đăng' : 'Cửa hàng'}</Text>
+              <Text style={styles.targetTitle}>
+                {report.postTitle || report.shopName || 'Mục tiêu không xác định'}
+              </Text>
             </View>
             <ExternalLink size={20} color="#3B82F6" />
           </TouchableOpacity>
@@ -202,14 +218,15 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
           <Text style={styles.label}>Ngữ cảnh xử lý</Text>
           <View style={styles.chatPlaceholder}>
             <MessageSquare size={32} color="#CBD5E1" />
-            <Text style={styles.placeholderText}>Độ nghiêm trọng: {report.severity || 'medium'}</Text>
+            <Text style={styles.placeholderText}>
+              Mức độ nghiêm trọng: {severityLabelMap[report.severity || 'medium'] || report.severity || 'Trung bình'}
+            </Text>
           </View>
         </View>
       </ScrollView>
 
       <View style={styles.bottomActions}>
-        {/* Nếu report liên kết với bài đăng: hiện nút duyệt/từ chối bài trực tiếp */}
-        {report?.postId ? (
+        {report.postId ? (
           <>
             <TouchableOpacity
               style={[styles.btn, styles.rejectPostBtn]}
@@ -229,12 +246,9 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
               <Text style={[styles.btnText, styles.approveBtnText]}>Duyệt bài</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.btn, styles.dismissBtn]}
-              onPress={() => handleAction('dismissed')}
-            >
+            <TouchableOpacity style={[styles.btn, styles.dismissBtn]} onPress={() => handleAction('dismissed')}>
               <XCircle size={18} color="#64748B" />
-              <Text style={[styles.btnText, styles.dismissBtnText]}>Bỏ qua BC</Text>
+              <Text style={[styles.btnText, styles.dismissBtnText]}>Bỏ qua báo cáo</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -259,29 +273,50 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
 
       <ReasonModal
         visible={isModalVisible}
-        onClose={() => { setIsModalVisible(false); setPostAction(null); }}
+        onClose={() => {
+          setIsModalVisible(false);
+          setPostAction(null);
+        }}
         onSubmit={onSubmitNote}
         title={
-          postAction === 'approved' ? 'Duyệt bài đăng' :
-          postAction === 'rejected' ? 'Từ chối bài đăng' :
-          actionType === 'resolved' ? 'Giải quyết báo cáo' :
-          actionType === 'escalated' ? 'Leo thang báo cáo' : 'Bỏ qua báo cáo'
+          postAction === 'approved'
+            ? 'Duyệt bài đăng'
+            : postAction === 'rejected'
+              ? 'Từ chối bài đăng'
+              : actionType === 'resolved'
+                ? 'Giải quyết báo cáo'
+                : actionType === 'escalated'
+                  ? 'Leo thang báo cáo'
+                  : 'Bỏ qua báo cáo'
         }
         placeholder={
-          postAction ? 'Nhập lý do kiểm duyệt (tùy chọn)...' :
-          actionType === 'escalated' ? 'Nhập lý do leo thang...' : 'Nhập ghi chú xử lý...'
+          postAction
+            ? 'Nhập ghi chú xử lý cho bài đăng...'
+            : actionType === 'escalated'
+              ? 'Nhập lý do leo thang...'
+              : 'Nhập ghi chú xử lý...'
         }
         confirmLabel={
-          postAction === 'approved' ? 'Xác nhận duyệt' :
-          postAction === 'rejected' ? 'Xác nhận từ chối' :
-          actionType === 'resolved' ? 'Giải quyết' :
-          actionType === 'escalated' ? 'Leo thang' : 'Bỏ qua'
+          postAction === 'approved'
+            ? 'Xác nhận duyệt'
+            : postAction === 'rejected'
+              ? 'Xác nhận từ chối'
+              : actionType === 'resolved'
+                ? 'Giải quyết'
+                : actionType === 'escalated'
+                  ? 'Leo thang'
+                  : 'Bỏ qua'
         }
         confirmColor={
-          postAction === 'approved' ? '#22C55E' :
-          postAction === 'rejected' ? '#EF4444' :
-          actionType === 'resolved' ? '#22C55E' :
-          actionType === 'escalated' ? '#F59E0B' : '#94A3B8'
+          postAction === 'approved'
+            ? '#22C55E'
+            : postAction === 'rejected'
+              ? '#EF4444'
+              : actionType === 'resolved'
+                ? '#22C55E'
+                : actionType === 'escalated'
+                  ? '#F59E0B'
+                  : '#94A3B8'
         }
       />
     </SafeAreaView>
@@ -321,7 +356,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
   },
-  statusText: { fontSize: 13, fontWeight: 'bold', color: '#EF4444', textTransform: 'capitalize' },
+  statusText: { fontSize: 13, fontWeight: 'bold', color: '#EF4444' },
   createdAt: { fontSize: 12, color: '#94A3B8' },
   section: { marginBottom: 24 },
   label: {
@@ -353,7 +388,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DBEAFE',
   },
-  targetInfo: { flex: 1 },
+  targetInfo: { flex: 1, marginRight: 12 },
   targetType: {
     fontSize: 12,
     color: '#3B82F6',
@@ -388,10 +423,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
+    minHeight: 80,
     backgroundColor: 'white',
     flexDirection: 'row',
     paddingHorizontal: 16,
+    paddingVertical: 12,
     alignItems: 'center',
     gap: 12,
     borderTopWidth: 1,
@@ -406,7 +442,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
   },
-  btnText: { fontWeight: '700' },
+  btnText: { fontWeight: '700', textAlign: 'center' },
   dismissBtn: { backgroundColor: '#F1F5F9' },
   dismissBtnText: { color: '#64748B' },
   escalateBtn: { backgroundColor: '#F59E0B' },

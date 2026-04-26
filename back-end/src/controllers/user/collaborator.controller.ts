@@ -35,6 +35,7 @@ const VALID_AVAILABILITY_STATUSES = ["available", "busy", "offline"] as const;
 const VALID_JOB_STATUSES = ["open", "accepted", "declined", "completed", "cancelled"] as const;
 const JOB_STATE_CHANGED_ERROR = "JOB_STATE_CHANGED";
 const MAX_CONTACT_MESSAGE_LENGTH = 1000;
+const DECLINE_REPLY_PREFIX = "[JOB_DECLINE]";
 
 const JOB_PROGRESS_BY_STATUS: Record<(typeof VALID_JOB_STATUSES)[number], number> = {
   open: 0,
@@ -113,6 +114,19 @@ const getProgressPercent = (status: string | null | undefined) => {
   return 0;
 };
 
+const getDeclinedCollaboratorIds = (meta: unknown) => {
+  const raw =
+    meta &&
+    typeof meta === "object" &&
+    Array.isArray((meta as Record<string, unknown>).declinedCollaboratorIds)
+      ? ((meta as Record<string, unknown>).declinedCollaboratorIds as unknown[])
+      : [];
+
+  return raw
+    .map((item: unknown) => Number(item))
+    .filter((item: number) => Number.isInteger(item) && item > 0);
+};
+
 const calculateAvailableBalance = async (collaboratorId: number) => {
   const [earningSummary] = await db
     .select({
@@ -182,15 +196,6 @@ export const getCollaboratorProfile = async (
       .from(tickets)
       .where(and(eq(tickets.ticketAssigneeId, userId), eq(tickets.ticketType, "JOB")));
 
-    const [earningSummary] = await db
-      .select({
-        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
-      })
-      .from(ledgers)
-      .where(eq(ledgers.ledgerUserId, userId));
-
-    const availableBalance = await calculateAvailableBalance(userId);
-
     res.json({
       profile: {
         ...profile,
@@ -201,8 +206,8 @@ export const getCollaboratorProfile = async (
         totalJobs: Number(jobSummary?.totalJobs ?? 0),
         activeJobs: Number(jobSummary?.activeJobs ?? 0),
         completedJobs: Number(jobSummary?.completedJobs ?? 0),
-        totalEarnings: toNumber(earningSummary?.total),
-        availableBalance,
+        totalEarnings: 0,
+        availableBalance: 0,
       },
     });
   } catch (error) {
@@ -314,6 +319,12 @@ export const getAvailableJobs = async (
   res: Response,
 ): Promise<void> => {
   try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Chưa xác thực người dùng." });
+      return;
+    }
+
     const keyword =
       typeof req.query.keyword === "string" ? req.query.keyword.trim() : "";
     const category =
@@ -325,7 +336,8 @@ export const getAvailableJobs = async (
     const conditions: SQL[] = [
       eq(tickets.ticketType, "JOB"),
       eq(tickets.ticketStatus, "open"),
-      isNull(tickets.ticketAssigneeId)
+      isNull(tickets.ticketAssigneeId),
+      sql`NOT COALESCE(${tickets.ticketMetaData}->'declinedCollaboratorIds', '[]'::jsonb) @> ${JSON.stringify([userId])}::jsonb`,
     ];
 
     if (keyword) {
@@ -425,6 +437,7 @@ export const getJobDetail = async (
         price: sql<string>`${tickets.ticketMetaData}->>'price'`,
         description: tickets.ticketContent,
         requirements: sql<any>`${tickets.ticketMetaData}->'requirements'`,
+        meta: tickets.ticketMetaData,
         status: tickets.ticketStatus,
         declineReason: sql<string>`${tickets.ticketMetaData}->>'declineReason'`,
         createdAt: tickets.ticketCreatedAt,
@@ -442,8 +455,10 @@ export const getJobDetail = async (
       return;
     }
 
+    const declinedCollaboratorIds = getDeclinedCollaboratorIds(jobDetail.meta);
+    const hasDeclinedThisJob = declinedCollaboratorIds.includes(userId);
     const canView =
-      jobDetail.status === "open" ||
+      (jobDetail.status === "open" && !hasDeclinedThisJob) ||
       jobDetail.collaboratorId === userId ||
       jobDetail.customerId === userId;
 
@@ -572,24 +587,38 @@ export const decideJob = async (
         return;
       }
 
+      const declinedCollaboratorIds = getDeclinedCollaboratorIds(existing.meta);
+      if (declinedCollaboratorIds.includes(userId)) {
+        res.status(409).json({
+          error: "Bạn đã từ chối công việc này trước đó.",
+        });
+        return;
+      }
+
       const newMeta = {
         ...(existing.meta as any),
-        declineReason: reason || "",
+        declinedCollaboratorIds: [...declinedCollaboratorIds, userId],
       };
 
       const [updatedJob] = await db
         .update(tickets)
         .set({
-          ticketStatus: "declined",
-          ticketAssigneeId: null,
           ticketMetaData: newMeta,
           ticketUpdatedAt: now,
         })
         .where(eq(tickets.ticketId, jobId))
         .returning();
 
+      await db.insert(taskReplies).values({
+        ticketId: jobId,
+        senderId: userId,
+        message: `${DECLINE_REPLY_PREFIX} ${reason || "Cộng tác viên từ chối nhận công việc này."}`,
+        visibility: "internal",
+        createdAt: now,
+      });
+
       res.json({
-        message: "Job declined successfully",
+        message: "Đã ghi nhận từ chối. Công việc vẫn mở để khách hàng tìm cộng tác viên khác.",
         job: updatedJob,
       });
       return;
@@ -857,233 +886,33 @@ export const getCollaboratorEarnings = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    const from = parseDateQuery(req.query.from);
-    if (from === undefined) {
-      res.status(400).json({ error: "Invalid from date format" });
-      return;
-    }
-
-    const to = parseDateQuery(req.query.to);
-    if (to === undefined) {
-      res.status(400).json({ error: "Invalid to date format" });
-      return;
-    }
-
-    const conditions: SQL[] = [
-      eq(ledgers.ledgerUserId, userId),
-    ];
-    if (from) {
-      conditions.push(gte(ledgers.ledgerCreatedAt, from));
-    }
-    if (to) {
-      conditions.push(lte(ledgers.ledgerCreatedAt, to));
-    }
-
-    const [summary] = await db
-      .select({
-        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
-        txCount: sql<number>`COUNT(*)`,
-      })
-      .from(ledgers)
-      .where(and(...conditions));
-
-    const byType = await db
-      .select({
-        type: sql<string>`${ledgers.ledgerMeta}->>'type'`,
-        total: sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(ledgers)
-      .where(and(...conditions))
-      .groupBy(sql`${ledgers.ledgerMeta}->>'type'`)
-      .orderBy(asc(sql`${ledgers.ledgerMeta}->>'type'`));
-
-    const history = await db
-      .select({
-        earningId: ledgers.ledgerId,
-        sourceId: sql<number | null>`(${ledgers.ledgerMeta}->>'sourceId')::int`,
-        jobTitle: tickets.ticketTitle,
-        amount: ledgers.ledgerAmount,
-        type: sql<string>`${ledgers.ledgerMeta}->>'type'`,
-        status: ledgers.ledgerStatus,
-        createdAt: ledgers.ledgerCreatedAt,
-      })
-      .from(ledgers)
-      .leftJoin(
-        tickets,
-        and(
-          eq(sql<number>`(${ledgers.ledgerMeta}->>'sourceId')::int`, tickets.ticketId),
-          eq(tickets.ticketType, "JOB")
-        )
-      )
-      .where(and(...conditions))
-      .orderBy(desc(ledgers.ledgerCreatedAt));
-
-    const total = toNumber(summary?.total);
-    const txCount = Number(summary?.txCount ?? 0);
-    const avgPerTx = txCount > 0 ? Number((total / txCount).toFixed(2)) : 0;
-
-    res.json({
-      total,
-      txCount,
-      avgPerTx,
-      byType: byType.map((item) => ({
-        type: item.type,
-        total: toNumber(item.total),
-        count: Number(item.count ?? 0),
-      })),
-      history: history.map((item) => ({
-        ...item,
-        amount: toNumber(item.amount),
-      })),
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
-  }
+  void req;
+  res.status(410).json({
+    error:
+      "GreenMarket không còn theo dõi thu nhập cộng tác viên trong hệ thống. Khách hàng và cộng tác viên tự liên hệ, thỏa thuận và thanh toán trực tiếp.",
+  });
 };
 
 export const getPayoutRequestHistory = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
-
-    const rows = await db
-      .select()
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.transactionUserId, userId),
-          eq(transactions.transactionType, "payout")
-        )
-      )
-      .orderBy(desc(transactions.transactionCreatedAt))
-      .limit(limit)
-      .offset(offset);
-
-    const [countResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.transactionUserId, userId),
-          eq(transactions.transactionType, "payout")
-        )
-      );
-
-    const totalItems = Number(countResult?.count ?? 0);
-    const totalPages = Math.ceil(totalItems / limit);
-
-    res.json({
-      data: rows.map((item) => ({
-        ...item,
-        payoutRequestAmount: toNumber(item.transactionAmount),
-        payoutRequestStatus: item.transactionStatus,
-        payoutRequestCreatedAt: item.transactionCreatedAt,
-        payoutRequestMethod: item.transactionProvider,
-        payoutRequestNote: (item.transactionMeta as any)?.note
-      })),
-      meta: {
-        page,
-        limit,
-        totalItems,
-        totalPages,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
-  }
+  void req;
+  res.status(410).json({
+    error:
+      "GreenMarket không còn hỗ trợ lịch sử yêu cầu chi trả cho cộng tác viên. Việc thanh toán được thực hiện trực tiếp ngoài hệ thống.",
+  });
 };
 
 export const createPayoutRequest = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    const amount = Number(req.body?.amount);
-    const method =
-      typeof req.body?.method === "string" ? req.body.method.trim() : "";
-    const note = typeof req.body?.note === "string" ? req.body.note.trim() : null;
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      res.status(400).json({ error: "amount must be a positive number" });
-      return;
-    }
-
-    if (amount < MIN_PAYOUT_AMOUNT) {
-      res.status(400).json({
-        error: `amount must be at least ${MIN_PAYOUT_AMOUNT}`,
-        minPayoutAmount: MIN_PAYOUT_AMOUNT,
-      });
-      return;
-    }
-
-    if (!method) {
-      res.status(400).json({ error: "method is required" });
-      return;
-    }
-
-    const availableBalance = await calculateAvailableBalance(userId);
-
-    if (amount > availableBalance) {
-      res.status(400).json({
-        error: "amount exceeds available balance",
-        availableBalance,
-      });
-      return;
-    }
-
-    const [createdRequest] = await db
-      .insert(transactions)
-      .values({
-        transactionUserId: userId,
-        transactionType: "payout",
-        transactionAmount: amount.toFixed(2),
-        transactionProvider: method,
-        transactionStatus: "pending",
-        transactionMeta: { note },
-        transactionCreatedAt: new Date(),
-      })
-      .returning();
-
-    res.status(201).json({
-      message: "Payout request created successfully (mock)",
-      payoutRequest: {
-        ...createdRequest,
-        payoutRequestAmount: toNumber(createdRequest.transactionAmount),
-        payoutRequestStatus: createdRequest.transactionStatus,
-        payoutRequestCreatedAt: createdRequest.transactionCreatedAt,
-        payoutRequestMethod: createdRequest.transactionProvider,
-        payoutRequestNote: note
-      },
-      availableBalanceAfter: Number((availableBalance - amount).toFixed(2)),
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
-  }
+  void req;
+  res.status(410).json({
+    error:
+      "GreenMarket không còn hỗ trợ tạo yêu cầu chi trả cho cộng tác viên. Khách hàng và cộng tác viên tự liên hệ để thanh toán trực tiếp ngoài hệ thống.",
+  });
 };
 
 
@@ -1410,6 +1239,47 @@ export const respondToInvitation = async (
     }
 
     res.json({ message: `Invitation ${action}ed successfully`, status: newStatus });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * Get active shops that the current collaborator can act on behalf of.
+ */
+export const getMyActiveShops = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const rows = await db
+      .select({
+        shopId: shops.shopId,
+        shopName: shops.shopName,
+        shopLogoUrl: shops.shopLogoUrl,
+        shopLocation: shops.shopLocation,
+        ownerDisplayName: users.userDisplayName,
+        joinedAt: shopCollaborators.shopCollaboratorsCreatedAt,
+      })
+      .from(shopCollaborators)
+      .innerJoin(shops, eq(shopCollaborators.shopCollaboratorsShopId, shops.shopId))
+      .leftJoin(users, eq(shops.shopId, users.userId))
+      .where(
+        and(
+          eq(shopCollaborators.collaboratorId, userId),
+          eq(shopCollaborators.shopCollaboratorsStatus, "active"),
+        ),
+      )
+      .orderBy(desc(shopCollaborators.shopCollaboratorsCreatedAt));
+
+    res.json({ data: rows });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal server error" });

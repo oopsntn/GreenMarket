@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { requestOtp, verifyOtp, generateQrSession, checkQrStatus } from '../services/api';
 import { Phone, Lock, ArrowRight, Loader2, QrCode, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
+import { io } from 'socket.io-client';
 
 const Login: React.FC = () => {
   const [loginMethod, setLoginMethod] = useState<'qr' | 'mobile'>('qr');
@@ -19,7 +20,7 @@ const Login: React.FC = () => {
   // QR State
   const [qrSessionId, setQrSessionId] = useState<string | null>(null);
   const [qrStatus, setQrStatus] = useState<'pending' | 'scanned' | 'authorized' | 'expired'>('pending');
-  const pollInterval = useRef<any>(null);
+  const socketRef = useRef<any>(null);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -30,7 +31,32 @@ const Login: React.FC = () => {
     setQrStatus('pending');
     try {
       const res = await generateQrSession();
-      setQrSessionId(res.data.sessionId);
+      const sessionId = res.data.sessionId;
+      setQrSessionId(sessionId);
+
+      // Setup Socket.io
+      const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+      const socket = io(socketUrl);
+      socketRef.current = socket;
+
+      socket.on('connect', () => {
+        console.log("Connected to socket server");
+        socket.emit('join-qr-session', sessionId);
+      });
+
+      socket.on('qr-status-updated', (data: any) => {
+        console.log("QR Status Updated:", data);
+        setQrStatus(data.status);
+        if (data.status === 'authorized' && data.token) {
+          login(data.token, data.user);
+          navigate('/home');
+        }
+      });
+
+      socket.on('disconnect', () => {
+        console.log("Disconnected from socket server");
+      });
+
     } catch (error) {
       console.error("QR Generate failed", error);
     } finally {
@@ -43,37 +69,18 @@ const Login: React.FC = () => {
       initQr();
     } else {
       setQrSessionId(null);
-      if (pollInterval.current) clearInterval(pollInterval.current);
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     }
     return () => {
-      if (pollInterval.current) clearInterval(pollInterval.current);
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
   }, [loginMethod]);
-
-  useEffect(() => {
-    if (!qrSessionId || loginMethod !== 'qr') return;
-
-    pollInterval.current = setInterval(async () => {
-      try {
-        const res = await checkQrStatus(qrSessionId);
-        setQrStatus(res.data.status);
-        if (res.data.status === 'authorized') {
-          clearInterval(pollInterval.current);
-          login(res.data.token, res.data.user);
-          navigate('/home');
-        } else if (res.data.status === 'expired') {
-          clearInterval(pollInterval.current);
-        }
-      } catch (error: any) {
-        if (error.response?.data?.status === 'expired') {
-          setQrStatus('expired');
-          clearInterval(pollInterval.current);
-        }
-      }
-    }, 2500); // Poll every 2.5s
-
-    return () => clearInterval(pollInterval.current);
-  }, [qrSessionId, loginMethod, login, navigate]);
 
   // --- Mobile/OTP Logic ---
   const handleOtpChange = (index: number, value: string) => {

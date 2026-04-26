@@ -1,5 +1,14 @@
 import { ApiError, apiClient } from "../lib/apiClient";
-import type { AIInsightFocus, AIInsightFocusFilter, AIInsightHistoryItem, AIInsightOverview, AIInsightSettings, AIInsightSummaryCard, AIInsightTone, AITrendScoreRow } from "../types/aiInsight";
+import type {
+  AIInsightFocus,
+  AIInsightFocusFilter,
+  AIInsightHistoryItem,
+  AIInsightOverview,
+  AIInsightSettings,
+  AIInsightSummaryCard,
+  AIInsightTone,
+  AITrendScoreRow,
+} from "../types/aiInsight";
 
 const AI_INSIGHTS_API_PATH = "/api/admin/ai-insights";
 
@@ -12,12 +21,9 @@ const TEXT_REPLACEMENTS: Array<[string, string]> = [
   ["Promotion Watchlist summary", "Tóm tắt quảng bá cần theo dõi"],
   ["Revenue Signals summary", "Tóm tắt tín hiệu doanh thu"],
   ["Operator Load summary", "Tóm tắt khối lượng vận hành"],
-  ["Homepage traffic stayed stable while Category Top outperformed revenue expectations in the final week of March. Keep Category Top inventory available because it is converting best among active slots.", "Lưu lượng trang chủ giữ ở mức ổn định, trong khi vị trí 2 trang chủ vượt kỳ vọng doanh thu ở tuần cuối tháng 3. Nên tiếp tục duy trì vị trí 2 vì đây là slot chuyển đổi tốt trong các slot đang hoạt động."],
-  ["Search Boost campaigns that expired on 2026-03-26 still show demand signals. Review whether any eligible cases should be reopened after payment confirmation.", "Các chiến dịch vị trí 3 trang chủ hết hạn vào ngày 2026-03-26 vẫn cho thấy tín hiệu nhu cầu. Cần rà soát xem trường hợp nào đủ điều kiện để mở lại sau khi xác nhận thanh toán."],
-  ["March revenue was concentrated in Homepage and Category Top packages. Search Boost volume increased late in the month but paid contribution is still smaller than premium placements.", "Doanh thu tháng 3 tập trung chủ yếu ở các gói vị trí 1 và vị trí 2 trang chủ. Gói vị trí 3 tăng về số lượng ở cuối tháng nhưng đóng góp doanh thu vẫn thấp hơn các vị trí cao cấp."],
-  ["Ops Team B handled the largest number of category campaigns. The current load remains acceptable, but new escalations should be balanced toward Team A for the next cycle.", "Nhóm vận hành B đang xử lý nhiều chiến dịch vị trí 2 nhất. Khối lượng hiện tại vẫn trong ngưỡng chấp nhận, nhưng các ca leo thang mới nên được phân bổ thêm cho Nhóm vận hành A ở chu kỳ tiếp theo."],
-  ["Early March homepage impressions were healthy but softened before premium 30-day inventory was activated. Review creative freshness for homepage premium buyers.", "Lượt hiển thị trang chủ đầu tháng 3 ở mức tốt nhưng giảm dần trước khi gói cao cấp 30 ngày được kích hoạt. Cần rà soát lại độ mới của nội dung quảng bá dành cho khách mua vị trí trang chủ."],
-  ["Average order value is currently supported by premium homepage packages, while smaller search packages are driving order count. Keep both tiers visible in pricing analysis.", "Giá trị đơn hàng trung bình hiện được giữ bởi các gói vị trí 1 trang chủ, trong khi các gói vị trí 3 đang kéo số lượng đơn. Nên tiếp tục theo dõi đồng thời cả hai tầng gói trong phân tích giá."],
+  ["Needs Review", "Cần duyệt lại"],
+  ["Generated", "Đã tạo"],
+  ["Archived", "Lưu trữ"],
 ];
 
 const translateText = (value: string) =>
@@ -107,6 +113,98 @@ const deriveReadableInsightSummary = (
 const getFocusLabel = (focus: AIInsightFocusFilter): AIInsightFocus =>
   focus === "All Focus Areas" ? "Executive Summary" : focus;
 
+const getFocusTitleVi = (focus: AIInsightFocus) => {
+  if (focus === "Executive Summary") return "Tổng quan điều hành";
+  if (focus === "Placement Performance") return "Hiệu quả vị trí hiển thị";
+  if (focus === "Promotion Watchlist") return "Quảng bá cần theo dõi";
+  if (focus === "Revenue Signals") return "Tín hiệu doanh thu";
+  if (focus === "Customer Spending") return "Chi tiêu khách hàng";
+  return "Khối lượng vận hành";
+};
+
+const getToneLead = (tone: AIInsightSettings["recommendationTone"]) => {
+  if (tone === "Conservative") {
+    return "Ưu tiên giữ an toàn vận hành, kiểm tra rủi ro trước khi mở rộng thay đổi.";
+  }
+
+  if (tone === "Aggressive") {
+    return "Ưu tiên tăng trưởng, đẩy nhanh các điểm có tín hiệu tốt và chấp nhận thử nghiệm mạnh hơn.";
+  }
+
+  return "Cân bằng giữa tăng trưởng và kiểm soát rủi ro, ưu tiên các bước có thể triển khai ngay.";
+};
+
+const getToneRecommendationLine = (
+  tone: AIInsightSettings["recommendationTone"],
+) => {
+  if (tone === "Conservative") {
+    return "Giữ thay đổi ở quy mô nhỏ, xác minh thêm trước khi tăng ngân sách hoặc mở rộng vận hành.";
+  }
+
+  if (tone === "Aggressive") {
+    return "Có thể tăng nhịp thử nghiệm ở các nhóm đang cho tín hiệu tốt để chốt cơ hội tăng trưởng sớm.";
+  }
+
+  return "Nên triển khai theo từng bước, vừa quan sát dữ liệu vừa điều chỉnh để tránh lệch vận hành.";
+};
+
+const getToneBadgeLabel = (tone: AIInsightSettings["recommendationTone"]) => {
+  if (tone === "Conservative") {
+    return "Thận trọng";
+  }
+
+  if (tone === "Aggressive") {
+    return "Quyết liệt";
+  }
+
+  return "Cân bằng";
+};
+
+const getToneDetailLead = (tone: AIInsightSettings["recommendationTone"]) => {
+  if (tone === "Conservative") {
+    return "Định hướng giọng điệu: ưu tiên kiểm soát rủi ro, xác minh trước khi mở rộng.";
+  }
+
+  if (tone === "Aggressive") {
+    return "Định hướng giọng điệu: ưu tiên tăng trưởng nhanh, đẩy mạnh các tín hiệu đang tốt.";
+  }
+
+  return "Định hướng giọng điệu: cân bằng giữa tăng trưởng và ổn định vận hành.";
+};
+
+const applyToneToHistoryItem = (
+  item: AIInsightHistoryItem,
+  tone: AIInsightSettings["recommendationTone"],
+): AIInsightHistoryItem => {
+  const toneLabel = getToneBadgeLabel(tone);
+  const title = item.title.includes(`• ${toneLabel}`)
+    ? item.title
+    : `${item.title} • ${toneLabel}`;
+
+  const lead =
+    tone === "Conservative"
+      ? "Ưu tiên kiểm soát rủi ro:"
+      : tone === "Aggressive"
+        ? "Ưu tiên tăng trưởng nhanh:"
+        : "Ưu tiên cân bằng vận hành:";
+
+  const summary = item.summary.startsWith(lead)
+    ? item.summary
+    : `${lead} ${item.summary}`;
+
+  const detailLead = getToneDetailLead(tone);
+  const detail = item.detail.startsWith(detailLead)
+    ? item.detail
+    : `${detailLead}\n\n${item.detail}`;
+
+  return {
+    ...item,
+    title,
+    summary,
+    detail,
+  };
+};
+
 const normalizeHistoryItem = (item: AIInsightHistoryItem): AIInsightHistoryItem => ({
   ...item,
   title: translateText(item.title),
@@ -157,20 +255,12 @@ const normalizeOverview = (overview: AIInsightOverview): AIInsightOverview => ({
 const formatOverviewRow = (label: string, value: string, detail: string) =>
   `${label}: ${value}. ${detail}`;
 
-const getFocusTitleVi = (focus: AIInsightFocus) => {
-  if (focus === "Executive Summary") return "Tổng quan điều hành";
-  if (focus === "Placement Performance") return "Hiệu quả vị trí hiển thị";
-  if (focus === "Promotion Watchlist") return "Quảng bá cần theo dõi";
-  if (focus === "Revenue Signals") return "Tín hiệu doanh thu";
-  if (focus === "Customer Spending") return "Chi tiêu khách hàng";
-  return "Khối lượng vận hành";
-};
-
 const buildLocalInsightDetail = (
   focus: AIInsightFocus,
   overview: AIInsightOverview,
   trendRows: AITrendScoreRow[],
   summary: string,
+  tone: AIInsightSettings["recommendationTone"],
 ) => {
   const relevantTrendRows = trendRows.filter(
     (item) => focus === "Executive Summary" || item.focus === focus,
@@ -200,6 +290,7 @@ const buildLocalInsightDetail = (
 
   return [
     "TÓM TẮT ĐIỀU HÀNH:",
+    `- ${getToneLead(tone)}`,
     ...executiveItems.map((item) => `- ${item}`),
     "CHỈ SỐ CHÍNH:",
     ...metricItems.map((item) => `- ${item}`),
@@ -208,46 +299,11 @@ const buildLocalInsightDetail = (
       ? trendHighlights.map((item) => `- ${item}`)
       : ["- Chưa có tín hiệu rủi ro nổi bật trong kỳ dữ liệu đang chọn."]),
     "HÀNH ĐỘNG ĐỀ XUẤT:",
+    `- ${getToneRecommendationLine(tone)}`,
     ...recommendationItems.map((item) => `- ${item}`),
     "DỮ LIỆU DÙNG ĐỂ KẾT LUẬN:",
     ...metricItems.slice(0, 2).map((item) => `- ${item}`),
   ].join("\n");
-};
-
-const buildLocalGeneratedInsight = async (
-  items: AIInsightHistoryItem[],
-  fromDate: string,
-  toDate: string,
-  focus: AIInsightFocusFilter,
-  settings: AIInsightSettings,
-): Promise<AIInsightHistoryItem> => {
-  const resolvedFocus = getFocusLabel(focus);
-  const [overview, trendRows] = await Promise.all([
-    aiInsightService.getOverview(fromDate, toDate, focus),
-    aiInsightService.getTrendRows(fromDate, toDate),
-  ]);
-
-  const summary =
-    overview.executiveSummary[0] || getFallbackSummaryByFocus(resolvedFocus);
-  const detail = buildLocalInsightDetail(
-    resolvedFocus,
-    overview,
-    trendRows,
-    summary,
-  );
-  const nextId =
-    items.length > 0 ? Math.max(...items.map((item) => item.id)) + 1 : 1;
-
-  return normalizeHistoryItem({
-    id: nextId,
-    title: `Tóm tắt ${getFocusTitleVi(resolvedFocus)}`,
-    focus: resolvedFocus,
-    summary,
-    detail,
-    generatedBy: "Bộ phân tích nội bộ",
-    generatedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
-    status: settings.reviewMode === "Required" ? "Needs Review" : "Generated",
-  });
 };
 
 const shouldUseLocalFallback = (error: unknown) => {
@@ -258,45 +314,108 @@ const shouldUseLocalFallback = (error: unknown) => {
     message.includes("fetch failed") ||
     message.includes("timed out") ||
     message.includes("gemini_api_key") ||
-    (error instanceof ApiError && error.status >= 500)
+    error instanceof ApiError
+  );
+};
+
+const fetchOverview = (
+  fromDate?: string,
+  toDate?: string,
+  focus?: AIInsightFocusFilter,
+) => {
+  const params = new URLSearchParams();
+  if (fromDate) params.set("fromDate", fromDate);
+  if (toDate) params.set("toDate", toDate);
+  if (focus && focus !== "All Focus Areas") params.set("focus", focus);
+  const query = params.toString();
+
+  return apiClient
+    .request<AIInsightOverview>(
+      `${AI_INSIGHTS_API_PATH}/overview${query ? `?${query}` : ""}`,
+      {
+        defaultErrorMessage: "Không thể tải tổng quan AI.",
+      },
+    )
+    .then(normalizeOverview);
+};
+
+const fetchTrendRows = (fromDate?: string, toDate?: string) => {
+  const params = new URLSearchParams();
+  if (fromDate) params.set("fromDate", fromDate);
+  if (toDate) params.set("toDate", toDate);
+  const query = params.toString();
+
+  return apiClient
+    .request<AITrendScoreRow[]>(
+      `${AI_INSIGHTS_API_PATH}/trends${query ? `?${query}` : ""}`,
+      {
+        defaultErrorMessage: "Không thể tải dữ liệu tín hiệu xu hướng AI.",
+      },
+    )
+    .then((items) => items.map(normalizeTrendRow));
+};
+
+const fetchHistory = () =>
+  apiClient
+    .request<AIInsightHistoryItem[]>(`${AI_INSIGHTS_API_PATH}/history`, {
+      defaultErrorMessage: "Không thể tải lịch sử AI Insights.",
+    })
+    .then((items) => items.map(normalizeHistoryItem));
+
+const buildLocalGeneratedInsight = async (
+  items: AIInsightHistoryItem[],
+  fromDate: string,
+  toDate: string,
+  focus: AIInsightFocusFilter,
+  settings: AIInsightSettings,
+): Promise<AIInsightHistoryItem> => {
+  const resolvedFocus = getFocusLabel(focus);
+  const [overview, trendRows] = await Promise.all([
+    fetchOverview(fromDate, toDate, focus),
+    fetchTrendRows(fromDate, toDate),
+  ]);
+
+  const summary =
+    overview.executiveSummary[0] || getFallbackSummaryByFocus(resolvedFocus);
+  const detail = buildLocalInsightDetail(
+    resolvedFocus,
+    overview,
+    trendRows,
+    summary,
+    settings.recommendationTone,
+  );
+  const nextId =
+    items.length > 0 ? Math.max(...items.map((item) => item.id)) + 1 : 1;
+
+  return applyToneToHistoryItem(
+    normalizeHistoryItem({
+      id: nextId,
+      title: `Tóm tắt ${getFocusTitleVi(resolvedFocus)}`,
+      focus: resolvedFocus,
+      summary,
+      detail,
+      generatedBy: "Bộ phân tích nội bộ",
+      generatedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+      status: settings.reviewMode === "Required" ? "Needs Review" : "Generated",
+    }),
+    settings.recommendationTone,
   );
 };
 
 export const aiInsightService = {
   getSettings(): Promise<AIInsightSettings> {
-    return apiClient.request<AIInsightSettings>(
-      `${AI_INSIGHTS_API_PATH}/settings`,
-      { defaultErrorMessage: "Không thể tải cấu hình AI Insights." },
-    );
+    return apiClient.request<AIInsightSettings>(`${AI_INSIGHTS_API_PATH}/settings`, {
+      defaultErrorMessage: "Không thể tải cấu hình AI Insights.",
+    });
   },
 
   updateSettings(settings: AIInsightSettings): Promise<AIInsightSettings> {
-    return apiClient.request<AIInsightSettings>(
-      `${AI_INSIGHTS_API_PATH}/settings`,
-      {
-        method: "PUT",
-        includeJsonContentType: true,
-        defaultErrorMessage: "Không thể lưu cấu hình AI Insights.",
-        body: JSON.stringify(settings),
-      },
-    );
-  },
-
-  getTrendRows(fromDate?: string, toDate?: string): Promise<AITrendScoreRow[]> {
-    const params = new URLSearchParams();
-    if (fromDate) params.set("fromDate", fromDate);
-    if (toDate) params.set("toDate", toDate);
-    const query = params.toString();
-
-    return apiClient
-      .request<AITrendScoreRow[]>(
-        `${AI_INSIGHTS_API_PATH}/trends${query ? `?${query}` : ""}`,
-        {
-          defaultErrorMessage:
-            "Không thể tải dữ liệu chấm điểm xu hướng AI.",
-        },
-      )
-      .then((items) => items.map(normalizeTrendRow));
+    return apiClient.request<AIInsightSettings>(`${AI_INSIGHTS_API_PATH}/settings`, {
+      method: "PUT",
+      includeJsonContentType: true,
+      defaultErrorMessage: "Không thể cập nhật cấu hình AI Insights.",
+      body: JSON.stringify(settings),
+    });
   },
 
   getOverview(
@@ -304,28 +423,15 @@ export const aiInsightService = {
     toDate?: string,
     focus?: AIInsightFocusFilter,
   ): Promise<AIInsightOverview> {
-    const params = new URLSearchParams();
-    if (fromDate) params.set("fromDate", fromDate);
-    if (toDate) params.set("toDate", toDate);
-    if (focus && focus !== "All Focus Areas") {
-      params.set("focus", getFocusLabel(focus));
-    }
-    const query = params.toString();
+    return fetchOverview(fromDate, toDate, focus);
+  },
 
-    return apiClient
-      .request<AIInsightOverview>(
-        `${AI_INSIGHTS_API_PATH}/overview${query ? `?${query}` : ""}`,
-        { defaultErrorMessage: "Không thể tải báo cáo nhận định AI." },
-      )
-      .then(normalizeOverview);
+  getTrendRows(fromDate?: string, toDate?: string): Promise<AITrendScoreRow[]> {
+    return fetchTrendRows(fromDate, toDate);
   },
 
   getHistory(): Promise<AIInsightHistoryItem[]> {
-    return apiClient
-      .request<AIInsightHistoryItem[]>(`${AI_INSIGHTS_API_PATH}/history`, {
-        defaultErrorMessage: "Không thể tải lịch sử AI Insights.",
-      })
-      .then((items) => items.map(normalizeHistoryItem));
+    return fetchHistory();
   },
 
   getSummaryCards(
@@ -352,14 +458,14 @@ export const aiInsightService = {
         subtitle: "Tổng số bản nhận định AI đang được lưu",
       },
       {
-        title: "Cần admin xem lại",
+        title: "Cần quản trị viên xem lại",
         value: String(reviewCount),
         subtitle: "Các bản AI đang ở trạng thái cần kiểm tra",
       },
       {
         title: "Tín hiệu nổi bật",
         value: String(watchlistCount),
-        subtitle: `Các dòng xu hướng có điểm từ ${settings.confidenceThreshold} trở lên`,
+        subtitle: `Các tín hiệu vượt ngưỡng quan tâm ${settings.confidenceThreshold}/100 của AI`,
       },
       {
         title: "Giọng điệu phân tích",
@@ -396,7 +502,12 @@ export const aiInsightService = {
             generatedAt,
           }),
         })
-        .then(normalizeHistoryItem);
+        .then((item) =>
+          applyToneToHistoryItem(
+            normalizeHistoryItem(item),
+            settings.recommendationTone,
+          ),
+        );
     } catch (error) {
       if (!shouldUseLocalFallback(error)) {
         throw error;

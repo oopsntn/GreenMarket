@@ -133,11 +133,18 @@ export const createVNPayPaymentRequest = async (
 
 export const verifyVNPaySignature = (query: Record<string, any>): boolean => {
     const config = getVNPayConfig();
-    let vnp_Params = { ...query };
-    let secureHash = vnp_Params['vnp_SecureHash'];
+    // VNPay only signs its own `vnp_` parameters.
+    // Our return URL may include extra params (e.g. `platform=mobile`) which must be excluded,
+    // otherwise signature verification will always fail.
+    const secureHashRaw = query["vnp_SecureHash"];
+    const secureHash = typeof secureHashRaw === "string" ? secureHashRaw : String(secureHashRaw ?? "");
 
-    delete vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHashType'];
+    let vnp_Params: Record<string, any> = {};
+    for (const [key, value] of Object.entries(query || {})) {
+        if (!key.startsWith("vnp_")) continue;
+        if (key === "vnp_SecureHash" || key === "vnp_SecureHashType") continue;
+        vnp_Params[key] = value;
+    }
 
     vnp_Params = sortObject(vnp_Params);
 

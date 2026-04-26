@@ -13,8 +13,10 @@ import { reportModerationService } from "../services/reportModerationService";
 import { shopApi } from "../services/shopApi";
 import { userService } from "../services/userService";
 import {
+  coerceDateRange,
   DEFAULT_REPORT_FROM_DATE,
   DEFAULT_REPORT_TO_DATE,
+  getTodayDateValue,
 } from "../utils/dateRange";
 import "./DashboardPage.css";
 
@@ -84,6 +86,19 @@ function DashboardPage() {
   const [pageError, setPageError] = useState("");
   const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
   const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
+  const today = getTodayDateValue();
+
+  const handleFromDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, toDate, "from", today);
+    setFromDate(nextValue);
+    setToDate(counterpartValue);
+  };
+
+  const handleToDateChange = (value: string) => {
+    const { nextValue, counterpartValue } = coerceDateRange(value, fromDate, "to", today);
+    setToDate(nextValue);
+    setFromDate(counterpartValue);
+  };
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -186,9 +201,9 @@ function DashboardPage() {
               note: `${fromDate} đến ${toDate}`,
             },
             {
-              title: "Shop chờ duyệt",
+              title: "Cửa hàng chờ duyệt",
               value: String(pendingShops),
-              note: "Hồ sơ đang chờ admin kiểm tra",
+              note: "Hồ sơ đang chờ quản trị viên kiểm tra",
             },
             {
               title: "Báo cáo chờ xử lý",
@@ -290,14 +305,17 @@ function DashboardPage() {
               label: "Từ ngày",
               type: "date",
               value: fromDate,
-              onChange: setFromDate,
+              max: toDate || today,
+              onChange: handleFromDateChange,
             },
             {
               id: "dashboard-to-date",
               label: "Đến ngày",
               type: "date",
               value: toDate,
-              onChange: setToDate,
+              min: fromDate || undefined,
+              max: today,
+              onChange: handleToDateChange,
             },
           ]}
         />
@@ -313,7 +331,7 @@ function DashboardPage() {
       ) : pageError ? (
         <SectionCard title="Chỉ số điều hành rất ngắn">
           <EmptyState
-            title="Không thể tải dashboard"
+            title="Không thể tải màn tổng quan"
             description={pageError}
           />
         </SectionCard>
@@ -321,7 +339,7 @@ function DashboardPage() {
         <>
           <SectionCard
             title="Chỉ số điều hành rất ngắn"
-            description="Giữ lại các chỉ số mà admin cần đọc trong vài giây đầu tiên."
+            description="Giữ lại các chỉ số mà quản trị viên cần đọc trong vài giây đầu tiên."
           >
             <div className="dashboard-cards">
               {dashboardData.metrics.map((card) => (

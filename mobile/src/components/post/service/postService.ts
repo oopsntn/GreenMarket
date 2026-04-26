@@ -18,6 +18,7 @@ export interface PostPayload {
     postPrice?: string | number;
     postLocation?: string;
     postContactPhone?: string;
+    shopId?: number;
     images?: string[];
     videos?: string[];
     attributes?: Array<{
@@ -94,10 +95,16 @@ export const postService = {
 
     createPost: async (postData: PostPayload) => {
         try {
+            console.log('[PostService.createPost]', {
+                url: `${API_BASE_URL}/posts`,
+                method: 'POST',
+                payload: postData,
+            })
             const response = await api.post('/posts', postData)
             return response.data
         } catch (error: any) {
             console.error('createPost failed:', {
+                url: `${API_BASE_URL}/posts`,
                 status: error?.response?.status,
                 data: error?.response?.data,
                 payload: postData,
@@ -121,22 +128,38 @@ export const postService = {
         return response.data
     },
 
-    uploadMedia: async (mediaUris: string[] = [], options: UploadOptions = {}): Promise<UploadResponse> => {
-        const retries = Number.isFinite(options.retries) ? Math.max(0, Number(options.retries)) : 2
+    uploadMedia: async (
+        mediaUris: string[] = [],
+        options: UploadOptions = {}
+    ): Promise<UploadResponse> => {
+        const retries = Number.isFinite(options.retries)
+            ? Math.max(0, Number(options.retries))
+            : 2
+
+        let lastError: any
 
         const attemptUpload = async () => {
             const formData = new FormData()
 
+            console.log('[PostService.uploadMedia]', {
+                url: `${API_BASE_URL}/upload`,
+                method: 'POST',
+                mediaCount: mediaUris.length,
+                mediaUris,
+            })
+
             for (const uri of mediaUris) {
                 const { fileName, mimeType } = getFileInfo(uri)
 
-                // Giữ nguyên URI cho React Native fetch
-                let normalizedUri = uri
+                const normalizedUri = uri
                 console.log(`uri: ${uri}, fileName: ${fileName}, mimeType: ${mimeType}`)
+
                 if (Platform.OS === 'web') {
                     const response = await fetch(uri)
                     const blob = await response.blob()
-                    const file = new File([blob], fileName, { type: blob.type || mimeType })
+                    const file = new File([blob], fileName, {
+                        type: blob.type || mimeType,
+                    })
                     formData.append('media', file)
                 } else {
                     formData.append('media', {
@@ -146,56 +169,58 @@ export const postService = {
                     } as any)
                 }
             }
+
             const token = await AsyncStorage.getItem('token')
+
             const response = await fetch(`${API_BASE_URL}/upload`, {
                 method: 'POST',
                 headers: {
-                    // KHÔNG set Content-Type — fetch tự set multipart boundary
                     ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 },
                 body: formData,
             })
-            const status = response.status
-            let data: any = null
-            try {
-                data = await response.json()
-            } catch {
-                data = null
-            }
+
+            console.log('[PostService.uploadMedia] Response status:', response.status)
 
             if (!response.ok) {
-                const message =
-                    (data && (data.error || data.message)) ||
-                    `Upload failed with status ${status}`
-                const err: any = new Error(message)
-                err.status = status
-                err.data = data
-                throw err
+                let errorData = null
+                try {
+                    errorData = await response.json()
+                } catch (e) { }
+
+                throw {
+                    response: {
+                        status: response.status,
+                        data: errorData || { error: 'Lỗi tải ảnh/video từ máy chủ' },
+                    },
+                    message: 'Network error or bad response',
+                }
             }
 
-            if (!data?.urls || !Array.isArray(data.urls)) {
+            const data = await response.json()
+
+            if (!data?.urls) {
                 throw new Error('Invalid upload response')
             }
 
-            return data as UploadResponse
+            console.log('[PostService.uploadMedia] Response data:', data)
+            return data
         }
 
-        let lastError: any = null
         for (let attempt = 0; attempt <= retries; attempt++) {
             try {
                 return await attemptUpload()
             } catch (error: any) {
                 lastError = error
-                const waitMs = Math.min(4000, 800 * Math.pow(2, attempt)) // 0.8s, 1.6s, 3.2s...
-                console.error('uploadMedia failed (attempt):', {
-                    attempt: attempt + 1,
-                    retries: retries + 1,
+
+                console.error(`uploadMedia attempt ${attempt + 1} failed:`, {
                     message: error?.message,
-                    status: error?.status,
-                    data: error?.data,
+                    status: error?.response?.status,
+                    data: error?.response?.data,
                 })
-                if (attempt < retries) {
-                    await new Promise((resolve) => setTimeout(resolve, waitMs))
+
+                if (attempt === retries) {
+                    break
                 }
             }
         }
@@ -220,11 +245,6 @@ export const postService = {
 
     toggleVisibility: async (postId: number) => {
         const response = await api.patch(`/posts/${postId}/toggle-visibility`)
-        return response.data
-    },
-
-    activateMockPlan: async (durationDays: number = 30) => {
-        const response = await api.post('/posts/personal-plan/mock-activate', { durationDays })
         return response.data
     }
 }

@@ -58,7 +58,9 @@ export const updateAccountPackage = async (
 
     const updatedPackage = await adminAccountPackageService.updatePackage({
       code: packageCode,
+      title: req.body?.title,
       price: req.body?.price,
+      maxSales: req.body?.maxSales,
       durationDays: req.body?.durationDays,
       adminId: req.user?.id ?? null,
       adminEmail: req.user?.email ?? null,

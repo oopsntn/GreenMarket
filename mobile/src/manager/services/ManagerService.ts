@@ -57,6 +57,56 @@ export interface ReportModerationData {
     severity?: ModerationPriority;
 }
 
+export interface ManagerHistoryEntry {
+    logId: number;
+    actionType: string;
+    eventType: string;
+    eventTime: string | null;
+    actor?: {
+        userId?: number | null;
+        displayName?: string | null;
+    } | null;
+    target?: {
+        targetType?: string | null;
+        targetId?: number | null;
+    } | null;
+    meta?: Record<string, unknown> | null;
+}
+
+export interface ManagerStatisticsData {
+    kpi: {
+        totalActions: number;
+        postStatusUpdates: number;
+        shopStatusUpdates: number;
+        reportResolved: number;
+        feedbackSent: number;
+        escalationsCreated: number;
+        pendingPosts: number;
+        pendingReports: number;
+        pendingShops: number;
+        openQueueItems: number;
+    };
+    charts: {
+        actionsByType: Array<{
+            actionType: string;
+            count: number;
+        }>;
+        actionsByDay: Array<{
+            date: string;
+            totalActions: number;
+            postStatusUpdates: number;
+            shopStatusUpdates: number;
+            reportResolved: number;
+            feedbackSent: number;
+            escalationsCreated: number;
+        }>;
+        severityBreakdown: Array<{
+            severity: ModerationPriority;
+            count: number;
+        }>;
+    };
+}
+
 export type HostContentModerationStatus = 'pending' | 'approved' | 'rejected' | string;
 
 export interface HostContentModerationData {
@@ -233,19 +283,42 @@ const managerService = {
         return managerService.updateShopStatus(id, 'active');
     },
 
-    getDashboardOverview: async (fromDate?: string, toDate?: string): Promise<DashboardOverview> => {
+    getStatistics: async (fromDate?: string, toDate?: string): Promise<ManagerStatisticsData> => {
         const response = await api.get('/manager/statistics', { params: { from: fromDate, to: toDate } });
-        const kpi = response.data?.kpi || {};
+        return {
+            kpi: {
+                totalActions: Number(response.data?.kpi?.totalActions || 0),
+                postStatusUpdates: Number(response.data?.kpi?.postStatusUpdates || 0),
+                shopStatusUpdates: Number(response.data?.kpi?.shopStatusUpdates || 0),
+                reportResolved: Number(response.data?.kpi?.reportResolved || 0),
+                feedbackSent: Number(response.data?.kpi?.feedbackSent || 0),
+                escalationsCreated: Number(response.data?.kpi?.escalationsCreated || 0),
+                pendingPosts: Number(response.data?.kpi?.pendingPosts || 0),
+                pendingReports: Number(response.data?.kpi?.pendingReports || 0),
+                pendingShops: Number(response.data?.kpi?.pendingShops || 0),
+                openQueueItems: Number(response.data?.kpi?.openQueueItems || 0),
+            },
+            charts: {
+                actionsByType: Array.isArray(response.data?.charts?.actionsByType) ? response.data.charts.actionsByType : [],
+                actionsByDay: Array.isArray(response.data?.charts?.actionsByDay) ? response.data.charts.actionsByDay : [],
+                severityBreakdown: Array.isArray(response.data?.charts?.severityBreakdown) ? response.data.charts.severityBreakdown : [],
+            },
+        };
+    },
+
+    getDashboardOverview: async (fromDate?: string, toDate?: string): Promise<DashboardOverview> => {
+        const stats = await managerService.getStatistics(fromDate, toDate);
+        const kpi = stats.kpi;
         return {
             statCards: [
-                { title: 'Pending Posts', value: String(kpi.pendingPosts || 0) },
-                { title: 'Pending Shops', value: String(kpi.pendingShops || 0) },
-                { title: 'Pending Reports', value: String(kpi.pendingReports || 0) },
-                { title: 'Total Actions', value: String(kpi.totalActions || 0) },
+                { title: 'Bài đăng chờ duyệt', value: String(kpi.pendingPosts || 0) },
+                { title: 'Cửa hàng chờ duyệt', value: String(kpi.pendingShops || 0) },
+                { title: 'Báo cáo chờ xử lý', value: String(kpi.pendingReports || 0) },
+                { title: 'Tổng hành động', value: String(kpi.totalActions || 0) },
             ],
             summary: {
-                title: 'Moderation Overview',
-                description: `There are ${kpi.openQueueItems || 0} items currently waiting in the moderation queue.`,
+                title: 'Tổng quan kiểm duyệt',
+                description: `Hiện có ${kpi.openQueueItems || 0} mục đang chờ xử lý trong hàng đợi kiểm duyệt.`,
             }
         };
     },
@@ -274,9 +347,12 @@ const managerService = {
         return response.data;
     },
 
-    getHistory: async (params?: { from?: string; to?: string; actionType?: string; page?: number; limit?: number }) => {
+    getHistory: async (params?: { from?: string; to?: string; actionType?: string; page?: number; limit?: number }): Promise<{ data: ManagerHistoryEntry[]; meta?: Record<string, unknown> }> => {
         const response = await api.get('/manager/history', { params });
-        return response.data;
+        return {
+            data: Array.isArray(response.data?.data) ? response.data.data : [],
+            meta: response.data?.meta,
+        };
     },
 
     escalate: async (data: { targetType: string; targetId: number | string; severity: string; reason: string; evidenceUrls?: string[] }) => {

@@ -15,6 +15,7 @@ import {
   getPublicCollaboratorDetail,
   getMyInvitations,
   respondToInvitation,
+  getMyActiveShops,
 } from "../../controllers/user/collaborator.controller.ts";
 import {
   requireBusinessRole,
@@ -34,6 +35,9 @@ router.get("/public/:id", verifyToken, requireShop, getPublicCollaboratorDetail)
 // Invitation management
 router.get("/invitations", verifyToken, requireBusinessRole("COLLABORATOR"), getMyInvitations); // CTV check invites
 router.post("/invitations/:id/respond", verifyToken, requireBusinessRole("COLLABORATOR"), respondToInvitation); // CTV respond
+
+// CTV Shop workspace
+router.get("/my-shops", verifyToken, requireBusinessRole("COLLABORATOR"), getMyActiveShops);
 
 // CTV Job management
 router.get("/jobs", verifyToken, requireBusinessRole("COLLABORATOR"), getAvailableJobs);

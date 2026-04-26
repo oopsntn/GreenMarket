@@ -46,7 +46,7 @@ export interface PostingPolicy {
     postCreationFee: number
 }
 
-const useCreatePostStable = () => {
+const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) => {
     const [categories, setCategories] = useState<Category[]>([])
     const [attributes, setAttributes] = useState<CategoryAttribute[]>([])
     const [policy, setPolicy] = useState<PostingPolicy | null>(null)
@@ -236,6 +236,7 @@ const useCreatePostStable = () => {
                 postPrice: Number(formData.postPrice.trim()),
                 postLocation: formData.postLocation.trim() || undefined,
                 postContactPhone: formData.postContactPhone.replace(/\s+/g, '').trim() || undefined,
+                ...(options?.shopId ? { shopId: Number(options.shopId) } : {}),
                 images,
                 attributes: attributePayload,
             }

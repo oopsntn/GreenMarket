@@ -163,7 +163,7 @@ const ProfileScreen = () => {
                     </View>
 
                     {/* 3. Micro Stats Bar */}
-                    <View style={styles.statsBar}>
+                    {/* <View style={styles.statsBar}>
                         <View style={styles.statItem}>
                             <Calendar size={18} color="#64748b" />
                             <View>
@@ -179,7 +179,7 @@ const ProfileScreen = () => {
                                 <Text style={styles.statValB}>Tuyệt vời</Text>
                             </View>
                         </View>
-                    </View>
+                    </View> */}
 
                     {/* 4. Action Banner (Shop Related) */}
                     <View style={styles.shopBannerArea}>

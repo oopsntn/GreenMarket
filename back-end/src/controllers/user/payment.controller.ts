@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { AuthRequest } from "../../dtos/auth.ts";
 import {
   buildPaymentResultRedirectUrl,
+  getVNPayConfig,
 } from "../../utils/vnpay.ts";
 import {
   VNPayCallbackResult,
