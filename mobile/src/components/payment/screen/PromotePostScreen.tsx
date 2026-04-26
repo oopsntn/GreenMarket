@@ -25,9 +25,35 @@ const PromotePostScreen = ({ route }: any) => {
 
     const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+    const getPromotionErrorAlert = (error: any) => {
+        const errorCode = error?.response?.data?.code;
+
+        if (errorCode === 'PLACEMENT_SLOT_FULL') {
+            return {
+                title: 'Vị trí này đang tạm hết chỗ',
+                message: 'Gói bạn chọn hiện đã đủ số lượng hiển thị. Bạn vui lòng chọn vị trí khác hoặc thử lại sau nhé.',
+            };
+        }
+
+        if (error?.response?.status === 409) {
+            return {
+                title: 'Chưa thể áp dụng gói này',
+                message:
+                    error?.response?.data?.error ||
+                    'Gói bạn chọn hiện chưa thể dùng cho bài đăng này. Bạn thử một gói khác giúp mình nhé.',
+            };
+        }
+
+        return {
+            title: 'Chưa thể tiếp tục',
+            message:
+                error?.response?.data?.error ||
+                error?.message ||
+                'Hiện tại hệ thống chưa xử lý được yêu cầu này. Bạn vui lòng thử lại sau nhé.',
+        };
+    };
+
     const pollAfterPayment = async (maxRetries = 6, delayMs = 2500) => {
-        // Ở đây mình chỉ poll mềm để chờ backend/IPN cập nhật.
-        // Nếu sau này có endpoint lấy chi tiết post mới nhất, bạn có thể gọi tại đây.
         for (let i = 0; i < maxRetries; i++) {
             await sleep(delayMs);
         }
@@ -58,9 +84,8 @@ const PromotePostScreen = ({ route }: any) => {
             if (allPackages.length > 0) {
                 setSelectedPackage(allPackages[0]);
             }
-        } catch (error) {
-            console.error('Error fetching packages:', error);
-            CustomAlert('Lỗi', 'Không thể tải các gói đẩy tin.');
+        } catch (_error) {
+            CustomAlert('Chưa tải được gói đẩy tin', 'Hiện tại hệ thống chưa lấy được danh sách gói. Bạn thử lại sau nhé.');
         } finally {
             setLoading(false);
         }
@@ -68,12 +93,12 @@ const PromotePostScreen = ({ route }: any) => {
 
     const handlePromote = async () => {
         if (!post?.postId) {
-            CustomAlert('Lỗi', 'Không tìm thấy thông tin bài đăng.');
+            CustomAlert('Chưa thể tiếp tục', 'Hiện chưa tìm thấy thông tin bài đăng để đẩy tin.');
             return;
         }
 
         if (!selectedPackage) {
-            CustomAlert('Yêu cầu chọn', 'Vui lòng chọn một gói đẩy tin trước.');
+            CustomAlert('Chọn giúp một gói nhé', 'Bạn vui lòng chọn một gói đẩy tin trước khi tiếp tục thanh toán.');
             return;
         }
 
@@ -85,27 +110,22 @@ const PromotePostScreen = ({ route }: any) => {
                 selectedPackage.promotionPackageId
             );
 
-            console.log('[PromotePost] buyPackage response:', res);
-
             const paymentUrl =
                 res?.paymentUrl ||
                 res?.url ||
                 res?.checkoutUrl;
 
             if (!paymentUrl) {
-                CustomAlert('Lỗi', 'Không thể tạo liên kết thanh toán.');
+                CustomAlert('Chưa tạo được liên kết thanh toán', 'Hệ thống chưa chuẩn bị xong trang thanh toán. Bạn thử lại sau nhé.');
                 return;
             }
 
-            const browserResult = await WebBrowser.openBrowserAsync(paymentUrl);
-            console.log('[PromotePost] Browser result:', browserResult);
-
-            // Chờ backend/IPN cập nhật
+            await WebBrowser.openBrowserAsync(paymentUrl);
             await pollAfterPayment();
 
             CustomAlert(
                 'Đã mở cổng thanh toán',
-                'Sau khi hoàn tất thanh toán, hệ thống sẽ cập nhật trạng thái đẩy tin. Vui lòng kiểm tra lại trong quản lý tin đăng hoặc bảng điều khiển cửa hàng.',
+                'Sau khi hoàn tất thanh toán, hệ thống sẽ cập nhật trạng thái đẩy tin. Bạn vui lòng kiểm tra lại trong quản lý tin đăng hoặc bảng điều khiển cửa hàng.',
                 [
                     {
                         text: 'Về quản lý tin',
@@ -118,13 +138,8 @@ const PromotePostScreen = ({ route }: any) => {
                 ]
             );
         } catch (error: any) {
-            console.error('Promotion error:', error);
-            CustomAlert(
-                'Lỗi',
-                error?.response?.data?.error ||
-                error?.message ||
-                'Đã xảy ra lỗi trong quá trình thanh toán.'
-            );
+            const alertContent = getPromotionErrorAlert(error);
+            CustomAlert(alertContent.title, alertContent.message);
         } finally {
             setProcessing(false);
         }
