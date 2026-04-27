@@ -1,16 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import {
-  ArrowLeft,
   CheckCircle,
   ExternalLink,
   Flag,
@@ -24,6 +21,7 @@ import {
 import ReasonModal from '../components/ReasonModal';
 import managerService, { ReportModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+import ManagerHeader from '../components/ManagerHeader';
 
 const statusLabelMap: Record<string, string> = {
   pending: 'Chờ xử lý',
@@ -143,16 +141,8 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
   if (!report) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft color="#1E293B" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chi tiết báo cáo</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={styles.container}>
+      <ManagerHeader title="Chi tiết báo cáo" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.statusSection}>
@@ -319,32 +309,13 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
                   : '#94A3B8'
         }
       />
-    </SafeAreaView>
+          </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-  },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0F172A' },
   scrollContent: { padding: 20, paddingBottom: 100 },
   statusSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   statusBadge: {

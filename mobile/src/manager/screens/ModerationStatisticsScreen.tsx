@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ArrowLeft, BarChart3, Clock3, ShieldAlert, TrendingUp } from 'lucide-react-native';
+import { BarChart3, Clock3, ShieldAlert, TrendingUp } from 'lucide-react-native';
 import managerService, { ManagerStatisticsData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+import ManagerHeader from '../components/ManagerHeader';
 
 const labelMap: Record<string, string> = {
   post_status_updated: 'Cập nhật trạng thái bài đăng',
@@ -63,17 +62,16 @@ const ModerationStatisticsScreen = ({ navigation }: any) => {
   const severityBreakdown = stats?.charts?.severityBreakdown ?? [];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Thống kê kiểm duyệt</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={fetchStatistics}>
-          <BarChart3 size={18} color="#166534" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <ManagerHeader
+        title="Thống kê kiểm duyệt"
+        onBack={() => navigation.goBack()}
+        rightAction={
+          <TouchableOpacity style={styles.headerActionButton} onPress={fetchStatistics}>
+            <BarChart3 size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroCard}>
@@ -151,40 +149,21 @@ const ModerationStatisticsScreen = ({ navigation }: any) => {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+  headerActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  refreshButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#ECFDF5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
   content: { padding: 16, paddingBottom: 32 },
   heroCard: {
     backgroundColor: '#ECFDF5',

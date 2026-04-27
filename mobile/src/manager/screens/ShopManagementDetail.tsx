@@ -5,14 +5,13 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
   ActivityIndicator,
 } from 'react-native';
-import { ArrowLeft, Store, User, Calendar, ShieldCheck, AlertCircle, Ban } from 'lucide-react-native';
+import { Store, User, Calendar, ShieldCheck, AlertCircle, Ban } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
 import managerService, { ShopModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+import ManagerHeader from '../components/ManagerHeader';
 
 const ShopManagementDetail = ({ route, navigation }: any) => {
   const { shopId } = route.params;
@@ -77,16 +76,8 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
   if (!shop) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft color="#1E293B" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Hồ sơ cửa hàng</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={styles.container}>
+      <ManagerHeader title="Hồ sơ cửa hàng" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.shopBriefCard}>
@@ -171,32 +162,13 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
         confirmLabel="Chặn cửa hàng"
         confirmColor="#F59E0B"
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-  },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0F172A' },
   scrollContent: { padding: 20, paddingBottom: 100 },
   shopBriefCard: {
     flexDirection: 'row',
