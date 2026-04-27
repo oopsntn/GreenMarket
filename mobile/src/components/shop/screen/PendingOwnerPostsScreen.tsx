@@ -114,7 +114,7 @@ const PendingOwnerPostsScreen = () => {
                     {item.postSlug ? (
                         <TouchableOpacity 
                             style={styles.viewBtn}
-                            onPress={() => navigation.navigate('PostDetail', { slug: item.postSlug })}
+                            onPress={() => navigation.navigate('PendingOwnerPostReview', { post: item })}
                         >
                             <ArrowRight size={20} color="#64748B" />
                         </TouchableOpacity>

@@ -56,9 +56,6 @@ importers:
       lucide-react-native:
         specifier: ^1.7.0
         version: 1.7.0(react-native-svg@15.15.4(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0))(react-native@0.83.4(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.2.0))(react@19.2.0)
-      mobile:
-        specifier: 'link:'
-        version: 'link:'
       react:
         specifier: 19.2.0
         version: 19.2.0
