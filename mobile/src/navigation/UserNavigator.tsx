@@ -9,6 +9,7 @@ import CreatePostLayout from '../components/post/screen/CreatePostScreen';
 import ManagementCenterScreen from '../components/post/screen/ManagementCenterScreen';
 import UserSettingsScreen from '../components/settings/screen/UserSettingsScreen';
 import UserSupportRequestScreen from '../components/settings/screen/UserSupportRequestScreen';
+import QrLoginScannerScreen from '../components/settings/screen/QrLoginScannerScreen';
 import ProfileScreen from '../components/profile/screen/ProfileScreen';
 import MyPostLayout from '../components/post/screen/MyPostLayout';
 import PostTrashScreen from '../components/post/screen/PostTrashScreen';
@@ -169,6 +170,7 @@ const UserNavigator = () => {
       <RootStack.Screen name="Packages" component={PackagesScreen} />
       <RootStack.Screen name="Notifications" component={NotificationsScreen} />
       <RootStack.Screen name="UserSupportRequest" component={UserSupportRequestScreen} />
+      <RootStack.Screen name="QrLoginScanner" component={QrLoginScannerScreen} />
 
       {/* Collaborator Screens For Shop Owner */}
       <RootStack.Screen name="ShopCollaborators" component={ShopCollaboratorsScreen} />

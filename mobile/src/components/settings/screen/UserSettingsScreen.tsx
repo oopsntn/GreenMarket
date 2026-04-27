@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { Bell, LayoutDashboard, LogOut, User, ChevronRight } from 'lucide-react-native';
+import { Bell, LayoutDashboard, LogOut, User, ChevronRight, QrCode } from 'lucide-react-native';
 import { useAuth } from '../../../context/AuthContext';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import { useFocusEffect } from '@react-navigation/native';
@@ -58,6 +58,10 @@ const UserSettingsScreen = ({ navigation }: any) => {
     navigation.navigate('UserSupportRequest');
   };
 
+  const handleQrLoginPress = () => {
+    navigation.navigate('QrLoginScanner');
+  };
+
   return (
     <MobileLayout
       title="Cài đặt"
@@ -110,6 +114,17 @@ const UserSettingsScreen = ({ navigation }: any) => {
               ) : null}
               <ChevronRight size={20} color="#d1d5db" />
             </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleQrLoginPress}
+          >
+            <View style={styles.menuItemLeft}>
+              <QrCode size={20} color="#22C55E" />
+              <Text style={styles.menuItemText}>Quét mã QR đăng nhập Web</Text>
+            </View>
+            <ChevronRight size={20} color="#d1d5db" />
           </TouchableOpacity>
 
           <TouchableOpacity
