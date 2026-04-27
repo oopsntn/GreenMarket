@@ -2,15 +2,12 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
   AlertTriangle,
   ChevronRight,
@@ -23,6 +20,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import managerService from '../services/ManagerService';
+import ManagerHeader from '../components/ManagerHeader';
 
 const DashboardScreen = ({ navigation }: any) => {
   const [stats, setStats] = useState<any[]>([]);
@@ -63,8 +61,15 @@ const DashboardScreen = ({ navigation }: any) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    <View style={styles.container}>
+      <ManagerHeader
+        title="Bảng điều khiển"
+        rightAction={
+          <TouchableOpacity style={styles.headerActionButton}>
+            <LayoutDashboard color="white" size={20} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -72,26 +77,14 @@ const DashboardScreen = ({ navigation }: any) => {
           <RefreshControl refreshing={loading} onRefresh={fetchDashboardData} tintColor="#22C55E" />
         }
       >
-        <LinearGradient colors={['#166534', '#22C55E']} style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.welcomeText}>Bảng điều khiển</Text>
-              <Text style={styles.dateText}>{new Date().toLocaleDateString('vi-VN')}</Text>
-            </View>
-            <TouchableOpacity style={styles.profileBtn}>
-              <LayoutDashboard color="white" size={20} />
-            </TouchableOpacity>
-          </View>
-
+        <View style={styles.content}>
           <View style={styles.mainStatsContainer}>
             <Text style={styles.summaryTitle}>{summary?.title || 'Tổng quan kiểm duyệt'}</Text>
             <Text style={styles.summaryDesc}>
               {summary?.description || 'Đang tải dữ liệu moderation mới nhất...'}
             </Text>
           </View>
-        </LinearGradient>
 
-        <View style={styles.content}>
           <View style={styles.statsGrid}>
             {stats.map((stat, index) => (
               <View key={index} style={styles.statCard}>
@@ -166,7 +159,7 @@ const DashboardScreen = ({ navigation }: any) => {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -180,58 +173,36 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    paddingTop: 20,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: 'white',
-  },
-  dateText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 4,
-  },
-  profileBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  headerActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   mainStatsContainer: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'white',
     padding: 20,
-    borderRadius: 24,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: '#DCFCE7',
+    marginBottom: 16,
   },
   summaryTitle: {
-    color: 'white',
+    color: '#166534',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   summaryDesc: {
-    color: 'rgba(255,255,255,0.9)',
+    color: '#475569',
     fontSize: 14,
     lineHeight: 20,
   },
   content: {
     paddingHorizontal: 20,
-    marginTop: -20,
+    paddingTop: 16,
   },
   statsGrid: {
     flexDirection: 'row',

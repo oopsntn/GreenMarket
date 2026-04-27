@@ -1,18 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  SafeAreaView,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { AlertCircle, ArrowLeft, Calendar, Check, Clock3, EyeOff, User, X } from 'lucide-react-native';
+import { AlertCircle, Calendar, Check, Clock3, EyeOff, User, X } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
 import managerService, { PostModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+import ManagerHeader from '../components/ManagerHeader';
 
 const statusLabelMap: Record<string, string> = {
   pending: 'Chờ duyệt',
@@ -96,16 +95,8 @@ const PostManagementDetail = ({ route, navigation }: any) => {
   if (!post) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft color="#1E293B" size={24} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chi tiết bài đăng</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={styles.container}>
+      <ManagerHeader title="Chi tiết bài đăng" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <View style={styles.heroCard}>
@@ -191,30 +182,13 @@ const PostManagementDetail = ({ route, navigation }: any) => {
         confirmLabel={modalType === 'reject' ? 'Từ chối bài' : 'Ẩn bài'}
         confirmColor={modalType === 'reject' ? '#F59E0B' : '#EF4444'}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'white' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: 'white',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-  },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
   contentContainer: { padding: 20, paddingBottom: 100 },
   heroCard: {
     backgroundColor: '#F8FAFC',

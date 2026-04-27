@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, StatusBar, KeyboardAvoidingView, Platform } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import LoginScreen from "../components/auth/LoginScreen";
@@ -15,6 +15,15 @@ const AuthStack = () => {
   const { token, user, loading } = useAuth();
   const [showSuccess, setShowSuccess] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const previousTokenRef = useRef<string | null>(token);
+
+  useEffect(() => {
+    if (previousTokenRef.current !== null && token === null) {
+      setShowWelcome(false);
+    }
+
+    previousTokenRef.current = token;
+  }, [token]);
 
   const handleLoginSuccess = () => {
     setShowSuccess(true);

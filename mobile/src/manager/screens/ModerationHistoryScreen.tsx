@@ -2,16 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { ArrowLeft, CalendarClock, Filter, History } from 'lucide-react-native';
+import { CalendarClock, Filter, History } from 'lucide-react-native';
 import managerService, { ManagerHistoryEntry } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+import ManagerHeader from '../components/ManagerHeader';
 
 const FILTERS = [
   { label: 'Tất cả', value: undefined },
@@ -186,17 +185,16 @@ const ModerationHistoryScreen = ({ navigation }: any) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lịch sử kiểm duyệt</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={() => fetchHistory(filter)}>
-          <Filter size={18} color="#166534" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <ManagerHeader
+        title="Lịch sử kiểm duyệt"
+        onBack={() => navigation.goBack()}
+        rightAction={
+          <TouchableOpacity style={styles.headerActionButton} onPress={() => fetchHistory(filter)}>
+            <Filter size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.filterSection}>
         <FlatList
@@ -232,39 +230,20 @@ const ModerationHistoryScreen = ({ navigation }: any) => {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+  headerActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  refreshButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#ECFDF5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
   filterSection: {
     backgroundColor: 'white',
     borderBottomWidth: 1,
