@@ -27,13 +27,13 @@ const HostSettingsScreen = () => {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <View style={styles.sectionTitle}>
-            <Text style={styles.sectionTitleText}>Account</Text>
+            <Text style={styles.sectionTitleText}>Tài Khoản</Text>
           </View>
 
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Profile')}>
             <View style={styles.menuItemLeft}>
               <User size={20} color="#22C55E" />
-              <Text style={styles.menuItemText}>Profile</Text>
+              <Text style={styles.menuItemText}>Cá nhân</Text>
             </View>
             <ChevronRight size={20} color="#d1d5db" />
           </TouchableOpacity>

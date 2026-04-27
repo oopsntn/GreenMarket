@@ -336,7 +336,18 @@ export const hostService = {
       body: formData,
     });
 
-    const data = (await response.json()) as UploadMediaResponse;
+    const data = (await response.json().catch(() => null)) as
+      | (UploadMediaResponse & { error?: string })
+      | null;
+
+    if (!response.ok) {
+      const serverMessage =
+        typeof data?.error === 'string' && data.error.trim()
+          ? data.error.trim()
+          : 'Không thể tải ảnh lên máy chủ.';
+      throw new Error(serverMessage);
+    }
+
     if (!data?.urls || !Array.isArray(data.urls)) {
       throw new Error('Invalid upload response');
     }
