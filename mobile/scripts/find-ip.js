@@ -1,57 +1,30 @@
 #!/usr/bin/env node
 
 /**
- * Script để tự động tìm IP WiFi và cập nhật vào .env.local
+ * Script để cập nhật API host cố định vào .env.local
  * Chạy: node scripts/find-ip.js
  */
 
-const os = require("os");
 const fs = require("fs");
 const path = require("path");
 
-function getWiFiIP() {
-  const interfaces = os.networkInterfaces();
-  
-  // Tìm IP từ các network interfaces
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      // IPv4 và không phải internal/loopback
-      if (iface.family === "IPv4" && !iface.internal) {
-        // Ưu tiên WiFi/Ethernet interfaces
-        if (name.includes("Wi-Fi") || name.includes("eth") || name.includes("en")) {
-          return iface.address;
-        }
-      }
-    }
-  }
-  
-  // Fallback: lấy IP đầu tiên không phải loopback
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      if (iface.family === "IPv4" && !iface.internal) {
-        return iface.address;
-      }
-    }
-  }
-  
-  return null;
-}
+const API_HOST = process.env.EXPO_PUBLIC_API_HOST || "greenmarket.ddns.net";
+const API_PORT = process.env.EXPO_PUBLIC_API_PORT || "5000";
+const API_SCHEME = process.env.EXPO_PUBLIC_API_SCHEME || "http";
 
 function updateEnvFile() {
-  const ip = getWiFiIP();
-  
-  if (!ip) {
-    console.error("❌ Lỗi: Không tìm được IP WiFi");
-    process.exit(1);
-  }
-  
   const envPath = path.join(__dirname, "../.env.local");
-  const envContent = `EXPO_PUBLIC_API_IP=${ip}\nEXPO_PUBLIC_API_PORT=5000\n`;
-  
+  const envContent = [
+    `EXPO_PUBLIC_API_HOST=${API_HOST}`,
+    `EXPO_PUBLIC_API_PORT=${API_PORT}`,
+    `EXPO_PUBLIC_API_SCHEME=${API_SCHEME}`,
+    "",
+  ].join("\n");
+
   fs.writeFileSync(envPath, envContent);
-  console.log(`✅ Cập nhật IP WiFi thành công: ${ip}`);
+  console.log(`✅ Cập nhật API host thành công: ${API_HOST}`);
   console.log(`📝 File: .env.local`);
-  console.log(`🔗 API URL: http://${ip}:5000/api`);
+  console.log(`🔗 API URL: ${API_SCHEME}://${API_HOST}:${API_PORT}/api`);
 }
 
 updateEnvFile();
