@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
 import {
   Building2,
   FileText,
@@ -17,13 +18,36 @@ import PublicShopDetailScreen from '../../components/shop/screen/PublicShopDetai
 import PostDetailScreen from '../../components/post/screen/PostDetailScreen';
 import NotificationsScreen from '../../components/notification/screen/NotificationsScreen';
 
-const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+type CollaboratorTabParamList = {
+  Dashboard: undefined;
+  InvitationsTab: undefined;
+  MyShopsTab: undefined;
+  MyPostsTab: undefined;
+};
+
+type CollaboratorStackParamList = {
+  CollaboratorMain: undefined;
+  Invitations: undefined;
+  MyActiveShops: undefined;
+  MyPost: undefined;
+  CreateDelegatedPost: undefined;
+  PublicShopDetail: undefined;
+  PostDetail: undefined;
+  Notifications: undefined;
+};
+
+type TabIconProps = {
+  color: string;
+  size: number;
+};
+
+const Tab = createBottomTabNavigator<CollaboratorTabParamList>();
+const Stack = createNativeStackNavigator<CollaboratorStackParamList>();
 
 const CollaboratorTabs = () => {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={({ route }: { route: RouteProp<CollaboratorTabParamList, keyof CollaboratorTabParamList> }) => ({
         headerShown: false,
         tabBarActiveTintColor: '#16A34A',
         tabBarInactiveTintColor: '#94A3B8',
@@ -36,7 +60,7 @@ const CollaboratorTabs = () => {
           fontSize: 11,
           fontWeight: '600',
         },
-        tabBarIcon: ({ color, size }) => {
+        tabBarIcon: ({ color, size }: TabIconProps) => {
           if (route.name === 'Dashboard') {
             return <LayoutDashboard color={color} size={size} />;
           }
