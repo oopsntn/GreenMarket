@@ -8,6 +8,8 @@ import HomeScreen from '../components/Home/screen/HomeScreen';
 import CreatePostLayout from '../components/post/screen/CreatePostScreen';
 import ManagementCenterScreen from '../components/post/screen/ManagementCenterScreen';
 import UserSettingsScreen from '../components/settings/screen/UserSettingsScreen';
+import UserSupportRequestScreen from '../components/settings/screen/UserSupportRequestScreen';
+import QrLoginScannerScreen from '../components/settings/screen/QrLoginScannerScreen';
 import ProfileScreen from '../components/profile/screen/ProfileScreen';
 import MyPostLayout from '../components/post/screen/MyPostLayout';
 import PostTrashScreen from '../components/post/screen/PostTrashScreen';
@@ -32,6 +34,7 @@ import PublicCollaboratorDetailScreen from '@/components/shop/screen/PublicColla
 import PendingOwnerPostsScreen from '@/components/shop/screen/PendingOwnerPostsScreen';
 import HostNewsDetailScreen from '@/host/screens/HostNewsDetailScreen';
 import NotificationsScreen from '@/components/notification/screen/NotificationsScreen';
+import HostNavigator from '@/host/navigation/HostNavigator';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -146,6 +149,7 @@ const UserNavigator = () => {
       <RootStack.Screen name="CreatePost" component={CreatePostLayout} />
       <RootStack.Screen name="Profile" component={ProfileScreen} />
       <RootStack.Screen name="ManagementCenter" component={ManagementCenterScreen} />
+      <RootStack.Screen name="HostMode" component={HostNavigator} />
       <RootStack.Screen name="PostDetail" component={PostDetailScreen} />
       <RootStack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} />
       <RootStack.Screen name="SavedPosts" component={SavedPostsScreen} />
@@ -165,6 +169,8 @@ const UserNavigator = () => {
       <RootStack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
       <RootStack.Screen name="Packages" component={PackagesScreen} />
       <RootStack.Screen name="Notifications" component={NotificationsScreen} />
+      <RootStack.Screen name="UserSupportRequest" component={UserSupportRequestScreen} />
+      <RootStack.Screen name="QrLoginScanner" component={QrLoginScannerScreen} />
 
       {/* Collaborator Screens For Shop Owner */}
       <RootStack.Screen name="ShopCollaborators" component={ShopCollaboratorsScreen} />

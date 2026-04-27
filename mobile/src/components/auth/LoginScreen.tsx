@@ -173,7 +173,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 4,
-    flexGrow: 1,
   },
   cardBody: {
     marginTop: 8,

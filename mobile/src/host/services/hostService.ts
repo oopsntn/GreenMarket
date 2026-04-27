@@ -20,6 +20,8 @@ export interface HostContent {
   hostContentAuthorId: number;
   hostContentTitle: string;
   hostContentDescription: string | null;
+  hostContentBody: string | null;
+  hostContentCategory: string | null;
   hostContentTargetType: HostContentTargetType;
   hostContentTargetId: number | null;
   hostContentTrackingUrl: string | null;
@@ -34,22 +36,13 @@ export interface HostContent {
 export interface HostEarning {
   hostEarningId: number;
   hostEarningHostId: number;
-  hostEarningAmount: string;
+  hostEarningAmount: number;
   hostEarningStatus: string;
   hostEarningSourceType: string;
   hostEarningSourceId: number | null;
   hostEarningCreatedAt: string | null;
-}
-
-export interface HostPayoutRequest {
-  hostPayoutId: number;
-  hostPayoutHostId: number;
-  hostPayoutAmount: string;
-  hostPayoutMethod: string;
-  hostPayoutStatus: string;
-  hostPayoutNote: string | null;
-  hostPayoutProcessedAt: string | null;
-  hostPayoutCreatedAt: string | null;
+  hostEarningNote: string | null;
+  hostEarningRawStatus: string | null;
 }
 
 export interface PaginatedResponse<T> {
@@ -97,15 +90,19 @@ export interface HostPublicContentDetail {
 export interface CreateHostContentPayload {
   title: string;
   description: string;
-  targetType: HostContentTargetType;
-  targetId?: number;
+  category?: string;
+  body?: string;
   mediaUrls?: string[];
+  payoutAmount?: number;
 }
 
-export interface CreateHostPayoutPayload {
-  amount: number;
-  method: string;
-  note?: string;
+export interface UpdateHostContentPayload {
+  title?: string;
+  description?: string | null;
+  category?: string | null;
+  body?: string | null;
+  mediaUrls?: string[];
+  payoutAmount?: number | null;
 }
 
 export interface UploadMediaResponse {
@@ -160,6 +157,99 @@ const toNumber = (value: string | number | null | undefined): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const toOptionalPositiveInt = (value: unknown): number | null => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  const normalized = Math.floor(parsed);
+  return normalized > 0 ? normalized : null;
+};
+
+const normalizeDate = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  if (value instanceof Date && Number.isFinite(value.getTime())) {
+    return value.toISOString();
+  }
+
+  return null;
+};
+
+const normalizeEarningStatus = (value: unknown): string => {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return normalized === 'available' ? 'available' : 'pending';
+};
+
+const normalizeEarningSourceType = (
+  row: Record<string, unknown>,
+  meta: Record<string, unknown>,
+): string => {
+  const metaType = typeof meta.type === 'string' ? meta.type.trim().toLowerCase() : '';
+  if (metaType) {
+    return metaType;
+  }
+
+  const sourceType =
+    typeof row.hostEarningSourceType === 'string'
+      ? row.hostEarningSourceType.trim().toLowerCase()
+      : '';
+  if (sourceType) {
+    return sourceType;
+  }
+
+  const referenceType =
+    typeof row.ledgerReferenceType === 'string'
+      ? row.ledgerReferenceType.trim().toLowerCase()
+      : '';
+  if (referenceType) {
+    return referenceType;
+  }
+
+  return 'other';
+};
+
+const normalizeHostEarning = (value: unknown): HostEarning => {
+  const row = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  const meta =
+    row.ledgerMeta && typeof row.ledgerMeta === 'object'
+      ? (row.ledgerMeta as Record<string, unknown>)
+      : {};
+
+  const rawStatus =
+    typeof row.hostEarningStatus === 'string'
+      ? row.hostEarningStatus
+      : typeof row.ledgerStatus === 'string'
+        ? row.ledgerStatus
+        : null;
+
+  const sourceId =
+    toOptionalPositiveInt(row.hostEarningSourceId) ??
+    toOptionalPositiveInt(meta.sourceId) ??
+    toOptionalPositiveInt(row.ledgerReferenceId);
+
+  return {
+    hostEarningId: toNumber(row.hostEarningId as string | number | null | undefined) || toNumber(row.ledgerId as string | number | null | undefined),
+    hostEarningHostId: toNumber(row.hostEarningHostId as string | number | null | undefined) || toNumber(row.ledgerUserId as string | number | null | undefined),
+    hostEarningAmount: toNumber(row.hostEarningAmount as string | number | null | undefined) || toNumber(row.ledgerAmount as string | number | null | undefined),
+    hostEarningStatus: normalizeEarningStatus(rawStatus),
+    hostEarningSourceType: normalizeEarningSourceType(row, meta),
+    hostEarningSourceId: sourceId,
+    hostEarningCreatedAt: normalizeDate(row.hostEarningCreatedAt) || normalizeDate(row.ledgerCreatedAt),
+    hostEarningNote:
+      typeof row.hostEarningNote === 'string'
+        ? row.hostEarningNote
+        : typeof row.ledgerNote === 'string'
+          ? row.ledgerNote
+          : null,
+    hostEarningRawStatus: rawStatus,
+  };
+};
+
 export const hostService = {
   getDashboard: async (): Promise<HostDashboardResponse> => {
     const response = await api.get<HostDashboardResponse>('/host/dashboard');
@@ -185,6 +275,16 @@ export const hostService = {
     return normalizeContent(response.data);
   },
 
+  updateContent: async (id: number | string, payload: UpdateHostContentPayload): Promise<HostContent> => {
+    const response = await api.patch<HostContent>(`/host/contents/${id}`, payload);
+    return normalizeContent(response.data);
+  },
+
+  deleteContent: async (id: number | string): Promise<{ message?: string }> => {
+    const response = await api.delete<{ message?: string }>(`/host/contents/${id}`);
+    return response.data;
+  },
+
   getPublicContentDetail: async (id: number | string): Promise<HostPublicContentDetail> => {
     const response = await api.get<HostPublicContentDetail>(`/host/public/contents/${id}`);
     const row = response.data as any;
@@ -200,33 +300,16 @@ export const hostService = {
     const response = await api.get<PaginatedResponse<HostEarning>>('/host/earnings', {
       params: { page, limit },
     });
+    const rows = Array.isArray(response.data?.data) ? response.data.data : [];
+
     return {
-      data: Array.isArray(response.data?.data) ? response.data.data : [],
+      data: rows.map((item) => normalizeHostEarning(item)),
       meta: {
         page: Number(response.data?.meta?.page || 1),
         limit: Number(response.data?.meta?.limit || 20),
         totalItems: Number(response.data?.meta?.totalItems || 0),
       },
     };
-  },
-
-  getPayoutRequests: async (page = 1, limit = 20): Promise<PaginatedResponse<HostPayoutRequest>> => {
-    const response = await api.get<PaginatedResponse<HostPayoutRequest>>('/host/payout-requests', {
-      params: { page, limit },
-    });
-    return {
-      data: Array.isArray(response.data?.data) ? response.data.data : [],
-      meta: {
-        page: Number(response.data?.meta?.page || 1),
-        limit: Number(response.data?.meta?.limit || 20),
-        totalItems: Number(response.data?.meta?.totalItems || 0),
-      },
-    };
-  },
-
-  createPayoutRequest: async (payload: CreateHostPayoutPayload): Promise<HostPayoutRequest> => {
-    const response = await api.post<{ data: HostPayoutRequest }>('/host/payout-requests', payload);
-    return response.data.data;
   },
 
   uploadMedia: async (fileUris: string[] = []): Promise<UploadMediaResponse> => {
@@ -245,7 +328,7 @@ export const hostService = {
     }
 
     const token = await AsyncStorage.getItem('token');
-    const response = await fetch(`${API_BASE_URL}/upload`, {
+    const response = await fetch(`${API_BASE_URL}/upload/images`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

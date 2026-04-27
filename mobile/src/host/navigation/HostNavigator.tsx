@@ -6,13 +6,11 @@ import {
   Home,
   Megaphone,
   CircleDollarSign,
-  HandCoins,
   Settings,
 } from 'lucide-react-native';
 import HostDashboardScreen from '../screens/HostDashboardScreen';
 import CreatePromotionalContentScreen from '../screens/CreatePromotionalContentScreen';
 import HostEarningsScreen from '../screens/HostEarningsScreen';
-import HostPayoutScreen from '../screens/HostPayoutScreen';
 import HostNewsDetailScreen from '../screens/HostNewsDetailScreen';
 
 // Marketplace (same browsing experience as User)
@@ -20,8 +18,8 @@ import HomeScreen from '../../components/Home/screen/HomeScreen';
 import PostDetailScreen from '../../components/post/screen/PostDetailScreen';
 import PublicShopDetailScreen from '../../components/shop/screen/PublicShopDetailScreen';
 import BrowseShopsScreen from '../../components/shop/screen/BrowseShopsScreen';
-import UserSettingsScreen from '../../components/settings/screen/UserSettingsScreen';
-import ProfileScreen from '../../components/profile/screen/ProfileScreen';
+import HostSettingsScreen from '../screens/HostSettingsScreen';
+import HostProfileScreen from '../screens/HostProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -29,8 +27,8 @@ const Stack = createNativeStackNavigator();
 const HostSettingsStack = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="SettingsTab" component={UserSettingsScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="SettingsTab" component={HostSettingsScreen} />
+      <Stack.Screen name="Profile" component={HostProfileScreen} />
     </Stack.Navigator>
   );
 };
@@ -72,8 +70,6 @@ const HostTabs = () => {
             icon = <Megaphone color={color} size={size} />;
           } else if (route.name === 'Earnings') {
             icon = <CircleDollarSign color={color} size={size} />;
-          } else if (route.name === 'Payout') {
-            icon = <HandCoins color={color} size={size} />;
           } else if (route.name === 'SettingsStack') {
             icon = <Settings color={color} size={size} />;
           }
@@ -102,11 +98,6 @@ const HostTabs = () => {
         options={{ tabBarLabel: 'Doanh thu' }}
       />
       <Tab.Screen
-        name="Payout"
-        component={HostPayoutScreen}
-        options={{ tabBarLabel: 'Rút tiền' }}
-      />
-      <Tab.Screen
         name="SettingsStack"
         component={HostSettingsStack}
         options={{ tabBarLabel: 'Cài đặt' }}
@@ -119,6 +110,11 @@ const HostNavigator = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="HostMain" component={HostTabs} />
+      <Stack.Screen
+        name="HostEditContent"
+        component={CreatePromotionalContentScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
       <Stack.Screen
         name="HostNewsDetail"
         component={HostNewsDetailScreen}

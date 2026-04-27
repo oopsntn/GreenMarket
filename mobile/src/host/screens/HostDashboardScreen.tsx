@@ -17,12 +17,14 @@ import {
   CircleDollarSign,
   Eye,
   Megaphone,
-  MousePointerClick,
+  Pencil,
+  Trash2,
   Wallet,
 } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { hostService, HostContent, HostDashboardStats } from '../services/hostService';
+import CustomAlert from '../../utils/AlertHelper';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('vi-VN', {
@@ -42,6 +44,14 @@ const formatDate = (value: string | null) => {
   }
 
   return date.toLocaleDateString('vi-VN');
+};
+
+const formatContentStatus = (status: string | null | undefined) => {
+  const value = String(status || '').toLowerCase();
+  if (value === 'published' || value === 'approved') return 'Đã đăng';
+  if (value.includes('pending')) return 'Chờ duyệt';
+  if (value === 'rejected') return 'Bị từ chối';
+  return status || 'Không rõ trạng thái';
 };
 
 const emptyStats: HostDashboardStats = {
@@ -82,6 +92,7 @@ const HostDashboardScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<HostDashboardStats>(emptyStats);
   const [contents, setContents] = useState<HostContent[]>([]);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -119,7 +130,6 @@ const HostDashboardScreen = () => {
 
   const recentContents = useMemo(() => {
     return [...contents]
-      .filter((item) => ['approved', 'published'].includes(String(item.hostContentStatus || '').toLowerCase()))
       .sort((a, b) => {
         const dateA = a.hostContentCreatedAt ? new Date(a.hostContentCreatedAt).getTime() : 0;
         const dateB = b.hostContentCreatedAt ? new Date(b.hostContentCreatedAt).getTime() : 0;
@@ -130,6 +140,53 @@ const HostDashboardScreen = () => {
 
   const openContentTarget = (item: HostContent) => {
     navigation.navigate('HostNewsDetail', { hostContentId: item.hostContentId });
+  };
+
+  const handleEditContent = (item: HostContent) => {
+    navigation.navigate('HostEditContent', { editContent: item });
+  };
+
+  const handleDeleteContent = (item: HostContent) => {
+    if (deletingId !== null) {
+      return;
+    }
+
+    CustomAlert(
+      'Xóa bài đăng',
+      'Bạn có chắc muốn xóa tin tức này không?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeletingId(item.hostContentId);
+              await hostService.deleteContent(item.hostContentId);
+
+              setContents((prev) => prev.filter((row) => row.hostContentId !== item.hostContentId));
+              setStats((prev) => ({
+                ...prev,
+                totalContents: Math.max(0, prev.totalContents - 1),
+              }));
+
+              CustomAlert('Thành công', 'Đã xóa tin tức.');
+            } catch (err: unknown) {
+              const message =
+                typeof err === 'object' &&
+                err !== null &&
+                'response' in err &&
+                typeof (err as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
+                  ? (err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Không thể xóa tin tức.'
+                  : 'Không thể xóa tin tức.';
+              CustomAlert('Lỗi', message);
+            } finally {
+              setDeletingId(null);
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (loading) {
@@ -165,19 +222,12 @@ const HostDashboardScreen = () => {
             <View>
               <Text style={styles.greeting}>Xin chào,</Text>
               <Text style={styles.userName}>{user?.userDisplayName || 'Host'}</Text>
-              <Text style={styles.subTitle}>Theo dõi hiệu suất và thu nhập nội dung</Text>
             </View>
           </View>
 
           <View style={styles.balanceBox}>
             <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
             <Text style={styles.balanceValue}>{formatCurrency(stats.availableBalance)}</Text>
-            <TouchableOpacity
-              style={styles.withdrawBtn}
-              onPress={() => navigation.navigate('Payout')}
-            >
-              <Text style={styles.withdrawBtnText}>Rút tiền</Text>
-            </TouchableOpacity>
           </View>
         </LinearGradient>
 
@@ -202,43 +252,11 @@ const HostDashboardScreen = () => {
               color="#2563EB"
             />
             <StatsCard
-              label="Lượt click"
-              value={String(stats.totalClicks)}
-              icon={MousePointerClick}
-              color="#F59E0B"
-            />
-            <StatsCard
               label="Thu nhập"
               value={formatCurrency(stats.totalEarnings)}
               icon={CircleDollarSign}
               color="#9333EA"
             />
-          </View>
-
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => navigation.navigate('CreateContent')}
-            >
-              <Megaphone size={18} color="#166534" />
-              <Text style={styles.actionText}>Tạo nội dung</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => navigation.navigate('Earnings')}
-            >
-              <Wallet size={18} color="#166534" />
-              <Text style={styles.actionText}>Thu nhập</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => navigation.navigate('Earnings')}
-            >
-              <BarChart3 size={18} color="#166534" />
-              <Text style={styles.actionText}>Phân tích</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
@@ -249,30 +267,68 @@ const HostDashboardScreen = () => {
               </View>
             ) : (
               recentContents.map((item) => (
-                <TouchableOpacity
+                <View
                   key={item.hostContentId}
                   style={styles.contentRow}
-                  onPress={() => openContentTarget(item)}
-                  activeOpacity={0.7}
                 >
-                  <View style={styles.contentMeta}>
-                    <Text style={styles.contentTitle} numberOfLines={1}>
-                      {item.hostContentTitle}
-                    </Text>
-                    <Text style={styles.contentDate}>{formatDate(item.hostContentCreatedAt)}</Text>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.contentMainTap}
+                    onPress={() => openContentTarget(item)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.contentMeta}>
+                      <Text style={styles.contentTitle} numberOfLines={1}>
+                        {item.hostContentTitle}
+                      </Text>
+                      <Text style={styles.contentDate}>{formatDate(item.hostContentCreatedAt)}</Text>
+                      <Text style={styles.contentStatus}>{formatContentStatus(item.hostContentStatus)}</Text>
+                    </View>
+                  </TouchableOpacity>
 
-                  <View style={styles.metricsRow}>
-                    <View style={styles.metricItem}>
-                      <Eye size={14} color="#475569" />
-                      <Text style={styles.metricText}>{item.hostContentViewCount}</Text>
+                  <View style={styles.rowActions}>
+                    <View style={styles.metricsRow}>
+                      <View style={styles.metricItem}>
+                        <Eye size={14} color="#475569" />
+                        <Text style={styles.metricText}>{item.hostContentViewCount}</Text>
+                      </View>
                     </View>
-                    <View style={styles.metricItem}>
-                      <MousePointerClick size={14} color="#475569" />
-                      <Text style={styles.metricText}>{item.hostContentClickCount}</Text>
-                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.editBtn,
+                        deletingId !== null ? styles.deleteBtnDisabled : null,
+                      ]}
+                      onPress={() => handleEditContent(item)}
+                      disabled={deletingId !== null}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Pencil size={15} color="white" />
+                      <Text style={styles.editBtnText}>Edit</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.deleteBtn,
+                        deletingId !== null ? styles.deleteBtnDisabled : null,
+                      ]}
+                      onPress={() => handleDeleteContent(item)}
+                      disabled={deletingId !== null}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      {deletingId === item.hostContentId ? (
+                        <>
+                          <ActivityIndicator size="small" color="white" />
+                          <Text style={styles.deleteBtnText}>Đang xóa</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={15} color="white" />
+                          <Text style={styles.deleteBtnText}>Xóa</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
+                </View>
               ))
             )}
           </View>
@@ -353,19 +409,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     marginTop: 6,
-  },
-  withdrawBtn: {
-    marginTop: 10,
-    alignSelf: 'flex-start',
-    backgroundColor: 'white',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 999,
-  },
-  withdrawBtnText: {
-    color: '#166534',
-    fontWeight: '700',
-    fontSize: 12,
   },
   content: {
     padding: 16,
@@ -466,6 +509,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
+  contentMainTap: {
+    flex: 1,
+  },
   contentMeta: {
     flex: 1,
     marginRight: 10,
@@ -480,10 +526,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
+  contentStatus: {
+    marginTop: 2,
+    color: '#0EA5E9',
+    fontSize: 11,
+    fontWeight: '700',
+  },
   metricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  rowActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   metricItem: {
     flexDirection: 'row',
@@ -494,6 +551,39 @@ const styles = StyleSheet.create({
     color: '#334155',
     fontWeight: '600',
     fontSize: 12,
+  },
+  deleteBtn: {
+    height: 30,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    backgroundColor: '#DC2626',
+  },
+  editBtn: {
+    height: 30,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    backgroundColor: '#0EA5E9',
+  },
+  deleteBtnDisabled: {
+    opacity: 0.65,
+  },
+  editBtnText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  deleteBtnText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
 

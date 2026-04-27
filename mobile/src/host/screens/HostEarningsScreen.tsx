@@ -33,6 +33,37 @@ const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?
 
 type FilterType = 'all' | 'available' | 'pending';
 
+const FILTER_OPTIONS: Array<{ key: FilterType; label: string }> = [
+  { key: 'all', label: 'Tất cả' },
+  { key: 'available', label: 'Đã ghi nhận' },
+  { key: 'pending', label: 'Đang chờ' },
+];
+
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  article_payout: 'Nhuận bút bài viết',
+  performance_bonus: 'Thưởng hiệu suất',
+  host_content: 'Thu nhập từ nội dung',
+  earning: 'Thu nhập ghi nhận',
+};
+
+const STATUS_LABELS: Record<'available' | 'pending', string> = {
+  available: 'Đã ghi nhận',
+  pending: 'Đang chờ',
+};
+
+const normalizeSourceTypeKey = (value: string | null | undefined): string => {
+  if (!value) {
+    return 'other';
+  }
+
+  return value.trim().toLowerCase();
+};
+
+const resolveSourceTypeLabel = (value: string | null | undefined): string => {
+  const key = normalizeSourceTypeKey(value);
+  return SOURCE_TYPE_LABELS[key] || 'Giao dịch doanh thu';
+};
+
 const HostEarningsScreen = () => {
   const navigation = useNavigation<any>();
 
@@ -137,21 +168,37 @@ const HostEarningsScreen = () => {
   const filterTotal = useMemo(
     () =>
       filteredEarnings.reduce(
-        (sum, item) => sum + Number(item.hostEarningAmount || 0),
+        (sum, item) => sum + item.hostEarningAmount,
         0
       ),
     [filteredEarnings]
   );
 
+  const pendingCount = useMemo(
+    () => earnings.filter((item) => item.hostEarningStatus === 'pending').length,
+    [earnings],
+  );
+
+  const activeFilterLabel = useMemo(
+    () => FILTER_OPTIONS.find((item) => item.key === filter)?.label || 'Tất cả',
+    [filter],
+  );
+
   const renderEarning = ({ item }: { item: HostEarning }) => {
-    const isAvailable = item.hostEarningStatus === 'available';
+    const statusKey: 'available' | 'pending' =
+      item.hostEarningStatus === 'available' ? 'available' : 'pending';
+    const isAvailable = statusKey === 'available';
+    const statusHint =
+      statusKey === 'available'
+        ? 'Khoản này đã được ghi nhận vào số dư khả dụng.'
+        : 'Khoản này đang chờ xử lý, chưa cộng vào số dư khả dụng.';
 
     return (
       <View style={styles.itemCard}>
         <View style={styles.itemTop}>
           <View style={styles.itemSourceWrap}>
             <CircleDollarSign color={isAvailable ? '#16A34A' : '#0EA5E9'} size={16} />
-            <Text style={styles.itemSourceText}>{item.hostEarningSourceType || 'source'}</Text>
+            <Text style={styles.itemSourceText}>{resolveSourceTypeLabel(item.hostEarningSourceType)}</Text>
           </View>
           <View
             style={[
@@ -165,17 +212,23 @@ const HostEarningsScreen = () => {
                 isAvailable ? styles.statusAvailableText : styles.statusPendingText,
               ]}
             >
-              {isAvailable ? 'available' : 'pending'}
+              {STATUS_LABELS[statusKey]}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.itemAmount}>{formatCurrency(Number(item.hostEarningAmount || 0))}</Text>
+        <Text style={styles.itemAmount}>{formatCurrency(item.hostEarningAmount)}</Text>
         <Text style={styles.itemDate}>
           {item.hostEarningCreatedAt
             ? new Date(item.hostEarningCreatedAt).toLocaleString('vi-VN')
             : 'Không rõ thời gian'}
         </Text>
+
+        {item.hostEarningSourceId ? (
+          <Text style={styles.itemMetaText}>{`Mã nội dung: #${item.hostEarningSourceId}`}</Text>
+        ) : null}
+
+        <Text style={styles.itemNoteText}>{item.hostEarningNote || statusHint}</Text>
       </View>
     );
   };
@@ -193,7 +246,7 @@ const HostEarningsScreen = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-          <ArrowLeft color="#0F172A" size={22} />
+          <ArrowLeft color="#FFFFFF" size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Doanh thu Host</Text>
         <View style={{ width: 38 }} />
@@ -214,21 +267,30 @@ const HostEarningsScreen = () => {
       </View>
 
       <View style={styles.filterRow}>
-        {(['all', 'available', 'pending'] as FilterType[]).map((item) => (
+        {FILTER_OPTIONS.map((item) => (
           <TouchableOpacity
-            key={item}
-            onPress={() => setFilter(item)}
-            style={[styles.filterBtn, filter === item && styles.filterBtnActive]}
+            key={item.key}
+            onPress={() => setFilter(item.key)}
+            style={[styles.filterBtn, filter === item.key && styles.filterBtnActive]}
           >
-            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item}</Text>
+            <Text style={[styles.filterText, filter === item.key && styles.filterTextActive]}>{item.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <View style={styles.filterSummary}>
-        <Text style={styles.filterSummaryText}>{`${filteredEarnings.length} giao dịch`}</Text>
+        <Text style={styles.filterSummaryText}>{`${filteredEarnings.length} giao dịch (${activeFilterLabel})`}</Text>
         <Text style={styles.filterSummaryText}>{formatCurrency(filterTotal)}</Text>
       </View>
+
+      {pendingCount > 0 ? (
+        <View style={styles.pendingHintBox}>
+          <Text style={styles.pendingHintTitle}>{`Có ${pendingCount} giao dịch đang chờ`}</Text>
+          <Text style={styles.pendingHintText}>
+            Giao dịch chờ là các khoản thu nhập đã phát sinh nhưng chưa hoàn tất xử lý chi trả, nên chưa cộng vào số dư khả dụng.
+          </Text>
+        </View>
+      ) : null}
 
       <FlatList
         data={filteredEarnings}
@@ -243,7 +305,7 @@ const HostEarningsScreen = () => {
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyTitle}>Chưa có giao dịch doanh thu</Text>
-            <Text style={styles.emptyDesc}>Doanh thu sẽ hiển thị khi nội dung quảng bá tạo ra lượt xem/click hợp lệ.</Text>
+            <Text style={styles.emptyDesc}>Doanh thu sẽ hiển thị khi bài Host được duyệt và ghi nhận theo chính sách hệ thống.</Text>
           </View>
         }
         ListFooterComponent={
@@ -278,12 +340,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#2e7d32',
     paddingHorizontal: 16,
     paddingTop: 14 + STATUS_BAR_OFFSET,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#2e7d32',
   },
   backBtn: {
     width: 38,
@@ -291,12 +353,12 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#FFFFFF',
   },
   summaryWrap: {
     flexDirection: 'row',
@@ -422,6 +484,39 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     color: '#64748B',
+  },
+  itemMetaText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '600',
+  },
+  itemNoteText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 18,
+  },
+  pendingHintBox: {
+    marginTop: 8,
+    marginHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  pendingHintTitle: {
+    color: '#166534',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  pendingHintText: {
+    marginTop: 4,
+    color: '#166534',
+    fontSize: 12,
+    lineHeight: 17,
   },
   emptyWrap: {
     paddingTop: 40,

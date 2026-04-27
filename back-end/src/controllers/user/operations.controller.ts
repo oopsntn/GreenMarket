@@ -149,8 +149,11 @@ export const getOperationTaskDetail = async (req: AuthRequest, res: Response): P
         createdAt: operationTasks.ticketCreatedAt,
         updatedAt: operationTasks.ticketUpdatedAt,
         assigneeId: operationTasks.ticketAssigneeId,
+        creatorId: operationTasks.ticketCreatorId,
+        customerName: users.userDisplayName,
       })
       .from(operationTasks)
+      .leftJoin(users, eq(operationTasks.ticketCreatorId, users.userId))
       .where(and(eq(operationTasks.ticketId, taskId), eq(operationTasks.ticketAssigneeId, userId)))
       .limit(1);
 
@@ -267,6 +270,28 @@ export const createOperationTaskReply = async (req: AuthRequest, res: Response):
         visibility: visibility || "internal",
       })
       .returning();
+
+    // Send notification to the ticket creator (user)
+    try {
+      const [ticket] = await db
+        .select({ creatorId: operationTasks.ticketCreatorId, title: operationTasks.ticketTitle })
+        .from(operationTasks)
+        .where(eq(operationTasks.ticketId, taskId))
+        .limit(1);
+
+      if (ticket?.creatorId && ticket.creatorId !== userId) {
+        const { notificationService } = await import("../../services/notification.service");
+        await notificationService.sendNotification({
+          recipientId: ticket.creatorId,
+          title: "Phản hồi yêu cầu hỗ trợ",
+          message: `Yêu cầu "${ticket.title || 'Hỗ trợ'}" đã được phản hồi: "${message.substring(0, 100)}"`,
+          type: "info",
+          metaData: { ticketId: taskId, type: "support_reply" }
+        });
+      }
+    } catch (notifErr) {
+      console.error("Reply notification failed:", notifErr);
+    }
 
     res.status(201).json({
       message: "Reply added successfully",

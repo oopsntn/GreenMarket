@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { Bell, LayoutDashboard, LogOut, User, ChevronRight } from 'lucide-react-native';
+import { Bell, LayoutDashboard, LogOut, User, ChevronRight, QrCode } from 'lucide-react-native';
 import { useAuth } from '../../../context/AuthContext';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,12 +27,12 @@ const UserSettingsScreen = ({ navigation }: any) => {
 
   const handleLogout = () => {
     Alert.alert(
-      'Sign out',
-      'Are you sure you want to sign out?',
+      'Đăng xuất',
+      'Bạn có chắc chắn muốn đăng xuất không?',
       [
-        { text: 'Cancel', onPress: () => { } },
+        { text: 'Hủy', onPress: () => { } },
         {
-          text: 'Sign out',
+          text: 'Đăng xuất',
           onPress: async () => {
             await logout();
           },
@@ -54,16 +54,24 @@ const UserSettingsScreen = ({ navigation }: any) => {
     navigation.navigate('Notifications');
   };
 
+  const handleSupportPress = () => {
+    navigation.navigate('UserSupportRequest');
+  };
+
+  const handleQrLoginPress = () => {
+    navigation.navigate('QrLoginScanner');
+  };
+
   return (
     <MobileLayout
-      title="Settings"
+      title="Cài đặt"
       headerStyle="default"
     >
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         {/* Settings Options */}
         <View style={styles.section}>
           <View style={styles.sectionTitle}>
-            <Text style={styles.sectionTitleText}>Account</Text>
+            <Text style={styles.sectionTitleText}>Tài khoản</Text>
           </View>
 
           {/* Profile Menu Item */}
@@ -73,7 +81,7 @@ const UserSettingsScreen = ({ navigation }: any) => {
           >
             <View style={styles.menuItemLeft}>
               <User size={20} color="#22C55E" />
-              <Text style={styles.menuItemText}>Profile</Text>
+              <Text style={styles.menuItemText}>Hồ sơ cá nhân</Text>
             </View>
             <ChevronRight size={20} color="#d1d5db" />
           </TouchableOpacity>
@@ -108,6 +116,28 @@ const UserSettingsScreen = ({ navigation }: any) => {
             </View>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleQrLoginPress}
+          >
+            <View style={styles.menuItemLeft}>
+              <QrCode size={20} color="#22C55E" />
+              <Text style={styles.menuItemText}>Quét mã QR đăng nhập Web</Text>
+            </View>
+            <ChevronRight size={20} color="#d1d5db" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleSupportPress}
+          >
+            <View style={styles.menuItemLeft}>
+              <LayoutDashboard size={20} color="#22C55E" />
+              <Text style={styles.menuItemText}>Gửi yêu cầu hỗ trợ</Text>
+            </View>
+            <ChevronRight size={20} color="#d1d5db" />
+          </TouchableOpacity>
+
           {/* Logout Menu Item */}
           <TouchableOpacity
             style={[styles.menuItem, styles.menuItemDanger]}
@@ -115,7 +145,7 @@ const UserSettingsScreen = ({ navigation }: any) => {
           >
             <View style={styles.menuItemLeft}>
               <LogOut size={20} color="#ff4d4f" />
-              <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>Sign out</Text>
+              <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>Đăng xuất</Text>
             </View>
             <ChevronRight size={20} color="#d1d5db" />
           </TouchableOpacity>
@@ -124,7 +154,7 @@ const UserSettingsScreen = ({ navigation }: any) => {
         {/* App info */}
         <View style={[styles.section, styles.footer]}>
           <Text style={styles.appVersion}>GreenMarket v1.0.0</Text>
-          <Text style={styles.copyright}>© 2024 GreenMarket. All rights reserved.</Text>
+          <Text style={styles.copyright}>© 2024 GreenMarket. Đã đăng ký bản quyền.</Text>
         </View>
       </ScrollView>
     </MobileLayout>

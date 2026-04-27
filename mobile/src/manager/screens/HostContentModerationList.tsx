@@ -29,7 +29,11 @@ const HostContentModerationList = ({ navigation }: any) => {
     try {
       setLoading(true);
       const data = await managerService.getPendingHostContents();
-      setItems(data.filter((x) => String(x.hostContentStatus || '').toLowerCase() === 'pending'));
+      setItems(
+        data.filter((x) =>
+          ['pending', 'pending_admin'].includes(String(x.hostContentStatus || '').toLowerCase()),
+        ),
+      );
     } catch (error) {
       console.error(error);
       const status =
@@ -88,7 +92,26 @@ const HostContentModerationList = ({ navigation }: any) => {
       setItems((current) => current.filter((p) => p.hostContentId !== selected.hostContentId));
       CustomAlert('Thành công', `Nội dung "${selected.hostContentTitle}" đã bị từ chối.`);
     } catch (error) {
-      CustomAlert('Lỗi', 'Không thể từ chối nội dung này.');
+      const status =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as any).response?.status === 'number'
+          ? (error as any).response.status
+          : null;
+      const serverMessage =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as any).response?.data?.error === 'string'
+          ? (error as any).response.data.error
+          : null;
+      CustomAlert(
+        'Lỗi',
+        status
+          ? `Không thể từ chối nội dung này. (HTTP ${status})${serverMessage ? `\n${serverMessage}` : ''}`
+          : `Không thể từ chối nội dung này.${serverMessage ? `\n${serverMessage}` : ''}`,
+      );
     }
   };
 
