@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, TextInput } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { CheckCircle, XCircle, FileText, ArrowRight } from 'lucide-react-native';
+import { CheckCircle, XCircle, FileText } from 'lucide-react-native';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import { ShopService, PendingOwnerPost } from '../service/shopService';
 import CustomAlert from '../../../utils/AlertHelper';
@@ -12,7 +12,7 @@ const PendingOwnerPostsScreen = () => {
     const [posts, setPosts] = useState<PendingOwnerPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    
+
     // Action states
     const [actionModalVisible, setActionModalVisible] = useState(false);
     const [selectedPost, setSelectedPost] = useState<PendingOwnerPost | null>(null);
@@ -52,7 +52,7 @@ const PendingOwnerPostsScreen = () => {
 
     const handleSubmitAction = async () => {
         if (!selectedPost) return;
-        
+
         if (actionType === 'reject' && !reason.trim()) {
             CustomAlert('Lỗi', 'Vui lòng nhập lý do từ chối');
             return;
@@ -67,7 +67,7 @@ const PendingOwnerPostsScreen = () => {
                 await ShopService.rejectCollaboratorPost(selectedPost.postId, reason.trim());
                 CustomAlert('Thành công', 'Đã từ chối bài');
             }
-            
+
             setActionModalVisible(false);
             fetchPendingPosts();
         } catch (error: any) {
@@ -79,7 +79,7 @@ const PendingOwnerPostsScreen = () => {
 
     const renderItem = ({ item }: { item: PendingOwnerPost }) => {
         const date = new Date(item.postCreatedAt).toLocaleDateString('vi-VN');
-        
+
         return (
             <View style={styles.card}>
                 <View style={styles.cardHeader}>
@@ -93,40 +93,31 @@ const PendingOwnerPostsScreen = () => {
                         <Text style={styles.meta}>Đăng bởi CTV: {item.authorName || item.authorMobile} • {date}</Text>
                     </View>
                 </View>
-                
+
                 <View style={styles.cardActions}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={[styles.btn, styles.btnReject]}
                         onPress={() => confirmAction(item, 'reject')}
                     >
                         <XCircle size={18} color="#EF4444" />
                         <Text style={styles.textReject}>Từ chối</Text>
                     </TouchableOpacity>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                         style={[styles.btn, styles.btnApprove]}
                         onPress={() => confirmAction(item, 'approve')}
                     >
                         <CheckCircle size={18} color="#16A34A" />
                         <Text style={styles.textApprove}>Duyệt bài</Text>
                     </TouchableOpacity>
-
-                    {item.postSlug ? (
-                        <TouchableOpacity 
-                            style={styles.viewBtn}
-                            onPress={() => navigation.navigate('PostDetail', { slug: item.postSlug })}
-                        >
-                            <ArrowRight size={20} color="#64748B" />
-                        </TouchableOpacity>
-                    ) : null}
                 </View>
             </View>
         );
     };
 
     return (
-        <MobileLayout 
-            title="Bài cần chủ vườn duyệt" 
+        <MobileLayout
+            title="Bài cần chủ vườn duyệt"
             backButton={() => navigation.goBack()}
         >
             <View style={styles.container}>
@@ -135,7 +126,7 @@ const PendingOwnerPostsScreen = () => {
                 ) : (
                     <FlatList
                         data={posts}
-                        keyExtractor={(item) => item.postId.toString()}
+                        keyExtractor={(item: any) => item.postId.toString()}
                         renderItem={renderItem}
                         contentContainerStyle={styles.listContainer}
                         refreshControl={
@@ -157,10 +148,10 @@ const PendingOwnerPostsScreen = () => {
                             <Text style={styles.modalTitle}>
                                 {actionType === 'approve' ? 'Xác nhận duyệt bài' : 'Từ chối bài đăng'}
                             </Text>
-                            
+
                             <Text style={styles.modalDesc}>
-                                {actionType === 'approve' 
-                                    ? `Bài đăng "${selectedPost?.postTitle}" sẽ được xuất bản công khai.` 
+                                {actionType === 'approve'
+                                    ? `Bài đăng "${selectedPost?.postTitle}" sẽ được xuất bản công khai.`
                                     : `Vui lòng cho quản lý biết lý do bạn từ chối bài đăng "${selectedPost?.postTitle}".`}
                             </Text>
 
@@ -186,8 +177,8 @@ const PendingOwnerPostsScreen = () => {
                                     Hủy
                                 </Button>
                                 <Button
-                                    style={{ 
-                                        flex: 1, 
+                                    style={{
+                                        flex: 1,
                                         backgroundColor: actionType === 'approve' ? '#16A34A' : '#EF4444',
                                         borderColor: actionType === 'approve' ? '#16A34A' : '#EF4444'
                                     }}

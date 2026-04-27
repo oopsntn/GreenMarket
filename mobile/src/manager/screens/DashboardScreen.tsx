@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -15,6 +15,7 @@ import {
   Clock,
   History,
   LayoutDashboard,
+  Megaphone,
   Store,
   TrendingUp,
   Users,
@@ -25,6 +26,7 @@ import ManagerHeader from '../components/ManagerHeader';
 const DashboardScreen = ({ navigation }: any) => {
   const [stats, setStats] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
+  const [pendingHostContents, setPendingHostContents] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,9 +36,14 @@ const DashboardScreen = ({ navigation }: any) => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const data = await managerService.getDashboardOverview();
+      const [data, hostContents] = await Promise.all([
+        managerService.getDashboardOverview(),
+        managerService.getPendingHostContents().catch(() => []),
+      ]);
+
       setStats(data.statCards ?? []);
       setSummary(data.summary ?? null);
+      setPendingHostContents(Array.isArray(hostContents) ? hostContents.length : 0);
     } catch (error) {
       console.error(error);
     } finally {
@@ -44,8 +51,16 @@ const DashboardScreen = ({ navigation }: any) => {
     }
   };
 
+  const statCards = useMemo(
+    () => [...stats, { title: 'Tin tức chờ duyệt', value: String(pendingHostContents) }],
+    [pendingHostContents, stats],
+  );
+
   const getIconForStat = (title: string) => {
     const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes('tin') || lowerTitle.includes('host')) {
+      return <Megaphone color="#F97316" size={24} />;
+    }
     if (lowerTitle.includes('bài')) return <ClipboardCheck color="#10B981" size={24} />;
     if (lowerTitle.includes('cửa')) return <Store color="#3B82F6" size={24} />;
     if (lowerTitle.includes('báo cáo')) return <AlertTriangle color="#EF4444" size={24} />;
@@ -86,8 +101,8 @@ const DashboardScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.statsGrid}>
-            {stats.map((stat, index) => (
-              <View key={index} style={styles.statCard}>
+            {statCards.map((stat, index) => (
+              <View key={`${stat.title}-${index}`} style={styles.statCard}>
                 <View style={[styles.statIcon, { backgroundColor: '#F0F9FF' }]}>
                   {getIconForStat(stat.title)}
                 </View>
@@ -105,6 +120,14 @@ const DashboardScreen = ({ navigation }: any) => {
                 <ClipboardCheck color="#22C55E" size={24} />
               </View>
               <Text style={styles.actionLabel}>Kiểm duyệt bài đăng</Text>
+              <ChevronRight color="#CBD5E1" size={18} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionCard} onPress={() => navigation.navigate('HostContents')}>
+              <View style={[styles.actionIcon, { backgroundColor: '#FFF7ED' }]}>
+                <Megaphone color="#F97316" size={24} />
+              </View>
+              <Text style={styles.actionLabel}>Kiểm duyệt tin tức Host</Text>
               <ChevronRight color="#CBD5E1" size={18} />
             </TouchableOpacity>
 
@@ -154,7 +177,9 @@ const DashboardScreen = ({ navigation }: any) => {
             </View>
             <View style={styles.activityRow}>
               <Clock size={16} color="#64748B" />
-              <Text style={styles.activityText}>Bạn đang có các mục chờ xử lý trong hàng đợi moderation.</Text>
+              <Text style={styles.activityText}>
+                Bạn đang có các mục chờ xử lý trong hàng đợi moderation, bao gồm cả tin tức Host.
+              </Text>
             </View>
           </View>
         </View>
