@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -90,6 +90,21 @@ const resolveFirstCoverImage = (content?: HostContent): MediaItem | null => {
   };
 };
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const responseError = (error as { response?: { data?: { error?: string } } }).response?.data?.error;
+    if (typeof responseError === 'string' && responseError.trim()) {
+      return responseError;
+    }
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
 const CreatePromotionalContentScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -118,7 +133,9 @@ const CreatePromotionalContentScreen = () => {
   const [uploadingBodyImages, setUploadingBodyImages] = useState(false);
   const [uploadingCoverImage, setUploadingCoverImage] = useState(false);
   const [bodyUploadError, setBodyUploadError] = useState<string | null>(null);
+  const [coverUploadError, setCoverUploadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
 
   const isBusy = submitting || uploadingBodyImages || uploadingCoverImage;
 
@@ -135,6 +152,7 @@ const CreatePromotionalContentScreen = () => {
     setBodyImageUrls(parsedBody.imageUrls);
     setCoverImage(resolveFirstCoverImage(editContent));
     setBodyUploadError(null);
+    setCoverUploadError(null);
     setShowPreview(false);
   }, [editContent?.hostContentId]);
 
@@ -179,10 +197,30 @@ const CreatePromotionalContentScreen = () => {
       return;
     }
 
+    setCoverUploadError(null);
     setCoverImage({
       uri: picked[0],
       source: 'local',
     });
+
+    setUploadingCoverImage(true);
+    try {
+      const uploadedCover = await hostService.uploadMedia([picked[0]]);
+      const uploadedUrl = uploadedCover.urls?.[0]?.trim();
+
+      if (!uploadedUrl) {
+        throw new Error('Không thể tải ảnh bìa.');
+      }
+
+      setCoverImage({
+        uri: uploadedUrl,
+        source: 'remote',
+      });
+    } catch (error: unknown) {
+      setCoverUploadError(getErrorMessage(error, 'Không thể tải ảnh bìa.'));
+    } finally {
+      setUploadingCoverImage(false);
+    }
   };
 
   const handleInsertImageIntoBody = async () => {
@@ -202,15 +240,7 @@ const CreatePromotionalContentScreen = () => {
       const nextUrls = (uploaded.urls || []).map((url) => url.trim()).filter(Boolean);
       setBodyImageUrls((prev) => [...prev, ...nextUrls]);
     } catch (error: unknown) {
-      const message =
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
-          ? (error as { response?: { data?: { error?: string } } }).response?.data?.error || 'Không thể tải ảnh nội dung.'
-          : 'Không thể tải ảnh nội dung.';
-
-      setBodyUploadError(message);
+      setBodyUploadError(getErrorMessage(error, 'Không thể tải ảnh nội dung.'));
     } finally {
       setUploadingBodyImages(false);
     }
@@ -230,6 +260,7 @@ const CreatePromotionalContentScreen = () => {
     }
 
     setCoverImage(null);
+    setCoverUploadError(null);
   };
 
   const resetForm = () => {
@@ -239,10 +270,25 @@ const CreatePromotionalContentScreen = () => {
     setBodyImageUrls([]);
     setCoverImage(null);
     setBodyUploadError(null);
+    setCoverUploadError(null);
     setShowPreview(false);
   };
 
   const handleSubmit = async () => {
+    if (submitLockRef.current) {
+      return;
+    }
+
+    if (uploadingBodyImages || uploadingCoverImage) {
+      CustomAlert('Đang tải ảnh', 'Vui lòng chờ ảnh tải xong rồi gửi nội dung.');
+      return;
+    }
+
+    if (coverImage?.source === 'local') {
+      CustomAlert('Đang tải ảnh', 'Ảnh bìa đang được tải lên. Vui lòng chờ hoàn tất.');
+      return;
+    }
+
     if (!title.trim()) {
       CustomAlert('Thiếu thông tin', 'Vui lòng nhập tiêu đề nội dung quảng bá.');
       return;
@@ -258,22 +304,10 @@ const CreatePromotionalContentScreen = () => {
       return;
     }
 
+    submitLockRef.current = true;
     setSubmitting(true);
     try {
-      let finalCoverUrl =
-        coverImage?.source === 'remote'
-          ? coverImage.uri
-          : null;
-
-      if (coverImage?.source === 'local') {
-        setUploadingCoverImage(true);
-        try {
-          const uploadedCover = await hostService.uploadMedia([coverImage.uri]);
-          finalCoverUrl = uploadedCover.urls?.[0] || null;
-        } finally {
-          setUploadingCoverImage(false);
-        }
-      }
+      const finalCoverUrl = coverImage?.source === 'remote' ? coverImage.uri : null;
 
       const finalMediaUrls = finalCoverUrl ? [finalCoverUrl] : [];
       const bodyValue = buildBodyForSubmit(bodyText, bodyImageUrls);
@@ -320,17 +354,9 @@ const CreatePromotionalContentScreen = () => {
         ]);
       }
     } catch (error: unknown) {
-      setUploadingCoverImage(false);
-      const message =
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
-          ? (error as { response?: { data?: { error?: string } } }).response?.data?.error || 'Không thể lưu nội dung quảng bá.'
-          : 'Không thể lưu nội dung quảng bá.';
-
-      CustomAlert('Lỗi', message);
+      CustomAlert('Lỗi', getErrorMessage(error, 'Không thể lưu nội dung quảng bá.'));
     } finally {
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   };
@@ -450,13 +476,30 @@ const CreatePromotionalContentScreen = () => {
               </View>
             )}
 
+            {uploadingCoverImage ? (
+              <View style={styles.bodyUploadLoadingBox}>
+                <ActivityIndicator color="#166534" size="small" />
+                <Text style={styles.bodyUploadLoadingText}>Đang tải ảnh bìa...</Text>
+              </View>
+            ) : null}
+
+            {coverUploadError ? (
+              <Text style={styles.bodyUploadErrorText}>{coverUploadError}</Text>
+            ) : null}
+
             <TouchableOpacity
               style={[styles.addCoverBtn, isBusy && styles.disabledBtn]}
               onPress={handlePickCoverImage}
               disabled={isBusy}
             >
-              <Plus color="#166534" size={16} />
-              <Text style={styles.addCoverText}>{coverImage ? 'Thay ảnh bìa' : 'Chọn ảnh bìa'}</Text>
+              {uploadingCoverImage ? (
+                <ActivityIndicator color="#166534" size="small" />
+              ) : (
+                <Plus color="#166534" size={16} />
+              )}
+              <Text style={styles.addCoverText}>
+                {uploadingCoverImage ? 'Đang tải ảnh bìa...' : coverImage ? 'Thay ảnh bìa' : 'Chọn ảnh bìa'}
+              </Text>
             </TouchableOpacity>
 
             <View style={styles.actions}>
