@@ -49,7 +49,15 @@ const Login: React.FC = () => {
         console.log("QR Status Updated:", data);
         setQrStatus(data.status);
         if (data.status === 'authorized' && data.token) {
-          login(data.token, data.user);
+          const user = data.user;
+          const allowedRoles = ['USER', null, undefined];
+          if (!allowedRoles.includes(user?.businessRoleCode)) {
+            alert("Tài khoản của bạn chỉ được phép đăng nhập và sử dụng trên ứng dụng GreenMarket Mobile.");
+            setQrStatus('pending');
+            return;
+          }
+
+          login(data.token, user);
           navigate('/home');
         }
       });
@@ -149,7 +157,16 @@ const Login: React.FC = () => {
     setLoading(true);
     try {
       const response = await verifyOtp(mobile, finalOtp);
-      login(response.data.token, response.data.user);
+      const user = response.data.user;
+
+      const allowedRoles = ['USER', null, undefined];
+      if (!allowedRoles.includes(user?.businessRoleCode)) {
+        alert("Tài khoản của bạn chỉ được phép đăng nhập và sử dụng trên ứng dụng GreenMarket Mobile.");
+        setLoading(false);
+        return;
+      }
+
+      login(response.data.token, user);
       navigate('/home');
     } catch (error) {
       console.error("OTP Verification failed:", error);

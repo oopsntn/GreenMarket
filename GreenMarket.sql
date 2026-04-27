@@ -1154,10 +1154,10 @@ INSERT INTO promotion_packages (
 ) VALUES
 (1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày ở vị trí 2 trang chủ.', true),
 (2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 7, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 7 ngày ở vị trí 1 trang chủ.', true),
-(3, 2, 'Gói nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên shop lên đầu danh sách nhà vườn và tăng nhận diện VIP trong 90 ngày.', true),
+(3, 2, 'Gói nhà vườn VIP (3 tháng)', 90, 0, 0, 'Ưu tiên shop lên đầu danh sách nhà vườn và tăng nhận diện VIP trong 90 ngày.', true),
 (4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 7, 1, 5000, 'Ưu tiên hiển thị bài đăng trong 7 ngày ở vị trí 3 trang chủ.', true),
-(5, 5, 'Gói Lên Nhà Vườn (Vĩnh viễn)', 36500, 1, 0, 'Nâng cấp tài khoản cá nhân lên tài khoản nhà vườn chuyên nghiệp.', true),
-(6, 6, 'Gói Cá Nhân (30 ngày)', 30, 1, 0, 'Gói đăng tin ưu tiên cho cá nhân trong 30 ngày.', true);
+(5, 5, 'Gói Lên Nhà Vườn (Vĩnh viễn)', 36500, 0, 0, 'Nâng cấp tài khoản cá nhân lên tài khoản nhà vườn chuyên nghiệp.', true),
+(6, 6, 'Gói Cá Nhân (30 ngày)', 30, 0, 0, 'Gói đăng tin ưu tiên cho cá nhân trong 30 ngày.', true);
 
 -- Promotion Package Prices
 INSERT INTO promotion_package_prices (price_id, package_id, price, effective_from, effective_to, note, created_by) VALUES
