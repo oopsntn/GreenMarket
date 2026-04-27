@@ -125,9 +125,6 @@ const OperationsDashboardScreen = () => {
               <Text style={styles.userName}>{user?.userDisplayName || 'Operations Staff'}</Text>
             </View>
           </View>
-
-          <Text style={styles.heroSubtitle}>Theo dõi khối lượng xử lý và điều phối công việc hằng ngày</Text>
-
           <View style={styles.progressCard}>
             <Text style={styles.progressLabel}>Tỷ lệ hoàn tất hôm nay</Text>
             <Text style={styles.progressValue}>{`${completionRate}%`}</Text>

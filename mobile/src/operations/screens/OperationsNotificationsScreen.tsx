@@ -2,10 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   RefreshControl,
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,6 +13,7 @@ import { BellRing } from 'lucide-react-native';
 import CustomAlert from '../../utils/AlertHelper';
 import { operationsService, OperationNotification } from '../services/operationsService';
 import { api } from '../../config/api';
+import MobileLayout from '../../components/Reused/MobileLayout/MobileLayout';
 
 type FilterMode = 'all' | 'unread';
 
@@ -31,8 +29,6 @@ const formatDateTime = (value: string | null) => {
 
   return date.toLocaleString('vi-VN');
 };
-
-const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const OperationsNotificationsScreen = () => {
   const navigation = useNavigation<any>();
@@ -74,16 +70,17 @@ const OperationsNotificationsScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#16A34A" />
-      </SafeAreaView>
+      <MobileLayout title="Thông báo" headerStyle="default" scrollEnabled={false}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#16A34A" />
+        </View>
+      </MobileLayout>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.pageTitle}>Thông báo hệ thống</Text>
+    <MobileLayout title="Thông báo" headerStyle="default" scrollEnabled={false}>
+      <View style={styles.container}>
         <View style={styles.filterRow}>
           <TouchableOpacity
             style={[styles.filterBtn, filter === 'all' && styles.filterBtnActive]}
@@ -99,54 +96,54 @@ const OperationsNotificationsScreen = () => {
             <Text style={[styles.filterText, filter === 'unread' && styles.filterTextActive]}>Chưa đọc</Text>
           </TouchableOpacity>
         </View>
-      </View>
 
-      <FlatList
-        data={filteredNotifications}
-        keyExtractor={(item) => item.notificationId.toString()}
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.card, !item.isRead && styles.cardUnread]}
-            onPress={() => {
-              // Mark as read locally
-              setNotifications((prev) =>
-                prev.map((n) =>
-                  n.notificationId === item.notificationId ? { ...n, isRead: true } : n
-                )
-              );
-              // Mark as read on server
-              api.patch(`/notifications/${item.notificationId}/read`).catch(() => {});
-              // Navigate to TaskDetail if metaData has ticketId
-              const ticketId = (item.metaData as any)?.ticketId;
-              if (ticketId) {
-                navigation.navigate('TaskDetail', { taskId: ticketId });
-              }
-            }}
-          >
-            <View style={styles.cardTop}>
-              <View style={styles.iconWrap}>
-                <BellRing color="#166534" size={16} />
+        <FlatList
+          data={filteredNotifications}
+          keyExtractor={(item) => item.notificationId.toString()}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.card, !item.isRead && styles.cardUnread]}
+              onPress={() => {
+                // Mark as read locally
+                setNotifications((prev) =>
+                  prev.map((n) =>
+                    n.notificationId === item.notificationId ? { ...n, isRead: true } : n
+                  )
+                );
+                // Mark as read on server
+                api.patch(`/notifications/${item.notificationId}/read`).catch(() => {});
+                // Navigate to TaskDetail if metaData has ticketId
+                const ticketId = (item.metaData as any)?.ticketId;
+                if (ticketId) {
+                  navigation.navigate('TaskDetail', { taskId: ticketId });
+                }
+              }}
+            >
+              <View style={styles.cardTop}>
+                <View style={styles.iconWrap}>
+                  <BellRing color="#166534" size={16} />
+                </View>
+                <Text style={styles.cardType}>{item.type}</Text>
+                {!item.isRead ? <View style={styles.dot} /> : null}
               </View>
-              <Text style={styles.cardType}>{item.type}</Text>
-              {!item.isRead ? <View style={styles.dot} /> : null}
-            </View>
 
-            <Text style={styles.cardTitle}>{item.title}</Text>
-            <Text style={styles.cardMessage} numberOfLines={3}>
-              {item.message}
-            </Text>
-            <Text style={styles.cardTime}>{formatDateTime(item.createdAt)}</Text>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>Không có thông báo phù hợp bộ lọc hiện tại.</Text>
-          </View>
-        }
-      />
-    </SafeAreaView>
+              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardMessage} numberOfLines={3}>
+                {item.message}
+              </Text>
+              <Text style={styles.cardTime}>{formatDateTime(item.createdAt)}</Text>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Text style={styles.emptyText}>Không có thông báo phù hợp bộ lọc hiện tại.</Text>
+            </View>
+          }
+        />
+      </View>
+    </MobileLayout>
   );
 };
 
@@ -161,21 +158,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F8FAFC',
   },
-  header: {
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingTop: 14 + STATUS_BAR_OFFSET,
-    paddingBottom: 14,
-  },
-  pageTitle: {
-    color: '#0F172A',
-    fontSize: 18,
-    fontWeight: '800',
-  },
   filterRow: {
-    marginTop: 10,
+    marginTop: 12,
+    marginHorizontal: 16,
     flexDirection: 'row',
     gap: 8,
   },

@@ -2,10 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   RefreshControl,
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +11,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ClipboardList } from 'lucide-react-native';
 import CustomAlert from '../../utils/AlertHelper';
+import MobileLayout from '../../components/Reused/MobileLayout/MobileLayout';
 import {
   OperationTaskListItem,
   OperationTaskPriority,
@@ -66,8 +64,6 @@ const defaultMeta: PaginationMeta = {
   totalItems: 0,
   totalPages: 1,
 };
-
-const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
 const OperationsTasksScreen = () => {
   const navigation = useNavigation<any>();
@@ -141,76 +137,76 @@ const OperationsTasksScreen = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#16A34A" />
-      </SafeAreaView>
+      <MobileLayout title="Công việc" headerStyle="default" scrollEnabled={false}>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#16A34A" />
+        </View>
+      </MobileLayout>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.pageTitle}>Công việc</Text>
-        <Text style={styles.pageSubtitle}>{`${meta.totalItems} công việc`}</Text>
-      </View>
+    <MobileLayout title="Công việc" headerStyle="default" scrollEnabled={false}>
+      <View style={styles.container}>
+        <View style={styles.filtersWrap}>
+          <Text style={styles.pageSubtitle}>{`${meta.totalItems} công việc`}</Text>
 
-      <View style={styles.filtersWrap}>
-        <View style={styles.filterLine}>
-          {STATUS_OPTIONS.map((item) => (
-            <TouchableOpacity
-              key={`status_${item.value}`}
-              style={[styles.filterBtn, statusFilter === item.value && styles.filterBtnActive]}
-              onPress={() => setStatusFilter(item.value)}
-            >
-              <Text style={[styles.filterText, statusFilter === item.value && styles.filterTextActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      <FlatList
-        data={tasks}
-        keyExtractor={(item) => item.taskId.toString()}
-        contentContainerStyle={styles.listContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        onEndReachedThreshold={0.25}
-        onEndReached={loadMore}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.taskCard}
-            onPress={() => navigation.navigate('TaskDetail', { taskId: item.taskId })}
-          >
-            <View style={styles.taskCardTop}>
-              <Text style={styles.taskTitle} numberOfLines={1}>
-                {item.title}
-              </Text>
-              <View style={styles.statusPill}>
-                <Text style={styles.statusText}>{item.status}</Text>
-              </View>
-            </View>
-
-            <Text style={styles.taskMeta}>{`${item.type} • ${item.priority}`}</Text>
-            <Text style={styles.taskMeta}>{`Customer: ${item.customerName || 'N/A'}`}</Text>
-            <Text style={styles.taskDate}>{formatDateTime(item.updatedAt || item.createdAt)}</Text>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyWrap}>
-            <ClipboardList color="#64748B" size={18} />
-            <Text style={styles.emptyText}>Không có task phù hợp bộ lọc hiện tại.</Text>
+          <View style={styles.filterLine}>
+            {STATUS_OPTIONS.map((item) => (
+              <TouchableOpacity
+                key={`status_${item.value}`}
+                style={[styles.filterBtn, statusFilter === item.value && styles.filterBtnActive]}
+                onPress={() => setStatusFilter(item.value)}
+              >
+                <Text style={[styles.filterText, statusFilter === item.value && styles.filterTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        }
-        ListFooterComponent={
-          loadingMore ? (
-            <View style={styles.footerLoading}>
-              <ActivityIndicator color="#16A34A" />
+        </View>
+
+        <FlatList
+          data={tasks}
+          keyExtractor={(item) => item.taskId.toString()}
+          contentContainerStyle={styles.listContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          onEndReachedThreshold={0.25}
+          onEndReached={loadMore}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.taskCard}
+              onPress={() => navigation.navigate('TaskDetail', { taskId: item.taskId })}
+            >
+              <View style={styles.taskCardTop}>
+                <Text style={styles.taskTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <View style={styles.statusPill}>
+                  <Text style={styles.statusText}>{item.status}</Text>
+                </View>
+              </View>
+
+              <Text style={styles.taskMeta}>{`Customer: ${item.customerName || 'N/A'}`}</Text>
+              <Text style={styles.taskDate}>{formatDateTime(item.updatedAt || item.createdAt)}</Text>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <ClipboardList color="#64748B" size={18} />
+              <Text style={styles.emptyText}>Không có task phù hợp bộ lọc hiện tại.</Text>
             </View>
-          ) : null
-        }
-      />
-    </SafeAreaView>
+          }
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.footerLoading}>
+                <ActivityIndicator color="#16A34A" />
+              </View>
+            ) : null
+          }
+        />
+      </View>
+    </MobileLayout>
   );
 };
 
@@ -225,27 +221,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F8FAFC',
   },
-  header: {
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingTop: 12 + STATUS_BAR_OFFSET,
-    paddingBottom: 12,
-  },
-  pageTitle: {
-    color: '#0F172A',
-    fontSize: 18,
-    fontWeight: '800',
-  },
   pageSubtitle: {
-    marginTop: 2,
     color: '#64748B',
     fontSize: 12,
+    marginBottom: 8,
   },
   filtersWrap: {
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 12,
     gap: 8,
   },
   filterLine: {

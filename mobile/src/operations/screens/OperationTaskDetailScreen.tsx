@@ -209,12 +209,8 @@ const OperationTaskDetailScreen = () => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.card}>
-          <Text style={styles.customerName}>{(detail.task as any).customerName || 'Khách hàng'}</Text>
-          <Text style={styles.taskMeta}>{formatDateTime(detail.task.createdAt)}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.taskTitle}>{detail.task.taskTitle}</Text>
+          <Text style={styles.customerName}>Khách hàng: {detail.task.customerName || 'Khách hàng'}</Text>
+          <Text style={styles.taskMeta}>Thời gian gửi: {formatDateTime(detail.task.createdAt)}</Text>
         </View>
 
         <View style={styles.card}>
