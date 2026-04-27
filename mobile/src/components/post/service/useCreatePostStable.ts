@@ -200,7 +200,9 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
         setSubmitting(true)
         try {
             const mediaUris = media.map((m) => m.uri)
-            const uploadedMedia = await postService.uploadMedia(mediaUris)
+            // Upload can intermittently fail when the server is still processing images.
+            // Auto-retry a few times while keeping the loading spinner.
+            const uploadedMedia = await postService.uploadMedia(mediaUris, { retries: 3 })
             const uploadedUrls = Array.isArray(uploadedMedia?.urls) ? uploadedMedia.urls : []
 
             if (uploadedUrls.length !== media.length) {
@@ -228,7 +230,7 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
 
             const attributePayload = attributeEntries.filter((item) => allowedAttributeIds.has(item.attributeId))
 
-            await postService.createPost({
+            const createPayload = {
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
                 postPrice: Number(formData.postPrice.trim()),
@@ -237,7 +239,21 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
                 ...(options?.shopId ? { shopId: Number(options.shopId) } : {}),
                 images,
                 attributes: attributePayload,
-            })
+            }
+
+            // Some backends may respond 500 for a short time window right after upload.
+            // Retry once (quietly) to avoid showing a scary error to the user.
+            try {
+                await postService.createPost(createPayload)
+            } catch (e: any) {
+                const status = e?.response?.status
+                if (status === 500) {
+                    await new Promise((resolve) => setTimeout(resolve, 1200))
+                    await postService.createPost(createPayload)
+                } else {
+                    throw e
+                }
+            }
 
             setSubmitted(true)
             resetForm()

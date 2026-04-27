@@ -39,6 +39,8 @@ const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -64,6 +66,11 @@ const HomeScreen = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Reset pagination when query/filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, appliedFilters]);
+
   // Load categories
   useEffect(() => {
     const loadCategories = async () => {
@@ -80,11 +87,15 @@ const HomeScreen = () => {
   // Fetch posts
   useEffect(() => {
     const fetchPosts = async () => {
-      setLoading(true);
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       try {
         const params: any = {
           page,
-          limit: 10,
+          limit: 20,
         };
         if (debouncedSearch) params.search = debouncedSearch;
         if (appliedFilters.minPrice) params.minPrice = appliedFilters.minPrice;
@@ -94,7 +105,17 @@ const HomeScreen = () => {
 
         const response = await postService.getPublicPosts(params);
         const postsData = response.data || [];
-        setPosts(postsData);
+        setPosts((current) => {
+          const next = page === 1 ? postsData : [...current, ...postsData];
+          // De-duplicate by postId
+          const map = new Map<number, Post>();
+          for (const item of next) {
+            if (item && typeof item.postId === 'number') {
+              map.set(item.postId, item);
+            }
+          }
+          return Array.from(map.values());
+        });
         console.log('Posts fetched:', postsData.length, 'items with images:', postsData.filter((p: Post) => p.images?.length).length);
 
         if (response.meta?.totalPages) {
@@ -104,11 +125,24 @@ const HomeScreen = () => {
         console.error('Failed to fetch posts:', error);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
+        setRefreshing(false);
       }
     };
 
     fetchPosts();
   }, [debouncedSearch, appliedFilters, page]);
+
+  const loadNextPage = () => {
+    if (loading || loadingMore) return;
+    if (page >= totalPages) return;
+    setPage((p) => p + 1);
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setPage(1);
+  };
 
   const handleApplyFilters = () => {
     setPage(1);
@@ -214,6 +248,17 @@ const HomeScreen = () => {
             columnWrapperStyle={styles.columnWrapper}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            onEndReached={loadNextPage}
+            onEndReachedThreshold={0.6}
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={styles.footerLoading}>
+                  <ActivityIndicator size="small" color="#10b981" />
+                </View>
+              ) : null
+            }
           />
         ) : (
           <View style={styles.emptyContainer}>
@@ -371,6 +416,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  footerLoading: {
+    paddingVertical: 16,
   },
   emptyContainer: {
     flex: 1,

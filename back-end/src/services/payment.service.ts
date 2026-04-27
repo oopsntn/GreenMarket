@@ -575,6 +575,7 @@ const findPublishedPackageBySlotCode = async (slotCode: string) => {
       promotionPackagePrice: promotionPackagePrices.price,
       placementSlotPublished: placementSlots.placementSlotPublished,
       placementSlotCode: placementSlots.placementSlotCode,
+      placementSlotCapacity: placementSlots.placementSlotCapacity,
     })
     .from(promotionPackages)
     .innerJoin(
@@ -743,6 +744,27 @@ export const paymentService = {
       maxSales: Number(vipPackage.promotionPackageMaxPosts ?? 0),
       message: "Gói Nhà Vườn VIP đã đạt số lượt bán tối đa.",
     });
+
+    const slotCapacity = Number(vipPackage.placementSlotCapacity ?? 0);
+    if (slotCapacity > 0) {
+      const [slotUsage] = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(shops)
+        .where(
+          and(
+            eq(shops.shopStatus, "active"),
+            gt(shops.shopVipExpiresAt, new Date()),
+          ),
+        );
+
+      if (Number(slotUsage?.count ?? 0) >= slotCapacity) {
+        throw new PaymentServiceError(
+          409,
+          "PLACEMENT_SLOT_FULL",
+          "Vị trí Nhà vườn VIP đã đủ sức chứa (tối đa 10 nhà vườn). Vui lòng thử lại sau.",
+        );
+      }
+    }
 
     const vipDurationDays = Number(vipPackage.promotionPackageDurationDays || 0);
     if (!Number.isFinite(vipDurationDays) || vipDurationDays <= 0) {

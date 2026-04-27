@@ -41,6 +41,36 @@ const toNumber = (value: string | number | null | undefined) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const toNullableTrimmedString = (value: unknown): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+};
+
+const normalizeCoverMediaUrls = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const urls = value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter((item) => item.length > 0);
+
+  // Host content currently supports one cover image; ignore additional entries.
+  return urls.slice(0, 1);
+};
+
+const hasOwn = (obj: unknown, key: string): boolean => {
+  return Boolean(
+    obj &&
+      typeof obj === "object" &&
+      Object.prototype.hasOwnProperty.call(obj, key),
+  );
+};
+
 const normalizePayoutStatus = (status: string | null | undefined) => {
   const normalized = (status || "").trim().toLowerCase();
   if (normalized === "success") {
@@ -133,10 +163,16 @@ export const getHostEarnings = async (
     await hostIncomePolicyService.syncForUser(userId);
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
 
+    const earningsWhereClause = and(
+      eq(ledgers.ledgerUserId, userId),
+      eq(ledgers.ledgerType, "earning"),
+      eq(ledgers.ledgerDirection, "CREDIT"),
+    );
+
     const rows = await db
       .select()
       .from(ledgers)
-      .where(eq(ledgers.ledgerUserId, userId))
+      .where(earningsWhereClause)
       .orderBy(desc(ledgers.ledgerCreatedAt), desc(ledgers.ledgerId))
       .limit(limit)
       .offset(offset);
@@ -144,7 +180,7 @@ export const getHostEarnings = async (
     const [countResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(ledgers)
-      .where(eq(ledgers.ledgerUserId, userId));
+      .where(earningsWhereClause);
 
     res.json({
       data: rows,
@@ -280,12 +316,16 @@ export const createContent = async (
       return;
     }
 
-    const { title, description, body, category, mediaUrls } = req.body;
-
+    const title = toNullableTrimmedString(req.body?.title);
     if (!title) {
       res.status(400).json({ error: "Tiêu đề là bắt buộc." });
       return;
     }
+
+    const description = toNullableTrimmedString(req.body?.description);
+    const body = toNullableTrimmedString(req.body?.body);
+    const category = toNullableTrimmedString(req.body?.category);
+    const mediaUrls = normalizeCoverMediaUrls(req.body?.mediaUrls);
 
     const policy = await hostIncomePolicyService.getPolicy();
 
@@ -327,12 +367,57 @@ export const updateContent = async (
       return;
     }
 
+    if (hasOwn(req.body, "status") || hasOwn(req.body, "hostContentStatus")) {
+      res.status(400).json({
+        error: "Không thể cập nhật trạng thái bài viết từ API Host.",
+      });
+      return;
+    }
+
+    const updateData: {
+      hostContentUpdatedAt: Date;
+      hostContentTitle?: string;
+      hostContentDescription?: string | null;
+      hostContentBody?: string | null;
+      hostContentCategory?: string | null;
+      hostContentMediaUrls?: string[];
+    } = {
+      hostContentUpdatedAt: new Date(),
+    };
+
+    if (hasOwn(req.body, "title")) {
+      const nextTitle = toNullableTrimmedString(req.body?.title);
+      if (!nextTitle) {
+        res.status(400).json({ error: "Tiêu đề là bắt buộc." });
+        return;
+      }
+
+      updateData.hostContentTitle = nextTitle;
+    }
+
+    if (hasOwn(req.body, "description")) {
+      updateData.hostContentDescription = toNullableTrimmedString(
+        req.body?.description,
+      );
+    }
+
+    if (hasOwn(req.body, "body")) {
+      updateData.hostContentBody = toNullableTrimmedString(req.body?.body);
+    }
+
+    if (hasOwn(req.body, "category")) {
+      updateData.hostContentCategory = toNullableTrimmedString(req.body?.category);
+    }
+
+    if (hasOwn(req.body, "mediaUrls")) {
+      updateData.hostContentMediaUrls = normalizeCoverMediaUrls(
+        req.body?.mediaUrls,
+      );
+    }
+
     const [updated] = await db
       .update(hostContents)
-      .set({
-        ...req.body,
-        hostContentUpdatedAt: new Date(),
-      })
+      .set(updateData)
       .where(
         and(
           eq(hostContents.hostContentId, contentId),

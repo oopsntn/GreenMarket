@@ -128,8 +128,17 @@ export const postService = {
         return response.data
     },
 
-    uploadMedia: async (mediaUris: string[] = []): Promise<UploadResponse> => {
-        try {
+    uploadMedia: async (
+        mediaUris: string[] = [],
+        options: UploadOptions = {}
+    ): Promise<UploadResponse> => {
+        const retries = Number.isFinite(options.retries)
+            ? Math.max(0, Number(options.retries))
+            : 2
+
+        let lastError: any
+
+        const attemptUpload = async () => {
             const formData = new FormData()
 
             console.log('[PostService.uploadMedia]', {
@@ -142,13 +151,15 @@ export const postService = {
             for (const uri of mediaUris) {
                 const { fileName, mimeType } = getFileInfo(uri)
 
-                // Giữ nguyên URI cho React Native fetch
-                let normalizedUri = uri
+                const normalizedUri = uri
                 console.log(`uri: ${uri}, fileName: ${fileName}, mimeType: ${mimeType}`)
+
                 if (Platform.OS === 'web') {
                     const response = await fetch(uri)
                     const blob = await response.blob()
-                    const file = new File([blob], fileName, { type: blob.type || mimeType })
+                    const file = new File([blob], fileName, {
+                        type: blob.type || mimeType,
+                    })
                     formData.append('media', file)
                 } else {
                     formData.append('media', {
@@ -158,44 +169,63 @@ export const postService = {
                     } as any)
                 }
             }
+
             const token = await AsyncStorage.getItem('token')
+
             const response = await fetch(`${API_BASE_URL}/upload`, {
                 method: 'POST',
                 headers: {
-                    // KHÔNG set Content-Type — fetch tự set multipart boundary
                     ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 },
                 body: formData,
             })
+
             console.log('[PostService.uploadMedia] Response status:', response.status)
-            
+
             if (!response.ok) {
-                let errorData = null;
-                try { errorData = await response.json(); } catch(e) {}
+                let errorData = null
+                try {
+                    errorData = await response.json()
+                } catch (e) { }
+
                 throw {
                     response: {
                         status: response.status,
-                        data: errorData || { error: 'Lỗi tải ảnh/video từ máy chủ' }
+                        data: errorData || { error: 'Lỗi tải ảnh/video từ máy chủ' },
                     },
-                    message: 'Network error or bad response'
-                };
+                    message: 'Network error or bad response',
+                }
             }
 
             const data = await response.json()
+
             if (!data?.urls) {
                 throw new Error('Invalid upload response')
             }
+
             console.log('[PostService.uploadMedia] Response data:', data)
             return data
-        } catch (error: any) {
-            console.error('uploadMedia failed:', {
-                url: `${API_BASE_URL}/upload`,
-                message: error?.message,
-                status: error?.response?.status,
-                data: error?.response?.data,
-            })
-            throw error
         }
+
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                return await attemptUpload()
+            } catch (error: any) {
+                lastError = error
+
+                console.error(`uploadMedia attempt ${attempt + 1} failed:`, {
+                    message: error?.message,
+                    status: error?.response?.status,
+                    data: error?.response?.data,
+                })
+
+                if (attempt === retries) {
+                    break
+                }
+            }
+        }
+
+        throw lastError || new Error('Upload failed')
     },
 
     getCategories: async () => {
