@@ -36,7 +36,6 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
         const {
             categoryId,
             postTitle,
-            postPrice,
             postLocation,
             postContactPhone,
             images,
@@ -117,7 +116,6 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             categoryId: Number(categoryId),
             postTitle,
             postSlug: finalSlug,
-            postPrice: postPrice?.toString(),
             postLocation,
             postContactPhone,
             postStatus: isDelegatedPost ? "pending_owner" : (canAutoApprove ? "approved" : "pending"),
@@ -472,7 +470,6 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         const {
             categoryId,
             postTitle,
-            postPrice,
             postLocation,
             postContactPhone,
             attributes: updatedAttributes
@@ -561,7 +558,6 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         if (categoryId !== undefined) postUpdatePayload.categoryId = Number(categoryId);
         if (postTitle !== undefined) postUpdatePayload.postTitle = postTitle;
 
-        if (postPrice !== undefined) postUpdatePayload.postPrice = postPrice?.toString();
         if (postLocation !== undefined) postUpdatePayload.postLocation = postLocation;
         if (postContactPhone !== undefined) postUpdatePayload.postContactPhone = postContactPhone;
 

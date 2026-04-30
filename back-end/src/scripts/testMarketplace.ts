@@ -43,7 +43,7 @@ async function testMarketplace() {
             postShopId: nursery.shopId,
             categoryId: cat.categoryId,
             postTitle: "Tùng La Hán Dáng Văn Nhân 50 Năm",
-            postPrice: "150000000", // 150tr
+
             postStatus: "pending", // Default
         };
         const finalSlug = slugify(postData.postTitle);

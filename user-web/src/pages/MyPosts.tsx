@@ -15,7 +15,6 @@ import {
 } from '../services/api';
 import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useCurrencyInput } from '../hooks/useCurrencyInput';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 const formatVnd = (value: number) =>
@@ -61,7 +60,6 @@ const MyPosts: React.FC = () => {
   // Edit Modal State
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const editPriceInput = useCurrencyInput("");
   const [editCategoryId, setEditCategoryId] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editContactPhone, setEditContactPhone] = useState("");
@@ -241,7 +239,6 @@ const MyPosts: React.FC = () => {
   const openEditModal = async (post: any) => {
     setEditingPost(post);
     setEditTitle(post.postTitle);
-    editPriceInput.setRawValue(post.postPrice ?? "");
     setEditCategoryId(post.categoryId ? String(post.categoryId) : "");
     setEditLocation(post.postLocation || "");
     setEditContactPhone(post.postContactPhone || "");
@@ -264,7 +261,6 @@ const MyPosts: React.FC = () => {
       const updateRes = await updateUserPost(editingPost.postId, {
         categoryId: editCategoryId ? Number(editCategoryId) : undefined,
         postTitle: editTitle,
-        postPrice: editPriceInput.rawValue,
         postLocation: editLocation,
         postContactPhone: editContactPhone,
         attributes: formattedAttributes,
@@ -602,7 +598,7 @@ const MyPosts: React.FC = () => {
 
                     <div className="flex flex-wrap justify-center sm:justify-start items-center gap-4 text-xs text-slate-500">
                       <div className="flex items-center gap-1.5 font-black text-xl text-emerald-600">
-                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(post.postPrice)}
+                        Giá tiền: Liên hệ
                       </div>
                       <div className="flex items-center gap-1.5 text-[10px] font-bold">
                         <MapPin className="w-3.5 h-3.5 text-slate-400" />
@@ -914,19 +910,6 @@ const MyPosts: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Giá bán (VND)</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="0"
-                    className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white focus:shadow-sm outline-none transition-all text-slate-900 font-black text-lg"
-                    ref={editPriceInput.inputRef}
-                    value={editPriceInput.displayValue}
-                    onChange={editPriceInput.handleChange}
-                    inputMode="numeric"
-                  />
-                </div>
                 {!shop && (
                   <div>
                     <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-2">Khu vực</label>

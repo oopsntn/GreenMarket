@@ -41,7 +41,7 @@ async function testCollaboratorFlow() {
             categoryId: 1,
             postTitle: "Sanh Nam Điền Cổ - CTV Test",
             postSlug,
-            postPrice: "5000000",
+
             postLocation: "Nam Định",
             postStatus: "pending_owner", // This should be handled by createPost controller normally
             postPublished: false,

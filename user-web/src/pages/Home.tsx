@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getPublicPosts, getCategories } from '../services/api';
 import { Search, ShoppingBag, MapPin, ListFilter, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCurrencyInput } from '../hooks/useCurrencyInput';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
 
 const VIETNAM_PROVINCES = [
@@ -33,13 +32,10 @@ const Home: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
-  const minPriceInput = useCurrencyInput('');
-  const maxPriceInput = useCurrencyInput('');
+
   const [location, setLocation] = useState('');
 
   const [appliedFilters, setAppliedFilters] = useState({
-    minPrice: '',
-    maxPrice: '',
     categoryId: '',
     location: '',
   });
@@ -58,22 +54,16 @@ const Home: React.FC = () => {
   const applyFilters = () => {
     setPage(1);
     setAppliedFilters({
-      minPrice: minPriceInput.rawValue,
-      maxPrice: maxPriceInput.rawValue,
       categoryId: selectedCategoryId,
       location,
     });
   };
 
   const clearFilters = () => {
-    minPriceInput.reset();
-    maxPriceInput.reset();
     setSelectedCategoryId('');
     setLocation('');
     setPage(1);
     setAppliedFilters({
-      minPrice: '',
-      maxPrice: '',
       categoryId: '',
       location: '',
     });
@@ -85,8 +75,6 @@ const Home: React.FC = () => {
       try {
         const params: any = {};
         if (debouncedSearch) params.search = debouncedSearch;
-        if (appliedFilters.minPrice) params.minPrice = appliedFilters.minPrice;
-        if (appliedFilters.maxPrice) params.maxPrice = appliedFilters.maxPrice;
         if (appliedFilters.categoryId) params.categoryId = appliedFilters.categoryId;
         if (appliedFilters.location) params.location = appliedFilters.location;
         params.page = page;
@@ -153,7 +141,7 @@ const Home: React.FC = () => {
         </h3>
         <div className="flex justify-between items-center">
           <p className="text-emerald-600 font-black text-xl">
-            {Number(post.postPrice).toLocaleString()} <span className="text-[10px] font-bold text-slate-400 ml-1 uppercase">VND</span>
+            Liên hệ
           </p>
         </div>
         <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold uppercase tracking-wider bg-slate-50 py-1 rounded-md border border-slate-100">
@@ -226,37 +214,7 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            <div className="mb-8">
-              <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 mb-4 uppercase tracking-[0.2em]">
-                <DollarSign className="w-4 h-4 text-emerald-600" /> Khoảng giá
-              </label>
-              <div className="flex flex-col gap-3">
-                <div className="relative">
-                  <input
-                    ref={minPriceInput.inputRef}
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Giá thấp nhất"
-                    value={minPriceInput.displayValue}
-                    onChange={minPriceInput.handleChange}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-12 py-3.5 text-sm text-slate-900 font-bold focus:border-emerald-500 focus:bg-white outline-none transition-all"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">VND</span>
-                </div>
-                <div className="relative">
-                  <input
-                    ref={maxPriceInput.inputRef}
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="Giá cao nhất"
-                    value={maxPriceInput.displayValue}
-                    onChange={maxPriceInput.handleChange}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-12 py-3.5 text-sm text-slate-900 font-bold focus:border-emerald-500 focus:bg-white outline-none transition-all"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">VND</span>
-                </div>
-              </div>
-            </div>
+
 
             <div className="mb-10">
               <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 mb-4 uppercase tracking-[0.2em]">

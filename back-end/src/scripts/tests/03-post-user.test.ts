@@ -46,7 +46,7 @@ async function runUserPostTests() {
         const postRes = await axios.post(`${BASE_URL}/posts`, {
             categoryId: testCategoryId,
             postTitle: "Sprint 1 Split Test Post",
-            postPrice: "150000",
+
             postLocation: "Bac Ninh"
         }, { headers });
         

@@ -51,7 +51,7 @@ async function runUserMonetizationTests() {
             postShopId: testShopId,
             categoryId: testCategoryId,
             postTitle: "Premium Test Post",
-            postPrice: "100000",
+
             postLocation: "Hanoi",
             postStatus: "approved",
             postSlug: "premium-post-" + Date.now()
