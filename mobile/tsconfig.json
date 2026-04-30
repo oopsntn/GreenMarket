@@ -10,19 +10,42 @@
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "bundler",
     "target": "ES2020",
-    "lib": ["ES2020"],
+    "lib": [
+      "ES2020"
+    ],
     "ignoreDeprecations": "5.0",
     "baseUrl": ".",
+    "allowJs": true,
     "paths": {
-      "@/*": ["src/*"],
-      "@components/*": ["src/components/*"],
-      "@navigation/*": ["src/navigation/*"],
-      "@context/*": ["src/context/*"],
-      "@services/*": ["src/services/*"],
-      "@utils/*": ["src/utils/*"],
-      "@types/*": ["src/types/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@components/*": [
+        "src/components/*"
+      ],
+      "@navigation/*": [
+        "src/navigation/*"
+      ],
+      "@context/*": [
+        "src/context/*"
+      ],
+      "@services/*": [
+        "src/services/*"
+      ],
+      "@utils/*": [
+        "src/utils/*"
+      ],
+      "@types/*": [
+        "src/types/*"
+      ]
     }
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist", "build"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
 }
