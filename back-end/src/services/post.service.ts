@@ -21,13 +21,6 @@ export class PostService {
             conditions.push(eq(posts.categoryId, Number(query.categoryId)));
         }
 
-        if (query.minPrice) {
-            conditions.push(gte(posts.postPrice, query.minPrice));
-        }
-
-        if (query.maxPrice) {
-            conditions.push(lte(posts.postPrice, query.maxPrice));
-        }
 
         if (query.location) {
             conditions.push(ilike(posts.postLocation, `%${query.location}%`));

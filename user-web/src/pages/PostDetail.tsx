@@ -138,7 +138,7 @@ const PostDetail: React.FC = () => {
     const currentMedia = mediaList[activeMediaIndex];
 
     const formatPrice = (price: string) => {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(price));
+        return 'Liên hệ';
     };
 
     const hasExactCoordinates = Boolean(post?.shop?.shopLat && post?.shop?.shopLng);
@@ -333,7 +333,7 @@ const PostDetail: React.FC = () => {
                                 </div>
 
                                 <div className="flex items-baseline gap-2 border-b border-slate-100 pb-3">
-                                    <span className="text-5xl font-black text-emerald-700">{formatPrice(post.postPrice)}</span>
+                                    <span className="text-5xl font-black text-emerald-700">Giá tiền: Liên hệ</span>
                                 </div>
 
                                 {!isOwner && (

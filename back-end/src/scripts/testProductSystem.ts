@@ -40,7 +40,7 @@ async function testBonsaiSystem() {
             postAuthorId: user.userId,
             categoryId: category.categoryId,
             postTitle: "Tùng La Hán Bonsai Nhật Bản",
-            postPrice: 5500000,
+
             postStatus: "approved",
             images: [
                 "https://example.com/bonsai-1.jpg",

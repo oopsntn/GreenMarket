@@ -46,7 +46,7 @@ async function runSavedPostsTests() {
             postAuthorId: testUserId,
             categoryId: testCategoryId,
             postTitle: "Awesome Test Post For Bookmarks",
-            postPrice: "250000",
+
             postLocation: "Hanoi",
             postSlug: slugify("Awesome Test Post For Bookmarks") + Date.now(),
             postStatus: "approved"

@@ -89,7 +89,7 @@ const HostContentModerationList = ({ navigation }: any) => {
     try {
       await managerService.updateHostContentStatus(selected.hostContentId, 'rejected', reason);
       setItems((current) => current.filter((p) => p.hostContentId !== selected.hostContentId));
-      CustomAlert('Thành công', `Nội dung "${selected.hostContentTitle}" đã bị từ chối.`);
+      CustomAlert('Thành công', `Bài đăng đã bị từ chối.`);
     } catch (error) {
       const status =
         typeof error === 'object' &&

@@ -1,9 +1,8 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Image as ImageIcon, MapPin, Tag, CircleDollarSign, CheckCircle, ArrowRight, X, UploadCloud } from 'lucide-react';
 import { getCategories, getCategoryAttributes, createPost, uploadMedia, getPublicSystemSettings } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useCurrencyInput } from '../hooks/useCurrencyInput';
 
 const MAX_IMAGES_PER_POST = 10;
 const MAX_IMAGE_SIZE_MB = 3;
@@ -40,7 +39,7 @@ const CreatePost: React.FC = () => {
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [videoFiles, setVideoFiles] = useState<File[]>([]);
     const [previews, setPreviews] = useState<{ url: string, type: 'image' | 'video' }[]>([]);
-    const postPriceInput = useCurrencyInput("");
+
 
     const [formData, setFormData] = useState({
         categoryId: '',
@@ -211,7 +210,6 @@ const CreatePost: React.FC = () => {
             const payload = {
                 ...formData,
                 categoryId: Number(formData.categoryId),
-                postPrice: postPriceInput.rawValue,
                 images: imageUrls,
                 videos: videoUrls,
                 attributes: formattedAttributes
@@ -311,21 +309,6 @@ const CreatePost: React.FC = () => {
                                     <option key={cat.categoryId} value={cat.categoryId}>{cat.categoryTitle}</option>
                                 ))}
                             </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-[0.1em] flex items-center gap-2 ml-1">
-                                <CircleDollarSign className="w-4 h-4 text-emerald-600" /> Giá bán (đ) *
-                            </label>
-                            <input
-                                required
-                                type="text"
-                                placeholder="0"
-                                className="w-full bg-slate-50 border border-slate-200 p-4 rounded-2xl focus:border-emerald-500 focus:bg-white outline-none transition-all text-slate-900 text-sm font-medium"
-                                ref={postPriceInput.inputRef}
-                                value={postPriceInput.displayValue}
-                                onChange={postPriceInput.handleChange}
-                                inputMode="numeric"
-                            />
                         </div>
                     </div>
 

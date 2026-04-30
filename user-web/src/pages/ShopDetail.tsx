@@ -297,7 +297,7 @@ const ShopDetail: React.FC = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <p className="text-emerald-600 font-black text-xl">
-                        {Number(post.postPrice).toLocaleString()} <span className="text-[10px] font-medium text-slate-400 ml-0.5">d</span>
+                        Liên hệ
                       </p>
                       <div className="text-[10px] text-slate-500 font-bold px-2 py-1 bg-slate-50 rounded-lg border border-slate-100">
                         {post.postLocation || 'VN'}
