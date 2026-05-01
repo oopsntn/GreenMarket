@@ -82,7 +82,7 @@ const SavedPosts: React.FC = () => {
                     </h3>
 
                     <div className="flex items-center gap-2 font-black text-2xl text-emerald-600 mb-4">
-                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(post.postPrice)}
+                      Giá tiền: Liên hệ
                     </div>
 
                     <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">

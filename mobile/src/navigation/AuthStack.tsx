@@ -1,17 +1,29 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, SafeAreaView, StatusBar, KeyboardAvoidingView, Platform } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import LoginScreen from "../components/auth/LoginScreen";
+import WelcomeScreen from "../components/auth/WelcomeScreen";
 import UserNavigator from "./UserNavigator";
 import ManagerNavigator from "../manager/navigation/ManagerNavigator";
 import SuccessToast from "../components/SuccessToast";
 import CollaboratorNavigator from "@/collaborator/navigation/CollaboratorNavigator";
 import HostNavigator from "../host/navigation/HostNavigator";
 import OperationsNavigator from "../operations/navigation/OperationsNavigator";
+import { Leaf } from "lucide-react-native";
 
 const AuthStack = () => {
   const { token, user, loading } = useAuth();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const previousTokenRef = useRef<string | null>(token);
+
+  useEffect(() => {
+    if (previousTokenRef.current !== null && token === null) {
+      setShowWelcome(false);
+    }
+
+    previousTokenRef.current = token;
+  }, [token]);
 
   const handleLoginSuccess = () => {
     setShowSuccess(true);
@@ -30,19 +42,36 @@ const AuthStack = () => {
   }
 
   if (!token) {
+    // Show welcome screen first
+    if (showWelcome) {
+      return <WelcomeScreen onStart={() => setShowWelcome(false)} />;
+    }
+
+    // Show login screen
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.appName}>GreenMarket</Text>
-          <Text style={styles.appDescription}>
-            Đăng nhập để tiếp tục trải nghiệm mua sắm xanh
-          </Text>
-        </View>
-        <LoginScreen onLoginSuccess={handleLoginSuccess} />
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardView}
+        >
+          <View style={styles.logoArea}>
+            <View style={styles.iconWrap}>
+              <Leaf color="#16a34a" size={32} />
+            </View>
+            <Text style={styles.appName}>GreenMarket</Text>
+            <Text style={styles.appDescription}>
+              Đăng nhập để tiếp tục trải nghiệm mua sắm xanh
+            </Text>
+          </View>
+
+          <View style={styles.loginCardWrap}>
+            <LoginScreen onLoginSuccess={handleLoginSuccess} />
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     );
   }
-
 
   const renderStack = () => {
     const businessRoleCode = user?.businessRoleCode;
@@ -55,9 +84,7 @@ const AuthStack = () => {
       case "OPERATION_STAFF":
         return <OperationsNavigator />;
       case "HOST":
-        // HOST is a shop-owner capability, but should not force users into the Host UI on app relaunch.
-        // Keep default user experience and let users enter Host mode explicitly from the Management Center.
-        return <UserNavigator />;
+        return <HostNavigator />;
       default:
         return <UserNavigator />;
     }
@@ -74,9 +101,7 @@ const AuthStack = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    backgroundColor: "#f0fdf4",
+    backgroundColor: "#f8faf8",
   },
   center: {
     flex: 1,
@@ -84,18 +109,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#f0fdf4",
   },
-  header: {
-    marginBottom: 24,
+  keyboardView: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  logoArea: {
+    alignItems: "center",
+    marginBottom: 28,
+  },
+  iconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: "#ecfdf5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
   },
   appName: {
     fontSize: 28,
-    fontWeight: "800",
+    fontWeight: "900",
     color: "#15803d",
   },
   appDescription: {
-    marginTop: 4,
+    marginTop: 6,
     fontSize: 14,
-    color: "#4b5563",
+    color: "#64748b",
+    textAlign: "center",
+  },
+  loginCardWrap: {
+    // The LoginScreen component is already a card, no extra flex needed
   },
 });
 

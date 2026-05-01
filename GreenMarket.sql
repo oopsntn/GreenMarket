@@ -247,7 +247,7 @@ CREATE TABLE posts (
     post_title VARCHAR(255) NOT NULL,
     post_slug VARCHAR(255) NOT NULL UNIQUE,
 
-    post_price NUMERIC(12,2),
+
     post_location VARCHAR(255),
     post_status VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending, approved, rejected, hidden, draft, pending_owner
     post_rejected_reason TEXT,
@@ -570,7 +570,7 @@ CREATE TABLE shop_collaborators (
 CREATE INDEX post_search_idx ON posts USING gin (to_tsvector('simple', post_title));
 CREATE INDEX post_category_idx ON posts USING btree (category_id);
 CREATE INDEX post_status_idx ON posts USING btree (post_status);
-CREATE INDEX post_price_idx ON posts USING btree (post_price);
+
 CREATE INDEX post_location_idx ON posts USING btree (post_location);
 CREATE INDEX idx_posts_author ON posts(post_author_id);
 CREATE INDEX idx_posts_shop ON posts(post_shop_id);
@@ -981,70 +981,70 @@ INSERT INTO category_attributes (
 -- ============================================================
 -- POSTS (16 bài đăng cây cảnh bonsai)
 -- ============================================================
-INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_title, post_slug, post_price, post_location, post_status, post_contact_phone, post_view_count, post_contact_count, post_published, post_submitted_at, post_published_at) VALUES
+INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_title, post_slug, post_location, post_status, post_contact_phone, post_view_count, post_contact_count, post_published, post_submitted_at, post_published_at) VALUES
 (1,  1, 1, 11, 'Sanh Nam Điền Mini Dáng Văn Nhân',
     'sanh-nam-dien-mini-dang-van-nhan',
-    2500000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 234, 12, true, now() - interval '30 days', now() - interval '29 days'),
+    'Yên Phong, Bắc Ninh', 'approved', '0978195419', 234, 12, true, now() - interval '30 days', now() - interval '29 days'),
 
 (2,  3, 3, 12, 'Tùng La Hán Dáng Trực Cổ Thụ',
     'tung-la-han-dang-truc-co-thu',
-    150000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 1520, 45, true, now() - interval '25 days', now() - interval '24 days'),
+    'Nam Trực, Nam Định', 'approved', '0123456789', 1520, 45, true, now() - interval '25 days', now() - interval '24 days'),
 
 (3,  3, 3, 12, 'Linh Sam Sông Hinh Lũa Thép',
     'linh-sam-song-hinh-lua-thep',
-    8500000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 876, 28, true, now() - interval '20 days', now() - interval '19 days'),
+    'Chợ Lách, Bến Tre', 'approved', '0912345678', 876, 28, true, now() - interval '20 days', now() - interval '19 days'),
 
 (4,  3, 3, 13, 'Sanh Quê Dáng Làng Đại Thụ',
     'sanh-que-dang-lang-dai-thu',
-    45000000, 'Nam Trực, Nam Định', 'approved', '0123456789', 432, 15, true, now() - interval '18 days', now() - interval '17 days'),
+    'Nam Trực, Nam Định', 'approved', '0123456789', 432, 15, true, now() - interval '18 days', now() - interval '17 days'),
 
 (5,  3, 3, 11, 'Mai Chiếu Thủy Nu Gò Công Mini',
     'mai-chieu-thuy-nu-go-cong-mini',
-    3500000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 567, 19, true, now() - interval '15 days', now() - interval '14 days'),
+    'Chợ Lách, Bến Tre', 'approved', '0912345678', 567, 19, true, now() - interval '15 days', now() - interval '14 days'),
 
 (6,  2, NULL, 12, 'Thông Đen Nhật Bản Thành Thẩm',
     'thong-den-nhat-ban-thanh-tham',
-    25000000, 'Hoàng Mai, Hà Nội', 'approved', '0982703398', 345, 8, true, now() - interval '12 days', now() - interval '11 days'),
+    'Hoàng Mai, Hà Nội', 'approved', '0982703398', 345, 8, true, now() - interval '12 days', now() - interval '11 days'),
 
 (7,  1, 1, 14, 'Si Bonsai Phong Thủy Tài Lộc',
     'si-bonsai-phong-thuy-tai-loc',
-    4200000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 189, 7, true, now() - interval '10 days', now() - interval '9 days'),
+    'Yên Phong, Bắc Ninh', 'approved', '0978195419', 189, 7, true, now() - interval '10 days', now() - interval '9 days'),
 
 (8,  3, 3, 15, 'Mai Vàng Bonsai Nghệ Thuật',
     'mai-vang-bonsai-nghe-thuat',
-    12000000, 'Chợ Lách, Bến Tre', 'approved', '0912345678', 723, 31, true, now() - interval '8 days', now() - interval '7 days'),
+    'Chợ Lách, Bến Tre', 'approved', '0912345678', 723, 31, true, now() - interval '8 days', now() - interval '7 days'),
 
 (9,  3, 3, 11, 'Tùng Bách Tán Lùn Nhật Mini',
     'tung-bach-tan-lun-nhat-mini',
-    6800000, 'Nam Trực, Nam Định', 'approved', '0123456789', 298, 11, true, now() - interval '5 days', now() - interval '4 days'),
+    'Nam Trực, Nam Định', 'approved', '0123456789', 298, 11, true, now() - interval '5 days', now() - interval '4 days'),
 
 (10, 1, 1, 11, 'Kim Quýt Bonsai Mini Sai Quả',
     'kim-quyt-bonsai-mini-sai-qua',
-    4900000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 156, 22, true, now() - interval '28 days', now() - interval '27 days'),
+    'Yên Phong, Bắc Ninh', 'approved', '0978195419', 156, 22, true, now() - interval '28 days', now() - interval '27 days'),
 
 (11, 6, 6, 12, 'Mai Chiếu Thủy Dáng Bay Gò Công',
     'mai-chieu-thuy-dang-bay-go-cong',
-    12800000, 'Chợ Lách, Bến Tre', 'approved', '0935112233', 412, 35, true, now() - interval '22 days', now() - interval '21 days'),
+    'Chợ Lách, Bến Tre', 'approved', '0935112233', 412, 35, true, now() - interval '22 days', now() - interval '21 days'),
 
 (12, 6, 6, 12, 'Duối Cổ Bonsai Dáng Xiên',
     'duoi-co-bonsai-dang-xien',
-    17600000, 'Chợ Lách, Bến Tre', 'approved', '0935112233', 534, 48, true, now() - interval '26 days', now() - interval '25 days'),
+    'Chợ Lách, Bến Tre', 'approved', '0935112233', 534, 48, true, now() - interval '26 days', now() - interval '25 days'),
 
 (13, 6, 6, 13, 'Sanh Cổ Tán Rơi Sân Vườn',
     'sanh-co-tan-roi-san-vuon',
-    32000000, 'Chợ Lách, Bến Tre', 'approved', '0935112233', 267, 16, true, now() - interval '16 days', now() - interval '15 days'),
+    'Chợ Lách, Bến Tre', 'approved', '0935112233', 267, 16, true, now() - interval '16 days', now() - interval '15 days'),
 
 (14, 6, 6, 14, 'Lộc Vừng Phong Thủy Dáng Huyền',
     'loc-vung-phong-thuy-dang-huyen',
-    9600000, 'Chợ Lách, Bến Tre', 'approved', '0935112233', 189, 27, true, now() - interval '14 days', now() - interval '13 days'),
+    'Chợ Lách, Bến Tre', 'approved', '0935112233', 189, 27, true, now() - interval '14 days', now() - interval '13 days'),
 
 (15, 1, 1, 15, 'Ổi Bonsai Sai Quả Dáng Hoành',
     'oi-bonsai-sai-qua-dang-hoanh',
-    5800000, 'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days'),
+    'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days'),
 
 (16, 8, NULL, 11, 'Cây Bonsai Test 0987654321',
     'cay-bonsai-test-0987654321',
-    1500000, 'Hà Nội', 'approved', '0987654321', 10, 2, true, now() - interval '1 days', now() - interval '1 days');
+    'Hà Nội', 'approved', '0987654321', 10, 2, true, now() - interval '1 days', now() - interval '1 days');
 
 -- Post Attribute Values
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
@@ -1154,10 +1154,10 @@ INSERT INTO promotion_packages (
 ) VALUES
 (1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 7, 1, 35000, 'Ưu tiên hiển thị bài đăng trong 7 ngày ở vị trí 2 trang chủ.', true),
 (2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 7, 1, 180000, 'Ưu tiên hiển thị bài đăng trong 7 ngày ở vị trí 1 trang chủ.', true),
-(3, 2, 'Gói nhà vườn VIP (3 tháng)', 90, 1, 0, 'Ưu tiên shop lên đầu danh sách nhà vườn và tăng nhận diện VIP trong 90 ngày.', true),
+(3, 2, 'Gói nhà vườn VIP (3 tháng)', 90, 0, 0, 'Ưu tiên shop lên đầu danh sách nhà vườn và tăng nhận diện VIP trong 90 ngày.', true),
 (4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 7, 1, 5000, 'Ưu tiên hiển thị bài đăng trong 7 ngày ở vị trí 3 trang chủ.', true),
-(5, 5, 'Gói Lên Nhà Vườn (Vĩnh viễn)', 36500, 1, 0, 'Nâng cấp tài khoản cá nhân lên tài khoản nhà vườn chuyên nghiệp.', true),
-(6, 6, 'Gói Cá Nhân (30 ngày)', 30, 1, 0, 'Gói đăng tin ưu tiên cho cá nhân trong 30 ngày.', true);
+(5, 5, 'Gói Lên Nhà Vườn (Vĩnh viễn)', 36500, 0, 0, 'Nâng cấp tài khoản cá nhân lên tài khoản nhà vườn chuyên nghiệp.', true),
+(6, 6, 'Gói Cá Nhân (30 ngày)', 30, 0, 0, 'Gói đăng tin ưu tiên cho cá nhân trong 30 ngày.', true);
 
 -- Promotion Package Prices
 INSERT INTO promotion_package_prices (price_id, package_id, price, effective_from, effective_to, note, created_by) VALUES

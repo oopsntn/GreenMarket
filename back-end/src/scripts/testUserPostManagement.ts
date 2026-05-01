@@ -40,7 +40,7 @@ async function testUserPostManagement() {
         const editRes = await axios.patch(`${BASE_URL}/${post.postId}`, {
             userId: user.userId,
             postTitle: "Cây test soft delete (Edited)",
-            postPrice: "100000"
+
         });
         console.log("   Edit response status:", editRes.status);
         if (editRes.data.postTitle === "Cây test soft delete (Edited)" && editRes.data.postStatus === "pending") {

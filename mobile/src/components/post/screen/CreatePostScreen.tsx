@@ -1,7 +1,23 @@
 import React from 'react'
 import { useNavigation, useRoute } from '@react-navigation/native'
-import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { AlertCircle, CheckCircle2, CircleDollarSign, ImagePlus, MapPin, Phone, Tag, X } from 'lucide-react-native'
+import {
+    ActivityIndicator,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native'
+import {
+    AlertCircle,
+    CheckCircle2,
+    ImagePlus,
+    MapPin,
+    Phone,
+    Tag,
+    VideoIcon,
+    X,
+} from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
 import Button from '../../Reused/Button/Button'
 import Card from '../../Reused/Card/Card'
@@ -78,19 +94,26 @@ const CreatePostLayout = () => {
         <MobileLayout title="Đăng tin mới" scrollEnabled={true}>
             <Card style={styles.card}>
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Hình ảnh</Text>
-                    <Text style={styles.sectionHint}>Tối đa 10 ảnh</Text>
+                    <Text style={styles.sectionTitle}>Hình ảnh & Video</Text>
+                    <Text style={styles.sectionHint}>Tối đa 10 tệp</Text>
                 </View>
 
                 <View style={styles.mediaGrid}>
                     <TouchableOpacity style={styles.uploadBtn} onPress={actions.pickMedia} disabled={state.submitting}>
                         <ImagePlus size={24} color="#10b981" />
-                        <Text style={styles.uploadText}>Thêm ảnh</Text>
+                        <Text style={styles.uploadText}>Thêm ảnh / Video</Text>
                     </TouchableOpacity>
 
                     {state.media.map((item, index) => (
                         <View key={`${item.uri}-${index}`} style={styles.mediaPreview}>
-                            <Image source={{ uri: item.uri }} style={styles.imageThumb} />
+                            {item.type === 'image' ? (
+                                <Image source={{ uri: item.uri }} style={styles.imageThumb} />
+                            ) : (
+                                <View style={[styles.imageThumb, styles.videoPlaceholder]}>
+                                    <VideoIcon size={28} color="#fff" />
+                                    <Text style={styles.videoPlaceholderText}>Video</Text>
+                                </View>
+                            )}
 
                             <TouchableOpacity style={styles.removeBadge} onPress={() => actions.removeMedia(index)}>
                                 <X size={10} color="#fff" />
@@ -98,6 +121,10 @@ const CreatePostLayout = () => {
                         </View>
                     ))}
                 </View>
+
+                <Text style={styles.mediaHint}>
+                    Ảnh tối đa 3MB • Video tối đa 50MB • Chọn ít nhất 1 ảnh
+                </Text>
             </Card>
 
             <Card style={styles.card}>
@@ -109,6 +136,15 @@ const CreatePostLayout = () => {
                     icon={<Tag size={16} color="#10b981" />}
                     required
                 />
+
+                {/* Mức giá: liên hệ */}
+                <View style={styles.contactPriceRow}>
+                    <Text style={styles.label}>Mức giá</Text>
+                    <View style={styles.contactPriceBadge}>
+                        <Text style={styles.contactPriceText}>Liên hệ</Text>
+                    </View>
+                    <Text style={styles.contactPriceNote}>Người mua sẽ liên hệ trực tiếp để thoả thuận giá</Text>
+                </View>
 
                 <Text style={styles.label}>Danh mục *</Text>
                 {state.loadingInitialData ? (
@@ -137,16 +173,6 @@ const CreatePostLayout = () => {
                         ))}
                     </View>
                 )}
-
-                <Input
-                    testID="create-post-price-input"
-                    label="Giá bán"
-                    type="numeric"
-                    value={state.formData.postPrice}
-                    onChangeText={(txt) => actions.setFormData({ ...state.formData, postPrice: txt })}
-                    icon={<CircleDollarSign size={16} color="#10b981" />}
-                    required
-                />
 
                 {isShop && shop?.shopLocation ? (
                     <View style={styles.locationBlock}>
@@ -249,25 +275,6 @@ const styles = StyleSheet.create({
         marginTop: 16,
         padding: 16,
     },
-    delegatedCard: {
-        marginHorizontal: 16,
-        marginTop: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#BBF7D0',
-        backgroundColor: '#F0FDF4',
-    },
-    delegatedTitle: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#065F46',
-        marginBottom: 6,
-    },
-    delegatedDesc: {
-        fontSize: 12,
-        color: '#047857',
-        lineHeight: 18,
-    },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -288,10 +295,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 10,
+        marginBottom: 8,
     },
-    primaryButton: {
-        
+    mediaHint: {
+        fontSize: 11,
+        color: '#9ca3af',
+        marginTop: 4,
     },
+    primaryButton: {},
     uploadBtn: {
         width: 96,
         height: 96,
@@ -305,9 +316,10 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     uploadText: {
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: '600',
         color: '#10b981',
+        textAlign: 'center',
     },
     mediaPreview: {
         width: 96,
@@ -319,6 +331,17 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 14,
     },
+    videoPlaceholder: {
+        backgroundColor: '#1e293b',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 4,
+    },
+    videoPlaceholderText: {
+        color: '#94a3b8',
+        fontSize: 10,
+        fontWeight: '600',
+    },
     removeBadge: {
         position: 'absolute',
         top: -5,
@@ -326,6 +349,29 @@ const styles = StyleSheet.create({
         backgroundColor: '#ef4444',
         borderRadius: 10,
         padding: 4,
+    },
+    contactPriceRow: {
+        marginBottom: 16,
+    },
+    contactPriceBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#f0fdf4',
+        borderWidth: 1,
+        borderColor: '#6ee7b7',
+        borderRadius: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        marginTop: 6,
+        marginBottom: 6,
+    },
+    contactPriceText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#065f46',
+    },
+    contactPriceNote: {
+        fontSize: 11,
+        color: '#9ca3af',
     },
     label: {
         fontSize: 13,

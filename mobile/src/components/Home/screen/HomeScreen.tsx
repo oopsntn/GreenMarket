@@ -28,7 +28,6 @@ interface Post {
   postId: number;
   postSlug: string;
   postTitle: string;
-  postPrice: number;
   postLocation?: string;
   images?: Array<{ imageUrl: string }>;
   isPromoted?: boolean;
@@ -39,6 +38,8 @@ const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -64,6 +65,11 @@ const HomeScreen = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Reset pagination when query/filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, appliedFilters]);
+
   // Load categories
   useEffect(() => {
     const loadCategories = async () => {
@@ -80,21 +86,33 @@ const HomeScreen = () => {
   // Fetch posts
   useEffect(() => {
     const fetchPosts = async () => {
-      setLoading(true);
+      if (page === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       try {
         const params: any = {
           page,
-          limit: 10,
+          limit: 20,
         };
         if (debouncedSearch) params.search = debouncedSearch;
-        if (appliedFilters.minPrice) params.minPrice = appliedFilters.minPrice;
-        if (appliedFilters.maxPrice) params.maxPrice = appliedFilters.maxPrice;
         if (appliedFilters.categoryId) params.categoryId = appliedFilters.categoryId;
         if (appliedFilters.location) params.location = appliedFilters.location;
 
         const response = await postService.getPublicPosts(params);
         const postsData = response.data || [];
-        setPosts(postsData);
+        setPosts((current) => {
+          const next = page === 1 ? postsData : [...current, ...postsData];
+          // De-duplicate by postId
+          const map = new Map<number, Post>();
+          for (const item of next) {
+            if (item && typeof item.postId === 'number') {
+              map.set(item.postId, item);
+            }
+          }
+          return Array.from(map.values());
+        });
         console.log('Posts fetched:', postsData.length, 'items with images:', postsData.filter((p: Post) => p.images?.length).length);
 
         if (response.meta?.totalPages) {
@@ -104,11 +122,24 @@ const HomeScreen = () => {
         console.error('Failed to fetch posts:', error);
       } finally {
         setLoading(false);
+        setLoadingMore(false);
+        setRefreshing(false);
       }
     };
 
     fetchPosts();
   }, [debouncedSearch, appliedFilters, page]);
+
+  const loadNextPage = () => {
+    if (loading || loadingMore) return;
+    if (page >= totalPages) return;
+    setPage((p) => p + 1);
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setPage(1);
+  };
 
   const handleApplyFilters = () => {
     setPage(1);
@@ -164,9 +195,9 @@ const HomeScreen = () => {
           <Text style={styles.postTitle} numberOfLines={2}>
             {item.postTitle}
           </Text>
-          <Text style={styles.postPrice}>
-            {Number(item.postPrice).toLocaleString()} <Text style={styles.currencyText}>VND</Text>
-          </Text>
+          <View style={styles.contactBadge}>
+            <Text style={styles.contactBadgeText}>Liên hệ</Text>
+          </View>
           <View style={styles.locationContainer}>
             <MapPin size={12} color="#666" />
             <Text style={styles.locationText}>{item.postLocation || 'Hà Nội'}</Text>
@@ -214,6 +245,17 @@ const HomeScreen = () => {
             columnWrapperStyle={styles.columnWrapper}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            onEndReached={loadNextPage}
+            onEndReachedThreshold={0.6}
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={styles.footerLoading}>
+                  <ActivityIndicator size="small" color="#10b981" />
+                </View>
+              ) : null
+            }
           />
         ) : (
           <View style={styles.emptyContainer}>
@@ -346,16 +388,20 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     lineHeight: 18,
   },
-  postPrice: {
-    color: '#10b981',
-    fontWeight: '800',
-    fontSize: 14,
+  contactBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#6ee7b7',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     marginBottom: 6,
   },
-  currencyText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#999',
+  contactBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#065f46',
   },
   locationContainer: {
     flexDirection: 'row',
@@ -371,6 +417,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  footerLoading: {
+    paddingVertical: 16,
   },
   emptyContainer: {
     flex: 1,

@@ -10,11 +10,17 @@ export const setUnauthorizedHandler = (handler) => {
 };
 
 const getApiBaseUrl = () => {
-  const API_IP = process.env.EXPO_PUBLIC_API_IP || '14.170.9.64';
+  const API_HOST =
+    process.env.EXPO_PUBLIC_API_HOST ||
+    process.env.EXPO_PUBLIC_API_IP ||
+    'greenmarket.ddns.net';
+  const API_SCHEME = process.env.EXPO_PUBLIC_API_SCHEME || 'http';
   const API_PORT = process.env.EXPO_PUBLIC_API_PORT || '5000';
+  const useAndroidEmulatorLoopback =
+    process.env.EXPO_PUBLIC_USE_ANDROID_EMULATOR_LOOPBACK === 'true';
 
-  const DEV_API_URL = `http://10.0.2.2:${API_PORT}/api`;
-  const DEVICE_API_URL = `http://${API_IP}:${API_PORT}/api`;
+  const EMULATOR_API_URL = `http://10.0.2.2:${API_PORT}/api`;
+  const DEFAULT_API_URL = `${API_SCHEME}://${API_HOST}:${API_PORT}/api`;
 
   const isProbablyAndroidEmulator = () => {
     if (Platform.OS !== 'android') return false;
@@ -42,13 +48,13 @@ const getApiBaseUrl = () => {
   if (
     __DEV__ &&
     Platform.OS === 'android' &&
-    !process.env.EXPO_PUBLIC_API_IP &&
+    useAndroidEmulatorLoopback &&
     isProbablyAndroidEmulator()
   ) {
-    return DEV_API_URL;
+    return EMULATOR_API_URL;
   }
 
-  return DEVICE_API_URL;
+  return DEFAULT_API_URL;
 };
 
 export const API_BASE_URL = getApiBaseUrl();

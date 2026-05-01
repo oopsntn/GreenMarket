@@ -38,7 +38,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           setIsSaved(false)
         }
       } else {
-        setPost(null); // Trình render sẽ hiển thị "Không tìm thấy"
+        setPost(null);
         console.error('PostDetail loadData: No post data returned for slug:', slug);
       }
     } catch (e) {
@@ -202,11 +202,6 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               <Text style={styles.metaText}>{post?.postViewCount || 0} lượt xem</Text>
             </View>
           </View>
-
-          <Text style={styles.priceText}>
-            {new Intl.NumberFormat('vi-VN').format(Number(post?.postPrice || 0))}
-            <Text style={styles.priceUnit}> VND</Text>
-          </Text>
         </View>
 
 
@@ -305,13 +300,21 @@ const styles = StyleSheet.create({
   verifyText: { color: '#52c41a', fontSize: 12, marginLeft: 4, fontWeight: '600' },
   metaBadge: { flexDirection: 'row', alignItems: 'center' },
   metaText: { color: '#8c8c8c', fontSize: 12, marginLeft: 4 },
-  priceText: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#52c41a',
-    marginTop: 15,
+  contactBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#6ee7b7',
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginTop: 12,
   },
-  priceUnit: { fontSize: 14, color: '#8c8c8c', fontWeight: 'normal' },
+  contactBadgeText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#065f46',
+  },
 
   sectionCard: {
     marginBottom: 16,

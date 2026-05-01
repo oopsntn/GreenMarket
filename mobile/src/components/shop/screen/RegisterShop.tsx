@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { ActionSheetIOS, Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActionSheetIOS, Dimensions, Image, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { ArrowRight, Camera, CheckCircle, Image as ImageIcon, Play, Plus, Store, User, X } from 'lucide-react-native'
 import * as ImagePicker from 'expo-image-picker'
 import * as WebBrowser from 'expo-web-browser'
@@ -231,9 +231,43 @@ const RegisterShopScreen = ({ navigation }: any) => {
             console.error('[Payment] Unexpected response shape:', paymentRes)
             throw new Error('Không nhận được link thanh toán từ hệ thống')
         }
-        const result = await WebBrowser.openBrowserAsync(paymentUrl)
-        console.log('[Payment] Browser closed, result:', result)
-        await pollShopActivation()
+
+        const navigatedRef = { current: false };
+
+        const subscription = Linking.addEventListener('url', (event) => {
+            if (navigatedRef.current) return;
+            const url = event.url;
+            if (url && (url.includes('payment-result') || url.includes('vnpay-return'))) {
+                navigatedRef.current = true;
+                subscription.remove();
+
+                const getParam = (u: string, key: string): string | undefined => {
+                    const match = u.match(new RegExp('[?&]' + key + '=([^&]*)'));
+                    return match ? decodeURIComponent(match[1]) : undefined;
+                };
+                const status = getParam(url, 'status') || (getParam(url, 'vnp_ResponseCode') === '00' ? 'success' : 'failed');
+                const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
+                const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
+
+                navigation.navigate('PaymentResult', { status, code, txnRef });
+            }
+        });
+
+        await WebBrowser.openBrowserAsync(paymentUrl);
+
+        subscription.remove();
+        if (!navigatedRef.current) {
+            // Fallback: refresh shop và báo user kiểm tra
+            await refreshShop();
+            CustomAlert(
+                'Kiểm tra kết quả',
+                'Nếu bạn đã hoàn tất thanh toán, vui lòng nhấn "Tải lại" để cập nhật trạng thái cửa hàng.',
+                [
+                    { text: 'Tải lại', onPress: () => refreshShop() },
+                    { text: 'Đóng', style: 'cancel' },
+                ]
+            );
+        }
     }
 
     const handleSubmit = async () => {

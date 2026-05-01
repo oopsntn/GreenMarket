@@ -17,13 +17,12 @@ interface CategoryAttribute {
 
 interface SelectedMedia {
     uri: string;
-    type: 'image';
+    type: 'image' | 'video';
 }
 
 interface CreatePostFormData {
     categoryId: string;
     postTitle: string;
-    postPrice: string;
     postLocation: string;
     postContactPhone: string;
     attributes: Record<number, string>;
@@ -32,7 +31,6 @@ interface CreatePostFormData {
 const initialFormData: CreatePostFormData = {
     categoryId: '',
     postTitle: '',
-    postPrice: '',
     postLocation: '',
     postContactPhone: '',
     attributes: {},
@@ -144,11 +142,6 @@ const useCreatePost = () => {
             return false
         }
 
-        const priceStr = formData.postPrice.trim()
-        if (!priceStr || Number.isNaN(Number(priceStr)) || Number(priceStr) < 0) {
-            CustomAlert('Giá trị không hợp lệ', 'Giá bán phải là số lớn hơn hoặc bằng 0.')
-            return false
-        }
 
         if (formData.postTitle.length > 200) {
             CustomAlert('Giá trị quá dài', 'Tiêu đề không được vượt quá 200 ký tự.')
@@ -218,7 +211,6 @@ const useCreatePost = () => {
             await postService.createPost({
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
-                postPrice: Number(formData.postPrice.trim()),
                 postLocation: formData.postLocation.trim() || undefined,
                 postContactPhone: formData.postContactPhone.replace(/\s+/g, '') || undefined,
                 images,
@@ -235,8 +227,8 @@ const useCreatePost = () => {
             })
             const serverMessage = e?.response?.data?.error || e?.response?.data?.message
             CustomAlert(
-                'Dang tin that bai',
-                serverMessage || 'Da co loi xay ra trong qua trinh tao bai dang. Vui long thu lai.'
+                'Đăng tin thất bại',
+                serverMessage || 'Đã có lỗi xảy ra trong quá trình tạo bài đăng. Vui lòng thử lại.'
             )
         } finally {
             setSubmitting(false)

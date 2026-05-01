@@ -15,7 +15,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
  */
 export const generateQR = async (req: Request, res: Response): Promise<void> => {
     try {
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiration
+        const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes expiration
         const [session] = await db.insert(qrSessions).values({
             status: "pending",
             expiresAt,

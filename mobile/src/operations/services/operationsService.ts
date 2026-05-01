@@ -34,6 +34,7 @@ export interface OperationTask {
   customerId: number | null;
   relatedTargetId: number | null;
   taskNote: string | null;
+  customerName?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -172,6 +173,59 @@ const normalizeEscalation = (item: unknown): OperationEscalation => {
   };
 };
 
+const normalizeTaskDetail = (item: unknown): OperationTask => {
+  const source = (item ?? {}) as Record<string, unknown>;
+
+  const assigneeRaw = source.assigneeId ?? source.taskAssigneeId;
+  const customerRaw = source.customerId ?? source.creatorId ?? source.taskCreatorId;
+  const relatedTargetRaw = source.relatedTargetId ?? source.taskTargetId;
+
+  return {
+    taskId: Number(source.taskId ?? source.ticketId ?? 0),
+    taskTitle:
+      typeof source.taskTitle === 'string'
+        ? source.taskTitle
+        : typeof source.title === 'string'
+          ? source.title
+          : '',
+    taskType:
+      typeof source.taskType === 'string'
+        ? source.taskType
+        : typeof source.type === 'string'
+          ? source.type
+          : 'support',
+    taskStatus:
+      typeof source.taskStatus === 'string'
+        ? source.taskStatus
+        : typeof source.status === 'string'
+          ? source.status
+          : 'open',
+    taskPriority:
+      typeof source.taskPriority === 'string'
+        ? source.taskPriority
+        : typeof source.priority === 'string'
+          ? source.priority
+          : 'medium',
+    assigneeId:
+      assigneeRaw === null || assigneeRaw === undefined ? null : Number(assigneeRaw),
+    customerId:
+      customerRaw === null || customerRaw === undefined ? null : Number(customerRaw),
+    relatedTargetId:
+      relatedTargetRaw === null || relatedTargetRaw === undefined ? null : Number(relatedTargetRaw),
+    taskNote:
+      typeof source.taskNote === 'string'
+        ? source.taskNote
+        : typeof source.description === 'string'
+          ? source.description
+          : typeof source.taskContent === 'string'
+            ? source.taskContent
+            : null,
+    customerName: typeof source.customerName === 'string' ? source.customerName : null,
+    createdAt: typeof source.createdAt === 'string' ? source.createdAt : null,
+    updatedAt: typeof source.updatedAt === 'string' ? source.updatedAt : null,
+  };
+};
+
 export const operationsService = {
   getTasks: async (params: GetTasksParams = {}) => {
     const response = await api.get('/operations/tasks', { params });
@@ -185,7 +239,7 @@ export const operationsService = {
 
   getTaskDetail: async (taskId: number): Promise<OperationTaskDetailResponse> => {
     const response = await api.get(`/operations/tasks/${taskId}`);
-    const task = response.data?.task as OperationTask;
+    const task = normalizeTaskDetail(response.data?.task);
 
     return {
       task,

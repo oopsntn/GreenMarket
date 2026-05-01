@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +12,7 @@ import ReasonModal from '../components/ReasonModal';
 import managerService, { HostContentModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
 import { API_BASE_URL } from '../../config/api';
+import ManagerHeader from '../components/ManagerHeader';
 
 const HostContentModerationList = ({ navigation }: any) => {
   const [items, setItems] = useState<HostContentModerationData[]>([]);
@@ -29,7 +28,11 @@ const HostContentModerationList = ({ navigation }: any) => {
     try {
       setLoading(true);
       const data = await managerService.getPendingHostContents();
-      setItems(data.filter((x) => String(x.hostContentStatus || '').toLowerCase() === 'pending'));
+      setItems(
+        data.filter((x) =>
+          ['pending', 'pending_admin'].includes(String(x.hostContentStatus || '').toLowerCase()),
+        ),
+      );
     } catch (error) {
       console.error(error);
       const status =
@@ -86,9 +89,28 @@ const HostContentModerationList = ({ navigation }: any) => {
     try {
       await managerService.updateHostContentStatus(selected.hostContentId, 'rejected', reason);
       setItems((current) => current.filter((p) => p.hostContentId !== selected.hostContentId));
-      CustomAlert('Thành công', `Nội dung "${selected.hostContentTitle}" đã bị từ chối.`);
+      CustomAlert('Thành công', `Bài đăng đã bị từ chối.`);
     } catch (error) {
-      CustomAlert('Lỗi', 'Không thể từ chối nội dung này.');
+      const status =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as any).response?.status === 'number'
+          ? (error as any).response.status
+          : null;
+      const serverMessage =
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof (error as any).response?.data?.error === 'string'
+          ? (error as any).response.data.error
+          : null;
+      CustomAlert(
+        'Lỗi',
+        status
+          ? `Không thể từ chối nội dung này. (HTTP ${status})${serverMessage ? `\n${serverMessage}` : ''}`
+          : `Không thể từ chối nội dung này.${serverMessage ? `\n${serverMessage}` : ''}`,
+      );
     }
   };
 
@@ -132,14 +154,15 @@ const HostContentModerationList = ({ navigation }: any) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Duyệt nội dung host</Text>
-        <TouchableOpacity onPress={fetchItems} style={styles.iconCircle}>
-          <Clock size={22} color="#64748B" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <ManagerHeader
+        title="Duyệt nội dung host"
+        rightAction={
+          <TouchableOpacity onPress={fetchItems} style={styles.headerActionButton}>
+            <Clock size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -171,29 +194,18 @@ const HostContentModerationList = ({ navigation }: any) => {
         placeholder="Giải thích lý do từ chối nội dung host..."
         confirmLabel="Từ chối"
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+  headerActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     justifyContent: 'center',
     alignItems: 'center',
   },

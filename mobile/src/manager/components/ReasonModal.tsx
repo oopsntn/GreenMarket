@@ -70,7 +70,6 @@ const ReasonModal: React.FC<ReasonModalProps> = ({
             <TouchableOpacity
               style={[styles.button, styles.confirmButton, { backgroundColor: confirmColor }]}
               onPress={handleConfirm}
-              disabled={!reason.trim()}
             >
               <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
             </TouchableOpacity>

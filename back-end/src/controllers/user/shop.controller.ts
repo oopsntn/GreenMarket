@@ -205,11 +205,6 @@ export const registerShop = async (req: AuthRequest, res: Response): Promise<voi
             shopStatus: "pending"
         }).returning();
 
-        // Automatically upgrade user to HOST business role
-        await db.update(users)
-            .set({ userBusinessRoleId: 2 })
-            .where(eq(users.userId, userId));
-
         res.status(201).json(withShopGallery(newShop));
     } catch (error) {
         console.error(error);

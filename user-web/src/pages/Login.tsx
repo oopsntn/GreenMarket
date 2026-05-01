@@ -21,6 +21,7 @@ const Login: React.FC = () => {
   const [qrSessionId, setQrSessionId] = useState<string | null>(null);
   const [qrStatus, setQrStatus] = useState<'pending' | 'scanned' | 'authorized' | 'expired'>('pending');
   const socketRef = useRef<any>(null);
+  const refreshTimerRef = useRef<any>(null);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -48,7 +49,15 @@ const Login: React.FC = () => {
         console.log("QR Status Updated:", data);
         setQrStatus(data.status);
         if (data.status === 'authorized' && data.token) {
-          login(data.token, data.user);
+          const user = data.user;
+          const allowedRoles = ['USER', null, undefined];
+          if (!allowedRoles.includes(user?.businessRoleCode)) {
+            alert("Tài khoản của bạn chỉ được phép đăng nhập và sử dụng trên ứng dụng GreenMarket Mobile.");
+            setQrStatus('pending');
+            return;
+          }
+
+          login(data.token, user);
           navigate('/home');
         }
       });
@@ -56,6 +65,13 @@ const Login: React.FC = () => {
       socket.on('disconnect', () => {
         console.log("Disconnected from socket server");
       });
+
+      // Auto refresh after 5 minutes
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = setTimeout(() => {
+        console.log("QR Session expired, refreshing...");
+        initQr();
+      }, 2 * 60 * 1000);
 
     } catch (error) {
       console.error("QR Generate failed", error);
@@ -73,11 +89,19 @@ const Login: React.FC = () => {
         socketRef.current.disconnect();
         socketRef.current = null;
       }
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
     }
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
+      }
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
       }
     };
   }, [loginMethod]);
@@ -133,7 +157,16 @@ const Login: React.FC = () => {
     setLoading(true);
     try {
       const response = await verifyOtp(mobile, finalOtp);
-      login(response.data.token, response.data.user);
+      const user = response.data.user;
+
+      const allowedRoles = ['USER', null, undefined];
+      if (!allowedRoles.includes(user?.businessRoleCode)) {
+        alert("Tài khoản của bạn chỉ được phép đăng nhập và sử dụng trên ứng dụng GreenMarket Mobile.");
+        setLoading(false);
+        return;
+      }
+
+      login(response.data.token, user);
       navigate('/home');
     } catch (error) {
       console.error("OTP Verification failed:", error);
@@ -222,7 +255,7 @@ const Login: React.FC = () => {
                 {qrStatus === 'scanned' ? (
                   <><Loader2 className="w-4 h-4 animate-spin text-emerald-600" /> Đang chờ xác nhận...</>
                 ) : (
-                  "Mã sẽ tự động làm mới sau 5 phút"
+                  "Mã sẽ tự động làm mới sau 2 phút"
                 )}
               </p>
             )}

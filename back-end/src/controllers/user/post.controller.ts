@@ -36,7 +36,6 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
         const {
             categoryId,
             postTitle,
-            postPrice,
             postLocation,
             postContactPhone,
             images,
@@ -117,7 +116,6 @@ export const createPost = async (req: AuthRequest, res: Response): Promise<void>
             categoryId: Number(categoryId),
             postTitle,
             postSlug: finalSlug,
-            postPrice: postPrice?.toString(),
             postLocation,
             postContactPhone,
             postStatus: isDelegatedPost ? "pending_owner" : (canAutoApprove ? "approved" : "pending"),
@@ -472,7 +470,6 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         const {
             categoryId,
             postTitle,
-            postPrice,
             postLocation,
             postContactPhone,
             attributes: updatedAttributes
@@ -516,6 +513,10 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         const shouldFlagForModeration =
             settings.moderation.autoModeration && matchedKeywords.length > 0;
         const canAutoApprove = effectivePolicy.autoApprove && !shouldFlagForModeration;
+        const isDelegatedCollaboratorEdit =
+            existingPost.postShopId !== null &&
+            existingPost.postShopId !== existingPost.postAuthorId &&
+            existingPost.postAuthorId === userId;
         const currentEditCount = Number(existingPost.postEditCount || 0);
         const currentPaidEditCount = Number(existingPost.postPaidEditCount || 0);
         const editPricing = postingPolicyService.getEditPricing(
@@ -523,9 +524,13 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             currentEditCount,
         );
 
+        const nextPostStatus = isDelegatedCollaboratorEdit
+            ? "pending_owner"
+            : (canAutoApprove ? "approved" : "pending");
+
         const postUpdatePayload: Record<string, any> = {
             postUpdatedAt: now,
-            postStatus: canAutoApprove ? "approved" : "pending",
+            postStatus: nextPostStatus,
             postRejectedReason: shouldFlagForModeration
                 ? `Cần kiểm duyệt thủ công do trùng từ khóa: ${matchedKeywords.join(", ")}`
                 : null,
@@ -536,7 +541,12 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
                     : currentPaidEditCount,
         };
 
-        if (canAutoApprove) {
+        if (isDelegatedCollaboratorEdit) {
+            postUpdatePayload.postPublished = false;
+            postUpdatePayload.postSubmittedAt = now;
+            postUpdatePayload.postPublishedAt = null;
+            postUpdatePayload.postModeratedAt = null;
+        } else if (canAutoApprove) {
             postUpdatePayload.postModeratedAt = now;
             postUpdatePayload.postSubmittedAt = now;
             postUpdatePayload.postPublishedAt = now;
@@ -548,7 +558,6 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         if (categoryId !== undefined) postUpdatePayload.categoryId = Number(categoryId);
         if (postTitle !== undefined) postUpdatePayload.postTitle = postTitle;
 
-        if (postPrice !== undefined) postUpdatePayload.postPrice = postPrice?.toString();
         if (postLocation !== undefined) postUpdatePayload.postLocation = postLocation;
         if (postContactPhone !== undefined) postUpdatePayload.postContactPhone = postContactPhone;
 
@@ -581,6 +590,21 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             amount: editPricing.chargeAmount,
             note: `Post edit fee - ${effectivePolicy.planTitle}`,
         });
+
+        if (isDelegatedCollaboratorEdit && existingPost.postShopId) {
+            const [author] = await db.select({ name: users.userDisplayName })
+                .from(users)
+                .where(eq(users.userId, userId))
+                .limit(1);
+
+            await notificationService.sendNotification({
+                recipientId: existingPost.postShopId,
+                title: "CTV đã cập nhật bài đăng",
+                message: `Cộng tác viên ${author?.name || "ẩn danh"} vừa cập nhật lại bài đăng "${updatedPost.postTitle}" và đang chờ bạn duyệt lại.`,
+                type: "collaboration",
+                metaData: { postId: updatedPost.postId, shopId: existingPost.postShopId }
+            }).catch(e => console.error("Failed to notify shop owner after collaborator update:", e));
+        }
 
         res.json({
             ...updatedPost,

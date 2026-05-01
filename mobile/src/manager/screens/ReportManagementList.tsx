@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,6 +10,7 @@ import {
 import { Calendar, CheckCircle2, ChevronRight, Flag, User } from 'lucide-react-native';
 import managerService, { ReportModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+import ManagerHeader from '../components/ManagerHeader';
 
 const severityColor = (value?: string) =>
   value === 'high' || value === 'critical' ? '#EF4444' : '#3B82F6';
@@ -82,14 +81,15 @@ const ReportManagementList = ({ navigation }: any) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <Text style={styles.title}>Quản lý báo cáo</Text>
-        <TouchableOpacity onPress={fetchReports} style={styles.iconCircle}>
-          <Flag size={22} color="#64748B" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <ManagerHeader
+        title="Quản lý báo cáo"
+        rightAction={
+          <TouchableOpacity onPress={fetchReports} style={styles.headerActionButton}>
+            <Flag size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -112,29 +112,18 @@ const ReportManagementList = ({ navigation }: any) => {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+  headerActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     justifyContent: 'center',
     alignItems: 'center',
   },

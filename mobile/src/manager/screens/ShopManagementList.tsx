@@ -5,13 +5,12 @@ import {
   View,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
   ActivityIndicator,
 } from 'react-native';
 import { Store, CheckCircle2, Clock, ChevronRight, ShieldCheck } from 'lucide-react-native';
 import managerService, { ShopModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+import ManagerHeader from '../components/ManagerHeader';
 
 const ShopManagementList = ({ navigation }: any) => {
   const [shops, setShops] = useState<ShopModerationData[]>([]);
@@ -91,14 +90,15 @@ const ShopManagementList = ({ navigation }: any) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <Text style={styles.title}>Kiểm duyệt cửa hàng</Text>
-        <TouchableOpacity onPress={fetchShops} style={styles.iconCircle}>
-          <Clock size={22} color="#64748B" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <ManagerHeader
+        title="Kiểm duyệt cửa hàng"
+        rightAction={
+          <TouchableOpacity onPress={fetchShops} style={styles.headerActionButton}>
+            <Clock size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -121,29 +121,18 @@ const ShopManagementList = ({ navigation }: any) => {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+  headerActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     justifyContent: 'center',
     alignItems: 'center',
   },

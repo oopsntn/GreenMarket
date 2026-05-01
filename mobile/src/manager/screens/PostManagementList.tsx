@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  SafeAreaView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,6 +11,7 @@ import { Check, CheckCircle2, ChevronRight, Clock, X } from 'lucide-react-native
 import ReasonModal from '../components/ReasonModal';
 import managerService, { PostModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
+import ManagerHeader from '../components/ManagerHeader';
 
 const priorityMap: Record<string, string> = {
   low: 'Thấp',
@@ -130,14 +129,15 @@ const PostManagementList = ({ navigation }: any) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
-        <Text style={styles.title}>Kiểm duyệt bài đăng</Text>
-        <TouchableOpacity onPress={fetchPosts} style={styles.iconCircle}>
-          <Clock size={22} color="#64748B" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <ManagerHeader
+        title="Kiểm duyệt bài đăng"
+        rightAction={
+          <TouchableOpacity onPress={fetchPosts} style={styles.headerActionButton}>
+            <Clock size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -169,29 +169,18 @@ const PostManagementList = ({ navigation }: any) => {
         placeholder="Giải thích lý do từ chối bài đăng này..."
         confirmLabel="Từ chối bài"
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#0F172A' },
-  iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
+  headerActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.22)',
     justifyContent: 'center',
     alignItems: 'center',
   },

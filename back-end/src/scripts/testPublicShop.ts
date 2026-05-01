@@ -36,7 +36,7 @@ async function testPublicShopDetail() {
             postTitle: "Cây Sanh Nam Điền Approved 1",
             postSlug: slugify("Cây Sanh Nam Điền Approved 1") + "-" + Date.now(),
             postStatus: "approved",
-            postPrice: "1000000"
+
         });
 
         await db.insert(posts).values({
@@ -46,7 +46,7 @@ async function testPublicShopDetail() {
             postTitle: "Cây Si Cổ Thụ Approved 2",
             postSlug: slugify("Cây Si Cổ Thụ Approved 2") + "-" + (Date.now() + 1),
             postStatus: "approved",
-            postPrice: "2000000"
+
         });
 
         await db.insert(posts).values({
@@ -56,7 +56,7 @@ async function testPublicShopDetail() {
             postTitle: "Cây Đa Pending",
             postSlug: slugify("Cây Đa Pending") + "-" + (Date.now() + 2),
             postStatus: "pending",
-            postPrice: "500000"
+
         });
 
         console.log(`Setup complete. Shop ID: ${shop.shopId}`);

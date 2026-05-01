@@ -39,7 +39,7 @@ async function seedMarketplace() {
             categoryId: cat1.categoryId,
             postTitle: title1,
             postSlug: `${slugify(title1)}`,
-            postPrice: "15000000",
+
             postLocation: "Nam Định",
             postStatus: "approved"
         }).returning();
@@ -51,7 +51,7 @@ async function seedMarketplace() {
             categoryId: cat2.categoryId,
             postTitle: title2,
             postSlug: `${slugify(title2)}`,
-            postPrice: "45000000",
+
             postLocation: "Nam Định",
             postStatus: "approved"
         }).returning();

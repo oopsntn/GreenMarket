@@ -35,7 +35,7 @@ async function runAnalyticsTests() {
             postAuthorId: testUserId,
             categoryId: testCategoryId,
             postTitle: "Analytics Test Post",
-            postPrice: "100000",
+
             postLocation: "Hanoi",
             postStatus: "approved",
             postSlug: testPostSlug
