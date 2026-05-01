@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { CheckCircle2, Crown, Rocket } from 'lucide-react-native';
+import { CheckCircle2, Clock, Crown, Eye, MapPin, Rocket, Banknote } from 'lucide-react-native';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import Card from '../../Reused/Card/Card';
 import Button from '../../Reused/Button/Button';
@@ -88,8 +88,41 @@ const PackagesScreen = () => {
             return;
         }
 
+        const navigatedRef = { current: false };
+
+        const subscription = Linking.addEventListener('url', (event) => {
+            if (navigatedRef.current) return;
+            const url = event.url;
+            if (url && (url.includes('payment-result') || url.includes('vnpay-return'))) {
+                navigatedRef.current = true;
+                subscription.remove();
+
+                const getParam = (u: string, key: string): string | undefined => {
+                    const match = u.match(new RegExp('[?&]' + key + '=([^&]*)'));
+                    return match ? decodeURIComponent(match[1]) : undefined;
+                };
+                const status = getParam(url, 'status') || (getParam(url, 'vnp_ResponseCode') === '00' ? 'success' : 'failed');
+                const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
+                const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
+
+                navigation.navigate('PaymentResult', { status, code, txnRef });
+            }
+        });
+
         await WebBrowser.openBrowserAsync(paymentUrl);
-        await refreshShop();
+
+        subscription.remove();
+        if (!navigatedRef.current) {
+            await refreshShop();
+            CustomAlert(
+                'Kiểm tra kết quả',
+                'Nếu bạn đã hoàn tất thanh toán, vui lòng kiểm tra trạng thái trong quản lý tài khoản.',
+                [
+                    { text: 'Xem tin của tôi', onPress: () => navigation.navigate('MyPost') },
+                    { text: 'Đóng', style: 'cancel' },
+                ]
+            );
+        }
     };
 
     const handleBuyVip = async () => {
@@ -246,8 +279,30 @@ const PackagesScreen = () => {
                                 <Text style={styles.desc}>
                                     {pkg.promotionPackageDescription || 'Gói ưu tiên hiển thị cho bài đăng đã được duyệt.'}
                                 </Text>
-                                <Text style={styles.metaText}>Thời hạn: {pkg.promotionPackageDurationDays} ngày</Text>
-                                {pkg.slotTitle ? <Text style={styles.metaText}>Vị trí: {pkg.slotTitle}</Text> : null}
+                                <View style={styles.metaRow}>
+                                    <View style={styles.metaChip}>
+                                        <Clock size={11} color="#475569" />
+                                        <Text style={styles.metaText}>{pkg.promotionPackageDurationDays} ngày</Text>
+                                    </View>
+                                    <View style={styles.metaChip}>
+                                        <Banknote size={11} color="#475569" />
+                                        <Text style={styles.metaText}>
+                                            {formatVnd(Math.round(pkg.promotionPackagePrice / Math.max(pkg.promotionPackageDurationDays, 1)))}/ngày
+                                        </Text>
+                                    </View>
+                                    {pkg.slotTitle ? (
+                                        <View style={styles.metaChip}>
+                                            <MapPin size={11} color="#475569" />
+                                            <Text style={styles.metaText}>{pkg.slotTitle}</Text>
+                                        </View>
+                                    ) : null}
+                                    {pkg.promotionPackageDisplayQuota && pkg.promotionPackageDisplayQuota > 0 ? (
+                                        <View style={styles.metaChip}>
+                                            <Eye size={11} color="#475569" />
+                                            <Text style={styles.metaText}>{pkg.promotionPackageDisplayQuota.toLocaleString('vi-VN')} lượt hiển thị</Text>
+                                        </View>
+                                    ) : null}
+                                </View>
                                 <Button variant="outline" onPress={() => navigation.navigate('MyPost')}>
                                     Chọn bài để mua gói này
                                 </Button>
@@ -318,10 +373,24 @@ const styles = StyleSheet.create({
         lineHeight: 20,
         marginBottom: 16,
     },
+    metaRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginBottom: 12,
+    },
+    metaChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#f1f5f9',
+        paddingHorizontal: 7,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
     metaText: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#475569',
-        marginBottom: 6,
     },
     featureList: {
         marginBottom: 16,

@@ -17,13 +17,12 @@ interface CategoryAttribute {
 
 interface SelectedMedia {
     uri: string
-    type: 'image'
+    type: 'image' | 'video'
 }
 
 interface CreatePostFormData {
     categoryId: string
     postTitle: string
-    postPrice: string
     postLocation: string
     postContactPhone: string
     attributes: Record<number, string>
@@ -32,7 +31,6 @@ interface CreatePostFormData {
 const initialFormData: CreatePostFormData = {
     categoryId: '',
     postTitle: '',
-    postPrice: '',
     postLocation: '',
     postContactPhone: '',
     attributes: {},
@@ -76,7 +74,7 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
             }
         } catch (error) {
             console.error('Error fetching initial data:', error)
-            CustomAlert('Loi', 'Khong the tai danh muc tin dang.')
+            CustomAlert('Lỗi', 'Không thể tải danh mục tin đăng.')
         } finally {
             setLoadingInitialData(false)
             setLoadingPolicy(false)
@@ -92,7 +90,7 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
             setAttributes(Array.isArray(res) ? res : [])
         } catch (error) {
             console.error('Error fetching category attributes:', error)
-            CustomAlert('Loi', 'Khong the tai thuoc tinh cho danh muc da chon.')
+            CustomAlert('Lỗi', 'Không thể tải thuộc tính cho danh mục đã chọn.')
         } finally {
             setLoadingAttributes(false)
         }
@@ -101,12 +99,12 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
     const pickMedia = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
         if (!permission.granted) {
-            CustomAlert('Yeu cau quyen truy cap', 'Vui long cap quyen truy cap thu vien anh de chon anh.')
+            CustomAlert('Yêu cầu quyền truy cập', 'Vui lòng cấp quyền truy cập thư viện để chọn ảnh và video.')
             return
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
+            mediaTypes: ['images', 'videos'],
             allowsMultipleSelection: true,
             quality: 1,
             selectionLimit: 10,
@@ -118,7 +116,7 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
 
         const selectedMedia: SelectedMedia[] = result.assets.map((asset): SelectedMedia => ({
             uri: asset.uri,
-            type: 'image',
+            type: asset.type === 'video' ? 'video' : 'image',
         }))
         setMedia((prev) => [...prev, ...selectedMedia].slice(0, 10))
     }
@@ -135,49 +133,43 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
 
     const validateForm = () => {
         if (!formData.postTitle.trim()) {
-            CustomAlert('Thieu thong tin', 'Vui long nhap tieu de tin dang.')
+            CustomAlert('Thiếu thông tin', 'Vui lòng nhập tiêu đề tin đăng.')
             return false
         }
 
         if (!formData.categoryId) {
-            CustomAlert('Thieu thong tin', 'Vui long chon danh muc.')
+            CustomAlert('Thiếu thông tin', 'Vui lòng chọn danh mục.')
             return false
         }
 
         const selectedCategoryId = Number(formData.categoryId)
         const categoryExists = categories.some((cat) => cat.categoryId === selectedCategoryId)
         if (!categoryExists) {
-            CustomAlert('Danh muc khong hop le', 'Danh muc da chon khong ton tai hoac da thay doi. Vui long chon lai.')
-            return false
-        }
-
-        const priceStr = formData.postPrice.trim()
-        const priceNumber = Number(priceStr)
-        if (!priceStr || Number.isNaN(priceNumber) || priceNumber < 0) {
-            CustomAlert('Gia tri khong hop le', 'Gia ban phai la so lon hon hoac bang 0.')
+            CustomAlert('Danh mục không hợp lệ', 'Danh mục đã chọn không tồn tại hoặc đã thay đổi. Vui lòng chọn lại.')
             return false
         }
 
         if (formData.postTitle.length > 200) {
-            CustomAlert('Gia tri qua dai', 'Tieu de khong duoc vuot qua 200 ky tu.')
+            CustomAlert('Giá trị quá dài', 'Tiêu đề không được vượt quá 200 ký tự.')
             return false
         }
 
         if (formData.postLocation && formData.postLocation.length > 255) {
-            CustomAlert('Gia tri qua dai', 'Dia chi khong duoc vuot qua 255 ky tu.')
+            CustomAlert('Giá trị quá dài', 'Địa chỉ không được vượt quá 255 ký tự.')
             return false
         }
 
         if (formData.postContactPhone) {
             const cleanPhone = formData.postContactPhone.trim()
             if (cleanPhone.length < 9 || cleanPhone.length > 20 || !/^\+?[0-9\s-]+$/.test(cleanPhone)) {
-                CustomAlert('Gia tri khong hop le', 'Vui long nhap so dien thoai hop le (it nhat 9 so).')
+                CustomAlert('Giá trị không hợp lệ', 'Vui lòng nhập số điện thoại hợp lệ (ít nhất 9 số).')
                 return false
             }
         }
 
-        if (media.length === 0) {
-            CustomAlert('Thieu hinh anh', 'Vui long chon it nhat mot hinh anh.')
+        const imageCount = media.filter((m) => m.type === 'image').length
+        if (imageCount === 0) {
+            CustomAlert('Thiếu hình ảnh', 'Vui lòng chọn ít nhất một hình ảnh.')
             return false
         }
 
@@ -185,7 +177,7 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
             (attr) => attr.required && !formData.attributes[attr.attributeId]?.trim(),
         )
         if (missingRequiredAttribute) {
-            CustomAlert('Thieu thuoc tinh', `Vui long nhap "${missingRequiredAttribute.attributeTitle}".`)
+            CustomAlert('Thiếu thuộc tính', `Vui lòng nhập "${missingRequiredAttribute.attributeTitle}".`)
             return false
         }
 
@@ -209,7 +201,9 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
                 throw new Error('Uploaded media count mismatch')
             }
 
+            // Tách images và videos từ danh sách đã upload
             const images = uploadedUrls.filter((_: string, index: number) => media[index]?.type === 'image')
+            const videos = uploadedUrls.filter((_: string, index: number) => media[index]?.type === 'video')
 
             const allowedAttributeIds = new Set(attributes.map((attr) => attr.attributeId))
             const attributeEntries = Object.entries(formData.attributes)
@@ -222,8 +216,8 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
             const hasInvalidAttribute = attributeEntries.some((item) => !allowedAttributeIds.has(item.attributeId))
             if (hasInvalidAttribute) {
                 CustomAlert(
-                    'Thuoc tinh khong hop le',
-                    'Mot so thuoc tinh da thay doi tren he thong. Vui long chon lai danh muc va nhap lai thuoc tinh.',
+                    'Thuộc tính không hợp lệ',
+                    'Một số thuộc tính đã thay đổi trên hệ thống. Vui lòng chọn lại danh mục và nhập lại thuộc tính.',
                 )
                 return
             }
@@ -233,11 +227,12 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
             const createPayload = {
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
-                postPrice: Number(formData.postPrice.trim()),
                 postLocation: formData.postLocation.trim() || undefined,
                 postContactPhone: formData.postContactPhone.replace(/\s+/g, '').trim() || undefined,
                 ...(options?.shopId ? { shopId: Number(options.shopId) } : {}),
                 images,
+                // videos được gửi để backend xử lý trong tương lai (hiện backend bỏ qua)
+                ...(videos.length > 0 ? { videos } : {}),
                 attributes: attributePayload,
             }
 
@@ -248,7 +243,7 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
             } catch (e: any) {
                 const status = e?.response?.status
                 if (status === 500) {
-                    await new Promise((resolve) => setTimeout(resolve, 1200))
+                    await new Promise((resolve: any) => setTimeout(resolve, 1200))
                     await postService.createPost(createPayload)
                 } else {
                     throw e
@@ -265,8 +260,8 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
             })
             const serverMessage = error?.response?.data?.error || error?.response?.data?.message
             CustomAlert(
-                'Dang tin that bai',
-                serverMessage || 'Da co loi xay ra trong qua trinh tao bai dang. Vui long thu lai.',
+                'Đăng tin thất bại',
+                serverMessage || 'Đã có lỗi xảy ra trong quá trình tạo bài đăng. Vui lòng thử lại.',
             )
         } finally {
             setSubmitting(false)
@@ -298,4 +293,3 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
 }
 
 export default useCreatePostStable
-
