@@ -28,7 +28,6 @@ interface Post {
   postId: number;
   postSlug: string;
   postTitle: string;
-  postPrice: number;
   postLocation?: string;
   images?: Array<{ imageUrl: string }>;
   isPromoted?: boolean;
@@ -98,8 +97,6 @@ const HomeScreen = () => {
           limit: 20,
         };
         if (debouncedSearch) params.search = debouncedSearch;
-        if (appliedFilters.minPrice) params.minPrice = appliedFilters.minPrice;
-        if (appliedFilters.maxPrice) params.maxPrice = appliedFilters.maxPrice;
         if (appliedFilters.categoryId) params.categoryId = appliedFilters.categoryId;
         if (appliedFilters.location) params.location = appliedFilters.location;
 
@@ -198,9 +195,9 @@ const HomeScreen = () => {
           <Text style={styles.postTitle} numberOfLines={2}>
             {item.postTitle}
           </Text>
-          <Text style={styles.postPrice}>
-            {Number(item.postPrice).toLocaleString()} <Text style={styles.currencyText}>VND</Text>
-          </Text>
+          <View style={styles.contactBadge}>
+            <Text style={styles.contactBadgeText}>Liên hệ</Text>
+          </View>
           <View style={styles.locationContainer}>
             <MapPin size={12} color="#666" />
             <Text style={styles.locationText}>{item.postLocation || 'Hà Nội'}</Text>
@@ -391,16 +388,20 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     lineHeight: 18,
   },
-  postPrice: {
-    color: '#10b981',
-    fontWeight: '800',
-    fontSize: 14,
+  contactBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#6ee7b7',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     marginBottom: 6,
   },
-  currencyText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#999',
+  contactBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#065f46',
   },
   locationContainer: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useNavigation } from '@react-navigation/native';
 import { CheckCircle2, CreditCard, Rocket, ShieldCheck } from 'lucide-react-native';
@@ -23,7 +23,7 @@ const PromotePostScreen = ({ route }: any) => {
         fetchPackages();
     }, []);
 
-    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
     const getPromotionErrorAlert = (error: any) => {
         const errorCode = error?.response?.data?.code;
@@ -56,6 +56,50 @@ const PromotePostScreen = ({ route }: any) => {
     const pollAfterPayment = async (maxRetries = 6, delayMs = 2500) => {
         for (let i = 0; i < maxRetries; i++) {
             await sleep(delayMs);
+        }
+    };
+
+    // Mở browser thanh toán và lắng nghe deep-link trả về từ VNPay
+    const openPaymentBrowser = async (paymentUrl: string) => {
+        // Dùng ref để tránh navigate nhiều lần nếu listener bị gọi nhiều lần
+        const navigatedRef = { current: false };
+
+        const subscription = Linking.addEventListener('url', (event) => {
+            if (navigatedRef.current) return;
+            const url = event.url;
+            // Kiểm tra xem URL có phải từ VNPay redirect về app không
+            if (url && (url.includes('payment-result') || url.includes('vnpay-return'))) {
+                navigatedRef.current = true;
+                subscription.remove();
+
+                // Parse params từ URL
+                const getParam = (u: string, key: string): string | undefined => {
+                    const match = u.match(new RegExp('[?&]' + key + '=([^&]*)'));
+                    return match ? decodeURIComponent(match[1]) : undefined;
+                };
+                const status = getParam(url, 'status') || (getParam(url, 'vnp_ResponseCode') === '00' ? 'success' : 'failed');
+                const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
+                const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
+
+                navigation.navigate('PaymentResult', { status, code, txnRef });
+            }
+        });
+
+        await WebBrowser.openBrowserAsync(paymentUrl);
+
+        // Browser đã đóng nhưng chưa nhận deep-link → fallback
+        subscription.remove();
+        if (!navigatedRef.current) {
+            // Người dùng có thể đã thanh toán nhưng deep-link không về được
+            // Hiển thị alert nhẹ nhàng thay vì silent fail
+            CustomAlert(
+                'Kiểm tra kết quả',
+                'Nếu bạn đã hoàn tất thanh toán, vui lòng kiểm tra trạng thái trong quản lý tin đăng.',
+                [
+                    { text: 'Xem tin của tôi', onPress: () => navigation.navigate('MyPost') },
+                    { text: 'Đóng', style: 'cancel' },
+                ]
+            );
         }
     };
 
@@ -120,23 +164,7 @@ const PromotePostScreen = ({ route }: any) => {
                 return;
             }
 
-            await WebBrowser.openBrowserAsync(paymentUrl);
-            await pollAfterPayment();
-
-            CustomAlert(
-                'Đã mở cổng thanh toán',
-                'Sau khi hoàn tất thanh toán, hệ thống sẽ cập nhật trạng thái đẩy tin. Bạn vui lòng kiểm tra lại trong quản lý tin đăng hoặc bảng điều khiển cửa hàng.',
-                [
-                    {
-                        text: 'Về quản lý tin',
-                        onPress: () => navigation.navigate('MyPost')
-                    },
-                    {
-                        text: 'Tới dashboard',
-                        onPress: () => navigation.replace('ShopDashboard')
-                    }
-                ]
-            );
+            await openPaymentBrowser(paymentUrl);
         } catch (error: any) {
             const alertContent = getPromotionErrorAlert(error);
             CustomAlert(alertContent.title, alertContent.message);

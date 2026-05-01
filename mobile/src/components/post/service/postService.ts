@@ -7,15 +7,12 @@ export interface BrowsePostsParams {
     limit?: number;
     search?: string;
     categoryId?: number;
-    minPrice?: number;
-    maxPrice?: number;
     location?: string;
 }
 
 export interface PostPayload {
     categoryId: number;
     postTitle: string;
-    postPrice?: string | number;
     postLocation?: string;
     postContactPhone?: string;
     shopId?: number;

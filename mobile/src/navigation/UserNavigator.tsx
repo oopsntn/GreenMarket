@@ -25,6 +25,7 @@ import PostDetailScreen from '../components/post/screen/PostDetailScreen';
 import SavedPostsScreen from '../components/post/screen/SavedPostsScreen';
 import PromotePostScreen from '../components/payment/screen/PromotePostScreen';
 import PersonalDashboardScreen from '../components/payment/screen/PersonalDashboardScreen';
+import PaymentResultScreen from '../components/payment/screen/PaymentResultScreen';
 import CreateReportScreen from '../components/report/screen/CreateReportService';
 import ShopDashboardScreen from '@/components/shop/screen/ShopDashboardScreen';
 import PackagesScreen from '@/components/shop/screen/PackagesScreen';
@@ -177,6 +178,7 @@ const UserNavigator = () => {
       <RootStack.Screen name="CollaboratorPublicList" component={CollaboratorPublicListScreen} />
       <RootStack.Screen name="PublicCollaboratorDetail" component={PublicCollaboratorDetailScreen} />
       <RootStack.Screen name="PendingOwnerPosts" component={PendingOwnerPostsScreen} />
+      <RootStack.Screen name="PaymentResult" component={PaymentResultScreen} />
     </RootStack.Navigator>
   );
 };

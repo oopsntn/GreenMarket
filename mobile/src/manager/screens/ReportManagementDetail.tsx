@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {
   CheckCircle,
+  EyeOff,
   ExternalLink,
   Flag,
   MessageSquare,
@@ -42,7 +43,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [actionType, setActionType] = useState<'resolved' | 'dismissed' | 'escalated' | null>(null);
-  const [postAction, setPostAction] = useState<'approved' | 'rejected' | null>(null);
+  const [postAction, setPostAction] = useState<'approved' | 'rejected' | 'hidden' | null>(null);
   const [processingPost, setProcessingPost] = useState(false);
 
   useEffect(() => {
@@ -68,15 +69,28 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
     setIsModalVisible(true);
   };
 
-  const handleModeratePost = (action: 'approved' | 'rejected') => {
+  const handleModeratePost = (action: 'approved' | 'rejected' | 'hidden') => {
     if (!report?.postId) {
       CustomAlert('Lỗi', 'Báo cáo này không liên kết với bài đăng nào.');
       return;
     }
-
     setPostAction(action);
     setActionType(null);
     setIsModalVisible(true);
+  };
+
+  const sendFeedbackToReporter = async (message: string) => {
+    if (!report?.reporterId) return;
+    try {
+      await managerService.moderationFeedback({
+        targetType: 'report',
+        targetId: report.reportId,
+        recipientUserId: report.reporterId,
+        message,
+      });
+    } catch (err) {
+      console.warn('[Report] moderationFeedback failed (non-critical):', err);
+    }
   };
 
   const onSubmitNote = async (note: string) => {
@@ -89,13 +103,20 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         await managerService.resolveReport(
           reportId,
           'resolved',
-          `Bài đăng đã được ${postAction === 'approved' ? 'duyệt' : 'từ chối'} bởi quản lý`,
+          `Bài đăng đã được ${postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối'} bởi quản lý`,
           note,
+        );
+        // Gửi thông báo cho người báo cáo
+        const postActionLabel = postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối';
+        await sendFeedbackToReporter(
+          `Báo cáo của bạn đại với bài đăng "${report.postTitle || ''}" đã được xử lý. Bài đăng đã được ${postActionLabel}.${
+            note ? ` Ghi chú: ${note}` : ''
+          }`
         );
 
         CustomAlert(
           'Hoàn tất',
-          `Bài đăng đã được ${postAction === 'approved' ? 'duyệt' : 'từ chối'} và báo cáo đã được giải quyết.`,
+          `Bài đăng đã được ${postActionLabel} và báo cáo đã được giải quyết.`,
           [{ text: 'OK', onPress: () => navigation.goBack() }],
         );
         return;
@@ -108,7 +129,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
           severity: 'high',
           reason: note,
         });
-        CustomAlert('Đã leo thang', `Báo cáo đã được chuyển cấp xử lý.\nLý do: ${note}`);
+        CustomAlert('Dạ leo thang', `Báo cáo đã được chuyển cấp xử lý.\nLý do: ${note}`);
       } else if (actionType) {
         await managerService.resolveReport(
           reportId,
@@ -116,6 +137,16 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
           actionType === 'resolved' ? 'Báo cáo đã được xem xét và giải quyết' : 'Báo cáo đã được xem xét và bỏ qua',
           note,
         );
+        // Gửi thông báo cho người báo cáo
+        if (actionType === 'resolved') {
+          await sendFeedbackToReporter(
+            `Báo cáo của bạn đã được giải quyết.${ note ? ` Ghi chú của quản lý: ${note}` : '' }`
+          );
+        } else if (actionType === 'dismissed') {
+          await sendFeedbackToReporter(
+            `Báo cáo của bạn đã được xem xét nhưng không được chấp nhận.${ note ? ` Ghi chú: ${note}` : '' }`
+          );
+        }
         CustomAlert(
           actionType === 'resolved' ? 'Đã giải quyết' : 'Đã bỏ qua',
           `Đã lưu ghi chú xử lý: ${note}`,
@@ -223,8 +254,17 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
               disabled={processingPost}
               onPress={() => handleModeratePost('rejected')}
             >
-              <ThumbsDown size={18} color="#EF4444" />
-              <Text style={[styles.btnText, { color: '#EF4444' }]}>Từ chối bài</Text>
+              <ThumbsDown size={16} color="#EF4444" />
+              <Text style={[styles.btnText, { color: '#EF4444', fontSize: 11 }]}>Từ chối</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.btn, styles.hidePostBtn]}
+              disabled={processingPost}
+              onPress={() => handleModeratePost('hidden')}
+            >
+              <EyeOff size={16} color="#F59E0B" />
+              <Text style={[styles.btnText, { color: '#F59E0B', fontSize: 11 }]}>Ẩn bài</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -232,13 +272,13 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
               disabled={processingPost}
               onPress={() => handleModeratePost('approved')}
             >
-              <ThumbsUp size={18} color="white" />
-              <Text style={[styles.btnText, styles.approveBtnText]}>Duyệt bài</Text>
+              <ThumbsUp size={16} color="white" />
+              <Text style={[styles.btnText, styles.approveBtnText, { fontSize: 11 }]}>Duyệt bài</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.btn, styles.dismissBtn]} onPress={() => handleAction('dismissed')}>
-              <XCircle size={18} color="#64748B" />
-              <Text style={[styles.btnText, styles.dismissBtnText]}>Bỏ qua báo cáo</Text>
+              <XCircle size={16} color="#64748B" />
+              <Text style={[styles.btnText, styles.dismissBtnText, { fontSize: 11 }]}>Bỏ qua</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -269,15 +309,17 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         }}
         onSubmit={onSubmitNote}
         title={
-          postAction === 'approved'
+    postAction === 'approved'
             ? 'Duyệt bài đăng'
-            : postAction === 'rejected'
-              ? 'Từ chối bài đăng'
-              : actionType === 'resolved'
-                ? 'Giải quyết báo cáo'
-                : actionType === 'escalated'
-                  ? 'Leo thang báo cáo'
-                  : 'Bỏ qua báo cáo'
+            : postAction === 'hidden'
+              ? 'Ẩn bài đăng'
+              : postAction === 'rejected'
+                ? 'Từ chối bài đăng'
+                : actionType === 'resolved'
+                  ? 'Giải quyết báo cáo'
+                  : actionType === 'escalated'
+                    ? 'Leo thang báo cáo'
+                    : 'Bỏ qua báo cáo'
         }
         placeholder={
           postAction
@@ -289,24 +331,28 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         confirmLabel={
           postAction === 'approved'
             ? 'Xác nhận duyệt'
-            : postAction === 'rejected'
-              ? 'Xác nhận từ chối'
-              : actionType === 'resolved'
-                ? 'Giải quyết'
-                : actionType === 'escalated'
-                  ? 'Leo thang'
-                  : 'Bỏ qua'
+            : postAction === 'hidden'
+              ? 'Xác nhận ẩn bài'
+              : postAction === 'rejected'
+                ? 'Xác nhận từ chối'
+                : actionType === 'resolved'
+                  ? 'Giải quyết'
+                  : actionType === 'escalated'
+                    ? 'Leo thang'
+                    : 'Bỏ qua'
         }
         confirmColor={
           postAction === 'approved'
             ? '#22C55E'
-            : postAction === 'rejected'
-              ? '#EF4444'
-              : actionType === 'resolved'
-                ? '#22C55E'
-                : actionType === 'escalated'
-                  ? '#F59E0B'
-                  : '#94A3B8'
+            : postAction === 'hidden'
+              ? '#F59E0B'
+              : postAction === 'rejected'
+                ? '#EF4444'
+                : actionType === 'resolved'
+                  ? '#22C55E'
+                  : actionType === 'escalated'
+                    ? '#F59E0B'
+                    : '#94A3B8'
         }
       />
           </View>
@@ -420,6 +466,7 @@ const styles = StyleSheet.create({
   escalateBtnText: { color: 'white' },
   resolveBtn: { backgroundColor: '#22C55E' },
   resolveBtnText: { color: 'white' },
+  hidePostBtn: { backgroundColor: '#FEF9C3', borderWidth: 1, borderColor: '#FDE68A' },
   rejectPostBtn: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' },
   approvePostBtn: { backgroundColor: '#22C55E' },
   approveBtnText: { color: 'white' },
