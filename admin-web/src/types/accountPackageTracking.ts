@@ -31,9 +31,6 @@ export type AccountPackageTrackingRow = {
   email: string | null;
   startedAt: string | null;
   expiresAt: string | null;
-  latestPaymentAmount: number | null;
-  latestPaymentAmountLabel: string | null;
-  latestPaymentAt: string | null;
   status: AccountPackageTrackingStatus;
   statusLabel: string;
   note: string;

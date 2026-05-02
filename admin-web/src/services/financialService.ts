@@ -1,6 +1,8 @@
 import { apiClient } from "../lib/apiClient";
 import type {
+  CreateFinancialPayoutPayload,
   FinancialFilters,
+  FinancialHostPayoutCandidate,
   FinancialPayoutDetail,
   FinancialPayoutListResult,
   FinancialPayoutRequest,
@@ -96,8 +98,24 @@ type FinancialDetailApiResponse = {
   };
 };
 
+type HostPayoutCandidateApiResponse = {
+  data: Array<{
+    userId: number;
+    userName: string;
+    userEmail: string | null;
+    userMobile: string | null;
+    roleCode: string | null;
+    totalEarned: number;
+    paidOutAmount: number;
+    pendingAmount: number;
+    availableBalance: number;
+  }>;
+};
+
+const MOJIBAKE_PATTERN = /[\u00c3\u00c2\u00c6\u00c4\u00e2\u00ba\u00bb]/;
+
 const repairMojibake = (value: string) => {
-  if (!value || !/[ÃƒÆ’Ãƒâ€šÃƒÂ¡Ã‚ÂºÃƒÂ¡Ã‚Â»Ãƒâ€ž]/.test(value)) {
+  if (!value || !MOJIBAKE_PATTERN.test(value)) {
     return value;
   }
 
@@ -303,6 +321,23 @@ const normalizeSummary = (
   completedAmountLabel: formatCurrency(summary.completedAmount),
 });
 
+const normalizeHostPayoutCandidate = (
+  item: HostPayoutCandidateApiResponse["data"][number],
+): FinancialHostPayoutCandidate => ({
+  ...item,
+  userName: repairMojibake(item.userName),
+  userEmail: repairMojibake(item.userEmail || "") || null,
+  userMobile: repairMojibake(item.userMobile || "") || null,
+  totalEarned: Number(item.totalEarned ?? 0),
+  totalEarnedLabel: formatCurrency(item.totalEarned),
+  paidOutAmount: Number(item.paidOutAmount ?? 0),
+  paidOutAmountLabel: formatCurrency(item.paidOutAmount),
+  pendingAmount: Number(item.pendingAmount ?? 0),
+  pendingAmountLabel: formatCurrency(item.pendingAmount),
+  availableBalance: Number(item.availableBalance ?? 0),
+  availableBalanceLabel: formatCurrency(item.availableBalance),
+});
+
 const normalizeSourceBreakdown = (
   item: NonNullable<FinancialDetailApiResponse["data"]["sourceBreakdown"]>[number],
 ): FinancialSourceBreakdown => ({
@@ -364,6 +399,17 @@ const buildQuery = (filters: FinancialFilters) => {
 };
 
 export const financialService = {
+  async getHostPayoutCandidates(): Promise<FinancialHostPayoutCandidate[]> {
+    const response = await apiClient.request<HostPayoutCandidateApiResponse>(
+      "/api/admin/financial/payout-hosts",
+      {
+        defaultErrorMessage: "Không thể tải danh sách Host để tạo chi trả.",
+      },
+    );
+
+    return response.data.map(normalizeHostPayoutCandidate);
+  },
+
   async getPayoutRequests(
     filters: FinancialFilters,
   ): Promise<FinancialPayoutListResult> {
@@ -371,7 +417,7 @@ export const financialService = {
     const response = await apiClient.request<FinancialListApiResponse>(
       `/api/admin/financial/payout-requests${query ? `?${query}` : ""}`,
       {
-        defaultErrorMessage: "Không thể tải danh sách chi trả.",
+        defaultErrorMessage: "Không thể tải danh sách khoản chi trả.",
       },
     );
 
@@ -386,7 +432,7 @@ export const financialService = {
     const response = await apiClient.request<FinancialDetailApiResponse>(
       `/api/admin/financial/payout-requests/${id}`,
       {
-        defaultErrorMessage: "Không thể tải chi tiết yêu cầu chi trả.",
+        defaultErrorMessage: "Không thể tải chi tiết khoản chi trả.",
       },
     );
 
@@ -437,7 +483,16 @@ export const financialService = {
       method: "PATCH",
       includeJsonContentType: true,
       body: JSON.stringify({ adminNote }),
-      defaultErrorMessage: "Không thể xác nhận hoàn thành chi trả.",
+        defaultErrorMessage: "Không thể xác nhận khoản chi trả.",
+    });
+  },
+
+  async createPayoutRequest(payload: CreateFinancialPayoutPayload) {
+    await apiClient.request("/api/admin/financial/payout-requests", {
+      method: "POST",
+      includeJsonContentType: true,
+      body: JSON.stringify(payload),
+      defaultErrorMessage: "Không thể tạo khoản chi trả Host.",
     });
   },
 
@@ -446,7 +501,7 @@ export const financialService = {
       method: "PATCH",
       includeJsonContentType: true,
       body: JSON.stringify({ adminNote }),
-      defaultErrorMessage: "Không thể từ chối yêu cầu chi trả.",
+      defaultErrorMessage: "Không thể từ chối khoản chi trả.",
     });
   },
 };

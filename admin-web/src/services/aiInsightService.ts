@@ -1,4 +1,4 @@
-import { ApiError, apiClient } from "../lib/apiClient";
+import { apiClient } from "../lib/apiClient";
 import type {
   AIInsightFocus,
   AIInsightFocusFilter,
@@ -307,15 +307,8 @@ const buildLocalInsightDetail = (
 };
 
 const shouldUseLocalFallback = (error: unknown) => {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-
-  return (
-    message.includes("gemini") ||
-    message.includes("fetch failed") ||
-    message.includes("timed out") ||
-    message.includes("gemini_api_key") ||
-    error instanceof ApiError
-  );
+  void error;
+  return false;
 };
 
 const fetchOverview = (

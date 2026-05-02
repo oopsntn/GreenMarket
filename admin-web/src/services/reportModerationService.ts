@@ -6,8 +6,10 @@ import type {
 } from "../types/reportModeration";
 import { getAdminProfile } from "../utils/adminSession";
 
+const MOJIBAKE_PATTERN = /[\u00c3\u00c2\u00c6\u00c4\u00e2\u00ba\u00bb]/;
+
 const repairMojibake = (value: string) => {
-  if (!value || !/[ÃƒÃ‚Ã¡ÂºÃ¡Â»Ã„]/.test(value)) {
+  if (!value || !MOJIBAKE_PATTERN.test(value)) {
     return value;
   }
 

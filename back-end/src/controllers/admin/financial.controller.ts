@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth";
 import {
@@ -109,119 +109,6 @@ const buildBaseConditions = (req: AuthRequest) => {
   }
 
   return and(...conditions);
-};
-
-const getHostProfiles = async () => {
-  const rows = await db
-    .select({
-      userId: users.userId,
-      userName: users.userDisplayName,
-      userEmail: users.userEmail,
-      userMobile: users.userMobile,
-      roleCode: businessRoles.businessRoleCode,
-    })
-    .from(users)
-    .leftJoin(
-      businessRoles,
-      eq(users.userBusinessRoleId, businessRoles.businessRoleId),
-    )
-    .where(hostRoleCondition());
-
-  return rows;
-};
-
-const syncPendingHostPayouts = async () => {
-  const hosts = await getHostProfiles();
-  if (hosts.length === 0) {
-    return;
-  }
-
-  await Promise.all(hosts.map((host) => hostIncomePolicyService.syncForUser(host.userId)));
-
-  const hostIds = hosts.map((host) => host.userId);
-  const [ledgerRows, payoutRows] = await Promise.all([
-    db
-      .select({
-        userId: ledgers.ledgerUserId,
-        totalEarned:
-          sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
-      })
-      .from(ledgers)
-      .where(
-        and(
-          eq(ledgers.ledgerType, "earning"),
-          inArray(ledgers.ledgerUserId, hostIds),
-        ),
-      )
-      .groupBy(ledgers.ledgerUserId),
-    db
-      .select({
-        transactionId: transactions.transactionId,
-        userId: transactions.transactionUserId,
-        amount: transactions.transactionAmount,
-        status: transactions.transactionStatus,
-        createdAt: transactions.transactionCreatedAt,
-      })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.transactionType, "payout"),
-          inArray(transactions.transactionUserId, hostIds),
-        ),
-      )
-      .orderBy(desc(transactions.transactionCreatedAt), desc(transactions.transactionId)),
-  ]);
-
-  const earnedByUser = new Map(
-    ledgerRows.map((item) => [item.userId, toNumber(item.totalEarned)]),
-  );
-
-  const payoutsByUser = new Map<
-    number,
-    Array<{
-      transactionId: number;
-      amount: number;
-      status: string | null;
-    }>
-  >();
-
-  for (const item of payoutRows) {
-    const current = payoutsByUser.get(item.userId) ?? [];
-    current.push({
-      transactionId: item.transactionId,
-      amount: toNumber(item.amount),
-      status: item.status,
-    });
-    payoutsByUser.set(item.userId, current);
-  }
-
-  for (const host of hosts) {
-    const payouts = payoutsByUser.get(host.userId) ?? [];
-    const paidOut = payouts
-      .filter((item) => item.status === "success")
-      .reduce((sum, item) => sum + item.amount, 0);
-    const pendingPayout = payouts.find((item) => item.status === "pending");
-    const remainingPayable = Math.max((earnedByUser.get(host.userId) ?? 0) - paidOut, 0);
-
-    if (remainingPayable <= 0 || pendingPayout) {
-      continue;
-    }
-
-    await db.insert(transactions).values({
-      transactionUserId: host.userId,
-      transactionAmount: remainingPayable.toFixed(2),
-      transactionCurrency: "VND",
-      transactionType: "payout",
-      transactionStatus: "pending",
-      transactionProvider: "bank_transfer",
-      transactionMeta: {
-        audience: "host",
-        note: "Đợt chi trả do hệ thống tổng hợp từ thu nhập Host chưa thanh toán.",
-      },
-      transactionCreatedAt: new Date(),
-      transactionUpdatedAt: new Date(),
-    });
-  }
 };
 
 const getHostPayoutTransactionById = async (transactionId: number) => {
@@ -358,7 +245,7 @@ const getHostIncomeBreakdown = async (userId: number) => {
       totalEarned,
       paidOutAmount,
       pendingBalance: pendingPayoutAmount,
-      availableBalance: Math.max(totalEarned - paidOutAmount, 0),
+      availableBalance: Math.max(totalEarned - paidOutAmount - pendingPayoutAmount, 0),
     },
     sourceBreakdown: sourceBreakdown.map((item) => ({
       type: item.type || "other",
@@ -400,6 +287,195 @@ const getHostIncomeBreakdown = async (userId: number) => {
   };
 };
 
+const getHostPayoutBalance = async (userId: number) => {
+  await hostIncomePolicyService.syncForUser(userId);
+  const breakdown = await getHostIncomeBreakdown(userId);
+  const { totalEarned, paidOutAmount, pendingBalance } = breakdown.earningSummary;
+
+  return {
+    ...breakdown.earningSummary,
+    availableBalance: Math.max(totalEarned - paidOutAmount - pendingBalance, 0),
+  };
+};
+
+export const getHostPayoutCandidates = async (
+  _req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const hostRows = await db
+      .select({
+        userId: users.userId,
+        userName: users.userDisplayName,
+        userEmail: users.userEmail,
+        userMobile: users.userMobile,
+        roleCode: businessRoles.businessRoleCode,
+      })
+      .from(users)
+      .leftJoin(
+        businessRoles,
+        eq(users.userBusinessRoleId, businessRoles.businessRoleId),
+      )
+      .where(hostRoleCondition())
+      .orderBy(users.userDisplayName, users.userId);
+
+    const data = await Promise.all(
+      hostRows.map(async (host) => {
+        const balance = await getHostPayoutBalance(host.userId);
+        return {
+          userId: host.userId,
+          userName:
+            normalizeString(host.userName) ||
+            normalizeString(host.userEmail) ||
+            `Host #${host.userId}`,
+          userEmail: host.userEmail,
+          userMobile: host.userMobile,
+          roleCode: host.roleCode,
+          totalEarned: balance.totalEarned,
+          paidOutAmount: balance.paidOutAmount,
+          pendingAmount: balance.pendingBalance,
+          availableBalance: balance.availableBalance,
+        };
+      }),
+    );
+
+    res.json({ data });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Không thể tải danh sách Host để tạo chi trả." });
+  }
+};
+
+export const createPayoutRequest = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = Number(req.body?.userId);
+    const amount = toNumber(req.body?.amount);
+    const method = normalizeString(req.body?.method) || "bank_transfer";
+    const note = normalizeString(req.body?.note);
+    const markAsPaid = Boolean(req.body?.markAsPaid);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      res.status(400).json({ error: "Vui lòng chọn Host cần chi trả." });
+      return;
+    }
+
+    if (amount <= 0) {
+      res.status(400).json({ error: "Số tiền chi trả phải lớn hơn 0 VND." });
+      return;
+    }
+
+    const [host] = await db
+      .select({
+        userId: users.userId,
+        userName: users.userDisplayName,
+        userEmail: users.userEmail,
+        userMobile: users.userMobile,
+        roleCode: businessRoles.businessRoleCode,
+      })
+      .from(users)
+      .leftJoin(
+        businessRoles,
+        eq(users.userBusinessRoleId, businessRoles.businessRoleId),
+      )
+      .where(and(eq(users.userId, userId), hostRoleCondition()))
+      .limit(1);
+
+    if (!host) {
+      res.status(404).json({ error: "Không tìm thấy tài khoản Host hợp lệ." });
+      return;
+    }
+
+    const balance = await getHostPayoutBalance(userId);
+    if (amount > balance.availableBalance) {
+      res.status(400).json({
+        error: `Số tiền chi trả không được vượt quá số dư khả dụng ${balance.availableBalance.toLocaleString("vi-VN")} VND.`,
+      });
+      return;
+    }
+
+    const now = new Date();
+    const performedBy = getPerformedBy(req);
+    const status = markAsPaid ? "success" : "pending";
+    const [created] = await db
+      .insert(transactions)
+      .values({
+        transactionUserId: userId,
+        transactionAmount: amount.toFixed(2),
+        transactionCurrency: "VND",
+        transactionType: "payout",
+        transactionStatus: status,
+        transactionProvider: method,
+        transactionReferenceType: "admin_host_payout",
+        transactionMeta: {
+          audience: "host",
+          note: note || "Khoản chi trả Host do admin tạo.",
+          adminCreated: true,
+          createdBy: performedBy,
+          createdAt: now.toISOString(),
+          balanceSnapshot: {
+            totalEarned: balance.totalEarned,
+            paidOutAmount: balance.paidOutAmount,
+            pendingAmount: balance.pendingBalance,
+            availableBeforeCreate: balance.availableBalance,
+            payoutAmount: amount,
+          },
+        },
+        transactionCreatedAt: now,
+        transactionUpdatedAt: now,
+        transactionProcessedAt: markAsPaid ? now : null,
+      })
+      .returning();
+
+    if (markAsPaid) {
+      await notificationService.sendNotification({
+        recipientId: userId,
+        title: "Thu nhập Host đã được chi trả",
+        message: `GreenMarket đã xác nhận chuyển khoản ${amount.toLocaleString("vi-VN")} VND cho khoản chi trả Host của bạn.`,
+        type: "success",
+        metaData: {
+          source: "admin_financial",
+          payoutRequestId: created.transactionId,
+          payoutStatus: "completed",
+        },
+      });
+    }
+
+    await db.insert(eventLogs).values({
+      eventLogEventType: `${PAYOUT_EVENT_PREFIX}_created`,
+      eventLogEventTime: now,
+      eventLogUserId: userId,
+      eventLogTargetType: "admin_host_payout",
+      eventLogTargetId: created.transactionId,
+      eventLogMeta: {
+        payoutRequestId: created.transactionId,
+        requesterId: userId,
+        requesterName:
+          normalizeString(host.userName) ||
+          normalizeString(host.userEmail) ||
+          `Host #${userId}`,
+        amount,
+        method,
+        status,
+        note,
+        performedBy,
+      },
+    });
+
+    res.status(201).json({
+      message: markAsPaid
+        ? "Đã tạo khoản chi trả và đánh dấu đã chi trả cho Host."
+        : "Đã tạo khoản chi trả Host ở trạng thái chờ chi trả.",
+      data: created,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Không thể tạo khoản chi trả Host." });
+  }
+};
+
 const processPayoutRequestStatus = async (
   req: AuthRequest,
   res: Response,
@@ -410,25 +486,25 @@ const processPayoutRequestStatus = async (
     const adminNote = normalizeString(req.body?.adminNote);
 
     if (!requestId) {
-      res.status(400).json({ error: "ID đợt chi trả không hợp lệ." });
+      res.status(400).json({ error: "ID khoản chi trả không hợp lệ." });
       return;
     }
 
     if (normalizedStatus && normalizedStatus !== "completed") {
       res.status(400).json({
-        error: "Luồng chi trả Host mới chỉ hỗ trợ xác nhận đã chi trả.",
+        error: "Luồng chi trả Host chỉ hỗ trợ xác nhận khoản chi trả đã được thanh toán.",
       });
       return;
     }
 
     const request = await getHostPayoutTransactionById(requestId);
     if (!request) {
-      res.status(404).json({ error: "Không tìm thấy đợt chi trả Host." });
+      res.status(404).json({ error: "Không tìm thấy khoản chi trả Host." });
       return;
     }
 
     if (request.status === "success") {
-      res.status(400).json({ error: "Đợt chi trả này đã được xác nhận trước đó." });
+      res.status(400).json({ error: "Khoản chi trả này đã được xác nhận trước đó." });
       return;
     }
 
@@ -452,7 +528,7 @@ const processPayoutRequestStatus = async (
     await notificationService.sendNotification({
       recipientId: request.userId,
       title: "Thu nhập Host đã được chi trả",
-      message: `GreenMarket đã xác nhận chuyển khoản ${toNumber(request.amount).toLocaleString("vi-VN")} VND cho thu nhập Host của bạn.`,
+      message: `GreenMarket đã xác nhận chuyển khoản ${toNumber(request.amount).toLocaleString("vi-VN")} VND cho khoản chi trả Host của bạn.`,
       type: "success",
       metaData: {
         source: "admin_financial",
@@ -482,12 +558,12 @@ const processPayoutRequestStatus = async (
     });
 
     res.json({
-      message: "Đã xác nhận hoàn tất chi trả cho Host.",
+      message: "Đã xác nhận hoàn tất khoản chi trả cho Host.",
       data: updated,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Không thể xác nhận chi trả Host." });
+    res.status(500).json({ error: "Không thể xác nhận khoản chi trả Host." });
   }
 };
 
@@ -496,7 +572,6 @@ export const getAllPayoutRequests = async (
   res: Response,
 ): Promise<void> => {
   try {
-    await syncPendingHostPayouts();
     const { page, limit, offset } = parsePagination(req.query.page, req.query.limit);
     const whereClause = buildBaseConditions(req);
 
@@ -591,7 +666,7 @@ export const getAllPayoutRequests = async (
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Không thể tải danh sách chi trả Host." });
+    res.status(500).json({ error: "Không thể tải danh sách khoản chi trả Host." });
   }
 };
 
@@ -602,14 +677,13 @@ export const getPayoutRequestDetail = async (
   try {
     const requestId = parseId(req.params.id as string);
     if (!requestId) {
-      res.status(400).json({ error: "ID đợt chi trả không hợp lệ." });
+      res.status(400).json({ error: "ID khoản chi trả không hợp lệ." });
       return;
     }
 
-    await syncPendingHostPayouts();
     const detail = await getHostPayoutTransactionById(requestId);
     if (!detail) {
-      res.status(404).json({ error: "Không tìm thấy đợt chi trả Host." });
+      res.status(404).json({ error: "Không tìm thấy khoản chi trả Host." });
       return;
     }
 
@@ -645,7 +719,7 @@ export const getPayoutRequestDetail = async (
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Không thể tải chi tiết chi trả Host." });
+    res.status(500).json({ error: "Không thể tải chi tiết khoản chi trả Host." });
   }
 };
 
@@ -661,7 +735,7 @@ export const rejectPayoutRequest = async (
   res: Response,
 ): Promise<void> => {
   res.status(400).json({
-    error: "Luồng chi trả Host mới không còn trạng thái từ chối.",
+    error: "Khoản chi trả Host không dùng trạng thái từ chối. Admin chỉ tạo khoản chi trả và đánh dấu đã chi trả khi hoàn tất chuyển khoản.",
   });
 };
 
