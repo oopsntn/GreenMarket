@@ -10,7 +10,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { AuthRequest } from "../../dtos/auth";
 import {
   eventLogs,
   hostContents,

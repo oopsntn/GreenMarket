@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { desc, eq } from "drizzle-orm";
 import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { AuthRequest } from "../../dtos/auth";
 import {
   adminTemplates,
   eventLogs,

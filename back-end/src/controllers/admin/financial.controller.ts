@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../config/db.ts";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { AuthRequest } from "../../dtos/auth";
 import {
   businessRoles,
   eventLogs,

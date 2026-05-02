@@ -1,11 +1,10 @@
 import { Response, NextFunction, RequestHandler } from "express";
-import jwt from "jsonwebtoken";
-import { AuthRequest, JWTUserPayload } from "../dtos/auth";
+import { JWTUserPayload } from "../dtos/auth";
 import { db } from "../config/db";
 import { businessRoles, users, shops } from "../models/schema/index";
 import { eq, and } from "drizzle-orm";
+import { verifyJWT } from "../utils/jwt";
 
-const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
 const ADMIN_ROLE_CODES = ["ROLE_SUPER_ADMIN", "ROLE_ADMIN"];
 
 const getRoleCodes = (user?: JWTUserPayload): string[] => {
@@ -17,7 +16,6 @@ const getRoleCodes = (user?: JWTUserPayload): string[] => {
         return user.roleCodes;
     }
 
-    // Backward compatibility for old admin tokens without roleCodes.
     if (user.role === "admin") {
         return ["ROLE_ADMIN"];
     }
@@ -25,7 +23,7 @@ const getRoleCodes = (user?: JWTUserPayload): string[] => {
     return [];
 };
 
-const getActiveBusinessRoleCode = async (userId: number): Promise<string | null> => {
+const getActiveBusinessRoleCode = async (userId: number) => {
     const [roleRow] = await db
         .select({
             roleCode: businessRoles.businessRoleCode,
@@ -50,63 +48,51 @@ const getActiveBusinessRoleCode = async (userId: number): Promise<string | null>
     return roleRow.roleCode.toUpperCase();
 };
 
-export const verifyToken: RequestHandler = (req, res: Response, next: NextFunction): void => {
-    const authReq = req as AuthRequest;
+export const verifyToken: RequestHandler = (req, res, next) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        res.status(401).json({ error: "Access denied. No token provided." });
-        return;
+
+    if (!authHeader?.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const token = authHeader.split(" ")[1];
-
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JWTUserPayload;
-        authReq.user = decoded;
+        const token = authHeader.split(" ")[1];
+        req.user = verifyJWT(token);
         next();
-    } catch (error) {
-        res.status(401).json({ error: "Invalid token." });
+    } catch {
+        return res.status(401).json({ error: "Invalid token" });
     }
 };
 
-export const optionalVerifyToken: RequestHandler = (
-    req,
-    _res: Response,
-    next: NextFunction,
-): void => {
-    const authReq = req as AuthRequest;
+export const optionalVerifyToken: RequestHandler = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        next();
-        return;
+    if (!authHeader?.startsWith("Bearer ")) {
+        return next();
     }
 
-    const token = authHeader.split(" ")[1];
-
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as JWTUserPayload;
-        authReq.user = decoded;
+        const token = authHeader.split(" ")[1];
+        req.user = verifyJWT(token);
     } catch {
-        // Public endpoints should still work even if an invalid token is sent.
+        // ignore
     }
 
     next();
 };
 
-export const isAdmin: RequestHandler = (req, res: Response, next: NextFunction): void => {
-    const authReq = req as AuthRequest;
-    if (!authReq.user) {
+export const isAdmin: RequestHandler = (req, res, next): void => {
+    if (!req.user) {
         res.status(403).json({ error: "Access denied. Admin privileges required." });
         return;
     }
 
-    if (authReq.user.role === "admin") {
+    if (req.user.role === "admin") {
         next();
         return;
     }
 
-    const roleCodes = getRoleCodes(authReq.user);
+    const roleCodes = getRoleCodes(req.user);
     const hasAdminRole = roleCodes.some((code) => ADMIN_ROLE_CODES.includes(code));
     if (!hasAdminRole) {
         res.status(403).json({ error: "Access denied. Admin privileges required." });
@@ -117,20 +103,19 @@ export const isAdmin: RequestHandler = (req, res: Response, next: NextFunction):
 };
 
 export const requireRoles = (...allowedRoles: string[]) => {
-    const handler: RequestHandler = (req, res: Response, next: NextFunction): void => {
-        const authReq = req as AuthRequest;
-        if (!authReq.user) {
+    const handler: RequestHandler = (req, res, next): void => {
+        if (!req.user) {
             res.status(401).json({ error: "Unauthorized" });
             return;
         }
 
         // Keep current admin behavior working with legacy tokens.
-        if (authReq.user.role === "admin" && (!authReq.user.roleCodes || authReq.user.roleCodes.length === 0)) {
+        if (req.user.role === "admin" && (!req.user.roleCodes || req.user.roleCodes.length === 0)) {
             next();
             return;
         }
 
-        const roleCodes = getRoleCodes(authReq.user);
+        const roleCodes = getRoleCodes(req.user);
         const hasRequiredRole = roleCodes.some((code) => allowedRoles.includes(code));
 
         if (!hasRequiredRole) {
@@ -149,68 +134,48 @@ export const requireBusinessRole = (...allowedBusinessRoles: string[]) => {
         role.toUpperCase(),
     );
 
-    const handler: RequestHandler = async (
-        req,
-        res: Response,
-        next: NextFunction,
-    ): Promise<void> => {
+    const handler: RequestHandler = async (req, res, next) => {
         try {
-            const authReq = req as AuthRequest;
-            const userId = authReq.user?.id;
-
-            if (!userId || !authReq.user) {
-                res.status(401).json({ error: "Unauthorized" });
-                return;
+            const user = req.user;
+            if (!user) {
+                return res.status(401).json({ error: "Unauthorized" });
             }
 
-            if (authReq.user.role !== "user") {
-                res
-                    .status(403)
-                    .json({ error: "Access denied. User account required." });
-                return;
+            if (user.role !== "user") {
+                return res.status(403).json({ error: "Access denied. User account required." });
             }
 
-            const currentRoleCode = await getActiveBusinessRoleCode(userId);
+            const currentRoleCode = await getActiveBusinessRoleCode(user.id);
 
             if (!currentRoleCode) {
-                res.status(403).json({
+                return res.status(403).json({
                     error: "Access denied. Active business role is required.",
                 });
-                return;
             }
 
-            authReq.user.businessRoleCode = currentRoleCode;
+            user.businessRoleCode = currentRoleCode;
 
             const hasPermission = normalizedAllowedRoles.includes(currentRoleCode);
             if (!hasPermission) {
-                res.status(403).json({
-                    error: "Access denied. Insufficient business role permissions.",
-                });
-                return;
+                return res.status(403).json({ error: "Access denied. Insufficient business role permissions." });
             }
 
             next();
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Internal server error" });
+            return res.status(500).json({ error: "Internal server error" });
         }
     };
 
     return handler;
 };
 
-export const requireShop: RequestHandler = async (
-    req,
-    res: Response,
-    next: NextFunction,
-): Promise<void> => {
+export const requireShop: RequestHandler = async (req, res, next) => {
     try {
-        const authReq = req as AuthRequest;
-        const userId = authReq.user?.id;
+        const userId = req.user?.id;
 
         if (!userId) {
-            res.status(401).json({ error: "Unauthorized" });
-            return;
+            return res.status(401).json({ error: "Unauthorized" });
         }
 
         const [shop] = await db
@@ -225,16 +190,13 @@ export const requireShop: RequestHandler = async (
             .limit(1);
 
         if (!shop) {
-            res.status(403).json({
-                error: "Access denied. Active shop profile required.",
-            });
-            return;
+            return res.status(403).json({ error: "Access denied. Active shop profile required." });
         }
 
-        authReq.shop = shop; // Attach shop info for convenience
+        req.shop = shop;
         next();
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Internal server error" });
+        return res.status(500).json({ error: "Internal server error" });
     }
 };
