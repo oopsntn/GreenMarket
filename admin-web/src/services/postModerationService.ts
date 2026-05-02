@@ -23,14 +23,14 @@ const formatDateTime = (value: string | null) => {
 
 const formatCurrency = (value: string | number | null) => {
   if (value === null || value === undefined || value === "") {
-    return "Thỏa thuận";
+    return "Liên hệ";
   }
 
   const numericValue =
     typeof value === "number" ? value : Number.parseFloat(String(value));
 
   if (Number.isNaN(numericValue)) {
-    return "Thỏa thuận";
+    return "Liên hệ";
   }
 
   return `${numericValue.toLocaleString("vi-VN")} VND`;

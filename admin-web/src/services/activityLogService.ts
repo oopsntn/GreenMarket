@@ -12,7 +12,7 @@ type LegacyActivityLogItem = {
 };
 
 const repairMojibake = (value: string) => {
-  if (!value || !/[ÃƒÃ‚Ã¡ÂºÃ¡Â»Ã„]/.test(value)) {
+  if (!value || !/[ÃƒÆ’Ã†â€™ÃƒÆ’Ã¢â‚¬Å¡ÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚ÂºÃƒÆ’Ã‚Â¡Ãƒâ€šÃ‚Â»ÃƒÆ’Ã¢â‚¬Å¾]/.test(value)) {
     return value;
   }
 
@@ -35,6 +35,9 @@ const normalizeTextKey = (value: string) =>
     .toLowerCase();
 
 const ACTION_LABELS: Record<string, string> = {
+  "shop view": "Xem cửa hàng",
+  "shop contact click": "Nhấn liên hệ cửa hàng",
+  "admin manual notification sent": "Gửi thông báo thủ công",
   "admin login": "Đăng nhập trang quản trị",
   "role assigned": "Gán vai trò",
   "account locked": "Khóa tài khoản",
@@ -100,7 +103,10 @@ const PHRASE_REPLACEMENTS: Array<[string, string]> = [
   ],
   ["Users CSV export completed.", "Đã hoàn tất xuất CSV danh sách người dùng."],
   ["Revenue summary CSV export completed.", "Đã hoàn tất xuất CSV tổng quan doanh thu."],
-  ["Customer spending CSV export completed.", "Đã hoàn tất xuất CSV chi tiêu khách hàng."],
+  [
+    "Customer spending CSV export completed.",
+    "Đã hoàn tất xuất CSV chi tiêu khách hàng.",
+  ],
   ["Analytics overview CSV export completed.", "Đã hoàn tất xuất CSV tổng quan phân tích."],
   ["Promotion operations CSV export completed.", "Đã hoàn tất xuất CSV theo dõi quảng bá."],
   ["Boosted campaigns CSV export completed.", "Đã hoàn tất xuất CSV chiến dịch đẩy bài."],

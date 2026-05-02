@@ -12,7 +12,7 @@ export type ApiModerationPostResponse = {
   categoryId: number | null;
   postTitle: string;
   postSlug: string;
-  postPrice: string | number | null;
+  postPrice?: string | number | null;
   postLocation: string | null;
   postStatus: string;
   postRejectedReason: string | null;

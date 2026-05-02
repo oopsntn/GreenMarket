@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import EmptyState from "../components/EmptyState";
+import { useRef } from "react";
 import FilterBar from "../components/FilterBar";
 import PageHeader from "../components/PageHeader";
 import SearchToolbar from "../components/SearchToolbar";
@@ -57,6 +58,22 @@ const formatChartMonthLabel = (value: string) => {
       });
 };
 
+const formatChartTooltipDate = (value: string) => {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+};
+
+const getMonthToken = (value: string) => {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : `${date.getFullYear()}-${date.getMonth() + 1}`;
+};
+
 function AnalyticsPage() {
   const [analyticsData, setAnalyticsData] = useState(
     analyticsService.getEmptyAnalytics(),
@@ -70,6 +87,15 @@ function AnalyticsPage() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [activeTrafficBar, setActiveTrafficBar] = useState<{
+    x: number;
+    y: number;
+    slot: string;
+    date: string;
+    impressions: number;
+    color: string;
+  } | null>(null);
+  const chartWrapperRef = useRef<HTMLDivElement | null>(null);
   const today = getTodayDateValue();
   const dateRangeLabel = formatDateRangeLabel(fromDate, toDate);
   const kpiCards = analyticsData.kpiCards;
@@ -258,14 +284,24 @@ function AnalyticsPage() {
   );
 
   const chartGridLines = [1, 0.75, 0.5, 0.25, 0];
-  const chartWidth = 1040;
   const chartHeight = 360;
   const chartMargin = {
-    top: 34,
+    top: 40,
     right: 18,
     bottom: 46,
     left: 58,
   };
+  const maxBarsPerPoint = Math.max(
+    ...chartTrafficPoints.map((point) => point.slots.length),
+    1,
+  );
+  const chartWidth = Math.max(
+    1040,
+    chartMargin.left +
+      chartMargin.right +
+      chartTrafficPoints.length *
+        Math.max(58, maxBarsPerPoint * 24 + Math.max(0, maxBarsPerPoint - 1) * 8),
+  );
   const chartPlotWidth = chartWidth - chartMargin.left - chartMargin.right;
   const chartPlotHeight = chartHeight - chartMargin.top - chartMargin.bottom;
   const maxDailyTraffic = Math.max(
@@ -274,10 +310,7 @@ function AnalyticsPage() {
     ),
     1,
   );
-  const chartValueLabelStep = Math.max(
-    1,
-    Math.ceil(chartTrafficPoints.length / 12),
-  );
+  const chartScaleMax = Math.max(Math.ceil(maxDailyTraffic * 1.08), maxDailyTraffic);
 
   const totalRevenue = placementChartRows.reduce(
     (total, item) => total + item.revenue,
@@ -341,6 +374,30 @@ function AnalyticsPage() {
     showToast(
       `Đã bắt đầu xuất báo cáo phân tích cho ${dateRangeLabel} • ${metricScope}.`,
     );
+  };
+
+  const updateTrafficBarTooltip = (
+    clientX: number,
+    clientY: number,
+    slot: string,
+    date: string,
+    impressions: number,
+    color: string,
+  ) => {
+    const wrapper = chartWrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+
+    const bounds = wrapper.getBoundingClientRect();
+    setActiveTrafficBar({
+      x: clientX - bounds.left + wrapper.scrollLeft,
+      y: clientY - bounds.top + wrapper.scrollTop,
+      slot,
+      date,
+      impressions,
+      color,
+    });
   };
 
   const trafficOverviewTitle =
@@ -460,146 +517,199 @@ function AnalyticsPage() {
                 Màn Vị trí hiển thị vẫn có thể chứa thêm các vị trí đã cấu hình nhưng chưa phát sinh traffic.
               </p>
 
-              <div className="analytics-daily-chart-wrapper">
+              <div
+                ref={chartWrapperRef}
+                className="analytics-daily-chart-wrapper"
+                onMouseLeave={() => setActiveTrafficBar(null)}
+              >
                 {chartTrafficPoints.length === 0 ? (
                   <EmptyState
                     title="Không có lưu lượng theo ngày"
                     description="Không có vị trí hiển thị nào phát sinh lượt hiển thị trong giai đoạn này."
                   />
                 ) : (
-                  <svg
-                    className="analytics-daily-chart"
-                    viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                    role="img"
-                    aria-label="Biểu đồ lượt hiển thị theo ngày và theo vị trí"
-                  >
-                    {chartGridLines.map((line) => {
-                      const y =
-                        chartMargin.top + chartPlotHeight * (1 - line);
-                      return (
-                        <g key={line}>
-                          <line
-                            className="analytics-daily-chart__grid-line"
-                            x1={chartMargin.left}
-                            x2={chartWidth - chartMargin.right}
-                            y1={y}
-                            y2={y}
-                          />
-                          <text
-                            className="analytics-daily-chart__axis-label"
-                            x={chartMargin.left - 12}
-                            y={y + 4}
-                            textAnchor="end"
-                          >
-                            {formatCompactMetric(maxDailyTraffic * line)}
-                          </text>
-                        </g>
-                      );
-                    })}
-
-                    <line
-                      className="analytics-daily-chart__axis"
-                      x1={chartMargin.left}
-                      x2={chartMargin.left}
-                      y1={chartMargin.top}
-                      y2={chartMargin.top + chartPlotHeight}
-                    />
-                    <line
-                      className="analytics-daily-chart__axis"
-                      x1={chartMargin.left}
-                      x2={chartWidth - chartMargin.right}
-                      y1={chartMargin.top + chartPlotHeight}
-                      y2={chartMargin.top + chartPlotHeight}
-                    />
-
-                    {chartTrafficPoints.map((point, pointIndex) => {
-                      const groupWidth =
-                        chartPlotWidth / chartTrafficPoints.length;
-                      const groupStart =
-                        chartMargin.left + pointIndex * groupWidth;
-                      const groupCenter = groupStart + groupWidth / 2;
-                      const barGap = point.slots.length > 1 ? 4 : 0;
-                      const barWidth = Math.min(
-                        28,
-                        Math.max(
-                          10,
-                          (groupWidth - 8 - barGap * (point.slots.length - 1)) /
-                            point.slots.length,
-                        ),
-                      );
-                      const barGroupWidth =
-                        point.slots.length * barWidth +
-                        (point.slots.length - 1) * barGap;
-                      const firstBarX = groupCenter - barGroupWidth / 2;
-                      const showValueLabel =
-                        pointIndex % chartValueLabelStep === 0 ||
-                        point.slots.some(
-                          (slot) => slot.impressions === maxDailyTraffic,
+                  <>
+                    <svg
+                      className="analytics-daily-chart"
+                      viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                      width={chartWidth}
+                      height={chartHeight}
+                      role="img"
+                      aria-label="Biểu đồ lượt hiển thị theo ngày và theo vị trí"
+                    >
+                      {chartGridLines.map((line) => {
+                        const y =
+                          chartMargin.top + chartPlotHeight * (1 - line);
+                        return (
+                          <g key={line}>
+                            <line
+                              className="analytics-daily-chart__grid-line"
+                              x1={chartMargin.left}
+                              x2={chartWidth - chartMargin.right}
+                              y1={y}
+                              y2={y}
+                            />
+                            <text
+                              className="analytics-daily-chart__axis-label"
+                              x={chartMargin.left - 12}
+                              y={y + 4}
+                              textAnchor="end"
+                            >
+                              {formatCompactMetric(chartScaleMax * line)}
+                            </text>
+                          </g>
                         );
+                      })}
 
-                      return (
-                        <g key={point.date}>
-                          {point.slots.map((slot, slotIndex) => {
-                            const barHeight = Math.max(
-                              3,
-                              (slot.impressions / maxDailyTraffic) *
-                                chartPlotHeight,
-                            );
-                            const x =
-                              firstBarX + slotIndex * (barWidth + barGap);
-                            const y =
-                              chartMargin.top +
-                              chartPlotHeight -
-                              barHeight;
+                      <line
+                        className="analytics-daily-chart__axis"
+                        x1={chartMargin.left}
+                        x2={chartMargin.left}
+                        y1={chartMargin.top}
+                        y2={chartMargin.top + chartPlotHeight}
+                      />
+                      <line
+                        className="analytics-daily-chart__axis"
+                        x1={chartMargin.left}
+                        x2={chartWidth - chartMargin.right}
+                        y1={chartMargin.top + chartPlotHeight}
+                        y2={chartMargin.top + chartPlotHeight}
+                      />
 
-                            return (
-                              <g key={`${point.date}-${slot.slot}`}>
-                                <rect
-                                  className="analytics-daily-chart__bar"
-                                  x={x}
-                                  y={y}
-                                  width={barWidth}
-                                  height={barHeight}
-                                  rx="6"
-                                  fill={chartSlotColorMap[slot.slot]}
-                                >
-                                  <title>
-                                    {`${slot.slot}: ${slot.impressions.toLocaleString("vi-VN")} lượt hiển thị ngày ${point.date}`}
-                                  </title>
-                                </rect>
-                                {showValueLabel ? (
-                                  <text
-                                    className="analytics-daily-chart__value"
-                                    x={x + barWidth / 2}
-                                    y={Math.max(chartMargin.top + 12, y - 8)}
-                                    textAnchor="middle"
+                      {chartTrafficPoints.map((point, pointIndex) => {
+                        const groupWidth =
+                          chartPlotWidth / chartTrafficPoints.length;
+                        const groupStart =
+                          chartMargin.left + pointIndex * groupWidth;
+                        const groupCenter = groupStart + groupWidth / 2;
+                        const barGap = point.slots.length > 1 ? 6 : 0;
+                        const barWidth = Math.min(
+                          30,
+                          Math.max(
+                            12,
+                            (groupWidth - 10 - barGap * (point.slots.length - 1)) /
+                              point.slots.length,
+                          ),
+                        );
+                        const barGroupWidth =
+                          point.slots.length * barWidth +
+                          (point.slots.length - 1) * barGap;
+                        const firstBarX = groupCenter - barGroupWidth / 2;
+                        const previousPoint = chartTrafficPoints[pointIndex - 1];
+                        const showMonthLabel =
+                          pointIndex === 0 ||
+                          getMonthToken(previousPoint?.date ?? "") !==
+                            getMonthToken(point.date);
+
+                        return (
+                          <g key={point.date}>
+                            {point.slots.map((slot, slotIndex) => {
+                              const barHeight = Math.max(
+                                3,
+                                (slot.impressions / chartScaleMax) *
+                                  chartPlotHeight,
+                              );
+                              const x =
+                                firstBarX + slotIndex * (barWidth + barGap);
+                              const y =
+                                chartMargin.top +
+                                chartPlotHeight -
+                                barHeight;
+                              const slotColor = chartSlotColorMap[slot.slot];
+
+                              return (
+                                <g key={`${point.date}-${slot.slot}`}>
+                                  <rect
+                                    className="analytics-daily-chart__bar"
+                                    x={x}
+                                    y={y}
+                                    width={barWidth}
+                                    height={barHeight}
+                                    rx="6"
+                                    fill={slotColor}
+                                    onPointerEnter={(event) =>
+                                      updateTrafficBarTooltip(
+                                        event.clientX,
+                                        event.clientY,
+                                        slot.slot,
+                                        point.date,
+                                        slot.impressions,
+                                        slotColor,
+                                      )
+                                    }
+                                    onPointerMove={(event) =>
+                                      updateTrafficBarTooltip(
+                                        event.clientX,
+                                        event.clientY,
+                                        slot.slot,
+                                        point.date,
+                                        slot.impressions,
+                                        slotColor,
+                                      )
+                                    }
+                                    onPointerLeave={() => setActiveTrafficBar(null)}
+                                    onClick={(event) =>
+                                      updateTrafficBarTooltip(
+                                        event.clientX,
+                                        event.clientY,
+                                        slot.slot,
+                                        point.date,
+                                        slot.impressions,
+                                        slotColor,
+                                      )
+                                    }
                                   >
-                                    {formatCompactMetric(slot.impressions)}
-                                  </text>
-                                ) : null}
-                              </g>
-                            );
-                          })}
-                          <text
-                            className="analytics-daily-chart__date"
-                            x={groupCenter}
-                            y={chartMargin.top + chartPlotHeight + 24}
-                            textAnchor="middle"
-                          >
-                            {formatChartDateLabel(point.date)}
-                          </text>
-                          <text
-                            className="analytics-daily-chart__month"
-                            x={groupCenter}
-                            y={chartMargin.top + chartPlotHeight + 40}
-                            textAnchor="middle"
-                          >
-                            {formatChartMonthLabel(point.date)}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </svg>
+                                    <title>
+                                      {`${slot.slot}: ${slot.impressions.toLocaleString("vi-VN")} lượt hiển thị ngày ${point.date}`}
+                                    </title>
+                                  </rect>
+                                </g>
+                              );
+                            })}
+                            <text
+                              className="analytics-daily-chart__date"
+                              x={groupCenter}
+                              y={chartMargin.top + chartPlotHeight + 24}
+                              textAnchor="middle"
+                            >
+                              {formatChartDateLabel(point.date)}
+                            </text>
+                            {showMonthLabel ? (
+                              <text
+                                className="analytics-daily-chart__month"
+                                x={groupCenter}
+                                y={chartMargin.top + chartPlotHeight + 40}
+                                textAnchor="middle"
+                              >
+                                {formatChartMonthLabel(point.date)}
+                              </text>
+                            ) : null}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                    {activeTrafficBar ? (
+                      <div
+                        className="analytics-daily-chart-tooltip"
+                        style={{
+                          left: activeTrafficBar.x,
+                          top: Math.max(18, activeTrafficBar.y - 16),
+                        }}
+                      >
+                        <span
+                          className="analytics-daily-chart-tooltip__dot"
+                          style={{ backgroundColor: activeTrafficBar.color }}
+                        />
+                        <div className="analytics-daily-chart-tooltip__content">
+                          <strong>{activeTrafficBar.slot}</strong>
+                          <span>{formatChartTooltipDate(activeTrafficBar.date)}</span>
+                          <span>
+                            {activeTrafficBar.impressions.toLocaleString("vi-VN")} lượt hiển thị
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
                 )}
               </div>
             </div>
