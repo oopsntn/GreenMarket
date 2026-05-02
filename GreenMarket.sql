@@ -749,6 +749,17 @@ INSERT INTO business_roles (
     '["Handle support requests", "Track assigned internal tasks", "Coordinate operational follow-up"]'::jsonb,
     '["Update task status", "Review support workload", "Escalate issues to managers"]'::jsonb,
     'active'
+),
+(
+    6,
+    'SEASONAL_PARTNER',
+    'Seasonal Partner',
+    'Marketplace',
+    'Mobile App',
+    'Archived demo role kept for role-management coverage and disabled-state testing.',
+    '["Support campaign-based collaboration", "Participate in seasonal activations"]'::jsonb,
+    '["Receive temporary assignments", "View time-boxed marketplace tasks"]'::jsonb,
+    'disabled'
 );
 
 -- ============================================================
@@ -791,6 +802,28 @@ INSERT INTO users (
 (136, '0998887776', 'Host Pro', 'host@greenmarket.local', 'Ha Noi', 'Seed account for host-role API testing and content management.', 'active', 2),
 (137, '0997776665', 'Operation Pro', 'operation@greenmarket.local', 'Ha Noi', 'Seed account for operations-staff-role testing and task handling.', 'active', 5);
 
+INSERT INTO users (
+    user_id,
+    user_mobile,
+    user_display_name,
+    user_email,
+    user_location,
+    user_bio,
+    user_status,
+    user_business_role_id,
+    user_registered_at,
+    user_last_login_at,
+    user_created_at,
+    user_updated_at
+) VALUES
+(140, '0909000140', 'Chủ vườn chờ duyệt', 'pending.shop@greenmarket.local', 'Gia Lâm, Hà Nội', 'Tài khoản dùng để mô phỏng chủ vườn đang chờ duyệt hồ sơ shop.', 'active', 1, now() - interval '9 days', now() - interval '3 days', now() - interval '9 days', now() - interval '3 days'),
+(141, '0909000141', 'Người dùng bị khóa', 'locked.user@greenmarket.local', 'Thủ Đức, TP.HCM', 'Tài khoản dùng để kiểm tra trạng thái khóa ở màn người dùng và cửa hàng.', 'blocked', 1, now() - interval '22 days', now() - interval '6 days', now() - interval '22 days', now() - interval '6 days'),
+(142, '0909000142', 'Người dùng thiếu hồ sơ', NULL, NULL, 'Tài khoản thiếu email và địa chỉ để kiểm tra độ đầy đủ hồ sơ.', 'active', 1, now() - interval '4 days', NULL, now() - interval '4 days', now() - interval '4 days'),
+(143, '0909000143', 'Cộng tác viên mới', 'collab.new@greenmarket.local', 'Long Biên, Hà Nội', 'Tài khoản cộng tác viên bổ sung để seed đủ trạng thái quan hệ shop - cộng tác viên.', 'active', 3, now() - interval '16 days', now() - interval '1 day', now() - interval '16 days', now() - interval '1 day'),
+(144, '0909000144', 'Host chờ duyệt nội dung', 'host.pending@greenmarket.local', 'Đà Nẵng', 'Tài khoản Host bổ sung để seed các trạng thái nội dung Host chưa xuất bản.', 'active', 2, now() - interval '11 days', now() - interval '2 days', now() - interval '11 days', now() - interval '2 days'),
+(145, '0909000145', 'Chủ vườn bị từ chối', 'rejected.shop@greenmarket.local', 'Biên Hòa, Đồng Nai', 'Tài khoản dùng để mô phỏng hồ sơ shop bị từ chối và bài đăng bị từ chối.', 'active', 1, now() - interval '13 days', now() - interval '5 days', now() - interval '13 days', now() - interval '5 days'),
+(146, '0909000146', 'Người dùng chưa mua gói', 'no.plan@greenmarket.local', 'Quận 7, TP.HCM', 'Tài khoản người dùng hoạt động bình thường nhưng chưa mua gói đăng bài nào, dùng để kiểm tra các màn hiển thị trạng thái chưa có gói.', 'active', 1, now() - interval '2 days', NULL, now() - interval '2 days', now() - interval '2 days');
+
 -- Collaborator availability profile (mock)
 UPDATE users
 SET
@@ -816,6 +849,11 @@ UPDATE users
 SET
     user_availability_status = 'busy'
 WHERE user_id = 6;
+UPDATE users
+SET
+    user_availability_status = 'available',
+    user_availability_note = 'Sẵn sàng nhận việc cộng tác vào buổi chiều và cuối tuần.'
+WHERE user_id = 143;
 
 -- Collaborator Jobs (Mock)
 -- Migrated Collaborator Jobs to Tickets
@@ -858,22 +896,6 @@ INSERT INTO task_replies (
 ) VALUES
 (101, 102, 9, 'Uploaded full album and source zip.', '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'internal', now() - interval '2 days');
 
--- Collaborator Earnings & Payout Requests (Consolidated into ledgers & transactions)
-INSERT INTO ledgers (ledger_id, ledger_user_id, ledger_amount, ledger_status, ledger_type, ledger_direction, ledger_reference_type, ledger_reference_id, ledger_created_at) VALUES
-(1, 9, 720000.00, 'available', 'job', 'CREDIT', 'ticket', 102, now() - interval '2 days');
-
-INSERT INTO transactions (
-    transaction_id,
-    transaction_user_id,
-    transaction_amount,
-    transaction_type,
-    transaction_provider,
-    transaction_status,
-    transaction_meta,
-    transaction_created_at
-) VALUES
-(1, 9, 500000.00,  'payout', 'bank', 'pending', '{"method":"Bank transfer","note":"Weekly payout request (mock)."}', now() - interval '1 day');
-
 -- Host Contents (Mock - Magazine Style)
 INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_description, host_content_body, host_content_category, host_content_media_urls, host_content_status, host_content_view_count, host_content_payout_amount) VALUES
 (1, 136, 'Top 5 loại Tùng La Hán đẹp nhất 2026', 'Khám phá danh sách những giống Tùng La Hán được giới chơi cây cảnh săn đón nhất.', 'Tùng La Hán từ lâu đã là biểu tượng của sự trường thọ, bền bỉ và khí chất kiên cường trong văn hóa Á Đông. Với dáng vẻ uy nghi, tán lá xanh quanh năm và khả năng sinh trưởng mạnh mẽ trong điều kiện khắc nghiệt, loài cây này không chỉ mang giá trị thẩm mỹ mà còn ẩn chứa chiều sâu triết lý về cuộc sống.
@@ -891,6 +913,23 @@ Bên cạnh đó, Tùng La Hán cũng gắn liền với hình ảnh của sự 
 Ngày nay, khi nhịp sống hiện đại ngày càng hối hả, sự hiện diện của Tùng La Hán như một lời nhắc nhở về giá trị của sự kiên nhẫn và bền bỉ. Đó không chỉ là một loài cây cảnh, mà còn là biểu tượng sống động của thời gian, của sự trưởng thành và của những điều bền vững vượt lên trên mọi biến đổi.', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format", "https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 1250, 300000.00),
 (2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Mẹo vặt', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
 (3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Sự kiện', '[]', 'published', 450, 300000.00);
+
+INSERT INTO host_contents (
+    host_content_id,
+    host_content_author_id,
+    host_content_title,
+    host_content_description,
+    host_content_body,
+    host_content_category,
+    host_content_media_urls,
+    host_content_status,
+    host_content_view_count,
+    host_content_payout_amount,
+    host_content_created_at,
+    host_content_updated_at
+) VALUES
+(4, 144, 'Checklist chuẩn bị bài Host trước khi gửi duyệt', 'Bản nháp dùng để seed trạng thái chờ admin duyệt cho màn nội dung Host.', 'Bài viết này đang chờ admin kiểm tra lại tiêu đề, phần mở bài và bộ ảnh minh họa trước khi được xuất bản lên user web.', 'Mẹo vặt', '["https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format"]'::jsonb, 'pending_admin', 0, 0, now() - interval '2 days', now() - interval '1 day'),
+(5, 136, 'Tin Host bị từ chối do thiếu nguồn ảnh hợp lệ', 'Mẫu dữ liệu dùng để kiểm tra trạng thái từ chối của nội dung Host trong admin.', 'Bài viết này đã bị từ chối vì ảnh minh họa không chứng minh được quyền sử dụng và phần thân bài chưa đủ chiều sâu nội dung.', 'Tin tức', '["https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format"]'::jsonb, 'rejected', 120, 0, now() - interval '6 days', now() - interval '5 days');
 
 INSERT INTO ledgers (
     ledger_id,
@@ -925,6 +964,25 @@ INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verifi
     'Chuyên sưu tầm và chăm sóc bonsai tùng, sanh, si theo phong cách vườn Bắc bộ. Nhận tư vấn phối chậu và tạo dáng cây trưởng thành.',
     '/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
 
+INSERT INTO shops (
+    shop_id,
+    shop_name,
+    shop_phone,
+    shop_email,
+    shop_email_verified,
+    shop_location,
+    shop_description,
+    shop_cover_url,
+    shop_status,
+    shop_vip_started_at,
+    shop_vip_expires_at,
+    shop_lat,
+    shop_lng
+) VALUES
+(140, 'Vườn đang chờ phê duyệt', '0909000140', 'pending.shop@greenmarket.local', FALSE, 'Gia Lâm, Hà Nội', 'Hồ sơ shop mới gửi lên, dùng để kiểm tra trạng thái chờ duyệt trong admin.', '/uploads/shop/pending-shop-cover.jpg', 'pending', NULL, NULL, 21.0342, 105.8863),
+(141, 'Vườn tạm ngưng hoạt động', '0909000141', 'locked.user@greenmarket.local', TRUE, 'Thủ Đức, TP.HCM', 'Hồ sơ shop bị tạm ngưng sau khi admin phát hiện vi phạm quy định hiển thị.', '/uploads/shop/suspended-shop-cover.jpg', 'suspended', now() - interval '45 days', now() - interval '5 days', 10.8496, 106.7718),
+(145, 'Vườn bị từ chối hồ sơ', '0909000145', 'rejected.shop@greenmarket.local', FALSE, 'Biên Hòa, Đồng Nai', 'Hồ sơ shop bị từ chối do thông tin pháp lý và bộ ảnh xác minh chưa đạt yêu cầu.', '/uploads/shop/rejected-shop-cover.jpg', 'rejected', NULL, NULL, 10.9447, 106.8243);
+
 -- ============================================================
 -- CATEGORIES
 -- Chỉ dùng danh mục Cây Cảnh Bonsai cho luồng đăng bài hiện tại
@@ -937,6 +995,15 @@ INSERT INTO categories (category_id, category_parent_id, category_title, categor
 (14, 1,    'Bonsai Phong Thủy',       'bonsai-phong-thuy',  true),
 (15, 1,    'Bonsai Hoa & Quả',        'bonsai-hoa-qua',     true);
 
+INSERT INTO categories (
+    category_id,
+    category_parent_id,
+    category_title,
+    category_slug,
+    category_published
+) VALUES
+(16, 1, 'Bonsai Sưu Tầm Cao Cấp', 'bonsai-suu-tam-cao-cap', false);
+
 -- ============================================================
 -- ATTRIBUTES
 -- ============================================================
@@ -946,6 +1013,16 @@ INSERT INTO attributes (attribute_id, attribute_code, attribute_title, attribute
 (3, 'hoanh_goc',  'Hoành gốc (cm)',   'number', NULL, true),
 (4, 'tuoi_cay',   'Tuổi cây (năm)',   'number', NULL, true),
 (5, 'nguon_goc',  'Nguồn gốc',        'text',   NULL, true);
+
+INSERT INTO attributes (
+    attribute_id,
+    attribute_code,
+    attribute_title,
+    attribute_data_type,
+    attribute_options,
+    attribute_published
+) VALUES
+(6, 'muc_do_cham_soc', 'Mức độ chăm sóc', 'enum', '["Dễ chăm","Trung bình","Cần người có kinh nghiệm"]'::jsonb, false);
 
 -- Category-Attribute Mapping
 INSERT INTO category_attributes (
@@ -981,6 +1058,16 @@ INSERT INTO category_attributes (
 -- ============================================================
 -- POSTS (16 bài đăng cây cảnh bonsai)
 -- ============================================================
+INSERT INTO category_attributes (
+    category_attribute_category_id,
+    category_attribute_attribute_id,
+    category_attribute_required,
+    category_attribute_display_order,
+    category_attribute_status
+) VALUES
+(11, 6, false, 4, 'Disabled'),
+(16, 6, false, 1, 'Disabled');
+
 INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_title, post_slug, post_location, post_status, post_contact_phone, post_view_count, post_contact_count, post_published, post_submitted_at, post_published_at) VALUES
 (1,  1, 1, 11, 'Sanh Nam Điền Mini Dáng Văn Nhân',
     'sanh-nam-dien-mini-dang-van-nhan',
@@ -1046,7 +1133,34 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'cay-bonsai-test-0987654321',
     'Hà Nội', 'approved', '0987654321', 10, 2, true, now() - interval '1 days', now() - interval '1 days');
 
--- Post Attribute Values
+-- Additional moderation coverage posts
+INSERT INTO posts (
+    post_id,
+    post_author_id,
+    post_shop_id,
+    category_id,
+    post_title,
+    post_slug,
+    post_location,
+    post_status,
+    post_rejected_reason,
+    post_contact_phone,
+    post_view_count,
+    post_contact_count,
+    post_published,
+    post_submitted_at,
+    post_published_at,
+    post_moderated_at,
+    post_created_at,
+    post_updated_at
+) VALUES
+(17, 140, 140, 12, 'Sanh mini chờ duyệt hình ảnh', 'sanh-mini-cho-duyet-hinh-anh', 'Gia Lâm, Hà Nội', 'pending', NULL, '0909000140', 18, 1, false, now() - interval '18 hours', NULL, NULL, now() - interval '1 day', now() - interval '18 hours'),
+(18, 145, 145, 13, 'Bài đăng bị từ chối do thiếu thông tin liên hệ', 'bai-dang-bi-tu-choi-thieu-thong-tin-lien-he', 'Biên Hòa, Đồng Nai', 'rejected', 'Bài đăng thiếu thông tin liên hệ rõ ràng và bộ ảnh xác minh nguồn gốc cây.', '0909000145', 22, 0, false, now() - interval '4 days', NULL, now() - interval '3 days', now() - interval '4 days', now() - interval '3 days'),
+(19, 1, 1, 14, 'Lộc vừng đang bị ẩn để rà soát', 'loc-vung-dang-bi-an-de-ra-soat', 'Yên Phong, Bắc Ninh', 'hidden', NULL, '0978195419', 95, 6, true, now() - interval '7 days', now() - interval '6 days', now() - interval '2 days', now() - interval '7 days', now() - interval '2 days'),
+(20, 142, NULL, 11, 'Bản nháp bonsai chưa gửi duyệt', 'ban-nhap-bonsai-chua-gui-duyet', NULL, 'draft', NULL, '0909000142', 0, 0, false, NULL, NULL, NULL, now() - interval '8 hours', now() - interval '2 hours'),
+(21, 143, 3, 12, 'Bài cộng tác viên chờ chủ vườn duyệt', 'bai-cong-tac-vien-cho-chu-vuon-duyet', 'Long Biên, Hà Nội', 'pending_owner', NULL, '0909000143', 14, 1, false, now() - interval '30 hours', NULL, NULL, now() - interval '32 hours', now() - interval '30 hours'),
+(22, 143, 3, 11, 'Bài cộng tác viên đã được xuất bản', 'bai-cong-tac-vien-da-duoc-xuat-ban', 'Long Biên, Hà Nội', 'approved', NULL, '0909000143', 164, 9, true, now() - interval '10 days', now() - interval '9 days', now() - interval '9 days', now() - interval '10 days', now() - interval '9 days');
+
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
 -- Post 1: Sanh Mini
 (1,  1, 'Dáng Văn Nhân'), (1,  2, '25'),  (1,  3, '15'),  (1,  4, '15'),
@@ -1078,6 +1192,14 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 (14, 1, 'Dáng Huyền'),    (14, 2, '72'),  (14, 3, '22'),  (14, 5, 'Bến Tre'),
 -- Post 15: Ổi Bonsai
 (15, 1, 'Dáng Hoành'),    (15, 2, '48'),  (15, 3, '18'),  (15, 4, '7'),  (15, 5, 'Bắc Ninh');
+
+INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
+(17, 1, 'Dáng Trực'), (17, 2, '42'), (17, 3, '16'), (17, 4, '7'), (17, 5, 'Vườn tự ươm'),
+(18, 1, 'Dáng Hoành'), (18, 2, '165'), (18, 3, '64'), (18, 4, '20'), (18, 5, 'Đồng Nai'),
+(19, 1, 'Dáng Huyền'), (19, 2, '88'), (19, 3, '24'), (19, 4, '11'), (19, 5, 'Bắc Ninh'),
+(20, 1, 'Dáng Văn Nhân'), (20, 2, '28'), (20, 3, '9'), (20, 5, 'Chưa cập nhật'),
+(21, 1, 'Dáng Xiên'), (21, 2, '51'), (21, 3, '21'), (21, 4, '8'), (21, 5, 'Long Biên'),
+(22, 1, 'Dáng Trực'), (22, 2, '37'), (22, 3, '14'), (22, 4, '6'), (22, 5, 'Long Biên');
 
 -- Media Assets Seed Data
 INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order) VALUES
@@ -1120,6 +1242,26 @@ INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order) V
 -- Post 15: Ổi Bonsai
 ('post', 15, 'image', '/uploads/oi-bonsai-sai-qua-1.jpg', 0);
 
+INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order, meta_data) VALUES
+('post', 17, 'image', '/uploads/pending-post-17-cover.jpg', 0, '{"label":"Ảnh bìa chờ duyệt"}'::jsonb),
+('post', 17, 'video', '/uploads/pending-post-17-overview.mp4', 1, '{"durationSeconds":18}'::jsonb),
+('post', 18, 'image', '/uploads/rejected-post-18-proof.jpg', 0, '{"label":"Ảnh hồ sơ bị từ chối"}'::jsonb),
+('post', 19, 'image', '/uploads/hidden-post-19-cover.jpg', 0, '{"label":"Ảnh bài đang ẩn"}'::jsonb),
+('post', 20, 'image', '/uploads/draft-post-20-cover.jpg', 0, '{"label":"Ảnh bản nháp"}'::jsonb),
+('post', 21, 'image', '/uploads/pending-owner-post-21-cover.jpg', 0, '{"label":"Ảnh bài chờ chủ vườn duyệt"}'::jsonb),
+('post', 22, 'image', '/uploads/approved-collab-post-22-cover.jpg', 0, '{"label":"Ảnh bài cộng tác viên đã duyệt"}'::jsonb);
+
+INSERT INTO shop_collaborators (
+    shop_collaborators_id,
+    shop_collaborators_shop_id,
+    collaborator_id,
+    shop_collaborators_status,
+    shop_collaborators_created_at
+) VALUES
+(1, 1, 9, 'active', now() - interval '30 days'),
+(2, 3, 143, 'pending', now() - interval '6 days'),
+(3, 6, 9, 'removed', now() - interval '14 days');
+
 -- Favorite Posts (Bookmarks)
 -- User Favorites (Mock - Posts & Contents)
 INSERT INTO user_favorites (user_id, target_id, target_type, created_at) VALUES
@@ -1142,6 +1284,16 @@ INSERT INTO placement_slots (placement_slot_id, placement_slot_code, placement_s
 (5, 'SHOP_REGISTRATION', 'Đăng ký nhà vườn', 0, NULL, true),
 (6, 'PERSONAL_PLAN', 'Nâng cấp cá nhân tháng', 0, NULL, true);
 
+INSERT INTO placement_slots (
+    placement_slot_id,
+    placement_slot_code,
+    placement_slot_title,
+    placement_slot_capacity,
+    placement_slot_rules,
+    placement_slot_published
+) VALUES
+(7, 'BOOST_POST_SPECIAL', 'Vị trí thử nghiệm theo chiến dịch', 2, '{"scope":"Homepage","displayRule":"Manual Override","priority":4,"notes":"Slot đang tắt để kiểm tra trạng thái disabled trong admin."}'::jsonb, false);
+
 INSERT INTO promotion_packages (
     promotion_package_id,
     promotion_package_slot_id,
@@ -1159,6 +1311,18 @@ INSERT INTO promotion_packages (
 (5, 5, 'Gói Lên Nhà Vườn (Vĩnh viễn)', 36500, 0, 0, 'Nâng cấp tài khoản cá nhân lên tài khoản nhà vườn chuyên nghiệp.', true),
 (6, 6, 'Gói Cá Nhân (30 ngày)', 30, 0, 0, 'Gói đăng tin ưu tiên cho cá nhân trong 30 ngày.', true);
 
+INSERT INTO promotion_packages (
+    promotion_package_id,
+    promotion_package_slot_id,
+    promotion_package_title,
+    promotion_package_duration_days,
+    promotion_package_max_posts,
+    promotion_package_display_quota,
+    promotion_package_description,
+    promotion_package_published
+) VALUES
+(7, 7, 'Gói thử nghiệm chiến dịch theo dịp', 14, 2, 60000, 'Gói đang tắt để seed trạng thái disabled ở màn gói quảng bá.', false);
+
 -- Promotion Package Prices
 INSERT INTO promotion_package_prices (price_id, package_id, price, effective_from, effective_to, note, created_by) VALUES
 (1, 1, 99000, now() - interval '45 days', NULL, 'Giá hiện hành của gói vị trí 2 trang chủ.', 1),
@@ -1167,6 +1331,19 @@ INSERT INTO promotion_package_prices (price_id, package_id, price, effective_fro
 (4, 4, 29000, now() - interval '45 days', NULL, 'Giá hiện hành của gói vị trí 3 trang chủ.', 1),
 (5, 5, 250000, now() - interval '45 days', NULL, 'Giá chuẩn cho đăng ký nhà vườn.', 1),
 (6, 6, 30000, now() - interval '45 days', NULL, 'Giá chuẩn cho gói cá nhân tháng.', 1);
+
+INSERT INTO promotion_package_prices (
+    price_id,
+    package_id,
+    price,
+    effective_from,
+    effective_to,
+    note,
+    created_by
+) VALUES
+(7, 1, 89000, now() - interval '90 days', now() - interval '46 days', 'Giá cũ để hiển thị lịch sử điều chỉnh của gói vị trí 2.', 1),
+(8, 2, 329000, now() + interval '7 days', NULL, 'Giá đã được lên lịch áp dụng cho gói vị trí 1.', 1),
+(9, 7, 159000, now() - interval '20 days', NULL, 'Giá hiện hành của gói thử nghiệm đang tắt.', 1);
 
 -- ============================================================
 -- POSTING PLANS (OWNER / PERSONAL)
@@ -1191,6 +1368,27 @@ INSERT INTO user_posting_plans (
 (1, 1, 'GARDEN_OWNER_LIFETIME', 'Gói chủ vườn vĩnh viễn', 'lifetime', 'active', true, 20, 20000, 4, 5000, now() - interval '120 days', NULL, now() - interval '120 days', now() - interval '120 days'),
 (2, 2, 'PERSONAL_MONTHLY',      'Gói cá nhân theo tháng', 'monthly',  'active', true, 20,     0, 4, 5000, now() - interval '12 days',  now() + interval '18 days', now() - interval '12 days', now() - interval '12 days'),
 (3, 3, 'PERSONAL_MONTHLY',      'Gói cá nhân theo tháng', 'monthly',  'expired', true, 20,    0, 4, 5000, now() - interval '65 days', now() - interval '35 days', now() - interval '65 days', now() - interval '35 days');
+
+INSERT INTO user_posting_plans (
+    posting_plan_id,
+    posting_plan_user_id,
+    posting_plan_code,
+    posting_plan_title,
+    posting_plan_cycle,
+    posting_plan_status,
+    posting_plan_auto_approve,
+    posting_plan_daily_post_limit,
+    posting_plan_post_fee_amount,
+    posting_plan_free_edit_quota,
+    posting_plan_edit_fee_amount,
+    posting_plan_started_at,
+    posting_plan_expires_at,
+    posting_plan_created_at,
+    posting_plan_updated_at
+) VALUES
+(4, 6, 'PERSONAL_MONTHLY', 'Gói cá nhân theo tháng', 'monthly', 'active', true, 20, 0, 4, 5000, now() - interval '28 days', now() + interval '2 days', now() - interval '28 days', now() - interval '2 days'),
+(5, 8, 'PERSONAL_MONTHLY', 'Gói cá nhân theo tháng', 'monthly', 'cancelled', true, 20, 0, 4, 5000, now() - interval '40 days', now() - interval '10 days', now() - interval '40 days', now() - interval '10 days'),
+(6, 140, 'GARDEN_OWNER_LIFETIME', 'Gói chủ vườn vĩnh viễn', 'lifetime', 'active', true, 20, 20000, 4, 5000, now() - interval '6 days', NULL, now() - interval '6 days', now() - interval '6 days');
 
 -- Fee ledger demo for posting-plan billing (tracking only)
 -- Fee ledger demo for posting-plan billing (tracking only)
@@ -1284,13 +1482,28 @@ INSERT INTO post_promotions (
     post_promotion_status,
     post_promotion_created_at
 ) VALUES
-(1, 1, 1, 2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 1, '2026-03-05 08:00:00', '2026-04-03 23:59:00', 'expired',  '2026-03-04 16:00:00'),
-(2, 4, 3, 1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 2, '2026-03-12 08:00:00', '2026-04-10 23:59:00', 'expired',  '2026-03-11 14:20:00'),
-(3, 2, 3, 4, 4, 'Gói đẩy bài theo tháng vị trí 3 trang chủ', 3, '2026-03-08 08:00:00', '2026-04-06 23:59:00', 'expired',  '2026-03-07 17:30:00'),
-(5, 12, 6, 1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 2, '2026-03-28 08:00:00', '2026-04-26 23:59:00', 'paused',   '2026-03-27 15:10:00'),
-(6, 9, 3, 2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 1, '2026-04-11 08:00:00', '2026-05-10 23:59:00', 'scheduled','2026-04-09 08:30:00'),
-(7, 15, 1, 2, 1, 'Gói đẩy bài theo tháng vị trí 1 trang chủ', 1, '2026-04-16 08:00:00', '2026-05-15 23:59:00', 'active',   '2026-04-16 07:40:00'),
-(8, 7, 1, 1, 3, 'Gói đẩy bài theo tháng vị trí 2 trang chủ', 2, '2026-04-16 08:05:00', '2026-05-15 23:59:00', 'active',   '2026-04-16 07:45:00');
+(1, 1, 1, 2, 1, 'G�i d?y b�i theo tu?n v? tr� 1 trang ch?', 1, '2026-03-05 08:00:00', '2026-03-11 08:00:00', 'expired',  '2026-03-04 16:00:00'),
+(2, 4, 3, 1, 3, 'G�i d?y b�i theo tu?n v? tr� 2 trang ch?', 2, '2026-03-12 08:00:00', '2026-03-18 08:00:00', 'expired',  '2026-03-11 14:20:00'),
+(3, 2, 3, 4, 4, 'G�i d?y b�i theo tu?n v? tr� 3 trang ch?', 3, '2026-03-08 08:00:00', '2026-03-14 08:00:00', 'expired',  '2026-03-07 17:30:00'),
+(5, 12, 6, 1, 3, 'G�i d?y b�i theo tu?n v? tr� 2 trang ch?', 2, '2026-03-28 08:00:00', '2026-04-03 08:00:00', 'expired',  '2026-03-27 15:10:00'),
+(6, 9, 3, 2, 1, 'G�i d?y b�i theo tu?n v? tr� 1 trang ch?', 1, '2026-05-06 08:00:00', '2026-05-12 08:00:00', 'scheduled','2026-05-01 08:30:00'),
+(7, 15, 1, 2, 1, 'G�i d?y b�i theo tu?n v? tr� 1 trang ch?', 1, '2026-04-28 08:00:00', '2026-05-04 08:00:00', 'active',   '2026-04-27 07:40:00'),
+(8, 7, 1, 1, 3, 'G�i d?y b�i theo tu?n v? tr� 2 trang ch?', 2, '2026-04-29 08:05:00', '2026-05-05 08:05:00', 'active',   '2026-04-28 07:45:00');
+
+INSERT INTO post_promotions (
+    post_promotion_id,
+    post_promotion_post_id,
+    post_promotion_buyer_id,
+    post_promotion_package_id,
+    post_promotion_slot_id,
+    post_promotion_snapshot_title,
+    post_promotion_snapshot_priority,
+    post_promotion_start_at,
+    post_promotion_end_at,
+    post_promotion_status,
+    post_promotion_created_at
+) VALUES
+(9, 11, 6, 4, 4, 'G�i d?y b�i theo tu?n v? tr� 3 trang ch?', 3, '2026-04-30 08:00:00', '2026-05-06 08:00:00', 'paused', '2026-04-29 16:00:00');
 
 -- ============================================================
 -- PAYMENT TRANSACTIONS
@@ -1320,6 +1533,69 @@ INSERT INTO transactions (
 (19, 6, 99000,  'payment', 'bank_transfer', 'GM-TXN-20260327-010', 'success', 'package', 1, '2026-03-27 15:10:00'),
 (20, 1, 299000, 'payment', 'bank_transfer', 'GM-TXN-20260416-011', 'success', 'package', 2, '2026-04-16 07:40:00'),
 (21, 1, 99000,  'payment', 'bank_transfer', 'GM-TXN-20260416-012', 'success', 'package', 1, '2026-04-16 07:45:00');
+
+INSERT INTO transactions (
+    transaction_id,
+    transaction_user_id,
+    transaction_amount,
+    transaction_currency,
+    transaction_type,
+    transaction_status,
+    transaction_provider,
+    transaction_provider_txn_id,
+    transaction_reference_type,
+    transaction_reference_id,
+    transaction_meta,
+    transaction_created_at,
+    transaction_updated_at,
+    transaction_processed_at
+) VALUES
+(22, 3, 299000, 'VND', 'payment', 'pending', 'bank_transfer', 'GM-TXN-20260501-013', 'package', 2, '{"note":"Ngu?i d�ng d� g?i minh ch?ng chuy?n kho?n cho m?t y�u c?u qu?ng b� kh�c, admin dang d?i chi?u th? c�ng."}'::jsonb, now() - interval '14 hours', now() - interval '12 hours', NULL),
+(23, 136, 420000, 'VND', 'payout', 'success', 'bank_transfer', 'GM-HOST-PAYOUT-20260428-014', 'host_payout', 1, '{"audience":"host","note":"Đợt chi trả thủ công đã hoàn tất cho thu nhập Host kỳ tháng 4."}'::jsonb, now() - interval '4 days', now() - interval '4 days', now() - interval '4 days'),
+(24, 136, 600000, 'VND', 'payout', 'pending', 'bank_transfer', 'GM-HOST-PAYOUT-20260501-015', 'host_payout', 2, '{"audience":"host","note":"Đợt chi trả đang chờ admin xác nhận chuyển khoản ngoài hệ thống."}'::jsonb, now() - interval '20 hours', now() - interval '20 hours', NULL);
+
+UPDATE transactions
+SET transaction_meta = '{"priceId":2,"postId":1,"promotionId":1,"slotId":1,"note":"Thanh to�n d� du?c x�c nh?n cho g�i d?y b�i v? tr� 1 trang ch?."}'::jsonb
+WHERE transaction_id = 16;
+
+UPDATE transactions
+SET transaction_meta = '{"priceId":1,"postId":4,"promotionId":2,"slotId":3,"note":"Thanh to�n d� du?c x�c nh?n cho g�i d?y b�i v? tr� 2 trang ch?."}'::jsonb
+WHERE transaction_id = 17;
+
+UPDATE transactions
+SET transaction_meta = '{"priceId":2,"postId":9,"promotionId":6,"slotId":1,"note":"Thanh to�n d� du?c x�c nh?n tru?c khi l�n l?ch chi?n d?ch ti?p theo."}'::jsonb
+WHERE transaction_id = 18;
+
+UPDATE transactions
+SET transaction_meta = '{"priceId":1,"postId":12,"promotionId":5,"slotId":3,"note":"Thanh to�n c?a chi?n d?ch cu d� du?c x�c nh?n d?y d?."}'::jsonb
+WHERE transaction_id = 19;
+
+UPDATE transactions
+SET transaction_meta = '{"priceId":2,"postId":15,"promotionId":7,"slotId":1,"note":"Thanh to�n d� du?c x�c nh?n d? chi?n d?ch dang ch?y hi?n th? b�nh thu?ng."}'::jsonb
+WHERE transaction_id = 20;
+
+UPDATE transactions
+SET transaction_meta = '{"priceId":1,"postId":7,"promotionId":8,"slotId":3,"note":"Thanh to�n d� du?c x�c nh?n d? chi?n d?ch dang ch?y hi?n th? b�nh thu?ng."}'::jsonb
+WHERE transaction_id = 21;
+
+INSERT INTO transactions (
+    transaction_id,
+    transaction_user_id,
+    transaction_amount,
+    transaction_currency,
+    transaction_type,
+    transaction_status,
+    transaction_provider,
+    transaction_provider_txn_id,
+    transaction_reference_type,
+    transaction_reference_id,
+    transaction_meta,
+    transaction_created_at,
+    transaction_updated_at,
+    transaction_processed_at
+) VALUES
+(25, 3, 29000, 'VND', 'payment', 'success', 'bank_transfer', 'GM-TXN-20260307-013', 'package', 4, '{"priceId":4,"postId":2,"promotionId":3,"slotId":4,"note":"Thanh to�n d� du?c x�c nh?n cho g�i d?y b�i v? tr� 3 trang ch?."}'::jsonb, '2026-03-07 17:31:00', '2026-03-07 17:31:00', '2026-03-07 17:31:00'),
+(26, 6, 29000, 'VND', 'payment', 'success', 'bank_transfer', 'GM-TXN-20260429-014', 'package', 4, '{"priceId":4,"postId":11,"promotionId":9,"slotId":4,"note":"Thanh to�n d� du?c x�c nh?n cho chi?n d?ch dang t?m d?ng ? v? tr� 3 trang ch?."}'::jsonb, '2026-04-29 16:05:00', '2026-04-29 16:05:00', '2026-04-29 16:05:00');
 
 -- Tickets Seed Data (Reports migrated)
 INSERT INTO tickets (ticket_id, ticket_type, ticket_creator_id, ticket_target_type, ticket_target_id, ticket_title, ticket_content, ticket_status, ticket_resolution_note, ticket_meta_data, ticket_created_at, ticket_updated_at) VALUES
@@ -1358,6 +1634,41 @@ INSERT INTO event_logs (
 (10, 1, 'system', NULL, 'admin_export',      '2026-03-29 12:44:00', '{"action":"Tạo tệp xuất","detail":"Đã hoàn tất xuất CSV bài đang quảng bá.","generatedBy":"Quản trị viên hệ thống","reportName":"Bài đang quảng bá - 2026-03-29","status":"Completed"}'),
 (11, 2, 'post', 2, 'promotion_resumed',            '2026-03-30 09:20:00', '{"action":"Tiếp tục chiến dịch quảng bá","detail":"Chiến dịch vị trí 2 trang chủ đã được tiếp tục sau khi cập nhật nội dung.","performedBy":"Quản trị viên hệ thống"}'),
 (12, 1, 'post', 3, 'promotion_reopened',           '2026-03-30 15:10:00', '{"action":"Mở lại chiến dịch quảng bá","detail":"Chiến dịch vị trí 3 trang chủ đã hết hạn được mở lại sau khi xác nhận thanh toán.","performedBy":"Quản trị viên hệ thống"}');
+
+INSERT INTO notifications (
+    notification_id,
+    recipient_id,
+    sender_id,
+    title,
+    message,
+    type,
+    meta_data,
+    is_read,
+    created_at
+) VALUES
+(1, 1, NULL, 'Cập nhật hồ sơ shop', 'Admin đã tiếp nhận thay đổi hồ sơ shop của bạn và sẽ phản hồi trong vòng 24 giờ.', 'info', '{"source":"admin_manual_notification","scope":"single"}'::jsonb, true, now() - interval '3 days'),
+(2, 2, NULL, 'Yêu cầu bổ sung minh chứng thanh toán', 'Chiến dịch quảng bá của bạn đang chờ xác minh thanh toán. Vui lòng phản hồi nếu cần hỗ trợ thêm.', 'warning', '{"source":"admin_manual_notification","scope":"single","promotionId":6}'::jsonb, false, now() - interval '2 days'),
+(3, 136, NULL, 'Đã xác nhận chi trả Host', 'GreenMarket đã đánh dấu hoàn tất đợt chi trả thủ công gần nhất cho nội dung Host của bạn.', 'success', '{"source":"financial_admin","audience":"host"}'::jsonb, false, now() - interval '1 day'),
+(4, 141, NULL, 'Tài khoản đang bị khóa', 'Tài khoản của bạn hiện bị khóa tạm thời để rà soát vi phạm ở hồ sơ shop.', 'error', '{"source":"admin_manual_notification","scope":"single"}'::jsonb, false, now() - interval '18 hours');
+
+INSERT INTO event_logs (
+    event_log_id,
+    event_log_user_id,
+    event_log_target_type,
+    event_log_target_id,
+    event_log_event_type,
+    event_log_event_time,
+    event_log_meta
+) VALUES
+(13, NULL, 'notification', 1, 'admin_manual_notification_sent', now() - interval '3 days', '{"scope":"single","recipientId":1,"recipientName":"Nguyễn Thành Nam","recipientCount":1,"title":"Cập nhật hồ sơ shop","finalMessage":"Admin đã tiếp nhận thay đổi hồ sơ shop của bạn và sẽ phản hồi trong vòng 24 giờ.","notificationType":"info","template":{"templateId":7,"templateName":"Notification - Export Completed","templateType":"Notification"},"performedBy":"Quản trị viên hệ thống"}'::jsonb),
+(14, NULL, 'notification', 2, 'admin_manual_notification_sent', now() - interval '2 days', '{"scope":"single","recipientId":2,"recipientName":"Trần Văn Bonsai","recipientCount":1,"title":"Yêu cầu bổ sung minh chứng thanh toán","finalMessage":"Chiến dịch quảng bá của bạn đang chờ xác minh thanh toán. Vui lòng phản hồi nếu cần hỗ trợ thêm.","notificationType":"warning","template":{"templateId":5,"templateName":"Notification - Payment Verification","templateType":"Notification"},"performedBy":"Quản trị viên hệ thống"}'::jsonb),
+(15, NULL, 'notification', NULL, 'admin_manual_notification_sent', now() - interval '1 day', '{"scope":"all_users","recipientCount":12,"title":"Nhắc lịch bảo trì nhẹ","finalMessage":"GreenMarket sẽ bảo trì nhẹ ngoài giờ cao điểm vào 23:00 tối nay. Các giao dịch đang chạy sẽ không bị ảnh hưởng.","notificationType":"info","template":null,"performedBy":"Quản trị viên hệ thống"}'::jsonb),
+(16, 6, 'shop_collaborator', 2, 'admin_collaborator_relationship_active', now() - interval '18 hours', '{"action":"Admin Collaborator Relationship Active","detail":"Quan hệ cộng tác giữa shop và cộng tác viên đã được admin kích hoạt sau khi đối chiếu hồ sơ.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
+(17, 136, 'host_content', 4, 'admin_host_content_published', now() - interval '14 hours', '{"action":"Admin Host Content Published","detail":"Bài Host chờ duyệt đã được xuất bản để lên chuyên mục News trên web người dùng.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
+(18, 136, 'host_payout', 1, 'admin_payout_request_completed', now() - interval '10 hours', '{"action":"Admin Payout Request Completed","detail":"Đợt chi trả Host kỳ gần nhất đã được xác nhận hoàn tất sau khi chuyển khoản thủ công.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
+(19, 1, 'system_setting', 1, 'admin_system_settings_updated', now() - interval '8 hours', '{"action":"Admin System Settings Updated","detail":"Thiết lập chi trả Host và ngưỡng thưởng theo lượt xem đã được cập nhật.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
+(20, 2, 'shop', 3, 'shop_view', now() - interval '4 hours', '{"action":"Shop View","detail":"Người dùng đã mở hồ sơ cửa hàng để xem thông tin và nội dung đang hiển thị.","performedBy":"Hệ thống"}'::jsonb),
+(21, 2, 'shop', 3, 'shop_contact_click', now() - interval '3 hours', '{"action":"Shop Contact Click","detail":"Người dùng đã nhấn vào nút liên hệ của cửa hàng để lấy thông tin kết nối.","performedBy":"Hệ thống"}'::jsonb);
 
 -- ============================================================
 -- DAILY PLACEMENT METRICS
@@ -1485,6 +1796,9 @@ SELECT setval('system_settings_system_setting_id_seq', (SELECT COALESCE(MAX(syst
 SELECT setval('admin_templates_template_id_seq', (SELECT COALESCE(MAX(template_id), 1) FROM admin_templates));
 SELECT setval('post_promotions_post_promotion_id_seq', (SELECT COALESCE(MAX(post_promotion_id), 1) FROM post_promotions));
 SELECT setval('event_logs_event_log_id_seq', (SELECT COALESCE(MAX(event_log_id), 1) FROM event_logs));
+SELECT setval('notifications_notification_id_seq', (SELECT COALESCE(MAX(notification_id), 1) FROM notifications));
+SELECT setval('host_contents_host_content_id_seq', (SELECT COALESCE(MAX(host_content_id), 1) FROM host_contents));
+SELECT setval('shop_collaborators_shop_collaborators_id_seq', (SELECT COALESCE(MAX(shop_collaborators_id), 1) FROM shop_collaborators));
 SELECT setval('daily_placement_metrics_daily_placement_metric_id_seq', (SELECT COALESCE(MAX(daily_placement_metric_id), 1) FROM daily_placement_metrics));
 SELECT setval('trend_scores_trend_score_id_seq', (SELECT COALESCE(MAX(trend_score_id), 1) FROM trend_scores));
 SELECT setval('ai_insights_ai_insight_id_seq', (SELECT COALESCE(MAX(ai_insight_id), 1) FROM ai_insights));
@@ -1519,4 +1833,3 @@ CREATE TRIGGER trg_sync_shop_to_user_email
     AFTER UPDATE OF shop_email ON shops
     FOR EACH ROW
     EXECUTE FUNCTION sync_shop_to_user_email();
-
