@@ -80,6 +80,53 @@ const normalizePayoutStatus = (status: string | null | undefined) => {
   return normalized || "pending";
 };
 
+const getHostPayoutBalance = async (userId: number) => {
+  await hostIncomePolicyService.syncForUser(userId);
+
+  const [earningSummary] = await db
+    .select({
+      total:
+        sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
+    })
+    .from(ledgers)
+    .where(
+      and(
+        eq(ledgers.ledgerUserId, userId),
+        eq(ledgers.ledgerType, "earning"),
+      ),
+    );
+
+  const [payoutSummary] = await db
+    .select({
+      paid:
+        sql<string>`COALESCE(SUM(${transactions.transactionAmount}) FILTER (WHERE ${transactions.transactionStatus} = 'success'), 0)`,
+      pending:
+        sql<string>`COALESCE(SUM(${transactions.transactionAmount}) FILTER (WHERE ${transactions.transactionStatus} = 'pending'), 0)`,
+      pendingCount:
+        sql<number>`COUNT(*) FILTER (WHERE ${transactions.transactionStatus} = 'pending')`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.transactionUserId, userId),
+        eq(transactions.transactionType, "payout"),
+      ),
+    );
+
+  const totalEarnings = toNumber(earningSummary?.total);
+  const paidOut = toNumber(payoutSummary?.paid);
+  const pendingAmount = toNumber(payoutSummary?.pending);
+  const availableBalance = Math.max(totalEarnings - paidOut - pendingAmount, 0);
+
+  return {
+    totalEarnings,
+    paidOut,
+    pendingAmount,
+    pendingCount: Number(payoutSummary?.pendingCount ?? 0),
+    availableBalance,
+  };
+};
+
 // --- Dashboard ---
 export const getHostDashboard = async (
   req: AuthRequest,
@@ -91,8 +138,6 @@ export const getHostDashboard = async (
       res.status(401).json({ error: "Chưa xác thực người dùng." });
       return;
     }
-
-    await hostIncomePolicyService.syncForUser(userId);
 
     const [contentStats] = await db
       .select({
@@ -109,37 +154,14 @@ export const getHostDashboard = async (
         ),
       );
 
-    const [earningSummary] = await db
-      .select({
-        total:
-          sql<string>`COALESCE(SUM(CASE WHEN ${ledgers.ledgerDirection} = 'CREDIT' THEN ${ledgers.ledgerAmount} ELSE 0 END), 0)`,
-      })
-      .from(ledgers)
-      .where(eq(ledgers.ledgerUserId, userId));
-
-    const [payoutSummary] = await db
-      .select({
-        total:
-          sql<string>`COALESCE(SUM(${transactions.transactionAmount}), 0)`,
-      })
-      .from(transactions)
-      .where(
-        and(
-          eq(transactions.transactionUserId, userId),
-          eq(transactions.transactionType, "payout"),
-          eq(transactions.transactionStatus, "success"),
-        ),
-      );
-
-    const totalEarnings = toNumber(earningSummary?.total);
-    const paidOut = toNumber(payoutSummary?.total);
+    const payoutBalance = await getHostPayoutBalance(userId);
 
     res.json({
       stats: {
         totalContents: Number(contentStats?.totalContents ?? 0),
         totalViews: Number(contentStats?.totalViews ?? 0),
-        totalEarnings,
-        availableBalance: Math.max(totalEarnings - paidOut, 0),
+        totalEarnings: payoutBalance.totalEarnings,
+        availableBalance: payoutBalance.availableBalance,
       },
     });
   } catch (error) {
@@ -271,7 +293,7 @@ export const createPayoutRequest = async (
 ): Promise<void> => {
   res.status(410).json({
     error:
-      "Luồng Host tự gửi yêu cầu chi trả không còn sử dụng. GreenMarket sẽ chuyển khoản thủ công và admin tự đánh dấu đã chi trả.",
+      "Host không tự tạo yêu cầu chi trả. Admin sẽ tạo khoản chi trả, chuyển khoản ngoài hệ thống và đánh dấu trạng thái trong trang quản trị.",
   });
 };
 

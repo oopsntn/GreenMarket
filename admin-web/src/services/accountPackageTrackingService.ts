@@ -22,8 +22,6 @@ type AccountPackageTrackingApiRow = {
   email: string | null;
   startedAt: string | null;
   expiresAt: string | null;
-  latestPaymentAmount: number | null;
-  latestPaymentAt: string | null;
   status: AccountPackageTrackingStatus;
   statusLabel: string;
   note: string;
@@ -32,14 +30,6 @@ type AccountPackageTrackingApiRow = {
 type AccountPackageTrackingApiPayload = {
   summary: AccountPackageTrackingSummary;
   rows: AccountPackageTrackingApiRow[];
-};
-
-const formatCurrencyLabel = (value: number | null) => {
-  if (!Number.isFinite(value ?? Number.NaN) || !value || value <= 0) {
-    return null;
-  }
-
-  return `${Number(value).toLocaleString("vi-VN")} VND`;
 };
 
 const formatDateTimeLabel = (value: string | null) => {
@@ -76,8 +66,6 @@ const normalizeRow = (
   email: row.email?.trim() || null,
   startedAt: formatDateTimeLabel(row.startedAt),
   expiresAt: formatDateTimeLabel(row.expiresAt),
-  latestPaymentAt: formatDateTimeLabel(row.latestPaymentAt),
-  latestPaymentAmountLabel: formatCurrencyLabel(row.latestPaymentAmount),
   note: row.note.trim(),
 });
 

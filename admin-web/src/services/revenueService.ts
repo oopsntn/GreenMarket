@@ -8,7 +8,7 @@ import type {
 const SUMMARY_TITLE_LABELS: Record<string, string> = {
   "Total Revenue": "Tổng doanh thu",
   "Active Packages": "Gói có phát sinh doanh thu",
-  "Host / News Payout Cost": "Chi phí chi trả Host / News",
+  "Host / News Payout Cost": "Chi phí chi trả Host / Tin tức",
   "Estimated Profit": "Lợi nhuận tạm tính",
   "Avg. Order Value": "Giá trị đơn hàng trung bình",
   "Top Slot Revenue": "Vị trí có doanh thu cao nhất",
@@ -18,12 +18,8 @@ const SUMMARY_NOTE_REPLACEMENTS: Array<[string, string]> = [
   ["successful order(s) in period", "đơn hàng thanh toán thành công trong kỳ"],
   ["Packages with paid orders in period", "gói có đơn thanh toán thành công trong kỳ"],
   [
-    "completed Host payout request(s) in period",
-    "yêu cầu chi trả Host / News đã hoàn thành trong kỳ",
-  ],
-  [
     "Revenue minus completed Host / News payout cost",
-    "doanh thu trừ chi phí chi trả Host / News đã hoàn tất",
+    "doanh thu trừ chi phí chi trả Host / Tin tức đã hoàn tất",
   ],
   [
     "Average successful package payment",

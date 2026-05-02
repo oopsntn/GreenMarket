@@ -30,12 +30,6 @@ const getStatusVariant = (status: AccountPackageTrackingStatus) => {
   return "success" as const;
 };
 
-const getLatestPaymentAmountText = (row: AccountPackageTrackingRow) =>
-  row.latestPaymentAmountLabel || "Không có lịch sử";
-
-const getLatestPaymentTimeText = (row: AccountPackageTrackingRow) =>
-  row.latestPaymentAt || "Kích hoạt từ hệ thống";
-
 function AccountPackageTrackingPage() {
   const [payload, setPayload] = useState<AccountPackageTrackingPayload>({
     summary: {
@@ -277,7 +271,6 @@ function AccountPackageTrackingPage() {
                     <th>Loại đối tượng</th>
                     <th>Bắt đầu</th>
                     <th>Hết hạn</th>
-                    <th>Thanh toán gần nhất</th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
                   </tr>
@@ -306,12 +299,6 @@ function AccountPackageTrackingPage() {
                       <td>{row.holderTypeLabel}</td>
                       <td>{row.startedAt || "Chưa ghi nhận"}</td>
                       <td>{row.expiresAt || "Không hết hạn"}</td>
-                      <td>
-                        <div className="account-package-tracking-table__payment">
-                          <strong>{getLatestPaymentAmountText(row)}</strong>
-                          <span>{getLatestPaymentTimeText(row)}</span>
-                        </div>
-                      </td>
                       <td>
                         <StatusBadge
                           label={row.statusLabel}
@@ -361,7 +348,7 @@ function AccountPackageTrackingPage() {
       <BaseModal
         isOpen={isDetailOpen}
         title="Chi tiết người đang dùng gói"
-        description="Xem gói đang dùng, dữ liệu liên hệ, thời gian hiệu lực và lịch sử thanh toán gần nhất."
+        description="Xem gói đang dùng, dữ liệu liên hệ, thời gian hiệu lực và trạng thái hiện tại."
         onClose={closeDetail}
         maxWidth="840px"
       >
@@ -390,14 +377,6 @@ function AccountPackageTrackingPage() {
             <div>
               <span>Hết hạn</span>
               <strong>{selectedRow.expiresAt || "Không hết hạn"}</strong>
-            </div>
-            <div>
-              <span>Thanh toán gần nhất</span>
-              <strong>{getLatestPaymentAmountText(selectedRow)}</strong>
-            </div>
-            <div>
-              <span>Thời điểm thanh toán</span>
-              <strong>{getLatestPaymentTimeText(selectedRow)}</strong>
             </div>
             <div>
               <span>Email</span>

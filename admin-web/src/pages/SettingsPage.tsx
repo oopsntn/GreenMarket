@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import ConfirmDialog from "../components/ConfirmDialog";
 import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
@@ -128,6 +129,7 @@ function SettingsPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [formError, setFormError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -238,14 +240,9 @@ function SettingsPage() {
   };
 
   const handleReset = async () => {
-    const confirmed = window.confirm(
-      "Bạn có chắc muốn khôi phục toàn bộ thiết lập về mặc định không?",
-    );
-
-    if (!confirmed) return;
-
     try {
       setIsSaving(true);
+      setIsResetConfirmOpen(false);
       const defaultSettings = normalizeSettings(await settingsService.resetSettings());
       setSettings(defaultSettings);
       setSavedSettings(defaultSettings);
@@ -283,7 +280,7 @@ function SettingsPage() {
         <button
           type="button"
           className="settings-toolbar__reset"
-          onClick={() => void handleReset()}
+          onClick={() => setIsResetConfirmOpen(true)}
           disabled={isLoading || isSaving}
         >
           Khôi phục mặc định
@@ -590,6 +587,16 @@ function SettingsPage() {
       </div>
 
       <ToastContainer toasts={toasts} onClose={removeToast} />
+      <ConfirmDialog
+        isOpen={isResetConfirmOpen}
+        title="Khôi phục thiết lập mặc định"
+        message="Bạn có chắc muốn khôi phục toàn bộ thiết lập hệ thống về mặc định không? Thao tác này sẽ ghi đè cấu hình hiện tại sau khi xác nhận."
+        confirmText={isSaving ? "Đang khôi phục..." : "Khôi phục"}
+        cancelText="Hủy"
+        tone="danger"
+        onConfirm={() => void handleReset()}
+        onCancel={() => setIsResetConfirmOpen(false)}
+      />
     </div>
   );
 }
