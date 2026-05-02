@@ -243,3 +243,234 @@ a {
 ) tbody tr:hover td {
   background-color: #fbfdf9;
 }
+
+/* Table alignment standards */
+:is(
+  .account-packages-table,
+  .account-package-tracking-table,
+  .activity-log-table,
+  .ai-insights-table,
+  .analytics-table,
+  .attributes-table,
+  .boosted-posts-table,
+  .categories-table,
+  .mapping-table,
+  .collaborators-page__table,
+  .customer-spending-table,
+  .export-history-table,
+  .financial-page__table,
+  .host-contents-page__table,
+  .placement-slots-table,
+  .posts-moderation-table,
+  .promotion-packages-table,
+  .promotions-table,
+  .reports-moderation-table,
+  .revenue-table,
+  .roles-capability-table,
+  .shops-table,
+  .templates-table,
+  .users-table,
+  .users-modal__history-table
+) th {
+  text-align: left;
+}
+
+:is(
+  .account-packages-table,
+  .account-package-tracking-table,
+  .activity-log-table,
+  .ai-insights-table,
+  .analytics-table,
+  .attributes-table,
+  .boosted-posts-table,
+  .categories-table,
+  .mapping-table,
+  .collaborators-page__table,
+  .customer-spending-table,
+  .export-history-table,
+  .financial-page__table,
+  .host-contents-page__table,
+  .placement-slots-table,
+  .posts-moderation-table,
+  .promotion-packages-table,
+  .promotions-table,
+  .reports-moderation-table,
+  .revenue-table,
+  .roles-capability-table,
+  .shops-table,
+  .templates-table,
+  .users-table,
+  .users-modal__history-table
+) td {
+  text-align: left;
+}
+
+.account-packages-table :is(th:nth-child(1), th:nth-child(3), th:nth-child(4), th:nth-child(6), th:nth-child(7), th:nth-child(8), td:nth-child(1), td:nth-child(3), td:nth-child(4), td:nth-child(6), td:nth-child(7), td:nth-child(8)),
+.account-package-tracking-table :is(th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8)),
+.activity-log-table :is(th:nth-child(1), th:nth-child(6), td:nth-child(1), td:nth-child(6)),
+.ai-insights-table :is(th:nth-child(1), th:nth-child(6), td:nth-child(1), td:nth-child(6)),
+.analytics-table :is(th:nth-child(1), th:nth-child(5), td:nth-child(1), td:nth-child(5)),
+.attributes-table :is(th:nth-child(1), th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), td:nth-child(1), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7)),
+.boosted-posts-table :is(th:nth-child(1), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(9), td:nth-child(1), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(9)),
+.categories-table :is(th:nth-child(1), th:nth-child(4), th:nth-child(5), th:nth-child(6), td:nth-child(1), td:nth-child(4), td:nth-child(5), td:nth-child(6)),
+.mapping-table :is(th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8)),
+.collaborators-page__table :is(th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7)),
+.customer-spending-table :is(th:nth-child(1), th:nth-child(4), th:nth-child(7), td:nth-child(1), td:nth-child(4), td:nth-child(7)),
+.export-history-table :is(th:nth-child(1), th:nth-child(3), th:nth-child(4), th:nth-child(6), th:nth-child(7), td:nth-child(1), td:nth-child(3), td:nth-child(4), td:nth-child(6), td:nth-child(7)),
+.financial-page__table :is(th:nth-child(1), th:nth-child(3), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), td:nth-child(1), td:nth-child(3), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8)),
+.host-contents-page__table :is(th:nth-child(3), th:nth-child(5), th:nth-child(7), th:nth-child(8), td:nth-child(3), td:nth-child(5), td:nth-child(7), td:nth-child(8)),
+.placement-slots-table :is(th:nth-child(1), th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), td:nth-child(1), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7)),
+.posts-moderation-table :is(th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6)),
+.promotion-packages-table :is(th:nth-child(1), th:nth-child(3), th:nth-child(4), th:nth-child(6), th:nth-child(8), th:nth-child(9), td:nth-child(1), td:nth-child(3), td:nth-child(4), td:nth-child(6), td:nth-child(8), td:nth-child(9)),
+.promotions-table :is(th:nth-child(1), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), th:nth-child(10), td:nth-child(1), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8), td:nth-child(10)),
+.reports-moderation-table :is(th:nth-child(3), th:nth-child(4), th:nth-child(5), td:nth-child(3), td:nth-child(4), td:nth-child(5)),
+.revenue-table :is(th:nth-child(1), th:nth-child(3), th:nth-child(4), td:nth-child(1), td:nth-child(3), td:nth-child(4)),
+.roles-capability-table :is(th:not(:first-child), td:not(:first-child)),
+.shops-table :is(th:nth-child(1), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), td:nth-child(1), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8)),
+.templates-table :is(th:nth-child(2), th:nth-child(5), th:nth-child(6), th:nth-child(7), td:nth-child(2), td:nth-child(5), td:nth-child(6), td:nth-child(7)),
+.users-table :is(th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7)),
+.users-modal__history-table :is(th:nth-child(1), th:nth-child(2), th:nth-child(4), td:nth-child(1), td:nth-child(2), td:nth-child(4)) {
+  text-align: center !important;
+}
+
+.account-packages-table :is(th:nth-child(5), td:nth-child(5)),
+.analytics-table :is(th:nth-child(3), th:nth-child(4), th:nth-child(6), td:nth-child(3), td:nth-child(4), td:nth-child(6)),
+.boosted-posts-table :is(th:nth-child(7), th:nth-child(8), td:nth-child(7), td:nth-child(8)),
+.customer-spending-table :is(th:nth-child(5), th:nth-child(6), td:nth-child(5), td:nth-child(6)),
+.financial-page__table :is(th:nth-child(4), td:nth-child(4)),
+.host-contents-page__table :is(th:nth-child(4), th:nth-child(6), td:nth-child(4), td:nth-child(6)),
+.promotion-packages-table :is(th:nth-child(5), th:nth-child(7), td:nth-child(5), td:nth-child(7)),
+.revenue-table :is(th:nth-child(5), td:nth-child(5)) {
+  text-align: right !important;
+}
+
+.posts-moderation-table td:nth-child(1),
+.posts-moderation-table td:nth-child(2),
+.reports-moderation-table td:nth-child(1),
+.reports-moderation-table td:nth-child(2),
+.activity-log-table td:nth-child(2),
+.activity-log-table td:nth-child(3),
+.activity-log-table td:nth-child(4),
+.activity-log-table td:nth-child(5),
+.templates-table td:nth-child(1),
+.templates-table td:nth-child(3),
+.templates-table td:nth-child(4),
+.users-table td:nth-child(1),
+.users-table td:nth-child(2),
+.financial-page__table td:nth-child(2),
+.host-contents-page__table td:nth-child(1),
+.host-contents-page__table td:nth-child(2),
+.collaborators-page__table td:nth-child(1),
+.collaborators-page__table td:nth-child(2),
+.account-package-tracking-table td:nth-child(1),
+.account-package-tracking-table td:nth-child(2),
+.promotions-table td:nth-child(2),
+.promotions-table td:nth-child(3),
+.promotions-table td:nth-child(4) {
+  text-align: left !important;
+}
+
+.posts-moderation-actions,
+.reports-moderation-actions,
+.financial-page__table-action,
+.roles-capability-table td:not(:first-child),
+.templates-table td:nth-child(7),
+.users-table td:nth-child(7),
+.users-modal__history-table td:nth-child(1),
+.users-modal__history-table td:nth-child(2),
+.users-modal__history-table td:nth-child(4) {
+  justify-content: center !important;
+}
+
+.posts-moderation-status,
+.posts-moderation-metrics,
+.reports-moderation-status,
+.financial-page__table td:nth-child(6),
+.host-contents-page__table td:nth-child(5) {
+  align-items: center !important;
+  text-align: center !important;
+}
+
+.posts-moderation-cell,
+.reports-moderation-cell,
+.activity-log-table td:nth-child(2) > div,
+.activity-log-table td:nth-child(3) > div,
+.activity-log-table td:nth-child(4) > div,
+.activity-log-table td:nth-child(5) > div,
+.account-package-tracking-table td:nth-child(1) > div,
+.account-package-tracking-table td:nth-child(2) > div,
+.collaborators-page__table td:nth-child(1) > div,
+.collaborators-page__table td:nth-child(2) > div,
+.financial-page__table td:nth-child(2) > div,
+.host-contents-page__table td:nth-child(1) > div,
+.host-contents-page__table td:nth-child(2) > div,
+.promotions-table td:nth-child(2) > div {
+  align-items: flex-start !important;
+  text-align: left !important;
+}
+
+/* Table action column standards */
+:is(
+  .account-packages-actions,
+  .attributes-actions,
+  .boosted-posts-actions,
+  .categories-actions,
+  .mapping-actions,
+  .placement-slots-actions,
+  .posts-moderation-actions,
+  .promotion-packages-actions,
+  .promotions-actions,
+  .reports-moderation-actions,
+  .shops-actions,
+  .templates-actions,
+  .users-actions
+) {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  width: min(112px, 100%);
+  min-width: 96px;
+  margin-inline: auto;
+}
+
+:is(
+  .account-packages-actions,
+  .attributes-actions,
+  .boosted-posts-actions,
+  .categories-actions,
+  .mapping-actions,
+  .placement-slots-actions,
+  .posts-moderation-actions,
+  .promotion-packages-actions,
+  .promotions-actions,
+  .reports-moderation-actions,
+  .shops-actions,
+  .templates-actions,
+  .users-actions
+) button {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+}
+
+:is(
+  .account-package-tracking-table__view,
+  .collaborators-page__table-action,
+  .financial-page__table-action,
+  .host-contents-page__table-action
+) {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: min(112px, 100%);
+  min-width: 96px;
+  margin-inline: auto;
+  white-space: nowrap;
+}

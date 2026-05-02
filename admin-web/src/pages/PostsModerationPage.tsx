@@ -630,7 +630,7 @@ function PostsModerationPage() {
                 <input type="text" value={selectedPost.categoryLabel} disabled />
               </div>
               <div className="posts-moderation-detail__field">
-                <label>Giá</label>
+                <label>Hình thức giá</label>
                 <input type="text" value={selectedPost.priceLabel} disabled />
               </div>
             </div>
