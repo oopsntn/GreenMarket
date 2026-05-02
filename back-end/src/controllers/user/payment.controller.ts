@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { AuthRequest } from "../../dtos/auth";
 import {
   buildPaymentResultRedirectUrl,
   getVNPayConfig,

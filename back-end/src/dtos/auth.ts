@@ -11,7 +11,13 @@ export interface JWTUserPayload {
     businessRoleCode?: string | null;
 }
 
-export interface AuthRequest extends Request {
-    user?: JWTUserPayload;
-    shop?: Shop;
+declare global {
+    namespace Express {
+        interface Request {
+            user?: JWTUserPayload;
+            shop?: Shop;
+        }
+    }
 }
+
+export interface AuthRequest extends Request {}

@@ -1,8 +1,6 @@
 import multer from "multer";
 import path from "path";
 
-// We use memory storage because our IStorageService handles the persistence
-// This allows us to easily swap to Cloudinary/S3 later
 const storage = multer.memoryStorage();
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set([
@@ -88,15 +86,12 @@ const createUploadMiddleware = (allowVideos: boolean, maxFileSize: number) => mu
 export const upload = createUploadMiddleware(true, MAX_VIDEO_SIZE);
 export const uploadImagesOnly = createUploadMiddleware(false, MAX_IMAGE_SIZE);
 
-/**
- * Secondary validation middleware to enforce different size limits for images vs videos
- * in mixed upload requests.
- */
+
 export const validateFileSizes = (req: any, res: any, next: any) => {
     if (!req.files) return next();
 
     const files = Array.isArray(req.files) ? req.files : Object.values(req.files).flat();
-    
+
     for (const file of (files as Express.Multer.File[])) {
         const mimeType = String(file.mimetype || "").toLowerCase();
         const isVideo = mimeType.startsWith("video/") || ALLOWED_VIDEO_MIME_TYPES.has(mimeType);

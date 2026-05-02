@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../config/db";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { AuthRequest } from "../../dtos/auth";
 import { adminTemplates } from "../../models/schema/admin-templates.ts";
 import {
   tickets as reports,

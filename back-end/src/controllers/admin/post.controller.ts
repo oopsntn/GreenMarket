@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../config/db";
-import { AuthRequest } from "../../dtos/auth.ts";
+import { AuthRequest } from "../../dtos/auth";
 import { adminTemplates } from "../../models/schema/admin-templates.ts";
 import { eventLogs, mediaAssets } from "../../models/schema/index.ts";
 import { postAttributeValues } from "../../models/schema/post-attribute-values";
