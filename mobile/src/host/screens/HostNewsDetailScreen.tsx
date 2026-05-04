@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { ArrowLeft, CalendarDays, ExternalLink, Store, ShoppingBag, Trash2, User } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { hostService, HostPublicContentDetail } from '../services/hostService';
+import { hostService, HostContentDetail } from '../services/hostService';
 import { resolveImageUrl } from '../../utils/resolveImageUrl';
 import { useAuth } from '../../context/AuthContext';
 import CustomAlert from '../../utils/AlertHelper';
@@ -92,7 +92,7 @@ const HostNewsDetailScreen = ({ route }: any) => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [content, setContent] = useState<HostPublicContentDetail | null>(null);
+  const [content, setContent] = useState<HostContentDetail | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -100,7 +100,7 @@ const HostNewsDetailScreen = ({ route }: any) => {
       try {
         setLoading(true);
         setError(null);
-        const res = await hostService.getPublicContentDetail(hostContentId);
+        const res = await hostService.getContentDetail(hostContentId);
         setContent(res);
       } catch (e: any) {
         const msg =

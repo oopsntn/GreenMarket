@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import cors from "cors";
 import { createServer } from "http";
 import { initSocket } from "./config/socket";
+import { sql } from "drizzle-orm";
+import { db } from "./config/db.ts";
 
 dotenv.config();
 
@@ -55,6 +57,30 @@ import path from "path";
 import "./services/promotionScheduler.ts";
 
 const app = express();
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const waitForDatabase = async () => {
+  const maxAttempts = Number(process.env.DB_READY_RETRIES || 12);
+  const delayMs = Number(process.env.DB_READY_DELAY_MS || 1000);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await db.execute(sql`SELECT 1`);
+      console.log("[Startup] Database is ready.");
+      return;
+    } catch (error) {
+      const isLastAttempt = attempt >= maxAttempts;
+      console.warn(
+        `[Startup] Database not ready (attempt ${attempt}/${maxAttempts}).`,
+      );
+      if (isLastAttempt) {
+        throw error;
+      }
+      await sleep(delayMs);
+    }
+  }
+};
 
 // Harden CORS
 const serverIp = process.env.IP || "localhost";
@@ -199,6 +225,16 @@ const httpServer = createServer(app);
 initSocket(httpServer);
 
 const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});
+const startServer = async () => {
+  try {
+    await waitForDatabase();
+    httpServer.listen(PORT, () => {
+      console.log("Server running on port", PORT);
+    });
+  } catch (error) {
+    console.error("[Startup] Failed to connect to database.", error);
+    process.exit(1);
+  }
+};
+
+startServer();

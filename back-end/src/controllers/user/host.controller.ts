@@ -327,6 +327,60 @@ export const getContents = async (
   }
 };
 
+export const getContentDetail = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const contentId = parseId(req.params.id as string);
+
+    if (!userId || !contentId) {
+      res.status(400).json({ error: "ID nội dung không hợp lệ." });
+      return;
+    }
+
+    const [content] = await db
+      .select({
+        hostContentId: hostContents.hostContentId,
+        hostContentTitle: hostContents.hostContentTitle,
+        hostContentDescription: hostContents.hostContentDescription,
+        hostContentBody: hostContents.hostContentBody,
+        hostContentCategory: hostContents.hostContentCategory,
+        hostContentMediaUrls: hostContents.hostContentMediaUrls,
+        hostContentStatus: hostContents.hostContentStatus,
+        hostContentViewCount: hostContents.hostContentViewCount,
+        hostContentCreatedAt: hostContents.hostContentCreatedAt,
+        hostContentUpdatedAt: hostContents.hostContentUpdatedAt,
+        authorId: users.userId,
+        authorName: users.userDisplayName,
+        authorAvatar: users.userAvatarUrl,
+      })
+      .from(hostContents)
+      .leftJoin(users, eq(hostContents.hostContentAuthorId, users.userId))
+      .where(
+        and(
+          eq(hostContents.hostContentId, contentId),
+          eq(hostContents.hostContentAuthorId, userId),
+          sql`${hostContents.hostContentDeletedAt} IS NULL`,
+        ),
+      )
+      .limit(1);
+
+    if (!content) {
+      res
+        .status(404)
+        .json({ error: "Không tìm thấy nội dung hoặc bạn không có quyền." });
+      return;
+    }
+
+    res.json(content);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Lỗi máy chủ nội bộ." });
+  }
+};
+
 export const createContent = async (
   req: AuthRequest,
   res: Response,
