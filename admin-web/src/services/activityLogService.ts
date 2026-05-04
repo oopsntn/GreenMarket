@@ -11,8 +11,10 @@ type LegacyActivityLogItem = {
   performedAt?: string;
 };
 
+const MOJIBAKE_PATTERN = /[\u00c3\u00c2\u00c6\u00c4\u00e2\u00ba\u00bb]/;
+
 const repairMojibake = (value: string) => {
-  if (!value || !/[ÃƒÃ‚Ã¡ÂºÃ¡Â»Ã„]/.test(value)) {
+  if (!value || !MOJIBAKE_PATTERN.test(value)) {
     return value;
   }
 
@@ -35,6 +37,9 @@ const normalizeTextKey = (value: string) =>
     .toLowerCase();
 
 const ACTION_LABELS: Record<string, string> = {
+  "shop view": "Xem cửa hàng",
+  "shop contact click": "Nhấn liên hệ cửa hàng",
+  "admin manual notification sent": "Gửi thông báo thủ công",
   "admin login": "Đăng nhập trang quản trị",
   "role assigned": "Gán vai trò",
   "account locked": "Khóa tài khoản",
@@ -44,8 +49,10 @@ const ACTION_LABELS: Record<string, string> = {
   "promotion reopened": "Mở lại chiến dịch quảng bá",
   "moderation updated": "Cập nhật kiểm duyệt",
   "admin collaborator relationship active": "Kích hoạt quan hệ cộng tác",
-  "admin host content published": "Xuất bản nội dung Host / News",
-  "admin payout request completed": "Hoàn tất chi trả Host / News",
+  "admin host content published": "Xuất bản nội dung Host / Tin tức",
+  "admin payout request completed": "Hoàn tất chi trả Host / Tin tức",
+  "admin host payout created": "Tạo khoản chi trả Host",
+  "host payout requested": "Ghi nhận khoản chi trả Host",
   "admin system settings updated": "Cập nhật thiết lập hệ thống",
   "update system settings": "Cập nhật thiết lập hệ thống",
 };
@@ -69,13 +76,15 @@ const MODULE_LABELS: Record<string, string> = {
   reports: "Xử lý báo cáo",
   templates: "Mẫu nội dung",
   collaborators: "Quản lý cộng tác viên",
-  "host / news": "Nội dung Host / News",
+  "host / news": "Nội dung Host / Tin tức",
 };
 
 const TARGET_CODE_LABELS: Record<string, string> = {
   export: "Bản xuất dữ liệu",
   template: "Mẫu nội dung",
   "system settings": "Thiết lập hệ thống",
+  "host payout request": "Khoản chi trả Host",
+  "admin host payout": "Khoản chi trả Host",
 };
 
 const ACTOR_LABELS: Record<string, string> = {
@@ -100,7 +109,10 @@ const PHRASE_REPLACEMENTS: Array<[string, string]> = [
   ],
   ["Users CSV export completed.", "Đã hoàn tất xuất CSV danh sách người dùng."],
   ["Revenue summary CSV export completed.", "Đã hoàn tất xuất CSV tổng quan doanh thu."],
-  ["Customer spending CSV export completed.", "Đã hoàn tất xuất CSV chi tiêu khách hàng."],
+  [
+    "Customer spending CSV export completed.",
+    "Đã hoàn tất xuất CSV chi tiêu khách hàng.",
+  ],
   ["Analytics overview CSV export completed.", "Đã hoàn tất xuất CSV tổng quan phân tích."],
   ["Promotion operations CSV export completed.", "Đã hoàn tất xuất CSV theo dõi quảng bá."],
   ["Boosted campaigns CSV export completed.", "Đã hoàn tất xuất CSV chiến dịch đẩy bài."],
@@ -113,9 +125,17 @@ const PHRASE_REPLACEMENTS: Array<[string, string]> = [
     "Chiến dịch vị trí 3 trang chủ đã hết hạn được mở lại sau khi xác nhận thanh toán.",
   ],
   ["Updated system settings", "Cập nhật thiết lập hệ thống"],
-  ["Admin payout request completed", "Hoàn tất chi trả Host / News"],
-  ["Cáº­p nháº­t thiáº¿t láº­p há»‡ thá»‘ng", "Cập nhật thiết lập hệ thống"],
-  ["KhÃ´i phá»¥c thiáº¿t láº­p há»‡ thá»‘ng", "Khôi phục thiết lập hệ thống"],
+  ["Admin payout request completed", "Hoàn tất chi trả Host / Tin tức"],
+  ["Host Payout Requested", "Ghi nhận khoản chi trả Host"],
+  ["Admin Host Payout Created", "Tạo khoản chi trả Host"],
+  [
+    "C\u00e1\u00ba\u00adp nh\u00e1\u00ba\u00adt thi\u00e1\u00ba\u00bft l\u00e1\u00ba\u00adp h\u00e1\u00bb\u0087 th\u00e1\u00bb\u0091ng",
+    "Cập nhật thiết lập hệ thống",
+  ],
+  [
+    "Kh\u00c3\u00b4i ph\u00e1\u00bb\u00a5c thi\u00e1\u00ba\u00bft l\u00e1\u00ba\u00adp h\u00e1\u00bb\u0087 th\u00e1\u00bb\u0091ng",
+    "Khôi phục thiết lập hệ thống",
+  ],
 ];
 
 const isActivityLogItem = (item: unknown): item is ActivityLogItem => {

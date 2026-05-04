@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -8,7 +8,9 @@ import StatusBadge from "../components/StatusBadge";
 import ToastContainer, { type ToastItem } from "../components/ToastContainer";
 import { financialService } from "../services/financialService";
 import type {
+  CreateFinancialPayoutPayload,
   FinancialFilters,
+  FinancialHostPayoutCandidate,
   FinancialPayoutDetail,
   FinancialPayoutRequest,
   FinancialPayoutStatus,
@@ -23,12 +25,26 @@ const statusLabels: Record<FinancialPayoutStatus | "all", string> = {
   completed: "Đã chi trả",
 };
 
+const methodLabels: Record<string, string> = {
+  bank_transfer: "Chuyển khoản ngân hàng",
+  cash: "Tiền mặt",
+  other: "Khác",
+};
+
 const getStatusVariant = (status: FinancialPayoutStatus) => {
   if (status === "pending") return "pending" as const;
   return "success" as const;
 };
 
 const createToastId = () => Date.now() + Math.floor(Math.random() * 1000);
+
+const initialCreateForm = {
+  userId: "",
+  amount: "",
+  method: "bank_transfer",
+  note: "",
+  markAsPaid: false,
+};
 
 function FinancialPage() {
   const [filters, setFilters] = useState<FinancialFilters>({
@@ -54,6 +70,12 @@ function FinancialPage() {
     totalItems: 0,
     totalPages: 1,
   });
+  const [hostOptions, setHostOptions] = useState<FinancialHostPayoutCandidate[]>([]);
+  const [createForm, setCreateForm] = useState(initialCreateForm);
+  const [hostSearch, setHostSearch] = useState("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isLoadingHosts, setIsLoadingHosts] = useState(false);
   const [selectedItem, setSelectedItem] = useState<FinancialPayoutRequest | null>(
     null,
   );
@@ -64,7 +86,35 @@ function FinancialPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [pageError, setPageError] = useState("");
   const [detailError, setDetailError] = useState("");
+  const [createError, setCreateError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const selectedHost = useMemo(
+    () => hostOptions.find((host) => String(host.userId) === createForm.userId) || null,
+    [createForm.userId, hostOptions],
+  );
+
+  const filteredHostOptions = useMemo(() => {
+    const keyword = hostSearch.trim().toLowerCase();
+    const sortedHosts = [...hostOptions].sort(
+      (left, right) => right.availableBalance - left.availableBalance,
+    );
+
+    if (!keyword) {
+      return sortedHosts;
+    }
+
+    return sortedHosts.filter((host) =>
+      [host.userName, host.userEmail, host.userMobile]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(keyword)),
+    );
+  }, [hostOptions, hostSearch]);
+
+  const payableHostCount = useMemo(
+    () => hostOptions.filter((host) => host.availableBalance > 0).length,
+    [hostOptions],
+  );
 
   const pushToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const id = createToastId();
@@ -78,7 +128,7 @@ function FinancialPage() {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       setPageError("");
@@ -95,32 +145,65 @@ function FinancialPage() {
     } finally {
       setIsLoading(false);
     }
+  }, [filters]);
+
+  const loadHostOptions = async () => {
+    try {
+      setIsLoadingHosts(true);
+      setCreateError("");
+      const hosts = await financialService.getHostPayoutCandidates();
+      setHostOptions(hosts);
+    } catch (error) {
+      setCreateError(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải danh sách Host để tạo chi trả.",
+      );
+    } finally {
+      setIsLoadingHosts(false);
+    }
   };
 
   useEffect(() => {
     void loadData();
-  }, [filters]);
+  }, [loadData]);
 
   const statCards = useMemo(
     () => [
       {
-        title: "Đợt chờ chi trả",
+        title: "Khoản chờ chi trả",
         value: String(summary.pendingRequests),
-        subtitle: `Tổng tiền đang chờ chi ${summary.pendingAmountLabel}`,
+        subtitle: `Tổng tiền chưa đánh dấu đã chi ${summary.pendingAmountLabel}`,
       },
       {
-        title: "Đã chuyển khoản",
+        title: "Đã xác nhận chi trả",
         value: String(summary.completedRequests),
         subtitle: `Đã chi ${summary.completedAmountLabel}`,
       },
       {
-        title: "Tổng đợt chi trả",
+        title: "Tổng khoản chi trả",
         value: String(summary.totalRequests),
-        subtitle: "Các đợt chi trả nội bộ cho thu nhập Host.",
+        subtitle: "Các khoản chi trả Host do admin tạo.",
       },
     ],
     [summary],
   );
+
+  const openCreateModal = async () => {
+    setCreateForm(initialCreateForm);
+    setHostSearch("");
+    setCreateError("");
+    setIsCreateOpen(true);
+    await loadHostOptions();
+  };
+
+  const closeCreateModal = () => {
+    if (isCreating) return;
+    setIsCreateOpen(false);
+    setCreateForm(initialCreateForm);
+    setHostSearch("");
+    setCreateError("");
+  };
 
   const openDetail = async (item: FinancialPayoutRequest) => {
     setSelectedItem(item);
@@ -153,6 +236,64 @@ function FinancialPage() {
     setDetailNote("");
   };
 
+  const handleCreatePayout = async () => {
+    const amount = Number(createForm.amount);
+    const userId = Number(createForm.userId);
+
+    if (!userId) {
+      setCreateError("Vui lòng chọn Host cần chi trả.");
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setCreateError("Số tiền chi trả phải lớn hơn 0 VND.");
+      return;
+    }
+
+    if (selectedHost && selectedHost.availableBalance <= 0) {
+      setCreateError("Host này chưa có số dư khả dụng để tạo khoản chi trả.");
+      return;
+    }
+
+    if (selectedHost && amount > selectedHost.availableBalance) {
+      setCreateError(
+        `Số tiền chi trả không được vượt quá số dư khả dụng ${selectedHost.availableBalanceLabel}.`,
+      );
+      return;
+    }
+
+    const payload: CreateFinancialPayoutPayload = {
+      userId,
+      amount,
+      method: createForm.method,
+      note: createForm.note.trim(),
+      markAsPaid: createForm.markAsPaid,
+    };
+
+    try {
+      setIsCreating(true);
+      setCreateError("");
+      await financialService.createPayoutRequest(payload);
+      await loadData();
+      await loadHostOptions();
+      setIsCreateOpen(false);
+      setCreateForm(initialCreateForm);
+      pushToast(
+        createForm.markAsPaid
+          ? "Đã tạo khoản chi trả và đánh dấu đã chi trả."
+          : "Đã tạo khoản chi trả ở trạng thái chờ chi trả.",
+      );
+    } catch (error) {
+      setCreateError(
+        error instanceof Error
+          ? error.message
+          : "Không thể tạo khoản chi trả Host.",
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   const handleProcess = async () => {
     if (!detail) return;
 
@@ -176,12 +317,12 @@ function FinancialPage() {
             }
           : current,
       );
-      pushToast("Đã xác nhận hoàn tất đợt chi trả cho Host.");
+      pushToast("Đã xác nhận khoản chi trả này đã được chuyển khoản.");
     } catch (error) {
       pushToast(
         error instanceof Error
           ? error.message
-          : "Không thể xử lý đợt chi trả.",
+          : "Không thể xử lý khoản chi trả.",
         "error",
       );
     } finally {
@@ -189,14 +330,28 @@ function FinancialPage() {
     }
   };
 
+  const currentBatchScopeHint = detail
+    ? `Khi xác nhận, hệ thống chỉ chốt khoản chi trả #${detail.payoutRequestId} với số tiền ${detail.amountLabel}. Các khoản thu nhập còn lại hoặc phát sinh sau đó sẽ do admin tạo khoản chi trả mới.`
+    : "";
+
   return (
     <div className="financial-page">
       <ToastContainer toasts={toasts} onClose={handleToastClose} />
 
       <PageHeader
         title="Tài chính / Chi trả Host"
-        description="Theo dõi thu nhập Host đã ghi nhận từ bài được duyệt, các đợt chi trả nội bộ và xác nhận khi admin đã chuyển khoản thực tế."
+        description="Admin chủ động tạo khoản chi trả cho Host, chuyển khoản ngoài hệ thống và đánh dấu trạng thái đã chi trả hoặc chờ chi trả."
       />
+
+      <div className="financial-page__top-actions">
+        <button
+          type="button"
+          className="financial-page__button financial-page__button--primary"
+          onClick={() => void openCreateModal()}
+        >
+          + Tạo khoản chi trả
+        </button>
+      </div>
 
       <div className="financial-page__stats">
         {statCards.map((card) => (
@@ -210,8 +365,8 @@ function FinancialPage() {
       </div>
 
       <SectionCard
-        title="Bộ lọc đợt chi trả"
-        description="Tìm nhanh theo tên Host, email, số điện thoại hoặc mã đợt chi trả."
+        title="Bộ lọc khoản chi trả"
+        description="Tìm nhanh theo tên Host, email, số điện thoại hoặc mã khoản chi trả."
       >
         <div className="financial-page__filters">
           <div className="financial-page__field financial-page__field--wide">
@@ -221,7 +376,7 @@ function FinancialPage() {
               className="financial-page__input"
               type="text"
               value={filters.keyword}
-              placeholder="Tên Host, email, số điện thoại hoặc mã đợt chi trả"
+              placeholder="Tên Host, email, số điện thoại hoặc mã khoản chi trả"
               onChange={(event) =>
                 setFilters((current) => ({
                   ...current,
@@ -259,8 +414,8 @@ function FinancialPage() {
       </SectionCard>
 
       <SectionCard
-        title="Danh sách đợt chi trả"
-        description="Mỗi dòng là một đợt chi trả nội bộ do hệ thống tổng hợp từ phần thu nhập Host chưa thanh toán."
+        title="Danh sách khoản chi trả"
+        description="Mỗi dòng là một khoản chi trả do admin tạo. Sau khi chuyển khoản ngoài hệ thống, admin đánh dấu lại là đã chi trả."
       >
         {pageError ? (
           <p className="financial-page__message financial-page__message--error">
@@ -272,8 +427,8 @@ function FinancialPage() {
           <p className="financial-page__message">Đang tải dữ liệu chi trả Host...</p>
         ) : items.length === 0 ? (
           <EmptyState
-            title="Chưa có đợt chi trả"
-            description="Khi có thu nhập Host chưa được thanh toán, hệ thống sẽ tổng hợp và hiển thị tại đây."
+            title="Chưa có khoản chi trả"
+            description="Admin có thể tạo khoản chi trả mới sau khi đối chiếu thu nhập khả dụng của Host."
           />
         ) : (
           <>
@@ -281,7 +436,7 @@ function FinancialPage() {
               <table className="financial-page__table">
                 <thead>
                   <tr>
-                    <th>Mã đợt</th>
+                    <th>Mã chi trả</th>
                     <th>Host</th>
                     <th>Vai trò</th>
                     <th>Số tiền</th>
@@ -366,9 +521,209 @@ function FinancialPage() {
       </SectionCard>
 
       <BaseModal
+        isOpen={isCreateOpen}
+        title="Tạo khoản chi trả Host"
+        description="Admin tự nhập thông tin chi trả. Tiền vẫn được chuyển ngoài hệ thống, trang này chỉ lưu trạng thái đối soát."
+        onClose={closeCreateModal}
+        maxWidth="1040px"
+      >
+        <div className="financial-page__detail">
+          {createError ? (
+            <p className="financial-page__message financial-page__message--error">
+              {createError}
+            </p>
+          ) : null}
+
+          <div className="financial-page__create-layout">
+            <section className="financial-page__create-panel">
+              <div className="financial-page__create-panel-header">
+                <div>
+                  <h4>Chọn Host</h4>
+                  <p>Chọn đúng Host trước khi nhập số tiền chi trả.</p>
+                </div>
+                <span>
+                  {payableHostCount}/{hostOptions.length} Host có thể chi trả
+                </span>
+              </div>
+
+              <input
+                className="financial-page__input financial-page__host-search"
+                type="text"
+                value={hostSearch}
+                placeholder="Tìm theo tên, email hoặc số điện thoại"
+                disabled={isLoadingHosts || isCreating}
+                onChange={(event) => setHostSearch(event.target.value)}
+              />
+
+              <div className="financial-page__host-list">
+                {isLoadingHosts ? (
+                  <div className="financial-page__host-empty">Đang tải danh sách Host...</div>
+                ) : filteredHostOptions.length === 0 ? (
+                  <div className="financial-page__host-empty">Không có Host phù hợp.</div>
+                ) : (
+                  filteredHostOptions.map((host) => {
+                    const isSelected = String(host.userId) === createForm.userId;
+                    const canCreatePayout = host.availableBalance > 0;
+                    return (
+                      <button
+                        key={host.userId}
+                        type="button"
+                        className={`financial-page__host-option${isSelected ? " financial-page__host-option--selected" : ""}${!canCreatePayout ? " financial-page__host-option--disabled" : ""}`}
+                        disabled={isCreating || !canCreatePayout}
+                        onClick={() =>
+                          setCreateForm((current) => ({
+                            ...current,
+                            userId: String(host.userId),
+                            amount: String(host.availableBalance),
+                          }))
+                        }
+                      >
+                        <span>
+                          <strong>{host.userName}</strong>
+                          <small>{host.userEmail || host.userMobile || `Host #${host.userId}`}</small>
+                          {!canCreatePayout ? (
+                            <em>Chưa có số dư khả dụng</em>
+                          ) : null}
+                        </span>
+                        <b>{host.availableBalanceLabel}</b>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+
+            <section className="financial-page__create-panel financial-page__create-panel--payment">
+              <div className="financial-page__create-panel-header">
+                <div>
+                  <h4>Thông tin chi trả</h4>
+                  <p>Ghi lại khoản tiền đã hoặc sẽ chuyển ngoài hệ thống.</p>
+                </div>
+              </div>
+
+              {selectedHost ? (
+                <div className="financial-page__balance-strip">
+                  <div>
+                    <span>Khả dụng</span>
+                    <strong>{selectedHost.availableBalanceLabel}</strong>
+                  </div>
+                  <div>
+                    <span>Đã chi</span>
+                    <strong>{selectedHost.paidOutAmountLabel}</strong>
+                  </div>
+                  <div>
+                    <span>Chờ chi</span>
+                    <strong>{selectedHost.pendingAmountLabel}</strong>
+                  </div>
+                </div>
+              ) : (
+                <div className="financial-page__balance-placeholder">
+                  Chọn Host để xem số dư và nhập khoản chi trả.
+                </div>
+              )}
+
+              <div className="financial-page__create-fields">
+                <div className="financial-page__field">
+                  <label htmlFor="financial-create-amount">Số tiền chi trả</label>
+                  <input
+                    id="financial-create-amount"
+                    className="financial-page__input"
+                    type="number"
+                    min="0"
+                    value={createForm.amount}
+                    disabled={isCreating}
+                    placeholder="Nhập số tiền"
+                    onChange={(event) =>
+                      setCreateForm((current) => ({
+                        ...current,
+                        amount: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="financial-page__field">
+                  <label htmlFor="financial-create-method">Phương thức</label>
+                  <select
+                    id="financial-create-method"
+                    className="financial-page__select"
+                    value={createForm.method}
+                    disabled={isCreating}
+                    onChange={(event) =>
+                      setCreateForm((current) => ({
+                        ...current,
+                        method: event.target.value,
+                      }))
+                    }
+                  >
+                    {Object.entries(methodLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="financial-page__field">
+                <label htmlFor="financial-create-note">Ghi chú</label>
+                <textarea
+                  id="financial-create-note"
+                  className="financial-page__textarea financial-page__textarea--compact"
+                  value={createForm.note}
+                  disabled={isCreating}
+                  placeholder="Ví dụ: chi trả nhuận bút Host kỳ tháng 5, đã đối chiếu ngoài hệ thống."
+                  onChange={(event) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      note: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <label className="financial-page__checkbox">
+                <input
+                  type="checkbox"
+                  checked={createForm.markAsPaid}
+                  disabled={isCreating}
+                  onChange={(event) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      markAsPaid: event.target.checked,
+                    }))
+                  }
+                />
+                <span>Đánh dấu đã chi trả ngay sau khi tạo</span>
+              </label>
+            </section>
+          </div>
+
+          <div className="financial-page__modal-actions">
+            <button
+              type="button"
+              className="financial-page__button"
+              onClick={closeCreateModal}
+              disabled={isCreating}
+            >
+              Đóng
+            </button>
+            <button
+              type="button"
+              className="financial-page__button financial-page__button--primary"
+              onClick={() => void handleCreatePayout()}
+              disabled={isCreating || isLoadingHosts}
+            >
+              {isCreating ? "Đang tạo..." : "Tạo khoản chi trả"}
+            </button>
+          </div>
+        </div>
+      </BaseModal>
+
+      <BaseModal
         isOpen={Boolean(selectedItem)}
-        title="Chi tiết đợt chi trả"
-        description="Kiểm tra thu nhập Host đã ghi nhận trước khi xác nhận đợt chuyển khoản thủ công."
+        title="Chi tiết khoản chi trả Host"
+        description="Đối chiếu khoản chi trả do admin tạo. Nếu đã chuyển khoản ngoài hệ thống, đánh dấu là đã chi trả."
         onClose={closeDetail}
         maxWidth="920px"
       >
@@ -384,21 +739,32 @@ function FinancialPage() {
               <strong>Chính sách hiện hành:</strong> {detail.approvalHint}
             </div>
 
+            <section className="financial-page__detail-hero">
+              <div>
+                <div className="financial-page__detail-eyebrow">
+                  Khoản chi trả #{detail.payoutRequestId}
+                </div>
+                <div className="financial-page__detail-amount">
+                  {detail.amountLabel}
+                </div>
+                <p className="financial-page__secondary-text financial-page__secondary-text--hero">
+                  Đây là số tiền admin đã tạo để chi trả cho Host. GreenMarket không chuyển tiền trong hệ thống, admin chỉ xác nhận lại sau khi đã chuyển khoản thực tế.
+                </p>
+              </div>
+
+              <StatusBadge
+                label={detail.statusLabel}
+                variant={getStatusVariant(detail.status)}
+              />
+            </section>
+
             <div className="financial-page__detail-grid">
               <article className="financial-page__detail-card">
-                <h4>Thông tin đợt chi trả</h4>
+                <h4>Thông tin cần xem</h4>
                 <dl>
-                  <div>
-                    <dt>Mã đợt</dt>
-                    <dd>#{detail.payoutRequestId}</dd>
-                  </div>
                   <div>
                     <dt>Host</dt>
                     <dd>{detail.userName}</dd>
-                  </div>
-                  <div>
-                    <dt>Vai trò</dt>
-                    <dd>{detail.audienceLabel}</dd>
                   </div>
                   <div>
                     <dt>Số tiền chi trả</dt>
@@ -413,36 +779,6 @@ function FinancialPage() {
                     <dd>{detail.statusLabel}</dd>
                   </div>
                   <div>
-                    <dt>Tạo lúc</dt>
-                    <dd>{detail.createdAt}</dd>
-                  </div>
-                  <div>
-                    <dt>Xử lý lúc</dt>
-                    <dd>{detail.processedAt || "--"}</dd>
-                  </div>
-                </dl>
-              </article>
-
-              <article className="financial-page__detail-card">
-                <h4>Tóm tắt thu nhập</h4>
-                <dl>
-                  <div>
-                    <dt>Tổng thu nhập đã ghi nhận</dt>
-                    <dd>{detail.earningSummary.totalEarnedLabel}</dd>
-                  </div>
-                  <div>
-                    <dt>Đã chi trả</dt>
-                    <dd>{detail.earningSummary.paidOutAmountLabel}</dd>
-                  </div>
-                  <div>
-                    <dt>Đang chờ chi trả</dt>
-                    <dd>{detail.earningSummary.pendingBalanceLabel}</dd>
-                  </div>
-                  <div>
-                    <dt>Còn phải chi</dt>
-                    <dd>{detail.earningSummary.availableBalanceLabel}</dd>
-                  </div>
-                  <div>
                     <dt>Email</dt>
                     <dd className="financial-page__value-text">
                       {detail.userEmail || "--"}
@@ -454,118 +790,48 @@ function FinancialPage() {
                       {detail.userMobile || "--"}
                     </dd>
                   </div>
+                  <div>
+                    <dt>Tạo lúc</dt>
+                    <dd>{detail.createdAt}</dd>
+                  </div>
+                  <div>
+                    <dt>Xử lý lúc</dt>
+                    <dd>{detail.processedAt || "--"}</dd>
+                  </div>
                 </dl>
               </article>
-            </div>
-
-            <div className="financial-page__detail-grid">
-              <article className="financial-page__detail-card">
-                <h4>Nguồn thu nhập</h4>
-                {detail.sourceBreakdown.length === 0 ? (
-                  <p className="financial-page__secondary-text">
-                    Chưa có dữ liệu nguồn thu nhập.
-                  </p>
-                ) : (
-                  <ul className="financial-page__list">
-                    {detail.sourceBreakdown.map((item) => (
-                      <li key={`${item.type}-${item.count}`}>
-                        <span>{item.typeLabel}</span>
-                        <span>{item.amountLabel} · {item.count} phát sinh</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </article>
 
               <article className="financial-page__detail-card">
-                <h4>Lịch sử chi trả gần đây</h4>
-                {detail.recentRequests.length === 0 ? (
-                  <p className="financial-page__secondary-text">
-                    Chưa có đợt chi trả nào khác cho Host này.
-                  </p>
-                ) : (
-                  <ul className="financial-page__list">
-                    {detail.recentRequests.map((item) => (
-                      <li key={item.payoutRequestId}>
-                        <span>
-                          #{item.payoutRequestId} · {item.amountLabel}
-                        </span>
-                        <span>
-                          {item.statusLabel} · {item.createdAt}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </article>
-            </div>
+                <h4>Nhắc trước khi xác nhận</h4>
+                <ul className="financial-page__checklist">
+                  <li>Chỉ bấm xác nhận sau khi đã chuyển khoản ngoài hệ thống cho Host.</li>
+                  <li>{currentBatchScopeHint}</li>
+                  <li>
+                    Nếu cần, ghi chú lại mã giao dịch ngân hàng hoặc nội dung đối
+                    soát để tiện kiểm tra sau này.
+                  </li>
+                </ul>
 
-            <article className="financial-page__detail-card financial-page__detail-card--full">
-                <h4>Chi tiết thu nhập đã ghi nhận</h4>
-              {detail.sourceDetails.length === 0 ? (
-                <p className="financial-page__secondary-text">
-                  Chưa có khoản thu nhập chi tiết cho đợt này.
-                </p>
-              ) : (
-                <div className="financial-page__source-list">
-                  {detail.sourceDetails.map((item) => (
-                    <article
-                      key={`${item.earningId}-${item.sourceType}-${item.sourceId ?? "internal"}`}
-                      className="financial-page__source-item"
-                    >
-                      <div className="financial-page__source-header">
-                        <div>
-                          <div className="financial-page__primary-text">
-                            {item.sourceTitle}
-                          </div>
-                          <div className="financial-page__secondary-text">
-                            {item.sourceTypeLabel}
-                          </div>
-                        </div>
-                        <div className="financial-page__source-amount">
-                          {item.amountLabel}
-                        </div>
-                      </div>
-
-                      <dl className="financial-page__source-meta">
-                        <div>
-                          <dt>Trạng thái bài / khoản ghi nhận</dt>
-                          <dd className="financial-page__value-text">
-                            {item.sourceStatusLabel}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Ghi nhận lúc</dt>
-                          <dd className="financial-page__value-text">
-                            {item.createdAt}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Đơn vị ghi nhận</dt>
-                          <dd className="financial-page__value-text">
-                            {item.payerName}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Ghi chú</dt>
-                          <dd className="financial-page__value-text">
-                            {item.fundingNote}
-                          </dd>
-                        </div>
-                      </dl>
-                    </article>
-                  ))}
+                <div className="financial-page__inline-summary">
+                  <div className="financial-page__inline-summary-item">
+                    <span>Tổng đã ghi nhận</span>
+                    <strong>{detail.earningSummary.totalEarnedLabel}</strong>
+                  </div>
+                  <div className="financial-page__inline-summary-item">
+                    <span>Đã chi trước đó</span>
+                    <strong>{detail.earningSummary.paidOutAmountLabel}</strong>
+                  </div>
                 </div>
-              )}
-            </article>
+              </article>
+            </div>
 
             <div className="financial-page__field">
-              <label htmlFor="financial-admin-note">Ghi chú quản trị</label>
+              <label htmlFor="financial-admin-note">Ghi chú xác nhận</label>
               <textarea
                 id="financial-admin-note"
                 className="financial-page__textarea"
                 value={detailNote}
-                placeholder="Ghi lại xác nhận chuyển khoản thực tế hoặc ghi chú đối soát nội bộ."
+                placeholder="Ví dụ: đã chuyển khoản ngoài thực tế lúc 10:30, ngân hàng MB, nội dung CK khoản chi trả #24."
                 onChange={(event) => setDetailNote(event.target.value)}
               />
             </div>
@@ -586,7 +852,9 @@ function FinancialPage() {
                   onClick={() => void handleProcess()}
                   disabled={isProcessing}
                 >
-                  {isProcessing ? "Đang xử lý..." : "Xác nhận đã chi trả"}
+                  {isProcessing
+                    ? "Đang xử lý..."
+                    : "Xác nhận đã chuyển khoản"}
                 </button>
               ) : null}
             </div>

@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
   PERSONAL_PLAN_SLOT_CODE,
@@ -6,9 +6,6 @@ import {
   SHOP_VIP_SLOT_CODE,
 } from "../constants/promotion.ts";
 import {
-  transactions,
-  placementSlots,
-  promotionPackages,
   shops,
   userPostingPlans,
   users,
@@ -37,8 +34,6 @@ export type AdminAccountPackageTrackingRow = {
   email: string | null;
   startedAt: Date | null;
   expiresAt: Date | null;
-  latestPaymentAmount: number | null;
-  latestPaymentAt: Date | null;
   status: TrackingStatus;
   statusLabel: string;
   note: string;
@@ -56,17 +51,7 @@ export type AdminAccountPackageTrackingPayload = {
   rows: AdminAccountPackageTrackingRow[];
 };
 
-type LatestPaymentSnapshot = {
-  amount: number | null;
-  createdAt: Date | null;
-};
-
 const EXPIRING_SOON_DAYS = 7;
-
-const toSafeNumber = (value: unknown): number | null => {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : null;
-};
 
 const buildStatus = (expiresAt: Date | null): Pick<
   AdminAccountPackageTrackingRow,
@@ -96,145 +81,9 @@ const buildStatus = (expiresAt: Date | null): Pick<
   };
 };
 
-const buildLatestPaymentMap = <
-  T extends {
-    transactionUserId: number;
-    transactionAmount: unknown;
-    transactionCreatedAt: Date | null;
-  },
->(
-  rows: T[],
-) => {
-  const result = new Map<number, LatestPaymentSnapshot>();
-
-  for (const row of rows) {
-    if (result.has(row.transactionUserId)) {
-      continue;
-    }
-
-    result.set(row.transactionUserId, {
-      amount: toSafeNumber(row.transactionAmount),
-      createdAt: row.transactionCreatedAt ?? null,
-    });
-  }
-
-  return result;
-};
-
-const buildLatestPaymentListMap = <
-  T extends {
-    transactionUserId: number;
-    transactionAmount: unknown;
-    transactionCreatedAt: Date | null;
-  },
->(
-  rows: T[],
-) => {
-  const result = new Map<number, LatestPaymentSnapshot[]>();
-
-  for (const row of rows) {
-    const current = result.get(row.transactionUserId) ?? [];
-    current.push({
-      amount: toSafeNumber(row.transactionAmount),
-      createdAt: row.transactionCreatedAt ?? null,
-    });
-    result.set(row.transactionUserId, current);
-  }
-
-  return result;
-};
-
-const resolveLatestPaymentByAmount = (
-  paymentsByUser: Map<number, LatestPaymentSnapshot[]>,
-  userId: number,
-  expectedAmount: number,
-) => {
-  const rows = paymentsByUser.get(userId) ?? [];
-  const roundedExpectedAmount = Math.round(expectedAmount);
-
-  return (
-    rows.find((item) => Math.round(item.amount ?? 0) === roundedExpectedAmount) ??
-    rows[0] ??
-    null
-  );
-};
-
-const getLatestGenericPaymentsByUser = async () => {
-  const rows = await db
-    .select({
-      transactionUserId: transactions.transactionUserId,
-      transactionAmount: transactions.transactionAmount,
-      transactionCreatedAt: transactions.transactionCreatedAt,
-    })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.transactionStatus, "success"),
-        isNull(transactions.transactionReferenceType),
-        sql`${transactions.transactionMeta}->>'postId' IS NULL`,
-      ),
-    )
-    .orderBy(
-      desc(transactions.transactionCreatedAt),
-      desc(transactions.transactionId),
-    );
-
-  return buildLatestPaymentListMap(rows);
-};
-
-const getLatestVipPaymentsByUser = async () => {
-  const vipPackages = await db
-    .select({
-      packageId: promotionPackages.promotionPackageId,
-    })
-    .from(promotionPackages)
-    .innerJoin(
-      placementSlots,
-      eq(promotionPackages.promotionPackageSlotId, placementSlots.placementSlotId),
-    )
-    .where(eq(placementSlots.placementSlotCode, SHOP_VIP_SLOT_CODE));
-
-  const vipPackageIds = vipPackages
-    .map((item) => item.packageId)
-    .filter((value): value is number => Number.isFinite(value));
-
-  if (vipPackageIds.length === 0) {
-    return new Map<number, LatestPaymentSnapshot>();
-  }
-
-  const rows = await db
-    .select({
-      transactionUserId: transactions.transactionUserId,
-      transactionAmount: transactions.transactionAmount,
-      transactionCreatedAt: transactions.transactionCreatedAt,
-    })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.transactionStatus, "success"),
-        eq(transactions.transactionReferenceType, "promotion_package"),
-        inArray(
-          sql<number>`(${transactions.transactionReferenceId})::int`,
-          vipPackageIds,
-        ),
-      ),
-    )
-    .orderBy(
-      desc(transactions.transactionCreatedAt),
-      desc(transactions.transactionId),
-    );
-
-  return buildLatestPaymentMap(rows);
-};
-
 export const adminAccountPackageTrackingService = {
   async getTracking(): Promise<AdminAccountPackageTrackingPayload> {
-    const [catalog, latestGenericPayments, latestVipPayments] =
-      await Promise.all([
-        adminAccountPackageService.getCatalog(),
-        getLatestGenericPaymentsByUser(),
-        getLatestVipPaymentsByUser(),
-      ]);
+    const catalog = await adminAccountPackageService.getCatalog();
 
     const catalogMap = new Map(catalog.map((item) => [item.code, item]));
     const ownerPackage = catalogMap.get("OWNER_LIFETIME");
@@ -305,11 +154,6 @@ export const adminAccountPackageTrackingService = {
     const rows: AdminAccountPackageTrackingRow[] = [];
 
     for (const item of activeShops) {
-      const latestPayment = resolveLatestPaymentByAmount(
-        latestGenericPayments,
-        item.userId,
-        ownerPackage.price,
-      );
       const status = buildStatus(null);
 
       rows.push({
@@ -326,10 +170,8 @@ export const adminAccountPackageTrackingService = {
         shopId: item.shopId,
         phone: item.shopPhone ?? null,
         email: item.shopEmail ?? null,
-        startedAt: latestPayment?.createdAt ?? item.shopCreatedAt ?? null,
+        startedAt: item.shopCreatedAt ?? null,
         expiresAt: null,
-        latestPaymentAmount: latestPayment?.amount ?? null,
-        latestPaymentAt: latestPayment?.createdAt ?? null,
         status: status.status,
         statusLabel: status.statusLabel,
         note: "Shop đang active; gói chủ vườn không có ngày hết hạn.",
@@ -337,11 +179,6 @@ export const adminAccountPackageTrackingService = {
     }
 
     for (const item of activePersonalPlans) {
-      const latestPayment = resolveLatestPaymentByAmount(
-        latestGenericPayments,
-        item.userId,
-        personalPackage.price,
-      );
       const status = buildStatus(item.planExpiresAt ?? null);
 
       rows.push({
@@ -361,8 +198,6 @@ export const adminAccountPackageTrackingService = {
         email: item.userEmail ?? null,
         startedAt: item.planStartedAt ?? null,
         expiresAt: item.planExpiresAt ?? null,
-        latestPaymentAmount: latestPayment?.amount ?? null,
-        latestPaymentAt: latestPayment?.createdAt ?? null,
         status: status.status,
         statusLabel: status.statusLabel,
         note: "Đang dùng gói cá nhân theo tháng từ user_posting_plans.",
@@ -370,7 +205,6 @@ export const adminAccountPackageTrackingService = {
     }
 
     for (const item of activeVipShops) {
-      const latestPayment = latestVipPayments.get(item.userId);
       const status = buildStatus(item.shopVipExpiresAt ?? null);
 
       rows.push({
@@ -387,10 +221,8 @@ export const adminAccountPackageTrackingService = {
         shopId: item.shopId,
         phone: item.shopPhone ?? null,
         email: item.shopEmail ?? null,
-        startedAt: item.shopVipStartedAt ?? latestPayment?.createdAt ?? null,
+        startedAt: item.shopVipStartedAt ?? null,
         expiresAt: item.shopVipExpiresAt ?? null,
-        latestPaymentAmount: latestPayment?.amount ?? null,
-        latestPaymentAt: latestPayment?.createdAt ?? null,
         status: status.status,
         statusLabel: status.statusLabel,
         note: "VIP chỉ ảnh hưởng thứ tự shop trong Danh sách nhà vườn.",
@@ -414,12 +246,10 @@ export const adminAccountPackageTrackingService = {
       const leftTime =
         left.expiresAt?.getTime() ??
         left.startedAt?.getTime() ??
-        left.latestPaymentAt?.getTime() ??
         0;
       const rightTime =
         right.expiresAt?.getTime() ??
         right.startedAt?.getTime() ??
-        right.latestPaymentAt?.getTime() ??
         0;
 
       return rightTime - leftTime;

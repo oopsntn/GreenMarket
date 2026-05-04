@@ -924,12 +924,12 @@ export const adminReportingService = {
             {
                 title: "Giá trị đơn hàng trung bình",
                 value: formatCurrency(totalHostPayoutCost),
-                note: `${filteredHostPayouts.length} completed Host payout request(s) in period`,
+                note: `${filteredHostPayouts.length} khoản chi trả Host / Tin tức đã hoàn tất trong kỳ`,
             },
             {
                 title: "Estimated Profit",
                 value: formatCurrency(provisionalProfit),
-                note: "Revenue minus completed Host / News payout cost",
+                note: "Doanh thu trừ chi phí chi trả Host / Tin tức đã hoàn tất",
             },
             {
                 title: "Avg. Order Value",
@@ -1019,12 +1019,12 @@ export const adminReportingService = {
             {
                 title: "Host / News Payout Cost",
                 value: formatCurrency(totalHostPayoutCost),
-                note: `${filteredHostPayouts.length} completed Host payout request(s) in period`,
+                note: `${filteredHostPayouts.length} khoản chi trả Host / Tin tức đã hoàn tất trong kỳ`,
             },
             {
                 title: "Estimated Profit",
                 value: formatCurrency(provisionalProfit),
-                note: "Revenue minus completed Host / News payout cost",
+                note: "Doanh thu trừ chi phí chi trả Host / Tin tức đã hoàn tất",
             },
             {
                 title: "Avg. Order Value",

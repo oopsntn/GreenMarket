@@ -29,6 +29,30 @@ export type FinancialPayoutSummary = {
   completedAmountLabel: string;
 };
 
+export type FinancialHostPayoutCandidate = {
+  userId: number;
+  userName: string;
+  userEmail: string | null;
+  userMobile: string | null;
+  roleCode: string | null;
+  totalEarned: number;
+  totalEarnedLabel: string;
+  paidOutAmount: number;
+  paidOutAmountLabel: string;
+  pendingAmount: number;
+  pendingAmountLabel: string;
+  availableBalance: number;
+  availableBalanceLabel: string;
+};
+
+export type CreateFinancialPayoutPayload = {
+  userId: number;
+  amount: number;
+  method: string;
+  note: string;
+  markAsPaid: boolean;
+};
+
 export type FinancialPayoutListResult = {
   data: FinancialPayoutRequest[];
   meta: {

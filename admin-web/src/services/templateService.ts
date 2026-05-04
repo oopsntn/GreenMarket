@@ -54,7 +54,7 @@ const TEMPLATE_NAME_LABELS: Record<string, string> = {
   "Post Rejection - Invalid Content": "Từ chối bài đăng - Nội dung không hợp lệ",
   "Post Rejection - Missing Information": "Từ chối bài đăng - Thiếu thông tin",
   "Report Reason - Spam Content": "Lý do báo cáo - Nội dung spam",
-  "Report Reason - Suspicious Pricing": "Lý do báo cáo - Giá bán bất thường",
+  "Report Reason - Suspicious Pricing": "Lý do báo cáo - Thông tin rao bán bất thường",
 };
 
 const TEXT_REPLACEMENTS: Array<[string, string]> = [
@@ -96,7 +96,7 @@ const TEXT_REPLACEMENTS: Array<[string, string]> = [
   ],
   [
     "Your post is missing required information such as care notes, product size, or accurate pricing. Please complete the details before resubmitting.",
-    "Bài đăng của bạn đang thiếu thông tin bắt buộc như hướng dẫn chăm sóc, kích thước sản phẩm hoặc giá bán chính xác. Vui lòng bổ sung đầy đủ trước khi gửi lại.",
+    "Bài đăng của bạn đang thiếu thông tin bắt buộc như hướng dẫn chăm sóc, kích thước sản phẩm hoặc thông tin liên hệ phù hợp. Vui lòng bổ sung đầy đủ trước khi gửi lại.",
   ],
   [
     "This listing appears to contain repetitive promotional messaging, external contact spam, or misleading attention bait.",
@@ -104,7 +104,7 @@ const TEXT_REPLACEMENTS: Array<[string, string]> = [
   ],
   [
     "This listing price deviates significantly from comparable marketplace items and should be reviewed manually by the moderation team.",
-    "Mức giá của bài đăng này chênh lệch đáng kể so với các bài tương tự trên sàn và cần được đội kiểm duyệt xem xét thủ công.",
+    "Bài đăng này có thông tin rao bán bất thường so với các bài tương tự trên sàn và cần được đội kiểm duyệt xem xét thủ công.",
   ],
   [
     "Used for system notifications, reminders, or generic status updates.",

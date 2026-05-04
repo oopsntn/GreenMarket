@@ -6,8 +6,10 @@ import type {
 } from "../types/reportModeration";
 import { getAdminProfile } from "../utils/adminSession";
 
+const MOJIBAKE_PATTERN = /[\u00c3\u00c2\u00c6\u00c4\u00e2\u00ba\u00bb]/;
+
 const repairMojibake = (value: string) => {
-  if (!value || !/[ÃƒÃ‚Ã¡ÂºÃ¡Â»Ã„]/.test(value)) {
+  if (!value || !MOJIBAKE_PATTERN.test(value)) {
     return value;
   }
 
@@ -20,7 +22,7 @@ const repairMojibake = (value: string) => {
 
 const REPORT_REASON_LABELS: Record<string, string> = {
   SUSPICIOUS_PRICING:
-    "Giá bán có dấu hiệu bất thường so với mặt bằng chung.",
+    "Thông tin rao bán có dấu hiệu bất thường so với mặt bằng chung.",
   COPYRIGHT_MEDIA:
     "Hình ảnh hoặc video có dấu hiệu sao chép từ nguồn khác.",
   WRONG_CATEGORY:
@@ -44,7 +46,7 @@ const REPORT_REASON_LABELS: Record<string, string> = {
 };
 
 const REPORT_REASON_CODE_LABELS: Record<string, string> = {
-  SUSPICIOUS_PRICING: "Giá bất thường",
+  SUSPICIOUS_PRICING: "Thông tin rao bán bất thường",
   COPYRIGHT_MEDIA: "Nghi ngờ sao chép hình ảnh",
   WRONG_CATEGORY: "Sai danh mục",
   SCAM_RISK: "Nguy cơ lừa đảo",
@@ -95,9 +97,9 @@ const REPORT_REASON_CODE_LOOKUP = buildReasonLookup(REPORT_REASON_CODE_LABELS);
 
 const REPORT_TEXT_LABELS: Record<string, string> = {
   "Potential bait pricing. Needs manual moderation follow-up.":
-    "Có dấu hiệu đặt giá mồi, cần quản trị viên kiểm tra thủ công thêm.",
+    "Có dấu hiệu dùng thông tin rao bán mập mờ, cần quản trị viên kiểm tra thủ công thêm.",
   "Pricing was verified with the shop and no policy breach was found.":
-    "Đã đối chiếu giá với cửa hàng và chưa ghi nhận vi phạm chính sách.",
+    "Đã đối chiếu thông tin rao bán với cửa hàng và chưa ghi nhận vi phạm chính sách.",
   "The post was published under the wrong category and disrupts category relevance.":
     "Bài đăng đang được xếp sai danh mục và làm giảm độ chính xác của phân loại.",
   "Needs category correction and listing clean-up.":
@@ -111,7 +113,7 @@ const REPORT_TEXT_LABELS: Record<string, string> = {
   "The issue was confirmed and the post owner was asked to replace the media.":
     "Vi phạm đã được xác nhận và chủ bài đăng đã được yêu cầu thay ảnh mới.",
   "The listed price looks abnormal compared with similar ornamental plant posts in the same category.":
-    "Mức giá niêm yết đang bất thường so với các bài đăng cây cảnh tương tự trong cùng danh mục.",
+    "Bài đăng có dấu hiệu đưa thông tin rao bán bất thường so với các bài tương tự trong cùng danh mục.",
   "The post content repeats promotional text and external contact instructions too aggressively.":
     "Nội dung bài đăng lặp lại quá nhiều câu quảng bá và hướng dẫn liên hệ ngoài nền tảng.",
   "Please review whether this listing should stay visible or be rewritten.":
@@ -137,9 +139,9 @@ const REPORT_TEXT_LABELS: Record<string, string> = {
   "Seller removed duplicated promotional slogans and listing stayed visible.":
     "Người bán đã gỡ các câu quảng bá lặp và bài đăng vẫn được giữ hiển thị.",
   "The reported price looks too low compared with product material quality.":
-    "Mức giá bị báo cáo đang thấp bất thường so với chất lượng vật liệu của sản phẩm.",
+    "Bài đăng có dấu hiệu dùng thông tin rao bán không phù hợp với chất lượng hoặc mô tả sản phẩm.",
   "Possible bait price to attract off-platform contact.":
-    "Có khả năng đây là giá mồi để dẫn người mua sang liên hệ ngoài nền tảng.",
+    "Có dấu hiệu dùng thông tin mập mờ để dẫn người mua sang liên hệ ngoài nền tảng.",
 };
 
 const formatDateTime = (value: string | null) => {
