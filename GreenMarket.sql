@@ -894,7 +894,7 @@ INSERT INTO task_replies (
     visibility,
     created_at
 ) VALUES
-(101, 102, 9, 'Uploaded full album and source zip.', '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'internal', now() - interval '2 days');
+(101, 102, 9, 'Uploaded full album and source zip.', '["/uploads/binh-phun-suong-1.jpg","/uploads/album.zip"]'::jsonb, 'internal', now() - interval '2 days');
 
 -- Host Contents (Mock - Magazine Style)
 INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_description, host_content_body, host_content_category, host_content_media_urls, host_content_status, host_content_view_count, host_content_payout_amount) VALUES
