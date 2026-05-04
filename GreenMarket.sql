@@ -1488,24 +1488,10 @@ INSERT INTO post_promotions (
 (2, 4, 3, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-03-12 08:00:00', '2026-03-18 08:00:00', 'expired',  '2026-03-11 14:20:00'),
 (3, 2, 3, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, '2026-03-08 08:00:00', '2026-03-14 08:00:00', 'expired',  '2026-03-07 17:30:00'),
 (5, 12, 6, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-03-28 08:00:00', '2026-04-03 08:00:00', 'expired',  '2026-03-27 15:10:00'),
-(6, 9, 3, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-05-06 08:00:00', '2026-05-12 08:00:00', 'scheduled','2026-05-01 08:30:00'),
+(6, 9, 3, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-04-28 08:00:00', '2026-05-04 08:00:00', 'expired','2026-04-27 08:30:00'),
 (7, 15, 1, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-04-28 08:00:00', '2026-05-04 08:00:00', 'active',   '2026-04-27 07:40:00'),
-(8, 7, 1, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-04-29 08:05:00', '2026-05-05 08:05:00', 'active',   '2026-04-28 07:45:00');
-
-INSERT INTO post_promotions (
-    post_promotion_id,
-    post_promotion_post_id,
-    post_promotion_buyer_id,
-    post_promotion_package_id,
-    post_promotion_slot_id,
-    post_promotion_snapshot_title,
-    post_promotion_snapshot_priority,
-    post_promotion_start_at,
-    post_promotion_end_at,
-    post_promotion_status,
-    post_promotion_created_at
-) VALUES
-(9, 11, 6, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, '2026-04-30 08:00:00', '2026-05-06 08:00:00', 'paused', '2026-04-29 16:00:00');
+(8, 7, 1, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-04-29 08:05:00', '2026-05-05 08:05:00', 'active',   '2026-04-28 07:45:00'),
+(9, 11, 6, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, '2026-04-28 08:00:00', '2026-05-04 08:00:00', 'expired', '2026-04-27 16:00:00');
 
 -- ============================================================
 -- PAYMENT TRANSACTIONS
