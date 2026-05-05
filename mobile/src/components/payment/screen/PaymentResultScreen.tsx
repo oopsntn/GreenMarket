@@ -1,49 +1,90 @@
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { CheckCircle2, XCircle, AlertCircle } from 'lucide-react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
-import Button from '../../Reused/Button/Button';
+import React, { useEffect } from 'react'
+import { StyleSheet, Text, View } from 'react-native'
+import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react-native'
+import { useNavigation, useRoute } from '@react-navigation/native'
+import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
+import Button from '../../Reused/Button/Button'
+import { useAuth } from '../../../context/AuthContext'
 
-/**
- * PaymentResultScreen
- *
- * Màn hình kết quả thanh toán - nhận params từ deep-link hoặc navigate trực tiếp:
- *   - status: 'success' | 'failed' | 'pending'
- *   - code?: string   (VNPay response code, '00' = success)
- *   - txnRef?: string (mã tham chiếu giao dịch)
- *   - message?: string
- *
- * Deep-link cho Expo Go:  exp://greenmarket.ddns.net:8081/--/payment-result?status=success&...
- * Deep-link cho APK:      greenmarket:///payment-result?status=success&...
- */
+type PaymentType = 'shop' | 'vip' | 'personal' | 'promote'
+
+const PAYMENT_ACTIONS: Record<PaymentType, { primaryLabel: string; primaryRoute: string; secondaryLabel: string; secondaryRoute: string }> = {
+    shop: {
+        primaryLabel: 'Xem cửa hàng của tôi',
+        primaryRoute: 'MyShop',
+        secondaryLabel: 'Vào Dashboard cửa hàng',
+        secondaryRoute: 'ShopDashboard',
+    },
+    vip: {
+        primaryLabel: 'Vào Dashboard cửa hàng',
+        primaryRoute: 'ShopDashboard',
+        secondaryLabel: 'Xem gói dịch vụ',
+        secondaryRoute: 'Packages',
+    },
+    personal: {
+        primaryLabel: 'Xem tài khoản',
+        primaryRoute: 'PersonalDashboard',
+        secondaryLabel: 'Xem gói dịch vụ',
+        secondaryRoute: 'Packages',
+    },
+    promote: {
+        primaryLabel: 'Xem tin của tôi',
+        primaryRoute: 'MyPost',
+        secondaryLabel: 'Vào Dashboard cửa hàng',
+        secondaryRoute: 'ShopDashboard',
+    },
+}
+
 const PaymentResultScreen = () => {
-    const navigation = useNavigation<any>();
-    const route = useRoute<any>();
+    const navigation = useNavigation<any>()
+    const route = useRoute<any>()
+    const { refreshShop } = useAuth()
 
-    const { status, code, txnRef, message } = route.params || {};
+    const { status, code, txnRef, message, type = 'promote' } = route.params || {}
+    const paymentType: PaymentType = PAYMENT_ACTIONS[type as PaymentType] ? type : 'promote'
+    const actionConfig = PAYMENT_ACTIONS[paymentType]
 
-    const isSuccess = status === 'success' || code === '00';
-    const isFailed = status === 'failed' || (status && status !== 'success' && status !== 'pending');
+    const isSuccess = status === 'success' || code === '00'
+    const isFailed = status === 'failed' || (status && status !== 'success' && status !== 'pending')
 
     useEffect(() => {
-        console.log('[PaymentResult] Received params:', { status, code, txnRef, message });
-    }, []);
+        console.log('[PaymentResult] Received params:', { status, code, txnRef, message, type: paymentType })
+    }, [status, code, txnRef, message, paymentType])
+
+    useEffect(() => {
+        if (!['shop', 'vip', 'promote'].includes(paymentType)) return
+
+        refreshShop().catch((error) => {
+            console.error('[PaymentResult] refreshShop failed:', error)
+        })
+    }, [paymentType, refreshShop])
 
     const handleGoHome = () => {
         navigation.reset({
             index: 0,
             routes: [{ name: 'MainTabs' }],
-        });
-    };
+        })
+    }
 
-    const handleGoMyPosts = () => {
-        navigation.navigate('MyPost');
-    };
+    const handlePrimaryAction = async () => {
+        if (['shop', 'vip', 'promote'].includes(paymentType)) {
+            await refreshShop().catch((error) => {
+                console.error('[PaymentResult] refreshShop before primary action failed:', error)
+            })
+        }
 
-    const handleGoDashboard = () => {
-        navigation.navigate('ShopDashboard');
-    };
+        navigation.navigate(actionConfig.primaryRoute)
+    }
+
+    const handleSecondaryAction = async () => {
+        if (['shop', 'vip', 'promote'].includes(paymentType)) {
+            await refreshShop().catch((error) => {
+                console.error('[PaymentResult] refreshShop before secondary action failed:', error)
+            })
+        }
+
+        navigation.navigate(actionConfig.secondaryRoute)
+    }
 
     if (isSuccess) {
         return (
@@ -62,18 +103,18 @@ const PaymentResultScreen = () => {
                             <Text style={styles.txnRef}>{txnRef}</Text>
                         </View>
                     ) : null}
-                    <Button onPress={handleGoMyPosts} style={styles.primaryBtn}>
-                        Xem tin của tôi
+                    <Button onPress={handlePrimaryAction} style={styles.primaryBtn}>
+                        {actionConfig.primaryLabel}
                     </Button>
-                    <Button variant="outline" onPress={handleGoDashboard} style={styles.secondaryBtn}>
-                        Vào Dashboard cửa hàng
+                    <Button variant="outline" onPress={handleSecondaryAction} style={styles.secondaryBtn}>
+                        {actionConfig.secondaryLabel}
                     </Button>
                     <Button variant="outline" onPress={handleGoHome} style={styles.secondaryBtn}>
                         Về trang chủ
                     </Button>
                 </View>
             </MobileLayout>
-        );
+        )
     }
 
     if (isFailed) {
@@ -96,15 +137,14 @@ const PaymentResultScreen = () => {
                     <Button onPress={handleGoHome} style={styles.primaryBtn}>
                         Về trang chủ
                     </Button>
-                    <Button variant="outline" onPress={handleGoMyPosts} style={styles.secondaryBtn}>
-                        Xem tin của tôi
+                    <Button variant="outline" onPress={handlePrimaryAction} style={styles.secondaryBtn}>
+                        {actionConfig.primaryLabel}
                     </Button>
                 </View>
             </MobileLayout>
-        );
+        )
     }
 
-    // Pending / unknown
     return (
         <MobileLayout title="Thanh toán">
             <View style={styles.container}>
@@ -113,7 +153,7 @@ const PaymentResultScreen = () => {
                 </View>
                 <Text style={[styles.title, { color: '#d97706' }]}>Đang xử lý...</Text>
                 <Text style={styles.subtitle}>
-                    Giao dịch đang được xử lý. Vui lòng kiểm tra lại trạng thái sau ít phút trong mục quản lý tin đăng.
+                    Giao dịch đang được xử lý. Vui lòng kiểm tra lại trạng thái sau ít phút trong mục phù hợp.
                 </Text>
                 {txnRef ? (
                     <View style={styles.txnBox}>
@@ -121,16 +161,16 @@ const PaymentResultScreen = () => {
                         <Text style={styles.txnRef}>{txnRef}</Text>
                     </View>
                 ) : null}
-                <Button onPress={handleGoMyPosts} style={styles.primaryBtn}>
-                    Xem tin của tôi
+                <Button onPress={handlePrimaryAction} style={styles.primaryBtn}>
+                    {actionConfig.primaryLabel}
                 </Button>
                 <Button variant="outline" onPress={handleGoHome} style={styles.secondaryBtn}>
                     Về trang chủ
                 </Button>
             </View>
         </MobileLayout>
-    );
-};
+    )
+}
 
 const styles = StyleSheet.create({
     container: {
@@ -189,6 +229,6 @@ const styles = StyleSheet.create({
         width: '100%',
         marginBottom: 8,
     },
-});
+})
 
-export default PaymentResultScreen;
+export default PaymentResultScreen

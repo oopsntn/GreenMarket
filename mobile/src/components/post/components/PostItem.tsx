@@ -17,12 +17,12 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
     const navigation = useNavigation<any>()
 
     const handlePress = () => {
-        if (item.postStatus === 'pending' || item.postStatus === 'pending_owner') {
+        if (item.postStatus === 'pending' || (item.postStatus === 'pending_owner' && !item.postRejectedReason)) {
             CustomAlert('Tin đang chờ duyệt', 'Tin đăng này đang được kiểm duyệt. Vui lòng kiểm tra lại sau.')
             return
         }
 
-        if (item.postStatus === 'rejected') {
+        if (item.postStatus === 'rejected' || (item.postStatus === 'pending_owner' && item.postRejectedReason)) {
             onEdit(item)
             return
         }
@@ -50,16 +50,8 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
 
                 <View style={styles.info}>
                     <Text style={styles.postTitle} numberOfLines={1}>{item.postTitle}</Text>
-                    <View style={styles.contactBadge}>
-                        <Text style={styles.contactBadgeText}>Liên hệ</Text>
-                    </View>
-                    {item.activePromotion && (
-                        <View style={[styles.contactBadge, { backgroundColor: '#eef2ff', borderColor: '#c7d2fe' }]}>
-                            <Text style={[styles.contactBadgeText, { color: '#4338ca' }]}>Đang đẩy tin</Text>
-                        </View>
-                    )}
                     {renderStatus && renderStatus(item.postStatus)}
-                    {item.postStatus === 'rejected' && item.postRejectedReason && (
+                    {(item.postStatus === 'rejected' || (item.postStatus === 'pending_owner' && item.postRejectedReason)) && (
                         <View style={localStyles.rejectReason}>
                             <Text style={localStyles.rejectText}>Lý do: {item.postRejectedReason}</Text>
                         </View>

@@ -935,6 +935,7 @@ export const getPendingOwnerPosts = async (req: AuthRequest, res: Response): Pro
                 postSlug: posts.postSlug,
                 postStatus: posts.postStatus,
                 postCreatedAt: posts.postCreatedAt,
+                postRejectedReason: posts.postRejectedReason,
                 authorName: users.userDisplayName,
                 authorMobile: users.userMobile,
             })
@@ -1059,6 +1060,7 @@ export const rejectCollaboratorPost = async (req: AuthRequest, res: Response): P
             .update(posts)
             .set({
                 postStatus: "rejected",
+                postPublished: false,
                 postRejectedReason: reason,
                 postModeratedAt: new Date(),
             })

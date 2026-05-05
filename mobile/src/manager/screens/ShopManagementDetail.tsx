@@ -132,13 +132,6 @@ const ShopManagementDetail = ({ route, navigation }: any) => {
             <Text style={styles.priorityText}>Độ ưu tiên: {shop.priority}</Text>
           </View>
         </View>
-
-        <View style={styles.warningBox}>
-          <AlertCircle size={20} color="#F59E0B" />
-          <Text style={styles.warningText}>
-            API quản lý chỉ hiển thị thông tin hàng đợi kiểm duyệt cho cửa hàng. Sử dụng kích hoạt hoặc chặn tại đây, và leo thang riêng nếu trường hợp cần quy trình mạnh hơn.
-          </Text>
-        </View>
       </ScrollView>
 
       <View style={styles.bottomBar}>

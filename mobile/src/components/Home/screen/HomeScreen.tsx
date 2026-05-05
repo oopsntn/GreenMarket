@@ -148,6 +148,8 @@ const HomeScreen = () => {
 
   const handleClearFilters = () => {
     setSelectedCategoryId('');
+    setLocation('');
+    setPage(1);
     setAppliedFilters({
       categoryId: '',
       location: '',

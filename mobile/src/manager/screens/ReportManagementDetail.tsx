@@ -12,6 +12,7 @@ import {
   EyeOff,
   ExternalLink,
   Flag,
+  Image as ImageIcon,
   MessageSquare,
   ShieldAlert,
   ThumbsDown,
@@ -23,6 +24,7 @@ import ReasonModal from '../components/ReasonModal';
 import managerService, { ReportModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
 import ManagerHeader from '../components/ManagerHeader';
+import { MediaGallery } from '../../components/post/components/MediaGallery';
 
 const statusLabelMap: Record<string, string> = {
   pending: 'Chờ xử lý',
@@ -54,6 +56,9 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
     try {
       setLoading(true);
       const data = await managerService.getReportById(reportId);
+      if (__DEV__) {
+        console.log('[ReportManagementDetail] report payload', data);
+      }
       setReport(data);
     } catch (error) {
       console.error(error);
@@ -74,6 +79,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
       CustomAlert('Lỗi', 'Báo cáo này không liên kết với bài đăng nào.');
       return;
     }
+
     setPostAction(action);
     setActionType(null);
     setIsModalVisible(true);
@@ -81,6 +87,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
 
   const sendFeedbackToReporter = async (message: string) => {
     if (!report?.reporterId) return;
+
     try {
       await managerService.moderationFeedback({
         targetType: 'report',
@@ -88,8 +95,8 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         recipientUserId: report.reporterId,
         message,
       });
-    } catch (err) {
-      console.warn('[Report] moderationFeedback failed (non-critical):', err);
+    } catch (error) {
+      console.warn('[Report] moderationFeedback failed (non-critical):', error);
     }
   };
 
@@ -99,19 +106,22 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
     try {
       if (postAction && report?.postId) {
         setProcessingPost(true);
+
         await managerService.updatePostStatus(report.postId, postAction, note || undefined);
         await managerService.resolveReport(
           reportId,
           'resolved',
-          `Bài đăng đã được ${postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối'} bởi quản lý`,
+          `Bài đăng đã được ${
+            postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối'
+          } bởi quản lý`,
           note,
         );
-        // Gửi thông báo cho người báo cáo
-        const postActionLabel = postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối';
+
+        const postActionLabel =
+          postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối';
+
         await sendFeedbackToReporter(
-          `Báo cáo của bạn đại với bài đăng "${report.postTitle || ''}" đã được xử lý. Bài đăng đã được ${postActionLabel}.${
-            note ? ` Ghi chú: ${note}` : ''
-          }`
+          `Báo cáo của bạn đối với bài đăng "${report.postTitle || ''}" đã được xử lý. Bài đăng đã được ${postActionLabel}.${note ? ` Ghi chú: ${note}` : ''}`,
         );
 
         CustomAlert(
@@ -129,24 +139,27 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
           severity: 'high',
           reason: note,
         });
-        CustomAlert('Dạ leo thang', `Báo cáo đã được chuyển cấp xử lý.\nLý do: ${note}`);
+        CustomAlert('Đã leo thang', `Báo cáo đã được chuyển cấp xử lý.\nLý do: ${note}`);
       } else if (actionType) {
         await managerService.resolveReport(
           reportId,
           actionType,
-          actionType === 'resolved' ? 'Báo cáo đã được xem xét và giải quyết' : 'Báo cáo đã được xem xét và bỏ qua',
+          actionType === 'resolved'
+            ? 'Báo cáo đã được xem xét và giải quyết'
+            : 'Báo cáo đã được xem xét và bỏ qua',
           note,
         );
-        // Gửi thông báo cho người báo cáo
+
         if (actionType === 'resolved') {
           await sendFeedbackToReporter(
-            `Báo cáo của bạn đã được giải quyết.${ note ? ` Ghi chú của quản lý: ${note}` : '' }`
+            `Báo cáo của bạn đã được giải quyết.${note ? ` Ghi chú của quản lý: ${note}` : ''}`,
           );
         } else if (actionType === 'dismissed') {
           await sendFeedbackToReporter(
-            `Báo cáo của bạn đã được xem xét nhưng không được chấp nhận.${ note ? ` Ghi chú: ${note}` : '' }`
+            `Báo cáo của bạn đã được xem xét nhưng không được chấp nhận.${note ? ` Ghi chú: ${note}` : ''}`,
           );
         }
+
         CustomAlert(
           actionType === 'resolved' ? 'Đã giải quyết' : 'Đã bỏ qua',
           `Đã lưu ghi chú xử lý: ${note}`,
@@ -171,6 +184,13 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
 
   if (!report) return null;
 
+  const reporterLabel =
+    (typeof report.reporterDisplayName === 'string' && report.reporterDisplayName.trim()) ||
+    (report.reporterId ? `Người dùng #${report.reporterId}` : 'Người báo cáo không xác định');
+  const evidenceMedia = (report.evidenceUrls || [])
+    .filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+    .map((url) => ({ type: 'image', url }));
+
   return (
     <View style={styles.container}>
       <ManagerHeader title="Chi tiết báo cáo" onBack={() => navigation.goBack()} />
@@ -190,7 +210,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
           <Text style={styles.label}>Người báo cáo</Text>
           <View style={styles.infoBox}>
             <User size={20} color="#64748B" />
-            <Text style={styles.infoText}>{report.reporterDisplayName || 'Người báo cáo không xác định'}</Text>
+            <Text style={styles.infoText}>{reporterLabel}</Text>
           </View>
         </View>
 
@@ -226,6 +246,22 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
           <View style={styles.infoBox}>
             <Text style={styles.infoText}>{report.reportNote || 'Không có ghi chú'}</Text>
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Ảnh chứng cứ</Text>
+          {evidenceMedia.length > 0 ? (
+            <View style={styles.evidenceGallery}>
+              <MediaGallery media={evidenceMedia} />
+            </View>
+          ) : (
+            <View style={styles.emptyEvidenceBox}>
+              <ImageIcon size={20} color="#94A3B8" />
+              <Text style={styles.emptyEvidenceText}>
+                Báo cáo này chưa có ảnh chứng cứ hoặc API chưa trả về `evidenceUrls`.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -309,7 +345,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         }}
         onSubmit={onSubmitNote}
         title={
-    postAction === 'approved'
+          postAction === 'approved'
             ? 'Duyệt bài đăng'
             : postAction === 'hidden'
               ? 'Ẩn bài đăng'
@@ -355,7 +391,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
                     : '#94A3B8'
         }
       />
-          </View>
+    </View>
   );
 };
 
@@ -363,7 +399,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { padding: 20, paddingBottom: 100 },
-  statusSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  statusSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -394,7 +435,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  infoText: { fontSize: 16, color: '#1E293B', fontWeight: '500', flex: 1 },
+  infoText: { flex: 1, fontSize: 16, color: '#1E293B', fontWeight: '500' },
   targetBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -424,6 +465,18 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
   },
   reasonText: { flex: 1, fontSize: 15, color: '#1E293B', lineHeight: 22 },
+  evidenceGallery: { marginHorizontal: -20 },
+  emptyEvidenceBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  emptyEvidenceText: { flex: 1, fontSize: 14, color: '#64748B', lineHeight: 20 },
   chatPlaceholder: {
     alignItems: 'center',
     paddingVertical: 30,

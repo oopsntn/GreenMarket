@@ -6,6 +6,8 @@ import MobileLayout from '../../components/Reused/MobileLayout/MobileLayout'
 import { CollaboratorService } from '../services/collaboratorService'
 import CustomAlert from '../../utils/AlertHelper'
 import { resolveImageUrl } from '../../utils/resolveImageUrl'
+import { useAuth } from '../../context/AuthContext'
+import { Alert } from 'react-native'
 
 const InvitationsScreen = () => {
     const navigation = useNavigation<any>()
@@ -15,6 +17,7 @@ const InvitationsScreen = () => {
     const [refreshing, setRefreshing] = useState(false)
     const [actioningId, setActioningId] = useState<number | null>(null)
     const showBackButton = route.name !== 'InvitationsTab'
+    const { user } = useAuth()
 
     const fetchInvitations = async () => {
         try {
@@ -40,6 +43,23 @@ const InvitationsScreen = () => {
     }
 
     const handleAction = async (id: number, action: 'accept' | 'reject') => {
+        if (action === 'accept') {
+            const hasProfile = user?.userDisplayName && user?.userMobile && user?.userLocation;
+            if (!hasProfile) {
+                Alert.alert(
+                    'Cập nhật hồ sơ',
+                    'Bạn cần cập nhật đầy đủ thông tin cá nhân (Tên, Số điện thoại, Địa chỉ) trước khi có thể chấp nhận lời mời.',
+                    [
+                        { text: 'Hủy', style: 'cancel' },
+                        {
+                            text: 'Cập nhật ngay',
+                            onPress: () => navigation.navigate('ProfileRoot')
+                        }
+                    ]
+                );
+                return;
+            }
+        }
         setActioningId(id)
         try {
             await CollaboratorService.respondToInvitation(id, action)

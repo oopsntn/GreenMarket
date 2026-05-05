@@ -27,6 +27,43 @@ export interface PostModerationData {
     summary?: string | null;
 }
 
+export interface PostModerationDetail {
+    postId: number;
+    postTitle: string;
+    postStatus: string;
+    postLocation?: string | null;
+    postContactPhone?: string | null;
+    postCreatedAt?: string | null;
+    postUpdatedAt?: string | null;
+    author?: {
+        userId?: number | null;
+        userDisplayName?: string | null;
+        userMobile?: string | null;
+        userAvatarUrl?: string | null;
+    } | null;
+    shop?: {
+        shopId?: number | null;
+        shopName?: string | null;
+        shopStatus?: string | null;
+        shopLogoUrl?: string | null;
+    } | null;
+    images: Array<{
+        assetId?: number;
+        imageUrl: string;
+        sortOrder?: number | null;
+    }>;
+    videos: Array<{
+        assetId?: number;
+        videoUrl: string;
+        sortOrder?: number | null;
+    }>;
+    attributes: Array<{
+        attributeId?: number | null;
+        name?: string | null;
+        value: string;
+    }>;
+}
+
 export interface ShopModerationData {
     queueId: string;
     id: number;
@@ -55,6 +92,7 @@ export interface ReportModerationData {
     reportUpdatedAt?: string | null;
     adminNote?: string | null;
     severity?: ModerationPriority;
+    evidenceUrls?: string[];
 }
 
 export interface ManagerHistoryEntry {
@@ -139,6 +177,33 @@ const parseSubtitleValue = (subtitle: string | null | undefined, prefix: string)
     return subtitle;
 };
 
+const normalizeStringArray = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+        return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+    }
+
+    if (typeof value === 'string') {
+        const trimmedValue = value.trim();
+        if (!trimmedValue) return [];
+
+        try {
+            const parsedValue = JSON.parse(trimmedValue);
+            if (Array.isArray(parsedValue)) {
+                return parsedValue.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+            }
+        } catch {
+            // Ignore invalid JSON and fall back to a simple delimiter parse.
+        }
+
+        return trimmedValue
+            .split('|')
+            .map((item) => item.trim())
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
 const normalizePost = (item: ModerationQueueRow): PostModerationData => ({
     queueId: item.queueId,
     postId: item.targetId,
@@ -166,7 +231,10 @@ const normalizeShop = (item: ModerationQueueRow): ShopModerationData => ({
 const normalizeReport = (report: any): ReportModerationData => ({
     reportId: report.reportId,
     reporterId: report.reporterId ?? null,
-    reporterDisplayName: report.reporterName ?? null,
+    reporterDisplayName:
+        report.reporterDisplayName ??
+        report.reporterName ??
+        (report.reporterId ? `Người dùng #${report.reporterId}` : null),
     postId: report.postId ?? null,
     reportShopId: report.reportShopId ?? null,
     postTitle: report.postTitle ?? null,
@@ -179,6 +247,7 @@ const normalizeReport = (report: any): ReportModerationData => ({
     reportUpdatedAt: report.reportUpdatedAt ?? null,
     adminNote: report.adminNote ?? null,
     severity: report.severity ?? 'medium',
+    evidenceUrls: normalizeStringArray(report.evidenceUrls ?? report.ticketMetaData?.evidenceUrls),
 });
 
 const fetchAllQueueItems = async (type: QueueType) => {
@@ -254,6 +323,50 @@ const managerService = {
     updatePostStatus: async (id: number | string, status: 'approved' | 'rejected' | 'hidden', reason?: string, note?: string) => {
         const response = await api.patch(`/manager/posts/${id}/status`, { status, reason, note });
         return response.data;
+    },
+
+    getPostDetail: async (id: number | string): Promise<PostModerationDetail> => {
+        const response = await api.get(`/manager/posts/${id}`);
+        const row = response.data?.data;
+
+        if (!row) {
+            throw new Error('Post detail not found');
+        }
+
+        const media = Array.isArray(row.media) ? row.media : [];
+
+        return {
+            postId: Number(row.postId || 0),
+            postTitle: String(row.postTitle || ''),
+            postStatus: normalizeStatus(row.postStatus),
+            postLocation: row.postLocation ?? null,
+            postContactPhone: row.postContactPhone ?? null,
+            postCreatedAt: row.postCreatedAt ?? null,
+            postUpdatedAt: row.postUpdatedAt ?? null,
+            author: row.author ?? null,
+            shop: row.shop ?? null,
+            images: media
+                .filter((item: any) => normalizeStatus(item?.type) === 'image')
+                .map((item: any) => ({
+                    assetId: item.assetId,
+                    imageUrl: item.url,
+                    sortOrder: item.sortOrder ?? null,
+                })),
+            videos: media
+                .filter((item: any) => normalizeStatus(item?.type) === 'video')
+                .map((item: any) => ({
+                    assetId: item.assetId,
+                    videoUrl: item.url,
+                    sortOrder: item.sortOrder ?? null,
+                })),
+            attributes: Array.isArray(row.attributes)
+                ? row.attributes.map((item: any) => ({
+                    attributeId: item.attributeId ?? null,
+                    name: item.attributeTitle ?? item.name ?? null,
+                    value: String(item.value ?? ''),
+                }))
+                : [],
+        };
     },
 
     deletePost: async (id: number | string, reason?: string) => {
