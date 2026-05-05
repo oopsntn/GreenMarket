@@ -18,11 +18,11 @@ import MyPostLayout from '../../components/post/screen/MyPostLayout';
 import PublicShopDetailScreen from '../../components/shop/screen/PublicShopDetailScreen';
 import PostDetailScreen from '../../components/post/screen/PostDetailScreen';
 import NotificationsScreen from '../../components/notification/screen/NotificationsScreen';
-import ProfileScreen from '../../components/profile/screen/ProfileScreen';
 import ManagementCenterScreen from '../../components/post/screen/ManagementCenterScreen';
 import UserSupportRequestScreen from '../../components/settings/screen/UserSupportRequestScreen';
 import QrLoginScannerScreen from '../../components/settings/screen/QrLoginScannerScreen';
 import CollaboratorSettingsScreen from '../screens/CollaboratorSettingsScreen';
+import CollaboratorProfileScreen from '../screens/CollaboratorProfileScreen';
 
 type CollaboratorTabParamList = {
   Dashboard: undefined;
@@ -132,7 +132,7 @@ const CollaboratorNavigator = () => {
       <Stack.Screen name="PublicShopDetail" component={PublicShopDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="PostDetail" component={PostDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ animation: 'slide_from_right' }} />
-      <Stack.Screen name="Profile" component={ProfileScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="Profile" component={CollaboratorProfileScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="ManagementCenter" component={ManagementCenterScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="UserSupportRequest" component={UserSupportRequestScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="QrLoginScanner" component={QrLoginScannerScreen} options={{ animation: 'slide_from_right' }} />
