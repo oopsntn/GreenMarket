@@ -3,6 +3,8 @@ import {
   desc,
   eq,
   isNull,
+  ilike,
+  or,
   sql,
   type SQL,
 } from "drizzle-orm";

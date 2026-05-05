@@ -9,9 +9,10 @@ import {
   MAX_CONTACT_MESSAGE_LENGTH
 } from "../../services/collaborator.service";
 
-const getStringParam = (value: string | string[] | undefined) => {
-  if (Array.isArray(value)) return value[0] ?? "";
-  return value ?? "";
+const getStringParam = (value: any): string => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return typeof value[0] === "string" ? value[0] : "";
+  return "";
 };
 
 export const getCollaboratorProfile = async (req: AuthRequest, res: Response): Promise<void> => {
