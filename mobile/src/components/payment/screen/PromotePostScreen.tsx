@@ -81,25 +81,16 @@ const PromotePostScreen = ({ route }: any) => {
                 const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
                 const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
 
-                navigation.navigate('PaymentResult', { status, code, txnRef });
+                navigation.navigate('PaymentResult', { status, code, txnRef, type: 'promote' });
             }
         });
 
         await WebBrowser.openBrowserAsync(paymentUrl);
 
-        // Browser đã đóng nhưng chưa nhận deep-link → fallback
+        // Browser đã đóng nhưng chưa nhận deep-link → chuyển đến màn hình chờ
         subscription.remove();
         if (!navigatedRef.current) {
-            // Người dùng có thể đã thanh toán nhưng deep-link không về được
-            // Hiển thị alert nhẹ nhàng thay vì silent fail
-            CustomAlert(
-                'Kiểm tra kết quả',
-                'Nếu bạn đã hoàn tất thanh toán, vui lòng kiểm tra trạng thái trong quản lý tin đăng.',
-                [
-                    { text: 'Xem tin của tôi', onPress: () => navigation.navigate('MyPost') },
-                    { text: 'Đóng', style: 'cancel' },
-                ]
-            );
+            navigation.navigate('PaymentPending', { type: 'promote', postId: post?.postId });
         }
     };
 

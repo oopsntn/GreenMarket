@@ -3,12 +3,27 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View }
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { CheckCircle2, Clock, Plus, XCircle } from 'lucide-react-native'
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout'
-import PostTabs from '../components/PostTabs'
 import PostItem from '../components/PostItem'
 import EditPostModal from '../components/EditPostModal'
 import useMyPost from '../service/useMyPost'
 import { postService } from '../service/postService'
 import { useAuth } from '../../../context/AuthContext'
+
+type EditData = {
+    title: string;
+    categoryId: number;
+    location: string;
+    contactPhone: string;
+    attributes: Record<number, string>;
+}
+
+const emptyEditData: EditData = {
+    title: '',
+    categoryId: 0,
+    location: '',
+    contactPhone: '',
+    attributes: {},
+}
 
 const MyPostLayout = () => {
     const navigation = useNavigation<any>()
@@ -16,21 +31,42 @@ const MyPostLayout = () => {
     const { state, actions } = useMyPost()
     const { user, shop } = useAuth()
     const [categories, setCategories] = useState<any[]>([])
+    const [categoryAttributes, setCategoryAttributes] = useState<any[]>([])
     const showBackButton = route.name !== 'MyPostsTab'
 
-    const [editData, setEditData] = useState({
-        title: '',
-        categoryId: 0,
-        content: '',
-        location: '',
-    })
+    const [editData, setEditData] = useState<EditData>(emptyEditData)
 
     const fetchCategories = async () => {
         try {
             const res = await postService.getCategories()
-            setCategories(res)
+            setCategories(Array.isArray(res) ? res : [])
         } catch (error) {
             console.error('Error fetching categories:', error)
+        }
+    }
+
+    const loadCategoryAttributes = async (categoryId: number, prefills?: Record<number, string>) => {
+        if (!categoryId) {
+            setCategoryAttributes([])
+            setEditData((prev) => ({
+                ...prev,
+                categoryId: 0,
+                attributes: prefills || {},
+            }))
+            return
+        }
+
+        try {
+            const res = await postService.getCategoryAttributes(categoryId)
+            setCategoryAttributes(Array.isArray(res) ? res : [])
+            setEditData((prev) => ({
+                ...prev,
+                categoryId,
+                attributes: prefills || prev.attributes,
+            }))
+        } catch (error) {
+            console.error('Error fetching category attributes:', error)
+            setCategoryAttributes([])
         }
     }
 
@@ -38,14 +74,37 @@ const MyPostLayout = () => {
         fetchCategories()
     }, [])
 
-    const openEdit = (post: any) => {
+    const getPrefilledAttributes = (post: any): Record<number, string> => {
+        if (!Array.isArray(post?.attributes)) return {}
+
+        return post.attributes.reduce((acc: Record<number, string>, item: any) => {
+            const rawId = item?.attributeId ?? item?.id
+            const rawValue = item?.value ?? item?.attributeValue
+            const attributeId = Number(rawId)
+
+            if (!Number.isNaN(attributeId) && rawValue !== undefined && rawValue !== null) {
+                acc[attributeId] = String(rawValue)
+            }
+
+            return acc
+        }, {})
+    }
+
+    const openEdit = async (post: any) => {
+        const prefilledAttributes = getPrefilledAttributes(post)
         setEditData({
-            title: post.postTitle,
-            categoryId: post.categoryId,
-            content: post.postContent || '',
+            title: post.postTitle || '',
+            categoryId: Number(post.categoryId || 0),
             location: post.postLocation || '',
+            contactPhone: post.postContactPhone || '',
+            attributes: prefilledAttributes,
         })
         actions.setEditingPost(post)
+        await loadCategoryAttributes(Number(post.categoryId || 0), prefilledAttributes)
+    }
+
+    const handleCategoryChange = async (categoryId: number) => {
+        await loadCategoryAttributes(categoryId, {})
     }
 
     const renderStatus = (status: string) => {
@@ -102,8 +161,6 @@ const MyPostLayout = () => {
                 </TouchableOpacity>
             }
         >
-
-
             {state.loading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator color="#10b981" />
@@ -138,11 +195,16 @@ const MyPostLayout = () => {
                 editingPost={state.editingPost}
                 editData={editData}
                 setEditData={setEditData}
-                onClose={() => actions.setEditingPost(null)}
+                onClose={() => {
+                    actions.setEditingPost(null)
+                    setCategoryAttributes([])
+                    setEditData(emptyEditData)
+                }}
                 onSave={actions.handleUpdate}
+                onCategoryChange={handleCategoryChange}
                 categories={categories}
+                categoryAttributes={categoryAttributes}
                 saving={state.saving}
-                styles={styles}
                 hideLocation={!!shop}
             />
         </MobileLayout>
@@ -256,24 +318,6 @@ const styles = StyleSheet.create({
         color: '#9ca3af',
         fontSize: 14,
         lineHeight: 22,
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        padding: 20,
-    },
-    modalCard: {
-        padding: 20,
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: '800',
-        marginBottom: 15,
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        marginTop: 20,
     },
     loadingContainer: {
         flex: 1,

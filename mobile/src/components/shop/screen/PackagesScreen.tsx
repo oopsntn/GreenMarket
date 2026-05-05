@@ -82,7 +82,7 @@ const PackagesScreen = () => {
             })[0];
     }, [boostPackages]);
 
-    const handleOpenPayment = async (paymentUrl?: string) => {
+    const handleOpenPayment = async (paymentUrl?: string, paymentType: 'vip' | 'personal' = 'vip') => {
         if (!paymentUrl) {
             CustomAlert('Thông báo', 'Không tạo được liên kết thanh toán.');
             return;
@@ -105,7 +105,7 @@ const PackagesScreen = () => {
                 const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
                 const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
 
-                navigation.navigate('PaymentResult', { status, code, txnRef });
+                navigation.navigate('PaymentResult', { status, code, txnRef, type: paymentType });
             }
         });
 
@@ -113,15 +113,9 @@ const PackagesScreen = () => {
 
         subscription.remove();
         if (!navigatedRef.current) {
+            // Browser đóng mà không có deep-link → chuyển đến màn hình chờ
             await refreshShop();
-            CustomAlert(
-                'Kiểm tra kết quả',
-                'Nếu bạn đã hoàn tất thanh toán, vui lòng kiểm tra trạng thái trong quản lý tài khoản.',
-                [
-                    { text: 'Xem tin của tôi', onPress: () => navigation.navigate('MyPost') },
-                    { text: 'Đóng', style: 'cancel' },
-                ]
-            );
+            navigation.navigate('PaymentPending', { type: paymentType });
         }
     };
 
@@ -129,7 +123,7 @@ const PackagesScreen = () => {
         try {
             setProcessing(true);
             const res = await paymentService.buyShopVipPackage();
-            await handleOpenPayment(res.paymentUrl);
+            await handleOpenPayment(res.paymentUrl, 'vip');
         } catch (error: any) {
             CustomAlert('Thông báo', error?.response?.data?.error || 'Đã xảy ra lỗi khi tạo thanh toán VIP.');
         } finally {
@@ -141,7 +135,7 @@ const PackagesScreen = () => {
         try {
             setProcessing(true);
             const res = await paymentService.buyPersonalPackage();
-            await handleOpenPayment(res.paymentUrl);
+            await handleOpenPayment(res.paymentUrl, 'personal');
         } catch (error: any) {
             CustomAlert('Thông báo', error?.response?.data?.error || 'Đã xảy ra lỗi khi tạo thanh toán gói cá nhân.');
         } finally {

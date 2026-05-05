@@ -557,7 +557,6 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
 
         if (categoryId !== undefined) postUpdatePayload.categoryId = Number(categoryId);
         if (postTitle !== undefined) postUpdatePayload.postTitle = postTitle;
-
         if (postLocation !== undefined) postUpdatePayload.postLocation = postLocation;
         if (postContactPhone !== undefined) postUpdatePayload.postContactPhone = postContactPhone;
 
