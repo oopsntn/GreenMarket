@@ -36,8 +36,8 @@ const ManagerTabs = () => {
         tabBarActiveTintColor: '#22C55E',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
-          height: 65,
-          paddingBottom: 10,
+          height: 75,
+          paddingBottom: 18,
           paddingTop: 10,
         },
         tabBarLabelStyle: {
