@@ -959,10 +959,7 @@ INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verifi
     '/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
 (6, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
-    '/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
-(137, 'Vườn Tùng Cổ Đông Anh', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
-    'Chuyên sưu tầm và chăm sóc bonsai tùng, sanh, si theo phong cách vườn Bắc bộ. Nhận tư vấn phối chậu và tạo dáng cây trưởng thành.',
-    '/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
+    '/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511);
 
 INSERT INTO shops (
     shop_id,
@@ -1127,11 +1124,7 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
 
 (15, 1, 1, 15, 'Ổi Bonsai Sai Quả Dáng Hoành',
     'oi-bonsai-sai-qua-dang-hoanh',
-    'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days'),
-
-(16, 8, NULL, 11, 'Cây Bonsai Test 0987654321',
-    'cay-bonsai-test-0987654321',
-    'Hà Nội', 'approved', '0987654321', 10, 2, true, now() - interval '1 days', now() - interval '1 days');
+    'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days');
 
 -- Additional moderation coverage posts
 INSERT INTO posts (
@@ -1158,8 +1151,8 @@ INSERT INTO posts (
 (18, 145, 145, 13, 'Bài đăng bị từ chối do thiếu thông tin liên hệ', 'bai-dang-bi-tu-choi-thieu-thong-tin-lien-he', 'Biên Hòa, Đồng Nai', 'rejected', 'Bài đăng thiếu thông tin liên hệ rõ ràng và bộ ảnh xác minh nguồn gốc cây.', '0909000145', 22, 0, false, now() - interval '4 days', NULL, now() - interval '3 days', now() - interval '4 days', now() - interval '3 days'),
 (19, 1, 1, 14, 'Lộc vừng đang bị ẩn để rà soát', 'loc-vung-dang-bi-an-de-ra-soat', 'Yên Phong, Bắc Ninh', 'hidden', NULL, '0978195419', 95, 6, true, now() - interval '7 days', now() - interval '6 days', now() - interval '2 days', now() - interval '7 days', now() - interval '2 days'),
 (20, 142, NULL, 11, 'Bản nháp bonsai chưa gửi duyệt', 'ban-nhap-bonsai-chua-gui-duyet', NULL, 'draft', NULL, '0909000142', 0, 0, false, NULL, NULL, NULL, now() - interval '8 hours', now() - interval '2 hours'),
-(21, 143, 3, 12, 'Bài cộng tác viên chờ chủ vườn duyệt', 'bai-cong-tac-vien-cho-chu-vuon-duyet', 'Long Biên, Hà Nội', 'pending_owner', NULL, '0909000143', 14, 1, false, now() - interval '30 hours', NULL, NULL, now() - interval '32 hours', now() - interval '30 hours'),
-(22, 143, 3, 11, 'Bài cộng tác viên đã được xuất bản', 'bai-cong-tac-vien-da-duoc-xuat-ban', 'Long Biên, Hà Nội', 'approved', NULL, '0909000143', 164, 9, true, now() - interval '10 days', now() - interval '9 days', now() - interval '9 days', now() - interval '10 days', now() - interval '9 days');
+(21, 143, 3, 12, 'Cây Tùng Kim Cương Dáng Trực', 'cay-tung-kim-cuong-dang-truc', 'Long Biên, Hà Nội', 'pending_owner', NULL, '0909000143', 14, 1, false, now() - interval '30 hours', NULL, NULL, now() - interval '32 hours', now() - interval '30 hours'),
+(22, 143, 3, 11, 'Cây Mai Chiếu Thủy Bonsai Mini', 'cay-mai-chieu-thuy-bonsai-mini', 'Long Biên, Hà Nội', 'approved', NULL, '0909000143', 164, 9, true, now() - interval '10 days', now() - interval '9 days', now() - interval '9 days', now() - interval '10 days', now() - interval '9 days');
 
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
 -- Post 1: Sanh Mini
@@ -1248,8 +1241,8 @@ INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order, m
 ('post', 18, 'image', '/uploads/rejected-post-18-proof.jpg', 0, '{"label":"Ảnh hồ sơ bị từ chối"}'::jsonb),
 ('post', 19, 'image', '/uploads/hidden-post-19-cover.jpg', 0, '{"label":"Ảnh bài đang ẩn"}'::jsonb),
 ('post', 20, 'image', '/uploads/draft-post-20-cover.jpg', 0, '{"label":"Ảnh bản nháp"}'::jsonb),
-('post', 21, 'image', '/uploads/pending-owner-post-21-cover.jpg', 0, '{"label":"Ảnh bài chờ chủ vườn duyệt"}'::jsonb),
-('post', 22, 'image', '/uploads/approved-collab-post-22-cover.jpg', 0, '{"label":"Ảnh bài cộng tác viên đã duyệt"}'::jsonb);
+('post', 21, 'image', '/uploads/tung-la-han-1.jpg', 0, '{"label":"Ảnh cây Tùng Kim Cương"}'::jsonb),
+('post', 22, 'image', '/uploads/mct-mini-1.jpg', 0, '{"label":"Ảnh cây Mai Chiếu Thủy"}'::jsonb);
 
 INSERT INTO shop_collaborators (
     shop_collaborators_id,
@@ -1487,8 +1480,8 @@ INSERT INTO post_promotions (
 (3, 2, 3, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, '2026-03-08 08:00:00', '2026-03-14 08:00:00', 'expired',  '2026-03-07 17:30:00'),
 (5, 12, 6, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-03-28 08:00:00', '2026-04-03 08:00:00', 'expired',  '2026-03-27 15:10:00'),
 (6, 9, 3, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-05-06 08:00:00', '2026-05-12 08:00:00', 'scheduled','2026-05-01 08:30:00'),
-(7, 15, 1, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-04-28 08:00:00', '2026-05-04 08:00:00', 'active',   '2026-04-27 07:40:00'),
-(8, 7, 1, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-04-29 08:05:00', '2026-05-05 08:05:00', 'active',   '2026-04-28 07:45:00'),
+(7, 15, 1, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, now() - interval '1 day', now() + interval '6 days', 'active',   now() - interval '2 days'),
+(8, 7, 1, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, now() - interval '1 day', now() + interval '6 days', 'active',   now() - interval '2 days'),
 (9, 11, 6, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, '2026-04-30 08:00:00', '2026-05-06 08:00:00', 'paused', '2026-04-29 16:00:00');
 
 -- ============================================================

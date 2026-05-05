@@ -23,11 +23,13 @@ const CollaboratorDirectory: React.FC = () => {
   const [selectedCollab, setSelectedCollab] = useState<CollaboratorProfile | null>(null);
   const [fullCollab, setFullCollab] = useState<CollaboratorFullProfile | null>(null);
   const [fetchingDetail, setFetchingDetail] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCollaborators();
-  }, [page, searchQuery]);
+  }, [page, searchQuery, statusFilter, locationFilter]);
 
   useEffect(() => {
     if (selectedCollab) {
@@ -52,7 +54,13 @@ const CollaboratorDirectory: React.FC = () => {
   const fetchCollaborators = async () => {
     try {
       setLoading(true);
-      const res = await getPublicCollaborators({ page, limit: 12 });
+      const res = await getPublicCollaborators({ 
+        page, 
+        limit: 12,
+        keyword: searchQuery,
+        location: locationFilter,
+        status: statusFilter
+      });
       setCollaborators(res.data.data);
       setTotalPages(res.data.meta.totalPages);
     } catch (error) {
@@ -121,10 +129,47 @@ const CollaboratorDirectory: React.FC = () => {
               placeholder="Tìm kiếm cộng tác viên theo tên, kỹ năng hoặc địa điểm..."
               className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all font-medium"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
-          <button className="px-6 py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2 w-full md:w-auto justify-center shadow-lg shadow-slate-200">
+
+          <div className="flex flex-row gap-3 w-full md:w-auto">
+            <select
+              className="px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all font-medium text-sm text-slate-600 outline-none appearance-none cursor-pointer min-w-[140px]"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="available">Đang rảnh</option>
+              <option value="busy">Đang bận</option>
+            </select>
+
+            <select
+              className="px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 transition-all font-medium text-sm text-slate-600 outline-none appearance-none cursor-pointer min-w-[140px]"
+              value={locationFilter}
+              onChange={(e) => {
+                setLocationFilter(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">Toàn quốc</option>
+              <option value="Hà Nội">Hà Nội</option>
+              <option value="Hồ Chí Minh">TP. HCM</option>
+              <option value="Đà Nẵng">Đà Nẵng</option>
+              <option value="Hải Phòng">Hải Phòng</option>
+            </select>
+          </div>
+
+          <button 
+            onClick={() => fetchCollaborators()}
+            className="px-6 py-3 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2 w-full md:w-auto justify-center shadow-lg shadow-slate-200"
+          >
             Tìm kiếm
           </button>
         </div>
@@ -175,10 +220,8 @@ const CollaboratorDirectory: React.FC = () => {
                   {user.bio || "Người cộng tác viên này chưa cập nhật giới thiệu cá nhân."}
                 </p>
 
-                {/* Tags/Categories (Mock for aesthetic) */}
+                {/* Tags/Categories (Empty for now until dynamic) */}
                 <div className="flex flex-wrap gap-2 mb-6">
-                  <span className="px-3 py-1 bg-slate-50 text-slate-500 rounded-lg text-xs font-bold uppercase tracking-wider">Nhiếp ảnh</span>
-                  <span className="px-3 py-1 bg-slate-50 text-slate-500 rounded-lg text-xs font-bold uppercase tracking-wider">Viết lách</span>
                 </div>
 
                 {/* Actions Section */}
@@ -386,9 +429,6 @@ const CollaboratorDirectory: React.FC = () => {
                   Kỹ năng chuyên môn
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  <span className="px-4 py-2 bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-100 shadow-sm">Nhiếp ảnh sản phẩm</span>
-                  <span className="px-4 py-2 bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-100 shadow-sm">Review nhà vườn</span>
-                  <span className="px-4 py-2 bg-slate-50 text-slate-700 rounded-xl text-xs font-bold border border-slate-100 shadow-sm">Viết content story</span>
                 </div>
               </section>
             </div>

@@ -497,6 +497,9 @@ export interface CollaboratorsListResponse {
 export const getPublicCollaborators = (params?: {
   page?: number;
   limit?: number;
+  keyword?: string;
+  location?: string;
+  status?: string;
 }) => api.get<CollaboratorsListResponse>('/collaborator/public-list', { params });
 
 export const getPublicCollaboratorDetail = (id: number | string) =>

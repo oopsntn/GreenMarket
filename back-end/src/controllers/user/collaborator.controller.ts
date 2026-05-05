@@ -308,8 +308,14 @@ export const getPublicCollaborators = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    const { page, limit } = req.query;
-    const result = await CollaboratorService.getPublicCollaborators(userId, { page, limit });
+    const { page, limit, keyword, location, status } = req.query;
+    const result = await CollaboratorService.getPublicCollaborators(userId, { 
+      page, 
+      limit,
+      keyword: getStringParam(keyword),
+      location: getStringParam(location),
+      status: getStringParam(status)
+    });
     res.json(result);
   } catch (error) {
     console.error("[getPublicCollaborators] Error:", error);

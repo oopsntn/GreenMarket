@@ -50,6 +50,12 @@ export interface PaginationParams {
   limit?: unknown;
 }
 
+export interface CollaboratorSearchParams extends PaginationParams {
+  keyword?: string;
+  location?: string;
+  status?: string;
+}
+
 export interface AvailableJobsParams extends PaginationParams {
   keyword?: string;
   category?: string;
@@ -515,8 +521,9 @@ export class CollaboratorService {
     return submission;
   }
 
-  static async getPublicCollaborators(requesterId: number, params: PaginationParams) {
+  static async getPublicCollaborators(requesterId: number, params: CollaboratorSearchParams) {
     const { page, limit, offset } = parsePagination(params.page, params.limit);
+    const { keyword, location, status } = params;
 
     const [ownerShop] = await db
       .select({ shopId: shops.shopId })
@@ -525,8 +532,25 @@ export class CollaboratorService {
       .limit(1);
 
     const shopId = ownerShop?.shopId || 0;
-
+    const serverUrl = `${process.env.PROTOCOL || 'http'}://${process.env.IP || 'localhost'}:${process.env.PORT || 5000}`;
     const conditions: SQL[] = [eq(users.userBusinessRoleId, COLLABORATOR_ROLE_ID), eq(users.userStatus, "active")];
+
+    if (keyword) {
+      conditions.push(
+        or(
+          ilike(users.userDisplayName, `%${keyword}%`),
+          ilike(users.userBio, `%${keyword}%`)
+        ) as SQL
+      );
+    }
+
+    if (location) {
+      conditions.push(ilike(users.userLocation, `%${location}%`) as SQL);
+    }
+
+    if (status) {
+      conditions.push(eq(users.userAvailabilityStatus, status) as SQL);
+    }
 
     const rows = await db
       .select({
@@ -562,8 +586,13 @@ export class CollaboratorService {
     const totalItems = Number(countResult?.count ?? 0);
     const totalPages = Math.ceil(totalItems / limit);
 
+    const formattedRows = rows.map(row => ({
+      ...row,
+      avatarUrl: row.avatarUrl?.startsWith('/uploads') ? `${serverUrl}${row.avatarUrl}` : row.avatarUrl
+    }));
+
     return {
-      data: rows,
+      data: formattedRows,
       meta: { page, limit, totalItems, totalPages },
     };
   }
@@ -623,6 +652,10 @@ export class CollaboratorService {
     }
 
     const portfolioPhotos: string[] = [];
+    const serverUrl = `${process.env.PROTOCOL || 'http'}://${process.env.IP || 'localhost'}:${process.env.PORT || 5000}`;
+    const isImage = (url: string) => /\.(jpg|jpeg|png|webp|gif|avif|heic)$/i.test(url);
+    const formatUrl = (url: string) => url.startsWith('/uploads') ? `${serverUrl}${url}` : url;
+
     try {
       const deliverables = await db
         .select({ urls: taskReplies.attachments })
@@ -649,14 +682,18 @@ export class CollaboratorService {
       deliverables.forEach(d => {
         if (Array.isArray(d.urls)) {
           d.urls.forEach(url => {
-            if (typeof url === 'string' && !portfolioPhotos.includes(url)) portfolioPhotos.push(url);
+            if (typeof url === 'string' && isImage(url) && !portfolioPhotos.includes(formatUrl(url))) {
+              portfolioPhotos.push(formatUrl(url));
+            }
           });
         }
       });
       hostPhotos.forEach(p => {
         if (Array.isArray(p.urls)) {
           p.urls.forEach(url => {
-            if (typeof url === 'string' && !portfolioPhotos.includes(url)) portfolioPhotos.push(url);
+            if (typeof url === 'string' && isImage(url) && !portfolioPhotos.includes(formatUrl(url))) {
+              portfolioPhotos.push(formatUrl(url));
+            }
           });
         }
       });
@@ -676,8 +713,12 @@ export class CollaboratorService {
       ...profile,
       mobile: isContactVisible ? maskCheck?.mobile : null,
       email: isContactVisible ? maskCheck?.email : null,
+      avatarUrl: profile.avatarUrl?.startsWith('/uploads') ? `${serverUrl}${profile.avatarUrl}` : profile.avatarUrl,
+      stats: {
+        totalGardens: totalGardens,
+        totalPosts: totalPosts,
+      },
       relationshipStatus: relationship?.status || null,
-      stats: { totalGardens, totalPosts },
       portfolioPhotos: portfolioPhotos.slice(0, 15),
     };
   }
