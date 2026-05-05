@@ -32,7 +32,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
     }
 
     if (trimmedMobile.length !== 10 || !/^\d+$/.test(trimmedMobile)) {
-      Alert.alert("Lỗi", "vui lòng nhập đúng định dạng số điện thoại");
+      Alert.alert("Lỗi", "Vui lòng nhập đúng định dạng số điện thoại");
       return;
     }
 

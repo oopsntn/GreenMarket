@@ -150,7 +150,7 @@ const HostContentModerationDetail = ({ route, navigation }: any) => {
 
   return (
     <View style={styles.container}>
-      <ManagerHeader title="Chi tiết nội dung Host" onBack={() => navigation.goBack()} />
+      <ManagerHeader title="Chi tiết nội dung tin tức" onBack={() => navigation.goBack()} />
 
       <ScrollView contentContainerStyle={styles.contentContainer}>
         <View style={styles.heroCard}>
@@ -200,7 +200,7 @@ const HostContentModerationDetail = ({ route, navigation }: any) => {
 
         {mediaUrls.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ảnh minh họa</Text>
+            <Text style={styles.sectionTitle}>Ảnh bìa</Text>
             <View style={styles.mediaGrid}>
               {mediaUrls.map((url, index) => (
                 <Image
