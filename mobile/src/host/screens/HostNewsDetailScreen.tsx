@@ -100,7 +100,12 @@ const HostNewsDetailScreen = ({ route }: any) => {
       try {
         setLoading(true);
         setError(null);
-        const res = await hostService.getContentDetail(hostContentId);
+        let res;
+        if (user?.businessRoleCode === 'HOST') {
+          res = await hostService.getContentDetail(hostContentId);
+        } else {
+          res = await hostService.getPublicContentDetail(hostContentId);
+        }
         setContent(res);
       } catch (e: any) {
         const msg =

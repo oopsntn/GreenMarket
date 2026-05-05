@@ -49,12 +49,8 @@ const HomeScreen = () => {
 
   // Filter states
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
   const [location, setLocation] = useState('');
   const [appliedFilters, setAppliedFilters] = useState({
-    minPrice: '',
-    maxPrice: '',
     categoryId: '',
     location: '',
   });
@@ -144,8 +140,6 @@ const HomeScreen = () => {
   const handleApplyFilters = () => {
     setPage(1);
     setAppliedFilters({
-      minPrice,
-      maxPrice,
       categoryId: selectedCategoryId,
       location,
     });
@@ -154,13 +148,7 @@ const HomeScreen = () => {
 
   const handleClearFilters = () => {
     setSelectedCategoryId('');
-    setMinPrice('');
-    setMaxPrice('');
-    setLocation('');
-    setPage(1);
     setAppliedFilters({
-      minPrice: '',
-      maxPrice: '',
       categoryId: '',
       location: '',
     });
@@ -270,10 +258,6 @@ const HomeScreen = () => {
           categories={categories}
           selectedCategoryId={selectedCategoryId}
           onSelectCategory={setSelectedCategoryId}
-          minPrice={minPrice}
-          onMinPriceChange={setMinPrice}
-          maxPrice={maxPrice}
-          onMaxPriceChange={setMaxPrice}
           location={location}
           onLocationChange={setLocation}
           onApply={handleApplyFilters}

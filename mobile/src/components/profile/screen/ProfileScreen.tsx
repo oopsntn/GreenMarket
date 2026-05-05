@@ -214,29 +214,35 @@ const ProfileScreen = () => {
 
                                 <TouchableOpacity
                                     style={styles.utilitiesCard}
-                                    onPress={() => navigation.navigate('PersonalDashboard')}
+                                    onPress={() => navigation.navigate('MyPost')}
                                     activeOpacity={0.9}
                                 >
                                     <Grid3X3 color="#16A34A" size={18} />
-                                    <Text style={styles.utilitiesTitle}>DASHBOARD CÁ NHÂN</Text>
-                                    <Text style={styles.utilitiesDesc}>Xem quá trình thanh toán và gói ưu tiên.</Text>
+                                    <Text style={styles.utilitiesTitle}>QUẢN LÝ TIN ĐĂNG</Text>
+                                    <Text style={styles.utilitiesDesc}>Chỉnh sửa, đẩy tin hoặc xóa các bài đăng.</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     style={styles.utilitiesCard}
-                                    onPress={() => {
-                                        if (hasNoShop) {
-                                            navigation.navigate('RegisterShop')
-                                            return
-                                        }
-                                        navigation.navigate('MyShop')
-                                    }}
+                                    onPress={() => navigation.navigate('PersonalDashboard')}
                                     activeOpacity={0.9}
                                 >
-                                    <Store color="#16A34A" size={18} />
-                                    <Text style={styles.utilitiesTitle}>MỞ NHÀ VƯỜN</Text>
-                                    <Text style={styles.utilitiesDesc}>Đăng ký nhà vườn để mở thêm quyền bán hàng.</Text>
+                                    <FileText color="#16A34A" size={18} />
+                                    <Text style={styles.utilitiesTitle}>LỊCH SỬ THANH TOÁN</Text>
+                                    <Text style={styles.utilitiesDesc}>Xem các giao dịch thanh toán và gói đẩy tin.</Text>
                                 </TouchableOpacity>
+
+                                {hasNoShop && (
+                                    <TouchableOpacity
+                                        style={styles.utilitiesCard}
+                                        onPress={() => navigation.navigate('RegisterShop')}
+                                        activeOpacity={0.9}
+                                    >
+                                        <Store color="#16A34A" size={18} />
+                                        <Text style={styles.utilitiesTitle}>MỞ NHÀ VƯỜN</Text>
+                                        <Text style={styles.utilitiesDesc}>Đăng ký nhà vườn để bán hàng.</Text>
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         </View>
 
@@ -284,6 +290,29 @@ const ProfileScreen = () => {
                                 </LinearGradient>
                             </TouchableOpacity>
                         ) : null}
+
+                        {isActiveShop && (
+                            <TouchableOpacity
+                                style={[styles.beShopBanner, { borderColor: '#10b981', marginTop: 8 }]}
+                                onPress={() => navigation.navigate('EditShop', { shop })}
+                            >
+                                <LinearGradient
+                                    colors={['#fff', '#f0fdf4']}
+                                    style={styles.beShopGrad}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                >
+                                    <View style={[styles.beShopIcon, { backgroundColor: '#f0fdf4' }]}>
+                                        <Settings color="#10b981" size={24} />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[styles.beShopTitle, { color: '#065f46' }]}>Chỉnh sửa nhà vườn</Text>
+                                        <Text style={[styles.beShopDesc, { color: '#059669' }]}>Cập nhật ảnh vườn, mạng xã hội và vị trí</Text>
+                                    </View>
+                                    <ChevronRight color="#10b981" size={20} />
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {/* 5. Main Form Card */}
@@ -294,21 +323,23 @@ const ProfileScreen = () => {
                                 {isShop ? 'THÔNG TIN CỬA HÀNG' : 'THÔNG TIN CÁ NHÂN'}
                             </Text>
                         </View>
-                        <ProfileForm formData={formData} setFormData={setFormData} isShop={isShop} />
+                        <ProfileForm formData={formData} setFormData={setFormData} isShop={isShop} readOnly={isShop} />
                     </View>
 
                     {/* 6. Interaction Area */}
-                    <TouchableOpacity
-                        style={styles.primaryBtn}
-                        onPress={handleSave}
-                        disabled={saving}
-                    >
-                        {saving ? (
-                            <ActivityIndicator color="white" size="small" />
-                        ) : (
-                            <Text style={styles.primaryBtnText}>LƯU THAY ĐỔI</Text>
-                        )}
-                    </TouchableOpacity>
+                    {!isShop && (
+                        <TouchableOpacity
+                            style={styles.primaryBtn}
+                            onPress={handleSave}
+                            disabled={saving}
+                        >
+                            {saving ? (
+                                <ActivityIndicator color="white" size="small" />
+                            ) : (
+                                <Text style={styles.primaryBtnText}>LƯU THAY ĐỔI</Text>
+                            )}
+                        </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity
                         style={styles.logoutBtn}

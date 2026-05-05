@@ -7,16 +7,17 @@ import { useAuth } from '../../../context/AuthContext';
 
 const ManagementCenterScreen = () => {
   const navigation = useNavigation<any>();
-  const { shop } = useAuth();
-  const canEnterHostMode = !!shop?.shopId && shop.shopStatus === 'active';
+  const { shop, user } = useAuth();
+  const canEnterShopMode = !!shop?.shopId && shop.shopStatus === 'active';
+  const canEnterHostMode = user?.businessRoleCode === 'HOST';
 
   return (
     <MobileLayout title="Trung tâm quản lý" scrollEnabled={true}>
       <View style={styles.container}>
-        {canEnterHostMode ? (
+        {canEnterShopMode ? (
           <TouchableOpacity
             style={styles.rowItem}
-            onPress={() => navigation.navigate('HostMode')}
+            onPress={() => navigation.navigate('ShopDashboard')}
             activeOpacity={0.9}
           >
             <View style={styles.rowLeft}>
@@ -25,7 +26,25 @@ const ManagementCenterScreen = () => {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>Chế độ Chủ shop</Text>
-                <Text style={styles.rowDesc}>Vào bảng điều khiển & doanh thu.</Text>
+                <Text style={styles.rowDesc}>Vào bảng điều khiển & doanh thu nhà vườn.</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ) : null}
+
+        {canEnterHostMode ? (
+          <TouchableOpacity
+            style={styles.rowItem}
+            onPress={() => navigation.navigate('HostMode')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.rowLeft}>
+              <View style={[styles.rowIcon, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                <Package size={18} color="#2563EB" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>Chế độ Cộng tác viên</Text>
+                <Text style={styles.rowDesc}>Quản lý bài viết & thu nhập cộng tác viên.</Text>
               </View>
             </View>
           </TouchableOpacity>

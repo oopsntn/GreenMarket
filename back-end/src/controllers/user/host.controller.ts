@@ -361,16 +361,18 @@ export const getContentDetail = async (
       .where(
         and(
           eq(hostContents.hostContentId, contentId),
-          eq(hostContents.hostContentAuthorId, userId),
           sql`${hostContents.hostContentDeletedAt} IS NULL`,
         ),
       )
       .limit(1);
 
     if (!content) {
-      res
-        .status(404)
-        .json({ error: "Không tìm thấy nội dung hoặc bạn không có quyền." });
+      res.status(404).json({ error: "Không tìm thấy nội dung." });
+      return;
+    }
+
+    if (content.authorId !== userId && content.hostContentStatus !== "published") {
+      res.status(404).json({ error: "Không tìm thấy nội dung hoặc bạn không có quyền." });
       return;
     }
 

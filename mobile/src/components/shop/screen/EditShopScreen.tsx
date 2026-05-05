@@ -213,30 +213,7 @@ const EditShopScreen = ({ route, navigation }: any) => {
         <MobileLayout title="Chỉnh sửa cửa hàng" backButton={() => navigation.goBack()}>
             <ScrollView style={styles.container}>
 
-                <Text style={styles.label}>Ảnh đại diện và bản đồ</Text>
-                <View style={styles.imagePickerRow}>
-                    <TouchableOpacity onPress={() => pickImage('shopLogoUrl')} style={styles.pickerBox}>
-                        {formData.shopLogoUrl ? (
-                            <Image source={{ uri: resolveImageUrl(formData.shopLogoUrl) }} style={styles.previewLogo} />
-                        ) : (
-                            <View style={styles.pickerInner}>
-                                <ImageIcon color="#94a3b8" size={24} />
-                                <Text style={styles.pickerText}>Ảnh đại diện</Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
 
-                    <TouchableOpacity onPress={() => pickImage('shopCoverUrl')} style={styles.pickerBoxCover}>
-                        {formData.shopCoverUrl ? (
-                            <Image source={{ uri: resolveImageUrl(formData.shopCoverUrl) }} style={styles.previewCover} />
-                        ) : (
-                            <View style={styles.pickerInner}>
-                                <Camera color="#94a3b8" size={24} />
-                                <Text style={styles.pickerText}>Ảnh bìa</Text>
-                            </View>
-                        )}
-                    </TouchableOpacity>
-                </View>
                 <Text style={styles.label}>Hình ảnh cửa hàng (Tối đa 4 ảnh)</Text>
                 <View style={styles.galleryContainer}>
                     {formData.shopGalleryImages.map((url: string, index: number) => (
