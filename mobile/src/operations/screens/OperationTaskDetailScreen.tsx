@@ -15,13 +15,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Send } from 'lucide-react-native';
 import CustomAlert from '../../utils/AlertHelper';
-import {
-  OperationTaskDetailResponse,
-  OperationTaskStatus,
-  operationsService,
-} from '../services/operationsService';
-
-const STATUS_OPTIONS: OperationTaskStatus[] = ['open', 'in_progress', 'closed'];
+import { OperationTaskDetailResponse, operationsService } from '../services/operationsService';
 
 const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
@@ -38,26 +32,9 @@ const formatDateTime = (value: string | null) => {
   return date.toLocaleString('vi-VN');
 };
 
-const toTaskStatus = (value: string): OperationTaskStatus => {
-  if (value === 'in_progress' || value === 'closed') {
-    return value;
-  }
+const toTaskStatus = (value: string) => (value === 'closed' ? 'closed' : 'open');
 
-  return 'open';
-};
-
-const getStatusLabel = (value: OperationTaskStatus) => {
-  switch (value) {
-    case 'open':
-      return 'Mở';
-    case 'in_progress':
-      return 'Đang xử lý';
-    case 'closed':
-      return 'Đã đóng';
-    default:
-      return value;
-  }
-};
+const getStatusLabel = (value: string) => (value === 'closed' ? 'Đã đóng' : 'Mở');
 
 const OperationTaskDetailScreen = () => {
   const navigation = useNavigation<any>();
@@ -68,9 +45,6 @@ const OperationTaskDetailScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [detail, setDetail] = useState<OperationTaskDetailResponse | null>(null);
-
-  const [statusDraft, setStatusDraft] = useState<OperationTaskStatus>('open');
-  const [statusNote, setStatusNote] = useState('');
   const [replyMessage, setReplyMessage] = useState('');
 
   const loadData = useCallback(async () => {
@@ -81,7 +55,6 @@ const OperationTaskDetailScreen = () => {
     try {
       const response = await operationsService.getTaskDetail(taskId);
       setDetail(response);
-      setStatusDraft(toTaskStatus(response.task.taskStatus || 'open'));
     } catch {
       CustomAlert('Lỗi', 'Không tải được chi tiết task.');
     } finally {
@@ -99,42 +72,12 @@ const OperationTaskDetailScreen = () => {
     loadData();
   };
 
-  const canSubmitReply = useMemo(() => replyMessage.trim().length > 0, [replyMessage]);
-
-  const handleUpdateStatus = async () => {
-    if (!taskId) {
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await operationsService.updateTaskStatus(taskId, statusDraft, statusNote.trim() || undefined);
-
-      if (statusNote.trim()) {
-        await operationsService.createTaskReply(taskId, {
-          message: statusNote.trim(),
-          visibility: 'internal',
-        });
-      }
-
-      setStatusNote('');
-      await loadData();
-      CustomAlert('Thành công', 'Đã cập nhật trạng thái task.');
-    } catch (err: unknown) {
-      const message =
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
-          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
-            'Không thể cập nhật trạng thái task.'
-          : 'Không thể cập nhật trạng thái task.';
-
-      CustomAlert('Lỗi', message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const normalizedStatus = toTaskStatus(String(detail?.task.taskStatus || 'open').toLowerCase());
+  const isClosed = normalizedStatus === 'closed';
+  const canSubmitReply = useMemo(
+    () => !isClosed && replyMessage.trim().length > 0,
+    [isClosed, replyMessage],
+  );
 
   const handleSendReply = async () => {
     if (!taskId || !canSubmitReply || !detail) {
@@ -143,7 +86,7 @@ const OperationTaskDetailScreen = () => {
 
     setSubmitting(true);
     try {
-      const currentStatus = toTaskStatus(detail.task.taskStatus || 'open');
+      const currentStatus = String(detail.task.taskStatus || 'open').toLowerCase();
 
       if (currentStatus === 'open') {
         await operationsService.updateTaskStatus(taskId, 'in_progress');
@@ -159,7 +102,6 @@ const OperationTaskDetailScreen = () => {
       }
 
       setReplyMessage('');
-      setStatusDraft('closed');
       await loadData();
       CustomAlert('Thành công', 'Đã gửi phản hồi và đóng task.');
     } catch (err: unknown) {
@@ -201,9 +143,16 @@ const OperationTaskDetailScreen = () => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.card}>
-          <Text style={styles.customerName}>
-            Khách hàng: {detail.task.customerName || 'Khách hàng'}
-          </Text>
+          <View style={styles.summaryTop}>
+            <Text style={styles.customerName}>
+              Khách hàng: {detail.task.customerName || 'Khách hàng'}
+            </Text>
+            <View style={[styles.statusPill, isClosed && styles.statusPillClosed]}>
+              <Text style={[styles.statusText, isClosed && styles.statusTextClosed]}>
+                {getStatusLabel(normalizedStatus)}
+              </Text>
+            </View>
+          </View>
           <Text style={styles.taskMeta}>Thời gian gửi: {formatDateTime(detail.task.createdAt)}</Text>
         </View>
 
@@ -213,70 +162,42 @@ const OperationTaskDetailScreen = () => {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Cập nhật trạng thái</Text>
-
-          <View style={styles.optionRow}>
-            {STATUS_OPTIONS.map((status) => (
-              <TouchableOpacity
-                key={status}
-                style={[styles.optionBtn, statusDraft === status && styles.optionBtnActive]}
-                onPress={() => setStatusDraft(status)}
-              >
-                <Text style={[styles.optionText, statusDraft === status && styles.optionTextActive]}>
-                  {getStatusLabel(status)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Ghi chú nội bộ khi đổi trạng thái (tùy chọn)"
-            multiline
-            textAlignVertical="top"
-            value={statusNote}
-            onChangeText={setStatusNote}
-          />
-
-          <TouchableOpacity
-            style={[styles.submitBtn, submitting && styles.disabledBtn]}
-            onPress={handleUpdateStatus}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.submitText}>Cập nhật trạng thái</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.card}>
           <Text style={styles.sectionTitle}>Phản hồi</Text>
 
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Nhập phản hồi cho task"
-            multiline
-            textAlignVertical="top"
-            value={replyMessage}
-            onChangeText={setReplyMessage}
-          />
+          {isClosed ? (
+            <View style={styles.closedNotice}>
+              <Text style={styles.closedNoticeText}>
+                Task đã đóng nên không thể gửi thêm phản hồi.
+              </Text>
+            </View>
+          ) : (
+            <>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Nhập phản hồi cho task"
+                multiline
+                textAlignVertical="top"
+                value={replyMessage}
+                onChangeText={setReplyMessage}
+                editable={!submitting}
+              />
 
-          <TouchableOpacity
-            style={[styles.submitBtn, (!canSubmitReply || submitting) && styles.disabledBtn]}
-            onPress={handleSendReply}
-            disabled={!canSubmitReply || submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <View style={styles.sendWrap}>
-                <Send size={15} color="white" />
-                <Text style={styles.submitText}>Gửi phản hồi</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.submitBtn, (!canSubmitReply || submitting) && styles.disabledBtn]}
+                onPress={handleSendReply}
+                disabled={!canSubmitReply || submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <View style={styles.sendWrap}>
+                    <Send size={15} color="white" />
+                    <Text style={styles.submitText}>Gửi phản hồi</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
 
           <View style={styles.divider} />
 
@@ -347,13 +268,40 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 12,
   },
+  summaryTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
   customerName: {
+    flex: 1,
     color: '#0F172A',
     fontSize: 16,
     fontWeight: '900',
   },
+  statusPill: {
+    borderRadius: 999,
+    backgroundColor: '#ECFDF5',
+    borderColor: '#86EFAC',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  statusPillClosed: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#93C5FD',
+  },
+  statusText: {
+    color: '#166534',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  statusTextClosed: {
+    color: '#1D4ED8',
+  },
   taskMeta: {
-    marginTop: 5,
+    marginTop: 6,
     color: '#64748B',
     fontSize: 12,
   },
@@ -368,31 +316,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
   },
-  optionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 8,
-  },
-  optionBtn: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+  closedNotice: {
+    borderRadius: 10,
     backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
   },
-  optionBtnActive: {
-    borderColor: '#22C55E',
-    backgroundColor: '#DCFCE7',
-  },
-  optionText: {
-    color: '#334155',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  optionTextActive: {
-    color: '#166534',
+  closedNoticeText: {
+    color: '#64748B',
+    fontSize: 12,
+    lineHeight: 18,
   },
   input: {
     borderWidth: 1,
