@@ -25,8 +25,14 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
   const { login } = useAuth();
 
   const handleRequestOtp = async (): Promise<void> => {
-    if (!mobile.trim()) {
+    const trimmedMobile = mobile.trim();
+    if (!trimmedMobile) {
       Alert.alert("Lỗi", "Vui lòng nhập số điện thoại của bạn");
+      return;
+    }
+
+    if (trimmedMobile.length !== 10 || !/^\d+$/.test(trimmedMobile)) {
+      Alert.alert("Lỗi", "vui lòng nhập đúng định dạng số điện thoại");
       return;
     }
 
@@ -35,7 +41,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
       const res = await fetch(`${API_BASE_URL}/auth/user/request-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile }),
+        body: JSON.stringify({ mobile: trimmedMobile }),
       });
 
       if (!res.ok) {
@@ -68,7 +74,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
       const res = await fetch(`${API_BASE_URL}/auth/user/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile, otp }),
+        body: JSON.stringify({ mobile: mobile.trim(), otp }),
       });
 
       if (!res.ok) {
