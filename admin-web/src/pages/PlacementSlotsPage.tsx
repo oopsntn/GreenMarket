@@ -164,7 +164,7 @@ function PlacementSlotsPage() {
       name: slot.name,
       scope: "Homepage",
       positionCode: slot.positionCode,
-      capacity: slot.capacity,
+      capacity: 1,
       displayRule: slot.displayRule,
       priority: slot.priority,
       notes: slot.notes,
@@ -188,8 +188,7 @@ function PlacementSlotsPage() {
 
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        name === "capacity" || name === "priority" ? Number(value) : value,
+      [name]: name === "priority" ? Number(value) : value,
     }));
 
     if (formError) {
@@ -607,8 +606,7 @@ function PlacementSlotsPage() {
                 type="number"
                 min={1}
                 value={formData.capacity}
-                onChange={handleChange}
-                disabled={isSubmitting}
+                disabled
               />
             </div>
 
@@ -622,7 +620,6 @@ function PlacementSlotsPage() {
                 value={formData.priority}
                 onChange={handleChange}
                 disabled={isSubmitting}
-                placeholder="1 là vị trí hiển thị đầu tiên"
               />
             </div>
           </div>

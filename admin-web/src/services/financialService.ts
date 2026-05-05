@@ -11,6 +11,7 @@ import type {
   FinancialSourceBreakdown,
   FinancialSourceDetail,
   FinancialPayoutSummary,
+  UpdateFinancialPayoutPayload,
 } from "../types/financial";
 
 type FinancialListApiResponse = {
@@ -178,10 +179,6 @@ const translateAudienceLabel = (value: string | null | undefined) => {
     return "Host";
   }
 
-  if (normalized.includes("collaborator") || normalized.includes("cong tac vien")) {
-    return "Cộng tác viên";
-  }
-
   if (normalized.includes("host")) {
     return "Host";
   }
@@ -197,6 +194,8 @@ const translateMethodLabel = (value: string | null | undefined) => {
     manualtransfer: "Chuyển khoản thủ công",
     "manual transfer": "Chuyển khoản thủ công",
     bank: "Chuyển khoản ngân hàng",
+    cash: "Tiền mặt",
+    other: "Khác",
     wallet: "Ví nội bộ",
     internalwallet: "Ví nội bộ",
   };
@@ -388,9 +387,7 @@ const buildQuery = (filters: FinancialFilters) => {
     params.set("status", filters.status);
   }
 
-  if (filters.audience !== "all") {
-    params.set("audience", filters.audience);
-  }
+  params.set("audience", "host");
 
   params.set("page", String(filters.page));
   params.set("limit", String(filters.limit));
@@ -493,6 +490,18 @@ export const financialService = {
       includeJsonContentType: true,
       body: JSON.stringify(payload),
       defaultErrorMessage: "Không thể tạo khoản chi trả Host.",
+    });
+  },
+
+  async updatePayoutRequest(
+    id: number,
+    payload: UpdateFinancialPayoutPayload,
+  ) {
+    await apiClient.request(`/api/admin/financial/payout-requests/${id}`, {
+      method: "PATCH",
+      includeJsonContentType: true,
+      body: JSON.stringify(payload),
+      defaultErrorMessage: "Không thể cập nhật khoản chi trả Host.",
     });
   },
 

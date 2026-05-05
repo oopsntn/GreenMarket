@@ -135,8 +135,6 @@ export const reopenPromotion = async (
         params: { id: string };
         body: {
             packageId?: number;
-            startDate?: string;
-            endDate?: string;
             paymentStatus?: "Paid" | "Pending Verification";
             adminNote?: string;
         };
@@ -150,11 +148,11 @@ export const reopenPromotion = async (
             return;
         }
 
-        const { packageId, startDate, endDate, paymentStatus, adminNote } = req.body;
+        const { packageId, paymentStatus, adminNote } = req.body;
 
-        if (!packageId || !startDate || !endDate || !paymentStatus) {
+        if (!packageId || !paymentStatus) {
             res.status(400).json({
-                error: "Vui lòng truyền đủ packageId, startDate, endDate và paymentStatus",
+                error: "Vui lòng truyền đủ packageId và paymentStatus",
             });
             return;
         }
@@ -163,8 +161,6 @@ export const reopenPromotion = async (
             promotionId,
             {
                 packageId,
-                startDate,
-                endDate,
                 paymentStatus,
                 adminNote,
             },

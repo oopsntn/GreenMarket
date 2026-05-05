@@ -1059,6 +1059,8 @@ export const rejectCollaboratorPost = async (req: AuthRequest, res: Response): P
         await db
             .update(posts)
             .set({
+                postStatus: "rejected",
+                postPublished: false,
                 postRejectedReason: reason,
                 postModeratedAt: new Date(),
             })

@@ -63,6 +63,9 @@ const SHOP_STATE_CHANGED_ERROR = "SHOP_STATE_CHANGED";
 const REPORT_STATE_CHANGED_ERROR = "REPORT_STATE_CHANGED";
 const HOST_CONTENT_STATE_CHANGED_ERROR = "HOST_CONTENT_STATE_CHANGED";
 
+const isPositiveIntegerId = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0;
+
 type ManagerHostContentStatus = (typeof VALID_HOST_CONTENT_STATUSES)[number];
 
 type QueueType = (typeof VALID_QUEUE_TYPES)[number];
@@ -1429,8 +1432,7 @@ export const resolveManagerReport = async (
           txResult.report.reportedShopOwnerId,
         ].filter(
           (recipientId): recipientId is number =>
-            Number.isInteger(recipientId) &&
-            recipientId > 0 &&
+            isPositiveIntegerId(recipientId) &&
             recipientId !== txResult.report.reporterId,
         ),
       )];

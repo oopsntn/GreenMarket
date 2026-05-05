@@ -351,7 +351,7 @@ const fetchTrendRows = (fromDate?: string, toDate?: string) => {
 const fetchHistory = () =>
   apiClient
     .request<AIInsightHistoryItem[]>(`${AI_INSIGHTS_API_PATH}/history`, {
-      defaultErrorMessage: "Không thể tải lịch sử AI Insights.",
+      defaultErrorMessage: "Không thể tải lịch sử nhận định AI.",
     })
     .then((items) => items.map(normalizeHistoryItem));
 
@@ -398,7 +398,7 @@ const buildLocalGeneratedInsight = async (
 export const aiInsightService = {
   getSettings(): Promise<AIInsightSettings> {
     return apiClient.request<AIInsightSettings>(`${AI_INSIGHTS_API_PATH}/settings`, {
-      defaultErrorMessage: "Không thể tải cấu hình AI Insights.",
+      defaultErrorMessage: "Không thể tải cấu hình nhận định AI.",
     });
   },
 
@@ -406,7 +406,7 @@ export const aiInsightService = {
     return apiClient.request<AIInsightSettings>(`${AI_INSIGHTS_API_PATH}/settings`, {
       method: "PUT",
       includeJsonContentType: true,
-      defaultErrorMessage: "Không thể cập nhật cấu hình AI Insights.",
+      defaultErrorMessage: "Không thể cập nhật cấu hình nhận định AI.",
       body: JSON.stringify(settings),
     });
   },

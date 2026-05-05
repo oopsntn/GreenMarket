@@ -164,8 +164,12 @@ function PromotionsPage() {
       ? (promotions.find((item) => item.id === actionPromotionId) ?? null)
       : null;
   const availablePackages = useMemo(() => {
+    if (actionModalMode === "reopen") {
+      return activePackages;
+    }
+
     return activePackages.filter((item) => item.slot === actionFormData.slot);
-  }, [actionFormData.slot, activePackages]);
+  }, [actionFormData.slot, actionModalMode, activePackages]);
   const selectedActionPackage =
     availablePackages.find(
       (item) => item.id === Number(actionFormData.packageId),
@@ -180,12 +184,6 @@ function PromotionsPage() {
 
     return ["All", ...dynamicSlots];
   }, [activePackages, promotions]);
-  const actionSlotOptions = useMemo(() => {
-    return Array.from(new Set(activePackages.map((item) => item.slot))).filter(
-      Boolean,
-    );
-  }, [activePackages]);
-
   useEffect(() => {
     const loadPromotionData = async () => {
       try {
@@ -304,12 +302,11 @@ function PromotionsPage() {
 
     setActionPromotionId(promotion.id);
     setActionModalMode("reopen");
-    const nextStartDate = todayDateInput;
     setActionFormData({
       slot: preferredPackage.slot,
       packageId: String(preferredPackage.id),
-      startDate: nextStartDate,
-      endDate: calculateEndDate(nextStartDate, preferredPackage.durationDays),
+      startDate: "",
+      endDate: "",
       paymentStatus: "Paid",
       adminNote: `Admin mở lại gói sau khi xác nhận thanh toán từ ${promotion.owner}.`,
     });
@@ -606,13 +603,15 @@ function PromotionsPage() {
       if (name === "slot") {
         const nextSlot = value as PromotionSlot;
         const nextPackage = activePackages.find((item) => item.slot === nextSlot);
+        const nextStartDate =
+          actionModalMode === "reopen" ? todayDateInput : prev.startDate;
 
         return {
           ...prev,
           slot: nextSlot,
           packageId: nextPackage ? String(nextPackage.id) : "",
           endDate: nextPackage
-            ? calculateEndDate(prev.startDate, nextPackage.durationDays)
+            ? calculateEndDate(nextStartDate, nextPackage.durationDays)
             : prev.endDate,
         };
       }
@@ -621,13 +620,15 @@ function PromotionsPage() {
         const nextPackage = activePackages.find(
           (item) => item.id === Number(value),
         );
+        const nextStartDate =
+          actionModalMode === "reopen" ? todayDateInput : prev.startDate;
 
         return {
           ...prev,
           packageId: value,
           slot: nextPackage?.slot ?? prev.slot,
           endDate: nextPackage
-            ? calculateEndDate(prev.startDate, nextPackage.durationDays)
+            ? calculateEndDate(nextStartDate, nextPackage.durationDays)
             : prev.endDate,
         };
       }
@@ -657,12 +658,21 @@ function PromotionsPage() {
       return;
     }
 
-    if (!actionFormData.startDate || !actionFormData.endDate) {
+    const effectiveStartDate =
+      actionModalMode === "reopen"
+        ? todayDateInput
+        : actionFormData.startDate;
+    const effectiveEndDate =
+      actionModalMode === "reopen"
+        ? calculateEndDate(todayDateInput, selectedActionPackage.durationDays)
+        : actionFormData.endDate;
+
+    if (!effectiveStartDate || !effectiveEndDate) {
       showToast("Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc.", "error");
       return;
     }
 
-    if (actionFormData.startDate < todayDateInput) {
+    if (effectiveStartDate < todayDateInput) {
       showToast(
         "Ngày bắt đầu phải từ ngày hiện tại trở đi.",
         "error",
@@ -671,8 +681,8 @@ function PromotionsPage() {
     }
 
     const selectedDuration = calculateDurationDays(
-      actionFormData.startDate,
-      actionFormData.endDate,
+      effectiveStartDate,
+      effectiveEndDate,
     );
 
     if (selectedDuration === null) {
@@ -700,8 +710,10 @@ function PromotionsPage() {
       packageId: selectedActionPackage.id,
       packageName: selectedActionPackage.name,
       slot: selectedActionPackage.slot,
-      startDate: actionFormData.startDate,
-      endDate: actionFormData.endDate,
+      startDate:
+        actionModalMode === "change" ? effectiveStartDate : undefined,
+      endDate:
+        actionModalMode === "change" ? effectiveEndDate : undefined,
       budget: selectedActionPackage.price,
       paymentStatus: actionFormData.paymentStatus,
       adminNote: actionFormData.adminNote,
@@ -911,7 +923,6 @@ function PromotionsPage() {
                     <th>Thời gian chạy</th>
                     <th>Thanh toán</th>
                     <th>Trạng thái</th>
-                    <th>Ghi chú</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -965,20 +976,6 @@ function PromotionsPage() {
                                   : "expired"
                             }
                           />
-                      </td>
-                      <td>
-                        <div className="promotions-cell promotions-cell--note">
-                          <span>{promotion.note}</span>
-                          {promotion.warnings.length > 0 ? (
-                            <span className="promotions-warning-list">
-                              {promotion.warnings.join(" • ")}
-                            </span>
-                          ) : (
-                            <span className="promotions-warning-list promotions-warning-list--ok">
-                              Không có cảnh báo xung đột
-                            </span>
-                          )}
-                        </div>
                       </td>
                       <td>
                         <div className="promotions-actions">
@@ -1422,7 +1419,7 @@ function PromotionsPage() {
         }
         description={
           actionModalMode === "reopen"
-            ? "Xác nhận thanh toán, chọn gói thay thế và mở lại chiến dịch với vai trò admin."
+            ? "Xác nhận thanh toán và mở lại chiến dịch ngay tại thời điểm admin xử lý."
             : "Chuyển khách sang gói khác và cập nhật lịch chạy từ admin."
         }
         onClose={closeActionModal}
@@ -1434,21 +1431,25 @@ function PromotionsPage() {
             onSubmit={handlePackageActionSubmit}
           >
             <div className="promotions-modal__grid">
-              <div className="promotions-modal__field">
-                <label htmlFor="slot">Vị trí hiển thị</label>
-                <select
-                  id="slot"
-                  name="slot"
-                  value={actionFormData.slot}
-                  onChange={handlePackageActionChange}
-                >
-                  {actionSlotOptions.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {getSlotLabel(slot)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {actionModalMode === "change" ? (
+                <div className="promotions-modal__field">
+                  <label htmlFor="slot">Vị trí hiển thị</label>
+                  <select
+                    id="slot"
+                    name="slot"
+                    value={actionFormData.slot}
+                    onChange={handlePackageActionChange}
+                  >
+                    {Array.from(
+                      new Set(activePackages.map((item) => item.slot)),
+                    ).map((slot) => (
+                      <option key={slot} value={slot}>
+                        {getSlotLabel(slot)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
 
               <div className="promotions-modal__field">
                 <label htmlFor="packageId">Gói</label>
@@ -1466,32 +1467,66 @@ function PromotionsPage() {
                 </select>
               </div>
 
-              <div className="promotions-modal__field">
-                <label htmlFor="startDate">Từ ngày</label>
-                <input
-                  id="startDate"
-                  name="startDate"
-                  type="date"
-                  min={todayDateInput}
-                  value={actionFormData.startDate}
-                  onChange={handlePackageActionChange}
-                />
-              </div>
+              {actionModalMode === "change" ? (
+                <>
+                  <div className="promotions-modal__field">
+                    <label htmlFor="startDate">Từ ngày</label>
+                    <input
+                      id="startDate"
+                      name="startDate"
+                      type="date"
+                      min={todayDateInput}
+                      value={actionFormData.startDate}
+                      onChange={handlePackageActionChange}
+                    />
+                  </div>
 
-              <div className="promotions-modal__field">
-                <label htmlFor="endDate">Đến ngày</label>
-                <input
-                  id="endDate"
-                  name="endDate"
-                  type="date"
-                  min={actionFormData.startDate || todayDateInput}
-                  value={actionFormData.endDate}
-                  disabled
-                />
-                <span className="promotions-modal__hint">
-                  Ngày kết thúc được tính tự động theo thời lượng của gói đã chọn.
-                </span>
-              </div>
+                  <div className="promotions-modal__field">
+                    <label htmlFor="endDate">Đến ngày</label>
+                    <input
+                      id="endDate"
+                      name="endDate"
+                      type="date"
+                      min={actionFormData.startDate || todayDateInput}
+                      value={actionFormData.endDate}
+                      disabled
+                    />
+                    <span className="promotions-modal__hint">
+                      Ngày kết thúc được tính tự động theo thời lượng của gói đã chọn.
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="promotions-modal__field">
+                    <label>Thời điểm mở lại</label>
+                    <input
+                      type="text"
+                      value="Hệ thống lấy ngay lúc admin xác nhận"
+                      disabled
+                    />
+                  </div>
+
+                  <div className="promotions-modal__field">
+                    <label>Kết thúc dự kiến</label>
+                    <input
+                      type="text"
+                      value={
+                        selectedActionPackage
+                          ? calculateEndDate(
+                              todayDateInput,
+                              selectedActionPackage.durationDays,
+                            )
+                          : ""
+                      }
+                      disabled
+                    />
+                    <span className="promotions-modal__hint">
+                      Hệ thống tự mở lại từ thời điểm xác nhận và tính ngày kết thúc theo thời lượng gói.
+                    </span>
+                  </div>
+                </>
+              )}
 
               <div className="promotions-modal__field">
                 <label htmlFor="paymentStatus">Trạng thái thanh toán</label>

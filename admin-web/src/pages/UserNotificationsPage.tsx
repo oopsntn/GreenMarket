@@ -38,6 +38,8 @@ function UserNotificationsPage() {
     AdminNotificationRecipientOption[]
   >([]);
   const [history, setHistory] = useState<AdminNotificationHistoryItem[]>([]);
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [templateSearch, setTemplateSearch] = useState("");
   const [historyPage, setHistoryPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -60,6 +62,51 @@ function UserNotificationsPage() {
       ) ?? null,
     [formState.recipientId, recipientOptions],
   );
+
+  const filteredRecipientOptions = useMemo(() => {
+    const keyword = recipientSearch.trim().toLowerCase();
+    const filtered = !keyword
+      ? recipientOptions
+      : recipientOptions.filter((recipient) =>
+          [recipient.label, recipient.sublabel]
+            .filter(Boolean)
+            .some((value) => value.toLowerCase().includes(keyword)),
+        );
+
+    if (
+      selectedRecipient &&
+      !filtered.some((recipient) => recipient.id === selectedRecipient.id)
+    ) {
+      return [selectedRecipient, ...filtered];
+    }
+
+    return filtered;
+  }, [recipientOptions, recipientSearch, selectedRecipient]);
+
+  const filteredTemplates = useMemo(() => {
+    const keyword = templateSearch.trim().toLowerCase();
+    const filtered = !keyword
+      ? templates
+      : templates.filter((template) =>
+          [
+            template.name,
+            template.previewText,
+            template.description,
+            template.usageNote,
+          ]
+            .filter(Boolean)
+            .some((value) => value.toLowerCase().includes(keyword)),
+        );
+
+    if (
+      selectedTemplate &&
+      !filtered.some((template) => template.id === selectedTemplate.id)
+    ) {
+      return [selectedTemplate, ...filtered];
+    }
+
+    return filtered;
+  }, [selectedTemplate, templateSearch, templates]);
 
   const previewTitle = buildNotificationPreviewTitle(
     selectedTemplate,
@@ -101,7 +148,7 @@ function UserNotificationsPage() {
           type: "Notification",
           status: "Active",
           page: 1,
-          pageSize: 50,
+          pageSize: 500,
         }),
         adminNotificationService.getHistory(),
       ]);
@@ -322,6 +369,13 @@ function UserNotificationsPage() {
                     Chỉ hiện người dùng đang hoạt động để tránh gửi nhầm vào tài
                     khoản đã khóa.
                   </small>
+                  <input
+                    className="user-notifications-page__input"
+                    type="text"
+                    value={recipientSearch}
+                    placeholder="Tìm theo tên, email hoặc số điện thoại"
+                    onChange={(event) => setRecipientSearch(event.target.value)}
+                  />
                   <select
                     id="notification-recipient"
                     className="user-notifications-page__select"
@@ -331,12 +385,17 @@ function UserNotificationsPage() {
                     }
                   >
                     <option value="">Chọn một người dùng</option>
-                    {recipientOptions.map((recipient) => (
+                    {filteredRecipientOptions.map((recipient) => (
                       <option key={recipient.id} value={recipient.id}>
                         {recipient.label} - {recipient.sublabel}
                       </option>
                     ))}
                   </select>
+                  {filteredRecipientOptions.length === 0 ? (
+                    <p className="user-notifications-page__search-empty">
+                      Không tìm thấy người dùng phù hợp.
+                    </p>
+                  ) : null}
                 </div>
               ) : (
                 <div className="user-notifications-page__field user-notifications-page__field--full">
@@ -357,6 +416,13 @@ function UserNotificationsPage() {
                   Chỉ hiển thị các mẫu loại Thông báo đang hoạt động trong màn
                   Mẫu nội dung.
                 </small>
+                <input
+                  className="user-notifications-page__input"
+                  type="text"
+                  value={templateSearch}
+                  placeholder="Tìm theo tên mẫu, mô tả hoặc nội dung xem trước"
+                  onChange={(event) => setTemplateSearch(event.target.value)}
+                />
                 <select
                   id="notification-template"
                   className="user-notifications-page__select"
@@ -364,12 +430,17 @@ function UserNotificationsPage() {
                   onChange={(event) => handleTemplateChange(event.target.value)}
                 >
                   <option value="">Chọn mẫu để điền nhanh tiêu đề và nội dung</option>
-                  {templates.map((template) => (
+                  {filteredTemplates.map((template) => (
                     <option key={template.id} value={template.id}>
                       {template.name}
                     </option>
                   ))}
                 </select>
+                {filteredTemplates.length === 0 ? (
+                  <p className="user-notifications-page__search-empty">
+                    Không tìm thấy mẫu thông báo phù hợp.
+                  </p>
+                ) : null}
               </div>
 
               {selectedTemplate ? (

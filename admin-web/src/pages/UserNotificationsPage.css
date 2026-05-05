@@ -156,6 +156,13 @@
   line-height: 1.7;
 }
 
+.user-notifications-page__search-empty {
+  margin: -2px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #7b8d80;
+}
+
 .user-notifications-page__broadcast-note,
 .user-notifications-page__template-preview,
 .user-notifications-page__preview-card {

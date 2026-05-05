@@ -255,7 +255,6 @@ a {
   .boosted-posts-table,
   .categories-table,
   .mapping-table,
-  .collaborators-page__table,
   .customer-spending-table,
   .export-history-table,
   .financial-page__table,
@@ -285,7 +284,6 @@ a {
   .boosted-posts-table,
   .categories-table,
   .mapping-table,
-  .collaborators-page__table,
   .customer-spending-table,
   .export-history-table,
   .financial-page__table,
@@ -314,7 +312,6 @@ a {
 .boosted-posts-table :is(th:nth-child(1), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(9), td:nth-child(1), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(9)),
 .categories-table :is(th:nth-child(1), th:nth-child(4), th:nth-child(5), th:nth-child(6), td:nth-child(1), td:nth-child(4), td:nth-child(5), td:nth-child(6)),
 .mapping-table :is(th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8)),
-.collaborators-page__table :is(th:nth-child(3), th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7)),
 .customer-spending-table :is(th:nth-child(1), th:nth-child(4), th:nth-child(7), td:nth-child(1), td:nth-child(4), td:nth-child(7)),
 .export-history-table :is(th:nth-child(1), th:nth-child(3), th:nth-child(4), th:nth-child(6), th:nth-child(7), td:nth-child(1), td:nth-child(3), td:nth-child(4), td:nth-child(6), td:nth-child(7)),
 .financial-page__table :is(th:nth-child(1), th:nth-child(3), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8), td:nth-child(1), td:nth-child(3), td:nth-child(5), td:nth-child(6), td:nth-child(7), td:nth-child(8)),
@@ -360,8 +357,6 @@ a {
 .financial-page__table td:nth-child(2),
 .host-contents-page__table td:nth-child(1),
 .host-contents-page__table td:nth-child(2),
-.collaborators-page__table td:nth-child(1),
-.collaborators-page__table td:nth-child(2),
 .account-package-tracking-table td:nth-child(1),
 .account-package-tracking-table td:nth-child(2),
 .promotions-table td:nth-child(2),
@@ -399,8 +394,6 @@ a {
 .activity-log-table td:nth-child(5) > div,
 .account-package-tracking-table td:nth-child(1) > div,
 .account-package-tracking-table td:nth-child(2) > div,
-.collaborators-page__table td:nth-child(1) > div,
-.collaborators-page__table td:nth-child(2) > div,
 .financial-page__table td:nth-child(2) > div,
 .host-contents-page__table td:nth-child(1) > div,
 .host-contents-page__table td:nth-child(2) > div,
@@ -462,7 +455,6 @@ a {
 
 :is(
   .account-package-tracking-table__view,
-  .collaborators-page__table-action,
   .financial-page__table-action,
   .host-contents-page__table-action
 ) {

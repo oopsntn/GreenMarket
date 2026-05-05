@@ -34,7 +34,6 @@ import adminAIInsightRoutes from "./routes/admin/ai-insight.route.ts";
 import adminActivityLogRoutes from "./routes/admin/activity-log.route.ts";
 import adminNotificationRoutes from "./routes/admin/notification.route.ts";
 import adminFinancialRoutes from "./routes/admin/financial.route.ts";
-import adminCollaboratorRoutes from "./routes/admin/collaborator.route.ts";
 import adminHostContentRoutes from "./routes/admin/host-content.route.ts";
 import userShopRoutes from "./routes/user/shop.route.ts";
 import userPostRoutes from "./routes/user/post.route.ts";
@@ -180,12 +179,6 @@ app.use(
   adminNotificationRoutes,
 );
 app.use("/api/admin/financial", verifyToken, isAdmin, adminFinancialRoutes);
-app.use(
-  "/api/admin/collaborators",
-  verifyToken,
-  isAdmin,
-  adminCollaboratorRoutes,
-);
 app.use(
   "/api/admin/host-contents",
   verifyToken,

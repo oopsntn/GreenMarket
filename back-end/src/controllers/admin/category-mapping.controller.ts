@@ -24,6 +24,20 @@ const normalizeMappingStatus = (value: unknown): "Active" | "Disabled" => {
   return value === "Disabled" ? "Disabled" : "Active";
 };
 
+const parseBooleanFlag = (value: unknown): boolean | null => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+
+  return null;
+};
+
 const parseCompositeIds = (
   categoryIdParam: string,
   attributeIdParam: string,
@@ -42,6 +56,7 @@ const parseCreateOrUpdatePayload = (body: CategoryMappingPayload) => {
   const categoryIdValue = body.categoryId;
   const attributeIdValue = body.attributeId;
   const displayOrderValue = body.displayOrder;
+  const parsedRequired = parseBooleanFlag(body.required);
 
   if (
     typeof categoryIdValue !== "number" ||
@@ -65,12 +80,18 @@ const parseCreateOrUpdatePayload = (body: CategoryMappingPayload) => {
     } as const;
   }
 
+  if (parsedRequired === null && typeof body.required !== "undefined") {
+    return {
+      error: "Trạng thái bắt buộc không hợp lệ",
+    } as const;
+  }
+
   return {
     value: {
       categoryId: categoryIdValue,
       attributeId: attributeIdValue,
       displayOrder: displayOrderValue,
-      required: Boolean(body.required),
+      required: parsedRequired ?? false,
     },
   } as const;
 };

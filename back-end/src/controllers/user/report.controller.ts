@@ -6,6 +6,9 @@ import { posts, reports, mediaAssets, users, businessRoles } from "../../models/
 import { adminWebSettingsService } from "../../services/adminWebSettings.service";
 import { notificationService } from "../../services/notification.service";
 
+const isPositiveIntegerId = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0;
+
 const getActiveManagerUserIds = async (): Promise<number[]> => {
   const [managerRole] = await db
     .select({ roleId: businessRoles.businessRoleId })
@@ -63,12 +66,14 @@ export const submitReport = async (
     const reporterId = req.user?.id;
 
     if (!reporterId) {
-      res.status(401).json({ error: "Please sign in before submitting a report" });
+      res.status(401).json({ error: "Vui lòng đăng nhập trước khi gửi báo cáo." });
       return;
     }
 
     if (!Number.isInteger(postId) || postId <= 0 || !reportReason?.trim()) {
-      res.status(400).json({ error: "Post ID and Reason are required" });
+      res.status(400).json({
+        error: "Vui lòng cung cấp mã bài đăng hợp lệ và lý do báo cáo.",
+      });
       return;
     }
 
@@ -85,7 +90,7 @@ export const submitReport = async (
       .limit(1);
 
     if (!post) {
-      res.status(404).json({ error: "Post not found" });
+      res.status(404).json({ error: "Không tìm thấy bài đăng cần báo cáo." });
       return;
     }
 
@@ -158,7 +163,7 @@ export const submitReport = async (
 
     const reportedRecipientIds = [...new Set(
       [post.postAuthorId, post.postShopId].filter(
-        (id): id is number => Number.isInteger(id) && id > 0 && id !== reporterId,
+        (id): id is number => isPositiveIntegerId(id) && id !== reporterId,
       ),
     )];
     const managerRecipientIds = await getActiveManagerUserIds();
@@ -166,8 +171,8 @@ export const submitReport = async (
     try {
       await notificationService.sendNotification({
         recipientId: reporterId,
-        title: "Report submitted successfully",
-        message: `Your report for post "${post.postTitle}" has been received. The moderation team will review it soon.`,
+        title: "Đã ghi nhận báo cáo",
+        message: `Báo cáo của bạn cho bài đăng "${post.postTitle}" đã được ghi nhận. Đội ngũ kiểm duyệt sẽ xem xét sớm.`,
         type: "info",
         metaData: {
           reportId: result.reportId,
@@ -182,10 +187,10 @@ export const submitReport = async (
 
     try {
       await notifyManyUsers(reportedRecipientIds, () => ({
-        title: "Your post has received a new report",
+        title: "Bài đăng nhận báo cáo mới",
         message: isModerated
-          ? `Post "${post.postTitle}" has received additional community reports and is now pending moderation review.`
-          : `Post "${post.postTitle}" has received a new community report. The moderation team will review it soon.`,
+          ? `Bài đăng "${post.postTitle}" đã nhận thêm báo cáo từ cộng đồng và hiện đang chờ kiểm duyệt lại.`
+          : `Bài đăng "${post.postTitle}" vừa nhận một báo cáo mới từ cộng đồng. Đội ngũ kiểm duyệt sẽ xem xét sớm.`,
         type: isModerated ? "warning" : "info",
         metaData: {
           reportId: result.reportId,
@@ -200,8 +205,8 @@ export const submitReport = async (
 
     try {
       await notifyManyUsers(managerRecipientIds, () => ({
-        title: "New report needs review",
-        message: `Post "${post.postTitle}" has been reported by a user. Please review it as soon as possible.`,
+        title: "Có báo cáo mới cần kiểm tra",
+        message: `Bài đăng "${post.postTitle}" vừa bị người dùng báo cáo. Vui lòng kiểm tra sớm.`,
         type: "warning",
         metaData: {
           reportId: result.reportId,
@@ -215,8 +220,8 @@ export const submitReport = async (
 
     try {
       await notificationService.notifyAdmins({
-        title: "New report",
-        message: `A new report was created for post "${post.postTitle}".`,
+        title: "Có báo cáo mới",
+        message: `Hệ thống vừa ghi nhận một báo cáo mới cho bài đăng "${post.postTitle}".`,
         type: "warning",
         metaData: { reportId: result.reportId, postId: post.postId },
       });
@@ -225,12 +230,14 @@ export const submitReport = async (
     }
 
     res.status(201).json({
-      message: "Report submitted successfully. A moderator will review it soon.",
+      message: "Báo cáo đã được gửi thành công. Quản trị viên sẽ xem xét trong thời gian sớm nhất.",
       report: result,
       moderationTriggered: isModerated,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal server error. Please try again later." });
+    res.status(500).json({
+      error: "Lỗi máy chủ nội bộ. Vui lòng thử lại sau.",
+    });
   }
 };
