@@ -10,6 +10,7 @@ import CustomAlert from '../../../utils/AlertHelper';
 import { useAuth } from '../../../context/AuthContext';
 import { postService } from '../../post/service/postService';
 import { paymentService, PromotionPackage } from '../../payment/service/paymentService';
+import { openPaymentAuthSession } from '../../payment/utils/paymentRedirect';
 
 const formatVnd = (value: unknown) => {
     const amount = Number(value ?? 0);
@@ -88,6 +89,18 @@ const PackagesScreen = () => {
             return;
         }
 
+        const paymentResult = await openPaymentAuthSession(paymentUrl as string);
+
+        if (paymentResult) {
+            const { status, code, txnRef, message } = paymentResult;
+            navigation.navigate('PaymentResult', { status, code, txnRef, message, type: paymentType });
+            return;
+        }
+
+        await refreshShop();
+        navigation.navigate('PaymentPending', { type: paymentType });
+        return;
+
         const navigatedRef = { current: false };
 
         const subscription = Linking.addEventListener('url', (event) => {
@@ -109,7 +122,10 @@ const PackagesScreen = () => {
             }
         });
 
-        await WebBrowser.openBrowserAsync(paymentUrl);
+        await WebBrowser.openAuthSessionAsync(
+            paymentUrl as string,
+            "greenmarket://payment-result"
+        );
 
         subscription.remove();
         if (!navigatedRef.current) {
@@ -167,7 +183,6 @@ const PackagesScreen = () => {
                     <Text style={styles.desc}>Nâng cấp tài khoản lên chủ vườn để mở shop và đăng bài theo mô hình shop owner.</Text>
                     <View style={styles.featureList}>
                         <View style={styles.featureItem}><CheckCircle2 size={16} color="#10b981" /><Text style={styles.featureText}>Đăng bài ngay theo quyền shop owner</Text></View>
-                        <View style={styles.featureItem}><CheckCircle2 size={16} color="#10b981" /><Text style={styles.featureText}>Phí đăng lẻ theo policy backend</Text></View>
                     </View>
 
                     {isOwner ? (
@@ -227,7 +242,7 @@ const PackagesScreen = () => {
                             ) : null}
                         </View>
                         <Text style={styles.price}>{formatVnd(pricingConfig?.personalMonthlyPrice)}</Text>
-                        <Text style={styles.desc}>Dành cho người bán cá nhân đăng bài thường xuyên theo policy cá nhân từ backend.</Text>
+                        <Text style={styles.desc}>Dành cho người bán cá nhân đăng bài thường xuyên theo cá nhân</Text>
 
                         {isAuthenticated ? (
                             isPersonalActive ? (

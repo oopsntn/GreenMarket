@@ -1,9 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, StyleSheet, Text, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Clock, CreditCard, Crown, Home, Rocket, Store } from 'lucide-react-native';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import Button from '../../Reused/Button/Button';
+import { useAuth } from '@/context/AuthContext';
+import CustomAlert from '@/utils/AlertHelper';
 
 type PaymentType = 'shop' | 'vip' | 'personal' | 'promote';
 
@@ -69,7 +71,8 @@ const PaymentPendingScreen = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const { type = 'shop', txnRef } = route.params || {};
-
+    const { refreshShop } = useAuth()
+    const [refreshing, setRefreshing] = useState(false);
     const config: TypeConfig = TYPE_CONFIG[type as PaymentType] ?? TYPE_CONFIG.shop;
 
     // Pulse animation cho icon
@@ -100,6 +103,25 @@ const PaymentPendingScreen = () => {
 
     const handleGoAction = () => {
         navigation.navigate(config.actionRoute);
+    };
+
+    const handleReload = async () => {
+        try {
+            setRefreshing(true);
+
+            if (type === 'shop' || type === 'vip') {
+                await refreshShop();
+            }
+
+            CustomAlert('Đã tải lại', 'Hệ thống đã cập nhật lại trạng thái mới nhất.');
+        } catch (error: any) {
+            CustomAlert(
+                'Chưa tải lại được',
+                error?.response?.data?.error || 'Không thể kiểm tra trạng thái thanh toán lúc này.'
+            );
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     return (
@@ -135,6 +157,15 @@ const PaymentPendingScreen = () => {
                     </Text>
                 </View>
 
+                <Button
+                    loading={refreshing}
+                    disabled={refreshing}
+                    onPress={handleReload}
+                    style={styles.reloadBtn}
+                >
+                    Đã thanh toán? Tải lại ngay
+                </Button>
+
                 {/* Action buttons */}
                 <Button onPress={handleGoAction} style={styles.primaryBtn}>
                     {config.actionLabel}
@@ -159,6 +190,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         padding: 28,
+    },
+    reloadBtn: {
+        width: '100%',
+        backgroundColor: '#111827',
+        marginBottom: 12,
     },
     iconCircle: {
         width: 100,
