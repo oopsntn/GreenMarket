@@ -74,6 +74,7 @@ export const createPayment = async (
       packageIdRaw: req.body?.packageId,
       ipAddr: req.ip || "127.0.0.1",
       platform: req.body?.platform,
+      mobileRedirectUrl: req.body?.mobileRedirectUrl,
     });
 
     res.json({ paymentUrl });
@@ -110,7 +111,12 @@ export const createShopRegistrationPayment = async (
       return;
     }
 
-    const { paymentUrl } = await paymentService.createShopPaymentIntent(userId, req.ip || "127.0.0.1", req.body?.platform);
+    const { paymentUrl } = await paymentService.createShopPaymentIntent(
+      userId,
+      req.ip || "127.0.0.1",
+      req.body?.platform,
+      req.body?.mobileRedirectUrl,
+    );
     res.json({ paymentUrl });
   } catch (error) {
     if (error instanceof PaymentServiceError) {
@@ -133,7 +139,12 @@ export const createShopVipPayment = async (
       return;
     }
 
-    const { paymentUrl } = await paymentService.createShopVipPaymentIntent(userId, req.ip || "127.0.0.1", req.body?.platform);
+    const { paymentUrl } = await paymentService.createShopVipPaymentIntent(
+      userId,
+      req.ip || "127.0.0.1",
+      req.body?.platform,
+      req.body?.mobileRedirectUrl,
+    );
     res.json({ paymentUrl });
   } catch (error) {
     if (error instanceof PaymentServiceError) {
@@ -156,7 +167,12 @@ export const createPersonalPackagePayment = async (
       return;
     }
 
-    const { paymentUrl } = await paymentService.createPersonalPackagePaymentIntent(userId, req.ip || "127.0.0.1", req.body?.platform);
+    const { paymentUrl } = await paymentService.createPersonalPackagePaymentIntent(
+      userId,
+      req.ip || "127.0.0.1",
+      req.body?.platform,
+      req.body?.mobileRedirectUrl,
+    );
     res.json({ paymentUrl });
   } catch (error) {
     if (error instanceof PaymentServiceError) {
@@ -184,7 +200,7 @@ export const vnpayReturn = async (req: Request, res: Response): Promise<void> =>
       code: mapped.code,
       txnRef: mapped.txnRef,
       message: mapped.message,
-    }, platform);
+    }, platform, asString(req.query.mobile_redirect_url));
 
     res.redirect(302, redirectUrl);
   } catch (error) {
@@ -195,7 +211,7 @@ export const vnpayReturn = async (req: Request, res: Response): Promise<void> =>
       status: "failed",
       code: "99",
       message: "system_error",
-    }, platform);
+    }, platform, asString(req.query.mobile_redirect_url));
     res.redirect(302, redirectUrl);
   }
 };
