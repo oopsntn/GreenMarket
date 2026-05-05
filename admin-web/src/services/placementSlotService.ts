@@ -1,5 +1,8 @@
 import { apiClient } from "../lib/apiClient";
-import { isHomepageBoostSlotCode } from "../types/placementSlot";
+import {
+  isHomepageBoostSlotCode,
+  isStrictHomepageBoostSlotCode,
+} from "../types/placementSlot";
 import type {
   PlacementSlot,
   PlacementSlotApiResponse,
@@ -64,6 +67,12 @@ const validateSlotForm = (
 
   if (!normalizedCode) {
     throw new Error("Mã vị trí là bắt buộc.");
+  }
+
+  if (!isStrictHomepageBoostSlotCode(normalizedCode)) {
+    throw new Error(
+      "Mã vị trí phải theo đúng định dạng BOOST_POST hoặc BOOST_POST_<số>.",
+    );
   }
 
   if (formData.capacity !== FIXED_CAPACITY) {

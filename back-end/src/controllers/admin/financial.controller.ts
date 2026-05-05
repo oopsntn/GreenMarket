@@ -24,6 +24,20 @@ type PayoutStatus = "pending" | "completed";
 const normalizeString = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
+const parseBooleanFlag = (value: unknown): boolean | null => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+
+  return null;
+};
+
 const toNumber = (value: string | number | null | undefined) => {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -355,10 +369,19 @@ export const createPayoutRequest = async (
     const amount = toNumber(req.body?.amount);
     const method = normalizeString(req.body?.method) || "bank_transfer";
     const note = normalizeString(req.body?.note);
-    const markAsPaid = Boolean(req.body?.markAsPaid);
+    const parsedMarkAsPaid = parseBooleanFlag(req.body?.markAsPaid);
+    const markAsPaid =
+      typeof req.body?.markAsPaid === "undefined" ? false : parsedMarkAsPaid;
 
     if (!Number.isInteger(userId) || userId <= 0) {
       res.status(400).json({ error: "Vui lòng chọn Host cần chi trả." });
+      return;
+    }
+
+    if (markAsPaid === null) {
+      res.status(400).json({
+        error: "Trạng thái đánh dấu đã chi trả không hợp lệ.",
+      });
       return;
     }
 

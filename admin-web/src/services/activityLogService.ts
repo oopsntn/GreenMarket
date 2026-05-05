@@ -75,7 +75,7 @@ const MODULE_LABELS: Record<string, string> = {
   revenue: "Doanh thu",
   reports: "Xử lý báo cáo",
   templates: "Mẫu nội dung",
-  collaborators: "Quản lý cộng tác viên",
+  collaborators: "Hoạt động cộng tác",
   "host / news": "Nội dung Host / Tin tức",
 };
 

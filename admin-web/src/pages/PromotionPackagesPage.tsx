@@ -140,6 +140,7 @@ function PromotionPackagesPage() {
             id: slot.id,
             code: slot.positionCode,
             label: slot.name,
+            status: slot.status,
           })),
         );
       } catch (error) {

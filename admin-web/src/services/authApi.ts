@@ -23,7 +23,7 @@ export const authApi = {
       method: "POST",
       includeJsonContentType: true,
       skipAuth: true,
-      defaultErrorMessage: "Login failed.",
+      defaultErrorMessage: "Đăng nhập thất bại.",
       body: JSON.stringify(payload),
     });
   },
