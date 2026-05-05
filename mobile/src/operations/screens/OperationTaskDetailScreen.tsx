@@ -13,18 +13,15 @@ import {
   View,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, CornerDownRight, Flag, Send } from 'lucide-react-native';
+import { ArrowLeft, Send } from 'lucide-react-native';
 import CustomAlert from '../../utils/AlertHelper';
 import {
   OperationTaskDetailResponse,
-  OperationTaskPriority,
   OperationTaskStatus,
-  ReplyVisibility,
   operationsService,
 } from '../services/operationsService';
 
 const STATUS_OPTIONS: OperationTaskStatus[] = ['open', 'in_progress', 'closed'];
-const PRIORITY_OPTIONS: OperationTaskPriority[] = ['low', 'medium', 'high', 'critical'];
 
 const STATUS_BAR_OFFSET = Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0;
 
@@ -49,6 +46,19 @@ const toTaskStatus = (value: string): OperationTaskStatus => {
   return 'open';
 };
 
+const getStatusLabel = (value: OperationTaskStatus) => {
+  switch (value) {
+    case 'open':
+      return 'Mở';
+    case 'in_progress':
+      return 'Đang xử lý';
+    case 'closed':
+      return 'Đã đóng';
+    default:
+      return value;
+  }
+};
+
 const OperationTaskDetailScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -61,13 +71,7 @@ const OperationTaskDetailScreen = () => {
 
   const [statusDraft, setStatusDraft] = useState<OperationTaskStatus>('open');
   const [statusNote, setStatusNote] = useState('');
-
   const [replyMessage, setReplyMessage] = useState('');
-  const [replyVisibility, setReplyVisibility] = useState<ReplyVisibility>('internal');
-
-  const [escalateReason, setEscalateReason] = useState('');
-  const [escalateTarget, setEscalateTarget] = useState<'MANAGER' | 'ADMIN'>('MANAGER');
-  const [escalatePriority, setEscalatePriority] = useState<OperationTaskPriority>('medium');
 
   const loadData = useCallback(async () => {
     if (!taskId) {
@@ -96,7 +100,6 @@ const OperationTaskDetailScreen = () => {
   };
 
   const canSubmitReply = useMemo(() => replyMessage.trim().length > 0, [replyMessage]);
-  const canEscalate = useMemo(() => escalateReason.trim().length > 0, [escalateReason]);
 
   const handleUpdateStatus = async () => {
     if (!taskId) {
@@ -134,42 +137,31 @@ const OperationTaskDetailScreen = () => {
   };
 
   const handleSendReply = async () => {
-    if (!taskId || !canSubmitReply) {
+    if (!taskId || !canSubmitReply || !detail) {
       return;
     }
 
     setSubmitting(true);
     try {
+      const currentStatus = toTaskStatus(detail.task.taskStatus || 'open');
+
+      if (currentStatus === 'open') {
+        await operationsService.updateTaskStatus(taskId, 'in_progress');
+      }
+
       await operationsService.createTaskReply(taskId, {
         message: replyMessage.trim(),
-        visibility: replyVisibility,
+        visibility: 'public',
       });
+
+      if (currentStatus !== 'closed') {
+        await operationsService.updateTaskStatus(taskId, 'closed');
+      }
 
       setReplyMessage('');
+      setStatusDraft('closed');
       await loadData();
-    } catch {
-      CustomAlert('Lỗi', 'Không gửi được phản hồi.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleEscalate = async () => {
-    if (!taskId || !canEscalate) {
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      await operationsService.escalateTask(taskId, {
-        reason: escalateReason.trim(),
-        targetRole: escalateTarget,
-        priority: escalatePriority,
-      });
-
-      setEscalateReason('');
-      await loadData();
-      CustomAlert('Thành công', 'Đã gửi escalation.');
+      CustomAlert('Thành công', 'Đã gửi phản hồi và đóng task.');
     } catch (err: unknown) {
       const message =
         typeof err === 'object' &&
@@ -177,8 +169,8 @@ const OperationTaskDetailScreen = () => {
         'response' in err &&
         typeof (err as { response?: { data?: { error?: string } } }).response?.data?.error === 'string'
           ? (err as { response?: { data?: { error?: string } } }).response?.data?.error ||
-            'Không thể escalate task.'
-          : 'Không thể escalate task.';
+            'Không gửi được phản hồi.'
+          : 'Không gửi được phản hồi.';
 
       CustomAlert('Lỗi', message);
     } finally {
@@ -201,7 +193,7 @@ const OperationTaskDetailScreen = () => {
           <ArrowLeft color="#fff" size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết công việc</Text>
-        <View style={{ width: 38 }} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -209,7 +201,9 @@ const OperationTaskDetailScreen = () => {
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.card}>
-          <Text style={styles.customerName}>Khách hàng: {detail.task.customerName || 'Khách hàng'}</Text>
+          <Text style={styles.customerName}>
+            Khách hàng: {detail.task.customerName || 'Khách hàng'}
+          </Text>
           <Text style={styles.taskMeta}>Thời gian gửi: {formatDateTime(detail.task.createdAt)}</Text>
         </View>
 
@@ -229,7 +223,7 @@ const OperationTaskDetailScreen = () => {
                 onPress={() => setStatusDraft(status)}
               >
                 <Text style={[styles.optionText, statusDraft === status && styles.optionTextActive]}>
-                  {status}
+                  {getStatusLabel(status)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -237,7 +231,7 @@ const OperationTaskDetailScreen = () => {
 
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Ghi chú nội bộ khi đổi trạng thái (tuỳ chọn)"
+            placeholder="Ghi chú nội bộ khi đổi trạng thái (tùy chọn)"
             multiline
             textAlignVertical="top"
             value={statusNote}
@@ -249,34 +243,16 @@ const OperationTaskDetailScreen = () => {
             onPress={handleUpdateStatus}
             disabled={submitting}
           >
-            {submitting ? <ActivityIndicator color="white" /> : <Text style={styles.submitText}>Cập nhật trạng thái</Text>}
+            {submitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.submitText}>Cập nhật trạng thái</Text>
+            )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Timeline phản hồi</Text>
-
-          <View style={styles.optionRow}>
-            {(['internal', 'public'] as ReplyVisibility[]).map((visibility) => (
-              <TouchableOpacity
-                key={visibility}
-                style={[
-                  styles.optionBtn,
-                  replyVisibility === visibility && styles.optionBtnActive,
-                ]}
-                onPress={() => setReplyVisibility(visibility)}
-              >
-                <Text
-                  style={[
-                    styles.optionText,
-                    replyVisibility === visibility && styles.optionTextActive,
-                  ]}
-                >
-                  {visibility}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <Text style={styles.sectionTitle}>Phản hồi</Text>
 
           <TextInput
             style={[styles.input, styles.textArea]}
@@ -311,94 +287,9 @@ const OperationTaskDetailScreen = () => {
               <View key={reply.replyId} style={styles.timelineItem}>
                 <View style={styles.timelineTop}>
                   <Text style={styles.timelineAuthor}>{reply.senderName || 'Unknown'}</Text>
-                  <Text style={styles.timelineVisibility}>{reply.visibility}</Text>
+                  <Text style={styles.timelineTime}>{formatDateTime(reply.createdAt)}</Text>
                 </View>
                 <Text style={styles.timelineMessage}>{reply.message}</Text>
-                <Text style={styles.timelineTime}>{formatDateTime(reply.createdAt)}</Text>
-              </View>
-            ))
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Escalation</Text>
-
-          <Text style={styles.fieldLabel}>Target role</Text>
-          <View style={styles.optionRow}>
-            {(['MANAGER', 'ADMIN'] as const).map((target) => (
-              <TouchableOpacity
-                key={target}
-                style={[styles.optionBtn, escalateTarget === target && styles.optionBtnActive]}
-                onPress={() => setEscalateTarget(target)}
-              >
-                <Text style={[styles.optionText, escalateTarget === target && styles.optionTextActive]}>
-                  {target}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={styles.fieldLabel}>Priority</Text>
-          <View style={styles.optionRow}>
-            {PRIORITY_OPTIONS.map((priority) => (
-              <TouchableOpacity
-                key={priority}
-                style={[
-                  styles.optionBtn,
-                  escalatePriority === priority && styles.optionBtnActive,
-                ]}
-                onPress={() => setEscalatePriority(priority)}
-              >
-                <Text
-                  style={[
-                    styles.optionText,
-                    escalatePriority === priority && styles.optionTextActive,
-                  ]}
-                >
-                  {priority}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Nhập lý do escalation"
-            multiline
-            textAlignVertical="top"
-            value={escalateReason}
-            onChangeText={setEscalateReason}
-          />
-
-          <TouchableOpacity
-            style={[styles.escalateBtn, (!canEscalate || submitting) && styles.disabledBtn]}
-            onPress={handleEscalate}
-            disabled={!canEscalate || submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <View style={styles.sendWrap}>
-                <Flag size={15} color="white" />
-                <Text style={styles.submitText}>Escalate task</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-          <Text style={styles.sectionTitle}>Lịch sử escalation</Text>
-
-          {detail.escalations.length === 0 ? (
-            <Text style={styles.emptyText}>Chưa có escalation.</Text>
-          ) : (
-            detail.escalations.map((item) => (
-              <View key={item.escalationId} style={styles.timelineItem}>
-                <View style={styles.timelineTop}>
-                  <Text style={styles.timelineAuthor}>{item.targetType}</Text>
-                  <Text style={styles.timelineVisibility}>{item.severity}</Text>
-                </View>
-                <Text style={styles.timelineMessage}>{item.reason}</Text>
-                <Text style={styles.timelineTime}>{formatDateTime(item.createdAt)}</Text>
               </View>
             ))
           )}
@@ -441,6 +332,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
   },
+  headerSpacer: {
+    width: 38,
+  },
   scrollContent: {
     padding: 16,
     paddingBottom: 28,
@@ -458,11 +352,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
   },
-  taskTitle: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '800',
-  },
   taskMeta: {
     marginTop: 5,
     color: '#64748B',
@@ -478,13 +367,6 @@ const styles = StyleSheet.create({
     color: '#334155',
     fontSize: 13,
     lineHeight: 20,
-  },
-  fieldLabel: {
-    color: '#334155',
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 6,
-    marginTop: 4,
   },
   optionRow: {
     flexDirection: 'row',
@@ -534,14 +416,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  escalateBtn: {
-    marginTop: 10,
-    backgroundColor: '#DC2626',
-    borderRadius: 10,
-    paddingVertical: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   disabledBtn: {
     opacity: 0.6,
   },
@@ -582,12 +456,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  timelineVisibility: {
-    color: '#166534',
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
   timelineMessage: {
     marginTop: 4,
     color: '#334155',
@@ -595,7 +463,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   timelineTime: {
-    marginTop: 4,
     color: '#94A3B8',
     fontSize: 11,
   },

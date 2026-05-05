@@ -14,9 +14,7 @@ import CustomAlert from '../../utils/AlertHelper';
 import MobileLayout from '../../components/Reused/MobileLayout/MobileLayout';
 import {
   OperationTaskListItem,
-  OperationTaskPriority,
   OperationTaskStatus,
-  OperationTaskType,
   PaginationMeta,
   operationsService,
 } from '../services/operationsService';
@@ -26,23 +24,7 @@ type OptionValue<T extends string> = T | 'all';
 const STATUS_OPTIONS: Array<{ label: string; value: OptionValue<OperationTaskStatus> }> = [
   { label: 'Tất cả', value: 'all' },
   { label: 'Mới', value: 'open' },
-  { label: 'Đang xử lý', value: 'in_progress' },
   { label: 'Đã đóng', value: 'closed' },
-];
-
-const TYPE_OPTIONS: Array<{ label: string; value: OptionValue<OperationTaskType> }> = [
-  { label: 'All', value: 'all' },
-  { label: 'Report', value: 'report' },
-  { label: 'Verification', value: 'verification' },
-  { label: 'Support', value: 'support' },
-];
-
-const PRIORITY_OPTIONS: Array<{ label: string; value: OptionValue<OperationTaskPriority> }> = [
-  { label: 'All', value: 'all' },
-  { label: 'Low', value: 'low' },
-  { label: 'Medium', value: 'medium' },
-  { label: 'High', value: 'high' },
-  { label: 'Critical', value: 'critical' },
 ];
 
 const formatDateTime = (value: string | null) => {
@@ -56,6 +38,19 @@ const formatDateTime = (value: string | null) => {
   }
 
   return date.toLocaleString('vi-VN');
+};
+
+const getStatusLabel = (value: string) => {
+  switch (value) {
+    case 'open':
+      return 'Mới';
+    case 'in_progress':
+      return 'Đang xử lý';
+    case 'closed':
+      return 'Đã đóng';
+    default:
+      return value;
+  }
 };
 
 const defaultMeta: PaginationMeta = {
@@ -73,14 +68,13 @@ const OperationsTasksScreen = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [tasks, setTasks] = useState<OperationTaskListItem[]>([]);
   const [meta, setMeta] = useState<PaginationMeta>(defaultMeta);
-
   const [statusFilter, setStatusFilter] = useState<OptionValue<OperationTaskStatus>>('all');
 
   const requestFilters = useMemo(
     () => ({
       status: statusFilter === 'all' ? undefined : statusFilter,
     }),
-    [statusFilter]
+    [statusFilter],
   );
 
   const fetchTasks = useCallback(
@@ -111,14 +105,14 @@ const OperationsTasksScreen = () => {
         setLoadingMore(false);
       }
     },
-    [requestFilters]
+    [requestFilters],
   );
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
       fetchTasks(1, false);
-    }, [fetchTasks])
+    }, [fetchTasks]),
   );
 
   const onRefresh = () => {
@@ -183,11 +177,11 @@ const OperationsTasksScreen = () => {
                   {item.title}
                 </Text>
                 <View style={styles.statusPill}>
-                  <Text style={styles.statusText}>{item.status}</Text>
+                  <Text style={styles.statusText}>{getStatusLabel(String(item.status))}</Text>
                 </View>
               </View>
 
-              <Text style={styles.taskMeta}>{`Customer: ${item.customerName || 'N/A'}`}</Text>
+              <Text style={styles.taskMeta}>{`Khách hàng: ${item.customerName || 'N/A'}`}</Text>
               <Text style={styles.taskDate}>{formatDateTime(item.updatedAt || item.createdAt)}</Text>
             </TouchableOpacity>
           )}
