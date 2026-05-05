@@ -105,17 +105,47 @@
 
 .account-package-tracking-table-wrapper {
   overflow-x: auto;
+  margin: 0 20px;
+  border: 1px solid rgba(224, 235, 224, 0.96);
+  border-radius: 18px;
+  background: #fff;
 }
 
 .account-package-tracking-table {
   width: 100%;
-  min-width: 1140px;
+  min-width: 1040px;
+  border-collapse: collapse;
 }
 
 .account-package-tracking-table th,
 .account-package-tracking-table td {
   text-align: left;
   vertical-align: middle;
+  border-bottom: 1px solid rgba(228, 237, 228, 0.96);
+  padding: 18px 16px;
+}
+
+.account-package-tracking-table th {
+  background: linear-gradient(180deg, rgba(248, 251, 246, 0.96), rgba(240, 246, 238, 0.96));
+  color: #5d7163;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.account-package-tracking-table tbody tr {
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.account-package-tracking-table tbody tr:hover {
+  background: rgba(248, 252, 248, 0.96);
+}
+
+.account-package-tracking-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .account-package-tracking-table th:nth-child(3),
@@ -124,44 +154,66 @@
 .account-package-tracking-table td:nth-child(4),
 .account-package-tracking-table th:nth-child(5),
 .account-package-tracking-table td:nth-child(5),
+.account-package-tracking-table th:nth-child(6),
+.account-package-tracking-table td:nth-child(6),
 .account-package-tracking-table th:nth-child(7),
-.account-package-tracking-table td:nth-child(7),
-.account-package-tracking-table th:nth-child(8),
-.account-package-tracking-table td:nth-child(8) {
+.account-package-tracking-table td:nth-child(7) {
   white-space: nowrap;
 }
 
-.account-package-tracking-table__primary,
-.account-package-tracking-table__payment {
+.account-package-tracking-table th:nth-child(3),
+.account-package-tracking-table td:nth-child(3),
+.account-package-tracking-table th:nth-child(4),
+.account-package-tracking-table td:nth-child(4),
+.account-package-tracking-table th:nth-child(5),
+.account-package-tracking-table td:nth-child(5),
+.account-package-tracking-table th:nth-child(6),
+.account-package-tracking-table td:nth-child(6),
+.account-package-tracking-table th:nth-child(7),
+.account-package-tracking-table td:nth-child(7) {
+  text-align: center;
+}
+
+.account-package-tracking-table__primary {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
-.account-package-tracking-table__primary strong,
-.account-package-tracking-table__payment strong {
-  font-size: 14px;
-  color: #213228;
+.account-package-tracking-table__primary strong {
+  font-size: 15px;
+  font-weight: 900;
+  color: #183b2b;
 }
 
-.account-package-tracking-table__primary span,
-.account-package-tracking-table__payment span {
+.account-package-tracking-table__primary span {
   font-size: 13px;
   line-height: 1.5;
   color: #67766c;
+  overflow-wrap: anywhere;
 }
 
 .account-package-tracking-table__view {
-  min-width: 82px;
-  height: 34px;
-  padding: 0 12px;
-  border: none;
-  border-radius: 12px;
-  background-color: #edf7ee;
+  min-width: 96px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(210, 224, 210, 0.94);
+  border-radius: 14px;
+  background: rgba(236, 247, 237, 0.96);
   color: #1b5e20;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
   cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.account-package-tracking-table__view:hover {
+  box-shadow: 0 12px 28px rgba(29, 92, 46, 0.08);
+  transform: translateY(-1px);
 }
 
 .account-package-tracking-pagination {
@@ -169,7 +221,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 24px 24px;
+  padding: 18px 24px 24px;
 }
 
 .account-package-tracking-pagination__info {

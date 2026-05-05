@@ -75,9 +75,9 @@ const PublicShopDetailScreen = ({ route }: any) => {
                                     )}
                                     <View style={styles.postInfo}>
                                         <Text style={styles.postTitle} numberOfLines={2}>{item.postTitle}</Text>
-                                        <Text style={styles.postPrice}>
-                                            {new Intl.NumberFormat('vi-VN').format(Number(item.postPrice || 0))}đ
-                                        </Text>
+                                        <View style={styles.contactBadge}>
+                                            <Text style={styles.contactBadgeText}>Liên hệ</Text>
+                                        </View>
                                         <Text style={styles.postMeta}>{item.postLocation || 'Chưa cập nhật vị trí'}</Text>
                                     </View>
                                 </View>
@@ -127,11 +127,20 @@ const styles = StyleSheet.create({
         color: '#0f172a',
         marginBottom: 6,
     },
-    postPrice: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#10b981',
-        marginBottom: 4,
+    contactBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#f0fdf4',
+        borderWidth: 1,
+        borderColor: '#6ee7b7',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        marginBottom: 6,
+    },
+    contactBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#065f46',
     },
     postMeta: {
         fontSize: 12,

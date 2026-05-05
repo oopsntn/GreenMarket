@@ -45,9 +45,13 @@ export const useProfile = () => {
                 throw new Error('Thông tin hồ sơ trống')
             }
 
+            const galleryImages = typeof shop?.shopGalleryImages === 'string'
+                ? shop.shopGalleryImages.split('|').filter(Boolean)
+                : (Array.isArray(shop?.shopGalleryImages) ? shop.shopGalleryImages : []);
+
             setFormData({
                 displayName: data.userDisplayName || '',
-                avatarUrl: resolveImageUrl(shop?.shopLogoUrl || data.userAvatarUrl || ''),
+                avatarUrl: resolveImageUrl(galleryImages[0] || shop?.shopLogoUrl || data.userAvatarUrl || ''),
                 mobile: data.userMobile || '',
                 email: data.userEmail || '',
                 location: data.userLocation || '',

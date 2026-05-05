@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -79,7 +79,7 @@ function HostContentsPage() {
   const [detailError, setDetailError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       setPageError("");
@@ -96,11 +96,11 @@ function HostContentsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     void loadData();
-  }, [filters]);
+  }, [loadData]);
 
   const pushToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const id = createToastId();
@@ -128,7 +128,7 @@ function HostContentsPage() {
       {
         title: "Đã xuất bản",
         value: String(summary.publishedContents),
-        subtitle: "Nguồn nội dung hiện đang đổ sang phần News của user web.",
+        subtitle: "Nguồn nội dung hiện đang đổ sang phần Tin tức của user web.",
       },
       {
         title: "Đã từ chối",
@@ -136,9 +136,9 @@ function HostContentsPage() {
         subtitle: "Các nội dung không đạt yêu cầu hoặc đã bị thu hồi.",
       },
       {
-        title: "Tổng payout dự kiến",
+        title: "Tổng nhuận bút dự kiến",
         value: summary.totalPayoutLabel,
-        subtitle: "Tổng payout gắn trên toàn bộ nội dung Host trong phạm vi hiện tại.",
+        subtitle: "Tổng nhuận bút gắn trên toàn bộ nội dung Host trong phạm vi hiện tại.",
       },
     ],
     [summary],
@@ -223,8 +223,8 @@ function HostContentsPage() {
       />
 
       <PageHeader
-        title="Quản lý nội dung Host / News"
-        description="Kiểm tra bài nội dung Host, payout đi kèm và quyết định trạng thái xuất bản để đảm bảo phần News hiển thị đúng định hướng vận hành."
+        title="Quản lý nội dung Host / Tin tức"
+        description="Kiểm tra bài nội dung Host, nhuận bút đi kèm và quyết định trạng thái xuất bản để đảm bảo phần Tin tức hiển thị đúng định hướng vận hành."
       />
 
       <div className="host-contents-page__stats">
@@ -240,7 +240,7 @@ function HostContentsPage() {
 
       <SectionCard
         title="Bộ lọc nội dung Host"
-        description="Tìm theo tiêu đề, tác giả hoặc lọc theo trạng thái và danh mục nội dung để kiểm tra nhanh nguồn News."
+        description="Tìm theo tiêu đề, tác giả hoặc lọc theo trạng thái và danh mục nội dung để kiểm tra nhanh nguồn Tin tức."
       >
         <div className="host-contents-page__filters">
           <div className="host-contents-page__field host-contents-page__field--wide">
@@ -310,7 +310,7 @@ function HostContentsPage() {
 
       <SectionCard
         title="Danh sách nội dung Host"
-        description="Theo dõi toàn bộ bài nội dung đang nuôi phần News, kiểm tra payout và kiểm soát trạng thái xuất bản."
+        description="Theo dõi toàn bộ bài nội dung đang nuôi phần Tin tức, kiểm tra nhuận bút và kiểm soát trạng thái xuất bản."
       >
         {pageError ? (
           <p className="host-contents-page__message host-contents-page__message--error">
@@ -323,7 +323,7 @@ function HostContentsPage() {
         ) : items.length === 0 ? (
           <EmptyState
             title="Chưa có nội dung Host"
-            description="Khi Host tạo bài nội dung hoặc News, chúng sẽ xuất hiện tại đây để admin theo dõi và kiểm soát."
+            description="Khi Host tạo bài nội dung hoặc Tin tức, chúng sẽ xuất hiện tại đây để admin theo dõi và kiểm soát."
           />
         ) : (
           <>
@@ -334,7 +334,7 @@ function HostContentsPage() {
                     <th>Tiêu đề</th>
                     <th>Tác giả</th>
                     <th>Danh mục</th>
-                    <th>Payout</th>
+                    <th>Nhuận bút</th>
                     <th>Trạng thái</th>
                     <th>Lượt xem</th>
                     <th>Cập nhật gần nhất</th>
@@ -425,7 +425,7 @@ function HostContentsPage() {
       <BaseModal
         isOpen={Boolean(selectedItem)}
         title="Chi tiết nội dung Host"
-        description="Kiểm tra đầy đủ nội dung, media, payout và trạng thái để quyết định duyệt, từ chối hoặc đưa bài về chờ xử lý."
+        description="Kiểm tra đầy đủ nội dung, media, nhuận bút và trạng thái để quyết định duyệt, từ chối hoặc đưa bài về chờ xử lý."
         onClose={closeDetail}
         maxWidth="980px"
       >
@@ -454,7 +454,7 @@ function HostContentsPage() {
                     <dd>{detail.statusLabel}</dd>
                   </div>
                   <div>
-                    <dt>Payout</dt>
+                    <dt>Nhuận bút</dt>
                     <dd>{detail.payoutAmountLabel}</dd>
                   </div>
                   <div>

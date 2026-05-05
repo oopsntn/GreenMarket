@@ -171,7 +171,7 @@ function RevenuePage() {
     <div className="revenue-page">
       <PageHeader
         title="Doanh thu"
-        description="Theo dõi doanh thu từ gói quảng bá, gói tài khoản / shop và phần chi phí chi trả Host / News trong cùng kỳ dữ liệu."
+        description="Theo dõi doanh thu từ gói quảng bá, gói tài khoản / shop và phần chi phí chi trả Host / Tin tức trong cùng kỳ dữ liệu."
         actionLabel={isExporting ? "Đang xuất..." : "Xuất báo cáo doanh thu"}
         onActionClick={() => void handleExportRevenueReport()}
       />

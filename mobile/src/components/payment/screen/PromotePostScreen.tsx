@@ -171,7 +171,7 @@ const PromotePostScreen = ({ route }: any) => {
                     <View style={styles.postHeader}>
                         <Rocket size={20} color="#8b5cf6" />
                         <Text style={styles.postTitle} numberOfLines={1}>
-                            Đang đẩy: {post?.postTitle || 'Bài đăng'}
+                            Bài đăng: {post?.postTitle || 'Bài đăng'}
                         </Text>
                     </View>
                     <Text style={styles.postDesc}>
@@ -196,45 +196,59 @@ const PromotePostScreen = ({ route }: any) => {
                     </View>
                 ) : (
                     <ScrollView showsVerticalScrollIndicator={false}>
-                        {packages.map((pkg) => (
-                            <TouchableOpacity
-                                key={pkg.promotionPackageId}
-                                onPress={() => setSelectedPackage(pkg)}
-                                activeOpacity={0.7}
-                            >
-                                <Card
-                                    style={[
-                                        styles.packageCard,
-                                        selectedPackage?.promotionPackageId === pkg.promotionPackageId && styles.selectedCard
-                                    ]}
+                        {packages.map((pkg) => {
+                            const isFull = pkg.slotCapacity !== undefined && (pkg.currentUsage ?? 0) >= pkg.slotCapacity;
+                            const isSelected = selectedPackage?.promotionPackageId === pkg.promotionPackageId;
+
+                            return (
+                                <TouchableOpacity
+                                    key={pkg.promotionPackageId}
+                                    onPress={() => !isFull && setSelectedPackage(pkg)}
+                                    activeOpacity={isFull ? 1 : 0.7}
+                                    disabled={isFull}
                                 >
-                                    <View style={styles.packageInfo}>
-                                        <View style={styles.pkgMain}>
-                                            <Text style={styles.pkgTitle}>{pkg.promotionPackageTitle}</Text>
-                                            <Text style={styles.pkgDuration}>
-                                                Gói {pkg.promotionPackageDurationDays} ngày
-                                            </Text>
-                                            <Text style={styles.pkgMeta}>
-                                                {pkg.slotTitle || pkg.slotCode || 'Vị trí tiêu chuẩn'}
-                                                {pkg.slotRules?.priority
-                                                    ? ` • Ưu tiên ${pkg.slotRules.priority}`
-                                                    : ''}
+                                    <Card
+                                        style={[
+                                            styles.packageCard,
+                                            isSelected && styles.selectedCard,
+                                            isFull && styles.fullCard
+                                        ]}
+                                    >
+                                        <View style={styles.packageInfo}>
+                                            <View style={styles.pkgMain}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                    <Text style={[styles.pkgTitle, isFull && { color: '#94a3b8' }]}>{pkg.promotionPackageTitle}</Text>
+                                                    {isFull && (
+                                                        <View style={styles.fullBadge}>
+                                                            <Text style={styles.fullBadgeText}>Hết chỗ</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                                <Text style={styles.pkgDuration}>
+                                                    Gói {pkg.promotionPackageDurationDays} ngày
+                                                </Text>
+                                                <Text style={styles.pkgMeta}>
+                                                    {pkg.slotTitle || pkg.slotCode || 'Vị trí tiêu chuẩn'}
+                                                    {pkg.slotRules?.priority
+                                                        ? ` • Ưu tiên ${pkg.slotRules.priority}`
+                                                        : ''}
+                                                </Text>
+                                            </View>
+
+                                            <Text style={[styles.pkgPrice, isFull && { color: '#94a3b8' }]}>
+                                                {new Intl.NumberFormat('vi-VN').format(pkg.promotionPackagePrice)}đ
                                             </Text>
                                         </View>
 
-                                        <Text style={styles.pkgPrice}>
-                                            {new Intl.NumberFormat('vi-VN').format(pkg.promotionPackagePrice)}đ
-                                        </Text>
-                                    </View>
-
-                                    {selectedPackage?.promotionPackageId === pkg.promotionPackageId && (
-                                        <View style={styles.checkIcon}>
-                                            <CheckCircle2 size={24} color="#10b981" />
-                                        </View>
-                                    )}
-                                </Card>
-                            </TouchableOpacity>
-                        ))}
+                                        {isSelected && (
+                                            <View style={styles.checkIcon}>
+                                                <CheckCircle2 size={24} color="#10b981" />
+                                            </View>
+                                        )}
+                                    </Card>
+                                </TouchableOpacity>
+                            );
+                        })}
 
                         <View style={styles.guaranteeBox}>
                             <ShieldCheck size={16} color="#059669" />
@@ -329,6 +343,25 @@ const styles = StyleSheet.create({
     selectedCard: {
         borderColor: '#10b981',
         backgroundColor: '#f0fdf4',
+    },
+    fullCard: {
+        opacity: 0.6,
+        backgroundColor: '#f8fafc',
+        borderColor: '#e2e8f0',
+    },
+    fullBadge: {
+        backgroundColor: '#f1f5f9',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+    },
+    fullBadgeText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#94a3b8',
+        textTransform: 'uppercase',
     },
     packageInfo: {
         flex: 1,

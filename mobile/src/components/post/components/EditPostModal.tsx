@@ -9,7 +9,6 @@ interface EditData {
     categoryId: number;
     content: string;
     location: string;
-    contactPhone: string;
 }
 
 interface ModalProps {
@@ -22,10 +21,12 @@ interface ModalProps {
     categories: any[];
     saving?: boolean;
     styles: any;
+    hideLocation?: boolean;
 }
 
 const EditPostModal = ({
-    visible, editingPost, editData, setEditData, onClose, onSave, categories, saving = false, styles: parentStyles
+    visible, editingPost, editData, setEditData, onClose, onSave, categories, saving = false, styles: parentStyles,
+    hideLocation = false
 }: ModalProps) => {
     if (!editingPost) return null
 
@@ -110,7 +111,6 @@ const EditPostModal = ({
                                 categoryId: editData.categoryId,
                                 postContent: editData.content,
                                 postLocation: editData.location,
-                                postContactPhone: editData.contactPhone
                             })}
                         >
                             Lưu thay đổi

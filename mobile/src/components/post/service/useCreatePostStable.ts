@@ -42,7 +42,7 @@ export interface PostingPolicy {
     postCreationFee: number
 }
 
-const useCreatePostStable = (options?: { shopId?: number; shopName?: string; shopLocation?: string }) => {
+const useCreatePostStable = (options?: { shopId?: number; shopName?: string; userPhone?: string; defaultLocation?: string }) => {
     const [categories, setCategories] = useState<Category[]>([])
     const [attributes, setAttributes] = useState<CategoryAttribute[]>([])
     const [policy, setPolicy] = useState<PostingPolicy | null>(null)
@@ -161,6 +161,7 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string; sho
         }
 
 
+
         const imageCount = media.filter((m) => m.type === 'image').length
         if (imageCount === 0) {
             CustomAlert('Thiếu hình ảnh', 'Vui lòng chọn ít nhất một hình ảnh.')
@@ -173,6 +174,33 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string; sho
         if (missingRequiredAttribute) {
             CustomAlert('Thiếu thuộc tính', `Vui lòng nhập "${missingRequiredAttribute.attributeTitle}".`)
             return false
+        }
+
+        // Validate numeric attributes
+        for (const attr of attributes) {
+            const val = formData.attributes[attr.attributeId];
+            if (!val) continue;
+
+            const isNumeric = 
+                attr.attributeDataType === 'number' || 
+                attr.attributeDataType === 'decimal' ||
+                /chiều cao|chieu cao|hoành|hoanh|tuổi|tuoi|số lượng|so luong|giá|gia/i.test(attr.attributeTitle);
+
+            if (isNumeric) {
+                // Remove spaces and check if it's a valid number
+                const cleanVal = val.trim().replace(',', '.');
+                if (cleanVal) {
+                    const num = Number(cleanVal);
+                    if (Number.isNaN(num)) {
+                        CustomAlert('Dữ liệu không hợp lệ', `"${attr.attributeTitle}" phải là một số.`);
+                        return false;
+                    }
+                    if (num <= 0) {
+                        CustomAlert('Dữ liệu không hợp lệ', `"${attr.attributeTitle}" phải là một số lớn hơn 0.`);
+                        return false;
+                    }
+                }
+            }
         }
 
         return true
@@ -221,7 +249,8 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string; sho
             const createPayload = {
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
-                postLocation: formData.postLocation.trim() || undefined,
+                postLocation: (formData.postLocation.trim() || options?.defaultLocation?.trim()) || undefined,
+                postContactPhone: options?.userPhone?.replace(/\s+/g, '').trim() || undefined,
                 ...(options?.shopId ? { shopId: Number(options.shopId) } : {}),
                 images,
                 // videos được gửi để backend xử lý trong tương lai (hiện backend bỏ qua)

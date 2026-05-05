@@ -132,13 +132,7 @@ const useMyPost = () => {
         }
     }
 
-    const filteredPosts = posts.filter((post) => {
-        if (activeTab === 'shop') {
-            return post.postShopId !== null
-        }
-
-        return post.postShopId === null
-    })
+    const filteredPosts = posts;
 
     const hasShopPosts = posts.some((post) => post.postShopId !== null)
 

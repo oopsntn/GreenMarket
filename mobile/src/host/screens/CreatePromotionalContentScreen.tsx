@@ -31,51 +31,81 @@ type MediaItem = {
   source: 'local' | 'remote';
 };
 
-type BodyEditorState = {
-  text: string;
-  imageUrls: string[];
+type TextSelection = {
+  start: number;
+  end: number;
 };
 
-const parseBodyForEditor = (rawBody: string | null | undefined): BodyEditorState => {
-  const source = typeof rawBody === 'string' ? rawBody : '';
+const normalizeBodyText = (rawBody: string | null | undefined) =>
+  typeof rawBody === 'string' ? rawBody : '';
 
-  if (!source.trim()) {
-    return {
-      text: '',
-      imageUrls: [],
-    };
+const extractInlineImageUrls = (rawBody: string) => {
+  if (!rawBody.trim()) {
+    return [] as string[];
   }
 
-  const imageUrls = [...source.matchAll(BODY_IMAGE_MARKDOWN_PATTERN)]
+  return [...rawBody.matchAll(BODY_IMAGE_MARKDOWN_PATTERN)]
     .map((match) => (match[1] || '').trim())
     .filter(Boolean);
+};
 
-  const text = source
+const stripInlineImageMarkdown = (rawBody: string) => {
+  if (!rawBody.trim()) {
+    return '';
+  }
+
+  return rawBody
     .replace(BODY_IMAGE_MARKDOWN_PATTERN, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
-
-  return {
-    text,
-    imageUrls,
-  };
 };
 
-const buildBodyForSubmit = (text: string, imageUrls: string[]) => {
-  const normalizedText = text.trim();
-  const normalizedImages = imageUrls
-    .map((item) => item.trim())
-    .filter(Boolean);
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-  const markdownImages = normalizedImages
-    .map((url) => `![](${url})`)
-    .join('\n\n');
-
-  if (normalizedText && markdownImages) {
-    return `${normalizedText}\n\n${markdownImages}`;
+const removeInlineImageFromBody = (body: string, url: string) => {
+  if (!body.trim()) {
+    return '';
   }
 
-  return normalizedText || markdownImages;
+  const escapedUrl = escapeRegExp(url);
+  const imagePattern = new RegExp(`!\\[[^\\]]*\\]\\(${escapedUrl}\\)\\s*`, 'g');
+
+  return body
+    .replace(imagePattern, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+const clampIndex = (value: number, max: number) => Math.min(Math.max(0, value), max);
+
+const normalizeSelection = (selection: TextSelection | null | undefined, textLength: number) => {
+  const rawStart = selection?.start ?? textLength;
+  const rawEnd = selection?.end ?? rawStart;
+  const start = clampIndex(Math.min(rawStart, rawEnd), textLength);
+  const end = clampIndex(Math.max(rawStart, rawEnd), textLength);
+  return { start, end };
+};
+
+const insertImagesAtSelection = (
+  body: string,
+  selection: TextSelection | null | undefined,
+  urls: string[],
+) => {
+  const normalizedUrls = urls.map((item) => item.trim()).filter(Boolean);
+  if (normalizedUrls.length === 0) {
+    return { nextText: body, cursor: selection?.end ?? body.length };
+  }
+
+  const safeSelection = normalizeSelection(selection, body.length);
+  const before = body.slice(0, safeSelection.start);
+  const after = body.slice(safeSelection.end);
+  const markdownImages = normalizedUrls.map((url) => `![](${url})`).join('\n\n');
+  const leadingBreak = before && !before.endsWith('\n') ? '\n\n' : '';
+  const trailingBreak = after && !after.startsWith('\n') ? '\n\n' : '';
+  const nextText = `${before}${leadingBreak}${markdownImages}${trailingBreak}${after}`;
+  const cursor = (before + leadingBreak + markdownImages).length;
+
+  return { nextText, cursor };
 };
 
 const resolveFirstCoverImage = (content?: HostContent): MediaItem | null => {
@@ -122,12 +152,10 @@ const CreatePromotionalContentScreen = () => {
 
   const [title, setTitle] = useState(editContent?.hostContentTitle || '');
   const [description, setDescription] = useState(editContent?.hostContentDescription || '');
-  const initialBodyEditorState = useMemo(
-    () => parseBodyForEditor(editContent?.hostContentBody),
-    [editContent?.hostContentBody],
-  );
-  const [bodyText, setBodyText] = useState(initialBodyEditorState.text);
-  const [bodyImageUrls, setBodyImageUrls] = useState<string[]>(initialBodyEditorState.imageUrls);
+  const [bodyText, setBodyText] = useState(normalizeBodyText(editContent?.hostContentBody));
+  const [bodySelection, setBodySelection] = useState<TextSelection>({ start: 0, end: 0 });
+  const bodyTextRef = useRef(bodyText);
+  const bodySelectionRef = useRef<TextSelection>({ start: 0, end: 0 });
   const [coverImage, setCoverImage] = useState<MediaItem | null>(resolveFirstCoverImage(editContent));
   const [showPreview, setShowPreview] = useState(false);
   const [uploadingBodyImages, setUploadingBodyImages] = useState(false);
@@ -138,18 +166,26 @@ const CreatePromotionalContentScreen = () => {
   const submitLockRef = useRef(false);
 
   const isBusy = submitting || uploadingBodyImages || uploadingCoverImage;
+  const inlineImageUrls = useMemo(() => extractInlineImageUrls(bodyText), [bodyText]);
+  const previewText = useMemo(() => stripInlineImageMarkdown(bodyText), [bodyText]);
+
+  useEffect(() => {
+    bodyTextRef.current = bodyText;
+  }, [bodyText]);
 
   useEffect(() => {
     if (!editContent?.hostContentId) {
       return;
     }
 
-    const parsedBody = parseBodyForEditor(editContent.hostContentBody);
+    const nextBody = normalizeBodyText(editContent.hostContentBody);
+    const nextSelection = { start: nextBody.length, end: nextBody.length };
 
     setTitle(editContent.hostContentTitle || '');
     setDescription(editContent.hostContentDescription || '');
-    setBodyText(parsedBody.text);
-    setBodyImageUrls(parsedBody.imageUrls);
+    setBodyText(nextBody);
+    setBodySelection(nextSelection);
+    bodySelectionRef.current = nextSelection;
     setCoverImage(resolveFirstCoverImage(editContent));
     setBodyUploadError(null);
     setCoverUploadError(null);
@@ -238,7 +274,19 @@ const CreatePromotionalContentScreen = () => {
     try {
       const uploaded = await hostService.uploadMedia(picked);
       const nextUrls = (uploaded.urls || []).map((url) => url.trim()).filter(Boolean);
-      setBodyImageUrls((prev) => [...prev, ...nextUrls]);
+      if (nextUrls.length === 0) {
+        throw new Error('Không thể tải ảnh nội dung.');
+      }
+
+      const { nextText, cursor } = insertImagesAtSelection(
+        bodyTextRef.current,
+        bodySelectionRef.current,
+        nextUrls,
+      );
+      setBodyText(nextText);
+      const nextSelection = { start: cursor, end: cursor };
+      setBodySelection(nextSelection);
+      bodySelectionRef.current = nextSelection;
     } catch (error: unknown) {
       setBodyUploadError(getErrorMessage(error, 'Không thể tải ảnh nội dung.'));
     } finally {
@@ -246,12 +294,18 @@ const CreatePromotionalContentScreen = () => {
     }
   };
 
-  const removeBodyImage = (index: number) => {
+  const removeBodyImage = (url: string) => {
     if (isBusy) {
       return;
     }
 
-    setBodyImageUrls((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
+    setBodyText((prev) => {
+      const nextText = removeInlineImageFromBody(prev, url);
+      const nextSelection = { start: nextText.length, end: nextText.length };
+      setBodySelection(nextSelection);
+      bodySelectionRef.current = nextSelection;
+      return nextText;
+    });
   };
 
   const removeCoverImage = () => {
@@ -267,7 +321,9 @@ const CreatePromotionalContentScreen = () => {
     setTitle('');
     setDescription('');
     setBodyText('');
-    setBodyImageUrls([]);
+    const nextSelection = { start: 0, end: 0 };
+    setBodySelection(nextSelection);
+    bodySelectionRef.current = nextSelection;
     setCoverImage(null);
     setBodyUploadError(null);
     setCoverUploadError(null);
@@ -299,7 +355,7 @@ const CreatePromotionalContentScreen = () => {
       return;
     }
 
-    if (!bodyText.trim() && bodyImageUrls.length === 0) {
+    if (!bodyText.trim()) {
       CustomAlert('Thiếu thông tin', 'Vui lòng nhập nội dung quảng bá hoặc thêm ảnh nội dung.');
       return;
     }
@@ -310,7 +366,7 @@ const CreatePromotionalContentScreen = () => {
       const finalCoverUrl = coverImage?.source === 'remote' ? coverImage.uri : null;
 
       const finalMediaUrls = finalCoverUrl ? [finalCoverUrl] : [];
-      const bodyValue = buildBodyForSubmit(bodyText, bodyImageUrls);
+      const bodyValue = bodyText.trim();
 
       if (isEditMode && editContent?.hostContentId) {
         await hostService.updateContent(editContent.hostContentId, {
@@ -404,6 +460,12 @@ const CreatePromotionalContentScreen = () => {
               textAlignVertical="top"
               value={bodyText}
               onChangeText={setBodyText}
+              onSelectionChange={(event) => {
+                const selection = event.nativeEvent.selection;
+                setBodySelection(selection);
+                bodySelectionRef.current = selection;
+              }}
+              selection={bodySelection}
             />
 
             {uploadingBodyImages ? (
@@ -417,9 +479,9 @@ const CreatePromotionalContentScreen = () => {
               <Text style={styles.bodyUploadErrorText}>{bodyUploadError}</Text>
             ) : null}
 
-            {bodyImageUrls.length > 0 ? (
+            {inlineImageUrls.length > 0 ? (
               <View style={styles.bodyImageGrid}>
-                {bodyImageUrls.map((url, index) => (
+                {inlineImageUrls.map((url, index) => (
                   <View key={`${url}_${index}`} style={styles.bodyImageItem}>
                     <Image
                       source={{ uri: resolveImageUrl(url) }}
@@ -428,7 +490,7 @@ const CreatePromotionalContentScreen = () => {
                     />
                     <TouchableOpacity
                       style={styles.removeBtn}
-                      onPress={() => removeBodyImage(index)}
+                      onPress={() => removeBodyImage(url)}
                       disabled={isBusy}
                     >
                       <X color="white" size={12} />
@@ -540,16 +602,18 @@ const CreatePromotionalContentScreen = () => {
               <Text style={styles.previewValue}>{description || '(Chưa nhập)'}</Text>
 
               <Text style={styles.previewLabel}>Nội dung chi tiết</Text>
-              <Text style={styles.previewValue}>{bodyText || '(Chưa nhập)'}</Text>
+              <Text style={styles.previewValue}>
+                {previewText || (inlineImageUrls.length > 0 ? '(Chỉ có ảnh)' : '(Chưa nhập)')}
+              </Text>
 
               <Text style={styles.previewLabel}>Ảnh nội dung</Text>
               <Text style={styles.previewValue}>
-                {bodyImageUrls.length > 0 ? `${bodyImageUrls.length} ảnh` : 'Chưa có ảnh nội dung'}
+                {inlineImageUrls.length > 0 ? `${inlineImageUrls.length} ảnh` : 'Chưa có ảnh nội dung'}
               </Text>
 
-              {bodyImageUrls.length > 0 ? (
+              {inlineImageUrls.length > 0 ? (
                 <View style={styles.previewImageGrid}>
-                  {bodyImageUrls.map((url, index) => (
+                  {inlineImageUrls.map((url, index) => (
                     <Image
                       key={`preview-body-image-${index}`}
                       source={{ uri: resolveImageUrl(url) }}

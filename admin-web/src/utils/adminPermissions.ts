@@ -146,8 +146,8 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
         moduleKey: "reportsModeration",
       },
       {
-        label: "Nội dung Host / News",
-        hint: "Duyệt bài nội dung Host đang đổ sang phần News của user web.",
+        label: "Nội dung Host / Tin tức",
+        hint: "Duyệt bài nội dung Host đang đổ sang phần Tin tức của user web.",
         path: "/host-contents",
         moduleKey: "hostContents",
       },

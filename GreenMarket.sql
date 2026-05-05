@@ -894,7 +894,7 @@ INSERT INTO task_replies (
     visibility,
     created_at
 ) VALUES
-(101, 102, 9, 'Uploaded full album and source zip.', '["https://cdn.greenmarket.local/jobs/3/cover-1.jpg","https://cdn.greenmarket.local/jobs/3/album.zip"]'::jsonb, 'internal', now() - interval '2 days');
+(101, 102, 9, 'Uploaded full album and source zip.', '["/uploads/binh-phun-suong-1.jpg","/uploads/album.zip"]'::jsonb, 'internal', now() - interval '2 days');
 
 -- Host Contents (Mock - Magazine Style)
 INSERT INTO host_contents (host_content_id, host_content_author_id, host_content_title, host_content_description, host_content_body, host_content_category, host_content_media_urls, host_content_status, host_content_view_count, host_content_payout_amount) VALUES
@@ -911,8 +911,8 @@ Không chỉ xuất hiện trong sân vườn hay các khu biệt thự, Tùng L
 Bên cạnh đó, Tùng La Hán cũng gắn liền với hình ảnh của sự tĩnh tại và thiền định. Trong nhiều không gian kiến trúc mang phong cách Nhật Bản hay Trung Hoa, cây thường được đặt ở vị trí trung tâm như một điểm nhấn tinh thần, giúp cân bằng cảm xúc và tạo cảm giác an yên.
 
 Ngày nay, khi nhịp sống hiện đại ngày càng hối hả, sự hiện diện của Tùng La Hán như một lời nhắc nhở về giá trị của sự kiên nhẫn và bền bỉ. Đó không chỉ là một loài cây cảnh, mà còn là biểu tượng sống động của thời gian, của sự trưởng thành và của những điều bền vững vượt lên trên mọi biến đổi.', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format", "https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 1250, 300000.00),
-(2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Mẹo vặt', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
-(3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Sự kiện', '[]', 'published', 450, 300000.00);
+(2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
+(3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Tin tức', '[]', 'published', 450, 300000.00);
 
 INSERT INTO host_contents (
     host_content_id,
@@ -959,10 +959,7 @@ INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verifi
     '/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
 (6, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
-    '/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
-(137, 'Vườn Tùng Cổ Đông Anh', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
-    'Chuyên sưu tầm và chăm sóc bonsai tùng, sanh, si theo phong cách vườn Bắc bộ. Nhận tư vấn phối chậu và tạo dáng cây trưởng thành.',
-    '/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
+    '/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511);
 
 INSERT INTO shops (
     shop_id,
@@ -1129,8 +1126,8 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'oi-bonsai-sai-qua-dang-hoanh',
     'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days'),
 
-(16, 8, NULL, 11, 'Cây Bonsai Test 0987654321',
-    'cay-bonsai-test-0987654321',
+(16, 8, NULL, 11, 'Lộc Vừng Mini',
+    'loc-vung-mini',
     'Hà Nội', 'approved', '0987654321', 10, 2, true, now() - interval '1 days', now() - interval '1 days');
 
 -- Additional moderation coverage posts
@@ -1191,7 +1188,9 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 -- Post 14: Lộc Vừng Phong Thủy
 (14, 1, 'Dáng Huyền'),    (14, 2, '72'),  (14, 3, '22'),  (14, 5, 'Bến Tre'),
 -- Post 15: Ổi Bonsai
-(15, 1, 'Dáng Hoành'),    (15, 2, '48'),  (15, 3, '18'),  (15, 4, '7'),  (15, 5, 'Bắc Ninh');
+(15, 1, 'Dáng Hoành'),    (15, 2, '48'),  (15, 3, '18'),  (15, 4, '7'),  (15, 5, 'Bắc Ninh'),
+-- Post 16: Lộc Vừng Mini
+(16, 1, 'Dáng Trực'),     (16, 2, '35'),  (16, 3, '20'),  (16, 4, '5'),  (16, 5, 'Hà Nội');
 
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
 (17, 1, 'Dáng Trực'), (17, 2, '42'), (17, 3, '16'), (17, 4, '7'), (17, 5, 'Vườn tự ươm'),
@@ -1240,7 +1239,10 @@ INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order) V
 -- Post 14: Lộc Vừng Phong Thủy
 ('post', 14, 'image', '/uploads/loc-vung-huyen-1.jpg', 0),
 -- Post 15: Ổi Bonsai
-('post', 15, 'image', '/uploads/oi-bonsai-sai-qua-1.jpg', 0);
+('post', 15, 'image', '/uploads/oi-bonsai-sai-qua-1.jpg', 0),
+-- Post 16: Lộc Vừng Mini
+('post', 16, 'image', '/uploads/loc-vung-mini-1.jpg', 0),
+('post', 16, 'image', '/uploads/loc-vung-mini-2.jpg', 1);
 
 INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order, meta_data) VALUES
 ('post', 17, 'image', '/uploads/pending-post-17-cover.jpg', 0, '{"label":"Ảnh bìa chờ duyệt"}'::jsonb),
@@ -1482,28 +1484,14 @@ INSERT INTO post_promotions (
     post_promotion_status,
     post_promotion_created_at
 ) VALUES
-(1, 1, 1, 2, 1, 'G�i d?y b�i theo tu?n v? tr� 1 trang ch?', 1, '2026-03-05 08:00:00', '2026-03-11 08:00:00', 'expired',  '2026-03-04 16:00:00'),
-(2, 4, 3, 1, 3, 'G�i d?y b�i theo tu?n v? tr� 2 trang ch?', 2, '2026-03-12 08:00:00', '2026-03-18 08:00:00', 'expired',  '2026-03-11 14:20:00'),
-(3, 2, 3, 4, 4, 'G�i d?y b�i theo tu?n v? tr� 3 trang ch?', 3, '2026-03-08 08:00:00', '2026-03-14 08:00:00', 'expired',  '2026-03-07 17:30:00'),
-(5, 12, 6, 1, 3, 'G�i d?y b�i theo tu?n v? tr� 2 trang ch?', 2, '2026-03-28 08:00:00', '2026-04-03 08:00:00', 'expired',  '2026-03-27 15:10:00'),
-(6, 9, 3, 2, 1, 'G�i d?y b�i theo tu?n v? tr� 1 trang ch?', 1, '2026-05-06 08:00:00', '2026-05-12 08:00:00', 'scheduled','2026-05-01 08:30:00'),
-(7, 15, 1, 2, 1, 'G�i d?y b�i theo tu?n v? tr� 1 trang ch?', 1, '2026-04-28 08:00:00', '2026-05-04 08:00:00', 'active',   '2026-04-27 07:40:00'),
-(8, 7, 1, 1, 3, 'G�i d?y b�i theo tu?n v? tr� 2 trang ch?', 2, '2026-04-29 08:05:00', '2026-05-05 08:05:00', 'active',   '2026-04-28 07:45:00');
-
-INSERT INTO post_promotions (
-    post_promotion_id,
-    post_promotion_post_id,
-    post_promotion_buyer_id,
-    post_promotion_package_id,
-    post_promotion_slot_id,
-    post_promotion_snapshot_title,
-    post_promotion_snapshot_priority,
-    post_promotion_start_at,
-    post_promotion_end_at,
-    post_promotion_status,
-    post_promotion_created_at
-) VALUES
-(9, 11, 6, 4, 4, 'G�i d?y b�i theo tu?n v? tr� 3 trang ch?', 3, '2026-04-30 08:00:00', '2026-05-06 08:00:00', 'paused', '2026-04-29 16:00:00');
+(1, 1, 1, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-03-05 08:00:00', '2026-03-11 08:00:00', 'expired',  '2026-03-04 16:00:00'),
+(2, 4, 3, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-03-12 08:00:00', '2026-03-18 08:00:00', 'expired',  '2026-03-11 14:20:00'),
+(3, 2, 3, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, '2026-03-08 08:00:00', '2026-03-14 08:00:00', 'expired',  '2026-03-07 17:30:00'),
+(5, 12, 6, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-03-28 08:00:00', '2026-04-03 08:00:00', 'expired',  '2026-03-27 15:10:00'),
+(6, 9, 3, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-04-28 08:00:00', '2026-05-04 08:00:00', 'expired','2026-04-27 08:30:00'),
+(7, 15, 1, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-04-28 08:00:00', '2026-05-04 08:00:00', 'active',   '2026-04-27 07:40:00'),
+(8, 7, 1, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-04-29 08:05:00', '2026-05-05 08:05:00', 'active',   '2026-04-28 07:45:00'),
+(9, 11, 6, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, '2026-04-28 08:00:00', '2026-05-04 08:00:00', 'expired', '2026-04-27 16:00:00');
 
 -- ============================================================
 -- PAYMENT TRANSACTIONS
@@ -1550,32 +1538,32 @@ INSERT INTO transactions (
     transaction_updated_at,
     transaction_processed_at
 ) VALUES
-(22, 3, 299000, 'VND', 'payment', 'pending', 'bank_transfer', 'GM-TXN-20260501-013', 'package', 2, '{"note":"Ngu?i d�ng d� g?i minh ch?ng chuy?n kho?n cho m?t y�u c?u qu?ng b� kh�c, admin dang d?i chi?u th? c�ng."}'::jsonb, now() - interval '14 hours', now() - interval '12 hours', NULL),
-(23, 136, 420000, 'VND', 'payout', 'success', 'bank_transfer', 'GM-HOST-PAYOUT-20260428-014', 'host_payout', 1, '{"audience":"host","note":"Đợt chi trả thủ công đã hoàn tất cho thu nhập Host kỳ tháng 4."}'::jsonb, now() - interval '4 days', now() - interval '4 days', now() - interval '4 days'),
-(24, 136, 600000, 'VND', 'payout', 'pending', 'bank_transfer', 'GM-HOST-PAYOUT-20260501-015', 'host_payout', 2, '{"audience":"host","note":"Đợt chi trả đang chờ admin xác nhận chuyển khoản ngoài hệ thống."}'::jsonb, now() - interval '20 hours', now() - interval '20 hours', NULL);
+(22, 3, 299000, 'VND', 'payment', 'pending', 'bank_transfer', 'GM-TXN-20260501-013', 'package', 2, '{"note":"Người dùng đã gửi minh chứng chuyển khoản cho một yêu cầu quảng bá khác, admin đang đối chiếu thủ công."}'::jsonb, now() - interval '14 hours', now() - interval '12 hours', NULL),
+(23, 136, 420000, 'VND', 'payout', 'success', 'bank_transfer', 'GM-HOST-PAYOUT-20260428-014', 'admin_host_payout', 1, '{"audience":"host","note":"Khoản chi trả Host do admin tạo và đã chuyển khoản ngoài hệ thống.","adminCreated":true,"createdBy":"Quản trị viên hệ thống"}'::jsonb, now() - interval '4 days', now() - interval '4 days', now() - interval '4 days'),
+(24, 136, 600000, 'VND', 'payout', 'pending', 'bank_transfer', 'GM-HOST-PAYOUT-20260501-015', 'admin_host_payout', 2, '{"audience":"host","note":"Khoản chi trả Host do admin tạo, đang chờ chuyển khoản ngoài hệ thống.","adminCreated":true,"createdBy":"Quản trị viên hệ thống"}'::jsonb, now() - interval '20 hours', now() - interval '20 hours', NULL);
 
 UPDATE transactions
-SET transaction_meta = '{"priceId":2,"postId":1,"promotionId":1,"slotId":1,"note":"Thanh to�n d� du?c x�c nh?n cho g�i d?y b�i v? tr� 1 trang ch?."}'::jsonb
+SET transaction_meta = '{"priceId":2,"postId":1,"promotionId":1,"slotId":1,"note":"Thanh toán đã được xác nhận cho gói đẩy bài vị trí 1 trang chủ."}'::jsonb
 WHERE transaction_id = 16;
 
 UPDATE transactions
-SET transaction_meta = '{"priceId":1,"postId":4,"promotionId":2,"slotId":3,"note":"Thanh to�n d� du?c x�c nh?n cho g�i d?y b�i v? tr� 2 trang ch?."}'::jsonb
+SET transaction_meta = '{"priceId":1,"postId":4,"promotionId":2,"slotId":3,"note":"Thanh toán đã được xác nhận cho gói đẩy bài vị trí 2 trang chủ."}'::jsonb
 WHERE transaction_id = 17;
 
 UPDATE transactions
-SET transaction_meta = '{"priceId":2,"postId":9,"promotionId":6,"slotId":1,"note":"Thanh to�n d� du?c x�c nh?n tru?c khi l�n l?ch chi?n d?ch ti?p theo."}'::jsonb
+SET transaction_meta = '{"priceId":2,"postId":9,"promotionId":6,"slotId":1,"note":"Thanh toán đã được xác nhận trước khi lên lịch chiến dịch tiếp theo."}'::jsonb
 WHERE transaction_id = 18;
 
 UPDATE transactions
-SET transaction_meta = '{"priceId":1,"postId":12,"promotionId":5,"slotId":3,"note":"Thanh to�n c?a chi?n d?ch cu d� du?c x�c nh?n d?y d?."}'::jsonb
+SET transaction_meta = '{"priceId":1,"postId":12,"promotionId":5,"slotId":3,"note":"Thanh toán của chiến dịch cũ đã được xác nhận đầy đủ."}'::jsonb
 WHERE transaction_id = 19;
 
 UPDATE transactions
-SET transaction_meta = '{"priceId":2,"postId":15,"promotionId":7,"slotId":1,"note":"Thanh to�n d� du?c x�c nh?n d? chi?n d?ch dang ch?y hi?n th? b�nh thu?ng."}'::jsonb
+SET transaction_meta = '{"priceId":2,"postId":15,"promotionId":7,"slotId":1,"note":"Thanh toán đã được xác nhận để chiến dịch đang chạy hiển thị bình thường."}'::jsonb
 WHERE transaction_id = 20;
 
 UPDATE transactions
-SET transaction_meta = '{"priceId":1,"postId":7,"promotionId":8,"slotId":3,"note":"Thanh to�n d� du?c x�c nh?n d? chi?n d?ch dang ch?y hi?n th? b�nh thu?ng."}'::jsonb
+SET transaction_meta = '{"priceId":1,"postId":7,"promotionId":8,"slotId":3,"note":"Thanh toán đã được xác nhận để chiến dịch đang chạy hiển thị bình thường."}'::jsonb
 WHERE transaction_id = 21;
 
 INSERT INTO transactions (
@@ -1594,8 +1582,8 @@ INSERT INTO transactions (
     transaction_updated_at,
     transaction_processed_at
 ) VALUES
-(25, 3, 29000, 'VND', 'payment', 'success', 'bank_transfer', 'GM-TXN-20260307-013', 'package', 4, '{"priceId":4,"postId":2,"promotionId":3,"slotId":4,"note":"Thanh to�n d� du?c x�c nh?n cho g�i d?y b�i v? tr� 3 trang ch?."}'::jsonb, '2026-03-07 17:31:00', '2026-03-07 17:31:00', '2026-03-07 17:31:00'),
-(26, 6, 29000, 'VND', 'payment', 'success', 'bank_transfer', 'GM-TXN-20260429-014', 'package', 4, '{"priceId":4,"postId":11,"promotionId":9,"slotId":4,"note":"Thanh to�n d� du?c x�c nh?n cho chi?n d?ch dang t?m d?ng ? v? tr� 3 trang ch?."}'::jsonb, '2026-04-29 16:05:00', '2026-04-29 16:05:00', '2026-04-29 16:05:00');
+(25, 3, 29000, 'VND', 'payment', 'success', 'bank_transfer', 'GM-TXN-20260307-013', 'package', 4, '{"priceId":4,"postId":2,"promotionId":3,"slotId":4,"note":"Thanh toán đã được xác nhận cho gói đẩy bài vị trí 3 trang chủ."}'::jsonb, '2026-03-07 17:31:00', '2026-03-07 17:31:00', '2026-03-07 17:31:00'),
+(26, 6, 29000, 'VND', 'payment', 'success', 'bank_transfer', 'GM-TXN-20260429-014', 'package', 4, '{"priceId":4,"postId":11,"promotionId":9,"slotId":4,"note":"Thanh toán đã được xác nhận cho chiến dịch đang tạm dừng ở vị trí 3 trang chủ."}'::jsonb, '2026-04-29 16:05:00', '2026-04-29 16:05:00', '2026-04-29 16:05:00');
 
 -- Tickets Seed Data (Reports migrated)
 INSERT INTO tickets (ticket_id, ticket_type, ticket_creator_id, ticket_target_type, ticket_target_id, ticket_title, ticket_content, ticket_status, ticket_resolution_note, ticket_meta_data, ticket_created_at, ticket_updated_at) VALUES
@@ -1648,7 +1636,7 @@ INSERT INTO notifications (
 ) VALUES
 (1, 1, NULL, 'Cập nhật hồ sơ shop', 'Admin đã tiếp nhận thay đổi hồ sơ shop của bạn và sẽ phản hồi trong vòng 24 giờ.', 'info', '{"source":"admin_manual_notification","scope":"single"}'::jsonb, true, now() - interval '3 days'),
 (2, 2, NULL, 'Yêu cầu bổ sung minh chứng thanh toán', 'Chiến dịch quảng bá của bạn đang chờ xác minh thanh toán. Vui lòng phản hồi nếu cần hỗ trợ thêm.', 'warning', '{"source":"admin_manual_notification","scope":"single","promotionId":6}'::jsonb, false, now() - interval '2 days'),
-(3, 136, NULL, 'Đã xác nhận chi trả Host', 'GreenMarket đã đánh dấu hoàn tất đợt chi trả thủ công gần nhất cho nội dung Host của bạn.', 'success', '{"source":"financial_admin","audience":"host"}'::jsonb, false, now() - interval '1 day'),
+(3, 136, NULL, 'Đã xác nhận chi trả Host', 'GreenMarket đã đánh dấu hoàn tất khoản chi trả Host gần nhất sau khi chuyển khoản thủ công.', 'success', '{"source":"financial_admin","audience":"host"}'::jsonb, false, now() - interval '1 day'),
 (4, 141, NULL, 'Tài khoản đang bị khóa', 'Tài khoản của bạn hiện bị khóa tạm thời để rà soát vi phạm ở hồ sơ shop.', 'error', '{"source":"admin_manual_notification","scope":"single"}'::jsonb, false, now() - interval '18 hours');
 
 INSERT INTO event_logs (
@@ -1665,10 +1653,11 @@ INSERT INTO event_logs (
 (15, NULL, 'notification', NULL, 'admin_manual_notification_sent', now() - interval '1 day', '{"scope":"all_users","recipientCount":12,"title":"Nhắc lịch bảo trì nhẹ","finalMessage":"GreenMarket sẽ bảo trì nhẹ ngoài giờ cao điểm vào 23:00 tối nay. Các giao dịch đang chạy sẽ không bị ảnh hưởng.","notificationType":"info","template":null,"performedBy":"Quản trị viên hệ thống"}'::jsonb),
 (16, 6, 'shop_collaborator', 2, 'admin_collaborator_relationship_active', now() - interval '18 hours', '{"action":"Admin Collaborator Relationship Active","detail":"Quan hệ cộng tác giữa shop và cộng tác viên đã được admin kích hoạt sau khi đối chiếu hồ sơ.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
 (17, 136, 'host_content', 4, 'admin_host_content_published', now() - interval '14 hours', '{"action":"Admin Host Content Published","detail":"Bài Host chờ duyệt đã được xuất bản để lên chuyên mục News trên web người dùng.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
-(18, 136, 'host_payout', 1, 'admin_payout_request_completed', now() - interval '10 hours', '{"action":"Admin Payout Request Completed","detail":"Đợt chi trả Host kỳ gần nhất đã được xác nhận hoàn tất sau khi chuyển khoản thủ công.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
+(18, 136, 'admin_host_payout', 1, 'admin_payout_request_completed', now() - interval '10 hours', '{"action":"Admin Payout Request Completed","detail":"Khoản chi trả Host gần nhất đã được xác nhận hoàn tất sau khi chuyển khoản thủ công.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
 (19, 1, 'system_setting', 1, 'admin_system_settings_updated', now() - interval '8 hours', '{"action":"Admin System Settings Updated","detail":"Thiết lập chi trả Host và ngưỡng thưởng theo lượt xem đã được cập nhật.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
 (20, 2, 'shop', 3, 'shop_view', now() - interval '4 hours', '{"action":"Shop View","detail":"Người dùng đã mở hồ sơ cửa hàng để xem thông tin và nội dung đang hiển thị.","performedBy":"Hệ thống"}'::jsonb),
-(21, 2, 'shop', 3, 'shop_contact_click', now() - interval '3 hours', '{"action":"Shop Contact Click","detail":"Người dùng đã nhấn vào nút liên hệ của cửa hàng để lấy thông tin kết nối.","performedBy":"Hệ thống"}'::jsonb);
+(21, 2, 'shop', 3, 'shop_contact_click', now() - interval '3 hours', '{"action":"Shop Contact Click","detail":"Người dùng đã nhấn vào nút liên hệ của cửa hàng để lấy thông tin kết nối.","performedBy":"Hệ thống"}'::jsonb),
+(22, 136, 'admin_host_payout', 24, 'admin_host_payout_created', now() - interval '20 hours', '{"action":"Admin Host Payout Created","detail":"Admin đã tạo khoản chi trả Host từ số dư thu nhập khả dụng.","performedBy":"Quản trị viên hệ thống"}'::jsonb);
 
 -- ============================================================
 -- DAILY PLACEMENT METRICS

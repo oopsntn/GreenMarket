@@ -59,13 +59,15 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                 </View>
 
                 <View style={styles.actions}>
-                    <TouchableOpacity
-                        style={[styles.actionBtn, !isApproved && { opacity: 0.3 }]}
-                        onPress={() => isApproved && navigation.navigate('PromotePost', { post: item })}
-                        disabled={!isApproved}
-                    >
-                        <Rocket size={18} color={isApproved ? "#8b5cf6" : "#9ca3af"} />
-                    </TouchableOpacity>
+                    {!item.activePromotion && (
+                        <TouchableOpacity
+                            style={[styles.actionBtn, !isApproved && { opacity: 0.3 }]}
+                            onPress={() => isApproved && navigation.navigate('PromotePost', { post: item })}
+                            disabled={!isApproved}
+                        >
+                            <Rocket size={18} color={isApproved ? "#8b5cf6" : "#9ca3af"} />
+                        </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity style={styles.actionBtn} onPress={() => onEdit(item)}>
                         <Edit size={18} color="#f59e0b" />

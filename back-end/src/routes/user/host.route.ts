@@ -5,6 +5,7 @@ import {
   getPayoutRequests,
   createPayoutRequest,
   getContents,
+  getContentDetail,
   createContent,
   updateContent,
   deleteContent,
@@ -37,6 +38,7 @@ router.get("/payout-requests", getPayoutRequests);
 router.post("/payout-requests", createPayoutRequest);
 
 router.get("/contents", getContents);
+router.get("/contents/:id", getContentDetail);
 router.post("/contents", createContent);
 router.patch("/contents/:id", updateContent);
 router.delete("/contents/:id", deleteContent);

@@ -342,7 +342,6 @@ const Profile: React.FC = () => {
             <span className="bg-emerald-500 w-1.5 h-6 inline-block mr-3 rounded-full align-middle group-hover:scale-y-125 transition-transform" />
             {isGardenOwner ? 'Thông tin Nhà Vườn' : 'Hồ sơ cá nhân'}
           </h1>
-          <p className="text-sm text-slate-500 mt-1 uppercase tracking-widest font-bold">Trạng thái: <span className="text-emerald-600">Đã xác minh</span></p>
         </div>
         <button
           onClick={() => setIsEditModalOpen(true)}
@@ -715,31 +714,33 @@ const Profile: React.FC = () => {
                         type="email"
                         className="w-full bg-slate-50 border border-slate-100 pl-12 pr-4 py-4 rounded-2xl text-slate-500 opacity-80 text-sm font-bold cursor-not-allowed"
                         placeholder="Chưa có địa chỉ Email..."
-                        value={email}
+                        value={shop ? shopEmail : email}
                         readOnly
                         disabled
                       />
                     </div>
-                    {email ? (
+                    {(shop ? shopEmail : email) ? (
                       <div className="flex items-center gap-2">
-                        {emailVerified ? (
+                        {(shop ? shopEmailVerified : emailVerified) ? (
                           <div className="px-4 py-4 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center gap-2 font-black uppercase text-[10px] tracking-widest shrink-0">
                             <CheckCircle2 className="w-4 h-4" /> Đã duyệt
                           </div>
                         ) : (
-                          <button type="button" onClick={() => handleUserEmailOTPRequest('add')} disabled={otpLoading} className="px-4 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200 shrink-0">
+                          <button type="button" onClick={() => shop ? handleRequestOTP('email', shopEmail) : handleUserEmailOTPRequest('add')} disabled={otpLoading} className="px-4 py-4 rounded-2xl bg-slate-900 text-white font-black uppercase text-[10px] tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200 shrink-0">
                             {otpLoading && otpActionType === 'add' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Xác thực'}
                           </button>
                         )}
-                        <button type="button" onClick={() => { setOtpActionType('change'); setOtpModalType('user_email'); setNewEmailValue(''); }} className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 hover:bg-amber-100 transition-all active:scale-95 shadow-sm">
+                        <button type="button" onClick={() => { setOtpActionType('change'); setOtpModalType(shop ? 'email' : 'user_email'); setNewEmailValue(''); }} className="p-4 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 hover:bg-amber-100 transition-all active:scale-95 shadow-sm">
                           <Pencil className="w-4 h-4" />
                         </button>
-                        <button type="button" onClick={() => handleUserEmailOTPRequest('remove')} disabled={otpLoading} className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-500 hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm">
-                          {otpLoading && otpActionType === 'remove' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                        </button>
+                        {!shop && (
+                          <button type="button" onClick={() => handleUserEmailOTPRequest('remove')} disabled={otpLoading} className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-500 hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm">
+                            {otpLoading && otpActionType === 'remove' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          </button>
+                        )}
                       </div>
                     ) : (
-                      <button type="button" onClick={() => { setOtpActionType('add'); setOtpModalType('user_email'); setNewEmailValue(''); }} className="flex items-center justify-center gap-2 px-6 py-4 bg-white border border-slate-200 text-emerald-600 font-black uppercase text-[10px] tracking-widest hover:bg-emerald-50 hover:border-emerald-200 rounded-2xl transition-all active:scale-95 shadow-sm shrink-0">
+                      <button type="button" onClick={() => { setOtpActionType('add'); setOtpModalType(shop ? 'email' : 'user_email'); setNewEmailValue(''); }} className="flex items-center justify-center gap-2 px-6 py-4 bg-white border border-slate-200 text-emerald-600 font-black uppercase text-[10px] tracking-widest hover:bg-emerald-50 hover:border-emerald-200 rounded-2xl transition-all active:scale-95 shadow-sm shrink-0">
                         <Plus className="w-4 h-4" /> Thêm Email mới
                       </button>
                     )}
@@ -999,7 +1000,7 @@ const Profile: React.FC = () => {
           </div>
         </div>
       )}
- 
+
       {/* Global Notifications (Always on top) */}
       {message && (
         <div className="fixed top-10 right-10 z-[100] animate-in fade-in slide-in-from-right-4 duration-500">

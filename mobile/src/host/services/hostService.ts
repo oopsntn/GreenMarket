@@ -87,6 +87,10 @@ export interface HostPublicContentDetail {
   target?: HostPublicContentTarget | null;
 }
 
+export interface HostContentDetail extends HostPublicContentDetail {
+  hostContentStatus?: string | null;
+}
+
 export interface CreateHostContentPayload {
   title: string;
   description: string;
@@ -283,6 +287,17 @@ export const hostService = {
   deleteContent: async (id: number | string): Promise<{ message?: string }> => {
     const response = await api.delete<{ message?: string }>(`/host/contents/${id}`);
     return response.data;
+  },
+
+  getContentDetail: async (id: number | string): Promise<HostContentDetail> => {
+    const response = await api.get<HostContentDetail>(`/host/contents/${id}`);
+    const row = response.data as any;
+    return {
+      ...row,
+      hostContentMediaUrls: normalizeMediaUrls(row?.hostContentMediaUrls),
+      hostContentViewCount: Number(row?.hostContentViewCount || 0),
+      hostContentClickCount: Number(row?.hostContentClickCount || 0),
+    };
   },
 
   getPublicContentDetail: async (id: number | string): Promise<HostPublicContentDetail> => {

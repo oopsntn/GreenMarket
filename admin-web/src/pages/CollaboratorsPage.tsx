@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import BaseModal from "../components/BaseModal";
 import EmptyState from "../components/EmptyState";
 import PageHeader from "../components/PageHeader";
@@ -77,7 +77,7 @@ function CollaboratorsPage() {
   const [detailError, setDetailError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       setPageError("");
@@ -94,11 +94,11 @@ function CollaboratorsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters]);
 
   useEffect(() => {
     void loadData();
-  }, [filters]);
+  }, [loadData]);
 
   const pushToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const id = createToastId();
