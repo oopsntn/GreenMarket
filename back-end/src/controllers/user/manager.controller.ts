@@ -1441,8 +1441,8 @@ export const resolveManagerReport = async (
         affectedRecipientIds.map((recipientId) =>
           notificationService.sendNotification({
             recipientId,
-            title: "Bao cao lien quan den noi dung cua ban da duoc xu ly",
-            message: `Quan tri vien da hoan tat xu ly bao cao lien quan den ${txResult.report.postTitle ? `bai dang \"${txResult.report.postTitle}\"` : `cua hang \"${txResult.report.shopName || "muc nay"}\"`}.`,
+            title: "Báo cáo liên quan đến nội dung của bạn đã được xử lý",
+            message: `Quản trị viên đã hoàn tất báo cáo liên quan đến ${txResult.report.postTitle ? `bài đăng \"${txResult.report.postTitle}\"` : `cửa hàng \"${txResult.report.shopName || "mục này"}\"`}.`,
             type: "info",
             metaData: { reportId, targetType: txResult.report.postTitle ? "post" : "shop" },
           }),
