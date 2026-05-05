@@ -15,6 +15,7 @@ const normalizeText = (value: string | null | undefined) =>
   (value ?? "").trim();
 
 const BOOST_POST_SLOT_CODE_PATTERN = /^BOOST_POST(?:_\d+)?$/i;
+const MAX_INTEGER_FIELD = 2_147_483_647;
 
 const extractPriority = (rules: Record<string, unknown> | null | undefined) => {
   const value = rules?.priority;
@@ -56,6 +57,10 @@ const validatePlacementSlotPayload = async (
   const priority = extractPriority(placementSlotRules);
   if (priority !== null && priority < 1) {
     return "Thứ tự hiển thị phải là số lớn hơn hoặc bằng 1.";
+  }
+
+  if (priority !== null && priority > MAX_INTEGER_FIELD) {
+    return "Thứ tự hiển thị không được vượt quá 2.147.483.647.";
   }
 
   const allSlots = await db.select().from(placementSlots);

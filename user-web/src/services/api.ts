@@ -525,6 +525,9 @@ export const respondToCollaboratorInvitation = (id: number, action: 'accept' | '
 export const getPendingCollaboratorPosts = () => 
   api.get<any[]>('/shops/collaborators/posts/pending');
 
+export const getPendingPostDetail = (id: number | string) => 
+  api.get(`/shops/collaborators/posts/${id}/detail`);
+
 export const approveCollaboratorPost = (id: number) => 
   api.post(`/shops/collaborators/posts/${id}/approve`);
 

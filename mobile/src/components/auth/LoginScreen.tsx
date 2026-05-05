@@ -27,12 +27,12 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
   const handleRequestOtp = async (): Promise<void> => {
     const trimmedMobile = mobile.trim();
     if (!trimmedMobile) {
-      Alert.alert("Lỗi", "Vui lòng nhập số điện thoại của bạn");
+      Alert.alert("Thông báo", "Vui lòng nhập số điện thoại của bạn");
       return;
     }
 
     if (trimmedMobile.length !== 10 || !/^\d+$/.test(trimmedMobile)) {
-      Alert.alert("Lỗi", "vui lòng nhập đúng định dạng số điện thoại");
+      Alert.alert("Thông báo", "vui lòng nhập đúng định dạng số điện thoại");
       return;
     }
 
@@ -46,7 +46,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
 
       if (!res.ok) {
         const errorData = await res.json();
-        Alert.alert("Lỗi", errorData.message || "Thao tác thất bại");
+        Alert.alert("Thông báo", errorData.message || "Thao tác thất bại");
         console.error("OTP request error:", errorData);
         return;
       }
@@ -57,7 +57,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("OTP request error:", errorMessage);
-      Alert.alert("Lỗi", "Đã có lỗi xảy ra. Vui lòng thử lại.");
+      Alert.alert("Thông báo", "Đã có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
 
   const handleVerifyOtp = async (): Promise<void> => {
     if (otp.length !== 6) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ 6 số OTP");
+      Alert.alert("Thông báo", "Vui lòng nhập đầy đủ 6 số OTP");
       return;
     }
 
@@ -78,7 +78,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
       });
 
       if (!res.ok) {
-        Alert.alert("Lỗi", "Mã OTP không đúng hoặc đã hết hạn.");
+        Alert.alert("Thông báo", "Mã OTP không đúng hoặc đã hết hạn.");
         return;
       }
 
@@ -89,7 +89,7 @@ const LoginScreen = ({ onLoginSuccess }: LoginScreenProps) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error("Verify OTP error:", errorMessage);
-      Alert.alert("Lỗi", "Đã có lỗi xảy ra. Vui lòng thử lại.");
+      Alert.alert("Thông báo", "Đã có lỗi xảy ra. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }

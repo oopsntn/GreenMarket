@@ -592,6 +592,52 @@ const deriveReportSeverity = (
   return "medium";
 };
 
+const attachEvidenceToReports = async <T extends { reportId: number }>(items: T[]) => {
+  if (items.length === 0) {
+    return items.map((item) => ({ ...item, evidenceUrls: [] as string[] }));
+  }
+
+  const reportIds = items
+    .map((item) => Number(item.reportId))
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  if (reportIds.length === 0) {
+    return items.map((item) => ({ ...item, evidenceUrls: [] as string[] }));
+  }
+
+  const evidenceRows = await db
+    .select({
+      reportId: mediaAssets.targetId,
+      url: mediaAssets.url,
+    })
+    .from(mediaAssets)
+    .where(
+      and(
+        eq(mediaAssets.targetType, "report"),
+        eq(mediaAssets.mediaType, "image"),
+        inArray(mediaAssets.targetId, reportIds),
+      ),
+    )
+    .orderBy(mediaAssets.targetId, mediaAssets.sortOrder, mediaAssets.assetId);
+
+  const evidenceMap = new Map<number, string[]>();
+
+  for (const row of evidenceRows) {
+    if (!row.url?.trim()) {
+      continue;
+    }
+
+    const current = evidenceMap.get(row.reportId) ?? [];
+    current.push(row.url.trim());
+    evidenceMap.set(row.reportId, current);
+  }
+
+  return items.map((item) => ({
+    ...item,
+    evidenceUrls: evidenceMap.get(item.reportId) ?? [],
+  }));
+};
+
 const derivePostPriority = (status: string | null | undefined): QueuePriority => {
   const normalized = (status ?? "").toLowerCase();
   switch (normalized) {
@@ -1243,7 +1289,9 @@ export const getManagerReports = async (
       .where(and(...conditions))
       .orderBy(desc(reports.ticketCreatedAt), desc(reports.ticketId));
 
-    const filteredRows = rows
+    const rowsWithEvidence = await attachEvidenceToReports(rows);
+
+    const filteredRows = rowsWithEvidence
       .map((item) => ({
         ...item,
         severity: deriveReportSeverity(item.reportReasonCode, item.reportReason),
@@ -1441,8 +1489,8 @@ export const resolveManagerReport = async (
         affectedRecipientIds.map((recipientId) =>
           notificationService.sendNotification({
             recipientId,
-            title: "Bao cao lien quan den noi dung cua ban da duoc xu ly",
-            message: `Quan tri vien da hoan tat xu ly bao cao lien quan den ${txResult.report.postTitle ? `bai dang \"${txResult.report.postTitle}\"` : `cua hang \"${txResult.report.shopName || "muc nay"}\"`}.`,
+            title: "Báo cáo liên quan đến nội dung của bạn đã được xử lý",
+            message: `Quản trị viên đã hoàn tất báo cáo liên quan đến ${txResult.report.postTitle ? `bài đăng \"${txResult.report.postTitle}\"` : `cửa hàng \"${txResult.report.shopName || "mục này"}\"`}.`,
             type: "info",
             metaData: { reportId, targetType: txResult.report.postTitle ? "post" : "shop" },
           }),

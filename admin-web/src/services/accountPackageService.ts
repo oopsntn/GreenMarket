@@ -29,6 +29,8 @@ const GROUP_LABELS: Record<string, string> = {
   VIP: "Nhà vườn VIP",
 };
 
+const MAX_INTEGER_FIELD = 2_147_483_647;
+
 const formatCurrencyLabel = (value: number | string | null | undefined) => {
   const numeric = Number(value ?? 0);
 
@@ -72,9 +74,27 @@ const normalizePackage = (
   updatedAt: formatDateTimeLabel(item.updatedAt),
 });
 
+const hasOnlyCurrencyCharacters = (value: string) =>
+  /^[\d\s.,]+$/.test(value.trim());
+
 const parsePrice = (value: string) => {
-  const numeric = Number(value.replace(/[^\d]/g, ""));
-  return Number.isFinite(numeric) ? numeric : 0;
+  const normalized = value.trim();
+
+  if (!normalized || !hasOnlyCurrencyCharacters(normalized)) {
+    return null;
+  }
+
+  const digits = normalized.replace(/[^\d]/g, "");
+  if (!digits) {
+    return null;
+  }
+
+  const numeric = Number(digits);
+  if (!Number.isSafeInteger(numeric) || numeric <= 0) {
+    return null;
+  }
+
+  return numeric;
 };
 
 export const accountPackageService = {
@@ -133,6 +153,18 @@ export const accountPackageService = {
   ): Promise<AccountPackage> {
     const price = parsePrice(formState.price);
 
+    if (price === null) {
+      throw new Error(
+        "Giá gói chỉ được gồm chữ số và các dấu phân cách hợp lệ.",
+      );
+    }
+
+    if (price > MAX_INTEGER_FIELD) {
+      throw new Error(
+        "Giá gói không được vượt quá 2.147.483.647 VND.",
+      );
+    }
+
     if (price <= 0) {
       throw new Error("Giá gói phải lớn hơn 0.");
     }
@@ -145,6 +177,16 @@ export const accountPackageService = {
     const maxSales = Number(formState.maxSales);
     if (!Number.isFinite(maxSales) || maxSales <= 0) {
       throw new Error("Số lượt bán tối đa phải lớn hơn 0.");
+    }
+
+    if (!Number.isInteger(maxSales)) {
+      throw new Error("Số lượt bán tối đa phải là số nguyên.");
+    }
+
+    if (maxSales > MAX_INTEGER_FIELD) {
+      throw new Error(
+        "Số lượt bán tối đa không được vượt quá 2.147.483.647.",
+      );
     }
 
     const payload: {
@@ -162,6 +204,16 @@ export const accountPackageService = {
       const parsedDuration = Number(formState.durationDays);
       if (!Number.isFinite(parsedDuration) || parsedDuration <= 0) {
         throw new Error("Thời hạn VIP phải lớn hơn 0 ngày.");
+      }
+
+      if (!Number.isInteger(parsedDuration)) {
+        throw new Error("Thời hạn VIP phải là số nguyên.");
+      }
+
+      if (parsedDuration > MAX_INTEGER_FIELD) {
+        throw new Error(
+          "Thời hạn VIP không được vượt quá 2.147.483.647 ngày.",
+        );
       }
 
       payload.durationDays = Math.floor(parsedDuration);

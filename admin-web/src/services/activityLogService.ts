@@ -57,6 +57,15 @@ const ACTION_LABELS: Record<string, string> = {
   "update system settings": "Cập nhật thiết lập hệ thống",
 };
 
+const EXTRA_ACTION_LABELS: Record<string, string> = {
+  "admin promotion package updated": "Cập nhật gói quảng bá",
+  "admin slot updated": "Cập nhật vị trí hiển thị",
+  "admin account package updated": "Cập nhật gói tài khoản / shop",
+  "package updated": "Cập nhật gói giá",
+  "price added": "Thêm mức giá",
+  "price superseded": "Thay thế mức giá",
+};
+
 const RESULT_LABELS: Record<string, string> = {
   completed: "Hoàn thành",
   success: "Thành công",
@@ -79,6 +88,13 @@ const MODULE_LABELS: Record<string, string> = {
   "host / news": "Nội dung Host / Tin tức",
 };
 
+const EXTRA_MODULE_LABELS: Record<string, string> = {
+  users: "Người dùng",
+  financial: "Tài chính / Chi trả Host",
+  exports: "Xuất báo cáo",
+  settings: "Thiết lập hệ thống",
+};
+
 const TARGET_CODE_LABELS: Record<string, string> = {
   export: "Bản xuất dữ liệu",
   template: "Mẫu nội dung",
@@ -91,6 +107,14 @@ const ACTOR_LABELS: Record<string, string> = {
   "system administrator": "Quản trị viên hệ thống",
   system: "Hệ thống",
   admin: "Quản trị viên",
+};
+
+const EXTRA_ACTOR_LABELS: Record<string, string> = {
+  "system setup": "Thiết lập hệ thống",
+  "he thong admin": "Hệ thống Admin",
+  "gemini gemini 2 5 flash": "Mô hình Gemini 2.5 Flash",
+  "gemini gemini 2 0 flash": "Mô hình Gemini 2.0 Flash",
+  "greenmarket fallback fallback local v1": "Bộ phân tích dự phòng GreenMarket",
 };
 
 const PHRASE_REPLACEMENTS: Array<[string, string]> = [
@@ -170,7 +194,11 @@ const translateAction = (value: string) => {
   }
 
   const actionKey = normalizeTextKey(normalized);
-  return ACTION_LABELS[actionKey] || translateKnownPhrases(humanizeCode(normalized));
+  return (
+    ACTION_LABELS[actionKey] ||
+    EXTRA_ACTION_LABELS[actionKey] ||
+    translateKnownPhrases(humanizeCode(normalized))
+  );
 };
 
 const translateResult = (value: string) => {
@@ -191,7 +219,12 @@ const translateActor = (value: string) => {
     return "Quản trị viên hệ thống";
   }
 
-  return ACTOR_LABELS[normalizeTextKey(normalized)] || repairMojibake(normalized);
+  const actorKey = normalizeTextKey(normalized);
+  return (
+    ACTOR_LABELS[actorKey] ||
+    EXTRA_ACTOR_LABELS[actorKey] ||
+    repairMojibake(normalized)
+  );
 };
 
 const translateModule = (value: string) => {
@@ -200,7 +233,12 @@ const translateModule = (value: string) => {
     return "Hệ thống";
   }
 
-  return MODULE_LABELS[normalizeTextKey(normalized)] || translateKnownPhrases(humanizeCode(normalized));
+  const moduleKey = normalizeTextKey(normalized);
+  return (
+    MODULE_LABELS[moduleKey] ||
+    EXTRA_MODULE_LABELS[moduleKey] ||
+    translateKnownPhrases(humanizeCode(normalized))
+  );
 };
 
 const translateTargetCode = (value: string) => {

@@ -7,6 +7,10 @@ import { adminConfigStoreService } from "../../services/adminConfigStore.service
 import { adminPromotionService } from "../../services/adminPromotion.service";
 import { adminReportingService } from "../../services/adminReporting.service";
 import { geminiAIService } from "../../services/geminiAI.service";
+import {
+  formatAdminBangkokDateTime,
+  toAdminBangkokIsoString,
+} from "../../utils/adminDateTime";
 
 const AI_INSIGHT_SETTINGS_KEY = "admin_ai_insight_settings";
 
@@ -60,6 +64,7 @@ type AITrendScoreRow = {
   momentumNote: string;
   recommendation: string;
   updatedAt: string;
+  updatedAtIso?: string;
 };
 type AIInsightHistoryItem = {
   id: number;
@@ -69,6 +74,7 @@ type AIInsightHistoryItem = {
   detail: string;
   generatedBy: string;
   generatedAt: string;
+  generatedAtIso?: string;
   status: AIInsightHistoryStatus;
 };
 type AIInsightOverview = {
@@ -113,14 +119,26 @@ const average = (values: number[]) =>
   values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
 const resolveMomentumByDelta = (delta: number): "Up" | "Stable" | "Down" =>
   delta >= 0.08 ? "Up" : delta <= -0.08 ? "Down" : "Stable";
+const bangkokDateTimeFormatter = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Bangkok",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
 const formatDateTime = (value: Date | string | null | undefined) => {
   if (!value) return "Chưa có dữ liệu";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Chưa có dữ liệu";
-  return `${date.toISOString().slice(0, 10)} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return bangkokDateTimeFormatter.format(date).replace(",", "");
 };
 const getGeneratedBy = (req: AuthRequest) =>
   req.user?.name || req.user?.email || req.user?.mobile || "Hệ thống Admin";
+const getBangkokDateValue = (value = new Date()) =>
+  value.toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+
 const isRecommendationTone = (
   value: string,
 ): value is AIInsightSettings["recommendationTone"] =>
@@ -328,7 +346,7 @@ const buildTrendRows = async (
         : score >= 65
           ? "Tiếp tục theo dõi thêm một chu kỳ dữ liệu trước khi tăng thêm ngân sách hoặc mở rộng capacity."
           : "Rà lại khả năng tạo nhấp, sức hút nội dung và mức đóng góp doanh thu trước khi tiếp tục mở rộng.",
-      updatedAt: toDate || new Date().toISOString().slice(0, 10),
+      updatedAt: toDate || getBangkokDateValue(),
     };
   });
 
@@ -360,7 +378,7 @@ const buildTrendRows = async (
         : score >= 65
           ? "Theo dõi thêm tỷ lệ mua và số đơn trước khi coi đây là gói trụ cột."
           : "Cần xem lại vị trí hiển thị, mức giá và cách mô tả quyền lợi của gói.",
-      updatedAt: toDate || new Date().toISOString().slice(0, 10),
+      updatedAt: toDate || getBangkokDateValue(),
     };
   });
 
@@ -392,7 +410,7 @@ const buildTrendRows = async (
         : score >= 65
           ? "Có thể khai thác thêm bằng ưu đãi nhẹ hoặc gói phù hợp hơn."
           : "Chưa đủ tín hiệu để coi đây là nhóm khách nổi bật trong kỳ.",
-      updatedAt: toDate || new Date().toISOString().slice(0, 10),
+      updatedAt: toDate || getBangkokDateValue(),
     };
   });
 
@@ -422,6 +440,7 @@ const buildTrendRows = async (
           ? "Theo dõi thêm một chu kỳ dữ liệu ngắn trước khi tăng ngân sách hoặc thay đổi vị trí."
           : "Có thể tiếp tục vận hành bình thường và dùng làm mốc so sánh cho các ca khác.",
       updatedAt: item.lastOptimizedAt,
+      updatedAtIso: toAdminBangkokIsoString(item.lastOptimizedAt) || undefined,
     };
   });
 
@@ -669,7 +688,11 @@ export const getAIInsightHistory = async (_req: AuthRequest, res: Response): Pro
         summary: meta?.summary?.trim() || createInsightSummary(detail),
         detail,
         generatedBy: meta?.generatedBy || row.aiInsightProvider || "Hệ thống Admin",
-        generatedAt: formatDateTime(row.aiInsightCreatedAt),
+        generatedAt:
+          formatAdminBangkokDateTime(row.aiInsightCreatedAt) ||
+          "Chưa có dữ liệu",
+        generatedAtIso:
+          toAdminBangkokIsoString(row.aiInsightCreatedAt) || undefined,
         status: meta?.status || "Generated",
       };
     });
@@ -692,7 +715,7 @@ export const generateAIInsight = async (req: AuthRequest, res: Response): Promis
       operatorDigest = false,
       focus = "Executive Summary",
       tone = "Balanced",
-      generatedAt = new Date().toISOString().slice(0, 10),
+      generatedAt = formatAdminBangkokDateTime(new Date()) || "Chưa có dữ liệu",
     } = req.body as {
       fromDate?: string;
       toDate?: string;
@@ -785,7 +808,11 @@ export const generateAIInsight = async (req: AuthRequest, res: Response): Promis
       summary,
       detail,
       generatedBy: `${providerLabel} ${generated.model}`,
-      generatedAt: formatDateTime(createdInsight.aiInsightCreatedAt),
+      generatedAt:
+        formatAdminBangkokDateTime(createdInsight.aiInsightCreatedAt) ||
+        "Chưa có dữ liệu",
+      generatedAtIso:
+        toAdminBangkokIsoString(createdInsight.aiInsightCreatedAt) || undefined,
       status,
     } satisfies AIInsightHistoryItem);
   } catch (error) {

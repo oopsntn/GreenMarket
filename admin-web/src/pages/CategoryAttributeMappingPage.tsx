@@ -48,6 +48,8 @@ const EMPTY_FORM: MappingFormState = {
   displayOrder: "1",
 };
 
+const MAX_INTEGER_FIELD = 2_147_483_647;
+
 function CategoryAttributeMappingPage() {
   const [mappings, setMappings] = useState<CategoryAttributeMapping[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -265,6 +267,15 @@ function CategoryAttributeMappingPage() {
         isRequired: formState.isRequired,
         displayOrder: Number(formState.displayOrder),
       };
+
+      categoryMappingService.validateUniqueDisplayOrder(
+        mappings,
+        {
+          categoryId: payload.categoryId,
+          displayOrder: payload.displayOrder,
+        },
+        activeMapping?.id,
+      );
 
       if (modalMode === "create") {
         await categoryMappingService.createMapping(payload);
@@ -684,6 +695,8 @@ function CategoryAttributeMappingPage() {
               id="mapping-form-order"
               type="number"
               min="1"
+              inputMode="numeric"
+              max={MAX_INTEGER_FIELD}
               value={formState.displayOrder}
               onChange={(event) =>
                 setFormState((current) => ({

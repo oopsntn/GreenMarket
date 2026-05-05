@@ -74,6 +74,8 @@ export type CreateMappingPayload = {
 
 export type UpdateMappingPayload = CreateMappingPayload;
 
+const MAX_INTEGER_FIELD = 2_147_483_647;
+
 const CATEGORY_MAPPING_BASE_PATH = "/api/admin/category-mappings";
 
 const normalizeAttributeType = (value: unknown): MappingAttributeType => {
@@ -122,12 +124,42 @@ function buildMappingPayload(payload: CreateMappingPayload | UpdateMappingPayloa
     throw new Error("Thứ tự hiển thị phải lớn hơn hoặc bằng 1.");
   }
 
+  if (payload.displayOrder > MAX_INTEGER_FIELD) {
+    throw new Error(
+      "Thứ tự hiển thị không được vượt quá 2.147.483.647.",
+    );
+  }
+
   return {
     categoryId: payload.categoryId,
     attributeId: payload.attributeId,
     required: Boolean(payload.isRequired),
     displayOrder: payload.displayOrder,
   };
+}
+
+function assertUniqueDisplayOrder(params: {
+  mappings: CategoryAttributeMapping[];
+  categoryId: number;
+  displayOrder: number;
+  excludeId?: string;
+}) {
+  const duplicated = params.mappings.some((mapping) => {
+    if (params.excludeId && mapping.id === params.excludeId) {
+      return false;
+    }
+
+    return (
+      mapping.categoryId === params.categoryId &&
+      mapping.displayOrder === params.displayOrder
+    );
+  });
+
+  if (duplicated) {
+    throw new Error(
+      "Thứ tự hiển thị này đã được dùng trong danh mục đã chọn. Vui lòng chọn thứ tự khác.",
+    );
+  }
 }
 
 function resolveApiError(error: unknown, fallbackMessage: string) {
@@ -210,6 +242,19 @@ export const categoryMappingService = {
     } catch (error) {
       throw new Error(resolveApiError(error, "Không thể tạo ánh xạ mới."));
     }
+  },
+
+  validateUniqueDisplayOrder(
+    mappings: CategoryAttributeMapping[],
+    payload: Pick<CreateMappingPayload, "categoryId" | "displayOrder">,
+    excludeId?: string,
+  ) {
+    assertUniqueDisplayOrder({
+      mappings,
+      categoryId: payload.categoryId,
+      displayOrder: payload.displayOrder,
+      excludeId,
+    });
   },
 
   async updateMapping(

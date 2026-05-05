@@ -3,6 +3,10 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "../../config/db";
 import { AuthRequest } from "../../dtos/auth";
 import { eventLogs, users } from "../../models/schema/index";
+import {
+  formatAdminBangkokDateTime,
+  toAdminBangkokIsoString,
+} from "../../utils/adminDateTime";
 
 type EventLogMeta = {
   action?: string;
@@ -503,8 +507,10 @@ export const getActivityLogs = async (
         return {
           id: row.eventLogId,
           eventType: row.eventLogEventType || "system_event",
-          occurredAt: toIsoString(row.eventLogEventTime),
-          occurredAtLabel: formatDateTimeLabel(row.eventLogEventTime),
+          occurredAt: toAdminBangkokIsoString(row.eventLogEventTime),
+          occurredAtLabel:
+            formatAdminBangkokDateTime(row.eventLogEventTime) ||
+            "Chưa có dữ liệu",
           actorName,
           actorRole,
           moduleKey: definition.moduleKey,

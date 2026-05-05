@@ -16,10 +16,7 @@ export const getAccountPackages = async (
   } catch (error) {
     console.error(error);
     res.status(500).json({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Không thể tải gói tài khoản / shop.",
+      error: "Không thể tải gói tài khoản / shop.",
     });
   }
 };
@@ -34,10 +31,7 @@ export const getAccountPackageTracking = async (
   } catch (error) {
     console.error(error);
     res.status(500).json({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Không thể tải danh sách theo dõi gói tài khoản / shop.",
+      error: "Không thể tải danh sách theo dõi gói tài khoản / shop.",
     });
   }
 };
@@ -74,10 +68,7 @@ export const updateAccountPackage = async (
       return;
     }
     res.status(500).json({
-      error:
-        error instanceof Error
-          ? error.message
-          : "Không thể cập nhật gói tài khoản / shop.",
+      error: "Không thể cập nhật gói tài khoản / shop. Vui lòng kiểm tra lại dữ liệu nhập.",
     });
   }
 };

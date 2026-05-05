@@ -11,6 +11,7 @@ import type {
 } from "../types/promotionPackage";
 
 const FIXED_MAX_POSTS = 1;
+const MAX_INTEGER_FIELD = 2_147_483_647;
 
 const emptyPromotionPackageForm: PromotionPackageFormState = {
   name: "",
@@ -30,9 +31,27 @@ const SLOT_LABELS: Record<string, string> = {
 
 const normalizeText = (value: string) => value.trim();
 
+const hasOnlyCurrencyCharacters = (value: string) =>
+  /^[\d\s.,]+$/.test(value.trim());
+
 const parseCurrencyValue = (value: string) => {
-  const numeric = Number(value.replace(/[^\d]/g, ""));
-  return Number.isNaN(numeric) ? 0 : numeric;
+  const normalized = value.trim();
+
+  if (!normalized || !hasOnlyCurrencyCharacters(normalized)) {
+    return null;
+  }
+
+  const digits = normalized.replace(/[^\d]/g, "");
+  if (!digits) {
+    return null;
+  }
+
+  const numeric = Number(digits);
+  if (!Number.isSafeInteger(numeric) || numeric <= 0) {
+    return null;
+  }
+
+  return numeric;
 };
 
 const formatCurrencyLabel = (value: string | number | null) => {
@@ -99,6 +118,16 @@ const validatePromotionPackageForm = (
     throw new Error("Thời lượng phải lớn hơn hoặc bằng 1 ngày.");
   }
 
+  if (!Number.isInteger(formData.durationDays)) {
+    throw new Error("Thời lượng phải là số nguyên.");
+  }
+
+  if (formData.durationDays > MAX_INTEGER_FIELD) {
+    throw new Error(
+      "Thời lượng không được vượt quá 2.147.483.647 ngày.",
+    );
+  }
+
   if (formData.maxPosts !== FIXED_MAX_POSTS) {
     throw new Error("Số bài tối đa của gói quảng bá được cố định là 1.");
   }
@@ -107,7 +136,31 @@ const validatePromotionPackageForm = (
     throw new Error("Quota hiển thị phải lớn hơn hoặc bằng 1.");
   }
 
-  if (parseCurrencyValue(formData.price) <= 0) {
+  if (!Number.isInteger(formData.displayQuota)) {
+    throw new Error("Quota hiển thị phải là số nguyên.");
+  }
+
+  if (formData.displayQuota > MAX_INTEGER_FIELD) {
+    throw new Error(
+      "Quota hiển thị không được vượt quá 2.147.483.647.",
+    );
+  }
+
+  const parsedPrice = parseCurrencyValue(formData.price);
+
+  if (parsedPrice === null) {
+    throw new Error(
+      "Giá gói chỉ được gồm chữ số và các dấu phân cách hợp lệ.",
+    );
+  }
+
+  if (parsedPrice > MAX_INTEGER_FIELD) {
+    throw new Error(
+      "Giá gói không được vượt quá 2.147.483.647 VND.",
+    );
+  }
+
+  if (parsedPrice <= 0) {
     throw new Error("Giá gói phải lớn hơn 0.");
   }
 
@@ -136,16 +189,24 @@ const buildPackagePayload = (
   formData: PromotionPackageFormState,
   slotId: number,
   published: boolean,
-) => ({
+) => {
+  const parsedPrice = parseCurrencyValue(formData.price);
+
+  if (parsedPrice === null) {
+    throw new Error("Giá gói quảng bá không hợp lệ.");
+  }
+
+  return {
   promotionPackageSlotId: slotId,
   promotionPackageTitle: normalizeText(formData.name),
   promotionPackageDurationDays: formData.durationDays,
-  promotionPackagePrice: String(parseCurrencyValue(formData.price)),
+  promotionPackagePrice: String(parsedPrice),
   promotionPackageMaxPosts: FIXED_MAX_POSTS,
   promotionPackageDisplayQuota: formData.displayQuota,
   promotionPackageDescription: normalizeText(formData.description),
   promotionPackagePublished: published,
-});
+  };
+};
 
 const sortPackages = (packages: PromotionPackage[]) =>
   [...packages].sort((left, right) => left.id - right.id);
@@ -214,7 +275,7 @@ export const promotionPackageService = {
     const highestPrice =
       packages.length === 0
         ? 0
-        : Math.max(...packages.map((item) => parseCurrencyValue(item.price)));
+        : Math.max(...packages.map((item) => parseCurrencyValue(item.price) ?? 0));
     const totalQuota = packages.reduce(
       (sum, item) => sum + item.displayQuota,
       0,

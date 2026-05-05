@@ -1,4 +1,4 @@
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, inArray } from "drizzle-orm";
 import { db } from "../config/db.ts";
 import {
   PERSONAL_PLAN_SLOT_CODE,
@@ -16,7 +16,7 @@ import {
 } from "./adminAccountPackage.service.ts";
 import { POSTING_PLAN_CODES } from "./posting-policy.service";
 
-type TrackingStatus = "permanent" | "active" | "expiring_soon";
+type TrackingStatus = "permanent" | "active" | "expiring_soon" | "inactive";
 
 export type AdminAccountPackageTrackingRow = {
   id: string;
@@ -81,6 +81,20 @@ const buildStatus = (expiresAt: Date | null): Pick<
   };
 };
 
+const buildTrackingStatus = (params: {
+  expiresAt: Date | null;
+  isInactive: boolean;
+}): Pick<AdminAccountPackageTrackingRow, "status" | "statusLabel"> => {
+  if (params.isInactive) {
+    return {
+      status: "inactive",
+      statusLabel: "Ngừng hoạt động",
+    };
+  }
+
+  return buildStatus(params.expiresAt);
+};
+
 export const adminAccountPackageTrackingService = {
   async getTracking(): Promise<AdminAccountPackageTrackingPayload> {
     const catalog = await adminAccountPackageService.getCatalog();
@@ -104,12 +118,14 @@ export const adminAccountPackageTrackingService = {
           shopPhone: shops.shopPhone,
           shopEmail: shops.shopEmail,
           shopCreatedAt: shops.shopCreatedAt,
+          shopStatus: shops.shopStatus,
           userId: users.userId,
           userDisplayName: users.userDisplayName,
+          userStatus: users.userStatus,
         })
         .from(shops)
         .innerJoin(users, eq(shops.shopId, users.userId))
-        .where(eq(shops.shopStatus, "active"))
+        .where(inArray(shops.shopStatus, ["active", "blocked"]))
         .orderBy(desc(shops.shopCreatedAt)),
       db
         .select({
@@ -120,6 +136,7 @@ export const adminAccountPackageTrackingService = {
           userDisplayName: users.userDisplayName,
           userMobile: users.userMobile,
           userEmail: users.userEmail,
+          userStatus: users.userStatus,
         })
         .from(userPostingPlans)
         .innerJoin(users, eq(userPostingPlans.postingPlanUserId, users.userId))
@@ -142,8 +159,10 @@ export const adminAccountPackageTrackingService = {
           shopEmail: shops.shopEmail,
           shopVipStartedAt: shops.shopVipStartedAt,
           shopVipExpiresAt: shops.shopVipExpiresAt,
+          shopStatus: shops.shopStatus,
           userId: users.userId,
           userDisplayName: users.userDisplayName,
+          userStatus: users.userStatus,
         })
         .from(shops)
         .innerJoin(users, eq(shops.shopId, users.userId))
@@ -154,7 +173,12 @@ export const adminAccountPackageTrackingService = {
     const rows: AdminAccountPackageTrackingRow[] = [];
 
     for (const item of activeShops) {
-      const status = buildStatus(null);
+      const status = buildTrackingStatus({
+        expiresAt: null,
+        isInactive:
+          (item.userStatus ?? "active").toLowerCase() !== "active" ||
+          (item.shopStatus ?? "active").toLowerCase() !== "active",
+      });
 
       rows.push({
         id: `owner-${item.shopId}`,
@@ -174,12 +198,18 @@ export const adminAccountPackageTrackingService = {
         expiresAt: null,
         status: status.status,
         statusLabel: status.statusLabel,
-        note: "Shop đang active; gói chủ vườn không có ngày hết hạn.",
+        note:
+          status.status === "inactive"
+            ? "Tài khoản hoặc shop đang bị ngừng hoạt động nên gói chủ vườn đang tạm ngừng hiệu lực."
+            : "Shop đang active; gói chủ vườn không có ngày hết hạn.",
       });
     }
 
     for (const item of activePersonalPlans) {
-      const status = buildStatus(item.planExpiresAt ?? null);
+      const status = buildTrackingStatus({
+        expiresAt: item.planExpiresAt ?? null,
+        isInactive: (item.userStatus ?? "active").toLowerCase() !== "active",
+      });
 
       rows.push({
         id: `personal-${item.planId}`,
@@ -200,12 +230,20 @@ export const adminAccountPackageTrackingService = {
         expiresAt: item.planExpiresAt ?? null,
         status: status.status,
         statusLabel: status.statusLabel,
-        note: "Đang dùng gói cá nhân theo tháng từ user_posting_plans.",
+        note:
+          status.status === "inactive"
+            ? "Tài khoản đang bị ngừng hoạt động nên gói cá nhân theo tháng đang tạm ngừng hiệu lực."
+            : "Đang dùng gói cá nhân theo tháng từ user_posting_plans.",
       });
     }
 
     for (const item of activeVipShops) {
-      const status = buildStatus(item.shopVipExpiresAt ?? null);
+      const status = buildTrackingStatus({
+        expiresAt: item.shopVipExpiresAt ?? null,
+        isInactive:
+          (item.userStatus ?? "active").toLowerCase() !== "active" ||
+          (item.shopStatus ?? "active").toLowerCase() !== "active",
+      });
 
       rows.push({
         id: `vip-${item.shopId}`,
@@ -225,7 +263,10 @@ export const adminAccountPackageTrackingService = {
         expiresAt: item.shopVipExpiresAt ?? null,
         status: status.status,
         statusLabel: status.statusLabel,
-        note: "VIP chỉ ảnh hưởng thứ tự shop trong Danh sách nhà vườn.",
+        note:
+          status.status === "inactive"
+            ? "Tài khoản hoặc shop đang bị ngừng hoạt động nên gói VIP đang tạm ngừng hiệu lực."
+            : "VIP chỉ ảnh hưởng thứ tự shop trong Danh sách nhà vườn.",
       });
     }
 

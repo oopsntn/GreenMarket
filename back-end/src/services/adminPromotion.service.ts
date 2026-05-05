@@ -32,7 +32,9 @@ type RawPromotionRow = {
     postStatus: string;
     postUpdatedAt: Date | null;
     userDisplayName: string | null;
+    userStatus: string | null;
     shopName: string | null;
+    shopStatus: string | null;
     packageTitle: string | null;
     packagePrice: string | null;
     packageQuota: number | null;
@@ -58,7 +60,8 @@ type PromotionLifecycleStatus =
     | "Active"
     | "Paused"
     | "Expired"
-    | "Closed";
+    | "Closed"
+    | "Inactive";
 
 const BONSAI_CATEGORY_IDS = [1, 11, 12, 13, 14, 15];
 
@@ -72,7 +75,7 @@ export type AdminPromotionResponse = {
     packageName: string;
     startDate: string;
     endDate: string;
-    status: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired";
+    status: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Inactive";
     budget: string;
     note: string;
     paymentStatus: "Paid" | "Pending Verification";
@@ -95,7 +98,7 @@ export type AdminBoostedPostResponse = {
     packageName: string;
     startDate: string;
     endDate: string;
-    status: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed";
+    status: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed" | "Inactive";
     deliveryHealth: "Healthy" | "Watch" | "At Risk";
     reviewStatus: "Approved" | "Needs Update" | "Escalated";
     assignedOperator: string;
@@ -218,6 +221,11 @@ const getPaymentStatus = (
         : "Pending Verification";
 };
 
+const isPromotionOwnerInactive = (item: RawPromotionRow) =>
+    (item.userStatus ?? "active").toLowerCase() !== "active" ||
+    ((item.shopStatus ?? "active").toLowerCase() !== "active" &&
+        item.shopStatus !== null);
+
 const getLifecycleStatus = (
     item: RawPromotionRow,
 ): PromotionLifecycleStatus => {
@@ -226,6 +234,10 @@ const getLifecycleStatus = (
 
     if (rawStatus === "closed") {
         return "Closed";
+    }
+
+    if (isPromotionOwnerInactive(item)) {
+        return "Inactive";
     }
 
     if (rawStatus === "paused") {
@@ -249,6 +261,14 @@ const getLifecycleStatus = (
     }
 
     return "Active";
+};
+
+const assertPromotionOwnerActive = (item: RawPromotionRow) => {
+    if (getLifecycleStatus(item) === "Inactive") {
+        throw new Error(
+            "Tài khoản hoặc cửa hàng sở hữu đang bị khóa nên chiến dịch hiện phải ngừng hoạt động.",
+        );
+    }
 };
 
 const isPostEligibleForPromotion = (postStatus: string) =>
@@ -326,6 +346,10 @@ const buildBlockedReason = (
     paymentStatus: "Paid" | "Pending Verification",
     action: "pause" | "resume" | "reopen",
 ) => {
+    if (status === "Inactive") {
+        return "Chiến dịch đang ngừng hoạt động vì tài khoản hoặc cửa hàng sở hữu đã bị khóa.";
+    }
+
     if (action === "pause") {
         if (status !== "Active") {
             return "Chỉ có thể tạm dừng chiến dịch quảng bá đang chạy.";
@@ -356,10 +380,13 @@ const buildBlockedReason = (
 };
 const buildPromotionNote = (
     item: RawPromotionRow & { latestPayment: LatestPaymentRecord | null },
-    promotionStatus: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired",
+    promotionStatus: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Inactive",
     paymentStatus: "Paid" | "Pending Verification",
 ) => {
     const lifecycleStatus = promotionStatus as PromotionLifecycleStatus;
+    if (promotionStatus === "Inactive") {
+        return "Chiến dịch quảng bá đang tự ngừng vì tài khoản hoặc cửa hàng sở hữu đã bị khóa/ngừng hoạt động.";
+    }
     if (promotionStatus === "Paused") {
         return "Chiến dịch quảng bá đang tạm dừng và chờ admin tiếp tục.";
     }
@@ -383,9 +410,13 @@ const getPromotionStatus = (
     lifecycleStatus: PromotionLifecycleStatus,
     totalQuota: number,
     usedQuota: number,
-): "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" => {
+): "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Inactive" => {
     if (lifecycleStatus === "Closed") {
         return "Expired";
+    }
+
+    if (lifecycleStatus === "Inactive") {
+        return "Inactive";
     }
 
     if (lifecycleStatus === "Paused") {
@@ -412,7 +443,8 @@ const getHandledBy = (
 ): "Manager" | "Admin" => {
     return lifecycleStatus === "Paused" ||
         lifecycleStatus === "Scheduled" ||
-        lifecycleStatus === "Closed"
+        lifecycleStatus === "Closed" ||
+        lifecycleStatus === "Inactive"
         ? "Admin"
         : "Manager";
 };
@@ -496,9 +528,13 @@ const getBoostedStatus = (
     lifecycleStatus: PromotionLifecycleStatus,
     totalQuota: number,
     usedQuota: number,
-): "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed" => {
+): "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed" | "Inactive" => {
     if (lifecycleStatus === "Closed") {
         return "Closed";
+    }
+
+    if (lifecycleStatus === "Inactive") {
+        return "Inactive";
     }
 
     if (lifecycleStatus === "Paused") {
@@ -529,7 +565,7 @@ const getCtrRate = (clicks: number, impressions: number) => {
 };
 
 const getDeliveryHealth = (
-    boostedStatus: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed",
+    boostedStatus: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed" | "Inactive",
     ctrRate: number,
     averageCtrRate: number,
 ): "Healthy" | "Watch" | "At Risk" => {
@@ -537,7 +573,7 @@ const getDeliveryHealth = (
         return "Watch";
     }
 
-    if (boostedStatus === "Closed") {
+    if (boostedStatus === "Closed" || boostedStatus === "Inactive") {
         return "At Risk";
     }
 
@@ -557,9 +593,13 @@ const getDeliveryHealth = (
 };
 
 const buildBoostedNotes = (
-    boostedStatus: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed",
+    boostedStatus: "Scheduled" | "Active" | "Paused" | "Completed" | "Expired" | "Closed" | "Inactive",
     reviewStatus: "Approved" | "Needs Update" | "Escalated",
 ) => {
+    if (boostedStatus === "Inactive") {
+        return "Chiến dịch đẩy bài đang tự ngừng vì tài khoản hoặc cửa hàng sở hữu đã bị khóa/ngừng hoạt động.";
+    }
+
     if (boostedStatus === "Closed") {
         return "Chiến dịch đẩy bài đã bị đóng và không còn phân phối.";
     }
@@ -615,7 +655,9 @@ const selectPromotionRows = async (): Promise<RawPromotionRow[]> => {
             postStatus: posts.postStatus,
             postUpdatedAt: posts.postUpdatedAt,
             userDisplayName: users.userDisplayName,
+            userStatus: users.userStatus,
             shopName: shops.shopName,
+            shopStatus: shops.shopStatus,
             packageTitle: promotionPackages.promotionPackageTitle,
             packagePrice: promotionPackagePrices.price,
             packageQuota: promotionPackages.promotionPackageDisplayQuota,
@@ -1064,6 +1106,8 @@ export const adminPromotionService = {
             return null;
         }
 
+        assertPromotionOwnerActive(current);
+
         const [updated] = await db
             .update(postPromotions)
             .set({
@@ -1104,6 +1148,8 @@ export const adminPromotionService = {
         if (!current) {
             return null;
         }
+
+        assertPromotionOwnerActive(current);
 
         if (getPaymentStatus(current.latestPayment) === "Paid") {
             throw new Error(
@@ -1211,6 +1257,8 @@ export const adminPromotionService = {
             return null;
         }
 
+        assertPromotionOwnerActive(current);
+
         const packageRecord = await ensurePromotionPackage(payload.packageId);
         if (!packageRecord) {
             throw new Error("Không tìm thấy gói quảng bá.");
@@ -1316,6 +1364,8 @@ export const adminPromotionService = {
         if (!current) {
             return null;
         }
+
+        assertPromotionOwnerActive(current);
 
         const [updated] = await db
             .update(postPromotions)
