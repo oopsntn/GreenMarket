@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { db } from "../../config/db";
 import { eq, and, inArray, sql, or, ilike, desc } from "drizzle-orm";
 import { shops, type Shop } from "../../models/schema/shops";
-import { posts, mediaAssets, eventLogs, shopCollaborators } from "../../models/schema/index";
+import { posts, mediaAssets, eventLogs, shopCollaborators, postAttributeValues, attributes } from "../../models/schema/index";
 import { parseId } from "../../utils/parseId";
 import { AuthRequest } from "../../dtos/auth";
 import { verificationService } from "../../services/verification.service";
@@ -944,6 +944,89 @@ export const getPendingOwnerPosts = async (req: AuthRequest, res: Response): Pro
             .orderBy(desc(posts.postCreatedAt));
 
         res.json(pendingPosts);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const getPendingPostDetail = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized" });
+            return;
+        }
+
+        const postId = parseId(req.params.id as string);
+        if (!postId) {
+            res.status(400).json({ error: "Invalid post ID" });
+            return;
+        }
+
+        const [shop] = await db.select().from(shops).where(eq(shops.shopId, userId)).limit(1);
+        if (!shop) {
+            res.status(404).json({ error: "Shop not found" });
+            return;
+        }
+
+        // Verify post belongs to this shop
+        const [post] = await db
+            .select()
+            .from(posts)
+            .where(and(eq(posts.postId, postId), eq(posts.postShopId, shop.shopId)))
+            .limit(1);
+
+        if (!post) {
+            res.status(404).json({ error: "Post not found for this shop" });
+            return;
+        }
+
+        // Fetch related images
+        const images = await db.select({
+            assetId: mediaAssets.assetId,
+            imageUrl: mediaAssets.url,
+            sortOrder: mediaAssets.sortOrder,
+            metaData: mediaAssets.metaData
+        }).from(mediaAssets).where(
+            and(
+                eq(mediaAssets.targetType, "post"),
+                eq(mediaAssets.targetId, post.postId),
+                eq(mediaAssets.mediaType, "image")
+            )
+        );
+
+        // Fetch related videos
+        const videos = await db.select({
+            assetId: mediaAssets.assetId,
+            videoUrl: mediaAssets.url,
+            sortOrder: mediaAssets.sortOrder,
+            metaData: mediaAssets.metaData
+        }).from(mediaAssets).where(
+            and(
+                eq(mediaAssets.targetType, "post"),
+                eq(mediaAssets.targetId, post.postId),
+                eq(mediaAssets.mediaType, "video")
+            )
+        );
+
+        // Fetch related attributes with names
+        const attributesData = await db.select({
+            id: postAttributeValues.attributeId,
+            name: attributes.attributeTitle,
+            value: postAttributeValues.attributeValue
+        })
+            .from(postAttributeValues)
+            .leftJoin(attributes, eq(postAttributeValues.attributeId, attributes.attributeId))
+            .where(eq(postAttributeValues.postId, post.postId));
+
+        res.json({
+            ...post,
+            images,
+            videos,
+            attributes: attributesData,
+            shop
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Internal server error" });
