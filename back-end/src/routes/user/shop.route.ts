@@ -3,7 +3,7 @@ import {
     registerShop, getMyShop, getOwnerDashboard, getPublicShopById, recordShopContactClick, updateShop, getAllShops,
     requestVerificationOTP, verifyShopEmail, addShopPhone, deleteShopPhone, deletePendingShop, setPrimaryPhone,
     getShopCollaborators, inviteCollaborator, removeCollaborator,
-    getPendingOwnerPosts, approveCollaboratorPost, rejectCollaboratorPost
+    getPendingOwnerPosts, approveCollaboratorPost, rejectCollaboratorPost, getPendingPostDetail
 } from "../../controllers/user/shop.controller.ts";
 import { optionalVerifyToken, verifyToken } from "../../middlewares/authMiddleware";
 
@@ -38,6 +38,7 @@ router.delete("/collaborators/:id", verifyToken, removeCollaborator);
 router.get("/collaborators/posts/pending", verifyToken, getPendingOwnerPosts);
 router.post("/collaborators/posts/:id/approve", verifyToken, approveCollaboratorPost);
 router.post("/collaborators/posts/:id/reject", verifyToken, rejectCollaboratorPost);
+router.get("/collaborators/posts/:id/detail", verifyToken, getPendingPostDetail);
 
 // Public route with path param must stay after static paths like /my-shop
 router.get("/:id", optionalVerifyToken, getPublicShopById);

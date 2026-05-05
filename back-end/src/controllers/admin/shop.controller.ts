@@ -222,7 +222,7 @@ export const updateShopStatus = async (
       .limit(1);
 
     if (!owner) {
-      res.status(404).json({ error: "KhÃ´ng tÃ¬m tháº¥y cá»­a hÃ ng" });
+      res.status(404).json({ error: "Không tìm thấy cửa hàng" });
       return;
     }
 

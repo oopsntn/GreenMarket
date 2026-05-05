@@ -168,6 +168,18 @@ const mapBusinessRoleCodeToUiRole = (
   }
 };
 
+const hasOwnedShop = (item: Pick<ApiUserResponse, "ownedShopId" | "ownedShopStatus">) =>
+  Number.isFinite(item.ownedShopId ?? NaN) &&
+  item.ownedShopStatus !== "closed";
+
+const resolveEffectiveUiRole = (item: ApiUserResponse): AssignableUserRole => {
+  if (hasOwnedShop(item)) {
+    return "Host";
+  }
+
+  return mapBusinessRoleCodeToUiRole(item.businessRoleCode);
+};
+
 const mapUiRoleToBusinessRoleCode = (role: AssignableUserRole): string => {
   switch (role) {
     case "Host":
@@ -302,9 +314,11 @@ const buildFallbackRoleHistory = (
       role,
       assignedBy: DEFAULT_ADMIN_NAME,
       assignedAt,
-      note: user.businessRoleTitle
-        ? `Vai trò hiện tại là ${translateRoleName(user.businessRoleTitle)}.`
-        : "Người dùng chưa được gán vai trò nghiệp vụ.",
+      note: hasOwnedShop(user)
+        ? "Tài khoản đang sở hữu hồ sơ nhà vườn nên được xem là Chủ vườn trong quản trị."
+        : user.businessRoleTitle
+          ? `Vai trò hiện tại là ${translateRoleName(user.businessRoleTitle)}.`
+          : "Người dùng chưa được gán vai trò nghiệp vụ.",
     },
   ];
 };
@@ -387,7 +401,7 @@ const mapApiUserToUi = (item: ApiUserResponse): User => {
     item.userMobile?.trim() ||
     `Người dùng #${item.userId}`;
 
-  const role = mapBusinessRoleCodeToUiRole(item.businessRoleCode);
+  const role = resolveEffectiveUiRole(item);
 
   return {
     id: item.userId,
@@ -404,6 +418,8 @@ const mapApiUserToUi = (item: ApiUserResponse): User => {
     businessRoleId: item.businessRoleId ?? item.userBusinessRoleId ?? null,
     businessRoleCode: item.businessRoleCode ?? null,
     businessRoleTitle: item.businessRoleTitle ?? null,
+    ownedShopId: item.ownedShopId ?? null,
+    ownedShopStatus: item.ownedShopStatus ?? null,
   };
 };
 

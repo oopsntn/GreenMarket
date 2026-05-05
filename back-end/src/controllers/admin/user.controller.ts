@@ -31,12 +31,15 @@ const buildUserBaseQuery = () =>
       businessRoleAudienceGroup: businessRoles.businessRoleAudienceGroup,
       businessRoleAccessScope: businessRoles.businessRoleAccessScope,
       businessRoleStatus: businessRoles.businessRoleStatus,
+      ownedShopId: shops.shopId,
+      ownedShopStatus: shops.shopStatus,
     })
     .from(users)
     .leftJoin(
       businessRoles,
       eq(users.userBusinessRoleId, businessRoles.businessRoleId),
-    );
+    )
+    .leftJoin(shops, eq(users.userId, shops.shopId));
 
 const formatDateTime = (value: Date | string | null | undefined) => {
   return toAdminBangkokIsoString(value);

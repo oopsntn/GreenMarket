@@ -9,8 +9,12 @@ import type {
   AIInsightTone,
   AITrendScoreRow,
 } from "../types/aiInsight";
+import { formatAdminDateTime } from "../utils/adminDateTime";
 
 const AI_INSIGHTS_API_PATH = "/api/admin/ai-insights";
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const TIMESTAMP_WITH_TIME_ZONE_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 
 const TEXT_REPLACEMENTS: Array<[string, string]> = [
   ["System Setup", "Thiết lập hệ thống"],
@@ -187,6 +191,31 @@ const formatLocalDateTime = (value: Date) => {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 };
 
+const resolveDisplayDateTime = (
+  value: string | null | undefined,
+  isoValue?: string,
+) => {
+  const normalizedIso = isoValue?.trim() || "";
+  if (normalizedIso) {
+    return formatAdminDateTime(normalizedIso) || value?.trim() || "Chưa có dữ liệu";
+  }
+
+  const normalizedValue = value?.trim() || "";
+  if (!normalizedValue) {
+    return "Chưa có dữ liệu";
+  }
+
+  if (DATE_ONLY_PATTERN.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (TIMESTAMP_WITH_TIME_ZONE_PATTERN.test(normalizedValue)) {
+    return formatAdminDateTime(normalizedValue) || normalizedValue;
+  }
+
+  return normalizedValue;
+};
+
 const applyToneToHistoryItem = (
   item: AIInsightHistoryItem,
   tone: AIInsightSettings["recommendationTone"],
@@ -230,6 +259,7 @@ const normalizeHistoryItem = (item: AIInsightHistoryItem): AIInsightHistoryItem 
   ),
   detail: translateText(item.detail || item.summary),
   generatedBy: translateText(item.generatedBy),
+  generatedAt: resolveDisplayDateTime(item.generatedAt, item.generatedAtIso),
 });
 
 const normalizeTrendRow = (item: AITrendScoreRow): AITrendScoreRow => ({
@@ -238,6 +268,7 @@ const normalizeTrendRow = (item: AITrendScoreRow): AITrendScoreRow => ({
   scoreNote: translateText(item.scoreNote),
   momentumNote: translateText(item.momentumNote),
   recommendation: translateText(item.recommendation),
+  updatedAt: resolveDisplayDateTime(item.updatedAt, item.updatedAtIso),
 });
 
 const normalizeOverview = (overview: AIInsightOverview): AIInsightOverview => ({

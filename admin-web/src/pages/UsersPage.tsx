@@ -43,6 +43,14 @@ type StatusActionState = {
   action: "lock" | "unlock" | null;
 };
 
+const roleCodeMap: Record<AssignableUserRole, string> = {
+  User: "USER",
+  Host: "HOST",
+  Collaborator: "COLLABORATOR",
+  Manager: "MANAGER",
+  "Operation Staff": "OPERATION_STAFF",
+};
+
 const roleLabelMap: Record<AssignableUserRole, string> = {
   User: "Người dùng",
   Host: "Chủ vườn",
@@ -187,7 +195,14 @@ function UsersPage() {
   };
 
   const handleSaveRoleAssignment = async () => {
-    if (!selectedUser || selectedUser.role === selectedRole) {
+    const currentAssignedRoleCode =
+      selectedUser?.businessRoleCode?.trim().toUpperCase() || "";
+
+    if (
+      !selectedUser ||
+      (selectedUser.role === selectedRole &&
+        currentAssignedRoleCode === roleCodeMap[selectedRole])
+    ) {
       showToast("Người dùng này đã có đúng vai trò đang chọn.", "info");
       return;
     }

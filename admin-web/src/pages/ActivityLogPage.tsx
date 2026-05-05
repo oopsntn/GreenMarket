@@ -8,10 +8,13 @@ import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import { activityLogService } from "../services/activityLogService";
 import type { ActivityLogItem } from "../types/activityLog";
+import { formatAdminDate, formatAdminDateTime } from "../utils/adminDateTime";
 import { coerceDateRange, getTodayDateValue } from "../utils/dateRange";
 import "./ActivityLogPage.css";
 
 const PAGE_SIZE = 8;
+const getOccurredAtDisplay = (item: ActivityLogItem) =>
+  formatAdminDateTime(item.occurredAt) || item.occurredAtLabel;
 
 const getResultVariant = (result: string) => {
   const normalized = result.toLowerCase();
@@ -184,9 +187,9 @@ function ActivityLogPage() {
     setDateFrom(counterpartValue);
   };
 
-  const todayPrefix = new Date().toISOString().slice(0, 10);
+  const todayPrefix = getTodayDateValue();
   const todayCount = activityLogs.filter((item) =>
-    (item.occurredAt || "").startsWith(todayPrefix),
+    formatAdminDate(item.occurredAt) === todayPrefix,
   ).length;
   const promotionOperationCount = activityLogs.filter((item) =>
     item.moduleLabel.toLowerCase().includes("quảng bá"),
@@ -355,7 +358,7 @@ function ActivityLogPage() {
                 <tbody>
                   {paginatedLogs.map((item) => (
                     <tr key={item.id}>
-                      <td>{item.occurredAtLabel}</td>
+                      <td>{getOccurredAtDisplay(item)}</td>
                       <td>
                         <div className="activity-log-cell">
                           <strong>{item.actorName}</strong>
@@ -441,7 +444,7 @@ function ActivityLogPage() {
               </div>
               <div className="activity-log-detail__field">
                 <label>Thời gian</label>
-                <strong>{selectedLog.occurredAtLabel}</strong>
+                <strong>{getOccurredAtDisplay(selectedLog)}</strong>
               </div>
               <div className="activity-log-detail__field">
                 <label>Người thực hiện</label>

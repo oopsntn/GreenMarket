@@ -87,6 +87,9 @@ const protocol = process.env.PROTOCOL || (serverIp === "localhost" ? "http" : "h
 const whitelist = [
   "http://localhost:5173",
   "http://localhost:5174",
+  "http://greenmarket.ddns.net:5173",
+  "http://greenmarket.ddns.net:5174",
+  "http://greenmarket.ddns.net",
   `${protocol}://${serverIp}:5173`,
   `${protocol}://${serverIp}:5174`,
   `${protocol}://${serverIp}`,

@@ -8,7 +8,7 @@ export const hostContents = pgTable("host_contents", {
   hostContentTitle: varchar("host_content_title", { length: 255 }).notNull(),
   hostContentDescription: text("host_content_description"),
   hostContentBody: text("host_content_body"),
-  hostContentCategory: varchar("host_content_category", { length: 50 }), // 'Tin tức', 'Mẹo vặt', 'Sự kiện'
+  hostContentCategory: varchar("host_content_category", { length: 50 }), // 'Tin tức'
   hostContentMediaUrls: jsonb("host_content_media_urls").default([]),
   hostContentStatus: varchar("host_content_status", { length: 20 }).default("pending_admin"), // 'pending_admin', 'published', 'rejected'
   hostContentPayoutAmount: numeric("host_content_payout_amount", { precision: 12, scale: 2 }),

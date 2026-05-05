@@ -497,6 +497,9 @@ export interface CollaboratorsListResponse {
 export const getPublicCollaborators = (params?: {
   page?: number;
   limit?: number;
+  keyword?: string;
+  location?: string;
+  status?: string;
 }) => api.get<CollaboratorsListResponse>('/collaborator/public-list', { params });
 
 export const getPublicCollaboratorDetail = (id: number | string) =>
@@ -521,6 +524,9 @@ export const respondToCollaboratorInvitation = (id: number, action: 'accept' | '
 // 3. Delegated Post Management
 export const getPendingCollaboratorPosts = () => 
   api.get<any[]>('/shops/collaborators/posts/pending');
+
+export const getPendingPostDetail = (id: number | string) => 
+  api.get(`/shops/collaborators/posts/${id}/detail`);
 
 export const approveCollaboratorPost = (id: number) => 
   api.post(`/shops/collaborators/posts/${id}/approve`);
