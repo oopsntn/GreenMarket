@@ -23,6 +23,7 @@ import ReportManagementDetail from '../screens/ReportManagementDetail';
 import ManagerSettingsScreen from '../screens/ManagerSettingsScreen';
 import ModerationHistoryScreen from '../screens/ModerationHistoryScreen';
 import ModerationStatisticsScreen from '../screens/ModerationStatisticsScreen';
+import ProfileScreen from '../../components/profile/screen/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -101,6 +102,11 @@ const ManagerNavigator = () => {
       <Stack.Screen
         name="ModerationStatistics"
         component={ModerationStatisticsScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
         options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>
