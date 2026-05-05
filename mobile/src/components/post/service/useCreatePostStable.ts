@@ -54,7 +54,7 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string; use
     const [media, setMedia] = useState<SelectedMedia[]>([])
     const [formData, setFormData] = useState<CreatePostFormData>(() => ({
         ...initialFormData,
-        postLocation: options?.shopLocation || '',
+        postLocation: options?.defaultLocation || '',
     }))
 
     useEffect(() => {
@@ -181,8 +181,8 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string; use
             const val = formData.attributes[attr.attributeId];
             if (!val) continue;
 
-            const isNumeric = 
-                attr.attributeDataType === 'number' || 
+            const isNumeric =
+                attr.attributeDataType === 'number' ||
                 attr.attributeDataType === 'decimal' ||
                 /chiều cao|chieu cao|hoành|hoanh|tuổi|tuoi|số lượng|so luong|giá|gia/i.test(attr.attributeTitle);
 

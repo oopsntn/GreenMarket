@@ -194,7 +194,10 @@ const normalizeShop = (item: ModerationQueueRow): ShopModerationData => ({
 const normalizeReport = (report: any): ReportModerationData => ({
     reportId: report.reportId,
     reporterId: report.reporterId ?? null,
-    reporterDisplayName: report.reporterDisplayName ?? report.reporterName ?? null,
+    reporterDisplayName:
+        report.reporterDisplayName ??
+        report.reporterName ??
+        (report.reporterId ? `Người dùng #${report.reporterId}` : null),
     postId: report.postId ?? null,
     reportShopId: report.reportShopId ?? null,
     postTitle: report.postTitle ?? null,
