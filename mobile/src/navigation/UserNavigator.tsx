@@ -167,6 +167,7 @@ const UserNavigator = () => {
       <RootStack.Screen name="CreateReport" component={CreateReportScreen} />
       <RootStack.Screen name="PromotePost" component={PromotePostScreen} />
       <RootStack.Screen name="PersonalDashboard" component={PersonalDashboardScreen} />
+
       <RootStack.Screen name="ShopDashboard" component={ShopDashboardScreen} />
       <RootStack.Screen name="Packages" component={PackagesScreen} />
       <RootStack.Screen name="Notifications" component={NotificationsScreen} />

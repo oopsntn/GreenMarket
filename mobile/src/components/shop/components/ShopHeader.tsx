@@ -127,11 +127,11 @@ const ShopHeader = ({ shop, isOwner }: ShopHeaderProps) => {
 
             <View style={styles.headerTop}>
                 <View style={styles.shopAvatar}>
-                    {shop.shopLogoUrl ? (
+                    {gallery[0] || shop.shopLogoUrl ? (
                         <Image
-                            source={{ uri: resolveImageUrl(shop.shopLogoUrl, { debugLabel: 'shop-logo-image' }) }}
+                            source={{ uri: resolveImageUrl(gallery[0] || shop.shopLogoUrl, { debugLabel: 'shop-avatar-image' }) }}
                             style={styles.logoImage}
-                            onError={(error) => logMediaResolveError('shop-logo-image', shop.shopLogoUrl, error?.nativeEvent)}
+                            onError={(error) => logMediaResolveError('shop-avatar-image', gallery[0] || shop.shopLogoUrl, error?.nativeEvent)}
                         />
                     ) : (
                         <Store size={36} color="#10b981" />

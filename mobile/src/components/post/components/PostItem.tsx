@@ -50,9 +50,14 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
 
                 <View style={styles.info}>
                     <Text style={styles.postTitle} numberOfLines={1}>{item.postTitle}</Text>
-                    <Text style={styles.postPrice}>
-                        {new Intl.NumberFormat('vi-VN').format(Number(item.postPrice || 0))}đ
-                    </Text>
+                    <View style={styles.contactBadge}>
+                        <Text style={styles.contactBadgeText}>Liên hệ</Text>
+                    </View>
+                    {item.activePromotion && (
+                        <View style={[styles.contactBadge, { backgroundColor: '#eef2ff', borderColor: '#c7d2fe' }]}>
+                            <Text style={[styles.contactBadgeText, { color: '#4338ca' }]}>Đang đẩy tin</Text>
+                        </View>
+                    )}
                     {renderStatus && renderStatus(item.postStatus)}
                     {item.postStatus === 'rejected' && item.postRejectedReason && (
                         <View style={localStyles.rejectReason}>
@@ -62,13 +67,15 @@ const PostItem = ({ item, onEdit, onDelete, styles, renderStatus }: PostItemProp
                 </View>
 
                 <View style={styles.actions}>
-                    <TouchableOpacity
-                        style={[styles.actionBtn, !isApproved && { opacity: 0.3 }]}
-                        onPress={() => isApproved && navigation.navigate('PromotePost', { post: item })}
-                        disabled={!isApproved}
-                    >
-                        <Rocket size={18} color={isApproved ? "#8b5cf6" : "#9ca3af"} />
-                    </TouchableOpacity>
+                    {!item.activePromotion && (
+                        <TouchableOpacity
+                            style={[styles.actionBtn, !isApproved && { opacity: 0.3 }]}
+                            onPress={() => isApproved && navigation.navigate('PromotePost', { post: item })}
+                            disabled={!isApproved}
+                        >
+                            <Rocket size={18} color={isApproved ? "#8b5cf6" : "#9ca3af"} />
+                        </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity style={styles.actionBtn} onPress={() => onEdit(item)}>
                         <Edit size={18} color="#f59e0b" />

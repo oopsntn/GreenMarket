@@ -4,6 +4,7 @@ import {
   createModerationFeedback,
   getHostContentById,
   getManagerHistory,
+  getManagerPostById,
   getManagerReports,
   getManagerStatistics,
   getModerationQueue,
@@ -23,6 +24,7 @@ const router = Router();
 router.use(verifyToken, requireBusinessRole("MANAGER"));
 
 router.get("/moderation/queue", getModerationQueue);
+router.get("/posts/:id", getManagerPostById);
 router.patch("/posts/:id/status", updateManagerPostStatus);
 router.patch("/shops/:id/status", updateManagerShopStatus);
 router.get("/reports", getManagerReports);

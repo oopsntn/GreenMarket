@@ -6,11 +6,9 @@ import Button from '../../Reused/Button/Button';
 
 interface EditData {
     title: string;
-    price: string;
     categoryId: number;
     content: string;
     location: string;
-    contactPhone: string;
 }
 
 interface ModalProps {
@@ -23,10 +21,12 @@ interface ModalProps {
     categories: any[];
     saving?: boolean;
     styles: any;
+    hideLocation?: boolean;
 }
 
 const EditPostModal = ({
-    visible, editingPost, editData, setEditData, onClose, onSave, categories, saving = false, styles: parentStyles
+    visible, editingPost, editData, setEditData, onClose, onSave, categories, saving = false, styles: parentStyles,
+    hideLocation = false
 }: ModalProps) => {
     if (!editingPost) return null
 
@@ -65,28 +65,16 @@ const EditPostModal = ({
                             ))}
                         </View>
 
-                        <Input
-                            label="Giá bán (VND)"
-                            type="numeric"
-                            value={editData.price}
-                            onChangeText={(t) => setEditData({ ...editData, price: t })}
-                            placeholder="0"
-                        />
 
-                        <Input
-                            label="Địa chỉ"
-                            value={editData.location}
-                            onChangeText={(t) => setEditData({ ...editData, location: t })}
-                            placeholder="Ví dụ: Quận 1, TP.HCM"
-                        />
 
-                        <Input
-                            label="Số điện thoại liên hệ"
-                            type="phone-pad"
-                            value={editData.contactPhone}
-                            onChangeText={(t) => setEditData({ ...editData, contactPhone: t })}
-                            placeholder="Để trống nếu dùng số mặc định"
-                        />
+                        {!hideLocation && (
+                            <Input
+                                label="Địa chỉ"
+                                value={editData.location}
+                                onChangeText={(t) => setEditData({ ...editData, location: t })}
+                                placeholder="Ví dụ: Quận 1, TP.HCM"
+                            />
+                        )}
 
                         <Input
                             label="Mô tả"
@@ -116,11 +104,9 @@ const EditPostModal = ({
                             disabled={saving}
                             onPress={() => onSave(editingPost.postId, {
                                 postTitle: editData.title,
-                                postPrice: editData.price,
                                 categoryId: editData.categoryId,
                                 postContent: editData.content,
                                 postLocation: editData.location,
-                                postContactPhone: editData.contactPhone
                             })}
                         >
                             Lưu thay đổi

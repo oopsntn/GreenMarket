@@ -32,8 +32,13 @@ const CreatePostLayout = () => {
     const delegatedShopName = route.params?.shopName ? String(route.params.shopName) : undefined
     const isDelegated = !!delegatedShopId
 
-    const { state, actions } = useCreatePost({ shopId: delegatedShopId, shopName: delegatedShopName })
-    const { shop } = useAuth()
+    const { user, shop } = useAuth()
+    const { state, actions } = useCreatePost({ 
+        shopId: delegatedShopId, 
+        shopName: delegatedShopName,
+        userPhone: user?.userMobile || undefined,
+        defaultLocation: shop?.shopLocation || undefined
+    })
     const isShop = !!shop && shop.shopStatus === 'active'
 
     if (state.submitted) {
@@ -137,14 +142,7 @@ const CreatePostLayout = () => {
                     required
                 />
 
-                {/* Mức giá: liên hệ */}
-                <View style={styles.contactPriceRow}>
-                    <Text style={styles.label}>Mức giá</Text>
-                    <View style={styles.contactPriceBadge}>
-                        <Text style={styles.contactPriceText}>Liên hệ</Text>
-                    </View>
-                    <Text style={styles.contactPriceNote}>Người mua sẽ liên hệ trực tiếp để thoả thuận giá</Text>
-                </View>
+
 
                 <Text style={styles.label}>Danh mục *</Text>
                 {state.loadingInitialData ? (
@@ -174,29 +172,7 @@ const CreatePostLayout = () => {
                     </View>
                 )}
 
-                {isShop && shop?.shopLocation ? (
-                    <View style={styles.locationBlock}>
-                        <Input
-                            testID="create-post-location-input"
-                            label="Địa chỉ"
-                            value={state.formData.postLocation}
-                            onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}
-                            icon={<MapPin size={16} color="#10b981" />}
-                            placeholder="Địa chỉ cửa hàng sẽ dùng cho tin này"
-                        />
-                        <TouchableOpacity
-                            style={styles.useShopLocationBtn}
-                            onPress={() =>
-                                actions.setFormData({
-                                    ...state.formData,
-                                    postLocation: shop.shopLocation || '',
-                                })
-                            }
-                        >
-                            <Text style={styles.useShopLocationText}>Dùng địa chỉ cửa hàng</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
+                {!isShop && (
                     <Input
                         testID="create-post-location-input"
                         label="Địa chỉ"
@@ -206,40 +182,7 @@ const CreatePostLayout = () => {
                         placeholder="Ví dụ: Cầu Giấy, Hà Nội"
                     />
                 )}
-                {isShop && shop?.shopPhone ? (
-                    <View style={styles.locationBlock}>
-                        <Input
-                            testID="create-post-contact-phone-input"
-                            label="Số điện thoại liên hệ"
-                            type="phone-pad"
-                            value={state.formData.postContactPhone}
-                            onChangeText={(txt) => actions.setFormData({ ...state.formData, postContactPhone: txt })}
-                            icon={<Phone size={16} color="#10b981" />}
-                            placeholder="Để trống nếu dùng số mặc định"
-                        />
-                        <TouchableOpacity
-                            style={styles.useShopLocationBtn}
-                            onPress={() =>
-                                actions.setFormData({
-                                    ...state.formData,
-                                    postContactPhone: shop.shopPhone || '',
-                                })
-                            }
-                        >
-                            <Text style={styles.useShopLocationText}>Dùng số cửa hàng</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <Input
-                        testID="create-post-contact-phone-input"
-                        label="Số điện thoại liên hệ"
-                        type="phone-pad"
-                        value={state.formData.postContactPhone}
-                        onChangeText={(txt) => actions.setFormData({ ...state.formData, postContactPhone: txt })}
-                        icon={<Phone size={16} color="#10b981" />}
-                        placeholder="Để trống nếu dùng số mặc định"
-                    />
-                )}
+
 
             </Card>
 
@@ -248,17 +191,27 @@ const CreatePostLayout = () => {
             ) : state.attributes.length > 0 ? (
                 <Card style={styles.card}>
                     <Text style={styles.sectionTitle}>Thuộc tính danh mục</Text>
-                    {state.attributes.map((attr) => (
-                        <Input
-                            key={attr.attributeId}
-                            label={`${attr.attributeTitle}${attr.required ? ' *' : ''}`}
-                            value={state.formData.attributes[attr.attributeId] || ''}
-                            onChangeText={(val) => actions.setFormData({
-                                ...state.formData,
-                                attributes: { ...state.formData.attributes, [attr.attributeId]: val }
-                            })}
-                        />
-                    ))}
+                    {state.attributes.map((attr) => {
+                        const isNumeric = 
+                            attr.attributeDataType === 'number' || 
+                            attr.attributeDataType === 'decimal' ||
+                            /chiều cao|chieu cao|hoành|hoanh|tuổi|tuoi|số lượng|so luong|giá|gia/i.test(attr.attributeTitle);
+                        
+                        return (
+                            <Input
+                                key={attr.attributeId}
+                                label={`${attr.attributeTitle}${attr.required ? ' *' : ''}`}
+                                value={state.formData.attributes[attr.attributeId] || ''}
+                                type={isNumeric ? 'decimal-pad' : 'default'}
+                                onChangeText={(val) => {
+                                    actions.setFormData(prev => ({
+                                        ...prev,
+                                        attributes: { ...prev.attributes, [attr.attributeId]: val }
+                                    }));
+                                }}
+                            />
+                        );
+                    })}
                 </Card>
             ) : null}
 

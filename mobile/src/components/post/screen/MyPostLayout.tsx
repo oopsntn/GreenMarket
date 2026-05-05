@@ -14,17 +14,15 @@ const MyPostLayout = () => {
     const navigation = useNavigation<any>()
     const route = useRoute<any>()
     const { state, actions } = useMyPost()
-    const { user } = useAuth()
+    const { user, shop } = useAuth()
     const [categories, setCategories] = useState<any[]>([])
     const showBackButton = route.name !== 'MyPostsTab'
 
     const [editData, setEditData] = useState({
         title: '',
-        price: '',
         categoryId: 0,
         content: '',
         location: '',
-        contactPhone: '',
     })
 
     const fetchCategories = async () => {
@@ -43,11 +41,9 @@ const MyPostLayout = () => {
     const openEdit = (post: any) => {
         setEditData({
             title: post.postTitle,
-            price: String(post.postPrice),
             categoryId: post.categoryId,
             content: post.postContent || '',
             location: post.postLocation || '',
-            contactPhone: post.postContactPhone || '',
         })
         actions.setEditingPost(post)
     }
@@ -106,12 +102,7 @@ const MyPostLayout = () => {
                 </TouchableOpacity>
             }
         >
-            <PostTabs
-                activeTab={state.activeTab}
-                onTabChange={actions.setActiveTab}
-                hasShop={Boolean(state.shop) || state.hasShopPosts}
-                styles={styles}
-            />
+
 
             {state.loading ? (
                 <View style={styles.loadingContainer}>
@@ -135,9 +126,7 @@ const MyPostLayout = () => {
                     ListEmptyComponent={
                         <View style={styles.empty}>
                             <Text style={styles.emptyText}>
-                                {state.activeTab === 'shop'
-                                    ? 'Chưa có tin đăng thay mặt shop nào.'
-                                    : 'Bạn chưa tạo tin đăng cá nhân nào.'}
+                                Bạn chưa có tin đăng nào. Hãy nhấn nút "+" để tạo tin mới.
                             </Text>
                         </View>
                     }
@@ -154,6 +143,7 @@ const MyPostLayout = () => {
                 categories={categories}
                 saving={state.saving}
                 styles={styles}
+                hideLocation={!!shop}
             />
         </MobileLayout>
     )
@@ -219,11 +209,20 @@ const styles = StyleSheet.create({
         color: '#1f2937',
         marginBottom: 4,
     },
-    postPrice: {
-        color: '#10b981',
-        fontWeight: '800',
-        fontSize: 14,
+    contactBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#f0fdf4',
+        borderWidth: 1,
+        borderColor: '#6ee7b7',
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
         marginBottom: 6,
+    },
+    contactBadgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#065f46',
     },
     statusBadge: {
         flexDirection: 'row',

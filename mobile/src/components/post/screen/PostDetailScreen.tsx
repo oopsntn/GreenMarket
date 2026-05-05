@@ -8,6 +8,7 @@ import { MediaGallery } from '../components/MediaGallery'
 import Card from '../../Reused/Card/Card'
 import { resolveImageUrl } from '../../../utils/resolveImageUrl'
 import { WEB_BASE_URL } from '../../../config/api'
+import { useAuth } from '../../../context/AuthContext'
 
 interface Props {
   route: any,
@@ -19,6 +20,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const [isSaved, setIsSaved] = useState(false)
   const [loading, setLoading] = useState(true)
   const { slug } = route.params
+  const { user, shop } = useAuth()
+  const isOwner = post?.postAuthorId === user?.id || (!!post?.postShopId && post?.postShopId === shop?.shopId)
 
   useEffect(() => {
     loadData()
@@ -138,15 +141,19 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   // Nút Share và Heart trên Header
   const renderRightActions = () => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <TouchableOpacity onPress={() => navigation.navigate('CreateReport', { postId: post?.postId, postTitle: post?.postTitle })}>
-        <AlertCircle size={24} color="#ff4d4f" />
-      </TouchableOpacity>
+      {!isOwner && (
+        <TouchableOpacity onPress={() => navigation.navigate('CreateReport', { postId: post?.postId, postTitle: post?.postTitle })}>
+          <AlertCircle size={24} color="#ff4d4f" />
+        </TouchableOpacity>
+      )}
       <TouchableOpacity onPress={handleShare}>
         <Share2 size={24} color="#fff" />
       </TouchableOpacity>
-      <TouchableOpacity onPress={handleToggleSave}>
-        <Bookmark size={24} color={isSaved ? '#10b981' : '#fff'} fill={isSaved ? '#10b981' : 'transparent'} />
-      </TouchableOpacity>
+      {!isOwner && (
+        <TouchableOpacity onPress={handleToggleSave}>
+          <Bookmark size={24} color={isSaved ? '#10b981' : '#fff'} fill={isSaved ? '#10b981' : 'transparent'} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -158,30 +165,32 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       rightAction={renderRightActions()}
       scrollEnabled={true}
       bottom={
-        <View style={styles.bottomActions}>
-          <Button
-            variant="outline"
-            style={{ flex: 1, borderColor: '#1890ff' }}
-            textStyle={{ color: '#1890ff' }}
-            icon={<MessageCircle size={20} color="#1890ff" />}
-            disabled={!contactPhone}
-            onPress={() => Linking.openURL(`https://zalo.me/${contactPhone}`)}
-          >
-            Zalo
-          </Button>
-          <Button
-            variant="primary"
-            style={{ flex: 2 }}
-            icon={<Phone size={20} color="#fff" />}
-            disabled={!contactPhone}
-            onPress={() => {
-              if (post?.postId) postService.recordContactClick(post.postId);
-              Linking.openURL(`tel:${contactPhone}`);
-            }}
-          >
-            Gọi ngay
-          </Button>
-        </View>
+        !isOwner ? (
+          <View style={styles.bottomActions}>
+            <Button
+              variant="outline"
+              style={{ flex: 1, borderColor: '#1890ff' }}
+              textStyle={{ color: '#1890ff' }}
+              icon={<MessageCircle size={20} color="#1890ff" />}
+              disabled={!contactPhone}
+              onPress={() => Linking.openURL(`https://zalo.me/${contactPhone}`)}
+            >
+              Zalo
+            </Button>
+            <Button
+              variant="primary"
+              style={{ flex: 2 }}
+              icon={<Phone size={20} color="#fff" />}
+              disabled={!contactPhone}
+              onPress={() => {
+                if (post?.postId) postService.recordContactClick(post.postId);
+                Linking.openURL(`tel:${contactPhone}`);
+              }}
+            >
+              Gọi ngay
+            </Button>
+          </View>
+        ) : undefined
       }
     >
       {/* 1. Media Gallery */}
@@ -202,6 +211,12 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               <Text style={styles.metaText}>{post?.postViewCount || 0} lượt xem</Text>
             </View>
           </View>
+
+          {!isOwner && (
+            <View style={styles.contactBadge}>
+              <Text style={styles.contactBadgeText}>Liên hệ</Text>
+            </View>
+          )}
         </View>
 
 
@@ -225,40 +240,44 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
         )}
 
         {/* 5. Thông tin Shop/Nhà vườn */}
-        <Card
-          style={styles.shopCard}
-          padding="medium"
-          onClick={() => { if (post?.postShopId) navigation.navigate('PublicShopDetail', { shopId: post?.postShopId }) }}
-        >
-          <View style={styles.shopContent}>
-            <View style={styles.shopAvatar}>
-              <Store size={24} color="#52c41a" />
+        {!isOwner && (
+          <Card
+            style={styles.shopCard}
+            padding="medium"
+            onClick={() => { if (post?.postShopId) navigation.navigate('PublicShopDetail', { shopId: post?.postShopId }) }}
+          >
+            <View style={styles.shopContent}>
+              <View style={styles.shopAvatar}>
+                <Store size={24} color="#52c41a" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.shopName}>{post?.shop?.shopName}</Text>
+                <Text style={styles.shopSub}>Xem chi tiết người bán</Text>
+              </View>
+              <ExternalLink size={18} color="#bfbfbf" />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.shopName}>{post?.shop?.shopName}</Text>
-              <Text style={styles.shopSub}>Xem chi tiết người bán</Text>
-            </View>
-            <ExternalLink size={18} color="#bfbfbf" />
-          </View>
-        </Card>
+          </Card>
+        )}
 
         {/* 6. Bản đồ & Vị trí */}
-        <Card style={styles.sectionCard} padding="medium">
-          <View style={styles.sectionHeader}>
-            <MapPin size={18} color="#52c41a" />
-            <Text style={styles.sectionTitle}>Vị trí</Text>
-          </View>
-          <Text style={styles.locationText}>{post?.shop?.shopLocation || post?.postLocation}</Text>
-          <Button
-            variant="outline"
-            size="small"
-            style={{ marginTop: 12, borderColor: '#d9d9d9' }}
-            textStyle={{ color: '#595959' }}
-            onPress={openMap}
-          >
-            Mở trong bản đồ
-          </Button>
-        </Card>
+        {!isOwner && (
+          <Card style={styles.sectionCard} padding="medium">
+            <View style={styles.sectionHeader}>
+              <MapPin size={18} color="#52c41a" />
+              <Text style={styles.sectionTitle}>Vị trí</Text>
+            </View>
+            <Text style={styles.locationText}>{post?.shop?.shopLocation || post?.postLocation}</Text>
+            <Button
+              variant="outline"
+              size="small"
+              style={{ marginTop: 12, borderColor: '#d9d9d9' }}
+              textStyle={{ color: '#595959' }}
+              onPress={openMap}
+            >
+              Mở trong bản đồ
+            </Button>
+          </Card>
+        )}
 
         {/* Padding cuối cùng để không bị lấp bởi bottom actions */}
         <View style={{ height: 40 }} />
