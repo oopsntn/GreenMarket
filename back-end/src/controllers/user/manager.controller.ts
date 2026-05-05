@@ -21,6 +21,9 @@ import {
   users,
   notifications,
   escalations,
+  mediaAssets,
+  postAttributeValues,
+  attributes,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
 import { notificationService } from "../../services/notification.service.ts";
@@ -1850,6 +1853,105 @@ export const createManagerEscalation = async (
         reason,
         evidenceUrls,
         createdAt: escalationRow.ticketCreatedAt,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const getManagerPostById = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const managerId = req.user?.id;
+    if (!managerId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const postId = parseId(getStringParam(req.params.id));
+    if (!postId) {
+      res.status(400).json({ error: "Invalid post id" });
+      return;
+    }
+
+    const [post] = await db
+      .select()
+      .from(posts)
+      .where(eq(posts.postId, postId))
+      .limit(1);
+
+    if (!post) {
+      res.status(404).json({ error: "Post not found" });
+      return;
+    }
+
+    // Fetch related images and videos
+    const media = await db
+      .select({
+        assetId: mediaAssets.assetId,
+        url: mediaAssets.url,
+        type: mediaAssets.mediaType,
+        sortOrder: mediaAssets.sortOrder,
+      })
+      .from(mediaAssets)
+      .where(
+        and(
+          eq(mediaAssets.targetType, "post"),
+          eq(mediaAssets.targetId, postId)
+        )
+      )
+      .orderBy(mediaAssets.sortOrder, mediaAssets.assetId);
+
+    // Fetch related attributes
+    const postAttributes = await db
+      .select({
+        attributeId: postAttributeValues.attributeId,
+        attributeTitle: attributes.attributeTitle,
+        value: postAttributeValues.attributeValue,
+      })
+      .from(postAttributeValues)
+      .leftJoin(attributes, eq(postAttributeValues.attributeId, attributes.attributeId))
+      .where(eq(postAttributeValues.postId, postId));
+
+    // Fetch author info
+    const [author] = await db
+      .select({
+        userId: users.userId,
+        userDisplayName: users.userDisplayName,
+        userMobile: users.userMobile,
+        userAvatarUrl: users.userAvatarUrl,
+      })
+      .from(users)
+      .where(eq(users.userId, post.postAuthorId!))
+      .limit(1);
+
+    // Fetch shop info if post belongs to a shop
+    let shopInfo = null;
+    if (post.postShopId) {
+      const [shop] = await db
+        .select({
+          shopId: shops.shopId,
+          shopName: shops.shopName,
+          shopStatus: shops.shopStatus,
+          shopLogoUrl: shops.shopLogoUrl,
+        })
+        .from(shops)
+        .where(eq(shops.shopId, post.postShopId))
+        .limit(1);
+      shopInfo = shop;
+    }
+
+    res.json({
+      data: {
+        ...post,
+        media,
+        attributes: postAttributes,
+        author: author || null,
+        shop: shopInfo || null,
       },
     });
   } catch (error) {
