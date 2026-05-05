@@ -450,44 +450,70 @@ const MyPosts: React.FC = () => {
         {activeTab === 'shop' && shop?.shopStatus === 'active' && (
           <>
             {shop ? (
-              <div className="bg-white p-8 rounded-4xl border border-emerald-100 shadow-2xl shadow-emerald-500/5 flex flex-col md:flex-row gap-8 items-center bg-linear-to-br from-white to-slate-50 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-3xl -mr-32 -mt-32"></div>
-                {(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl) ? (
-                  <div className="w-24 h-24 rounded-3xl overflow-hidden border border-emerald-100 shrink-0 shadow-sm transition-transform group-hover:scale-105">
-                    <img
-                      src={resolveImageUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl || '')}
-                      alt={shop.shopName}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-24 h-24 bg-emerald-50 rounded-3xl flex items-center justify-center text-emerald-600 shrink-0 border border-emerald-100 shadow-sm">
-                    <Store className="w-12 h-12" />
-                  </div>
-                )}
-                <Link
-                  to={`/shop/${shop.shopId}`}
-                  className="flex-1 text-center md:text-left group/shopLink cursor-pointer"
-                >
-                  <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
-                    <h2 className="text-3xl font-black text-slate-900 group-hover/shopLink:text-emerald-700 transition-colors uppercase tracking-tight">{shop.shopName}</h2>
-                    <span className={shop.shopStatus === 'active' ? "bg-emerald-50 text-emerald-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border border-emerald-100 shadow-sm transition-all" : "bg-amber-50 text-amber-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase border border-amber-100 shadow-sm"}>
-                      {shop.shopStatus === 'active' ? 'Nhà vườn đã xác minh' : 'Đang chờ xác minh'}
-                    </span>
-                  </div>
-                  <p className="text-slate-500 font-medium max-w-xl line-clamp-2 transition-colors group-hover/shopLink:text-slate-700">{shop.shopDescription || 'Chưa có mô tả nhà vườn.'}</p>
-                </Link>
-                <div className="flex gap-8">
-                  <div className="text-center">
-                    <div className="text-3xl font-black text-emerald-600">{displayShopViews.toLocaleString('vi-VN')}</div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Lượt xem</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-black text-slate-900">{filteredPosts.length}</div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Tin rao</div>
+              <>
+                <div className="bg-white p-8 rounded-4xl border border-emerald-100 shadow-2xl shadow-emerald-500/5 flex flex-col md:flex-row gap-8 items-center bg-linear-to-br from-white to-slate-50 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-3xl -mr-32 -mt-32"></div>
+                  {(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl) ? (
+                    <div className="w-24 h-24 rounded-3xl overflow-hidden border border-emerald-100 shrink-0 shadow-sm transition-transform group-hover:scale-105">
+                      <img
+                        src={resolveImageUrl(shop.shopPreviewImageUrl || shop.shopGalleryImages?.[0] || shop.shopLogoUrl || '')}
+                        alt={shop.shopName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 bg-emerald-50 rounded-3xl flex items-center justify-center text-emerald-600 shrink-0 border border-emerald-100 shadow-sm">
+                      <Store className="w-12 h-12" />
+                    </div>
+                  )}
+                  <Link
+                    to={`/shop/${shop.shopId}`}
+                    className="flex-1 text-center md:text-left group/shopLink cursor-pointer"
+                  >
+                    <div className="flex items-center justify-center md:justify-start gap-3 mb-2">
+                      <h2 className="text-3xl font-black text-slate-900 group-hover/shopLink:text-emerald-700 transition-colors uppercase tracking-tight">{shop.shopName}</h2>
+                      <span className={shop.shopStatus === 'active' ? "bg-emerald-50 text-emerald-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase tracking-wider border border-emerald-100 shadow-sm transition-all" : "bg-amber-50 text-amber-700 text-[10px] px-2 py-1 rounded-full font-bold uppercase border border-amber-100 shadow-sm"}>
+                        {shop.shopStatus === 'active' ? 'Nhà vườn đã xác minh' : 'Đang chờ xác minh'}
+                      </span>
+                    </div>
+                    <p className="text-slate-500 font-medium max-w-xl line-clamp-2 transition-colors group-hover/shopLink:text-slate-700">{shop.shopDescription || 'Chưa có mô tả nhà vườn.'}</p>
+                  </Link>
+                  <div className="flex gap-8">
+                    <div className="text-center">
+                      <div className="text-3xl font-black text-emerald-600">{displayShopViews.toLocaleString('vi-VN')}</div>
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Lượt xem</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-black text-slate-900">{filteredPosts.length}</div>
+                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Tin rao</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+
+                {/* Pending Collaborator Posts Section */}
+                {posts.some(p => p.postStatus === 'pending_owner') && (
+                  <div className="mt-8 bg-blue-50/50 p-6 rounded-[2rem] border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 text-center md:text-left">
+                      <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                        <Clock className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-blue-900 uppercase tracking-tight">Bài đăng CTV chờ duyệt</h3>
+                        <p className="text-blue-600 text-sm font-medium">Bạn có {posts.filter(p => p.postStatus === 'pending_owner').length} bài đăng từ cộng tác viên đang chờ bạn phê duyệt.</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setShopSubTab('collaborator');
+                        // Optional: scroll to the list
+                      }}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 whitespace-nowrap"
+                    >
+                      Xem ngay
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="bg-amber-50/50 p-12 rounded-4xl border border-amber-100 text-center shadow-xl shadow-amber-500/5">
                 <Store className="w-16 h-16 text-amber-400 mx-auto mb-6 opacity-40" />
@@ -617,6 +643,15 @@ const MyPosts: React.FC = () => {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-2">
+                    {post.postStatus === 'pending_owner' && (
+                      <button
+                        onClick={() => navigate(`/owner-dashboard/pending-posts/${post.postId}`)}
+                        className="px-4 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        Duyệt ngay
+                      </button>
+                    )}
                     {post.postStatus === 'approved' && (
                       <button
                         title={post.postPublished ? "Ẩn bài đăng" : "Hiện bài đăng"}

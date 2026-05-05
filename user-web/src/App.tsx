@@ -25,6 +25,7 @@ import NewsBookmarks from './pages/NewsBookmarks';
 import CollaboratorDirectory from './pages/CollaboratorDirectory';
 import CollaboratorInvitations from './pages/CollaboratorInvitations';
 import ShopTeamManagement from './pages/ShopTeamManagement';
+import CollaboratorPostPreview from './pages/CollaboratorPostPreview';
 import { Toaster } from 'react-hot-toast';
 
 /**
@@ -104,6 +105,11 @@ const AppContent: React.FC = () => {
         <Route path="/owner-dashboard/team" element={
           <ProtectedRoute>
             <ShopTeamManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="/owner-dashboard/pending-posts/:id" element={
+          <ProtectedRoute>
+            <CollaboratorPostPreview />
           </ProtectedRoute>
         } />
       </Routes>

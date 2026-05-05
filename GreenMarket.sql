@@ -532,7 +532,6 @@ CREATE TABLE task_replies (
     created_at TIMESTAMP DEFAULT now()
 );
 
-
 -- Host Contents
 CREATE TABLE host_contents (
     host_content_id SERIAL PRIMARY KEY,
@@ -540,7 +539,7 @@ CREATE TABLE host_contents (
     host_content_title VARCHAR(255) NOT NULL,
     host_content_description TEXT,
     host_content_body TEXT,
-    host_content_category VARCHAR(50), -- Tin tức, Mẹo vặt, Sự kiện
+    host_content_category VARCHAR(50), -- Tin tức
     host_content_media_urls JSONB DEFAULT '[]'::jsonb,
     host_content_status VARCHAR(20) DEFAULT 'pending_admin', -- pending_admin, published, rejected
     host_content_payout_amount NUMERIC(12,2),
@@ -549,8 +548,6 @@ CREATE TABLE host_contents (
     host_content_updated_at TIMESTAMP DEFAULT now(),
     host_content_deleted_at TIMESTAMP
 );
-
-
 
 -- Shop Collaborators
 CREATE TABLE shop_collaborators (
@@ -911,8 +908,23 @@ Không chỉ xuất hiện trong sân vườn hay các khu biệt thự, Tùng L
 Bên cạnh đó, Tùng La Hán cũng gắn liền với hình ảnh của sự tĩnh tại và thiền định. Trong nhiều không gian kiến trúc mang phong cách Nhật Bản hay Trung Hoa, cây thường được đặt ở vị trí trung tâm như một điểm nhấn tinh thần, giúp cân bằng cảm xúc và tạo cảm giác an yên.
 
 Ngày nay, khi nhịp sống hiện đại ngày càng hối hả, sự hiện diện của Tùng La Hán như một lời nhắc nhở về giá trị của sự kiên nhẫn và bền bỉ. Đó không chỉ là một loài cây cảnh, mà còn là biểu tượng sống động của thời gian, của sự trưởng thành và của những điều bền vững vượt lên trên mọi biến đổi.', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format", "https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 1250, 300000.00),
-(2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Mẹo vặt', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
-(3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Sự kiện', '[]', 'published', 450, 300000.00);
+(2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu cho người mới bắt đầu.', 'Việc chọn kéo cắt tỉa là bước đi đầu tiên và quan trọng nhất đối với bất kỳ ai mới bắt đầu bước chân vào thế giới nghệ thuật Bonsai. Một chiếc kéo tốt không chỉ giúp bạn thao tác dễ dàng mà còn bảo vệ sức khỏe cho cây bằng những vết cắt ngọt, sạch, hạn chế dập nát mô tế bào.
+
+Đối với người mới, bạn không nhất thiết phải sắm cả bộ dụng cụ đắt tiền. Hãy tập trung vào 3 loại kéo cơ bản sau:
+1. **Kéo tỉa dăm (Twig Scissors):** Có thiết kế thanh mảnh, mũi dài giúp bạn len lỏi vào sâu trong tán lá để loại bỏ những cành thừa, lá úa mà không làm ảnh hưởng đến các cành xung quanh.
+2. **Kéo cắt cành (Branch Cutter):** Thân kéo dày, tay cầm chắc chắn giúp tạo ra lực cắt lớn, chuyên dùng cho các cành có độ dày trung bình.
+3. **Kìm cạp (Concave Cutter):** Đây là dụng cụ đặc thù của Bonsai, giúp tạo ra vết cắt lõm, giúp cây mau liền sẹo và không để lại những vết lồi mất thẩm mỹ.
+
+Khi chọn mua, hãy ưu tiên các thương hiệu uy tín từ Nhật Bản hoặc các dòng kéo thép carbon cao cấp. Hãy cầm thử để cảm nhận độ đầm tay và sự linh hoạt của lò xo. Đừng quên bảo trì dụng cụ bằng cách lau khô và tra dầu sau mỗi lần sử dụng để kéo luôn sắc bén và bền bỉ theo thời gian.', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
+(3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm tại Hà Nội.', 'Chào đón xuân Bính Ngọ, Triển lãm Sinh vật cảnh miền Bắc 2026 hứa hẹn sẽ là ngày hội lớn nhất từ trước đến nay dành cho cộng đồng yêu cây cảnh, đá quý và chim nghệ thuật. Sự kiện năm nay quy tụ hơn 500 nghệ nhân từ khắp các tỉnh thành miền Bắc, mang đến hàng nghìn tác phẩm độc đáo, có giá trị nghệ thuật và kinh tế cao.
+
+**Thông tin sự kiện:**
+- **Thời gian:** Từ ngày 15/02/2026 đến hết ngày 25/02/2026.
+- **Địa điểm:** Công viên triển lãm Thành phố (Hà Nội).
+
+Tại triển lãm, du khách sẽ có cơ hội chiêm ngưỡng những siêu phẩm Bonsai đạt giải quốc tế, tham gia các buổi workshop hướng dẫn tạo dáng cây từ các nghệ nhân hàng đầu và tham quan khu chợ sinh vật cảnh sầm uất với đầy đủ các chủng loại phôi cây, dụng cụ và phụ kiện.
+
+Đặc biệt, triển lãm năm nay sẽ có khu vực trưng bày riêng cho dòng Bonsai Mini và Mame – xu hướng đang rất được giới trẻ quan tâm. Đây không chỉ là nơi giao lưu học hỏi kinh nghiệm mà còn là cầu nối thương mại quan trọng cho ngành sinh vật cảnh Việt Nam. Hãy lên lịch ngay để không bỏ lỡ cơ hội đắm mình trong không gian xanh nghệ thuật đầy cảm hứng này!', 'Tin tức', '[]', 'published', 450, 300000.00);
 
 INSERT INTO host_contents (
     host_content_id,
@@ -928,7 +940,7 @@ INSERT INTO host_contents (
     host_content_created_at,
     host_content_updated_at
 ) VALUES
-(4, 144, 'Checklist chuẩn bị bài Host trước khi gửi duyệt', 'Bản nháp dùng để seed trạng thái chờ admin duyệt cho màn nội dung Host.', 'Bài viết này đang chờ admin kiểm tra lại tiêu đề, phần mở bài và bộ ảnh minh họa trước khi được xuất bản lên user web.', 'Mẹo vặt', '["https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format"]'::jsonb, 'pending_admin', 0, 0, now() - interval '2 days', now() - interval '1 day'),
+(4, 144, 'Checklist chuẩn bị bài Host trước khi gửi duyệt', 'Bản nháp dùng để seed trạng thái chờ admin duyệt cho màn nội dung Host.', 'Bài viết này đang chờ admin kiểm tra lại tiêu đề, phần mở bài và bộ ảnh minh họa trước khi được xuất bản lên user web.', 'Tin tức', '["https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format"]'::jsonb, 'pending_admin', 0, 0, now() - interval '2 days', now() - interval '1 day'),
 (5, 136, 'Tin Host bị từ chối do thiếu nguồn ảnh hợp lệ', 'Mẫu dữ liệu dùng để kiểm tra trạng thái từ chối của nội dung Host trong admin.', 'Bài viết này đã bị từ chối vì ảnh minh họa không chứng minh được quyền sử dụng và phần thân bài chưa đủ chiều sâu nội dung.', 'Tin tức', '["https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format"]'::jsonb, 'rejected', 120, 0, now() - interval '6 days', now() - interval '5 days');
 
 INSERT INTO ledgers (
@@ -1149,7 +1161,6 @@ INSERT INTO posts (
 ) VALUES
 (17, 140, 140, 12, 'Sanh mini chờ duyệt hình ảnh', 'sanh-mini-cho-duyet-hinh-anh', 'Gia Lâm, Hà Nội', 'pending', NULL, '0909000140', 18, 1, false, now() - interval '18 hours', NULL, NULL, now() - interval '1 day', now() - interval '18 hours'),
 (18, 145, 145, 13, 'Bài đăng bị từ chối do thiếu thông tin liên hệ', 'bai-dang-bi-tu-choi-thieu-thong-tin-lien-he', 'Biên Hòa, Đồng Nai', 'rejected', 'Bài đăng thiếu thông tin liên hệ rõ ràng và bộ ảnh xác minh nguồn gốc cây.', '0909000145', 22, 0, false, now() - interval '4 days', NULL, now() - interval '3 days', now() - interval '4 days', now() - interval '3 days'),
-(19, 1, 1, 14, 'Lộc vừng đang bị ẩn để rà soát', 'loc-vung-dang-bi-an-de-ra-soat', 'Yên Phong, Bắc Ninh', 'hidden', NULL, '0978195419', 95, 6, true, now() - interval '7 days', now() - interval '6 days', now() - interval '2 days', now() - interval '7 days', now() - interval '2 days'),
 (20, 142, NULL, 11, 'Bản nháp bonsai chưa gửi duyệt', 'ban-nhap-bonsai-chua-gui-duyet', NULL, 'draft', NULL, '0909000142', 0, 0, false, NULL, NULL, NULL, now() - interval '8 hours', now() - interval '2 hours'),
 (21, 143, 3, 12, 'Cây Tùng Kim Cương Dáng Trực', 'cay-tung-kim-cuong-dang-truc', 'Long Biên, Hà Nội', 'pending_owner', NULL, '0909000143', 14, 1, false, now() - interval '30 hours', NULL, NULL, now() - interval '32 hours', now() - interval '30 hours'),
 (22, 143, 3, 11, 'Cây Mai Chiếu Thủy Bonsai Mini', 'cay-mai-chieu-thuy-bonsai-mini', 'Long Biên, Hà Nội', 'approved', NULL, '0909000143', 164, 9, true, now() - interval '10 days', now() - interval '9 days', now() - interval '9 days', now() - interval '10 days', now() - interval '9 days');
@@ -1189,7 +1200,6 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
 (17, 1, 'Dáng Trực'), (17, 2, '42'), (17, 3, '16'), (17, 4, '7'), (17, 5, 'Vườn tự ươm'),
 (18, 1, 'Dáng Hoành'), (18, 2, '165'), (18, 3, '64'), (18, 4, '20'), (18, 5, 'Đồng Nai'),
-(19, 1, 'Dáng Huyền'), (19, 2, '88'), (19, 3, '24'), (19, 4, '11'), (19, 5, 'Bắc Ninh'),
 (20, 1, 'Dáng Văn Nhân'), (20, 2, '28'), (20, 3, '9'), (20, 5, 'Chưa cập nhật'),
 (21, 1, 'Dáng Xiên'), (21, 2, '51'), (21, 3, '21'), (21, 4, '8'), (21, 5, 'Long Biên'),
 (22, 1, 'Dáng Trực'), (22, 2, '37'), (22, 3, '14'), (22, 4, '6'), (22, 5, 'Long Biên');
@@ -1239,7 +1249,6 @@ INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order, m
 ('post', 17, 'image', '/uploads/pending-post-17-cover.jpg', 0, '{"label":"Ảnh bìa chờ duyệt"}'::jsonb),
 ('post', 17, 'video', '/uploads/pending-post-17-overview.mp4', 1, '{"durationSeconds":18}'::jsonb),
 ('post', 18, 'image', '/uploads/rejected-post-18-proof.jpg', 0, '{"label":"Ảnh hồ sơ bị từ chối"}'::jsonb),
-('post', 19, 'image', '/uploads/hidden-post-19-cover.jpg', 0, '{"label":"Ảnh bài đang ẩn"}'::jsonb),
 ('post', 20, 'image', '/uploads/draft-post-20-cover.jpg', 0, '{"label":"Ảnh bản nháp"}'::jsonb),
 ('post', 21, 'image', '/uploads/tung-la-han-1.jpg', 0, '{"label":"Ảnh cây Tùng Kim Cương"}'::jsonb),
 ('post', 22, 'image', '/uploads/mct-mini-1.jpg', 0, '{"label":"Ảnh cây Mai Chiếu Thủy"}'::jsonb);
@@ -1475,14 +1484,7 @@ INSERT INTO post_promotions (
     post_promotion_status,
     post_promotion_created_at
 ) VALUES
-(1, 1, 1, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-03-05 08:00:00', '2026-03-11 08:00:00', 'expired',  '2026-03-04 16:00:00'),
-(2, 4, 3, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-03-12 08:00:00', '2026-03-18 08:00:00', 'expired',  '2026-03-11 14:20:00'),
-(3, 2, 3, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, '2026-03-08 08:00:00', '2026-03-14 08:00:00', 'expired',  '2026-03-07 17:30:00'),
-(5, 12, 6, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, '2026-03-28 08:00:00', '2026-04-03 08:00:00', 'expired',  '2026-03-27 15:10:00'),
-(6, 9, 3, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, '2026-05-06 08:00:00', '2026-05-12 08:00:00', 'scheduled','2026-05-01 08:30:00'),
-(7, 15, 1, 2, 1, 'Gói đẩy bài theo tuần vị trí 1 trang chủ', 1, now() - interval '1 day', now() + interval '6 days', 'active',   now() - interval '2 days'),
-(8, 7, 1, 1, 3, 'Gói đẩy bài theo tuần vị trí 2 trang chủ', 2, now() - interval '1 day', now() + interval '6 days', 'active',   now() - interval '2 days'),
-(9, 11, 6, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, '2026-04-30 08:00:00', '2026-05-06 08:00:00', 'paused', '2026-04-29 16:00:00');
+(1, 1, 1, 4, 4, 'Gói đẩy bài theo tuần vị trí 3 trang chủ', 3, now() - interval '1 day', now() + interval '6 days', 'active', now() - interval '2 days');
 
 -- ============================================================
 -- PAYMENT TRANSACTIONS
@@ -1500,18 +1502,7 @@ INSERT INTO transactions (
     transaction_reference_id,
     transaction_created_at
 ) VALUES
-(10, 1, 250000, 'payment', 'bank_transfer', 'GM-TXN-20260101-001', 'success', 'plan', null, '2026-01-01 09:00:00'),
-(11, 3, 250000, 'payment', 'bank_transfer', 'GM-TXN-20260103-002', 'success', 'plan', null, '2026-01-03 10:00:00'),
-(12, 9, 250000, 'payment', 'bank_transfer', 'GM-TXN-20260105-003', 'success', 'plan', null, '2026-01-05 11:00:00'),
-(13, 6, 250000, 'payment', 'bank_transfer', 'GM-TXN-20260107-004', 'success', 'plan', null, '2026-01-07 11:30:00'),
-(14, 2, 30000,  'payment', 'bank_transfer', 'GM-TXN-20260403-005', 'success', 'plan', null, '2026-04-03 18:58:00'),
-(15, 1, 499000, 'payment', 'bank_transfer', 'GM-TXN-20260316-006', 'success', 'package', 3, '2026-03-16 18:58:00'),
-(16, 1, 299000, 'payment', 'bank_transfer', 'GM-TXN-20260304-007', 'success', 'package', 2, '2026-03-04 15:30:00'),
-(17, 3, 99000,  'payment', 'bank_transfer', 'GM-TXN-20260311-008', 'success', 'package', 1, '2026-03-11 13:40:00'),
-(18, 3, 299000, 'payment', 'bank_transfer', 'GM-TXN-20260409-009', 'success', 'package', 2, '2026-04-09 08:50:00'),
-(19, 6, 99000,  'payment', 'bank_transfer', 'GM-TXN-20260327-010', 'success', 'package', 1, '2026-03-27 15:10:00'),
-(20, 1, 299000, 'payment', 'bank_transfer', 'GM-TXN-20260416-011', 'success', 'package', 2, '2026-04-16 07:40:00'),
-(21, 1, 99000,  'payment', 'bank_transfer', 'GM-TXN-20260416-012', 'success', 'package', 1, '2026-04-16 07:45:00');
+(25, 1, 29000, 'payment', 'bank_transfer', 'GM-TXN-20260307-013', 'success', 'package', 4, '2026-03-07 17:31:00');
 
 INSERT INTO transactions (
     transaction_id,
@@ -1533,48 +1524,7 @@ INSERT INTO transactions (
 (23, 136, 420000, 'VND', 'payout', 'success', 'bank_transfer', 'GM-HOST-PAYOUT-20260428-014', 'admin_host_payout', 1, '{"audience":"host","note":"Khoản chi trả Host do admin tạo và đã chuyển khoản ngoài hệ thống.","adminCreated":true,"createdBy":"Quản trị viên hệ thống"}'::jsonb, now() - interval '4 days', now() - interval '4 days', now() - interval '4 days'),
 (24, 136, 600000, 'VND', 'payout', 'pending', 'bank_transfer', 'GM-HOST-PAYOUT-20260501-015', 'admin_host_payout', 2, '{"audience":"host","note":"Khoản chi trả Host do admin tạo, đang chờ chuyển khoản ngoài hệ thống.","adminCreated":true,"createdBy":"Quản trị viên hệ thống"}'::jsonb, now() - interval '20 hours', now() - interval '20 hours', NULL);
 
-UPDATE transactions
-SET transaction_meta = '{"priceId":2,"postId":1,"promotionId":1,"slotId":1,"note":"Thanh toán đã được xác nhận cho gói đẩy bài vị trí 1 trang chủ."}'::jsonb
-WHERE transaction_id = 16;
-
-UPDATE transactions
-SET transaction_meta = '{"priceId":1,"postId":4,"promotionId":2,"slotId":3,"note":"Thanh toán đã được xác nhận cho gói đẩy bài vị trí 2 trang chủ."}'::jsonb
-WHERE transaction_id = 17;
-
-UPDATE transactions
-SET transaction_meta = '{"priceId":2,"postId":9,"promotionId":6,"slotId":1,"note":"Thanh toán đã được xác nhận trước khi lên lịch chiến dịch tiếp theo."}'::jsonb
-WHERE transaction_id = 18;
-
-UPDATE transactions
-SET transaction_meta = '{"priceId":1,"postId":12,"promotionId":5,"slotId":3,"note":"Thanh toán của chiến dịch cũ đã được xác nhận đầy đủ."}'::jsonb
-WHERE transaction_id = 19;
-
-UPDATE transactions
-SET transaction_meta = '{"priceId":2,"postId":15,"promotionId":7,"slotId":1,"note":"Thanh toán đã được xác nhận để chiến dịch đang chạy hiển thị bình thường."}'::jsonb
-WHERE transaction_id = 20;
-
-UPDATE transactions
-SET transaction_meta = '{"priceId":1,"postId":7,"promotionId":8,"slotId":3,"note":"Thanh toán đã được xác nhận để chiến dịch đang chạy hiển thị bình thường."}'::jsonb
-WHERE transaction_id = 21;
-
-INSERT INTO transactions (
-    transaction_id,
-    transaction_user_id,
-    transaction_amount,
-    transaction_currency,
-    transaction_type,
-    transaction_status,
-    transaction_provider,
-    transaction_provider_txn_id,
-    transaction_reference_type,
-    transaction_reference_id,
-    transaction_meta,
-    transaction_created_at,
-    transaction_updated_at,
-    transaction_processed_at
-) VALUES
-(25, 3, 29000, 'VND', 'payment', 'success', 'bank_transfer', 'GM-TXN-20260307-013', 'package', 4, '{"priceId":4,"postId":2,"promotionId":3,"slotId":4,"note":"Thanh toán đã được xác nhận cho gói đẩy bài vị trí 3 trang chủ."}'::jsonb, '2026-03-07 17:31:00', '2026-03-07 17:31:00', '2026-03-07 17:31:00'),
-(26, 6, 29000, 'VND', 'payment', 'success', 'bank_transfer', 'GM-TXN-20260429-014', 'package', 4, '{"priceId":4,"postId":11,"promotionId":9,"slotId":4,"note":"Thanh toán đã được xác nhận cho chiến dịch đang tạm dừng ở vị trí 3 trang chủ."}'::jsonb, '2026-04-29 16:05:00', '2026-04-29 16:05:00', '2026-04-29 16:05:00');
+-- No additional transactions needed for this seed state
 
 -- Tickets Seed Data (Reports migrated)
 INSERT INTO tickets (ticket_id, ticket_type, ticket_creator_id, ticket_target_type, ticket_target_id, ticket_title, ticket_content, ticket_status, ticket_resolution_note, ticket_meta_data, ticket_created_at, ticket_updated_at) VALUES
