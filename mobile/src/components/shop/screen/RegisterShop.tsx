@@ -12,6 +12,7 @@ import AddressPicker from '../components/AddressPicker'
 import { useAuth } from '../../../context/AuthContext'
 import { resolveImageUrl } from '../../../utils/resolveImageUrl'
 import { paymentService } from '../../payment/service/paymentService'
+import { openPaymentAuthSession } from '../../payment/utils/paymentRedirect'
 
 const RegisterShopScreen = ({ navigation }: any) => {
     const { refreshShop, shop, user } = useAuth()
@@ -235,6 +236,27 @@ const RegisterShopScreen = ({ navigation }: any) => {
             throw new Error('Không nhận được link thanh toán từ hệ thống')
         }
 
+        const paymentResult = await openPaymentAuthSession(paymentUrl)
+
+        if (paymentResult) {
+            const { status, code, txnRef, message } = paymentResult
+
+            try {
+                if (status === 'success' || code === '00') {
+                    await refreshShop()
+                }
+            } catch (error) {
+                console.error('[Payment] Failed to refresh shop after return:', error)
+            }
+
+            navigation.navigate('PaymentResult', { status, code, txnRef, message, type: 'shop' })
+            return
+        }
+
+        await refreshShop()
+        navigation.navigate('PaymentPending', { type: 'shop' })
+        return
+
         const navigatedRef = { current: false };
 
         const subscription = Linking.addEventListener('url', (event) => {
@@ -265,7 +287,10 @@ const RegisterShopScreen = ({ navigation }: any) => {
             }
         });
 
-        await WebBrowser.openBrowserAsync(paymentUrl);
+        await WebBrowser.openAuthSessionAsync(
+            paymentUrl,
+            "greenmarket://payment-result"
+        );
 
         subscription.remove();
         if (!navigatedRef.current) {

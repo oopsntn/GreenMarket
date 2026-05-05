@@ -63,8 +63,8 @@ const CollaboratorTabs = () => {
         tabBarActiveTintColor: '#16A34A',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
-          height: 65,
-          paddingBottom: 10,
+          height: 75,
+          paddingBottom: 18,
           paddingTop: 10,
         },
         tabBarLabelStyle: {

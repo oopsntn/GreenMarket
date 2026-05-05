@@ -8,6 +8,7 @@ import Card from '../../Reused/Card/Card';
 import Button from '../../Reused/Button/Button';
 import { paymentService, PromotionPackage } from '../service/paymentService';
 import CustomAlert from '../../../utils/AlertHelper';
+import { openPaymentAuthSession } from '../utils/paymentRedirect';
 
 const PromotePostScreen = ({ route }: any) => {
     const navigation = useNavigation<any>();
@@ -62,6 +63,17 @@ const PromotePostScreen = ({ route }: any) => {
     // Mở browser thanh toán và lắng nghe deep-link trả về từ VNPay
     const openPaymentBrowser = async (paymentUrl: string) => {
         // Dùng ref để tránh navigate nhiều lần nếu listener bị gọi nhiều lần
+        const paymentResult = await openPaymentAuthSession(paymentUrl);
+
+        if (paymentResult) {
+            const { status, code, txnRef, message } = paymentResult;
+            navigation.navigate('PaymentResult', { status, code, txnRef, message, type: 'promote' });
+            return;
+        }
+
+        navigation.navigate('PaymentPending', { type: 'promote', postId: post?.postId });
+        return;
+
         const navigatedRef = { current: false };
 
         const subscription = Linking.addEventListener('url', (event) => {
@@ -85,7 +97,10 @@ const PromotePostScreen = ({ route }: any) => {
             }
         });
 
-        await WebBrowser.openBrowserAsync(paymentUrl);
+        await WebBrowser.openAuthSessionAsync(
+            paymentUrl,
+            "greenmarket://payment-result"
+        );
 
         // Browser đã đóng nhưng chưa nhận deep-link → chuyển đến màn hình chờ
         subscription.remove();

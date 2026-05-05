@@ -7,11 +7,13 @@ import {
   Megaphone,
   CircleDollarSign,
   Settings,
+  Bell,
 } from 'lucide-react-native';
 import HostDashboardScreen from '../screens/HostDashboardScreen';
 import CreatePromotionalContentScreen from '../screens/CreatePromotionalContentScreen';
 import HostEarningsScreen from '../screens/HostEarningsScreen';
 import HostNewsDetailScreen from '../screens/HostNewsDetailScreen';
+import NotificationsScreen from '../../components/notification/screen/NotificationsScreen';
 
 // Marketplace (same browsing experience as User)
 import HomeScreen from '../../components/Home/screen/HomeScreen';
@@ -52,8 +54,8 @@ const HostTabs = () => {
         tabBarActiveTintColor: '#16A34A',
         tabBarInactiveTintColor: '#94A3B8',
         tabBarStyle: {
-          height: 65,
-          paddingBottom: 10,
+          height: 75,
+          paddingBottom: 18,
           paddingTop: 10,
         },
         tabBarLabelStyle: {
@@ -70,6 +72,8 @@ const HostTabs = () => {
             icon = <Megaphone color={color} size={size} />;
           } else if (route.name === 'Earnings') {
             icon = <CircleDollarSign color={color} size={size} />;
+          } else if (route.name === 'Notifications') {
+            icon = <Bell color={color} size={size} />;
           } else if (route.name === 'SettingsStack') {
             icon = <Settings color={color} size={size} />;
           }
@@ -96,6 +100,11 @@ const HostTabs = () => {
         name="Earnings"
         component={HostEarningsScreen}
         options={{ tabBarLabel: 'Doanh thu' }}
+      />
+      <Tab.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ tabBarLabel: 'Thông báo' }}
       />
       <Tab.Screen
         name="SettingsStack"

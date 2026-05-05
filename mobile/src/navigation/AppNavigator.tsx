@@ -4,27 +4,28 @@ import * as Linking from "expo-linking";
 import AuthStack from "./AuthStack";
 
 /**
- * Deep-link config cho VNPay payment redirect.
+ * Deep-link config cho payment redirect.
  *
- * Expo Go (dev):  exp://greenmarket.ddns.net:8081/--/payment-result?status=success&code=00&txnRef=...
- * Production APK: greenmarket:///payment-result?status=success&code=00&txnRef=...
+ * Expo Go:
+ *   exp://<expo-host>:8081/--/payment-result?status=success&code=00&txnRef=...
  *
- * Backend cần set:
- *   MOBILE_URL=exp://greenmarket.ddns.net:8081   (dev)
- *   MOBILE_URL=greenmarket://                    (production APK)
- *   MOBILE_PAYMENT_RESULT_PATH=/--/payment-result (dev) hoặc /payment-result (production)
+ * APK / dev build:
+ *   greenmarket://payment-result?status=success&code=00&txnRef=...
+ *
+ * Backend phải dùng đúng cặp biến theo môi trường đang chạy:
+ *   Expo Go:
+ *     MOBILE_URL=exp://<expo-host>:8081
+ *     MOBILE_PAYMENT_RESULT_PATH=/--/payment-result
+ *   APK / dev build:
+ *     MOBILE_URL=greenmarket://
+ *     MOBILE_PAYMENT_RESULT_PATH=/payment-result
  */
-const prefix = Linking.createURL("/");
+const expoPrefix = Linking.createURL("/");
 
 const linking = {
-  prefixes: [
-    prefix,
-    "greenmarket://",
-    "exp://",
-  ],
+  prefixes: [expoPrefix, "greenmarket://"],
   config: {
     screens: {
-      // Màn hình UserNavigator (root level)
       PaymentResult: {
         path: "payment-result",
         parse: {

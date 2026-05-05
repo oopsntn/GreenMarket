@@ -515,6 +515,19 @@ export const updateManagerHostContentStatus = async (
         } catch (notifyError) {
           console.error("Failed to notify host after moderation:", notifyError);
         }
+      } else if (nextDbStatus === "rejected") {
+        try {
+          const reasonText = reason ? ` Lý do: ${reason}` : '';
+          await notificationService.sendNotification({
+            recipientId: updated.hostContentAuthorId!,
+            title: "Nội dung bị từ chối",
+            message: `Nội dung "${updated.hostContentTitle}" của bạn đã bị từ chối.${reasonText}`,
+            type: "warning",
+            metaData: { contentId: updated.hostContentId, senderId: managerId },
+          });
+        } catch (notifyError) {
+          console.error("Failed to notify host after moderation rejection:", notifyError);
+        }
       }
 
       const [actionLog] = await tx

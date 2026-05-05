@@ -1,85 +1,76 @@
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { BarChart3, History, LogOut, User } from 'lucide-react-native';
-import { useAuth } from '../../context/AuthContext';
+import { BarChart3, History, LogOut, User, ChevronRight } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 import MobileLayout from '../../components/Reused/MobileLayout/MobileLayout';
+import { useAuth } from '../../context/AuthContext';
 
-const ManagerSettingsScreen = ({ navigation }: any) => {
-  const { user, logout } = useAuth();
+const ManagerSettingsScreen = () => {
+  const navigation = useNavigation<any>();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [
-      { text: 'Hủy', onPress: () => {} },
+      { text: 'Hủy', style: 'cancel' },
       {
         text: 'Đăng xuất',
+        style: 'destructive',
         onPress: async () => {
           await logout();
         },
-        style: 'destructive',
       },
     ]);
   };
 
   return (
     <MobileLayout title="Cài đặt" headerStyle="default">
-      <ScrollView style={styles.container}>
-        <View style={styles.section}>
-          <View style={styles.userInfo}>
-            <View style={styles.avatar}>
-              <User size={32} color="#fff" />
-            </View>
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>{user?.userDisplayName || 'Manager'}</Text>
-              <Text style={styles.userPhone}>{user?.userMobile}</Text>
-            </View>
-          </View>
-        </View>
-
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <View style={styles.sectionTitle}>
-            <Text style={styles.sectionTitleText}>Kiểm duyệt</Text>
+            <Text style={styles.sectionTitleText}>Tài Khoản</Text>
           </View>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Profile')}>
+            <View style={styles.menuItemLeft}>
+              <User size={20} color="#22C55E" />
+              <Text style={styles.menuItemText}>Cá nhân</Text>
+            </View>
+            <ChevronRight size={20} color="#d1d5db" />
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('ModerationStatistics')}
           >
-            <BarChart3 size={20} color="#166534" />
-            <Text style={styles.menuItemText}>Thống kê kiểm duyệt</Text>
-            <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemSubtext}>Xem số lượng hàng đợi và khối lượng xử lý</Text>
+            <View style={styles.menuItemLeft}>
+              <BarChart3 size={20} color="#22C55E" />
+              <Text style={styles.menuItemText}>Thống kê kiểm duyệt</Text>
             </View>
+            <ChevronRight size={20} color="#d1d5db" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => navigation.navigate('ModerationHistory')}
           >
-            <History size={20} color="#334155" />
-            <Text style={styles.menuItemText}>Lịch sử kiểm duyệt</Text>
-            <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemSubtext}>Theo dõi các thao tác đã thực hiện</Text>
+            <View style={styles.menuItemLeft}>
+              <History size={20} color="#22C55E" />
+              <Text style={styles.menuItemText}>Lịch sử kiểm duyệt</Text>
             </View>
+            <ChevronRight size={20} color="#d1d5db" />
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionTitle}>
-            <Text style={styles.sectionTitleText}>Tài khoản</Text>
-          </View>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-            <LogOut size={20} color="#ff4d4f" />
-            <Text style={styles.menuItemText}>Đăng xuất</Text>
-            <View style={styles.menuItemRight}>
-              <Text style={styles.menuItemSubtext}>Dữ liệu của bạn vẫn được giữ an toàn</Text>
+          <TouchableOpacity style={[styles.menuItem, styles.menuItemDanger]} onPress={handleLogout}>
+            <View style={styles.menuItemLeft}>
+              <LogOut size={20} color="#ff4d4f" />
+              <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>Đăng xuất</Text>
             </View>
+            <ChevronRight size={20} color="#d1d5db" />
           </TouchableOpacity>
         </View>
 
         <View style={[styles.section, styles.footer]}>
-          <Text style={styles.appVersion}>GreenMarket Quản lý v1.0.0</Text>
-          <Text style={styles.copyright}>2024 GreenMarket. All rights reserved.</Text>
+          <Text style={styles.appVersion}>GreenMarket Manager v1.0.0</Text>
         </View>
       </ScrollView>
     </MobileLayout>
@@ -96,37 +87,6 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#22C55E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  userPhone: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
   sectionTitle: {
     marginBottom: 8,
     paddingHorizontal: 4,
@@ -141,29 +101,31 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#fff',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
+  menuItemDanger: {
+    borderColor: '#ffcccb',
+    backgroundColor: '#fff7f7',
+  },
+  menuItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   menuItemText: {
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
-    marginLeft: 12,
-    flex: 1,
   },
-  menuItemRight: {
-    alignItems: 'flex-end',
-    maxWidth: 140,
-  },
-  menuItemSubtext: {
-    fontSize: 12,
-    color: '#9ca3af',
-    textAlign: 'right',
+  menuItemTextDanger: {
+    color: '#ff4d4f',
   },
   footer: {
     marginBottom: 32,
@@ -171,12 +133,6 @@ const styles = StyleSheet.create({
   appVersion: {
     fontSize: 12,
     color: '#9ca3af',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  copyright: {
-    fontSize: 11,
-    color: '#d1d5db',
     textAlign: 'center',
   },
 });
