@@ -108,6 +108,37 @@ const insertImagesAtSelection = (
   return { nextText, cursor };
 };
 
+const parseBlocks = (body: string) => {
+  const blocks: Array<{ type: 'text'; content: string; startOffset: number; endOffset: number; } | { type: 'image'; url: string; startOffset: number; endOffset: number; }> = [];
+  let lastIndex = 0;
+  const pattern = new RegExp(BODY_IMAGE_MARKDOWN_PATTERN.source, 'g');
+  let match;
+  while ((match = pattern.exec(body)) !== null) {
+    const textBefore = body.substring(lastIndex, match.index);
+    blocks.push({ 
+        type: 'text', 
+        content: textBefore, 
+        startOffset: lastIndex, 
+        endOffset: match.index 
+    });
+    blocks.push({ 
+        type: 'image', 
+        url: match[1], 
+        startOffset: match.index, 
+        endOffset: match.index + match[0].length 
+    });
+    lastIndex = match.index + match[0].length;
+  }
+  const textAfter = body.substring(lastIndex);
+  blocks.push({ 
+      type: 'text', 
+      content: textAfter, 
+      startOffset: lastIndex, 
+      endOffset: body.length 
+  });
+  return blocks;
+};
+
 const resolveFirstCoverImage = (content?: HostContent): MediaItem | null => {
   const firstImage = content?.hostContentMediaUrls?.[0];
   if (!firstImage) {
@@ -453,20 +484,58 @@ const CreatePromotionalContentScreen = () => {
             />
 
             <Text style={styles.label}>Nội dung quảng bá (có thể chèn ảnh)</Text>
-            <TextInput
-              style={[styles.input, styles.contentTextArea]}
-              placeholder="Nhập nội dung chi tiết. Bạn có thể chèn ảnh minh họa vào nội dung."
-              multiline
-              textAlignVertical="top"
-              value={bodyText}
-              onChangeText={setBodyText}
-              onSelectionChange={(event) => {
-                const selection = event.nativeEvent.selection;
-                setBodySelection(selection);
-                bodySelectionRef.current = selection;
-              }}
-              selection={bodySelection}
-            />
+            <View style={styles.contentEditorBox}>
+              {parseBlocks(bodyText).map((block, index, arr) => {
+                const isLast = index === arr.length - 1;
+                if (block.type === 'text') {
+                  return (
+                    <TextInput
+                      key={`block_${index}`}
+                      style={[
+                        styles.blockTextInput,
+                        block.content === '' && !isLast ? styles.emptyBlock : null,
+                        isLast ? { flexGrow: 1, minHeight: 80 } : null
+                      ]}
+                      placeholder={index === 0 ? "Nhập nội dung chi tiết. Bạn có thể chèn ảnh minh họa vào nội dung." : undefined}
+                      placeholderTextColor="#94A3B8"
+                      multiline
+                      textAlignVertical="top"
+                      value={block.content}
+                      onChangeText={(newText) => {
+                        const newBody = bodyText.substring(0, block.startOffset) + newText + bodyText.substring(block.endOffset);
+                        setBodyText(newBody);
+                      }}
+                      onSelectionChange={(event) => {
+                        const sel = event.nativeEvent.selection;
+                        const globalSel = {
+                          start: block.startOffset + sel.start,
+                          end: block.startOffset + sel.end,
+                        };
+                        setBodySelection(globalSel);
+                        bodySelectionRef.current = globalSel;
+                      }}
+                    />
+                  );
+                } else {
+                  return (
+                    <View key={`block_${index}`} style={styles.inlineImageContainer}>
+                      <Image
+                        source={{ uri: resolveImageUrl(block.url) }}
+                        style={styles.inlineImage}
+                        resizeMode="contain"
+                      />
+                      <TouchableOpacity
+                        style={styles.removeInlineBtn}
+                        onPress={() => removeBodyImage(block.url)}
+                        disabled={isBusy}
+                      >
+                        <X color="white" size={12} />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                }
+              })}
+            </View>
 
             {uploadingBodyImages ? (
               <View style={styles.bodyUploadLoadingBox}>
@@ -477,27 +546,6 @@ const CreatePromotionalContentScreen = () => {
 
             {bodyUploadError ? (
               <Text style={styles.bodyUploadErrorText}>{bodyUploadError}</Text>
-            ) : null}
-
-            {inlineImageUrls.length > 0 ? (
-              <View style={styles.bodyImageGrid}>
-                {inlineImageUrls.map((url, index) => (
-                  <View key={`${url}_${index}`} style={styles.bodyImageItem}>
-                    <Image
-                      source={{ uri: resolveImageUrl(url) }}
-                      style={styles.bodyImagePreview}
-                      resizeMode="contain"
-                    />
-                    <TouchableOpacity
-                      style={styles.removeBtn}
-                      onPress={() => removeBodyImage(url)}
-                      disabled={isBusy}
-                    >
-                      <X color="white" size={12} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
             ) : null}
 
             <View style={styles.bodyImageActionRow}>
@@ -699,6 +747,52 @@ const styles = StyleSheet.create({
     minHeight: 160,
     paddingTop: 10,
   },
+  contentEditorBox: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    minHeight: 160,
+    overflow: 'hidden',
+    paddingVertical: 4,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  blockTextInput: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: '#0F172A',
+    minHeight: 40,
+  },
+  emptyBlock: {
+    minHeight: 32, 
+  },
+  inlineImageContainer: {
+    marginHorizontal: 12,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#F8FAFC',
+    position: 'relative',
+  },
+  inlineImage: {
+    width: '100%',
+    height: 200,
+  },
+  removeInlineBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
   bodyUploadLoadingBox: {
     marginTop: 10,
     backgroundColor: '#ECFDF5',
@@ -721,23 +815,6 @@ const styles = StyleSheet.create({
     color: '#B91C1C',
     fontSize: 12,
     fontWeight: '600',
-  },
-  bodyImageGrid: {
-    marginTop: 10,
-    gap: 8,
-  },
-  bodyImageItem: {
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#F8FAFC',
-  },
-  bodyImagePreview: {
-    width: '100%',
-    height: 260,
-    backgroundColor: '#E2E8F0',
   },
   bodyImageActionRow: {
     marginTop: 10,
