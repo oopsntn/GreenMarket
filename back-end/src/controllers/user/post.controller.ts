@@ -370,17 +370,17 @@ export const getMyPosts = async (req: AuthRequest, res: Response): Promise<void>
             packageName: promotionPackages.promotionPackageTitle,
             packageDescription: promotionPackages.promotionPackageDescription,
         })
-        .from(postPromotions)
-        .innerJoin(promotionPackages, eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId))
-        .innerJoin(placementSlots, eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId))
-        .where(
-            and(
-                inArray(postPromotions.postPromotionPostId, postIds),
-                eq(postPromotions.postPromotionStatus, "active"),
-                sql`post_promotion_end_at > now()`,
-                sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`
-            )
-        ) : [];
+            .from(postPromotions)
+            .innerJoin(promotionPackages, eq(postPromotions.postPromotionPackageId, promotionPackages.promotionPackageId))
+            .innerJoin(placementSlots, eq(postPromotions.postPromotionSlotId, placementSlots.placementSlotId))
+            .where(
+                and(
+                    inArray(postPromotions.postPromotionPostId, postIds),
+                    eq(postPromotions.postPromotionStatus, "active"),
+                    sql`post_promotion_end_at > now()`,
+                    sql`UPPER(${placementSlots.placementSlotCode}) LIKE ${`${BOOST_POST_SLOT_PREFIX}%`}`
+                )
+            ) : [];
 
         const promotionsByPostId = new Map<number, any>();
         for (const promo of activePromotions) {
@@ -482,8 +482,8 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             return;
         }
 
-        const isAuthorized = existingPost.postAuthorId === userId || 
-                           (existingPost.postShopId !== null && existingPost.postShopId === userId);
+        const isAuthorized = existingPost.postAuthorId === userId ||
+            (existingPost.postShopId !== null && existingPost.postShopId === userId);
 
         if (!isAuthorized) {
             res.status(403).json({ error: "Unauthorized to update this post" });
@@ -666,8 +666,8 @@ export const softDeletePost = async (req: AuthRequest, res: Response): Promise<v
             return;
         }
 
-        const isAuthorized = existingPost.postAuthorId === userId || 
-                           (existingPost.postShopId !== null && existingPost.postShopId === userId);
+        const isAuthorized = existingPost.postAuthorId === userId ||
+            (existingPost.postShopId !== null && existingPost.postShopId === userId);
 
         if (!isAuthorized) {
             res.status(403).json({ error: "Unauthorized to delete this post" });
@@ -707,8 +707,8 @@ export const restorePost = async (req: AuthRequest, res: Response): Promise<void
             return;
         }
 
-        const isAuthorized = existingPost.postAuthorId === userId || 
-                           (existingPost.postShopId !== null && existingPost.postShopId === userId);
+        const isAuthorized = existingPost.postAuthorId === userId ||
+            (existingPost.postShopId !== null && existingPost.postShopId === userId);
 
         if (!isAuthorized) {
             res.status(403).json({ error: "Unauthorized to restore this post" });
@@ -754,8 +754,8 @@ export const togglePostVisibility = async (req: AuthRequest, res: Response): Pro
             return;
         }
 
-        const isAuthorized = existingPost.postAuthorId === userId || 
-                           (existingPost.postShopId !== null && existingPost.postShopId === userId);
+        const isAuthorized = existingPost.postAuthorId === userId ||
+            (existingPost.postShopId !== null && existingPost.postShopId === userId);
 
         if (!isAuthorized) {
             res.status(403).json({ error: "Unauthorized to update this post" });
@@ -819,7 +819,7 @@ export const getPublicPostBySlug = async (req: Request<{ slug: string }>, res: R
                 .where(eq(posts.postId, post.postId))
                 .execute()
                 .catch(e => console.error("Failed to increment views:", e));
-            
+
             post.postViewCount = (post.postViewCount || 0) + 1;
         }
 
@@ -912,7 +912,7 @@ export const checkIsSaved = async (req: AuthRequest, res: Response): Promise<voi
         const userId = req.user?.id;
         const postId = parseId(req.params.id as string);
         if (!userId || !postId) { res.status(400).json({ isSaved: false }); return; }
-        
+
         const [existingFavorite] = await db.select().from(userFavorites)
             .where(
                 and(
@@ -922,7 +922,7 @@ export const checkIsSaved = async (req: AuthRequest, res: Response): Promise<voi
                 )
             )
             .limit(1);
-            
+
         res.json({ isSaved: !!existingFavorite });
     } catch (error) {
         console.error(error);
