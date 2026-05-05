@@ -5,9 +5,6 @@ import PageHeader from "../components/PageHeader";
 import SectionCard from "../components/SectionCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
-import ToastContainer, {
-  type ToastItem,
-} from "../components/ToastContainer";
 import { collaboratorAdminService } from "../services/collaboratorAdminService";
 import type {
   CollaboratorDetail,
@@ -41,8 +38,6 @@ const getStatusVariant = (status: CollaboratorRelationshipStatus) => {
   return "negative" as const;
 };
 
-const createToastId = () => Date.now() + Math.floor(Math.random() * 1000);
-
 function CollaboratorsPage() {
   const [filters, setFilters] = useState<CollaboratorFilters>({
     keyword: "",
@@ -67,15 +62,10 @@ function CollaboratorsPage() {
     null,
   );
   const [detail, setDetail] = useState<CollaboratorDetail | null>(null);
-  const [statusDraft, setStatusDraft] =
-    useState<CollaboratorRelationshipStatus>("active");
-  const [statusNote, setStatusNote] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [pageError, setPageError] = useState("");
   const [detailError, setDetailError] = useState("");
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -100,25 +90,19 @@ function CollaboratorsPage() {
     void loadData();
   }, [loadData]);
 
-  const pushToast = (message: string, tone: ToastItem["tone"] = "success") => {
-    const id = createToastId();
-    setToasts((current) => [...current, { id, message, tone }]);
-    window.setTimeout(() => {
-      setToasts((current) => current.filter((toast) => toast.id !== id));
-    }, 3600);
-  };
-
   const statCards = useMemo(
     () => [
       {
         title: "Tổng quan hệ cộng tác",
         value: String(summary.totalRelationships),
-        subtitle: "Toàn bộ quan hệ shop - cộng tác viên đang được lưu trong hệ thống.",
+        subtitle:
+          "Toàn bộ quan hệ shop - cộng tác viên đang được lưu trong hệ thống.",
       },
       {
         title: "Đang hoạt động",
         value: String(summary.activeRelationships),
-        subtitle: "Các cộng tác viên đang được shop sử dụng để phối hợp đăng và xử lý bài.",
+        subtitle:
+          "Các cộng tác viên đang được shop sử dụng để phối hợp đăng và xử lý bài.",
       },
       {
         title: "Chờ phản hồi",
@@ -128,7 +112,8 @@ function CollaboratorsPage() {
       {
         title: "Đã kết thúc",
         value: String(summary.endedRelationships),
-        subtitle: "Bao gồm lời mời bị từ chối hoặc quan hệ đã bị gỡ khỏi shop.",
+        subtitle:
+          "Bao gồm lời mời bị từ chối hoặc quan hệ đã bị gỡ khỏi shop.",
       },
     ],
     [summary],
@@ -138,8 +123,6 @@ function CollaboratorsPage() {
     setSelectedItem(item);
     setDetail(null);
     setDetailError("");
-    setStatusDraft(item.relationshipStatus);
-    setStatusNote("");
 
     try {
       setIsDetailLoading(true);
@@ -148,7 +131,6 @@ function CollaboratorsPage() {
         item.shopId,
       );
       setDetail(response);
-      setStatusDraft(response.relationshipStatus);
     } catch (error) {
       setDetailError(
         error instanceof Error
@@ -164,64 +146,13 @@ function CollaboratorsPage() {
     setSelectedItem(null);
     setDetail(null);
     setDetailError("");
-    setStatusNote("");
-  };
-
-  const handleUpdateStatus = async () => {
-    if (!detail) return;
-
-    try {
-      setIsSaving(true);
-      await collaboratorAdminService.updateRelationshipStatus(
-        detail.collaboratorId,
-        {
-          shopId: detail.shopId,
-          status: statusDraft,
-          note: statusNote,
-        },
-      );
-
-      const refreshedDetail =
-        await collaboratorAdminService.getRelationshipDetail(
-          detail.collaboratorId,
-          detail.shopId,
-        );
-      setDetail(refreshedDetail);
-      setSelectedItem((current) =>
-        current
-          ? {
-              ...current,
-              relationshipStatus: refreshedDetail.relationshipStatus,
-              relationshipStatusLabel: refreshedDetail.relationshipStatusLabel,
-            }
-          : current,
-      );
-      await loadData();
-      pushToast("Đã cập nhật trạng thái cộng tác.");
-    } catch (error) {
-      pushToast(
-        error instanceof Error
-          ? error.message
-          : "Không thể cập nhật trạng thái cộng tác.",
-        "error",
-      );
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   return (
     <div className="collaborators-page">
-      <ToastContainer
-        toasts={toasts}
-        onClose={(id) =>
-          setToasts((current) => current.filter((toast) => toast.id !== id))
-        }
-      />
-
       <PageHeader
         title="Quản lý cộng tác viên"
-        description="Theo dõi quan hệ giữa shop và cộng tác viên, kiểm tra bài đã gửi và cho phép admin can thiệp khi cần khóa hoặc kết thúc cộng tác."
+        description="Theo dõi quan hệ giữa shop và cộng tác viên, kiểm tra bài đã gửi và trạng thái phản hồi thực tế giữa hai bên."
       />
 
       <div className="collaborators-page__stats">
@@ -297,7 +228,7 @@ function CollaboratorsPage() {
         ) : items.length === 0 ? (
           <EmptyState
             title="Chưa có quan hệ cộng tác"
-            description="Khi shop gửi lời mời hoặc kích hoạt cộng tác viên, dữ liệu sẽ hiển thị tại đây để admin theo dõi."
+            description="Khi hai bên phát sinh yêu cầu cộng tác và bắt đầu phản hồi với nhau, dữ liệu sẽ hiển thị tại đây để admin theo dõi."
           />
         ) : (
           <>
@@ -397,7 +328,7 @@ function CollaboratorsPage() {
       <BaseModal
         isOpen={Boolean(selectedItem)}
         title="Chi tiết quan hệ cộng tác"
-        description="Theo dõi shop, cộng tác viên, thống kê bài gửi và đổi trạng thái quan hệ khi cần can thiệp vận hành."
+        description="Theo dõi shop, cộng tác viên, thống kê bài gửi và trạng thái phản hồi hiện tại giữa hai bên."
         onClose={closeDetail}
         maxWidth="920px"
       >
@@ -518,58 +449,13 @@ function CollaboratorsPage() {
               </div>
             ) : null}
 
-            <div className="collaborators-page__detail-grid collaborators-page__detail-grid--controls">
-              <div className="collaborators-page__field">
-                <label htmlFor="relationship-status">Trạng thái mới</label>
-                <select
-                  id="relationship-status"
-                  className="collaborators-page__select"
-                  value={statusDraft}
-                  onChange={(event) =>
-                    setStatusDraft(
-                      event.target.value as CollaboratorRelationshipStatus,
-                    )
-                  }
-                >
-                  {statusOptions
-                    .filter((item) => item !== "all")
-                    .map((status) => (
-                      <option key={status} value={status}>
-                        {statusLabels[status]}
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div className="collaborators-page__field collaborators-page__field--wide">
-                <label htmlFor="relationship-note">Ghi chú quản trị</label>
-                <textarea
-                  id="relationship-note"
-                  className="collaborators-page__textarea"
-                  value={statusNote}
-                  placeholder="Ghi chú thêm khi khóa, kết thúc hoặc chuyển lại trạng thái cộng tác."
-                  onChange={(event) => setStatusNote(event.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="collaborators-page__modal-actions">
-              <button
-                type="button"
-                className="collaborators-page__button"
-                onClick={closeDetail}
-                disabled={isSaving}
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                className="collaborators-page__button collaborators-page__button--primary"
-                onClick={() => void handleUpdateStatus()}
-                disabled={isSaving}
-              >
-                {isSaving ? "Đang lưu..." : "Cập nhật trạng thái"}
-              </button>
+            <div className="collaborators-page__note-card">
+              <h4>Ghi chú nghiệp vụ</h4>
+              <p>
+                Trạng thái cộng tác hiện do phía user và cộng tác viên tự xác
+                nhận với nhau. Admin chỉ theo dõi để đối chiếu dữ liệu và bài
+                đăng liên quan, không can thiệp đổi trạng thái từ màn này.
+              </p>
             </div>
           </div>
         ) : null}

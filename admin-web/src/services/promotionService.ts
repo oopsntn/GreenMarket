@@ -85,19 +85,27 @@ export const promotionService = {
     promotionId: number,
     payload: PromotionPackageActionPayload,
   ) {
+    const requestBody: Record<string, unknown> = {
+      packageId: payload.packageId,
+      paymentStatus: payload.paymentStatus,
+      adminNote: payload.adminNote,
+    };
+
+    if (payload.startDate) {
+      requestBody.startDate = payload.startDate;
+    }
+
+    if (payload.endDate) {
+      requestBody.endDate = payload.endDate;
+    }
+
     const updatedPromotion = await apiClient.request<PromotionApiResponse>(
       `/api/admin/promotions/${promotionId}/reopen`,
       {
         method: "PATCH",
         includeJsonContentType: true,
         defaultErrorMessage: "Không thể mở lại đơn quảng bá đã hết hạn.",
-        body: JSON.stringify({
-          packageId: payload.packageId,
-          startDate: payload.startDate,
-          endDate: payload.endDate,
-          paymentStatus: payload.paymentStatus,
-          adminNote: payload.adminNote,
-        }),
+        body: JSON.stringify(requestBody),
       },
     );
 
@@ -190,7 +198,8 @@ export const promotionService = {
       {
         title: "Lên lịch / Hoàn tất / Hết hạn",
         value: `${scheduledCount} / ${completedCount} / ${expiredCount}`,
-        subtitle: "Tương quan giữa đơn sắp chạy, dùng hết quota và hết thời gian",
+        subtitle:
+          "Tương quan giữa đơn sắp chạy, dùng hết quota và hết thời gian",
       },
     ];
   },

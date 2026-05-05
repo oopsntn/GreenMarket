@@ -63,6 +63,22 @@ const parsePrice = (value: unknown): string | null => {
     return parsed.toFixed(2);
 };
 
+const findOtherPackageBySlotId = async (
+    slotId: number,
+    excludeId?: number,
+) => {
+    const rows = await db
+        .select({
+            promotionPackageId: promotionPackages.promotionPackageId,
+            promotionPackageTitle: promotionPackages.promotionPackageTitle,
+        })
+        .from(promotionPackages)
+        .where(eq(promotionPackages.promotionPackageSlotId, slotId))
+        .limit(5);
+
+    return rows.find((row) => row.promotionPackageId !== excludeId) ?? null;
+};
+
 const getCurrentPriceRows = async (packageIds: number[]) => {
     if (packageIds.length === 0) {
         return [];
@@ -299,11 +315,10 @@ export const createPromotionPackage = async (
             return;
         }
 
-        const maxPosts = parseNonNegativeInteger(promotionPackageMaxPosts, 1);
         const displayQuota = parseNonNegativeInteger(promotionPackageDisplayQuota, 1);
-        if (maxPosts < 1 || displayQuota < 1) {
+        if (displayQuota < 1) {
             res.status(400).json({
-                error: "Số bài tối đa và quota hiển thị phải lớn hơn hoặc bằng 1",
+                error: "Quota hiển thị phải lớn hơn hoặc bằng 1",
             });
             return;
         }
@@ -319,13 +334,28 @@ export const createPromotionPackage = async (
             return;
         }
 
+        if (!slot.placementSlotPublished) {
+            res.status(400).json({
+                error: "Vị trí hiển thị đã tắt. Vui lòng chọn vị trí đang bật.",
+            });
+            return;
+        }
+
+        const occupiedPackage = await findOtherPackageBySlotId(slotId);
+        if (occupiedPackage) {
+            res.status(400).json({
+                error: "Vị trí hiển thị này đã có gói quảng bá. Vui lòng chọn vị trí khác.",
+            });
+            return;
+        }
+
         const [newPkg] = await db
             .insert(promotionPackages)
             .values({
                 promotionPackageSlotId: slotId,
                 promotionPackageTitle: String(promotionPackageTitle),
                 promotionPackageDurationDays: durationDays,
-                promotionPackageMaxPosts: maxPosts,
+                promotionPackageMaxPosts: 1,
                 promotionPackageDisplayQuota: displayQuota,
                 promotionPackageDescription:
                     typeof promotionPackageDescription === "string"
@@ -419,6 +449,24 @@ export const updatePromotionPackage = async (
                 return;
             }
 
+            if (!slot.placementSlotPublished) {
+                res.status(400).json({
+                    error: "Vị trí hiển thị đã tắt. Vui lòng chọn vị trí đang bật.",
+                });
+                return;
+            }
+
+            const occupiedPackage = await findOtherPackageBySlotId(
+                nextSlotId,
+                idNumber,
+            );
+            if (occupiedPackage) {
+                res.status(400).json({
+                    error: "Vị trí hiển thị này đã có gói quảng bá. Vui lòng chọn vị trí khác.",
+                });
+                return;
+            }
+
             updatePayload.promotionPackageSlotId = nextSlotId;
         }
 
@@ -441,17 +489,7 @@ export const updatePromotionPackage = async (
         }
 
         if (Object.prototype.hasOwnProperty.call(body, "promotionPackageMaxPosts")) {
-            const parsedMaxPosts = parseNonNegativeInteger(
-                body.promotionPackageMaxPosts,
-                -1,
-            );
-            if (parsedMaxPosts < 1) {
-                res.status(400).json({
-                    error: "Số bài tối đa phải lớn hơn hoặc bằng 1",
-                });
-                return;
-            }
-            updatePayload.promotionPackageMaxPosts = parsedMaxPosts;
+            updatePayload.promotionPackageMaxPosts = 1;
         }
 
         if (

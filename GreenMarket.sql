@@ -911,8 +911,8 @@ Không chỉ xuất hiện trong sân vườn hay các khu biệt thự, Tùng L
 Bên cạnh đó, Tùng La Hán cũng gắn liền với hình ảnh của sự tĩnh tại và thiền định. Trong nhiều không gian kiến trúc mang phong cách Nhật Bản hay Trung Hoa, cây thường được đặt ở vị trí trung tâm như một điểm nhấn tinh thần, giúp cân bằng cảm xúc và tạo cảm giác an yên.
 
 Ngày nay, khi nhịp sống hiện đại ngày càng hối hả, sự hiện diện của Tùng La Hán như một lời nhắc nhở về giá trị của sự kiên nhẫn và bền bỉ. Đó không chỉ là một loài cây cảnh, mà còn là biểu tượng sống động của thời gian, của sự trưởng thành và của những điều bền vững vượt lên trên mọi biến đổi.', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format", "https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 1250, 300000.00),
-(2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Tin tức', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
-(3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Tin tức', '[]', 'published', 450, 300000.00);
+(2, 136, 'Mẹo chọn kéo cắt tỉa bonsai cho người mới', 'Hướng dẫn chi tiết cách chọn bộ dụng cụ cắt tỉa phù hợp túi tiền và nhu cầu.', 'Việc chọn kéo rất quan trọng...', 'Mẹo vặt', '["https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?auto=format"]', 'published', 890, 300000.00),
+(3, 136, 'Triển lãm sinh vật cảnh miền Bắc 2026', 'Thông tin chi tiết về thời gian và địa điểm tổ chức ngày hội cây cảnh lớn nhất năm.', 'Sự kiện sẽ diễn ra tại...', 'Sự kiện', '[]', 'published', 450, 300000.00);
 
 INSERT INTO host_contents (
     host_content_id,
@@ -959,7 +959,10 @@ INSERT INTO shops (shop_id, shop_name, shop_phone, shop_email, shop_email_verifi
     '/uploads/shop/nam-dinh-art-garden.jpg', 'active', NULL, NULL, 20.2506, 106.2355),
 (6, 'Thế Giới Cây Kiểng Miền Tây', '0912345678', 'kieng.tran@gmail.com', TRUE, 'Chợ Lách, Bến Tre',
     'Chuyên cung cấp Linh Sam, Mai Chiếu Thủy, bonsai hoa quả số lượng lớn. Bao ship đồng bằng sông Cửu Long.',
-    '/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511);
+    '/uploads/shop/cay-kieng-mien-tay.jpg', 'active', NULL, NULL, 10.2350, 106.1511),
+(137, 'Vườn Tùng Cổ Đông Anh', '0935112233', 'tuan.dang@gmail.com', TRUE, 'Đông Anh, Hà Nội',
+    'Chuyên sưu tầm và chăm sóc bonsai tùng, sanh, si theo phong cách vườn Bắc bộ. Nhận tư vấn phối chậu và tạo dáng cây trưởng thành.',
+    '/uploads/shop/dung-cu-bonsai-pro.jpg', 'active', NULL, NULL, 21.1395, 105.8544);
 
 INSERT INTO shops (
     shop_id,
@@ -1126,8 +1129,8 @@ INSERT INTO posts (post_id, post_author_id, post_shop_id, category_id, post_titl
     'oi-bonsai-sai-qua-dang-hoanh',
     'Yên Phong, Bắc Ninh', 'approved', '0978195419', 123, 9, true, now() - interval '7 days', now() - interval '6 days'),
 
-(16, 8, NULL, 11, 'Lộc Vừng Mini',
-    'loc-vung-mini',
+(16, 8, NULL, 11, 'Cây Bonsai Test 0987654321',
+    'cay-bonsai-test-0987654321',
     'Hà Nội', 'approved', '0987654321', 10, 2, true, now() - interval '1 days', now() - interval '1 days');
 
 -- Additional moderation coverage posts
@@ -1188,9 +1191,7 @@ INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUE
 -- Post 14: Lộc Vừng Phong Thủy
 (14, 1, 'Dáng Huyền'),    (14, 2, '72'),  (14, 3, '22'),  (14, 5, 'Bến Tre'),
 -- Post 15: Ổi Bonsai
-(15, 1, 'Dáng Hoành'),    (15, 2, '48'),  (15, 3, '18'),  (15, 4, '7'),  (15, 5, 'Bắc Ninh'),
--- Post 16: Lộc Vừng Mini
-(16, 1, 'Dáng Trực'),     (16, 2, '35'),  (16, 3, '20'),  (16, 4, '5'),  (16, 5, 'Hà Nội');
+(15, 1, 'Dáng Hoành'),    (15, 2, '48'),  (15, 3, '18'),  (15, 4, '7'),  (15, 5, 'Bắc Ninh');
 
 INSERT INTO post_attribute_values (post_id, attribute_id, attribute_value) VALUES
 (17, 1, 'Dáng Trực'), (17, 2, '42'), (17, 3, '16'), (17, 4, '7'), (17, 5, 'Vườn tự ươm'),
@@ -1239,10 +1240,7 @@ INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order) V
 -- Post 14: Lộc Vừng Phong Thủy
 ('post', 14, 'image', '/uploads/loc-vung-huyen-1.jpg', 0),
 -- Post 15: Ổi Bonsai
-('post', 15, 'image', '/uploads/oi-bonsai-sai-qua-1.jpg', 0),
--- Post 16: Lộc Vừng Mini
-('post', 16, 'image', '/uploads/loc-vung-mini-1.jpg', 0),
-('post', 16, 'image', '/uploads/loc-vung-mini-2.jpg', 1);
+('post', 15, 'image', '/uploads/oi-bonsai-sai-qua-1.jpg', 0);
 
 INSERT INTO media_assets (target_type, target_id, media_type, url, sort_order, meta_data) VALUES
 ('post', 17, 'image', '/uploads/pending-post-17-cover.jpg', 0, '{"label":"Ảnh bìa chờ duyệt"}'::jsonb),
@@ -1294,7 +1292,7 @@ INSERT INTO placement_slots (
     placement_slot_rules,
     placement_slot_published
 ) VALUES
-(7, 'BOOST_POST_SPECIAL', 'Vị trí thử nghiệm theo chiến dịch', 2, '{"scope":"Homepage","displayRule":"Manual Override","priority":4,"notes":"Slot đang tắt để kiểm tra trạng thái disabled trong admin."}'::jsonb, false);
+(7, 'BOOST_POST_SPECIAL', 'Vị trí thử nghiệm theo chiến dịch', 1, '{"scope":"Homepage","displayRule":"Manual Override","priority":4,"notes":"Slot đang tắt để kiểm tra trạng thái disabled trong admin."}'::jsonb, false);
 
 INSERT INTO promotion_packages (
     promotion_package_id,
@@ -1323,7 +1321,7 @@ INSERT INTO promotion_packages (
     promotion_package_description,
     promotion_package_published
 ) VALUES
-(7, 7, 'Gói thử nghiệm chiến dịch theo dịp', 14, 2, 60000, 'Gói đang tắt để seed trạng thái disabled ở màn gói quảng bá.', false);
+(7, 7, 'Gói thử nghiệm chiến dịch theo dịp', 14, 1, 60000, 'Gói đang tắt để seed trạng thái disabled ở màn gói quảng bá.', false);
 
 -- Promotion Package Prices
 INSERT INTO promotion_package_prices (price_id, package_id, price, effective_from, effective_to, note, created_by) VALUES
@@ -1665,7 +1663,7 @@ INSERT INTO event_logs (
 (13, NULL, 'notification', 1, 'admin_manual_notification_sent', now() - interval '3 days', '{"scope":"single","recipientId":1,"recipientName":"Nguyễn Thành Nam","recipientCount":1,"title":"Cập nhật hồ sơ shop","finalMessage":"Admin đã tiếp nhận thay đổi hồ sơ shop của bạn và sẽ phản hồi trong vòng 24 giờ.","notificationType":"info","template":{"templateId":7,"templateName":"Notification - Export Completed","templateType":"Notification"},"performedBy":"Quản trị viên hệ thống"}'::jsonb),
 (14, NULL, 'notification', 2, 'admin_manual_notification_sent', now() - interval '2 days', '{"scope":"single","recipientId":2,"recipientName":"Trần Văn Bonsai","recipientCount":1,"title":"Yêu cầu bổ sung minh chứng thanh toán","finalMessage":"Chiến dịch quảng bá của bạn đang chờ xác minh thanh toán. Vui lòng phản hồi nếu cần hỗ trợ thêm.","notificationType":"warning","template":{"templateId":5,"templateName":"Notification - Payment Verification","templateType":"Notification"},"performedBy":"Quản trị viên hệ thống"}'::jsonb),
 (15, NULL, 'notification', NULL, 'admin_manual_notification_sent', now() - interval '1 day', '{"scope":"all_users","recipientCount":12,"title":"Nhắc lịch bảo trì nhẹ","finalMessage":"GreenMarket sẽ bảo trì nhẹ ngoài giờ cao điểm vào 23:00 tối nay. Các giao dịch đang chạy sẽ không bị ảnh hưởng.","notificationType":"info","template":null,"performedBy":"Quản trị viên hệ thống"}'::jsonb),
-(16, 6, 'shop_collaborator', 2, 'admin_collaborator_relationship_active', now() - interval '18 hours', '{"action":"Admin Collaborator Relationship Active","detail":"Quan hệ cộng tác giữa shop và cộng tác viên đã được admin kích hoạt sau khi đối chiếu hồ sơ.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
+(16, 6, 'shop_collaborator', 2, 'admin_collaborator_relationship_reviewed', now() - interval '18 hours', '{"action":"Admin Collaborator Relationship Reviewed","detail":"Admin đã mở chi tiết để đối chiếu quan hệ cộng tác giữa shop và cộng tác viên, không thay đổi trạng thái của hai bên.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
 (17, 136, 'host_content', 4, 'admin_host_content_published', now() - interval '14 hours', '{"action":"Admin Host Content Published","detail":"Bài Host chờ duyệt đã được xuất bản để lên chuyên mục News trên web người dùng.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
 (18, 136, 'admin_host_payout', 1, 'admin_payout_request_completed', now() - interval '10 hours', '{"action":"Admin Payout Request Completed","detail":"Khoản chi trả Host gần nhất đã được xác nhận hoàn tất sau khi chuyển khoản thủ công.","performedBy":"Quản trị viên hệ thống"}'::jsonb),
 (19, 1, 'system_setting', 1, 'admin_system_settings_updated', now() - interval '8 hours', '{"action":"Admin System Settings Updated","detail":"Thiết lập chi trả Host và ngưỡng thưởng theo lượt xem đã được cập nhật.","performedBy":"Quản trị viên hệ thống"}'::jsonb),

@@ -14,11 +14,13 @@ const SLOT_LABELS: Record<string, string> = {
   "Search Boost": "Vị trí 3 trang chủ",
 };
 
+const FIXED_CAPACITY = 1;
+
 const emptyPlacementSlotForm: PlacementSlotFormState = {
   name: "",
   scope: "Homepage",
   positionCode: "",
-  capacity: 1,
+  capacity: FIXED_CAPACITY,
   displayRule: "Priority Score",
   priority: 1,
   notes: "",
@@ -29,7 +31,24 @@ const translateSlotLabel = (value: string | null | undefined) =>
   SLOT_LABELS[value?.trim() || ""] || value?.trim() || "";
 
 const sortPlacementSlots = (slots: PlacementSlot[]) =>
-  [...slots].sort((left, right) => left.id - right.id);
+  [...slots].sort((left, right) => {
+    if (left.priority !== right.priority) {
+      return left.priority - right.priority;
+    }
+
+    return left.id - right.id;
+  });
+
+const getUsedPriorities = (
+  slots: PlacementSlot[],
+  excludeId?: number,
+): Set<number> =>
+  new Set(
+    slots
+      .filter((slot) => (excludeId !== undefined ? slot.id !== excludeId : true))
+      .map((slot) => slot.priority)
+      .filter((priority) => Number.isFinite(priority) && priority >= 1),
+  );
 
 const validateSlotForm = (
   formData: PlacementSlotFormState,
@@ -47,12 +66,19 @@ const validateSlotForm = (
     throw new Error("Mã vị trí là bắt buộc.");
   }
 
-  if (!Number.isFinite(formData.capacity) || formData.capacity < 1) {
-    throw new Error("Sức chứa phải lớn hơn hoặc bằng 1.");
+  if (formData.capacity !== FIXED_CAPACITY) {
+    throw new Error("Sức chứa của vị trí hiển thị được cố định là 1.");
   }
 
   if (!Number.isFinite(formData.priority) || formData.priority < 1) {
     throw new Error("Thứ tự hiển thị phải lớn hơn hoặc bằng 1.");
+  }
+
+  const usedPriorities = getUsedPriorities(existingSlots, excludeId);
+  if (usedPriorities.has(formData.priority)) {
+    throw new Error(
+      "Thứ tự hiển thị này đã được sử dụng. Vui lòng chọn thứ tự khác.",
+    );
   }
 
   const isDuplicatedName = existingSlots.some((slot) => {
@@ -107,7 +133,8 @@ const mapRulesToUi = (rules: Record<string, unknown> | null) => {
 
 const mapApiSlotToUi = (item: PlacementSlotApiResponse): PlacementSlot => {
   const title =
-    translateSlotLabel(item.placementSlotTitle?.trim()) || "Vị trí chưa đặt tên";
+    translateSlotLabel(item.placementSlotTitle?.trim()) ||
+    "Vị trí chưa đặt tên";
   const code = item.placementSlotCode?.trim() || "";
   const mappedRules = mapRulesToUi(item.placementSlotRules);
   const inferredScope = inferScopeFromSlot(code, title);
@@ -120,7 +147,7 @@ const mapApiSlotToUi = (item: PlacementSlotApiResponse): PlacementSlot => {
         ? inferredScope
         : mappedRules.scope,
     positionCode: code,
-    capacity: item.placementSlotCapacity ?? 1,
+    capacity: item.placementSlotCapacity ?? FIXED_CAPACITY,
     displayRule: mappedRules.displayRule,
     priority: mappedRules.priority,
     status: item.placementSlotPublished ? "Active" : "Disabled",
@@ -135,7 +162,7 @@ const buildSlotPayload = (
   return {
     placementSlotCode: normalizeText(formData.positionCode),
     placementSlotTitle: normalizeText(formData.name),
-    placementSlotCapacity: formData.capacity,
+    placementSlotCapacity: FIXED_CAPACITY,
     placementSlotPublished: published,
     placementSlotRules: {
       scope: "Homepage",
@@ -192,7 +219,7 @@ export const placementSlotService = {
       {
         title: "Tổng sức chứa",
         value: String(totalCapacity),
-        subtitle: "Số lượng chiến dịch có thể hiển thị đồng thời",
+        subtitle: "Mỗi vị trí hiển thị cố định một bài cùng thời điểm",
       },
     ];
   },
@@ -265,7 +292,7 @@ export const placementSlotService = {
               name: currentSlot.name,
               scope: currentSlot.scope,
               positionCode: currentSlot.positionCode,
-              capacity: currentSlot.capacity,
+              capacity: FIXED_CAPACITY,
               displayRule: currentSlot.displayRule,
               priority: currentSlot.priority,
               notes: currentSlot.notes,

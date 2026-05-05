@@ -1,5 +1,5 @@
 export type FinancialPayoutStatus = "pending" | "completed";
-export type FinancialAudienceFilter = "all" | "host" | "collaborator";
+export type FinancialAudienceFilter = "host";
 
 export type FinancialPayoutRequest = {
   payoutRequestId: number;

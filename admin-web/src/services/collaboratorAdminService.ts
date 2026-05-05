@@ -4,7 +4,6 @@ import type {
   CollaboratorFilters,
   CollaboratorRelationship,
   CollaboratorRelationshipListResult,
-  CollaboratorRelationshipStatus,
 } from "../types/collaboratorAdmin";
 
 type CollaboratorListApiResponse = {
@@ -18,7 +17,7 @@ type CollaboratorListApiResponse = {
     collaboratorEmail: string | null;
     collaboratorMobile: string | null;
     roleTitle: string;
-    relationshipStatus: CollaboratorRelationshipStatus;
+    relationshipStatus: CollaboratorRelationship["relationshipStatus"];
     relationshipStatusLabel: string;
     joinedAt: string | null;
     publishedPostCount: number;
@@ -77,10 +76,26 @@ const getPostStatusLabel = (status: string) => {
   }
 };
 
+const getShopStatusLabel = (status: string | null | undefined) => {
+  switch ((status ?? "").trim().toLowerCase()) {
+    case "active":
+      return "Đang hoạt động";
+    case "pending":
+      return "Chờ duyệt";
+    case "blocked":
+      return "Đã khóa";
+    case "closed":
+      return "Đã đóng";
+    default:
+      return status?.trim() || "--";
+  }
+};
+
 const normalizeItem = (
   item: CollaboratorListApiResponse["data"][number],
 ): CollaboratorRelationship => ({
   ...item,
+  shopStatus: getShopStatusLabel(item.shopStatus),
   joinedAt: formatDateTime(item.joinedAt),
 });
 
@@ -133,6 +148,7 @@ export const collaboratorAdminService = {
 
     return {
       ...response.data,
+      shopStatus: getShopStatusLabel(response.data.shopStatus),
       joinedAt: formatDateTime(response.data.joinedAt),
       recentPosts: response.data.recentPosts.map((post) => ({
         ...post,
@@ -141,21 +157,5 @@ export const collaboratorAdminService = {
         updatedAt: formatDateTime(post.updatedAt),
       })),
     };
-  },
-
-  async updateRelationshipStatus(
-    collaboratorId: number,
-    payload: {
-      shopId: number;
-      status: CollaboratorRelationshipStatus;
-      note?: string;
-    },
-  ) {
-    await apiClient.request(`/api/admin/collaborators/${collaboratorId}/status`, {
-      method: "PATCH",
-      includeJsonContentType: true,
-      body: JSON.stringify(payload),
-      defaultErrorMessage: "Không thể cập nhật trạng thái cộng tác.",
-    });
   },
 };

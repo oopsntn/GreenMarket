@@ -178,10 +178,6 @@ const translateAudienceLabel = (value: string | null | undefined) => {
     return "Host";
   }
 
-  if (normalized.includes("collaborator") || normalized.includes("cong tac vien")) {
-    return "Cộng tác viên";
-  }
-
   if (normalized.includes("host")) {
     return "Host";
   }
@@ -388,9 +384,7 @@ const buildQuery = (filters: FinancialFilters) => {
     params.set("status", filters.status);
   }
 
-  if (filters.audience !== "all") {
-    params.set("audience", filters.audience);
-  }
+  params.set("audience", "host");
 
   params.set("page", String(filters.page));
   params.set("limit", String(filters.limit));

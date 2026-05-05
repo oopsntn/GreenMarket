@@ -16,6 +16,7 @@ type EventLogMeta = {
   moduleLabel?: string;
   targetType?: string;
   targetName?: string;
+  targetCode?: string;
 };
 
 type ActivityModuleKey =
@@ -315,6 +316,22 @@ const resolveActorRole = (rowUserId: number | null, meta: EventLogMeta | null) =
   return rowUserId ? "Người dùng" : "Hệ thống";
 };
 
+const deriveTargetCode = (
+  targetType: string | null,
+  targetId: number | null,
+) => {
+  if (!targetType || !targetId) {
+    return "";
+  }
+
+  if (targetType === "post") return `POST-${targetId}`;
+  if (targetType === "shop") return `SHOP-${targetId}`;
+  if (targetType === "slot") return `SLOT-${targetId}`;
+  if (targetType === "category") return `CAT-${targetId}`;
+
+  return "";
+};
+
 const resolveTarget = (
   definition: EventDefinition,
   meta: EventLogMeta | null,
@@ -326,11 +343,17 @@ const resolveTarget = (
     userEmail: string | null;
   },
 ) => {
+  const metaTargetCode = meta?.targetCode?.trim() || "";
+  const derivedTargetCode = deriveTargetCode(
+    row.eventLogTargetType,
+    row.eventLogTargetId,
+  );
+
   if (meta?.targetName?.trim()) {
     return {
       targetType: meta.targetType?.trim() || definition.targetType,
       targetName: meta.targetName.trim(),
-      targetCode: "",
+      targetCode: metaTargetCode || derivedTargetCode || "SYSTEM-RECORD",
     };
   }
 
@@ -406,7 +429,7 @@ const resolveTarget = (
   return {
     targetType: definition.targetType,
     targetName: meta?.targetName?.trim() || "Bản ghi hệ thống",
-    targetCode: "",
+    targetCode: metaTargetCode || derivedTargetCode || "SYSTEM-RECORD",
   };
 };
 

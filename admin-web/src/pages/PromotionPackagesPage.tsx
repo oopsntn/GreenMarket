@@ -94,6 +94,20 @@ function PromotionPackagesPage() {
 
     return ["All", ...uniqueSlots];
   }, [packages, slotOptions]);
+  const availableAddSlotOptions = useMemo(
+    () =>
+      promotionPackageService.getSelectableSlotOptions(slotOptions, packages, null),
+    [packages, slotOptions],
+  );
+  const selectableSlotOptions = useMemo(
+    () =>
+      promotionPackageService.getSelectableSlotOptions(
+        slotOptions,
+        packages,
+        modalMode === "edit" ? editingPackageId : null,
+      ),
+    [editingPackageId, modalMode, packages, slotOptions],
+  );
 
   const showToast = (message: string, tone: ToastItem["tone"] = "success") => {
     const toastId = Date.now() + Math.random();
@@ -198,29 +212,52 @@ function PromotionPackagesPage() {
       return;
     }
 
+    if (availableAddSlotOptions.length === 0) {
+      showToast(
+        "Không còn vị trí đang bật nào có thể dùng cho gói quảng bá mới.",
+        "error",
+      );
+      return;
+    }
+
     setModalMode("add");
     setEditingPackageId(null);
     setFormData({
       ...promotionPackageService.getEmptyForm(),
-      slot: slotOptions[0]?.label ?? "",
+      slot: availableAddSlotOptions[0]?.label ?? "",
     });
     setFormError("");
     setIsFormModalOpen(true);
   };
 
   const openEditModal = (item: PromotionPackage) => {
+    const nextSelectableSlotOptions = promotionPackageService.getSelectableSlotOptions(
+      slotOptions,
+      packages,
+      item.id,
+    );
+    const currentSlotStillSelectable = nextSelectableSlotOptions.some(
+      (slot) => slot.label === item.slot,
+    );
+
     setModalMode("edit");
     setEditingPackageId(item.id);
     setFormData({
       name: item.name,
-      slot: item.slot,
+      slot: currentSlotStillSelectable
+        ? item.slot
+        : (nextSelectableSlotOptions[0]?.label ?? ""),
       durationDays: item.durationDays,
       price: String(currencyToNumber(item.price)),
-      maxPosts: item.maxPosts,
+      maxPosts: 1,
       displayQuota: item.displayQuota,
       description: item.description,
     });
-    setFormError("");
+    setFormError(
+      currentSlotStillSelectable
+        ? ""
+        : "Vị trí hiển thị của gói này đã tắt. Vui lòng chọn một vị trí đang bật khác trước khi lưu.",
+    );
     setIsFormModalOpen(true);
   };
 
@@ -230,7 +267,7 @@ function PromotionPackagesPage() {
     setEditingPackageId(null);
     setFormData({
       ...promotionPackageService.getEmptyForm(),
-      slot: slotOptions[0]?.label ?? "",
+      slot: "",
     });
     setFormError("");
     setIsFormModalOpen(false);
@@ -247,7 +284,6 @@ function PromotionPackagesPage() {
       ...prev,
       [name]:
         name === "durationDays" ||
-        name === "maxPosts" ||
         name === "displayQuota"
           ? Number(value)
           : value,
@@ -268,12 +304,12 @@ function PromotionPackagesPage() {
         modalMode === "add"
           ? await promotionPackageService.createPromotionPackage(
               packages,
-              slotOptions,
+              selectableSlotOptions,
               formData,
             )
           : await promotionPackageService.updatePromotionPackage(
               packages,
-              slotOptions,
+              selectableSlotOptions,
               editingPackageId as number,
               formData,
             );
@@ -687,7 +723,7 @@ function PromotionPackagesPage() {
               onChange={handleFormChange}
               disabled={isSubmitting}
             >
-              {slotOptions.map((slot) => (
+              {selectableSlotOptions.map((slot) => (
                 <option key={slot.code} value={slot.label}>
                   {slot.label}
                 </option>
@@ -726,8 +762,7 @@ function PromotionPackagesPage() {
               type="number"
               min={1}
               value={formData.maxPosts}
-              onChange={handleFormChange}
-              disabled={isSubmitting}
+              disabled
             />
           </label>
 

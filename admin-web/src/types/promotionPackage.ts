@@ -1,3 +1,5 @@
+import type { PlacementSlotStatus } from "./placementSlot";
+
 export type PromotionPackageSlot = string;
 export type PromotionPackageStatus = "Active" | "Disabled";
 
@@ -43,6 +45,7 @@ export type PromotionPackageSlotOption = {
   id: number;
   code: string;
   label: PromotionPackageSlot;
+  status: PlacementSlotStatus;
 };
 
 export type PromotionPackageSummaryCard = {

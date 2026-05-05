@@ -14,6 +14,11 @@ import { parseId } from "../../utils/parseId";
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").trim();
 
+const extractPriority = (rules: Record<string, unknown> | null | undefined) => {
+  const value = rules?.priority;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+};
+
 const validatePlacementSlotPayload = async (
   payload: Partial<NewPlacementSlot>,
   excludeId?: number,
@@ -37,15 +42,15 @@ const validatePlacementSlotPayload = async (
   if (
     typeof placementSlotCapacity !== "number" ||
     !Number.isFinite(placementSlotCapacity) ||
-    placementSlotCapacity < 1
+    placementSlotCapacity !== 1
   ) {
-    return "placementSlotCapacity must be a number greater than or equal to 1";
+    return "placementSlotCapacity must be fixed at 1";
   }
 
-  const priority = placementSlotRules?.priority;
+  const priority = extractPriority(placementSlotRules);
   if (
-    priority !== undefined &&
-    (typeof priority !== "number" || !Number.isFinite(priority) || priority < 1)
+    priority !== null &&
+    priority < 1
   ) {
     return "placementSlotRules.priority must be a number greater than or equal to 1";
   }
@@ -82,6 +87,20 @@ const validatePlacementSlotPayload = async (
     return "placementSlotTitle already exists";
   }
 
+  if (priority !== null) {
+    const duplicatedPriority = allSlots.some((slot) => {
+      if (excludeId !== undefined && slot.placementSlotId === excludeId) {
+        return false;
+      }
+
+      return extractPriority(slot.placementSlotRules as Record<string, unknown> | null) === priority;
+    });
+
+    if (duplicatedPriority) {
+      return "Thứ tự hiển thị đã tồn tại";
+    }
+  }
+
   return null;
 };
 
@@ -98,7 +117,7 @@ const buildPlacementSlotPayload = (
   return {
     placementSlotCode: normalizeText(payload.placementSlotCode),
     placementSlotTitle: normalizeText(payload.placementSlotTitle),
-    placementSlotCapacity: payload.placementSlotCapacity,
+    placementSlotCapacity: 1,
     placementSlotPublished: payload.placementSlotPublished ?? false,
     placementSlotRules,
   };
@@ -238,8 +257,7 @@ export const updatePlacementSlot = async (
         req.body.placementSlotCode ?? existingSlot.placementSlotCode,
       placementSlotTitle:
         req.body.placementSlotTitle ?? existingSlot.placementSlotTitle,
-      placementSlotCapacity:
-        req.body.placementSlotCapacity ?? existingSlot.placementSlotCapacity,
+      placementSlotCapacity: 1,
       placementSlotPublished:
         req.body.placementSlotPublished ?? existingSlot.placementSlotPublished,
       placementSlotRules:

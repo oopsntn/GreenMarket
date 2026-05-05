@@ -109,8 +109,8 @@ export type AdminBoostedPostResponse = {
 
 type PromotionActionPayload = {
     packageId: number;
-    startDate: string;
-    endDate: string;
+    startDate?: string;
+    endDate?: string;
     paymentStatus: "Paid" | "Pending Verification";
     adminNote?: string;
 };
@@ -1077,8 +1077,8 @@ export const adminPromotionService = {
             throw new Error("Không tìm thấy gói quảng bá.");
         }
 
-        const startAt = parseDateInput(payload.startDate);
-        const endAt = parseDateInput(payload.endDate);
+        const startAt = payload.startDate ? parseDateInput(payload.startDate) : null;
+        const endAt = payload.endDate ? parseDateInput(payload.endDate) : null;
         validatePromotionActionDates(
             startAt,
             endAt,
@@ -1163,12 +1163,10 @@ export const adminPromotionService = {
             throw new Error("Không tìm thấy gói quảng bá.");
         }
 
-        const startAt = parseDateInput(payload.startDate);
-        const endAt = parseDateInput(payload.endDate);
-        validatePromotionActionDates(
+        const startAt = new Date();
+        const endAt = calculateExpectedEndAt(
             startAt,
-            endAt,
-            packageRecord.promotionPackageDurationDays,
+            Math.max(Number(packageRecord.promotionPackageDurationDays ?? 0), 1),
         );
 
         if (!packageRecord.promotionPackagePublished) {
@@ -1194,9 +1192,9 @@ export const adminPromotionService = {
             .set({
                 postPromotionPackageId: packageRecord.promotionPackageId,
                 postPromotionSlotId: packageRecord.promotionPackageSlotId,
-                postPromotionStartAt: startAt!,
-                postPromotionEndAt: endAt!,
-                postPromotionStatus: getPersistedStatus(startAt!, "active"),
+                postPromotionStartAt: startAt,
+                postPromotionEndAt: endAt,
+                postPromotionStatus: getPersistedStatus(startAt, "active"),
             })
             .where(eq(postPromotions.postPromotionId, promotionId))
             .returning({ id: postPromotions.postPromotionId });
@@ -1218,7 +1216,7 @@ export const adminPromotionService = {
             slotId: packageRecord.promotionPackageSlotId,
             actorName,
             action: "Mở lại chiến dịch quảng bá",
-            detail: `Chiến dịch quảng bá cho bài "${current.postTitle}" đã được mở lại với gói "${packageRecord.promotionPackageTitle ?? "Không rõ tên"}" từ ${payload.startDate} đến ${payload.endDate}.`,
+            detail: `Chiến dịch quảng bá cho bài "${current.postTitle}" đã được mở lại ngay khi admin xác nhận với gói "${packageRecord.promotionPackageTitle ?? "Không rõ tên"}", hiệu lực đến ${formatDate(endAt)}.`,
             targetName: current.postTitle,
         });
 

@@ -12,8 +12,8 @@ export type PromotionPackageActionPayload = {
   packageId: number;
   packageName: string;
   slot: PromotionSlot;
-  startDate: string;
-  endDate: string;
+  startDate?: string;
+  endDate?: string;
   budget: string;
   paymentStatus: PromotionPaymentStatus;
   adminNote: string;

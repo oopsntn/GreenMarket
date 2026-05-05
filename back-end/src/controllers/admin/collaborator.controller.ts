@@ -4,34 +4,16 @@ import { db } from "../../config/db.ts";
 import { AuthRequest } from "../../dtos/auth";
 import {
   businessRoles,
-  eventLogs,
   posts,
   shopCollaborators,
   shops,
   users,
 } from "../../models/schema/index.ts";
 import { parseId } from "../../utils/parseId.ts";
-import { notificationService } from "../../services/notification.service.ts";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
-const COLLABORATOR_EVENT_PREFIX = "admin_collaborator_relationship";
-
-type CollaboratorStatus = "active" | "pending" | "rejected" | "removed";
-
-type UpdateCollaboratorStatusPayload = {
-  status?: string;
-  note?: string;
-};
-
-const ALLOWED_STATUS_TRANSITIONS: Record<CollaboratorStatus, CollaboratorStatus[]> = {
-  pending: ["active", "rejected"],
-  active: ["removed"],
-  rejected: ["pending", "active"],
-  removed: ["pending", "active"],
-};
-
 const normalizeString = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
 
@@ -43,11 +25,6 @@ const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
 
   return { page, limit, offset };
 };
-
-const getPerformedBy = (req: AuthRequest) =>
-  normalizeString(req.user?.name) ||
-  normalizeString(req.user?.email) ||
-  "Quản trị viên hệ thống";
 
 const resolveRelationshipStatusLabel = (status: string | null) => {
   switch ((status || "").toLowerCase()) {
@@ -86,48 +63,6 @@ const buildListWhereClause = (req: AuthRequest) => {
   }
 
   return conditions.length > 0 ? and(...conditions) : undefined;
-};
-
-const buildNotificationByStatus = (
-  status: CollaboratorStatus,
-  shopName: string,
-  note: string,
-) => {
-  if (status === "active") {
-    return {
-      title: "Quan hệ cộng tác đã được kích hoạt",
-      message: `Bạn hiện đang được ghi nhận là cộng tác viên hoạt động của shop ${shopName}.`,
-      type: "success" as const,
-    };
-  }
-
-  if (status === "removed") {
-    return {
-      title: "Quan hệ cộng tác đã kết thúc",
-      message: note
-        ? `Quan hệ cộng tác với shop ${shopName} đã được quản trị viên kết thúc. Ghi chú: ${note}`
-        : `Quan hệ cộng tác với shop ${shopName} đã được quản trị viên kết thúc.`,
-      type: "warning" as const,
-    };
-  }
-
-  if (status === "rejected") {
-    return {
-      title: "Lời mời cộng tác đã bị từ chối",
-      message: note
-        ? `Lời mời cộng tác với shop ${shopName} không được chấp nhận. Ghi chú: ${note}`
-        : `Lời mời cộng tác với shop ${shopName} không được chấp nhận.`,
-      type: "warning" as const,
-    };
-  }
-
-  return {
-    title: "Quan hệ cộng tác chuyển về chờ xử lý",
-    message: note
-      ? `Quan hệ cộng tác với shop ${shopName} đang được đưa về trạng thái chờ xử lý. Ghi chú: ${note}`
-      : `Quan hệ cộng tác với shop ${shopName} đang được đưa về trạng thái chờ xử lý.`,
-    type: "info" as const,
-  };
 };
 
 export const getAdminCollaborators = async (
@@ -378,151 +313,5 @@ export const getAdminCollaboratorDetail = async (
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Không thể tải chi tiết cộng tác viên." });
-  }
-};
-
-export const updateAdminCollaboratorStatus = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
-  try {
-    const collaboratorId = parseId(req.params.id as string);
-    const shopId = parseId(req.body?.shopId);
-    const nextStatus = normalizeString(
-      (req.body as UpdateCollaboratorStatusPayload).status,
-    ).toLowerCase() as CollaboratorStatus;
-    const note = normalizeString((req.body as UpdateCollaboratorStatusPayload).note);
-
-    if (!collaboratorId || !shopId) {
-      res.status(400).json({ error: "Thiếu thông tin shop hoặc cộng tác viên." });
-      return;
-    }
-
-    if (!["active", "pending", "rejected", "removed"].includes(nextStatus)) {
-      res.status(400).json({ error: "Trạng thái cộng tác không hợp lệ." });
-      return;
-    }
-
-    const [relationship] = await db
-      .select({
-        shopId: shopCollaborators.shopCollaboratorsShopId,
-        collaboratorId: shopCollaborators.collaboratorId,
-        previousStatus: shopCollaborators.shopCollaboratorsStatus,
-        shopName: shops.shopName,
-        collaboratorName: users.userDisplayName,
-        collaboratorEmail: users.userEmail,
-      })
-      .from(shopCollaborators)
-      .innerJoin(
-        shops,
-        eq(shopCollaborators.shopCollaboratorsShopId, shops.shopId),
-      )
-      .innerJoin(users, eq(shopCollaborators.collaboratorId, users.userId))
-      .where(
-        and(
-          eq(shopCollaborators.shopCollaboratorsShopId, shopId),
-          eq(shopCollaborators.collaboratorId, collaboratorId),
-        ),
-      )
-      .limit(1);
-
-    if (!relationship) {
-      res.status(404).json({ error: "Không tìm thấy quan hệ cộng tác này." });
-      return;
-    }
-
-    const previousStatus = relationship.previousStatus as CollaboratorStatus;
-    if (previousStatus === nextStatus) {
-      res.json({
-        message: "Trạng thái cộng tác không thay đổi.",
-        data: {
-          relationshipStatus: previousStatus,
-          relationshipStatusLabel: resolveRelationshipStatusLabel(previousStatus),
-        },
-      });
-      return;
-    }
-
-    const allowedNextStatuses = ALLOWED_STATUS_TRANSITIONS[previousStatus] ?? [];
-    if (!allowedNextStatuses.includes(nextStatus)) {
-      res.status(400).json({
-        error: `Không thể chuyển trạng thái từ ${resolveRelationshipStatusLabel(previousStatus)} sang ${resolveRelationshipStatusLabel(nextStatus)}.`,
-      });
-      return;
-    }
-
-    if ((nextStatus === "rejected" || nextStatus === "removed") && !note) {
-      res.status(400).json({
-        error: "Vui lòng nhập ghi chú khi từ chối hoặc kết thúc cộng tác.",
-      });
-      return;
-    }
-
-    const [updated] = await db
-      .update(shopCollaborators)
-      .set({
-        shopCollaboratorsStatus: nextStatus,
-      })
-      .where(
-        and(
-          eq(shopCollaborators.shopCollaboratorsShopId, shopId),
-          eq(shopCollaborators.collaboratorId, collaboratorId),
-        ),
-      )
-      .returning();
-
-    const performedBy = getPerformedBy(req);
-    const notification = buildNotificationByStatus(
-      nextStatus,
-      relationship.shopName,
-      note,
-    );
-
-    await notificationService.sendNotification({
-      recipientId: collaboratorId,
-      title: notification.title,
-      message: notification.message,
-      type: notification.type,
-      metaData: {
-        source: "admin_collaborator",
-        shopId,
-        collaboratorId,
-        relationshipStatus: nextStatus,
-      },
-    });
-
-    await db.insert(eventLogs).values({
-      eventLogUserId: null,
-      eventLogTargetType: "shop",
-      eventLogTargetId: shopId,
-      eventLogEventType: `${COLLABORATOR_EVENT_PREFIX}_${nextStatus}`,
-      eventLogEventTime: new Date(),
-      eventLogMeta: {
-        collaboratorId,
-        shopId,
-        previousStatus: relationship.previousStatus,
-        nextStatus,
-        note,
-        performedBy,
-        collaboratorName:
-          normalizeString(relationship.collaboratorName) ||
-          normalizeString(relationship.collaboratorEmail) ||
-          `Cộng tác viên #${collaboratorId}`,
-        shopName: relationship.shopName,
-      },
-    });
-
-    res.json({
-      message: "Đã cập nhật trạng thái cộng tác.",
-      data: {
-        ...updated,
-        relationshipStatusLabel: resolveRelationshipStatusLabel(
-          updated.shopCollaboratorsStatus,
-        ),
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Không thể cập nhật trạng thái cộng tác." });
   }
 };
