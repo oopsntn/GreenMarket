@@ -25,8 +25,8 @@ export const getVNPayConfig = (): VNPayConfig => {
         ipnUrl: getEnv("VNPAY_IPN_URL").trim(),
         frontendUrl: getEnv("FRONTEND_URL", "http://localhost:5173").trim(),
         frontendPaymentResultPath: getEnv("FRONTEND_PAYMENT_RESULT_PATH", "/payment-result").trim(),
-        mobileUrl: getEnv("MOBILE_URL", "exp://127.0.0.1:8081").trim(),
-        mobilePaymentResultPath: getEnv("MOBILE_PAYMENT_RESULT_PATH", "/--/payment-result").trim(),
+        mobileUrl: getEnv("MOBILE_URL", "greenmarket://").trim(),
+        mobilePaymentResultPath: getEnv("MOBILE_PAYMENT_RESULT_PATH", "/payment-result").trim(),
     };
 };
 
@@ -65,7 +65,10 @@ export const createVNPayPaymentRequest = async (
     orderId: string,
     orderInfo: string,
     ipAddr: string,
-    platform: "web" | "mobile" = "web"
+    platform: "web" | "mobile" = "web",
+    options?: {
+        mobileRedirectUrl?: string;
+    }
 ): Promise<{ payUrl: string }> => {
     const config = getVNPayConfig();
 
@@ -82,6 +85,9 @@ export const createVNPayPaymentRequest = async (
     if (platform === "mobile") {
         const urlObj = new URL(returnUrl);
         urlObj.searchParams.set("platform", "mobile");
+        if (options?.mobileRedirectUrl) {
+            urlObj.searchParams.set("mobile_redirect_url", options.mobileRedirectUrl);
+        }
         returnUrl = urlObj.toString();
     }
 
@@ -166,13 +172,17 @@ export const buildPaymentResultRedirectUrl = (
         txnRef?: string;
         message?: string;
     },
-    platform: "web" | "mobile" = "web"
+    platform: "web" | "mobile" = "web",
+    mobileRedirectUrl?: string
 ): string => {
     const config = getVNPayConfig();
-    const baseUrl = new URL(
-        platform === "mobile" ? config.mobilePaymentResultPath : config.frontendPaymentResultPath,
-        platform === "mobile" ? config.mobileUrl : config.frontendUrl
-    );
+    const baseUrl =
+        platform === "mobile" && mobileRedirectUrl
+            ? new URL(mobileRedirectUrl)
+            : new URL(
+                  platform === "mobile" ? config.mobilePaymentResultPath : config.frontendPaymentResultPath,
+                  platform === "mobile" ? config.mobileUrl : config.frontendUrl
+              );
     baseUrl.searchParams.set("status", payload.status);
 
     if (payload.code) baseUrl.searchParams.set("code", payload.code);

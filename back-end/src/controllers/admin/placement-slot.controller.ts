@@ -14,6 +14,13 @@ import { parseId } from "../../utils/parseId";
 const normalizeText = (value: string | null | undefined) =>
   (value ?? "").trim();
 
+const BOOST_POST_SLOT_CODE_PATTERN = /^BOOST_POST(?:_\d+)?$/i;
+
+const extractPriority = (rules: Record<string, unknown> | null | undefined) => {
+  const value = rules?.priority;
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+};
+
 const validatePlacementSlotPayload = async (
   payload: Partial<NewPlacementSlot>,
   excludeId?: number,
@@ -27,27 +34,28 @@ const validatePlacementSlotPayload = async (
     | undefined;
 
   if (!placementSlotCode) {
-    return "placementSlotCode is required";
+    return "Mã vị trí là bắt buộc.";
+  }
+
+  if (!BOOST_POST_SLOT_CODE_PATTERN.test(placementSlotCode)) {
+    return "Mã vị trí phải theo đúng định dạng BOOST_POST hoặc BOOST_POST_<số>.";
   }
 
   if (!placementSlotTitle) {
-    return "placementSlotTitle is required";
+    return "Tên vị trí là bắt buộc.";
   }
 
   if (
     typeof placementSlotCapacity !== "number" ||
     !Number.isFinite(placementSlotCapacity) ||
-    placementSlotCapacity < 1
+    placementSlotCapacity !== 1
   ) {
-    return "placementSlotCapacity must be a number greater than or equal to 1";
+    return "Sức chứa của vị trí hiển thị phải cố định là 1.";
   }
 
-  const priority = placementSlotRules?.priority;
-  if (
-    priority !== undefined &&
-    (typeof priority !== "number" || !Number.isFinite(priority) || priority < 1)
-  ) {
-    return "placementSlotRules.priority must be a number greater than or equal to 1";
+  const priority = extractPriority(placementSlotRules);
+  if (priority !== null && priority < 1) {
+    return "Thứ tự hiển thị phải là số lớn hơn hoặc bằng 1.";
   }
 
   const allSlots = await db.select().from(placementSlots);
@@ -64,7 +72,7 @@ const validatePlacementSlotPayload = async (
   });
 
   if (duplicatedCode) {
-    return "placementSlotCode already exists";
+    return "Mã vị trí đã tồn tại. Vui lòng nhập mã khác.";
   }
 
   const duplicatedTitle = allSlots.some((slot) => {
@@ -79,7 +87,24 @@ const validatePlacementSlotPayload = async (
   });
 
   if (duplicatedTitle) {
-    return "placementSlotTitle already exists";
+    return "Tên vị trí đã tồn tại. Vui lòng nhập tên khác.";
+  }
+
+  if (priority !== null) {
+    const duplicatedPriority = allSlots.some((slot) => {
+      if (excludeId !== undefined && slot.placementSlotId === excludeId) {
+        return false;
+      }
+
+      return (
+        extractPriority(slot.placementSlotRules as Record<string, unknown> | null) ===
+        priority
+      );
+    });
+
+    if (duplicatedPriority) {
+      return "Thứ tự hiển thị này đã được sử dụng. Vui lòng chọn thứ tự khác.";
+    }
   }
 
   return null;
@@ -98,7 +123,7 @@ const buildPlacementSlotPayload = (
   return {
     placementSlotCode: normalizeText(payload.placementSlotCode),
     placementSlotTitle: normalizeText(payload.placementSlotTitle),
-    placementSlotCapacity: payload.placementSlotCapacity,
+    placementSlotCapacity: 1,
     placementSlotPublished: payload.placementSlotPublished ?? false,
     placementSlotRules,
   };
@@ -238,8 +263,7 @@ export const updatePlacementSlot = async (
         req.body.placementSlotCode ?? existingSlot.placementSlotCode,
       placementSlotTitle:
         req.body.placementSlotTitle ?? existingSlot.placementSlotTitle,
-      placementSlotCapacity:
-        req.body.placementSlotCapacity ?? existingSlot.placementSlotCapacity,
+      placementSlotCapacity: 1,
       placementSlotPublished:
         req.body.placementSlotPublished ?? existingSlot.placementSlotPublished,
       placementSlotRules:

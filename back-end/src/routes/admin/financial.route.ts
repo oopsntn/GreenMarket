@@ -8,6 +8,7 @@ import {
   getHostPayoutCandidates,
   processPayoutRequest,
   rejectPayoutRequest,
+  updatePayoutRequest,
 } from "../../controllers/admin/financial.controller.ts";
 
 const router = Router();
@@ -34,6 +35,12 @@ router.get(
   "/payout-requests/:id",
   requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
   getPayoutRequestDetail,
+);
+
+router.patch(
+  "/payout-requests/:id",
+  requireRoles("ROLE_SUPER_ADMIN", "ROLE_ADMIN"),
+  updatePayoutRequest,
 );
 
 router.patch(

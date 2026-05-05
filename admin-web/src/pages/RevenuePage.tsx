@@ -11,14 +11,15 @@ import { exportService } from "../services/exportService";
 import { revenueService } from "../services/revenueService";
 import {
   coerceDateRange,
-  DEFAULT_REPORT_FROM_DATE,
-  DEFAULT_REPORT_TO_DATE,
   formatDateRangeLabel,
+  getPastDateValue,
   getTodayDateValue,
 } from "../utils/dateRange";
 import "./RevenuePage.css";
 
 const PAGE_SIZE = 5;
+const DEFAULT_REVENUE_TO_DATE = getTodayDateValue();
+const DEFAULT_REVENUE_FROM_DATE = getPastDateValue(90);
 const ALL_SLOTS_FILTER = "Tất cả vị trí";
 
 function RevenuePage() {
@@ -27,8 +28,8 @@ function RevenuePage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState("");
-  const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
-  const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
+  const [fromDate, setFromDate] = useState(DEFAULT_REVENUE_FROM_DATE);
+  const [toDate, setToDate] = useState(DEFAULT_REVENUE_TO_DATE);
   const [slotFilter, setSlotFilter] = useState(ALL_SLOTS_FILTER);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [page, setPage] = useState(1);

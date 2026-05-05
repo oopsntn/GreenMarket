@@ -14,7 +14,6 @@ import {
     Building2,
     ChevronRight,
     FileText,
-    LogOut,
     MailOpen,
     UserCheck,
 } from 'lucide-react-native';
@@ -98,42 +97,13 @@ const DashboardScreen = () => {
     };
 
     const handleLogout = () => {
-        CustomAlert(
-            'Đăng xuất',
-            'Bạn có chắc muốn đăng xuất không?',
-            [
-                { text: 'Hủy', style: 'cancel' },
-                { text: 'Đăng xuất', style: 'destructive', onPress: logout }
-            ]
-        );
+        CustomAlert('Đăng xuất', 'Bạn có chắc muốn đăng xuất không?', [
+            { text: 'Hủy', style: 'cancel' },
+            { text: 'Đăng xuất', style: 'destructive', onPress: logout },
+        ]);
     };
 
-    const toggleAvailability = async () => {
-        if (!profileData?.profile) return;
-
-        const nextStatus =
-            profileData.profile.availabilityStatus === 'available' ? 'busy' : 'available';
-
-        try {
-            await CollaboratorService.updateAvailability({ availabilityStatus: nextStatus });
-            await loadDashboard();
-        } catch (error: any) {
-            CustomAlert(
-                'Lỗi',
-                error?.response?.data?.error || 'Không thể cập nhật trạng thái làm việc lúc này.',
-            );
-        }
-    };
-
-    const displayName =
-        profileData?.profile?.displayName ||
-        user?.userDisplayName ||
-        'Cộng tác viên';
-
-    const availabilityLabel =
-        profileData?.profile?.availabilityStatus === 'available'
-            ? 'Sẵn sàng hợp tác'
-            : 'Tạm bận';
+    const displayName = profileData?.profile?.displayName || user?.userDisplayName || 'Cộng tác viên';
 
     return (
         <SafeAreaView style={styles.container}>
@@ -148,7 +118,8 @@ const DashboardScreen = () => {
                             <Text style={styles.welcomeText}>Xin chào,</Text>
                             <Text style={styles.nameText}>{displayName}</Text>
                             <Text style={styles.subtitleText}>
-                                Tập trung nhận lời mời từ chủ shop và đăng bài thay mặt shop đang hợp tác.
+                                Quản lý lời mời từ chủ shop, theo dõi shop đang hợp tác và đăng bài thay mặt shop
+                                đã liên kết.
                             </Text>
                         </View>
 
@@ -166,19 +137,12 @@ const DashboardScreen = () => {
                     </View>
 
                     <View style={styles.profileCard}>
-                        <Text style={styles.profileLabel}>TRẠNG THÁI HỢP TÁC</Text>
-                        <Text style={styles.profileStatus}>{availabilityLabel}</Text>
+                        <Text style={styles.profileLabel}>VAI TRÒ CỘNG TÁC VIÊN</Text>
+                        <Text style={styles.profileStatus}>Sẵn sàng nhận việc từ shop đã kết nối</Text>
                         <Text style={styles.profileText}>
-                            Trạng thái này sẽ hiển thị cho chủ shop khi họ xem danh sách cộng tác viên công khai.
+                            Mobile không còn dùng trạng thái “tạm bận” hay “sẵn sàng hợp tác” vì nó không ảnh hưởng
+                            đến lời mời, quyền đăng bài hay khả năng liên hệ.
                         </Text>
-
-                        <TouchableOpacity style={styles.profileAction} onPress={toggleAvailability}>
-                            <Text style={styles.profileActionText}>
-                                {profileData?.profile?.availabilityStatus === 'available'
-                                    ? 'Đặt tạm bận'
-                                    : 'Đặt sẵn sàng'}
-                            </Text>
-                        </TouchableOpacity>
                     </View>
                 </LinearGradient>
 
@@ -190,16 +154,8 @@ const DashboardScreen = () => {
                     ) : null}
 
                     <View style={styles.statsRow}>
-                        <StatCard
-                            title="Lời mời"
-                            value={invitationCount}
-                            helper="Đang chờ phản hồi"
-                        />
-                        <StatCard
-                            title="Shop đang hợp tác"
-                            value={activeShopCount}
-                            helper="Có thể đăng bài thay mặt"
-                        />
+                        <StatCard title="Lời mời" value={invitationCount} helper="Đang chờ phản hồi" />
+                        <StatCard title="Shop đang hợp tác" value={activeShopCount} helper="Có thể đăng bài thay mặt" />
                     </View>
 
                     <View style={styles.section}>
@@ -229,14 +185,13 @@ const DashboardScreen = () => {
                                 icon={<UserCheck color="#16A34A" size={20} />}
                                 onPress={() => navigation.navigate('Notifications')}
                             />
-                            <QuickAction
-                                title="Đăng xuất"
-                                description="Thoát khỏi tài khoản hiện tại"
-                                icon={<LogOut color="#EF4444" size={20} />}
-                                onPress={handleLogout}
-                            />
                         </View>
                     </View>
+
+                    <TouchableOpacity style={styles.logoutCard} activeOpacity={0.85} onPress={handleLogout}>
+                        <Text style={styles.logoutTitle}>Đăng xuất</Text>
+                        <Text style={styles.logoutText}>Rời khỏi tài khoản cộng tác viên trên thiết bị này.</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -249,7 +204,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F8FAFC',
     },
     header: {
-        paddingTop: 20,
+        paddingTop: 60,
         paddingHorizontal: 24,
         paddingBottom: 80,
         borderBottomLeftRadius: 32,
@@ -293,7 +248,7 @@ const styles = StyleSheet.create({
         minWidth: 20,
         height: 20,
         borderRadius: 999,
-        backgroundColor: '#ef4444',
+        backgroundColor: '#EF4444',
         paddingHorizontal: 5,
         alignItems: 'center',
         justifyContent: 'center',
@@ -301,7 +256,7 @@ const styles = StyleSheet.create({
         borderColor: '#064E3B',
     },
     badgeText: {
-        color: '#fff',
+        color: '#FFF',
         fontSize: 10,
         fontWeight: '800',
     },
@@ -330,19 +285,6 @@ const styles = StyleSheet.create({
         fontSize: 13,
         lineHeight: 20,
     },
-    profileAction: {
-        marginTop: 14,
-        alignSelf: 'flex-start',
-        backgroundColor: '#fff',
-        paddingHorizontal: 14,
-        paddingVertical: 10,
-        borderRadius: 12,
-    },
-    profileActionText: {
-        color: '#065F46',
-        fontSize: 13,
-        fontWeight: '700',
-    },
     content: {
         paddingHorizontal: 24,
         marginTop: -50,
@@ -369,7 +311,7 @@ const styles = StyleSheet.create({
     },
     statCard: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#FFF',
         borderRadius: 24,
         padding: 16,
         shadowColor: '#000',
@@ -439,6 +381,23 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#64748B',
         marginTop: 2,
+    },
+    logoutCard: {
+        backgroundColor: '#FFF7ED',
+        borderWidth: 1,
+        borderColor: '#FED7AA',
+        borderRadius: 20,
+        padding: 18,
+    },
+    logoutTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#9A3412',
+    },
+    logoutText: {
+        marginTop: 4,
+        fontSize: 12,
+        color: '#C2410C',
     },
 });
 

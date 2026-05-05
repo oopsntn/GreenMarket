@@ -48,7 +48,7 @@ const ACTION_LABELS: Record<string, string> = {
   "promotion resumed": "Tiếp tục chiến dịch quảng bá",
   "promotion reopened": "Mở lại chiến dịch quảng bá",
   "moderation updated": "Cập nhật kiểm duyệt",
-  "admin collaborator relationship active": "Kích hoạt quan hệ cộng tác",
+  "admin collaborator relationship reviewed": "Đối chiếu quan hệ cộng tác",
   "admin host content published": "Xuất bản nội dung Host / Tin tức",
   "admin payout request completed": "Hoàn tất chi trả Host / Tin tức",
   "admin host payout created": "Tạo khoản chi trả Host",
@@ -75,7 +75,7 @@ const MODULE_LABELS: Record<string, string> = {
   revenue: "Doanh thu",
   reports: "Xử lý báo cáo",
   templates: "Mẫu nội dung",
-  collaborators: "Quản lý cộng tác viên",
+  collaborators: "Hoạt động cộng tác",
   "host / news": "Nội dung Host / Tin tức",
 };
 

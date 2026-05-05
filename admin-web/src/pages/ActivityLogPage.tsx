@@ -486,16 +486,6 @@ function ActivityLogPage() {
               <p>{selectedLog.detail}</p>
             </div>
 
-            <div className="activity-log-detail__panel">
-              <label>ID liên quan</label>
-              <div className="activity-log-detail__tags">
-                <span>Người dùng: {selectedLog.relatedIds.userId ?? "--"}</span>
-                <span>Bài đăng: {selectedLog.relatedIds.postId ?? "--"}</span>
-                <span>Cửa hàng: {selectedLog.relatedIds.shopId ?? "--"}</span>
-                <span>Vị trí: {selectedLog.relatedIds.slotId ?? "--"}</span>
-                <span>Danh mục: {selectedLog.relatedIds.categoryId ?? "--"}</span>
-              </div>
-            </div>
           </div>
         ) : null}
       </BaseModal>

@@ -63,6 +63,9 @@ const SHOP_STATE_CHANGED_ERROR = "SHOP_STATE_CHANGED";
 const REPORT_STATE_CHANGED_ERROR = "REPORT_STATE_CHANGED";
 const HOST_CONTENT_STATE_CHANGED_ERROR = "HOST_CONTENT_STATE_CHANGED";
 
+const isPositiveIntegerId = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0;
+
 type ManagerHostContentStatus = (typeof VALID_HOST_CONTENT_STATUSES)[number];
 
 type QueueType = (typeof VALID_QUEUE_TYPES)[number];
@@ -512,6 +515,19 @@ export const updateManagerHostContentStatus = async (
         } catch (notifyError) {
           console.error("Failed to notify host after moderation:", notifyError);
         }
+      } else if (nextDbStatus === "rejected") {
+        try {
+          const reasonText = reason ? ` Lý do: ${reason}` : '';
+          await notificationService.sendNotification({
+            recipientId: updated.hostContentAuthorId!,
+            title: "Nội dung bị từ chối",
+            message: `Nội dung "${updated.hostContentTitle}" của bạn đã bị từ chối.${reasonText}`,
+            type: "warning",
+            metaData: { contentId: updated.hostContentId, senderId: managerId },
+          });
+        } catch (notifyError) {
+          console.error("Failed to notify host after moderation rejection:", notifyError);
+        }
       }
 
       const [actionLog] = await tx
@@ -704,51 +720,51 @@ export const getModerationQueue = async (
     const [postRows, reportRows, shopRows] = await Promise.all([
       !queueTypeFilter || queueTypeFilter === "post"
         ? db
-            .select({
-              postId: posts.postId,
-              postTitle: posts.postTitle,
-              postStatus: posts.postStatus,
-              postRejectedReason: posts.postRejectedReason,
-              postCreatedAt: posts.postCreatedAt,
-              postUpdatedAt: posts.postUpdatedAt,
-              authorName: users.userDisplayName,
-            })
-            .from(posts)
-            .leftJoin(users, eq(posts.postAuthorId, users.userId))
-            .where(inArray(posts.postStatus, ["pending", "approved", "rejected", "hidden"]))
+          .select({
+            postId: posts.postId,
+            postTitle: posts.postTitle,
+            postStatus: posts.postStatus,
+            postRejectedReason: posts.postRejectedReason,
+            postCreatedAt: posts.postCreatedAt,
+            postUpdatedAt: posts.postUpdatedAt,
+            authorName: users.userDisplayName,
+          })
+          .from(posts)
+          .leftJoin(users, eq(posts.postAuthorId, users.userId))
+          .where(inArray(posts.postStatus, ["pending", "approved", "rejected", "hidden"]))
         : Promise.resolve([]),
-        !queueTypeFilter || queueTypeFilter === "report"
-          ? db
-              .select({
-                reportId: reports.ticketId,
-                reportStatus: reports.ticketStatus,
-                reportReasonCode: reports.ticketTitle,
-                reportReason: reports.ticketContent,
-                reportCreatedAt: reports.ticketCreatedAt,
-                reportUpdatedAt: reports.ticketUpdatedAt,
-                reporterName: users.userDisplayName,
-                postTitle: posts.postTitle,
-                shopName: shops.shopName,
-              })
-              .from(reports)
-              .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
-              .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
-              .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
-              .where(eq(reports.ticketType, 'REPORT'))
-          : Promise.resolve([]),
+      !queueTypeFilter || queueTypeFilter === "report"
+        ? db
+          .select({
+            reportId: reports.ticketId,
+            reportStatus: reports.ticketStatus,
+            reportReasonCode: reports.ticketTitle,
+            reportReason: reports.ticketContent,
+            reportCreatedAt: reports.ticketCreatedAt,
+            reportUpdatedAt: reports.ticketUpdatedAt,
+            reporterName: users.userDisplayName,
+            postTitle: posts.postTitle,
+            shopName: shops.shopName,
+          })
+          .from(reports)
+          .leftJoin(users, eq(reports.ticketCreatorId, users.userId))
+          .leftJoin(posts, and(eq(reports.ticketTargetType, 'post'), eq(reports.ticketTargetId, posts.postId)))
+          .leftJoin(shops, and(eq(reports.ticketTargetType, 'shop'), eq(reports.ticketTargetId, shops.shopId)))
+          .where(eq(reports.ticketType, 'REPORT'))
+        : Promise.resolve([]),
       !queueTypeFilter || queueTypeFilter === "shop"
         ? db
-            .select({
-              shopId: shops.shopId,
-              shopName: shops.shopName,
-              shopStatus: shops.shopStatus,
-              shopCreatedAt: shops.shopCreatedAt,
-              shopUpdatedAt: shops.shopUpdatedAt,
-              ownerName: users.userDisplayName,
-            })
-            .from(shops)
-            .leftJoin(users, eq(shops.shopId, users.userId))
-            .where(inArray(shops.shopStatus, ["pending", "active", "blocked", "closed"]))
+          .select({
+            shopId: shops.shopId,
+            shopName: shops.shopName,
+            shopStatus: shops.shopStatus,
+            shopCreatedAt: shops.shopCreatedAt,
+            shopUpdatedAt: shops.shopUpdatedAt,
+            ownerName: users.userDisplayName,
+          })
+          .from(shops)
+          .leftJoin(users, eq(shops.shopId, users.userId))
+          .where(inArray(shops.shopStatus, ["pending", "active", "blocked", "closed"]))
         : Promise.resolve([]),
     ]);
 
@@ -966,6 +982,45 @@ export const updateManagerPostStatus = async (
         actionLog,
       };
     });
+
+    // Notify the author about the status change
+    try {
+      const [postOwner] = await db
+        .select({ authorId: posts.postAuthorId, title: posts.postTitle })
+        .from(posts)
+        .where(eq(posts.postId, postId))
+        .limit(1);
+
+      if (postOwner && postOwner.authorId) {
+        let title = "Trạng thái bài đăng thay đổi";
+        let message = `Trạng thái bài đăng "${postOwner.title}" đã được cập nhật thành: ${nextStatus}.`;
+        let type = "info";
+
+        if (nextStatus === "approved") {
+          title = "Bài đăng đã được duyệt";
+          message = `Bài đăng "${postOwner.title}" của bạn đã được duyệt và hiển thị công khai.`;
+          type = "success";
+        } else if (nextStatus === "hidden") {
+          title = "Bài đăng đã bị ẩn";
+          message = `Bài đăng "${postOwner.title}" của bạn đã bị quản trị viên ẩn. Vui lòng kiểm tra lại nội dung.${reason ? ` Lý do: ${reason}` : ""}`;
+          type = "warning";
+        } else if (nextStatus === "rejected") {
+          title = "Bài đăng bị từ chối";
+          message = `Bài đăng "${postOwner.title}" của bạn đã bị từ chối.${reason ? ` Lý do: ${reason}` : ""}`;
+          type = "error";
+        }
+
+        await notificationService.sendNotification({
+          recipientId: postOwner.authorId,
+          title,
+          message,
+          type,
+          metaData: { postId, status: nextStatus },
+        });
+      }
+    } catch (notifError) {
+      console.error("Failed to notify author about post status change:", notifError);
+    }
 
     res.json({
       post: txResult.updatedPost,
@@ -1329,6 +1384,8 @@ export const resolveManagerReport = async (
           reporterId: reports.ticketCreatorId,
           postId: sql<number>`case when ${reports.ticketTargetType} = 'post' then ${reports.ticketTargetId} end`,
           reportShopId: sql<number>`case when ${reports.ticketTargetType} = 'shop' then ${reports.ticketTargetId} end`,
+          reportedAuthorId: posts.postAuthorId,
+          reportedShopOwnerId: shops.shopId,
           reporterName: users.userDisplayName,
           postTitle: posts.postTitle,
           shopName: shops.shopName,
@@ -1345,6 +1402,55 @@ export const resolveManagerReport = async (
         decisionLog,
       };
     });
+
+    const resolutionStatusLabel =
+      status === "resolved" ? "đã được xác nhận và xử lý" : "đã được xem xét và đóng";
+    const resolutionSummary = note ? `${resolution}. ${note}` : resolution;
+    const targetLabel = txResult.report.postTitle
+      ? `bài đăng "${txResult.report.postTitle}"`
+      : `cửa hàng "${txResult.report.shopName || "mục này"}"`;
+
+    // Notify the reporter that their report has been resolved
+    try {
+      if (txResult.report.reporterId) {
+        await notificationService.sendNotification({
+          recipientId: txResult.report.reporterId,
+          title: "Báo cáo đã được xử lý",
+          message: `Báo cáo của bạn về ${txResult.report.postTitle ? "bài đăng" : "cửa hàng"} "${txResult.report.postTitle || txResult.report.shopName || "mục này"}" đã được quản trị viên xem xét và xử lý. Cảm ơn bạn đã đóng góp!`,
+          type: "info",
+          metaData: { reportId },
+        });
+      }
+    } catch (notifError) {
+      console.error("Failed to notify reporter about report resolution:", notifError);
+    }
+
+    try {
+      const affectedRecipientIds = [...new Set(
+        [
+          txResult.report.reportedAuthorId,
+          txResult.report.reportedShopOwnerId,
+        ].filter(
+          (recipientId): recipientId is number =>
+            isPositiveIntegerId(recipientId) &&
+            recipientId !== txResult.report.reporterId,
+        ),
+      )];
+
+      await Promise.allSettled(
+        affectedRecipientIds.map((recipientId) =>
+          notificationService.sendNotification({
+            recipientId,
+            title: "Bao cao lien quan den noi dung cua ban da duoc xu ly",
+            message: `Quan tri vien da hoan tat xu ly bao cao lien quan den ${txResult.report.postTitle ? `bai dang \"${txResult.report.postTitle}\"` : `cua hang \"${txResult.report.shopName || "muc nay"}\"`}.`,
+            type: "info",
+            metaData: { reportId, targetType: txResult.report.postTitle ? "post" : "shop" },
+          }),
+        ),
+      );
+    } catch (notifError) {
+      console.error("Failed to notify affected user about report resolution:", notifError);
+    }
 
     res.json({
       report: txResult.report,
@@ -1804,9 +1910,9 @@ export const createManagerEscalation = async (
 
     const evidenceUrls = Array.isArray(req.body?.evidenceUrls)
       ? req.body.evidenceUrls.filter(
-          (item: unknown): item is string =>
-            typeof item === "string" && item.trim().length > 0,
-        )
+        (item: unknown): item is string =>
+          typeof item === "string" && item.trim().length > 0,
+      )
       : [];
 
     const targetContext = await ensureTargetExists(targetType, targetId);

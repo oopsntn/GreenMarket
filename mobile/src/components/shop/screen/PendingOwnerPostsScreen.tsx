@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Modal, TextInput } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { CheckCircle, XCircle, FileText } from 'lucide-react-native';
+import { CheckCircle, XCircle, FileText, Eye } from 'lucide-react-native';
 import MobileLayout from '../../Reused/MobileLayout/MobileLayout';
 import { ShopService, PendingOwnerPost } from '../service/shopService';
 import CustomAlert from '../../../utils/AlertHelper';
@@ -87,10 +87,23 @@ const PendingOwnerPostsScreen = () => {
                         <FileText size={20} color="#047857" />
                     </View>
                     <View style={styles.info}>
-                        <Text style={styles.title} numberOfLines={2}>
-                            {item.postTitle || `Bài đăng #${item.postId}`}
-                        </Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <Text style={[styles.title, { flex: 1 }]} numberOfLines={2}>
+                                {item.postTitle || `Bài đăng #${item.postId}`}
+                            </Text>
+                            <TouchableOpacity
+                                style={{ padding: 4 }}
+                                onPress={() => navigation.navigate('PreviewCollaboratorPost', { postId: item.postId })}
+                            >
+                                <Eye size={20} color="#64748B" />
+                            </TouchableOpacity>
+                        </View>
                         <Text style={styles.meta}>Đăng bởi CTV: {item.authorName || item.authorMobile} • {date}</Text>
+                        {item.postRejectedReason && (
+                            <Text style={styles.rejectedMeta}>
+                                Đã từ chối (chờ sửa): {item.postRejectedReason}
+                            </Text>
+                        )}
                     </View>
                 </View>
 
@@ -240,6 +253,12 @@ const styles = StyleSheet.create({
     meta: {
         fontSize: 12,
         color: '#64748B',
+    },
+    rejectedMeta: {
+        fontSize: 12,
+        color: '#EF4444',
+        marginTop: 4,
+        fontStyle: 'italic',
     },
     cardActions: {
         flexDirection: 'row',

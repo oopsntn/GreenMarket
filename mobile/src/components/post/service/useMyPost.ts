@@ -1,10 +1,22 @@
 import { useEffect, useState } from 'react'
-import { Alert } from 'react-native'
 import { useAuth } from '../../../context/AuthContext'
 import { postService } from './postService'
 import CustomAlert from '../../../utils/AlertHelper'
 
 type PostTab = 'personal' | 'shop' | 'trash'
+
+type UpdatePostAttribute = {
+    attributeId: number;
+    value: string;
+}
+
+type UpdatePostInput = {
+    postTitle: string;
+    categoryId: number;
+    postLocation: string;
+    postContactPhone: string;
+    attributes?: UpdatePostAttribute[];
+}
 
 const useMyPost = () => {
     const { user, shop } = useAuth()
@@ -61,7 +73,7 @@ const useMyPost = () => {
             'Xác nhận xóa',
             'Bạn có chắc chắn muốn xóa bài đăng này không?',
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: 'Hủy', style: 'cancel' },
                 {
                     text: 'Xóa',
                     style: 'destructive',
@@ -83,13 +95,7 @@ const useMyPost = () => {
         )
     }
 
-    const handleUpdate = async (postId: number, data: {
-        postTitle: string;
-        categoryId: number;
-        postContent: string;
-        postLocation: string;
-        postContactPhone: string;
-    }) => {
+    const handleUpdate = async (postId: number, data: UpdatePostInput) => {
         if (!data.postTitle.trim()) {
             CustomAlert('Thông tin bị thiếu', 'Vui lòng nhập tiêu đề bài viết.')
             return
@@ -100,11 +106,30 @@ const useMyPost = () => {
             return
         }
 
+        if (data.postLocation.length > 255) {
+            CustomAlert('Thông tin quá dài', 'Địa chỉ không được vượt quá 255 ký tự.')
+            return
+        }
 
+        if (data.postContactPhone) {
+            const cleanPhone = data.postContactPhone.trim()
+            if (cleanPhone.length < 9 || cleanPhone.length > 20 || !/^\+?[0-9\s-]+$/.test(cleanPhone)) {
+                CustomAlert('Giá trị không hợp lệ', 'Vui lòng nhập số điện thoại hợp lệ (ít nhất 9 số).')
+                return
+            }
+        }
 
-        // Constraints mentioned in plan
-        if (data.postContent.length > 2000) {
-            CustomAlert('Thông tin quá dài', 'Phần mô tả không được vượt quá 2000 ký tự.')
+        const normalizedAttributes = Array.isArray(data.attributes)
+            ? data.attributes
+                .filter((item) => item?.attributeId && String(item?.value ?? '').trim())
+                .map((item) => ({
+                    attributeId: Number(item.attributeId),
+                    value: String(item.value).trim(),
+                }))
+            : undefined
+
+        if (normalizedAttributes?.some((item) => !Number.isFinite(item.attributeId) || item.attributeId <= 0)) {
+            CustomAlert('Thuộc tính không hợp lệ', 'Vui lòng kiểm tra lại thuộc tính bài đăng.')
             return
         }
 
@@ -115,6 +140,7 @@ const useMyPost = () => {
                 categoryId: data.categoryId,
                 postLocation: data.postLocation.trim() || undefined,
                 postContactPhone: data.postContactPhone.replace(/\s+/g, '') || undefined,
+                attributes: normalizedAttributes,
             })
 
             setPosts((prev) => prev.map((post) => (
@@ -123,8 +149,8 @@ const useMyPost = () => {
                     : post
             )))
             setEditingPost(null)
-            CustomAlert('Success', 'Bài viết đã được cập nhật thành công.')
-            await fetchPosts() // Refresh to ensure data consistency
+            CustomAlert('Thành công', 'Bài viết đã được cập nhật thành công.')
+            await fetchPosts()
         } catch (e) {
             console.error('Lỗi khi cập nhật bài viết:', e)
             CustomAlert('Lỗi', 'Cập nhật thất bại. Vui lòng thử lại.')
@@ -133,8 +159,7 @@ const useMyPost = () => {
         }
     }
 
-    const filteredPosts = posts;
-
+    const filteredPosts = posts
     const hasShopPosts = posts.some((post) => post.postShopId !== null)
 
     return {

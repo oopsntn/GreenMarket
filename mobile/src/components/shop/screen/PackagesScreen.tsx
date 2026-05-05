@@ -10,6 +10,7 @@ import CustomAlert from '../../../utils/AlertHelper';
 import { useAuth } from '../../../context/AuthContext';
 import { postService } from '../../post/service/postService';
 import { paymentService, PromotionPackage } from '../../payment/service/paymentService';
+import { openPaymentAuthSession } from '../../payment/utils/paymentRedirect';
 
 const formatVnd = (value: unknown) => {
     const amount = Number(value ?? 0);
@@ -82,11 +83,23 @@ const PackagesScreen = () => {
             })[0];
     }, [boostPackages]);
 
-    const handleOpenPayment = async (paymentUrl?: string) => {
+    const handleOpenPayment = async (paymentUrl?: string, paymentType: 'vip' | 'personal' = 'vip') => {
         if (!paymentUrl) {
             CustomAlert('Thông báo', 'Không tạo được liên kết thanh toán.');
             return;
         }
+
+        const paymentResult = await openPaymentAuthSession(paymentUrl as string);
+
+        if (paymentResult) {
+            const { status, code, txnRef, message } = paymentResult;
+            navigation.navigate('PaymentResult', { status, code, txnRef, message, type: paymentType });
+            return;
+        }
+
+        await refreshShop();
+        navigation.navigate('PaymentPending', { type: paymentType });
+        return;
 
         const navigatedRef = { current: false };
 
@@ -105,23 +118,20 @@ const PackagesScreen = () => {
                 const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
                 const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
 
-                navigation.navigate('PaymentResult', { status, code, txnRef });
+                navigation.navigate('PaymentResult', { status, code, txnRef, type: paymentType });
             }
         });
 
-        await WebBrowser.openBrowserAsync(paymentUrl);
+        await WebBrowser.openAuthSessionAsync(
+            paymentUrl as string,
+            "greenmarket://payment-result"
+        );
 
         subscription.remove();
         if (!navigatedRef.current) {
+            // Browser đóng mà không có deep-link → chuyển đến màn hình chờ
             await refreshShop();
-            CustomAlert(
-                'Kiểm tra kết quả',
-                'Nếu bạn đã hoàn tất thanh toán, vui lòng kiểm tra trạng thái trong quản lý tài khoản.',
-                [
-                    { text: 'Xem tin của tôi', onPress: () => navigation.navigate('MyPost') },
-                    { text: 'Đóng', style: 'cancel' },
-                ]
-            );
+            navigation.navigate('PaymentPending', { type: paymentType });
         }
     };
 
@@ -129,7 +139,7 @@ const PackagesScreen = () => {
         try {
             setProcessing(true);
             const res = await paymentService.buyShopVipPackage();
-            await handleOpenPayment(res.paymentUrl);
+            await handleOpenPayment(res.paymentUrl, 'vip');
         } catch (error: any) {
             CustomAlert('Thông báo', error?.response?.data?.error || 'Đã xảy ra lỗi khi tạo thanh toán VIP.');
         } finally {
@@ -141,7 +151,7 @@ const PackagesScreen = () => {
         try {
             setProcessing(true);
             const res = await paymentService.buyPersonalPackage();
-            await handleOpenPayment(res.paymentUrl);
+            await handleOpenPayment(res.paymentUrl, 'personal');
         } catch (error: any) {
             CustomAlert('Thông báo', error?.response?.data?.error || 'Đã xảy ra lỗi khi tạo thanh toán gói cá nhân.');
         } finally {
@@ -173,7 +183,6 @@ const PackagesScreen = () => {
                     <Text style={styles.desc}>Nâng cấp tài khoản lên chủ vườn để mở shop và đăng bài theo mô hình shop owner.</Text>
                     <View style={styles.featureList}>
                         <View style={styles.featureItem}><CheckCircle2 size={16} color="#10b981" /><Text style={styles.featureText}>Đăng bài ngay theo quyền shop owner</Text></View>
-                        <View style={styles.featureItem}><CheckCircle2 size={16} color="#10b981" /><Text style={styles.featureText}>Phí đăng lẻ theo policy backend</Text></View>
                     </View>
 
                     {isOwner ? (
@@ -233,7 +242,7 @@ const PackagesScreen = () => {
                             ) : null}
                         </View>
                         <Text style={styles.price}>{formatVnd(pricingConfig?.personalMonthlyPrice)}</Text>
-                        <Text style={styles.desc}>Dành cho người bán cá nhân đăng bài thường xuyên theo policy cá nhân từ backend.</Text>
+                        <Text style={styles.desc}>Dành cho người bán cá nhân đăng bài thường xuyên theo cá nhân</Text>
 
                         {isAuthenticated ? (
                             isPersonalActive ? (

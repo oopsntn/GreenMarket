@@ -286,17 +286,6 @@ const styles = StyleSheet.create({
   categoryButtonTextActive: {
     color: '#fff',
   },
-  priceInput: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#111827',
-    backgroundColor: '#f9fafb',
-  },
   locationList: {
     maxHeight: 150,
     borderWidth: 1,

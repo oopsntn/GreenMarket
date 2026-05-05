@@ -13,7 +13,6 @@ import {
     CheckCircle2,
     ImagePlus,
     MapPin,
-    Phone,
     Tag,
     VideoIcon,
     X,
@@ -30,23 +29,27 @@ const CreatePostLayout = () => {
     const route = useRoute<any>()
     const delegatedShopId = route.params?.shopId ? Number(route.params.shopId) : undefined
     const delegatedShopName = route.params?.shopName ? String(route.params.shopName) : undefined
+    const delegatedShopLocation = route.params?.shopLocation ? String(route.params.shopLocation) : undefined
     const isDelegated = !!delegatedShopId
 
     const { user, shop } = useAuth()
-    const { state, actions } = useCreatePost({ 
-        shopId: delegatedShopId, 
+    const isShop = !!shop && shop.shopStatus === 'active'
+
+    const { state, actions } = useCreatePost({
+        shopId: delegatedShopId,
         shopName: delegatedShopName,
         userPhone: user?.userMobile || undefined,
-        defaultLocation: shop?.shopLocation || undefined
+        defaultLocation: delegatedShopLocation || shop?.shopLocation || undefined
     })
-    const isShop = !!shop && shop.shopStatus === 'active'
 
     if (state.submitted) {
         return (
             <MobileLayout title="Thành công">
                 <View style={styles.successContainer}>
                     <CheckCircle2 size={80} color="#10b981" />
-                    <Text style={styles.successTitle}>{isDelegated ? 'Đã gửi bài cho chủ vườn duyệt' : 'Đăng tin thành công'}</Text>
+                    <Text style={styles.successTitle}>
+                        {isDelegated ? 'Đã gửi bài cho chủ vườn duyệt' : 'Đăng tin thành công'}
+                    </Text>
                     <Text style={styles.successSubtitle}>
                         {isDelegated
                             ? `Bài đăng đã được gửi thay mặt ${delegatedShopName || 'shop'}. Chủ vườn sẽ duyệt hoặc từ chối nội dung trước khi hiển thị công khai.`
@@ -61,6 +64,13 @@ const CreatePostLayout = () => {
                         style={styles.successButton}
                     >
                         Tạo tin khác
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })}
+                        style={styles.successButton}
+                    >
+                        Về trang chủ
                     </Button>
                 </View>
             </MobileLayout>
@@ -99,14 +109,14 @@ const CreatePostLayout = () => {
         <MobileLayout title="Đăng tin mới" scrollEnabled={true}>
             <Card style={styles.card}>
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Hình ảnh & Video</Text>
+                    <Text style={styles.sectionTitle}>Hình ảnh và video</Text>
                     <Text style={styles.sectionHint}>Tối đa 10 tệp</Text>
                 </View>
 
                 <View style={styles.mediaGrid}>
                     <TouchableOpacity style={styles.uploadBtn} onPress={actions.pickMedia} disabled={state.submitting}>
                         <ImagePlus size={24} color="#10b981" />
-                        <Text style={styles.uploadText}>Thêm ảnh / Video</Text>
+                        <Text style={styles.uploadText}>Thêm ảnh / video</Text>
                     </TouchableOpacity>
 
                     {state.media.map((item, index) => (
@@ -141,8 +151,6 @@ const CreatePostLayout = () => {
                     icon={<Tag size={16} color="#10b981" />}
                     required
                 />
-
-
 
                 <Text style={styles.label}>Danh mục *</Text>
                 {state.loadingInitialData ? (
@@ -182,8 +190,6 @@ const CreatePostLayout = () => {
                         placeholder="Ví dụ: Cầu Giấy, Hà Nội"
                     />
                 )}
-
-
             </Card>
 
             {state.loadingAttributes ? (
@@ -192,30 +198,72 @@ const CreatePostLayout = () => {
                 <Card style={styles.card}>
                     <Text style={styles.sectionTitle}>Thuộc tính danh mục</Text>
                     {state.attributes.map((attr) => {
-                        const isNumeric = 
-                            attr.attributeDataType === 'number' || 
+                        const attributeOptions = Array.isArray(attr.attributeOptions)
+                            ? attr.attributeOptions.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
+                            : []
+
+                        const isNumeric =
+                            attr.attributeDataType === 'number' ||
                             attr.attributeDataType === 'decimal' ||
-                            /chiều cao|chieu cao|hoành|hoanh|tuổi|tuoi|số lượng|so luong|giá|gia/i.test(attr.attributeTitle);
-                        
+                            /chiều cao|chieu cao|hoành|hoanh|tuổi|tuoi|số lượng|so luong|giá|gia/i.test(attr.attributeTitle)
+
                         return (
-                            <Input
-                                key={attr.attributeId}
-                                label={`${attr.attributeTitle}${attr.required ? ' *' : ''}`}
-                                value={state.formData.attributes[attr.attributeId] || ''}
-                                type={isNumeric ? 'decimal-pad' : 'default'}
-                                onChangeText={(val) => {
-                                    actions.setFormData(prev => ({
-                                        ...prev,
-                                        attributes: { ...prev.attributes, [attr.attributeId]: val }
-                                    }));
-                                }}
-                            />
-                        );
+                            <View key={attr.attributeId}>
+                                {attributeOptions.length > 0 ? (
+                                    <View style={styles.optionGroup}>
+                                        <Text style={styles.optionLabel}>{`${attr.attributeTitle}${attr.required ? ' *' : ''}`}</Text>
+                                        <View style={styles.optionWrap}>
+                                            {attributeOptions.map((option: string) => (
+                                                <TouchableOpacity
+                                                    key={`${attr.attributeId}-${option}`}
+                                                    style={[
+                                                        styles.optionChip,
+                                                        state.formData.attributes[attr.attributeId] === option && styles.optionChipActive
+                                                    ]}
+                                                    onPress={() => {
+                                                        actions.setFormData((prev) => ({
+                                                            ...prev,
+                                                            attributes: { ...prev.attributes, [attr.attributeId]: option }
+                                                        }))
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.optionChipText,
+                                                            state.formData.attributes[attr.attributeId] === option && styles.optionChipTextActive
+                                                        ]}
+                                                    >
+                                                        {option}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </View>
+                                ) : (
+                                    <Input
+                                        label={`${attr.attributeTitle}${attr.required ? ' *' : ''}`}
+                                        value={state.formData.attributes[attr.attributeId] || ''}
+                                        type={isNumeric ? 'decimal-pad' : 'default'}
+                                        onChangeText={(val) => {
+                                            actions.setFormData((prev) => ({
+                                                ...prev,
+                                                attributes: { ...prev.attributes, [attr.attributeId]: val }
+                                            }))
+                                        }}
+                                    />
+                                )}
+                            </View>
+                        )
                     })}
                 </Card>
             ) : null}
 
-            <Button testID="create-post-submit-button" onPress={actions.submitForm} disabled={state.submitting} style={styles.submitBtn}>
+            <Button
+                testID="create-post-submit-button"
+                onPress={actions.submitForm}
+                disabled={state.submitting}
+                style={styles.submitBtn}
+            >
                 {state.submitting ? 'Đang gửi...' : 'Đăng tin'}
             </Button>
         </MobileLayout>
@@ -362,6 +410,40 @@ const styles = StyleSheet.create({
     },
     attributeLoading: {
         marginTop: 8,
+    },
+    optionGroup: {
+        marginBottom: 14,
+    },
+    optionLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        marginBottom: 8,
+        color: '#374151',
+    },
+    optionWrap: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    optionChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 999,
+        backgroundColor: '#f3f4f6',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    optionChipActive: {
+        backgroundColor: '#e8f5e9',
+        borderColor: '#10b981',
+    },
+    optionChipText: {
+        fontSize: 12,
+        color: '#4b5563',
+        fontWeight: '600',
+    },
+    optionChipTextActive: {
+        color: '#047857',
     },
     submitBtn: {
         marginHorizontal: 16,

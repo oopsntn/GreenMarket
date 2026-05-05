@@ -13,6 +13,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Building2, ChevronRight, PenSquare } from 'lucide-react-native';
 import { CollaboratorActiveShop, CollaboratorService } from '../services/collaboratorService';
 import { resolveImageUrl } from '../../utils/resolveImageUrl';
+import MobileLayout from '../../components/Reused/MobileLayout/MobileLayout';
 
 const MyActiveShopsScreen = () => {
     const navigation = useNavigation<any>();
@@ -54,7 +55,11 @@ const MyActiveShopsScreen = () => {
     };
 
     const goCreatePost = (shop: CollaboratorActiveShop) => {
-        navigation.navigate('CreateDelegatedPost', { shopId: shop.shopId, shopName: shop.shopName });
+        navigation.navigate('CreateDelegatedPost', {
+            shopId: shop.shopId,
+            shopName: shop.shopName,
+            shopLocation: shop.shopLocation
+        });
     };
 
     const renderItem = ({ item }: { item: CollaboratorActiveShop }) => (
@@ -101,9 +106,8 @@ const MyActiveShopsScreen = () => {
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Shop đang cộng tác</Text>
+        <MobileLayout title="Shop đang cộng tác" headerStyle="default">
+            <View style={styles.headerSubtitle}>
                 <Text style={styles.subtitle}>
                     Chọn shop để xem thông tin, liên hệ Zalo hoặc đăng bài thay mặt chủ shop.
                 </Text>
@@ -127,21 +131,16 @@ const MyActiveShopsScreen = () => {
                     </View>
                 }
             />
-        </SafeAreaView>
+        </MobileLayout>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
-    header: {
-        backgroundColor: 'white',
+    headerSubtitle: {
         paddingHorizontal: 20,
-        paddingTop: 16,
         paddingBottom: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: '#E2E8F0',
+        paddingTop: 8,
     },
-    title: { fontSize: 20, fontWeight: '800', color: '#0F172A', marginBottom: 6 },
     subtitle: { fontSize: 13, color: '#64748B', lineHeight: 18 },
     listContent: { padding: 16, paddingBottom: 30, flexGrow: 1 },
     card: {

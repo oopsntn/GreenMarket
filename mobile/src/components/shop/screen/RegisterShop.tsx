@@ -12,6 +12,7 @@ import AddressPicker from '../components/AddressPicker'
 import { useAuth } from '../../../context/AuthContext'
 import { resolveImageUrl } from '../../../utils/resolveImageUrl'
 import { paymentService } from '../../payment/service/paymentService'
+import { openPaymentAuthSession } from '../../payment/utils/paymentRedirect'
 
 const RegisterShopScreen = ({ navigation }: any) => {
     const { refreshShop, shop, user } = useAuth()
@@ -30,7 +31,6 @@ const RegisterShopScreen = ({ navigation }: any) => {
     const [localGalleryUris, setLocalGalleryUris] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
-    const [submitted, setSubmitted] = useState(false)
 
     const hasExistingShop = useMemo(
         () => !!shop?.shopId && shop.shopStatus === 'active',
@@ -176,35 +176,35 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
     const validateForm = () => {
         if (!formData.shopName.trim()) {
-            CustomAlert('Lỗi', 'Vui lòng nhập tên cửa hàng')
+            CustomAlert('Xin thông báo', 'Vui lòng nhập tên cửa hàng')
             return false
         }
         if (formData.shopName.trim().length < 3) {
-            CustomAlert('Lỗi', 'Tên cửa hàng phải có ít nhất 3 ký tự')
+            CustomAlert('Xin thông báo', 'Tên cửa hàng phải có ít nhất 3 ký tự')
             return false
         }
         if (!localLogoUri) {
-            CustomAlert('Lỗi', 'Vui lòng tải lên ảnh đại diện cho cửa hàng')
+            CustomAlert('Xin thông báo', 'Vui lòng tải lên ảnh đại diện cho cửa hàng')
             return false
         }
         if (localGalleryUris.length < 3) {
-            CustomAlert('Lỗi', 'Vui lòng tải lên ít nhất 3 ảnh mô tả cửa hàng')
+            CustomAlert('Xin thông báo', 'Vui lòng tải lên ít nhất 3 ảnh mô tả cửa hàng')
             return false
         }
         if (!formData.shopDescription.trim()) {
-            CustomAlert('Lỗi', 'Vui lòng nhập mô tả cho cửa hàng')
+            CustomAlert('Xin thông báo', 'Vui lòng nhập mô tả cho cửa hàng')
             return false
         }
         if (formData.shopDescription.trim().length < 10) {
-            CustomAlert('Lỗi', 'Mô tả cửa hàng quá ngắn (cần ít nhất 10 ký tự)')
+            CustomAlert('Xin thông báo', 'Mô tả cửa hàng quá ngắn (cần ít nhất 10 ký tự)')
             return false
         }
         if (!formData.shopLocation.trim() || formData.shopLocation.trim() === 'Vị trí đã chọn') {
-            CustomAlert('Lỗi', 'Vui lòng xác định địa chỉ cửa hàng hợp lệ')
+            CustomAlert('Xin thông báo', 'Vui lòng xác định địa chỉ cửa hàng hợp lệ')
             return false
         }
         if (!formData.shopLat || !formData.shopLng) {
-            CustomAlert('Lỗi', 'Vui lòng chọn tọa độ cửa hàng trên bản đồ')
+            CustomAlert('Xin thông báo', 'Vui lòng chọn tọa độ cửa hàng trên bản đồ')
             return false
         }
         return true
@@ -223,6 +223,10 @@ const RegisterShopScreen = ({ navigation }: any) => {
         }
     }
 
+    const handleGoHome = () => {
+        navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })
+    }
+
     const openPaymentBrowser = async () => {
         const paymentRes = await paymentService.createShopPaymentIntent()
         console.log('[Payment] createShopPaymentIntent response:', paymentRes)
@@ -231,6 +235,27 @@ const RegisterShopScreen = ({ navigation }: any) => {
             console.error('[Payment] Unexpected response shape:', paymentRes)
             throw new Error('Không nhận được link thanh toán từ hệ thống')
         }
+
+        const paymentResult = await openPaymentAuthSession(paymentUrl)
+
+        if (paymentResult) {
+            const { status, code, txnRef, message } = paymentResult
+
+            try {
+                if (status === 'success' || code === '00') {
+                    await refreshShop()
+                }
+            } catch (error) {
+                console.error('[Payment] Failed to refresh shop after return:', error)
+            }
+
+            navigation.navigate('PaymentResult', { status, code, txnRef, message, type: 'shop' })
+            return
+        }
+
+        await refreshShop()
+        navigation.navigate('PaymentPending', { type: 'shop' })
+        return
 
         const navigatedRef = { current: false };
 
@@ -249,24 +274,29 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
                 const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
 
-                navigation.navigate('PaymentResult', { status, code, txnRef });
+                (async () => {
+                    if (status === 'success' || code === '00') {
+                        await refreshShop();
+                    }
+
+                    navigation.navigate('PaymentResult', { status, code, txnRef, type: 'shop' });
+                })().catch((error) => {
+                    console.error('[Payment] Failed to refresh shop after return:', error);
+                    navigation.navigate('PaymentResult', { status, code, txnRef, type: 'shop' });
+                });
             }
         });
 
-        await WebBrowser.openBrowserAsync(paymentUrl);
+        await WebBrowser.openAuthSessionAsync(
+            paymentUrl,
+            "greenmarket://payment-result"
+        );
 
         subscription.remove();
         if (!navigatedRef.current) {
-            // Fallback: refresh shop và báo user kiểm tra
+            // Browser đóng mà không có deep-link → chuyển đến màn hình chờ
             await refreshShop();
-            CustomAlert(
-                'Kiểm tra kết quả',
-                'Nếu bạn đã hoàn tất thanh toán, vui lòng nhấn "Tải lại" để cập nhật trạng thái cửa hàng.',
-                [
-                    { text: 'Tải lại', onPress: () => refreshShop() },
-                    { text: 'Đóng', style: 'cancel' },
-                ]
-            );
+            navigation.navigate('PaymentPending', { type: 'shop' });
         }
     }
 
@@ -378,29 +408,6 @@ const RegisterShopScreen = ({ navigation }: any) => {
         }
     }
 
-    if (submitted) {
-        return (
-            <View style={styles.successContainer}>
-                <View style={styles.successCard}>
-                    <View style={styles.iconCircle}>
-                        <CheckCircle color="#10b981" size={40} />
-                    </View>
-                    <Text style={styles.successTitle}>Đăng ký thành công!</Text>
-                    <Text style={styles.successDesc}>
-                        Hồ sơ cửa hàng đang được xét duyệt. Chúng tôi sẽ thông báo cho bạn sớm nhất có thể.
-                    </Text>
-                    <Button
-                        fullWidth
-                        icon={<ArrowRight size={18} color="#fff" />}
-                        onPress={() => navigation.navigate('MyShop')}
-                        style={styles.primaryAction}
-                    >
-                        Xem cửa hàng của tôi
-                    </Button>
-                </View>
-            </View>
-        )
-    }
 
     if (isPendingShop) {
         return (
@@ -436,6 +443,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         >
                             Đã thanh toán? Tải lại ngay
                         </Button>
+                        <Button
+                            fullWidth
+                            variant="outline"
+                            onPress={handleGoHome}
+                            style={[styles.secondaryAction, { marginTop: 8 }]}
+                        >
+                            Về trang chủ
+                        </Button>
                     </View>
                 </View>
             </MobileLayout>
@@ -465,6 +480,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             textStyle={{ color: '#10b981' }}
                         >
                             Sửa thông tin
+                        </Button>
+                        <Button
+                            fullWidth
+                            variant="outline"
+                            onPress={handleGoHome}
+                            style={[styles.secondaryAction, { marginTop: 8 }]}
+                        >
+                            Về trang chủ
                         </Button>
                     </View>
                 </View>
@@ -613,7 +636,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         fullWidth
                         style={styles.submitBtn}
                     >
-                        {uploading ? 'Đang tải ảnh...' : loading ? 'Đang đăng ký...' : 'Đăng ký cửa hàng'}
+                        {uploading ? 'Đang tải ảnh...' : loading ? 'Đang đăng ký...' : 'Đăng ký cửa hàng với phí 250.000 đồng'}
                     </Button>
                 </View>
             </ScrollView>

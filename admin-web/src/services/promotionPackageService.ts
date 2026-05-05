@@ -10,12 +10,14 @@ import type {
   PromotionPackageSummaryCard,
 } from "../types/promotionPackage";
 
+const FIXED_MAX_POSTS = 1;
+
 const emptyPromotionPackageForm: PromotionPackageFormState = {
   name: "",
   slot: "",
   durationDays: 7,
   price: "",
-  maxPosts: 1,
+  maxPosts: FIXED_MAX_POSTS,
   displayQuota: 1000,
   description: "",
 };
@@ -69,7 +71,7 @@ const mapApiPackageToUi = (
     slotCode: item.slotCode?.trim() || "",
     durationDays: item.promotionPackageDurationDays ?? 1,
     price: formatCurrencyLabel(item.promotionPackagePrice),
-    maxPosts: item.promotionPackageMaxPosts ?? 1,
+    maxPosts: item.promotionPackageMaxPosts ?? FIXED_MAX_POSTS,
     displayQuota: item.promotionPackageDisplayQuota ?? 1,
     status: item.promotionPackagePublished ? "Active" : "Disabled",
     description: item.promotionPackageDescription?.trim() || "",
@@ -85,6 +87,10 @@ const validatePromotionPackageForm = (
     throw new Error("Tên gói là bắt buộc.");
   }
 
+  if (!normalizeText(formData.slot)) {
+    throw new Error("Vị trí hiển thị là bắt buộc.");
+  }
+
   if (!normalizeText(formData.price)) {
     throw new Error("Giá gói là bắt buộc.");
   }
@@ -93,8 +99,8 @@ const validatePromotionPackageForm = (
     throw new Error("Thời lượng phải lớn hơn hoặc bằng 1 ngày.");
   }
 
-  if (!Number.isFinite(formData.maxPosts) || formData.maxPosts < 1) {
-    throw new Error("Số bài đăng tối đa phải lớn hơn hoặc bằng 1.");
+  if (formData.maxPosts !== FIXED_MAX_POSTS) {
+    throw new Error("Số bài tối đa của gói quảng bá được cố định là 1.");
   }
 
   if (!Number.isFinite(formData.displayQuota) || formData.displayQuota < 1) {
@@ -115,6 +121,15 @@ const validatePromotionPackageForm = (
   if (isDuplicateName) {
     throw new Error("Tên gói đã tồn tại. Vui lòng nhập tên khác.");
   }
+
+  const isDuplicateSlot = existingPackages.some((item) => {
+    if (excludeId !== undefined && item.id === excludeId) return false;
+    return item.slot === formData.slot;
+  });
+
+  if (isDuplicateSlot) {
+    throw new Error("Vị trí này đã có gói quảng bá. Vui lòng chọn vị trí khác.");
+  }
 };
 
 const buildPackagePayload = (
@@ -126,11 +141,14 @@ const buildPackagePayload = (
   promotionPackageTitle: normalizeText(formData.name),
   promotionPackageDurationDays: formData.durationDays,
   promotionPackagePrice: String(parseCurrencyValue(formData.price)),
-  promotionPackageMaxPosts: formData.maxPosts,
+  promotionPackageMaxPosts: FIXED_MAX_POSTS,
   promotionPackageDisplayQuota: formData.displayQuota,
   promotionPackageDescription: normalizeText(formData.description),
   promotionPackagePublished: published,
 });
+
+const sortPackages = (packages: PromotionPackage[]) =>
+  [...packages].sort((left, right) => left.id - right.id);
 
 export const promotionPackageService = {
   getSlotOptions(slotResponses: PlacementSlotApiResponse[]) {
@@ -142,8 +160,25 @@ export const promotionPackageService = {
           item.placementSlotCode ?? null,
           item.placementSlotTitle ?? null,
         ),
+        status: item.placementSlotPublished ? "Active" : "Disabled",
       }))
       .filter((item) => isHomepageBoostSlotCode(item.code));
+  },
+
+  getSelectableSlotOptions(
+    slotOptions: PromotionPackageSlotOption[],
+    packages: PromotionPackage[],
+    editingPackageId?: number | null,
+  ) {
+    const usedSlotLabels = new Set(
+      packages
+        .filter((item) => item.id !== editingPackageId)
+        .map((item) => item.slot),
+    );
+
+    return slotOptions.filter(
+      (slot) => slot.status === "Active" && !usedSlotLabels.has(slot.label),
+    );
   },
 
   async getPromotionPackages(): Promise<PromotionPackage[]> {
@@ -154,9 +189,11 @@ export const promotionPackageService = {
       },
     );
 
-    return data
-      .map(mapApiPackageToUi)
-      .filter((item) => isHomepageBoostSlotCode(item.slotCode));
+    return sortPackages(
+      data
+        .map(mapApiPackageToUi)
+        .filter((item) => isHomepageBoostSlotCode(item.slotCode)),
+    );
   },
 
   getActivePromotionPackages(packages: PromotionPackage[]) {
@@ -206,8 +243,8 @@ export const promotionPackageService = {
       },
       {
         title: "Tổng quota",
-        value: totalQuota.toLocaleString("en-US"),
-        subtitle: "Tổng lượng hiển thị của tất cả gói đã cấu hình",
+        value: totalQuota.toLocaleString("vi-VN"),
+        subtitle: "Tổng lượt hiển thị của các gói đã cấu hình",
       },
     ];
   },
@@ -224,6 +261,10 @@ export const promotionPackageService = {
       throw new Error("Không tìm thấy vị trí hiển thị đã chọn.");
     }
 
+    if (targetSlot.status !== "Active") {
+      throw new Error("Vị trí hiển thị đã tắt. Vui lòng chọn vị trí đang bật.");
+    }
+
     const data = await apiClient.request<PromotionPackageApiResponse>(
       "/api/admin/promotion-packages",
       {
@@ -234,13 +275,13 @@ export const promotionPackageService = {
       },
     );
 
-    return [
+    return sortPackages([
+      ...packages,
       mapApiPackageToUi({
         ...data,
         slotCode: targetSlot.code,
       }),
-      ...packages,
-    ];
+    ]);
   },
 
   async updatePromotionPackage(
@@ -255,6 +296,10 @@ export const promotionPackageService = {
 
     if (!targetSlot) {
       throw new Error("Không tìm thấy vị trí hiển thị đã chọn.");
+    }
+
+    if (targetSlot.status !== "Active") {
+      throw new Error("Vị trí hiển thị đã tắt. Vui lòng chọn vị trí đang bật.");
     }
 
     const data = await apiClient.request<PromotionPackageApiResponse>(
@@ -273,10 +318,12 @@ export const promotionPackageService = {
       },
     );
 
-    return packages.map((item) =>
-      item.id === packageId
-        ? mapApiPackageToUi({ ...data, slotCode: targetSlot.code })
-        : item,
+    return sortPackages(
+      packages.map((item) =>
+        item.id === packageId
+          ? mapApiPackageToUi({ ...data, slotCode: targetSlot.code })
+          : item,
+      ),
     );
   },
 
@@ -313,7 +360,7 @@ export const promotionPackageService = {
               slot: currentPackage.slot,
               durationDays: currentPackage.durationDays,
               price: currentPackage.price,
-              maxPosts: currentPackage.maxPosts,
+              maxPosts: FIXED_MAX_POSTS,
               displayQuota: currentPackage.displayQuota,
               description: currentPackage.description,
             },
@@ -324,10 +371,12 @@ export const promotionPackageService = {
       },
     );
 
-    return packages.map((item) =>
-      item.id === packageId
-        ? mapApiPackageToUi({ ...data, slotCode: targetSlot.code })
-        : item,
+    return sortPackages(
+      packages.map((item) =>
+        item.id === packageId
+          ? mapApiPackageToUi({ ...data, slotCode: targetSlot.code })
+          : item,
+      ),
     );
   },
 };

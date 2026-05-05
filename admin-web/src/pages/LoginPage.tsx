@@ -114,9 +114,9 @@ function LoginPage() {
               <span>Ghi nhớ đăng nhập</span>
             </label>
 
-            <button type="button" className="login-form__forgot">
-              Quên mật khẩu?
-            </button>
+            <span className="login-form__forgot">
+              Liên hệ quản trị hệ thống nếu bạn cần đặt lại mật khẩu.
+            </span>
           </div>
 
           <button

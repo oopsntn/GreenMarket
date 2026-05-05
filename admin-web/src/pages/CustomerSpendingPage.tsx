@@ -12,14 +12,15 @@ import { exportService } from "../services/exportService";
 import type { CustomerSpendingRow } from "../types/customerSpending";
 import {
   coerceDateRange,
-  DEFAULT_REPORT_FROM_DATE,
-  DEFAULT_REPORT_TO_DATE,
   formatDateRangeLabel,
+  getPastDateValue,
   getTodayDateValue,
 } from "../utils/dateRange";
 import "./CustomerSpendingPage.css";
 
 const PAGE_SIZE = 5;
+const DEFAULT_CUSTOMER_SPENDING_TO_DATE = getTodayDateValue();
+const DEFAULT_CUSTOMER_SPENDING_FROM_DATE = getPastDateValue(90);
 
 const CUSTOMER_SEGMENTS = [
   "All Customers",
@@ -47,8 +48,10 @@ function CustomerSpendingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState("");
 
-  const [fromDate, setFromDate] = useState(DEFAULT_REPORT_FROM_DATE);
-  const [toDate, setToDate] = useState(DEFAULT_REPORT_TO_DATE);
+  const [fromDate, setFromDate] = useState(
+    DEFAULT_CUSTOMER_SPENDING_FROM_DATE,
+  );
+  const [toDate, setToDate] = useState(DEFAULT_CUSTOMER_SPENDING_TO_DATE);
   const [customerSegment, setCustomerSegment] =
     useState<(typeof CUSTOMER_SEGMENTS)[number]>("All Customers");
   const [searchKeyword, setSearchKeyword] = useState("");

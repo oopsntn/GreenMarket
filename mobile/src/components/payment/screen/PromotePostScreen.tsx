@@ -8,6 +8,7 @@ import Card from '../../Reused/Card/Card';
 import Button from '../../Reused/Button/Button';
 import { paymentService, PromotionPackage } from '../service/paymentService';
 import CustomAlert from '../../../utils/AlertHelper';
+import { openPaymentAuthSession } from '../utils/paymentRedirect';
 
 const PromotePostScreen = ({ route }: any) => {
     const navigation = useNavigation<any>();
@@ -62,6 +63,17 @@ const PromotePostScreen = ({ route }: any) => {
     // Mở browser thanh toán và lắng nghe deep-link trả về từ VNPay
     const openPaymentBrowser = async (paymentUrl: string) => {
         // Dùng ref để tránh navigate nhiều lần nếu listener bị gọi nhiều lần
+        const paymentResult = await openPaymentAuthSession(paymentUrl);
+
+        if (paymentResult) {
+            const { status, code, txnRef, message } = paymentResult;
+            navigation.navigate('PaymentResult', { status, code, txnRef, message, type: 'promote' });
+            return;
+        }
+
+        navigation.navigate('PaymentPending', { type: 'promote', postId: post?.postId });
+        return;
+
         const navigatedRef = { current: false };
 
         const subscription = Linking.addEventListener('url', (event) => {
@@ -81,25 +93,19 @@ const PromotePostScreen = ({ route }: any) => {
                 const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
                 const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
 
-                navigation.navigate('PaymentResult', { status, code, txnRef });
+                navigation.navigate('PaymentResult', { status, code, txnRef, type: 'promote' });
             }
         });
 
-        await WebBrowser.openBrowserAsync(paymentUrl);
+        await WebBrowser.openAuthSessionAsync(
+            paymentUrl,
+            "greenmarket://payment-result"
+        );
 
-        // Browser đã đóng nhưng chưa nhận deep-link → fallback
+        // Browser đã đóng nhưng chưa nhận deep-link → chuyển đến màn hình chờ
         subscription.remove();
         if (!navigatedRef.current) {
-            // Người dùng có thể đã thanh toán nhưng deep-link không về được
-            // Hiển thị alert nhẹ nhàng thay vì silent fail
-            CustomAlert(
-                'Kiểm tra kết quả',
-                'Nếu bạn đã hoàn tất thanh toán, vui lòng kiểm tra trạng thái trong quản lý tin đăng.',
-                [
-                    { text: 'Xem tin của tôi', onPress: () => navigation.navigate('MyPost') },
-                    { text: 'Đóng', style: 'cancel' },
-                ]
-            );
+            navigation.navigate('PaymentPending', { type: 'promote', postId: post?.postId });
         }
     };
 

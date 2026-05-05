@@ -9,9 +9,10 @@ import {
   MAX_CONTACT_MESSAGE_LENGTH
 } from "../../services/collaborator.service";
 
-const getStringParam = (value: string | string[] | undefined) => {
-  if (Array.isArray(value)) return value[0] ?? "";
-  return value ?? "";
+const getStringParam = (value: any): string => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return typeof value[0] === "string" ? value[0] : "";
+  return "";
 };
 
 export const getCollaboratorProfile = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -308,8 +309,14 @@ export const getPublicCollaborators = async (req: AuthRequest, res: Response): P
       return;
     }
 
-    const { page, limit } = req.query;
-    const result = await CollaboratorService.getPublicCollaborators(userId, { page, limit });
+    const { page, limit, keyword, location, status } = req.query;
+    const result = await CollaboratorService.getPublicCollaborators(userId, { 
+      page, 
+      limit,
+      keyword: getStringParam(keyword),
+      location: getStringParam(location),
+      status: getStringParam(status)
+    });
     res.json(result);
   } catch (error) {
     console.error("[getPublicCollaborators] Error:", error);

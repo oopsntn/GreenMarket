@@ -8,6 +8,12 @@ export const getTodayDateValue = (baseDate = new Date()) => toDateInputValue(bas
 export const getCurrentMonthStartDateValue = (baseDate = new Date()) =>
   toDateInputValue(new Date(baseDate.getFullYear(), baseDate.getMonth(), 1));
 
+export const getPastDateValue = (daysBack: number, baseDate = new Date()) => {
+  const nextDate = new Date(baseDate);
+  nextDate.setDate(nextDate.getDate() - Math.max(daysBack, 0));
+  return toDateInputValue(nextDate);
+};
+
 export const DEFAULT_REPORT_FROM_DATE = getCurrentMonthStartDateValue();
 export const DEFAULT_REPORT_TO_DATE = getTodayDateValue();
 

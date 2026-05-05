@@ -1,4 +1,5 @@
 import { api, API_BASE_URL } from "../../../config/api";
+import { getPaymentRedirectUrl } from "../utils/paymentRedirect";
 
 export interface PromotionPackage {
     promotionPackageId: number;
@@ -68,16 +69,18 @@ export const paymentService = {
     },
 
     buyPackage: async (postId: number, packageId: number): Promise<PaymentIntentResponse> => {
+        const mobileRedirectUrl = getPaymentRedirectUrl();
         console.log('[PaymentService.buyPackage]', {
             url: `${API_BASE_URL}/payment/buy-package`,
             method: 'POST',
-            payload: { postId, packageId, platform: 'mobile' },
+            payload: { postId, packageId, platform: 'mobile', mobileRedirectUrl },
         });
 
         const response = await api.post('/payment/buy-package', {
             postId,
             packageId,
-            platform: 'mobile'
+            platform: 'mobile',
+            mobileRedirectUrl,
         });
         return response.data;
     },
@@ -106,35 +109,38 @@ export const paymentService = {
     },
 
     buyShopVipPackage: async () => {
+        const mobileRedirectUrl = getPaymentRedirectUrl();
         console.log('[PaymentService.buyShopVipPackage]', {
             url: `${API_BASE_URL}/payment/buy-shop-vip`,
             method: 'POST',
-            payload: { platform: 'mobile' },
+            payload: { platform: 'mobile', mobileRedirectUrl },
         });
 
-        const response = await api.post('/payment/buy-shop-vip', { platform: 'mobile' });
+        const response = await api.post('/payment/buy-shop-vip', { platform: 'mobile', mobileRedirectUrl });
         return response.data;
     },
 
     buyPersonalPackage: async () => {
+        const mobileRedirectUrl = getPaymentRedirectUrl();
         console.log('[PaymentService.buyPersonalPackage]', {
             url: `${API_BASE_URL}/payment/buy-personal`,
             method: 'POST',
-            payload: { platform: 'mobile' },
+            payload: { platform: 'mobile', mobileRedirectUrl },
         });
 
-        const response = await api.post('/payment/buy-personal', { platform: 'mobile' });
+        const response = await api.post('/payment/buy-personal', { platform: 'mobile', mobileRedirectUrl });
         return response.data;
     },
 
     createShopPaymentIntent: async (): Promise<{ paymentUrl: string }> => {
+        const mobileRedirectUrl = getPaymentRedirectUrl();
         console.log('[PaymentService.createShopPaymentIntent]', {
             url: `${API_BASE_URL}/payment/register-shop`,
             method: 'POST',
-            payload: { platform: 'mobile' },
+            payload: { platform: 'mobile', mobileRedirectUrl },
         });
 
-        const response = await api.post<{ paymentUrl: string }>('/payment/register-shop', { platform: 'mobile' });
+        const response = await api.post<{ paymentUrl: string }>('/payment/register-shop', { platform: 'mobile', mobileRedirectUrl });
         return response.data;
     }
 };

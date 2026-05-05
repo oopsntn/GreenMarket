@@ -13,6 +13,7 @@ interface CategoryAttribute {
     attributeTitle: string;
     attributeDataType?: string;
     required?: boolean;
+    attributeOptions?: string[];
 }
 
 interface SelectedMedia {

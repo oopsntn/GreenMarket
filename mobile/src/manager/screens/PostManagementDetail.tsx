@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   ScrollView,
@@ -6,50 +6,73 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { AlertCircle, Calendar, Check, Clock3, EyeOff, User, X } from 'lucide-react-native';
-import ReasonModal from '../components/ReasonModal';
-import managerService, { PostModerationData } from '../services/ManagerService';
-import CustomAlert from '../../utils/AlertHelper';
-import ManagerHeader from '../components/ManagerHeader';
+} from 'react-native'
+import { Calendar, Check, Clock3, EyeOff, MapPin, Maximize2, Phone, Store, User, X } from 'lucide-react-native'
+import ReasonModal from '../components/ReasonModal'
+import managerService, { PostModerationData, PostModerationDetail } from '../services/ManagerService'
+import { MediaGallery } from '../../components/post/components/MediaGallery'
+import { resolveImageUrl } from '../../utils/resolveImageUrl'
+import CustomAlert from '../../utils/AlertHelper'
+import ManagerHeader from '../components/ManagerHeader'
+
+const normalizeMediaUrl = (raw: unknown): string => {
+  if (!raw) return ''
+  if (typeof raw === 'string') return resolveImageUrl(raw)
+  if (typeof raw === 'object') {
+    const record = raw as Record<string, unknown>
+    const url =
+      (typeof record.imageUrl === 'string' && record.imageUrl) ||
+      (typeof record.videoUrl === 'string' && record.videoUrl) ||
+      (typeof record.url === 'string' && record.url) ||
+      ''
+    return resolveImageUrl(url)
+  }
+  return resolveImageUrl(String(raw))
+}
 
 const statusLabelMap: Record<string, string> = {
   pending: 'Chờ duyệt',
   approved: 'Đã duyệt',
   rejected: 'Bị từ chối',
   hidden: 'Đã ẩn',
-};
+}
 
 const priorityMap: Record<string, string> = {
   low: 'Thấp',
   medium: 'Trung bình',
   high: 'Cao',
   critical: 'Khẩn cấp',
-};
+}
 
 const PostManagementDetail = ({ route, navigation }: any) => {
-  const { postId } = route.params;
-  const [post, setPost] = useState<PostModerationData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [modalType, setModalType] = useState<'reject' | 'hide' | null>(null);
+  const { postId } = route.params
+  const [post, setPost] = useState<PostModerationData | null>(null)
+  const [fullPost, setFullPost] = useState<PostModerationDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [modalType, setModalType] = useState<'reject' | 'hide' | null>(null)
 
   useEffect(() => {
-    fetchPost();
-  }, [postId]);
+    fetchPost()
+  }, [postId])
 
   const fetchPost = async () => {
     try {
-      setLoading(true);
-      const data = await managerService.getPostById(postId);
-      setPost(data);
+      setLoading(true)
+      const [queueData, detailData] = await Promise.all([
+        managerService.getPostById(postId),
+        managerService.getPostDetail(postId),
+      ])
+
+      setPost(queueData)
+      setFullPost(detailData)
     } catch (error) {
-      console.error(error);
-      CustomAlert('Lỗi', 'Không thể tải chi tiết bài đăng.');
-      navigation.goBack();
+      console.error(error)
+      CustomAlert('Lỗi', 'Không thể tải chi tiết bài đăng.')
+      navigation.goBack()
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleApprove = () => {
     CustomAlert('Duyệt bài đăng', 'Bạn có muốn duyệt bài đăng này không?', [
@@ -58,41 +81,41 @@ const PostManagementDetail = ({ route, navigation }: any) => {
         text: 'Duyệt',
         onPress: async () => {
           try {
-            await managerService.updatePostStatus(postId, 'approved');
-            CustomAlert('Thành công', 'Bài đăng đã được duyệt.');
-            navigation.goBack();
-          } catch (error) {
-            CustomAlert('Lỗi', 'Không thể duyệt bài đăng này.');
+            await managerService.updatePostStatus(postId, 'approved')
+            CustomAlert('Thành công', 'Bài đăng đã được duyệt.')
+            navigation.goBack()
+          } catch (_error) {
+            CustomAlert('Lỗi', 'Không thể duyệt bài đăng này.')
           }
         },
       },
-    ]);
-  };
+    ])
+  }
 
   const onSubmitModal = async (reason: string) => {
     try {
       if (modalType === 'reject') {
-        await managerService.updatePostStatus(postId, 'rejected', reason);
-        CustomAlert('Đã từ chối', `Đã lưu lý do: ${reason}`);
+        await managerService.updatePostStatus(postId, 'rejected', reason)
+        CustomAlert('Đã từ chối', `Đã lưu lý do: ${reason}`)
       } else if (modalType === 'hide') {
-        await managerService.deletePost(postId, reason);
-        CustomAlert('Đã ẩn bài', `Bài đăng đã được ẩn.\nLý do: ${reason}`);
+        await managerService.deletePost(postId, reason)
+        CustomAlert('Đã ẩn bài', `Bài đăng đã được ẩn.\nLý do: ${reason}`)
       }
-      navigation.goBack();
-    } catch (error) {
-      CustomAlert('Lỗi', 'Không thể thực hiện thao tác này.');
+      navigation.goBack()
+    } catch (_error) {
+      CustomAlert('Lỗi', 'Không thể thực hiện thao tác này.')
     }
-  };
+  }
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#22C55E" />
       </View>
-    );
+    )
   }
 
-  if (!post) return null;
+  if (!post) return null
 
   return (
     <View style={styles.container}>
@@ -111,6 +134,68 @@ const PostManagementDetail = ({ route, navigation }: any) => {
           <Text style={styles.subtitle}>{post.summary || 'Không có mô tả bổ sung.'}</Text>
         </View>
 
+        {fullPost && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Nội dung bài đăng</Text>
+
+            <View style={{ marginBottom: 16, marginHorizontal: -20 }}>
+              <MediaGallery media={[
+                ...(fullPost.images || []).map((i) => ({ type: 'image', url: normalizeMediaUrl(i) })),
+                ...(fullPost.videos || []).map((v) => ({ type: 'video', url: normalizeMediaUrl(v) })),
+              ]} />
+            </View>
+
+            {fullPost.attributes.length > 0 && (
+              <View style={styles.infoCard}>
+                <View style={[styles.infoRow, { marginBottom: 4 }]}>
+                  <Maximize2 size={18} color="#64748B" />
+                  <Text style={[styles.infoLabel, styles.sectionInfoTitle]}>Thông số kỹ thuật</Text>
+                </View>
+                <View style={styles.attrGrid}>
+                  {fullPost.attributes.map((attr, index) => (
+                    <View key={index} style={styles.attrItem}>
+                      <Text style={styles.attrLabel}>{attr.name || 'Thuộc tính'}</Text>
+                      <Text style={styles.attrValue}>{attr.value}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={[styles.infoCard, { marginTop: 12 }]}>
+              <View style={styles.infoRow}>
+                <Store size={18} color="#64748B" />
+                <View>
+                  <Text style={styles.infoLabel}>Cửa hàng / Người bán</Text>
+                  <Text style={styles.infoValue}>
+                    {fullPost.shop?.shopName || fullPost.author?.userDisplayName || fullPost.author?.userMobile || 'Chưa cập nhật'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <Phone size={18} color="#64748B" />
+                <View>
+                  <Text style={styles.infoLabel}>Số điện thoại</Text>
+                  <Text style={styles.infoValue}>{fullPost.postContactPhone || fullPost.author?.userMobile || 'Chưa cập nhật'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <MapPin size={18} color="#64748B" />
+                <View>
+                  <Text style={styles.infoLabel}>Vị trí</Text>
+                  <Text style={styles.infoValue}>{fullPost.postLocation || 'Chưa cập nhật'}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ngữ cảnh kiểm duyệt</Text>
           <View style={styles.infoCard}>
@@ -118,7 +203,7 @@ const PostManagementDetail = ({ route, navigation }: any) => {
               <User size={18} color="#64748B" />
               <View>
                 <Text style={styles.infoLabel}>Tác giả</Text>
-                <Text style={styles.infoValue}>{post.authorName || 'Chưa rõ tác giả'}</Text>
+                <Text style={styles.infoValue}>{post.authorName || fullPost?.author?.userDisplayName || 'Chưa rõ tác giả'}</Text>
               </View>
             </View>
 
@@ -147,13 +232,6 @@ const PostManagementDetail = ({ route, navigation }: any) => {
             </View>
           </View>
         </View>
-
-        <View style={styles.warningBox}>
-          <AlertCircle size={20} color="#94A3B8" />
-          <Text style={styles.warningText}>
-            Màn này hiện chỉ hiển thị dữ liệu moderation queue. Nếu cần xử lý mạnh hơn, quản lý có thể ẩn hoặc từ chối bài đăng tại đây.
-          </Text>
-        </View>
       </ScrollView>
 
       <View style={styles.moderationBar}>
@@ -164,12 +242,12 @@ const PostManagementDetail = ({ route, navigation }: any) => {
 
         <TouchableOpacity style={[styles.modButton, styles.rejectBtn]} onPress={() => setModalType('reject')}>
           <X size={22} color="#F59E0B" />
-          <Text style={[styles.modText, { color: '#F59E0B' }]}>Từ chối</Text>
+          <Text style={[styles.modText, { color: '#F59E0B' }]}>Gỡ bài đăng</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.modButton, styles.approveBtn]} onPress={handleApprove}>
           <Check size={22} color="white" />
-          <Text style={[styles.modText, { color: 'white' }]}>Duyệt</Text>
+          <Text style={[styles.modText, { color: 'white' }]}>Giữ bài</Text>
         </TouchableOpacity>
       </View>
 
@@ -183,8 +261,8 @@ const PostManagementDetail = ({ route, navigation }: any) => {
         confirmColor={modalType === 'reject' ? '#F59E0B' : '#EF4444'}
       />
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'white' },
@@ -221,18 +299,23 @@ const styles = StyleSheet.create({
   },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   infoLabel: { fontSize: 12, color: '#94A3B8', marginBottom: 2 },
+  sectionInfoTitle: { fontSize: 14, fontWeight: 'bold', color: '#1E293B', marginBottom: 0 },
   infoValue: { fontSize: 15, color: '#1E293B', fontWeight: '500' },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 14 },
-  warningBox: {
+  attrGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
-    padding: 16,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    marginTop: 8,
   },
-  warningText: { flex: 1, color: '#475569', lineHeight: 20 },
+  attrItem: {
+    width: '47%',
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 8,
+  },
+  attrLabel: { fontSize: 11, color: '#64748B', marginBottom: 2 },
+  attrValue: { fontSize: 13, color: '#1E293B', fontWeight: '600' },
   moderationBar: {
     position: 'absolute',
     bottom: 0,
@@ -260,6 +343,6 @@ const styles = StyleSheet.create({
   rejectBtn: { backgroundColor: '#FFFBEB' },
   approveBtn: { backgroundColor: '#22C55E' },
   modText: { fontWeight: '700', fontSize: 14 },
-});
+})
 
-export default PostManagementDetail;
+export default PostManagementDetail

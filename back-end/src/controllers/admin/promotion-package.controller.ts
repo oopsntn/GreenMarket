@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import {
     and,
     desc,
@@ -54,6 +54,33 @@ const parseNonNegativeInteger = (value: unknown, fallback: number): number => {
     return Math.floor(parsed);
 };
 
+const parseBooleanFlag = (value: unknown): boolean | null => {
+    if (typeof value === "boolean") {
+        return value;
+    }
+
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === "true") {
+            return true;
+        }
+        if (normalized === "false") {
+            return false;
+        }
+    }
+
+    if (typeof value === "number") {
+        if (value === 1) {
+            return true;
+        }
+        if (value === 0) {
+            return false;
+        }
+    }
+
+    return null;
+};
+
 const parsePrice = (value: unknown): string | null => {
     const parsed = Number(value);
     if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -61,6 +88,56 @@ const parsePrice = (value: unknown): string | null => {
     }
 
     return parsed.toFixed(2);
+};
+
+const normalizePackageTitle = (value: unknown) =>
+    typeof value === "string" ? value.trim() : "";
+
+const findOtherPackageBySlotId = async (
+    slotId: number,
+    excludeId?: number,
+) => {
+    const rows = await db
+        .select({
+            promotionPackageId: promotionPackages.promotionPackageId,
+            promotionPackageTitle: promotionPackages.promotionPackageTitle,
+        })
+        .from(promotionPackages)
+        .where(eq(promotionPackages.promotionPackageSlotId, slotId))
+        .limit(5);
+
+    return rows.find((row) => row.promotionPackageId !== excludeId) ?? null;
+};
+
+const findOtherPackageByTitle = async (
+    title: string,
+    excludeId?: number,
+) => {
+    const normalizedTitle = normalizePackageTitle(title).toLowerCase();
+    if (!normalizedTitle) {
+        return null;
+    }
+
+    const rows = await db
+        .select({
+            promotionPackageId: promotionPackages.promotionPackageId,
+            promotionPackageTitle: promotionPackages.promotionPackageTitle,
+        })
+        .from(promotionPackages)
+        .limit(200);
+
+    return (
+        rows.find((row) => {
+            if (row.promotionPackageId === excludeId) {
+                return false;
+            }
+
+            return (
+                normalizePackageTitle(row.promotionPackageTitle).toLowerCase() ===
+                normalizedTitle
+            );
+        }) ?? null
+    );
 };
 
 const getCurrentPriceRows = async (packageIds: number[]) => {
@@ -281,7 +358,6 @@ export const createPromotionPackage = async (
             promotionPackageSlotId,
             promotionPackageTitle,
             promotionPackageDurationDays,
-            promotionPackageMaxPosts,
             promotionPackageDisplayQuota,
             promotionPackageDescription,
             promotionPackagePublished,
@@ -291,19 +367,33 @@ export const createPromotionPackage = async (
         const slotId = parsePositiveInteger(promotionPackageSlotId);
         const durationDays = parsePositiveInteger(promotionPackageDurationDays);
         const parsedPrice = parsePrice(rawPrice);
+        const normalizedTitle = normalizePackageTitle(promotionPackageTitle);
+        const parsedPublished =
+            promotionPackagePublished === undefined
+                ? false
+                : parseBooleanFlag(promotionPackagePublished);
 
-        if (!slotId || !promotionPackageTitle || !durationDays || !parsedPrice) {
+        if (!slotId || !normalizedTitle || !durationDays || !parsedPrice) {
             res.status(400).json({
-                error: "Vui lòng nhập đủ vị trí hiển thị, tên gói, thời lượng và giá bán",
+                error: "Vui lòng nhập đầy đủ vị trí hiển thị, tên gói, thời lượng và giá bán.",
             });
             return;
         }
 
-        const maxPosts = parseNonNegativeInteger(promotionPackageMaxPosts, 1);
-        const displayQuota = parseNonNegativeInteger(promotionPackageDisplayQuota, 1);
-        if (maxPosts < 1 || displayQuota < 1) {
+        if (parsedPublished === null) {
             res.status(400).json({
-                error: "Số bài tối đa và quota hiển thị phải lớn hơn hoặc bằng 1",
+                error: "Trạng thái bật hoặc tắt của gói quảng bá không hợp lệ.",
+            });
+            return;
+        }
+
+        const displayQuota = parseNonNegativeInteger(
+            promotionPackageDisplayQuota,
+            -1,
+        );
+        if (displayQuota < 1) {
+            res.status(400).json({
+                error: "Quota hiển thị phải lớn hơn hoặc bằng 1.",
             });
             return;
         }
@@ -315,7 +405,30 @@ export const createPromotionPackage = async (
             .limit(1);
 
         if (!slot) {
-            res.status(400).json({ error: "Không tìm thấy vị trí hiển thị" });
+            res.status(400).json({ error: "Không tìm thấy vị trí hiển thị." });
+            return;
+        }
+
+        if (!slot.placementSlotPublished) {
+            res.status(400).json({
+                error: "Vị trí hiển thị đã tắt. Vui lòng chọn vị trí đang bật.",
+            });
+            return;
+        }
+
+        const occupiedPackage = await findOtherPackageBySlotId(slotId);
+        if (occupiedPackage) {
+            res.status(400).json({
+                error: "Vị trí hiển thị này đã có gói quảng bá. Vui lòng chọn vị trí khác.",
+            });
+            return;
+        }
+
+        const duplicatedPackage = await findOtherPackageByTitle(normalizedTitle);
+        if (duplicatedPackage) {
+            res.status(400).json({
+                error: "Tên gói quảng bá đã tồn tại. Vui lòng nhập tên khác.",
+            });
             return;
         }
 
@@ -323,15 +436,15 @@ export const createPromotionPackage = async (
             .insert(promotionPackages)
             .values({
                 promotionPackageSlotId: slotId,
-                promotionPackageTitle: String(promotionPackageTitle),
+                promotionPackageTitle: normalizedTitle,
                 promotionPackageDurationDays: durationDays,
-                promotionPackageMaxPosts: maxPosts,
+                promotionPackageMaxPosts: 1,
                 promotionPackageDisplayQuota: displayQuota,
                 promotionPackageDescription:
                     typeof promotionPackageDescription === "string"
                         ? promotionPackageDescription
                         : null,
-                promotionPackagePublished: Boolean(promotionPackagePublished),
+                promotionPackagePublished: parsedPublished,
             })
             .returning();
 
@@ -347,7 +460,8 @@ export const createPromotionPackage = async (
             action: "Tạo gói quảng bá",
             detail: `Đã tạo gói "${newPkg.promotionPackageTitle}" cho vị trí ${slot.placementSlotTitle ?? slot.placementSlotCode ?? "không xác định"}.`,
             performedBy: req.user?.email ?? null,
-            targetName: newPkg.promotionPackageTitle ?? `Gói #${newPkg.promotionPackageId}`,
+            targetName:
+                newPkg.promotionPackageTitle ?? `Gói #${newPkg.promotionPackageId}`,
         });
 
         const [created] = await attachCurrentPrices([
@@ -393,9 +507,16 @@ export const updatePromotionPackage = async (
         const parsedPrice = hasPriceInput
             ? parsePrice(body.promotionPackagePrice)
             : null;
+        const hasPublishedInput = Object.prototype.hasOwnProperty.call(
+            body,
+            "promotionPackagePublished",
+        );
+        const parsedPublished = hasPublishedInput
+            ? parseBooleanFlag(body.promotionPackagePublished)
+            : undefined;
 
         if (hasPriceInput && !parsedPrice) {
-            res.status(400).json({ error: "Giá bán phải lớn hơn 0" });
+            res.status(400).json({ error: "Giá bán phải lớn hơn 0." });
             return;
         }
 
@@ -404,7 +525,9 @@ export const updatePromotionPackage = async (
         if (Object.prototype.hasOwnProperty.call(body, "promotionPackageSlotId")) {
             const nextSlotId = parsePositiveInteger(body.promotionPackageSlotId);
             if (!nextSlotId) {
-                res.status(400).json({ error: "Mã vị trí hiển thị không hợp lệ" });
+                res.status(400).json({
+                    error: "Mã vị trí hiển thị không hợp lệ.",
+                });
                 return;
             }
 
@@ -415,7 +538,25 @@ export const updatePromotionPackage = async (
                 .limit(1);
 
             if (!slot) {
-                res.status(400).json({ error: "Không tìm thấy vị trí hiển thị" });
+                res.status(400).json({ error: "Không tìm thấy vị trí hiển thị." });
+                return;
+            }
+
+            if (!slot.placementSlotPublished) {
+                res.status(400).json({
+                    error: "Vị trí hiển thị đã tắt. Vui lòng chọn vị trí đang bật.",
+                });
+                return;
+            }
+
+            const occupiedPackage = await findOtherPackageBySlotId(
+                nextSlotId,
+                idNumber,
+            );
+            if (occupiedPackage) {
+                res.status(400).json({
+                    error: "Vị trí hiển thị này đã có gói quảng bá. Vui lòng chọn vị trí khác.",
+                });
                 return;
             }
 
@@ -423,10 +564,26 @@ export const updatePromotionPackage = async (
         }
 
         if (Object.prototype.hasOwnProperty.call(body, "promotionPackageTitle")) {
-            updatePayload.promotionPackageTitle =
-                body.promotionPackageTitle === null
-                    ? null
-                    : String(body.promotionPackageTitle);
+            const nextTitle = normalizePackageTitle(body.promotionPackageTitle);
+            if (!nextTitle) {
+                res.status(400).json({
+                    error: "Tên gói quảng bá là bắt buộc.",
+                });
+                return;
+            }
+
+            const duplicatedPackage = await findOtherPackageByTitle(
+                nextTitle,
+                idNumber,
+            );
+            if (duplicatedPackage) {
+                res.status(400).json({
+                    error: "Tên gói quảng bá đã tồn tại. Vui lòng nhập tên khác.",
+                });
+                return;
+            }
+
+            updatePayload.promotionPackageTitle = nextTitle;
         }
 
         if (Object.prototype.hasOwnProperty.call(body, "promotionPackageDurationDays")) {
@@ -434,24 +591,14 @@ export const updatePromotionPackage = async (
                 body.promotionPackageDurationDays,
             );
             if (!parsedDuration) {
-                res.status(400).json({ error: "Thời lượng phải lớn hơn 0" });
+                res.status(400).json({ error: "Thời lượng phải lớn hơn 0." });
                 return;
             }
             updatePayload.promotionPackageDurationDays = parsedDuration;
         }
 
         if (Object.prototype.hasOwnProperty.call(body, "promotionPackageMaxPosts")) {
-            const parsedMaxPosts = parseNonNegativeInteger(
-                body.promotionPackageMaxPosts,
-                -1,
-            );
-            if (parsedMaxPosts < 1) {
-                res.status(400).json({
-                    error: "Số bài tối đa phải lớn hơn hoặc bằng 1",
-                });
-                return;
-            }
-            updatePayload.promotionPackageMaxPosts = parsedMaxPosts;
+            updatePayload.promotionPackageMaxPosts = 1;
         }
 
         if (
@@ -463,7 +610,7 @@ export const updatePromotionPackage = async (
             );
             if (parsedDisplayQuota < 1) {
                 res.status(400).json({
-                    error: "Quota hiển thị phải lớn hơn hoặc bằng 1",
+                    error: "Quota hiển thị phải lớn hơn hoặc bằng 1.",
                 });
                 return;
             }
@@ -479,17 +626,20 @@ export const updatePromotionPackage = async (
                     : String(body.promotionPackageDescription);
         }
 
-        if (
-            Object.prototype.hasOwnProperty.call(body, "promotionPackagePublished")
-        ) {
-            updatePayload.promotionPackagePublished = Boolean(
-                body.promotionPackagePublished,
-            );
+        if (hasPublishedInput) {
+            if (parsedPublished === null) {
+                res.status(400).json({
+                    error: "Trạng thái bật hoặc tắt của gói quảng bá không hợp lệ.",
+                });
+                return;
+            }
+
+            updatePayload.promotionPackagePublished = parsedPublished;
         }
 
         if (Object.keys(updatePayload).length === 0 && !hasPriceInput) {
             res.status(400).json({
-                error: "Không có dữ liệu hợp lệ để cập nhật",
+                error: "Không có dữ liệu hợp lệ để cập nhật.",
             });
             return;
         }
@@ -547,12 +697,11 @@ export const updatePromotionPackage = async (
 
         await logPromotionPackageEvent({
             packageId: idNumber,
-            action:
-                Object.prototype.hasOwnProperty.call(body, "promotionPackagePublished")
-                    ? Boolean(body.promotionPackagePublished)
-                        ? "Bật gói quảng bá"
-                        : "Tắt gói quảng bá"
-                    : "Cập nhật gói quảng bá",
+            action: hasPublishedInput
+                ? parsedPublished
+                    ? "Bật gói quảng bá"
+                    : "Tắt gói quảng bá"
+                : "Cập nhật gói quảng bá",
             detail: `Đã cập nhật gói "${updatedPkg.promotionPackageTitle ?? `#${updatedPkg.promotionPackageId}`}".`,
             performedBy: req.user?.email ?? null,
             targetName:
@@ -586,7 +735,7 @@ export const deletePromotionPackage = async (
 
         if (linkedPromotions.length > 0) {
             res.status(400).json({
-                error: "Không thể xóa gói đang được dùng trong chiến dịch quảng bá",
+                error: "Không thể xóa gói đang được dùng trong chiến dịch quảng bá.",
             });
             return;
         }

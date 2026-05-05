@@ -29,7 +29,7 @@ export interface ReverseGeocodeResult {
 
 const nominatimHeaders = {
     'Accept-Language': 'vi',
-    'User-Agent': 'GreenMarketMobile/1.0 (Expo React Native)',
+    'User-Agent': 'GreenMarketMobile/1.0',
 };
 
 export const getProvinces = async (): Promise<Province[]> => {

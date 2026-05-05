@@ -15,7 +15,6 @@ import AttributesPage from "../pages/AttributesPage";
 import BoostedPostsPage from "../pages/BoostedPostsPage";
 import CategoriesPage from "../pages/CategoriesPage";
 import CategoryAttributeMappingPage from "../pages/CategoryAttributeMappingPage";
-import CollaboratorsPage from "../pages/CollaboratorsPage";
 import CustomerSpendingPage from "../pages/CustomerSpendingPage";
 import DashboardPage from "../pages/DashboardPage";
 import ExportPage from "../pages/ExportPage";
@@ -95,12 +94,6 @@ function AppRoutes() {
 
             <Route element={<ProtectedModuleRoute moduleKey="users" />}>
               <Route path="users" element={<UsersPage />} />
-            </Route>
-
-            <Route
-              element={<ProtectedModuleRoute moduleKey="collaborators" />}
-            >
-              <Route path="collaborators" element={<CollaboratorsPage />} />
             </Route>
 
             <Route
