@@ -1,5 +1,10 @@
 import { apiClient } from "../lib/apiClient";
 import { roleManagementService } from "./roleManagementService";
+import {
+  formatAdminDate,
+  formatAdminDateTime,
+  getAdminTodayDateValue,
+} from "../utils/adminDateTime";
 import type {
   ApiUserResponse,
   AssignableUserRole,
@@ -12,6 +17,31 @@ import type {
   UserStatus,
   UserSummaryCard,
 } from "../types/user";
+
+const MOJIBAKE_PATTERN = /[\u00c3\u00c2\u00c6\u00c4\u00e2\u00ba\u00bb]/;
+
+const repairMojibake = (value: string) => {
+  if (!value || !MOJIBAKE_PATTERN.test(value)) {
+    return value;
+  }
+
+  try {
+    return decodeURIComponent(escape(value));
+  } catch {
+    return value;
+  }
+};
+
+const normalizeTextKey = (value: string) =>
+  repairMojibake(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/[^\p{L}\p{N}\s/]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 
 const DEFAULT_ADMIN_NAME = "Quản trị viên hệ thống";
 
@@ -31,6 +61,25 @@ const ACTIVITY_ACTION_LABELS: Record<string, string> = {
   "Profile Updated": "Cập nhật hồ sơ",
   "Promotion Reopened": "Mở lại chiến dịch quảng bá",
   "Export Generated": "Tạo tệp xuất",
+};
+
+const EXTENDED_ACTIVITY_ACTION_LABELS: Record<string, string> = {
+  "Admin System Settings Updated": "Cập nhật thiết lập hệ thống",
+  "Admin Manual Notification Sent": "Gửi thông báo thủ công",
+  "Admin Promotion Package Updated": "Cập nhật gói quảng bá",
+  "Admin Slot Updated": "Cập nhật vị trí hiển thị",
+  "Role Assigned": "Gán vai trò",
+};
+
+const NORMALIZED_ACTIVITY_ACTION_LABELS: Record<string, string> = {
+  "admin system settings updated": "Cập nhật thiết lập hệ thống",
+  "admin manual notification sent": "Gửi thông báo thủ công",
+  "admin promotion package updated": "Cập nhật gói quảng bá",
+  "admin slot updated": "Cập nhật vị trí hiển thị",
+  "role assigned": "Gán vai trò",
+  "package updated": "Cập nhật gói giá",
+  "price added": "Thêm mức giá",
+  "price superseded": "Thay thế mức giá",
 };
 
 const ACTIVITY_DETAIL_LABELS: Record<string, string> = {
@@ -66,31 +115,35 @@ const ACTOR_LABELS: Record<string, string> = {
   Admin: "Quản trị viên",
 };
 
-const padNumber = (value: number) => String(value).padStart(2, "0");
+const EXTENDED_ACTOR_LABELS: Record<string, string> = {
+  "System Setup": "Thiết lập hệ thống",
+  "Hệ Thống Admin": "Hệ thống Admin",
+  "Gemini gemini-2.5-flash": "Mô hình Gemini 2.5 Flash",
+  "Gemini gemini-2.0-flash": "Mô hình Gemini 2.0 Flash",
+  "GreenMarket Fallback fallback-local-v1": "Bộ phân tích dự phòng GreenMarket",
+};
+
+const NORMALIZED_ACTOR_LABELS: Record<string, string> = {
+  "system setup": "Thiết lập hệ thống",
+  "he thong admin": "Hệ thống Admin",
+  "gemini gemini 2 5 flash": "Mô hình Gemini 2.5 Flash",
+  "gemini gemini 2 0 flash": "Mô hình Gemini 2.0 Flash",
+  "greenmarket fallback fallback local v1": "Bộ phân tích dự phòng GreenMarket",
+  system: "Hệ thống",
+  admin: "Quản trị viên",
+  "system administrator": "Quản trị viên hệ thống",
+};
 
 const getCurrentDate = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = padNumber(now.getMonth() + 1);
-  const day = padNumber(now.getDate());
-
-  return `${year}-${month}-${day}`;
+  return getAdminTodayDateValue();
 };
 
 const formatDate = (value: string | null) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
+  return formatAdminDate(value);
 };
 
 const formatDateTime = (value: string | null) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return `${date.toISOString().slice(0, 10)} ${String(
-    date.getHours(),
-  ).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return formatAdminDateTime(value);
 };
 
 const mapApiStatusToUiStatus = (value: string | null): UserStatus => {
@@ -169,7 +222,13 @@ const translateActor = (value: string | null | undefined) => {
     return DEFAULT_ADMIN_NAME;
   }
 
-  return ACTOR_LABELS[normalized] || normalized;
+  const actorKey = normalizeTextKey(normalized);
+  return (
+    ACTOR_LABELS[normalized] ||
+    EXTENDED_ACTOR_LABELS[normalized] ||
+    NORMALIZED_ACTOR_LABELS[actorKey] ||
+    repairMojibake(normalized)
+  );
 };
 
 const translateRoleName = (value: string | null | undefined) => {
@@ -207,7 +266,13 @@ const translateActivityAction = (value: string | null | undefined) => {
     return "Hoạt động hệ thống";
   }
 
-  return ACTIVITY_ACTION_LABELS[normalized] || normalized;
+  const actionKey = normalizeTextKey(normalized);
+  return (
+    ACTIVITY_ACTION_LABELS[normalized] ||
+    EXTENDED_ACTIVITY_ACTION_LABELS[normalized] ||
+    NORMALIZED_ACTIVITY_ACTION_LABELS[actionKey] ||
+    repairMojibake(normalized)
+  );
 };
 
 const translateActivityDetail = (value: string | null | undefined) => {
@@ -216,7 +281,11 @@ const translateActivityDetail = (value: string | null | undefined) => {
     return "Không có chi tiết.";
   }
 
-  return ACTIVITY_DETAIL_LABELS[normalized] || translateRoleNote(normalized);
+  return (
+    ACTIVITY_DETAIL_LABELS[normalized] ||
+    ACTIVITY_DETAIL_LABELS[repairMojibake(normalized)] ||
+    translateRoleNote(repairMojibake(normalized))
+  );
 };
 
 const buildFallbackRoleHistory = (

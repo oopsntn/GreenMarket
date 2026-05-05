@@ -46,6 +46,7 @@ const statusFilterOptions: Array<PromotionStatus | "All"> = [
   "Paused",
   "Completed",
   "Expired",
+  "Inactive",
 ];
 
 const paymentFilterOptions: Array<PromotionPaymentStatus | "All"> = [
@@ -69,6 +70,7 @@ const statusLabelMap: Record<PromotionStatus | "All", string> = {
   Paused: "Tạm dừng",
   Completed: "Hoàn tất",
   Expired: "Hết hạn",
+  Inactive: "Ngừng hoạt động",
 };
 
 const paymentLabelMap: Record<PromotionPaymentStatus | "All", string> = {
@@ -969,6 +971,8 @@ function PromotionsPage() {
                                 ? "active"
                               : promotion.status === "Paused"
                                 ? "paused"
+                              : promotion.status === "Inactive"
+                                ? "disabled"
                               : promotion.status === "Completed"
                                 ? "success"
                                 : promotion.status === "Scheduled"
@@ -1234,6 +1238,15 @@ function PromotionsPage() {
                 </div>
               )}
 
+            {selectedPromotion.status === "Inactive" && (
+              <div className="promotions-modal__notice">
+                {promotionService.getActionBlockedReason(
+                  selectedPromotion,
+                  "pause",
+                )}
+              </div>
+            )}
+
             {(selectedPromotion.status === "Active" ||
               selectedPromotion.status === "Paused" ||
               selectedPromotion.status === "Scheduled") &&
@@ -1394,6 +1407,15 @@ function PromotionsPage() {
                   }
                 >
                   Mở lại gói
+                </button>
+              ) : selectedPromotion.status === "Inactive" ? (
+                <button
+                  type="button"
+                  className="promotions-modal__close"
+                  disabled
+                  title="Đơn quảng bá đang ngừng hoạt động vì tài khoản hoặc cửa hàng sở hữu đã bị khóa."
+                >
+                  Ngừng hoạt động
                 </button>
               ) : (
                 <button

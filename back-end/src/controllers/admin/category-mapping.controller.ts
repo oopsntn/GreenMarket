@@ -20,6 +20,8 @@ type CategoryMappingStatusPayload = {
   status?: string;
 };
 
+const MAX_INTEGER_FIELD = 2_147_483_647;
+
 const normalizeMappingStatus = (value: unknown): "Active" | "Disabled" => {
   return value === "Disabled" ? "Disabled" : "Active";
 };
@@ -73,10 +75,12 @@ const parseCreateOrUpdatePayload = (body: CategoryMappingPayload) => {
   if (
     typeof displayOrderValue !== "number" ||
     !Number.isInteger(displayOrderValue) ||
-    displayOrderValue < 1
+    displayOrderValue < 1 ||
+    displayOrderValue > MAX_INTEGER_FIELD
   ) {
     return {
-      error: "Thứ tự hiển thị phải là số nguyên lớn hơn hoặc bằng 1",
+      error:
+        "Thứ tự hiển thị phải là số nguyên lớn hơn hoặc bằng 1 và không vượt quá 2.147.483.647",
     } as const;
   }
 
@@ -94,6 +98,31 @@ const parseCreateOrUpdatePayload = (body: CategoryMappingPayload) => {
       required: parsedRequired ?? false,
     },
   } as const;
+};
+
+const hasDuplicateDisplayOrder = async (params: {
+  categoryId: number;
+  displayOrder: number;
+  excludeAttributeId?: number;
+}) => {
+  const rows = await db
+    .select({
+      attributeId: categoryAttributes.attributeId,
+    })
+    .from(categoryAttributes)
+    .where(
+      and(
+        eq(categoryAttributes.categoryId, params.categoryId),
+        eq(categoryAttributes.displayOrder, params.displayOrder),
+      ),
+    )
+    .limit(5);
+
+  return rows.some(
+    (row) =>
+      params.excludeAttributeId === undefined ||
+      row.attributeId !== params.excludeAttributeId,
+  );
 };
 
 export const getCategoryMappings = async (
@@ -187,6 +216,19 @@ export const createCategoryMapping = async (
     if (duplicateMapping) {
       res.status(409).json({
         error: "Danh mục này đã có thuộc tính được chọn",
+      });
+      return;
+    }
+
+    if (
+      await hasDuplicateDisplayOrder({
+        categoryId,
+        displayOrder,
+      })
+    ) {
+      res.status(409).json({
+        error:
+          "Thứ tự hiển thị này đã được dùng trong danh mục đã chọn. Vui lòng chọn thứ tự khác.",
       });
       return;
     }
@@ -300,6 +342,20 @@ export const updateCategoryMapping = async (
         return;
       }
 
+      if (
+        await hasDuplicateDisplayOrder({
+          categoryId,
+          displayOrder,
+          excludeAttributeId: currentIds.attributeId,
+        })
+      ) {
+        res.status(409).json({
+          error:
+            "Thứ tự hiển thị này đã được dùng trong danh mục đã chọn. Vui lòng chọn thứ tự khác.",
+        });
+        return;
+      }
+
       await db
         .delete(categoryAttributes)
         .where(
@@ -323,6 +379,20 @@ export const updateCategoryMapping = async (
         .returning();
 
       res.json(newMapping);
+      return;
+    }
+
+    if (
+      await hasDuplicateDisplayOrder({
+        categoryId,
+        displayOrder,
+        excludeAttributeId: currentIds.attributeId,
+      })
+    ) {
+      res.status(409).json({
+        error:
+          "Thứ tự hiển thị này đã được dùng trong danh mục đã chọn. Vui lòng chọn thứ tự khác.",
+      });
       return;
     }
 

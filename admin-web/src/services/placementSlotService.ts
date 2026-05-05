@@ -18,6 +18,7 @@ const SLOT_LABELS: Record<string, string> = {
 };
 
 const FIXED_CAPACITY = 1;
+const MAX_INTEGER_FIELD = 2_147_483_647;
 
 const emptyPlacementSlotForm: PlacementSlotFormState = {
   name: "",
@@ -81,6 +82,16 @@ const validateSlotForm = (
 
   if (!Number.isFinite(formData.priority) || formData.priority < 1) {
     throw new Error("Thứ tự hiển thị phải lớn hơn hoặc bằng 1.");
+  }
+
+  if (!Number.isInteger(formData.priority)) {
+    throw new Error("Thứ tự hiển thị phải là số nguyên.");
+  }
+
+  if (formData.priority > MAX_INTEGER_FIELD) {
+    throw new Error(
+      "Thứ tự hiển thị không được vượt quá 2.147.483.647.",
+    );
   }
 
   const usedPriorities = getUsedPriorities(existingSlots, excludeId);

@@ -84,6 +84,19 @@ function UsersPage() {
   const [statusReason, setStatusReason] = useState("");
   const [statusReasonError, setStatusReasonError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const availableAssignableRoles = useMemo(() => {
+    if (!selectedUser) {
+      return assignableRoles;
+    }
+
+    const shouldHideUserRole =
+      selectedUser.role === "Host" ||
+      selectedUser.businessRoleCode?.toUpperCase() === "HOST";
+
+    return shouldHideUserRole
+      ? assignableRoles.filter((role) => role !== "User")
+      : assignableRoles;
+  }, [assignableRoles, selectedUser]);
 
   const summaryCards: UserSummaryCard[] = userService.getSummaryCards(users);
   const usersWithEmailCount = users.filter(
@@ -176,6 +189,18 @@ function UsersPage() {
   const handleSaveRoleAssignment = async () => {
     if (!selectedUser || selectedUser.role === selectedRole) {
       showToast("Người dùng này đã có đúng vai trò đang chọn.", "info");
+      return;
+    }
+
+    if (
+      (selectedUser.role === "Host" ||
+        selectedUser.businessRoleCode?.toUpperCase() === "HOST") &&
+      selectedRole === "User"
+    ) {
+      showToast(
+        "Tài khoản đang là chủ vườn nên không thể gán về vai trò Người dùng.",
+        "error",
+      );
       return;
     }
 
@@ -639,7 +664,7 @@ function UsersPage() {
                     setSelectedRole(event.target.value as AssignableUserRole)
                   }
                 >
-                  {assignableRoles.map((role) => (
+                  {availableAssignableRoles.map((role) => (
                     <option key={role} value={role}>
                       {roleLabelMap[role]}
                     </option>

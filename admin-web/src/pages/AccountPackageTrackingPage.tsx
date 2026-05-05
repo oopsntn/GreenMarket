@@ -27,6 +27,10 @@ const getStatusVariant = (status: AccountPackageTrackingStatus) => {
     return "pending" as const;
   }
 
+  if (status === "inactive") {
+    return "disabled" as const;
+  }
+
   return "success" as const;
 };
 
@@ -236,6 +240,7 @@ function AccountPackageTrackingPage() {
               <option value="permanent">Vĩnh viễn</option>
               <option value="active">Đang hiệu lực</option>
               <option value="expiring_soon">Sắp hết hạn</option>
+              <option value="inactive">Ngừng hoạt động</option>
             </select>
           </div>
         </div>

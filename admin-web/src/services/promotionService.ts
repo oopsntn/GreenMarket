@@ -118,6 +118,10 @@ export const promotionService = {
     promotion: Promotion,
     action: "pause" | "resume" | "reopen",
   ): string {
+    if (promotion.status === "Inactive") {
+      return "Đơn quảng bá đang ngừng hoạt động vì tài khoản hoặc cửa hàng sở hữu đã bị khóa.";
+    }
+
     if (action === "pause") {
       if (promotion.status !== "Active") {
         return "Chỉ có thể tạm dừng đơn quảng bá đang chạy.";
@@ -155,6 +159,10 @@ export const promotionService = {
   },
 
   getChangePackageBlockedReason(promotion: Promotion) {
+    if (promotion.status === "Inactive") {
+      return "Không thể đổi gói khi tài khoản hoặc cửa hàng sở hữu đang bị khóa.";
+    }
+
     if (promotion.paymentStatus === "Paid") {
       return "Đơn quảng bá đã thanh toán không thể đổi gói hoặc chỉnh lại thời gian chạy. Chỉ đơn chưa thanh toán mới được phép cập nhật các thông tin này.";
     }

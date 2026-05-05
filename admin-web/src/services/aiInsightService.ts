@@ -13,6 +13,11 @@ import type {
 const AI_INSIGHTS_API_PATH = "/api/admin/ai-insights";
 
 const TEXT_REPLACEMENTS: Array<[string, string]> = [
+  ["System Setup", "Thiết lập hệ thống"],
+  ["Hệ Thống Admin", "Hệ thống Admin"],
+  ["Gemini gemini-2.5-flash", "Mô hình Gemini 2.5 Flash"],
+  ["Gemini gemini-2.0-flash", "Mô hình Gemini 2.0 Flash"],
+  ["GreenMarket Fallback fallback-local-v1", "Bộ phân tích dự phòng GreenMarket"],
   ["System Administrator", "Quản trị viên hệ thống"],
   ["Home Top", "Vị trí 1 trang chủ"],
   ["Category Top", "Vị trí 2 trang chủ"],
@@ -170,6 +175,16 @@ const getToneDetailLead = (tone: AIInsightSettings["recommendationTone"]) => {
   }
 
   return "Định hướng giọng điệu: cân bằng giữa tăng trưởng và ổn định vận hành.";
+};
+
+const formatLocalDateTime = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
 };
 
 const applyToneToHistoryItem = (
@@ -388,7 +403,7 @@ const buildLocalGeneratedInsight = async (
       summary,
       detail,
       generatedBy: "Bộ phân tích nội bộ",
-      generatedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+      generatedAt: formatLocalDateTime(new Date()),
       status: settings.reviewMode === "Required" ? "Needs Review" : "Generated",
     }),
     settings.recommendationTone,

@@ -4,7 +4,8 @@ export type PromotionStatus =
   | "Active"
   | "Paused"
   | "Completed"
-  | "Expired";
+  | "Expired"
+  | "Inactive";
 export type PromotionPaymentStatus = "Paid" | "Pending Verification";
 export type PromotionHandledBy = "Manager" | "Admin";
 

@@ -34,6 +34,7 @@ const statusFilterOptions: Array<BoostedPostStatus | "All"> = [
   "Completed",
   "Expired",
   "Closed",
+  "Inactive",
 ];
 
 const reviewFilterOptions: Array<BoostedPostReviewStatus | "All"> = [
@@ -66,6 +67,7 @@ const statusLabelMap: Record<BoostedPostStatus | "All", string> = {
   Completed: "Hoàn tất",
   Expired: "Hết hạn",
   Closed: "Đã đóng",
+  Inactive: "Ngừng hoạt động",
 };
 
 const reviewLabelMap: Record<BoostedPostReviewStatus | "All", string> = {

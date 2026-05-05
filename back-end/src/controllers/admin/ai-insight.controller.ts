@@ -7,6 +7,7 @@ import { adminConfigStoreService } from "../../services/adminConfigStore.service
 import { adminPromotionService } from "../../services/adminPromotion.service";
 import { adminReportingService } from "../../services/adminReporting.service";
 import { geminiAIService } from "../../services/geminiAI.service";
+import { formatAdminBangkokDateTime } from "../../utils/adminDateTime";
 
 const AI_INSIGHT_SETTINGS_KEY = "admin_ai_insight_settings";
 
@@ -113,11 +114,20 @@ const average = (values: number[]) =>
   values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
 const resolveMomentumByDelta = (delta: number): "Up" | "Stable" | "Down" =>
   delta >= 0.08 ? "Up" : delta <= -0.08 ? "Down" : "Stable";
+const bangkokDateTimeFormatter = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Bangkok",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
 const formatDateTime = (value: Date | string | null | undefined) => {
   if (!value) return "Chưa có dữ liệu";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Chưa có dữ liệu";
-  return `${date.toISOString().slice(0, 10)} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return bangkokDateTimeFormatter.format(date).replace(",", "");
 };
 const getGeneratedBy = (req: AuthRequest) =>
   req.user?.name || req.user?.email || req.user?.mobile || "Hệ thống Admin";
@@ -669,7 +679,9 @@ export const getAIInsightHistory = async (_req: AuthRequest, res: Response): Pro
         summary: meta?.summary?.trim() || createInsightSummary(detail),
         detail,
         generatedBy: meta?.generatedBy || row.aiInsightProvider || "Hệ thống Admin",
-        generatedAt: formatDateTime(row.aiInsightCreatedAt),
+        generatedAt:
+          formatAdminBangkokDateTime(row.aiInsightCreatedAt) ||
+          "Chưa có dữ liệu",
         status: meta?.status || "Generated",
       };
     });
@@ -692,7 +704,7 @@ export const generateAIInsight = async (req: AuthRequest, res: Response): Promis
       operatorDigest = false,
       focus = "Executive Summary",
       tone = "Balanced",
-      generatedAt = new Date().toISOString().slice(0, 10),
+      generatedAt = formatAdminBangkokDateTime(new Date()) || "Chưa có dữ liệu",
     } = req.body as {
       fromDate?: string;
       toDate?: string;
@@ -785,7 +797,9 @@ export const generateAIInsight = async (req: AuthRequest, res: Response): Promis
       summary,
       detail,
       generatedBy: `${providerLabel} ${generated.model}`,
-      generatedAt: formatDateTime(createdInsight.aiInsightCreatedAt),
+      generatedAt:
+        formatAdminBangkokDateTime(createdInsight.aiInsightCreatedAt) ||
+        "Chưa có dữ liệu",
       status,
     } satisfies AIInsightHistoryItem);
   } catch (error) {

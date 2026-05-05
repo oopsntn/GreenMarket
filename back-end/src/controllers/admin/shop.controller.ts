@@ -64,6 +64,9 @@ const formatDate = (value: Date | string | null | undefined): string => {
   return date.toISOString().slice(0, 10);
 };
 
+const isOwnerInactive = (status: string | null | undefined) =>
+  (status ?? "active").toLowerCase() !== "active";
+
 const mapRowToAdminShop = (row: {
   shopId: number;
   shopName: string;
@@ -72,6 +75,7 @@ const mapRowToAdminShop = (row: {
   shopCreatedAt: Date | null;
   ownerName: string | null;
   ownerEmail: string | null;
+  ownerStatus: string | null;
   totalPosts: number;
 }): AdminShopResponse => {
   return {
@@ -80,7 +84,9 @@ const mapRowToAdminShop = (row: {
     ownerName: row.ownerName?.trim() || "Chưa có chủ sở hữu",
     ownerEmail: row.ownerEmail ?? "",
     totalPosts: Number(row.totalPosts ?? 0),
-    status: mapDbStatusToAdminStatus(row.shopStatus),
+    status: isOwnerInactive(row.ownerStatus)
+      ? "Suspended"
+      : mapDbStatusToAdminStatus(row.shopStatus),
     createdAt: formatDate(row.shopCreatedAt),
     description: row.shopDescription ?? "",
   };
@@ -97,6 +103,7 @@ export const getShops = async (req: Request, res: Response): Promise<void> => {
         shopCreatedAt: shops.shopCreatedAt,
         ownerName: users.userDisplayName,
         ownerEmail: users.userEmail,
+        ownerStatus: users.userStatus,
         totalPosts: sql<number>`count(${posts.postId})`,
       })
       .from(shops)
@@ -110,6 +117,7 @@ export const getShops = async (req: Request, res: Response): Promise<void> => {
         shops.shopCreatedAt,
         users.userDisplayName,
         users.userEmail,
+        users.userStatus,
       )
       .orderBy(shops.shopId);
 
@@ -155,6 +163,7 @@ export const getShopById = async (
         shopCreatedAt: shops.shopCreatedAt,
         ownerName: users.userDisplayName,
         ownerEmail: users.userEmail,
+        ownerStatus: users.userStatus,
         totalPosts: sql<number>`count(${posts.postId})`,
       })
       .from(shops)
@@ -169,6 +178,7 @@ export const getShopById = async (
         shops.shopCreatedAt,
         users.userDisplayName,
         users.userEmail,
+        users.userStatus,
       )
       .limit(1);
 
@@ -198,6 +208,29 @@ export const updateShopStatus = async (
     const nextDbStatus = mapRequestStatusToDbStatus(req.body.status);
     if (!nextDbStatus) {
       res.status(400).json({ error: "Trạng thái cửa hàng không hợp lệ" });
+      return;
+    }
+
+    const [owner] = await db
+      .select({
+        shopId: shops.shopId,
+        ownerStatus: users.userStatus,
+      })
+      .from(shops)
+      .leftJoin(users, eq(shops.shopId, users.userId))
+      .where(eq(shops.shopId, idNumber))
+      .limit(1);
+
+    if (!owner) {
+      res.status(404).json({ error: "KhÃ´ng tÃ¬m tháº¥y cá»­a hÃ ng" });
+      return;
+    }
+
+    if (nextDbStatus === "active" && isOwnerInactive(owner.ownerStatus)) {
+      res.status(400).json({
+        error:
+          "Không thể kích hoạt cửa hàng khi tài khoản chủ sở hữu đang bị khóa hoặc ngừng hoạt động.",
+      });
       return;
     }
 
@@ -237,6 +270,7 @@ export const updateShopStatus = async (
         shopCreatedAt: shops.shopCreatedAt,
         ownerName: users.userDisplayName,
         ownerEmail: users.userEmail,
+        ownerStatus: users.userStatus,
         totalPosts: sql<number>`count(${posts.postId})`,
       })
       .from(shops)
@@ -251,6 +285,7 @@ export const updateShopStatus = async (
         shops.shopCreatedAt,
         users.userDisplayName,
         users.userEmail,
+        users.userStatus,
       )
       .limit(1);
 
@@ -340,6 +375,7 @@ export const verifyShop = async (
         shopCreatedAt: shops.shopCreatedAt,
         ownerName: users.userDisplayName,
         ownerEmail: users.userEmail,
+        ownerStatus: users.userStatus,
         totalPosts: sql<number>`count(${posts.postId})`,
       })
       .from(shops)
@@ -354,6 +390,7 @@ export const verifyShop = async (
         shops.shopCreatedAt,
         users.userDisplayName,
         users.userEmail,
+        users.userStatus,
       )
       .limit(1);
 

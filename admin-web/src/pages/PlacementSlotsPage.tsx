@@ -23,6 +23,7 @@ type ConfirmState = {
 };
 
 const PAGE_SIZE = 5;
+const MAX_INTEGER_FIELD = 2_147_483_647;
 
 const statusFilterOptions: Array<PlacementSlotStatus | "All"> = [
   "All",
@@ -617,6 +618,7 @@ function PlacementSlotsPage() {
                 name="priority"
                 type="number"
                 min={1}
+                max={MAX_INTEGER_FIELD}
                 value={formData.priority}
                 onChange={handleChange}
                 disabled={isSubmitting}
