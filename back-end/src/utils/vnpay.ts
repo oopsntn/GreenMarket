@@ -25,8 +25,8 @@ export const getVNPayConfig = (): VNPayConfig => {
         ipnUrl: getEnv("VNPAY_IPN_URL").trim(),
         frontendUrl: getEnv("FRONTEND_URL", "http://localhost:5173").trim(),
         frontendPaymentResultPath: getEnv("FRONTEND_PAYMENT_RESULT_PATH", "/payment-result").trim(),
-        mobileUrl: getEnv("MOBILE_URL", "exp://127.0.0.1:8081").trim(),
-        mobilePaymentResultPath: getEnv("MOBILE_PAYMENT_RESULT_PATH", "/--/payment-result").trim(),
+        mobileUrl: getEnv("MOBILE_URL", "greenmarket://").trim(),
+        mobilePaymentResultPath: getEnv("MOBILE_PAYMENT_RESULT_PATH", "payment-result").trim(),
     };
 };
 

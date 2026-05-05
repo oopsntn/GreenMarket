@@ -470,6 +470,7 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         const {
             categoryId,
             postTitle,
+            postContent,
             postLocation,
             postContactPhone,
             attributes: updatedAttributes
@@ -503,6 +504,7 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
         const matchedKeywords = adminWebSettingsService.findMatchedKeywords(
             [
                 postTitle ?? existingPost.postTitle,
+                postContent ?? existingPost.postContent,
                 postLocation ?? existingPost.postLocation,
                 ...(Array.isArray(updatedAttributes)
                     ? updatedAttributes.map((item: any) => String(item?.value ?? ""))
@@ -557,7 +559,7 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
 
         if (categoryId !== undefined) postUpdatePayload.categoryId = Number(categoryId);
         if (postTitle !== undefined) postUpdatePayload.postTitle = postTitle;
-
+        if (postContent !== undefined) postUpdatePayload.postContent = postContent;
         if (postLocation !== undefined) postUpdatePayload.postLocation = postLocation;
         if (postContactPhone !== undefined) postUpdatePayload.postContactPhone = postContactPhone;
 
