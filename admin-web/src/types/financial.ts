@@ -53,6 +53,12 @@ export type CreateFinancialPayoutPayload = {
   markAsPaid: boolean;
 };
 
+export type UpdateFinancialPayoutPayload = {
+  amount: number;
+  method: string;
+  note: string;
+};
+
 export type FinancialPayoutListResult = {
   data: FinancialPayoutRequest[];
   meta: {

@@ -11,6 +11,7 @@ import type {
   FinancialSourceBreakdown,
   FinancialSourceDetail,
   FinancialPayoutSummary,
+  UpdateFinancialPayoutPayload,
 } from "../types/financial";
 
 type FinancialListApiResponse = {
@@ -193,6 +194,8 @@ const translateMethodLabel = (value: string | null | undefined) => {
     manualtransfer: "Chuyển khoản thủ công",
     "manual transfer": "Chuyển khoản thủ công",
     bank: "Chuyển khoản ngân hàng",
+    cash: "Tiền mặt",
+    other: "Khác",
     wallet: "Ví nội bộ",
     internalwallet: "Ví nội bộ",
   };
@@ -487,6 +490,18 @@ export const financialService = {
       includeJsonContentType: true,
       body: JSON.stringify(payload),
       defaultErrorMessage: "Không thể tạo khoản chi trả Host.",
+    });
+  },
+
+  async updatePayoutRequest(
+    id: number,
+    payload: UpdateFinancialPayoutPayload,
+  ) {
+    await apiClient.request(`/api/admin/financial/payout-requests/${id}`, {
+      method: "PATCH",
+      includeJsonContentType: true,
+      body: JSON.stringify(payload),
+      defaultErrorMessage: "Không thể cập nhật khoản chi trả Host.",
     });
   },
 

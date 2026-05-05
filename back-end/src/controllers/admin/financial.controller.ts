@@ -20,6 +20,7 @@ const MAX_LIMIT = 100;
 const PAYOUT_EVENT_PREFIX = "admin_host_payout";
 
 type PayoutStatus = "pending" | "completed";
+type TransactionMetaRecord = Record<string, unknown>;
 
 const normalizeString = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
@@ -41,6 +42,14 @@ const parseBooleanFlag = (value: unknown): boolean | null => {
 const toNumber = (value: string | number | null | undefined) => {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const coerceMetaRecord = (value: unknown): TransactionMetaRecord => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as TransactionMetaRecord;
+  }
+
+  return {};
 };
 
 const parsePagination = (queryPage: unknown, queryLimit: unknown) => {
@@ -134,6 +143,7 @@ const getHostPayoutTransactionById = async (transactionId: number) => {
       method: transactions.transactionProvider,
       status: transactions.transactionStatus,
       note: sql<string>`${transactions.transactionMeta}->>'note'`,
+      meta: transactions.transactionMeta,
       createdAt: transactions.transactionCreatedAt,
       updatedAt: transactions.transactionUpdatedAt,
       processedAt: transactions.transactionProcessedAt,
@@ -309,6 +319,18 @@ const getHostPayoutBalance = async (userId: number) => {
   return {
     ...breakdown.earningSummary,
     availableBalance: Math.max(totalEarned - paidOutAmount - pendingBalance, 0),
+  };
+};
+
+const getEditablePendingPayoutBalance = async (
+  userId: number,
+  currentRequestAmount: number,
+) => {
+  const balance = await getHostPayoutBalance(userId);
+
+  return {
+    ...balance,
+    editableLimit: Math.max(balance.availableBalance + currentRequestAmount, 0),
   };
 };
 
@@ -499,6 +521,120 @@ export const createPayoutRequest = async (
   }
 };
 
+export const updatePayoutRequest = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  try {
+    const requestId = parseId(req.params.id as string);
+    const amount = toNumber(req.body?.amount);
+    const method = normalizeString(req.body?.method) || "bank_transfer";
+    const note = normalizeString(req.body?.note);
+
+    if (!requestId) {
+      res.status(400).json({ error: "ID khoản chi trả không hợp lệ." });
+      return;
+    }
+
+    if (amount <= 0) {
+      res.status(400).json({ error: "Số tiền chi trả phải lớn hơn 0 VND." });
+      return;
+    }
+
+    const request = await getHostPayoutTransactionById(requestId);
+    if (!request) {
+      res.status(404).json({ error: "Không tìm thấy khoản chi trả Host." });
+      return;
+    }
+
+    if (request.status !== "pending") {
+      res.status(400).json({
+        error: "Chỉ có thể chỉnh sửa khoản chi trả đang ở trạng thái chờ chi trả.",
+      });
+      return;
+    }
+
+    const currentRequestAmount = toNumber(request.amount);
+    const balance = await getEditablePendingPayoutBalance(
+      request.userId,
+      currentRequestAmount,
+    );
+
+    if (amount > balance.editableLimit) {
+      res.status(400).json({
+        error: `Số tiền chi trả không được vượt quá mức có thể chỉnh sửa ${balance.editableLimit.toLocaleString("vi-VN")} VND.`,
+      });
+      return;
+    }
+
+    const now = new Date();
+    const performedBy = getPerformedBy(req);
+    const nextMeta = {
+      ...coerceMetaRecord(request.meta),
+      note: note || "Khoản chi trả Host do admin tạo.",
+      audience: "host",
+      updatedBy: performedBy,
+      updatedAt: now.toISOString(),
+      balanceSnapshot: {
+        totalEarned: balance.totalEarned,
+        paidOutAmount: balance.paidOutAmount,
+        pendingAmount: balance.pendingBalance,
+        availableBeforeUpdate: balance.availableBalance,
+        editableLimit: balance.editableLimit,
+        payoutAmount: amount,
+      },
+    };
+
+    const [updated] = await db
+      .update(transactions)
+      .set({
+        transactionAmount: amount.toFixed(2),
+        transactionProvider: method,
+        transactionMeta: nextMeta,
+        transactionUpdatedAt: now,
+      })
+      .where(eq(transactions.transactionId, requestId))
+      .returning();
+
+    await db.insert(eventLogs).values({
+      eventLogEventType: `${PAYOUT_EVENT_PREFIX}_updated`,
+      eventLogEventTime: now,
+      eventLogUserId: request.userId,
+      eventLogTargetType: "admin_host_payout",
+      eventLogTargetId: requestId,
+      eventLogMeta: {
+        payoutRequestId: requestId,
+        requesterId: request.userId,
+        requesterName:
+          normalizeString(request.userName) ||
+          normalizeString(request.userEmail) ||
+          `Host #${request.userId}`,
+        previousAmount: currentRequestAmount,
+        nextAmount: amount,
+        previousMethod: request.method,
+        nextMethod: method,
+        note,
+        performedBy,
+        action: "Cập nhật khoản chi trả Host",
+        detail: `Admin đã cập nhật khoản chi trả #${requestId} từ ${currentRequestAmount.toLocaleString("vi-VN")} VND thành ${amount.toLocaleString("vi-VN")} VND.`,
+        moduleLabel: "Tài chính / Chi trả Host",
+        targetType: "Khoản chi trả Host",
+        targetName: `Khoản chi trả #${requestId}`,
+        targetCode: `PAYOUT-${requestId}`,
+        result: "Đã cập nhật",
+      },
+    });
+
+    res.json({
+      message: "Đã cập nhật khoản chi trả Host đang chờ chi trả.",
+      data: updated,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Không thể cập nhật khoản chi trả Host." });
+  }
+};
+
 const processPayoutRequestStatus = async (
   req: AuthRequest,
   res: Response,
@@ -532,6 +668,7 @@ const processPayoutRequestStatus = async (
     }
 
     const performedBy = getPerformedBy(req);
+    const currentMeta = coerceMetaRecord(request.meta);
     const [updated] = await db
       .update(transactions)
       .set({
@@ -539,6 +676,7 @@ const processPayoutRequestStatus = async (
         transactionProcessedAt: new Date(),
         transactionUpdatedAt: new Date(),
         transactionMeta: {
+          ...currentMeta,
           ...(request.note ? { note: request.note } : {}),
           adminNote,
           performedBy,

@@ -46,6 +46,24 @@ const initialCreateForm = {
   markAsPaid: false,
 };
 
+const initialDetailForm = {
+  amount: "",
+  method: "bank_transfer",
+  note: "",
+};
+
+const getMethodValueFromLabel = (value: string) => {
+  if (value === "Tiền mặt") {
+    return "cash";
+  }
+
+  if (value === "Khác") {
+    return "other";
+  }
+
+  return "bank_transfer";
+};
+
 function FinancialPage() {
   const [filters, setFilters] = useState<FinancialFilters>({
     keyword: "",
@@ -80,12 +98,14 @@ function FinancialPage() {
     null,
   );
   const [detail, setDetail] = useState<FinancialPayoutDetail | null>(null);
-  const [detailNote, setDetailNote] = useState("");
+  const [detailForm, setDetailForm] = useState(initialDetailForm);
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSavingPending, setIsSavingPending] = useState(false);
   const [pageError, setPageError] = useState("");
   const [detailError, setDetailError] = useState("");
+  const [detailActionError, setDetailActionError] = useState("");
   const [createError, setCreateError] = useState("");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -209,7 +229,8 @@ function FinancialPage() {
     setSelectedItem(item);
     setDetail(null);
     setDetailError("");
-    setDetailNote(item.note || "");
+    setDetailActionError("");
+    setDetailForm(initialDetailForm);
 
     try {
       setIsDetailLoading(true);
@@ -217,7 +238,11 @@ function FinancialPage() {
         item.payoutRequestId,
       );
       setDetail(response);
-      setDetailNote(response.note || "");
+      setDetailForm({
+        amount: String(response.amount),
+        method: getMethodValueFromLabel(response.method),
+        note: response.note || "",
+      });
     } catch (error) {
       setDetailError(
         error instanceof Error
@@ -233,7 +258,8 @@ function FinancialPage() {
     setSelectedItem(null);
     setDetail(null);
     setDetailError("");
-    setDetailNote("");
+    setDetailActionError("");
+    setDetailForm(initialDetailForm);
   };
 
   const handleCreatePayout = async () => {
@@ -299,13 +325,53 @@ function FinancialPage() {
 
     try {
       setIsProcessing(true);
-      await financialService.approvePayoutRequest(detail.payoutRequestId, detailNote);
+      setDetailActionError("");
+
+      const editableLimit =
+        detail.earningSummary.availableBalance + detail.amount;
+      const nextAmount = Number(detailForm.amount);
+
+      if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
+        setDetailActionError("Số tiền chi trả phải lớn hơn 0 VND.");
+        return;
+      }
+
+      if (detail.status === "pending" && nextAmount > editableLimit) {
+        setDetailActionError(
+          `Số tiền chi trả không được vượt quá mức có thể chỉnh sửa ${editableLimit.toLocaleString("vi-VN")} VND.`,
+        );
+        return;
+      }
+
+      const isDirty =
+        nextAmount !== detail.amount ||
+        detailForm.method !== getMethodValueFromLabel(detail.method) ||
+        detailForm.note !== (detail.note || "");
+
+      if (detail.status === "pending" && isDirty) {
+        await financialService.updatePayoutRequest(detail.payoutRequestId, {
+          amount: nextAmount,
+          method: detailForm.method,
+          note: detailForm.note.trim(),
+        });
+      }
+
+      await financialService.approvePayoutRequest(
+        detail.payoutRequestId,
+        detailForm.note.trim(),
+      );
 
       await loadData();
+      await loadHostOptions();
       const refreshedDetail = await financialService.getPayoutRequestDetail(
         detail.payoutRequestId,
       );
       setDetail(refreshedDetail);
+      setDetailForm({
+        amount: String(refreshedDetail.amount),
+        method: getMethodValueFromLabel(refreshedDetail.method),
+        note: refreshedDetail.note || "",
+      });
       setSelectedItem((current) =>
         current
           ? {
@@ -330,9 +396,67 @@ function FinancialPage() {
     }
   };
 
-  const currentBatchScopeHint = detail
-    ? `Khi xác nhận, hệ thống chỉ chốt khoản chi trả #${detail.payoutRequestId} với số tiền ${detail.amountLabel}. Các khoản thu nhập còn lại hoặc phát sinh sau đó sẽ do admin tạo khoản chi trả mới.`
-    : "";
+  const handleSavePending = async () => {
+    if (!detail || detail.status !== "pending") {
+      return;
+    }
+
+    const nextAmount = Number(detailForm.amount);
+    const editableLimit = detail.earningSummary.availableBalance + detail.amount;
+
+    if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
+      setDetailActionError("Số tiền chi trả phải lớn hơn 0 VND.");
+      return;
+    }
+
+    if (nextAmount > editableLimit) {
+      setDetailActionError(
+        `Số tiền chi trả không được vượt quá mức có thể chỉnh sửa ${editableLimit.toLocaleString("vi-VN")} VND.`,
+      );
+      return;
+    }
+
+    try {
+      setIsSavingPending(true);
+      setDetailActionError("");
+      await financialService.updatePayoutRequest(detail.payoutRequestId, {
+        amount: nextAmount,
+        method: detailForm.method,
+        note: detailForm.note.trim(),
+      });
+      await loadData();
+      await loadHostOptions();
+      const refreshedDetail = await financialService.getPayoutRequestDetail(
+        detail.payoutRequestId,
+      );
+      setDetail(refreshedDetail);
+      setDetailForm({
+        amount: String(refreshedDetail.amount),
+        method: getMethodValueFromLabel(refreshedDetail.method),
+        note: refreshedDetail.note || "",
+      });
+      setSelectedItem((current) =>
+        current
+          ? {
+              ...current,
+              amount: refreshedDetail.amount,
+              amountLabel: refreshedDetail.amountLabel,
+              method: refreshedDetail.method,
+              note: refreshedDetail.note,
+            }
+          : current,
+      );
+      pushToast("Đã cập nhật khoản chi trả đang chờ chi trả.");
+    } catch (error) {
+      setDetailActionError(
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật khoản chi trả Host.",
+      );
+    } finally {
+      setIsSavingPending(false);
+    }
+  };
 
   return (
     <div className="financial-page">
@@ -469,13 +593,24 @@ function FinancialPage() {
                       </td>
                       <td>{item.createdAt}</td>
                       <td>
-                        <button
-                          type="button"
-                          className="financial-page__table-action"
-                          onClick={() => void openDetail(item)}
-                        >
-                          Xem
-                        </button>
+                        <div className="financial-page__table-actions">
+                          <button
+                            type="button"
+                            className="financial-page__table-action"
+                            onClick={() => void openDetail(item)}
+                          >
+                            Xem
+                          </button>
+                          {item.status === "pending" ? (
+                            <button
+                              type="button"
+                              className="financial-page__table-action financial-page__table-action--primary"
+                              onClick={() => void openDetail(item)}
+                            >
+                              Sửa
+                            </button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -604,15 +739,19 @@ function FinancialPage() {
               {selectedHost ? (
                 <div className="financial-page__balance-strip">
                   <div>
-                    <span>Khả dụng</span>
+                    <span>Tổng thu nhập đã ghi nhận</span>
+                    <strong>{selectedHost.totalEarnedLabel}</strong>
+                  </div>
+                  <div>
+                    <span>Còn khả dụng</span>
                     <strong>{selectedHost.availableBalanceLabel}</strong>
                   </div>
                   <div>
-                    <span>Đã chi</span>
+                    <span>Đã chi trả thành công</span>
                     <strong>{selectedHost.paidOutAmountLabel}</strong>
                   </div>
                   <div>
-                    <span>Chờ chi</span>
+                    <span>Đang chờ chi</span>
                     <strong>{selectedHost.pendingAmountLabel}</strong>
                   </div>
                 </div>
@@ -630,6 +769,7 @@ function FinancialPage() {
                     className="financial-page__input"
                     type="number"
                     min="0"
+                    max={selectedHost?.availableBalance || undefined}
                     value={createForm.amount}
                     disabled={isCreating}
                     placeholder="Nhập số tiền"
@@ -637,10 +777,15 @@ function FinancialPage() {
                       setCreateForm((current) => ({
                         ...current,
                         amount: event.target.value,
-                      }))
-                    }
-                  />
-                </div>
+                        }))
+                      }
+                    />
+                    {selectedHost ? (
+                      <div className="financial-page__helper-text">
+                        Chỉ được tạo tối đa {selectedHost.availableBalanceLabel} theo số dư khả dụng hiện tại.
+                      </div>
+                    ) : null}
+                  </div>
 
                 <div className="financial-page__field">
                   <label htmlFor="financial-create-method">Phương thức</label>
@@ -767,7 +912,7 @@ function FinancialPage() {
                     <dd>{detail.userName}</dd>
                   </div>
                   <div>
-                    <dt>Số tiền chi trả</dt>
+                    <dt>Số tiền khoản này</dt>
                     <dd>{detail.amountLabel}</dd>
                   </div>
                   <div>
@@ -801,56 +946,133 @@ function FinancialPage() {
                 </dl>
               </article>
 
-              <article className="financial-page__detail-card">
-                <h4>Nhắc trước khi xác nhận</h4>
-                <ul className="financial-page__checklist">
-                  <li>Chỉ bấm xác nhận sau khi đã chuyển khoản ngoài hệ thống cho Host.</li>
-                  <li>{currentBatchScopeHint}</li>
-                  <li>
-                    Nếu cần, ghi chú lại mã giao dịch ngân hàng hoặc nội dung đối
-                    soát để tiện kiểm tra sau này.
-                  </li>
-                </ul>
-
-                <div className="financial-page__inline-summary">
-                  <div className="financial-page__inline-summary-item">
-                    <span>Tổng đã ghi nhận</span>
-                    <strong>{detail.earningSummary.totalEarnedLabel}</strong>
-                  </div>
-                  <div className="financial-page__inline-summary-item">
-                    <span>Đã chi trước đó</span>
-                    <strong>{detail.earningSummary.paidOutAmountLabel}</strong>
-                  </div>
-                </div>
-              </article>
             </div>
 
+            <article className="financial-page__detail-card financial-page__detail-card--full">
+              <h4>Đối soát hiện tại</h4>
+              <div className="financial-page__inline-summary">
+                <div className="financial-page__inline-summary-item">
+                  <span>Tổng thu nhập đã ghi nhận</span>
+                  <strong>{detail.earningSummary.totalEarnedLabel}</strong>
+                </div>
+                <div className="financial-page__inline-summary-item">
+                  <span>Đã chi trả thành công</span>
+                  <strong>{detail.earningSummary.paidOutAmountLabel}</strong>
+                </div>
+                <div className="financial-page__inline-summary-item">
+                  <span>Đang chờ chi</span>
+                  <strong>{detail.earningSummary.pendingBalanceLabel}</strong>
+                </div>
+                <div className="financial-page__inline-summary-item">
+                  <span>Còn khả dụng</span>
+                  <strong>{detail.earningSummary.availableBalanceLabel}</strong>
+                </div>
+              </div>
+
+              {detail.status === "pending" ? (
+                <div className="financial-page__edit-block">
+                  <h5>Chỉnh sửa khoản chờ chi</h5>
+                  <p>
+                    Có thể điều chỉnh nếu admin nhập nhầm. Mức tối đa hiện có thể chỉnh là{" "}
+                    <strong>
+                      {(detail.earningSummary.availableBalance + detail.amount).toLocaleString("vi-VN")} VND
+                    </strong>.
+                  </p>
+
+                  <div className="financial-page__create-fields">
+                    <div className="financial-page__field">
+                      <label htmlFor="financial-detail-amount">Số tiền chi trả</label>
+                      <input
+                        id="financial-detail-amount"
+                        className="financial-page__input"
+                        type="number"
+                        min="0"
+                        max={detail.earningSummary.availableBalance + detail.amount}
+                        value={detailForm.amount}
+                        disabled={isSavingPending || isProcessing}
+                        onChange={(event) =>
+                          setDetailForm((current) => ({
+                            ...current,
+                            amount: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="financial-page__field">
+                      <label htmlFor="financial-detail-method">Phương thức</label>
+                      <select
+                        id="financial-detail-method"
+                        className="financial-page__select"
+                        value={detailForm.method}
+                        disabled={isSavingPending || isProcessing}
+                        onChange={(event) =>
+                          setDetailForm((current) => ({
+                            ...current,
+                            method: event.target.value,
+                          }))
+                        }
+                      >
+                        {Object.entries(methodLabels).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </article>
+
             <div className="financial-page__field">
-              <label htmlFor="financial-admin-note">Ghi chú xác nhận</label>
+              <label htmlFor="financial-admin-note">Ghi chú khoản chi trả</label>
               <textarea
                 id="financial-admin-note"
                 className="financial-page__textarea"
-                value={detailNote}
-                placeholder="Ví dụ: đã chuyển khoản ngoài thực tế lúc 10:30, ngân hàng MB, nội dung CK khoản chi trả #24."
-                onChange={(event) => setDetailNote(event.target.value)}
+                value={detailForm.note}
+                placeholder="Ví dụ: đã đối soát với Host, chuyển khoản ngoài hệ thống qua MB Bank, nội dung chi trả tháng 5."
+                disabled={detail.status !== "pending"}
+                onChange={(event) =>
+                  setDetailForm((current) => ({
+                    ...current,
+                    note: event.target.value,
+                  }))
+                }
               />
             </div>
+
+            {detailActionError ? (
+              <p className="financial-page__message financial-page__message--error">
+                {detailActionError}
+              </p>
+            ) : null}
 
             <div className="financial-page__modal-actions">
               <button
                 type="button"
                 className="financial-page__button"
                 onClick={closeDetail}
-                disabled={isProcessing}
+                disabled={isProcessing || isSavingPending}
               >
                 Đóng
               </button>
               {detail.status === "pending" ? (
                 <button
                   type="button"
+                  className="financial-page__button"
+                  onClick={() => void handleSavePending()}
+                  disabled={isProcessing || isSavingPending}
+                >
+                  {isSavingPending ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              ) : null}
+              {detail.status === "pending" ? (
+                <button
+                  type="button"
                   className="financial-page__button financial-page__button--primary"
                   onClick={() => void handleProcess()}
-                  disabled={isProcessing}
+                  disabled={isProcessing || isSavingPending}
                 >
                   {isProcessing
                     ? "Đang xử lý..."

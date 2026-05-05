@@ -24,6 +24,7 @@ type ActivityModuleKey =
   | "shops"
   | "post-moderation"
   | "report-moderation"
+  | "financial"
   | "settings"
   | "templates"
   | "exports"
@@ -279,6 +280,33 @@ const eventDefinitionMap: Record<string, EventDefinition> = {
     severity: "cao",
     result: "Đã đóng",
     targetType: "Chiến dịch quảng bá",
+  },
+  admin_host_payout_created: {
+    actionLabel: "Tạo khoản chi trả Host",
+    moduleKey: "financial",
+    moduleLabel: "Tài chính / Chi trả Host",
+    actionType: "Tạo khoản chi trả",
+    severity: "trung bình",
+    result: "Đã tạo",
+    targetType: "Khoản chi trả Host",
+  },
+  admin_host_payout_updated: {
+    actionLabel: "Cập nhật khoản chi trả Host",
+    moduleKey: "financial",
+    moduleLabel: "Tài chính / Chi trả Host",
+    actionType: "Chỉnh sửa khoản chi trả",
+    severity: "trung bình",
+    result: "Đã cập nhật",
+    targetType: "Khoản chi trả Host",
+  },
+  admin_host_payout_completed: {
+    actionLabel: "Xác nhận đã chi trả Host",
+    moduleKey: "financial",
+    moduleLabel: "Tài chính / Chi trả Host",
+    actionType: "Xác nhận chi trả",
+    severity: "trung bình",
+    result: "Đã chi trả",
+    targetType: "Khoản chi trả Host",
   },
 };
 
