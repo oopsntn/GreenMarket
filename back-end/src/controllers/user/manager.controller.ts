@@ -1368,6 +1368,8 @@ export const resolveManagerReport = async (
           reporterId: reports.ticketCreatorId,
           postId: sql<number>`case when ${reports.ticketTargetType} = 'post' then ${reports.ticketTargetId} end`,
           reportShopId: sql<number>`case when ${reports.ticketTargetType} = 'shop' then ${reports.ticketTargetId} end`,
+          reportedAuthorId: posts.postAuthorId,
+          reportedShopOwnerId: shops.shopId,
           reporterName: users.userDisplayName,
           postTitle: posts.postTitle,
           shopName: shops.shopName,
@@ -1385,6 +1387,13 @@ export const resolveManagerReport = async (
       };
     });
 
+    const resolutionStatusLabel =
+      status === "resolved" ? "đã được xác nhận và xử lý" : "đã được xem xét và đóng";
+    const resolutionSummary = note ? `${resolution}. ${note}` : resolution;
+    const targetLabel = txResult.report.postTitle
+      ? `bài đăng "${txResult.report.postTitle}"`
+      : `cửa hàng "${txResult.report.shopName || "mục này"}"`;
+
     // Notify the reporter that their report has been resolved
     try {
       if (txResult.report.reporterId) {
@@ -1398,6 +1407,34 @@ export const resolveManagerReport = async (
       }
     } catch (notifError) {
       console.error("Failed to notify reporter about report resolution:", notifError);
+    }
+
+    try {
+      const affectedRecipientIds = [...new Set(
+        [
+          txResult.report.reportedAuthorId,
+          txResult.report.reportedShopOwnerId,
+        ].filter(
+          (recipientId): recipientId is number =>
+            Number.isInteger(recipientId) &&
+            recipientId > 0 &&
+            recipientId !== txResult.report.reporterId,
+        ),
+      )];
+
+      await Promise.allSettled(
+        affectedRecipientIds.map((recipientId) =>
+          notificationService.sendNotification({
+            recipientId,
+            title: "Bao cao lien quan den noi dung cua ban da duoc xu ly",
+            message: `Quan tri vien da hoan tat xu ly bao cao lien quan den ${txResult.report.postTitle ? `bai dang \"${txResult.report.postTitle}\"` : `cua hang \"${txResult.report.shopName || "muc nay"}\"`}.`,
+            type: "info",
+            metaData: { reportId, targetType: txResult.report.postTitle ? "post" : "shop" },
+          }),
+        ),
+      );
+    } catch (notifError) {
+      console.error("Failed to notify affected user about report resolution:", notifError);
     }
 
     res.json({

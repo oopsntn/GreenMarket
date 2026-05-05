@@ -1,34 +1,55 @@
 import React from 'react'
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Card from '../../Reused/Card/Card';
-import Input from '../../Reused/Input/Input';
-import Button from '../../Reused/Button/Button';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import Card from '../../Reused/Card/Card'
+import Input from '../../Reused/Input/Input'
+import Button from '../../Reused/Button/Button'
 
 interface EditData {
     title: string;
     categoryId: number;
-    content: string;
     location: string;
+    contactPhone: string;
+    attributes: Record<number, string>;
 }
 
 interface ModalProps {
     visible: boolean;
     editingPost: any;
     editData: EditData;
-    setEditData: (data: EditData) => void;
+    setEditData: React.Dispatch<React.SetStateAction<EditData>>;
     onClose: () => void;
     onSave: (postId: number, data: any) => void;
+    onCategoryChange: (categoryId: number) => Promise<void> | void;
     categories: any[];
+    categoryAttributes: any[];
     saving?: boolean;
-    styles: any;
     hideLocation?: boolean;
 }
 
 const EditPostModal = ({
-    visible, editingPost, editData, setEditData, onClose, onSave, categories, saving = false, styles: parentStyles,
-    hideLocation = false
+    visible,
+    editingPost,
+    editData,
+    setEditData,
+    onClose,
+    onSave,
+    onCategoryChange,
+    categories,
+    categoryAttributes,
+    saving = false,
+    hideLocation = false,
 }: ModalProps) => {
     if (!editingPost) return null
+
+    const handleAttributeChange = (attributeId: number, value: string) => {
+        setEditData((prev) => ({
+            ...prev,
+            attributes: {
+                ...prev.attributes,
+                [attributeId]: value,
+            },
+        }))
+    }
 
     return (
         <Modal visible={visible} transparent animationType="slide">
@@ -36,11 +57,11 @@ const EditPostModal = ({
                 <Card style={styles.modalCard}>
                     <Text style={styles.modalTitle}>Cập nhật thông tin tin đăng</Text>
 
-                    <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 500 }}>
+                    <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 560 }}>
                         <Input
                             label="Tiêu đề tin đăng"
                             value={editData.title}
-                            onChangeText={(t) => setEditData({ ...editData, title: t })}
+                            onChangeText={(t) => setEditData((prev) => ({ ...prev, title: t }))}
                             placeholder="Ví dụ: Cây bonsai hiếm"
                         />
 
@@ -53,7 +74,7 @@ const EditPostModal = ({
                                         styles.catItem,
                                         editData.categoryId === cat.categoryId && styles.catActive
                                     ]}
-                                    onPress={() => setEditData({ ...editData, categoryId: cat.categoryId })}
+                                    onPress={() => onCategoryChange(cat.categoryId)}
                                 >
                                     <Text style={[
                                         styles.catText,
@@ -65,29 +86,76 @@ const EditPostModal = ({
                             ))}
                         </View>
 
-                        <Input
-                            label="Địa chỉ"
-                            value={editData.location}
-                            onChangeText={(t) => setEditData({ ...editData, location: t })}
-                            placeholder="Ví dụ: Quận 1, TP.HCM"
-                        />
+                        {!hideLocation && (
+                            <Input
+                                label="Địa chỉ"
+                                value={editData.location}
+                                onChangeText={(t) => setEditData((prev) => ({ ...prev, location: t }))}
+                                placeholder="Ví dụ: Quận 1, TP.HCM"
+                            />
+                        )}
 
                         <Input
                             label="Số điện thoại liên hệ"
                             type="phone-pad"
                             value={editData.contactPhone}
-                            onChangeText={(t) => setEditData({ ...editData, contactPhone: t })}
+                            onChangeText={(t) => setEditData((prev) => ({ ...prev, contactPhone: t }))}
                             placeholder="Để trống nếu dùng số mặc định"
                         />
 
-                        <Input
-                            label="Mô tả"
-                            value={editData.content}
-                            onChangeText={(t) => setEditData({ ...editData, content: t })}
-                            multiline
-                            numberOfLines={4}
-                            placeholder="Mô tả cây của bạn..."
-                        />
+                        {categoryAttributes.length > 0 && (
+                            <View style={styles.attributesSection}>
+                                <Text style={styles.sectionTitle}>Thuộc tính chi tiết</Text>
+                                {categoryAttributes.map((attr) => {
+                                    const isNumeric =
+                                        attr.attributeDataType === 'number' ||
+                                        attr.attributeDataType === 'decimal'
+
+                                    const attributeOptions = Array.isArray(attr.attributeOptions)
+                                        ? attr.attributeOptions.filter((item: unknown): item is string => typeof item === 'string' && item.trim().length > 0)
+                                        : []
+
+                                    return (
+                                        <View key={attr.attributeId}>
+                                            {attributeOptions.length > 0 ? (
+                                                <View style={styles.optionGroup}>
+                                                    <Text style={styles.optionLabel}>{`${attr.attributeTitle}${attr.required ? ' *' : ''}`}</Text>
+                                                    <View style={styles.optionWrap}>
+                                                        {attributeOptions.map((option: string) => (
+                                                            <TouchableOpacity
+                                                                key={`${attr.attributeId}-${option}`}
+                                                                style={[
+                                                                    styles.optionChip,
+                                                                    editData.attributes[attr.attributeId] === option && styles.optionChipActive,
+                                                                ]}
+                                                                onPress={() => handleAttributeChange(attr.attributeId, option)}
+                                                            >
+                                                                <Text
+                                                                    style={[
+                                                                        styles.optionChipText,
+                                                                        editData.attributes[attr.attributeId] === option && styles.optionChipTextActive,
+                                                                    ]}
+                                                                >
+                                                                    {option}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        ))}
+                                                    </View>
+                                                </View>
+                                            ) : (
+                                                <Input
+                                                    label={`${attr.attributeTitle}${attr.required ? ' *' : ''}`}
+                                                    value={editData.attributes[attr.attributeId] || ''}
+                                                    type={isNumeric ? 'decimal-pad' : 'default'}
+                                                    onChangeText={(value) => handleAttributeChange(attr.attributeId, value)}
+                                                    placeholder={`Nhập ${attr.attributeTitle}`}
+                                                />
+                                            )}
+                                        </View>
+                                    )
+                                })}
+                            </View>
+                        )}
                     </ScrollView>
 
                     <View style={styles.modalButtons}>
@@ -109,8 +177,14 @@ const EditPostModal = ({
                             onPress={() => onSave(editingPost.postId, {
                                 postTitle: editData.title,
                                 categoryId: editData.categoryId,
-                                postContent: editData.content,
                                 postLocation: editData.location,
+                                postContactPhone: editData.contactPhone,
+                                attributes: Object.entries(editData.attributes)
+                                    .filter(([, value]) => value.trim())
+                                    .map(([attributeId, value]) => ({
+                                        attributeId: Number(attributeId),
+                                        value: value.trim(),
+                                    })),
                             })}
                         >
                             Lưu thay đổi
@@ -174,6 +248,49 @@ const styles = StyleSheet.create({
     catTextActive: {
         color: '#10b981',
         fontWeight: '700'
+    },
+    attributesSection: {
+        marginTop: 8,
+    },
+    sectionTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 8,
+    },
+    optionGroup: {
+        marginBottom: 12,
+    },
+    optionLabel: {
+        fontSize: 13,
+        fontWeight: '500',
+        marginBottom: 8,
+        color: '#333',
+    },
+    optionWrap: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+    },
+    optionChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 999,
+        backgroundColor: '#f3f4f6',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    optionChipActive: {
+        backgroundColor: '#e8f5e9',
+        borderColor: '#10b981',
+    },
+    optionChipText: {
+        fontSize: 12,
+        color: '#4b5563',
+        fontWeight: '600',
+    },
+    optionChipTextActive: {
+        color: '#047857',
     },
     modalButtons: {
         flexDirection: 'row',

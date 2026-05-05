@@ -105,7 +105,7 @@ const PackagesScreen = () => {
                 const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
                 const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
 
-                navigation.navigate('PaymentResult', { status, code, txnRef });
+                navigation.navigate('PaymentResult', { status, code, txnRef, type: paymentType });
             }
         });
 

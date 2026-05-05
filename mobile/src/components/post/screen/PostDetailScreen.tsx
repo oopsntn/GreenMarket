@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Linking, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { postService } from '../service/postService'
 import { AlertCircle, Bookmark, ExternalLink, Eye, MapPin, Maximize2, MessageCircle, Phone, Share2, ShieldCheck, Store } from 'lucide-react-native'
@@ -32,7 +32,6 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       const res = await postService.getPostDetail(slug)
       if (res && res.postId) {
         setPost(res)
-        // Chỉ gọi checkIsSaved nếu res tồn tại hợp lệ
         try {
           const saved = await postService.checkIsSaved(res.postId)
           setIsSaved(!!saved?.isSaved)
@@ -41,11 +40,11 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           setIsSaved(false)
         }
       } else {
-        setPost(null);
-        console.error('PostDetail loadData: No post data returned for slug:', slug);
+        setPost(null)
+        console.error('PostDetail loadData: No post data returned for slug:', slug)
       }
     } catch (e) {
-      console.error("PostDetail loadData error: ", e);
+      console.error('PostDetail loadData error:', e)
     } finally {
       setLoading(false)
     }
@@ -53,92 +52,114 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
 
   const handleShare = async () => {
     try {
-      const slug = post?.postSlug || post?.postId
-      const webUrl = `${WEB_BASE_URL}/san-pham/${slug}`
+      const shareSlug = post?.postSlug || post?.postId
+      const webUrl = `${WEB_BASE_URL}/san-pham/${shareSlug}`
       await Share.share({
         message: `${post?.postTitle}\n${webUrl}`,
-        url: webUrl,  // iOS chỉ hiển thị url khi dùng AirDrop/Messages
+        url: webUrl,
         title: post?.postTitle || 'GreenMarket',
-      });
+      })
     } catch (error) {
-      console.error(error);
+      console.error(error)
     }
-  };
+  }
 
   const handleToggleSave = async () => {
     try {
       if (post?.postId) {
-        const res = await postService.toggleFavorite(post.postId);
-        setIsSaved(res.isSaved);
+        const res = await postService.toggleFavorite(post.postId)
+        setIsSaved(res.isSaved)
       }
     } catch (error) {
-      console.error(error);
+      console.error(error)
     }
-  };
+  }
+
+  const ownerShopFallback = useMemo(() => {
+    if (!isOwner || !shop?.shopId || !post?.postShopId) return null
+    return Number(shop.shopId) === Number(post.postShopId) ? shop : null
+  }, [isOwner, post?.postShopId, shop])
+
+  const displayShop = post?.shop || ownerShopFallback || null
+  const sellerName = displayShop?.shopName || post?.author?.userDisplayName || user?.userDisplayName || 'Người bán'
+  const contactPhoneRaw = displayShop?.shopPhone || displayShop?.phones?.[0] || post?.postContactPhone || (isOwner ? user?.userMobile : '') || ''
+  const contactPhone = String(contactPhoneRaw).replace(/\s+/g, '')
+  const displayAddress = displayShop?.shopLocation || post?.postLocation || (isOwner ? shop?.shopLocation : '') || ''
+  const displayLat = displayShop?.shopLat || post?.postLat
+  const displayLng = displayShop?.shopLng || post?.postLng
 
   const openMap = () => {
-    // Ưu tiên lấy tọa độ từ Shop, nếu không có thì dùng địa chỉ văn bản
-    const lat = post?.shop?.shopLat || post?.postLat;
-    const lng = post?.shop?.shopLng || post?.postLng;
-    const addr = post?.shop?.shopLocation || post?.postLocation;
-    const label = encodeURIComponent(post?.postTitle || 'Vị trí cây cảnh');
+    const lat = displayLat
+    const lng = displayLng
+    const addr = displayAddress
+    const label = encodeURIComponent(post?.postTitle || 'Vị trí cây cảnh')
 
-    // 1. Xử lý cho môi trường Web (Giả lập hoặc trình duyệt)
     if (Platform.OS === 'web') {
       const webUrl = lat && lng
         ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
-      Linking.openURL(webUrl);
-      return;
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`
+      Linking.openURL(webUrl)
+      return
     }
 
-    // 2. Xử lý cho Mobile (iOS / Android)
-    let url = '';
+    let url = ''
     if (Platform.OS === 'ios') {
-      // iOS: Nếu có tọa độ thì dùng q=label@lat,lng. Nếu không thì dùng q=address
       url = lat && lng
         ? `maps:0,0?q=${label}@${lat},${lng}`
-        : `maps:0,0?q=${encodeURIComponent(addr)}`;
+        : `maps:0,0?q=${encodeURIComponent(addr)}`
     } else {
-      // Android: dùng geo:lat,lng hoặc geo:0,0?q=address
       url = lat && lng
         ? `geo:${lat},${lng}?q=${lat},${lng}(${label})`
-        : `geo:0,0?q=${encodeURIComponent(addr)}`;
+        : `geo:0,0?q=${encodeURIComponent(addr)}`
     }
 
     Linking.openURL(url).catch(() => {
-      // Fallback: Nếu không mở được app Maps, mở bằng trình duyệt
-      const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
-      Linking.openURL(fallbackUrl);
-    });
+      const fallbackUrl = lat && lng
+        ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`
+      Linking.openURL(fallbackUrl)
+    })
   }
 
-  if (loading) return <View style={styles.center}><Text>Đang tải...</Text></View>;
-  if (!post) return <View style={styles.center}><Text>Không tìm thấy tin đăng hoặc đã bị xóa.</Text></View>;
+  const openZalo = () => {
+    if (!contactPhone) return
+    if (post?.postId && !isOwner) {
+      postService.recordContactClick(post.postId).catch(console.error)
+    }
+    Linking.openURL(`https://zalo.me/${contactPhone}`).catch(console.error)
+  }
+
+  const makeCall = () => {
+    if (!contactPhone) return
+    if (post?.postId && !isOwner) {
+      postService.recordContactClick(post.postId).catch(console.error)
+    }
+    Linking.openURL(`tel:${contactPhone}`).catch(console.error)
+  }
+
+  if (loading) return <View style={styles.center}><Text>Đang tải...</Text></View>
+  if (!post) return <View style={styles.center}><Text>Không tìm thấy tin đăng hoặc đã bị xóa.</Text></View>
 
   const normalizeMediaUrl = (raw: unknown): string => {
-    if (!raw) return '';
-    if (typeof raw === 'string') return resolveImageUrl(raw);
+    if (!raw) return ''
+    if (typeof raw === 'string') return resolveImageUrl(raw)
     if (typeof raw === 'object') {
-      const record = raw as Record<string, unknown>;
+      const record = raw as Record<string, unknown>
       const url =
         (typeof record.imageUrl === 'string' && record.imageUrl) ||
         (typeof record.videoUrl === 'string' && record.videoUrl) ||
         (typeof record.url === 'string' && record.url) ||
-        '';
-      return resolveImageUrl(url);
+        ''
+      return resolveImageUrl(url)
     }
-    return resolveImageUrl(String(raw));
-  };
+    return resolveImageUrl(String(raw))
+  }
 
   const media = [
     ...(post?.images || []).map((i: any) => ({ type: 'image', url: normalizeMediaUrl(i) })),
     ...(post?.videos || []).map((v: any) => ({ type: 'video', url: normalizeMediaUrl(v) })),
   ]
 
-  const contactPhone = post?.shop?.shopPhone || post?.shop?.phones?.[0] || post?.postContactPhone || ''
-
-  // Nút Share và Heart trên Header
   const renderRightActions = () => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       {!isOwner && (
@@ -155,7 +176,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
         </TouchableOpacity>
       )}
     </View>
-  );
+  )
 
   return (
     <MobileLayout
@@ -173,7 +194,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               textStyle={{ color: '#1890ff' }}
               icon={<MessageCircle size={20} color="#1890ff" />}
               disabled={!contactPhone}
-              onPress={() => Linking.openURL(`https://zalo.me/${contactPhone}`)}
+              onPress={openZalo}
             >
               Zalo
             </Button>
@@ -182,10 +203,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               style={{ flex: 2 }}
               icon={<Phone size={20} color="#fff" />}
               disabled={!contactPhone}
-              onPress={() => {
-                if (post?.postId) postService.recordContactClick(post.postId);
-                Linking.openURL(`tel:${contactPhone}`);
-              }}
+              onPress={makeCall}
             >
               Gọi ngay
             </Button>
@@ -193,11 +211,9 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
         ) : undefined
       }
     >
-      {/* 1. Media Gallery */}
       <MediaGallery media={media} />
 
       <View style={styles.container}>
-        {/* 2. Thông tin chính */}
         <View style={styles.mainInfo}>
           <Text style={styles.postTitle}>{post?.postTitle}</Text>
 
@@ -206,22 +222,41 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               <ShieldCheck size={14} color="#52c41a" />
               <Text style={styles.verifyText}>Đã xác thực</Text>
             </View>
-            <View style={styles.metaBadge}>
+            {/* <View style={styles.metaBadge}>
               <Eye size={14} color="#8c8c8c" />
               <Text style={styles.metaText}>{post?.postViewCount || 0} lượt xem</Text>
-            </View>
+            </View> */}
           </View>
 
-          {!isOwner && (
-            <View style={styles.contactBadge}>
-              <Text style={styles.contactBadgeText}>Liên hệ</Text>
-            </View>
-          )}
+          <View style={styles.contactBadge}>
+            <Text style={styles.contactBadgeText}>{isOwner ? 'Thông tin hiển thị trên bài đăng' : 'Liên hệ'}</Text>
+          </View>
         </View>
 
+        {(sellerName || contactPhone || displayAddress) && (
+          <Card style={styles.sectionCard} padding="medium">
+            <View style={styles.sectionHeader}>
+              <Store size={18} color="#52c41a" />
+              <Text style={styles.sectionTitle}>Cửa hàng / Người bán</Text>
+            </View>
 
+            <View style={styles.infoRow}>
+              <Store size={16} color="#94a3b8" />
+              <Text style={styles.infoText}>{sellerName}</Text>
+            </View>
 
-        {/* 4. Card Thông số kỹ thuật */}
+            <View style={styles.infoRow}>
+              <Phone size={16} color="#94a3b8" />
+              <Text style={styles.infoText}>{contactPhone || 'Chưa cập nhật số điện thoại'}</Text>
+            </View>
+
+            <View style={styles.infoRow}>
+              <MapPin size={16} color="#94a3b8" />
+              <Text style={styles.infoText}>{displayAddress || 'Chưa cập nhật địa chỉ'}</Text>
+            </View>
+          </Card>
+        )}
+
         {post?.attributes && (
           <Card style={styles.sectionCard} shadow padding="medium">
             <View style={styles.sectionHeader}>
@@ -239,34 +274,32 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           </Card>
         )}
 
-        {/* 5. Thông tin Shop/Nhà vườn */}
-        {!isOwner && (
+        {!!post?.postShopId && (
           <Card
             style={styles.shopCard}
             padding="medium"
-            onClick={() => { if (post?.postShopId) navigation.navigate('PublicShopDetail', { shopId: post?.postShopId }) }}
+            onClick={() => navigation.navigate('PublicShopDetail', { shopId: post?.postShopId })}
           >
             <View style={styles.shopContent}>
               <View style={styles.shopAvatar}>
                 <Store size={24} color="#52c41a" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.shopName}>{post?.shop?.shopName}</Text>
-                <Text style={styles.shopSub}>Xem chi tiết người bán</Text>
+                <Text style={styles.shopName}>{displayShop?.shopName || 'Cửa hàng của bài đăng'}</Text>
+                <Text style={styles.shopSub}>{isOwner ? 'Xem lại trang cửa hàng của bạn' : 'Xem chi tiết người bán'}</Text>
               </View>
               <ExternalLink size={18} color="#bfbfbf" />
             </View>
           </Card>
         )}
 
-        {/* 6. Bản đồ & Vị trí */}
-        {!isOwner && (
+        {(displayAddress || (displayLat && displayLng)) && (
           <Card style={styles.sectionCard} padding="medium">
             <View style={styles.sectionHeader}>
               <MapPin size={18} color="#52c41a" />
               <Text style={styles.sectionTitle}>Vị trí</Text>
             </View>
-            <Text style={styles.locationText}>{post?.shop?.shopLocation || post?.postLocation}</Text>
+            <Text style={styles.locationText}>{displayAddress || 'Chưa cập nhật vị trí'}</Text>
             <Button
               variant="outline"
               size="small"
@@ -279,7 +312,6 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           </Card>
         )}
 
-        {/* Padding cuối cùng để không bị lấp bởi bottom actions */}
         <View style={{ height: 40 }} />
       </View>
     </MobileLayout>
@@ -334,7 +366,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#065f46',
   },
-
   sectionCard: {
     marginBottom: 16,
   },
@@ -349,10 +380,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#262626',
   },
-  descriptionText: {
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 10,
+  },
+  infoText: {
+    flex: 1,
     fontSize: 14,
     color: '#595959',
-    lineHeight: 22,
+    lineHeight: 20,
   },
   attrGrid: {
     flexDirection: 'row',
@@ -367,7 +405,6 @@ const styles = StyleSheet.create({
   },
   attrLabel: { fontSize: 11, color: '#8c8c8c', marginBottom: 2 },
   attrValue: { fontSize: 13, color: '#262626', fontWeight: '600' },
-
   shopCard: {
     marginBottom: 16,
     backgroundColor: '#fff',
@@ -389,9 +426,7 @@ const styles = StyleSheet.create({
   },
   shopName: { fontSize: 16, fontWeight: '700', color: '#262626' },
   shopSub: { fontSize: 12, color: '#8c8c8c' },
-
   locationText: { fontSize: 14, color: '#595959' },
-
   bottomActions: {
     flexDirection: 'row',
     paddingHorizontal: 16,

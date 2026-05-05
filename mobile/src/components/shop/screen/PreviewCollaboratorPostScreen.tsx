@@ -27,7 +27,7 @@ const PreviewCollaboratorPostScreen = ({ route, navigation }: Props) => {
       // Vì không can thiệp backend, ta lấy tất cả bài đăng của shop/user và filter
       const posts = await postService.getMyPosts();
       const targetPost = posts.find((p: any) => p.postId === postId);
-      
+
       if (targetPost) {
         setPost(targetPost);
       } else {
@@ -113,10 +113,7 @@ const PreviewCollaboratorPostScreen = ({ route, navigation }: Props) => {
               <ShieldCheck size={14} color="#f59e0b" />
               <Text style={[styles.verifyText, { color: '#f59e0b' }]}>Đang chờ duyệt</Text>
             </View>
-            <View style={styles.metaBadge}>
-              <Eye size={14} color="#8c8c8c" />
-              <Text style={styles.metaText}>{post?.postViewCount || 0} lượt xem</Text>
-            </View>
+
           </View>
         </View>
 

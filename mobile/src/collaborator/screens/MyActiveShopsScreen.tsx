@@ -54,8 +54,8 @@ const MyActiveShopsScreen = () => {
     };
 
     const goCreatePost = (shop: CollaboratorActiveShop) => {
-        navigation.navigate('CreateDelegatedPost', { 
-            shopId: shop.shopId, 
+        navigation.navigate('CreateDelegatedPost', {
+            shopId: shop.shopId,
             shopName: shop.shopName,
             shopLocation: shop.shopLocation
         });
@@ -136,7 +136,7 @@ const MyActiveShopsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    container: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: 16 },
     header: {
         backgroundColor: 'white',
         paddingHorizontal: 20,

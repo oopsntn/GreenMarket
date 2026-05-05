@@ -13,6 +13,7 @@ interface CategoryAttribute {
     attributeTitle: string
     attributeDataType?: string
     required?: boolean
+    attributeOptions?: string[]
 }
 
 interface SelectedMedia {
@@ -40,6 +41,30 @@ export interface PostingPolicy {
     usedNewPostsToday: number
     isLimitReached: boolean
     postCreationFee: number
+}
+
+const normalizePostingPolicy = (raw: any): PostingPolicy | null => {
+    if (!raw || typeof raw !== 'object') {
+        return null
+    }
+
+    const dailyPostLimit = raw?.policy?.dailyPostLimit
+    const dailyPostsUsed = Number(raw?.usage?.dailyPostsUsed ?? 0)
+    const normalizedLimit =
+        dailyPostLimit === null || dailyPostLimit === undefined
+            ? Number.MAX_SAFE_INTEGER
+            : Number(dailyPostLimit)
+    const safeLimit = Number.isFinite(normalizedLimit) ? normalizedLimit : Number.MAX_SAFE_INTEGER
+
+    return {
+        effectivePolicyType: String(raw?.policy?.planCode || raw?.policy?.source || ''),
+        allowedNewPostsPerDay: safeLimit,
+        usedNewPostsToday: Number.isFinite(dailyPostsUsed) ? dailyPostsUsed : 0,
+        isLimitReached:
+            safeLimit !== Number.MAX_SAFE_INTEGER &&
+            (Number.isFinite(dailyPostsUsed) ? dailyPostsUsed : 0) >= safeLimit,
+        postCreationFee: Number(raw?.policy?.postFeeAmount ?? 0) || 0,
+    }
 }
 
 const useCreatePostStable = (options?: { shopId?: number; shopName?: string; userPhone?: string; defaultLocation?: string }) => {
@@ -71,7 +96,7 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string; use
             ])
             setCategories(Array.isArray(resCategories) ? resCategories : [])
             if (resPolicy) {
-                setPolicy(resPolicy)
+                setPolicy(normalizePostingPolicy(resPolicy))
             }
         } catch (error) {
             console.error('Error fetching initial data:', error)

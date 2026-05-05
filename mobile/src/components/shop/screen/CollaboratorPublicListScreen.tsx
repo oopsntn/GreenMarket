@@ -19,13 +19,13 @@ const CollaboratorPublicListScreen = () => {
         try {
             if (pageNum === 1) setLoading(true);
             const response = await CollaboratorService.getPublicCollaborators({ page: pageNum, limit: 15 });
-            
+
             if (pageNum === 1) {
                 setCollaborators(response.data || []);
             } else {
-                setCollaborators(prev => [...prev, ...(response.data || [])]);
+                setCollaborators((prev) => [...prev, ...(response.data || [])]);
             }
-            
+
             setHasMore(pageNum < (response.meta?.totalPages || 1));
             setPage(pageNum);
         } catch (error: any) {
@@ -39,7 +39,7 @@ const CollaboratorPublicListScreen = () => {
     useFocusEffect(
         useCallback(() => {
             fetchPublicCollaborators(1);
-        }, [])
+        }, []),
     );
 
     const handleRefresh = () => {
@@ -53,61 +53,55 @@ const CollaboratorPublicListScreen = () => {
         }
     };
 
-    const renderItem = ({ item }: { item: any }) => {
-        const isOnline = item.availabilityStatus === 'available';
-        
-        return (
-            <TouchableOpacity 
-                style={styles.card}
-                onPress={() => navigation.navigate('PublicCollaboratorDetail', { id: item.userId })}
-            >
-                <View style={styles.cardContent}>
-                    <View style={styles.avatarContainer}>
-                        <Image 
-                            source={{ uri: resolveImageUrl(item.avatarUrl) }} 
-                            style={styles.avatar} 
-                        />
-                        <View style={[styles.statusDot, { backgroundColor: isOnline ? '#10B981' : '#F59E0B' }]} />
-                    </View>
-                    
-                    <View style={styles.info}>
-                        <Text style={styles.name}>{item.displayName || 'CTV chưa có tên'}</Text>
-                        
-                        {item.bio ? (
-                            <Text style={styles.bio} numberOfLines={2}>{item.bio}</Text>
+    const renderItem = ({ item }: { item: any }) => (
+        <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('PublicCollaboratorDetail', { id: item.userId })}
+        >
+            <View style={styles.cardContent}>
+                <View style={styles.avatarContainer}>
+                    <Image source={{ uri: resolveImageUrl(item.avatarUrl) }} style={styles.avatar} />
+                </View>
+
+                <View style={styles.info}>
+                    <Text style={styles.name}>{item.displayName || 'Cộng tác viên chưa có tên'}</Text>
+
+                    {item.bio ? (
+                        <Text style={styles.bio} numberOfLines={2}>
+                            {item.bio}
+                        </Text>
+                    ) : (
+                        <Text style={styles.bioPlaceholder}>Chưa có phần giới thiệu công khai.</Text>
+                    )}
+
+                    <View style={styles.metaRow}>
+                        {item.location ? (
+                            <View style={styles.metaBadge}>
+                                <MapPin size={12} color="#64748B" />
+                                <Text style={styles.metaText}>{item.location}</Text>
+                            </View>
                         ) : null}
-                        
-                        <View style={styles.metaRow}>
-                            {item.location && (
-                                <View style={styles.metaBadge}>
-                                    <MapPin size={12} color="#64748B" />
-                                    <Text style={styles.metaText}>{item.location}</Text>
-                                </View>
-                            )}
-                            
-                            {item.relationshipStatus === 'active' && (
-                                <View style={[styles.metaBadge, styles.activeBadge]}>
-                                    <Briefcase size={12} color="#16A34A" />
-                                    <Text style={[styles.metaText, { color: '#16A34A' }]}>Đang cộng tác</Text>
-                                </View>
-                            )}
-                        </View>
+
+                        {item.relationshipStatus === 'active' ? (
+                            <View style={[styles.metaBadge, styles.activeBadge]}>
+                                <Briefcase size={12} color="#16A34A" />
+                                <Text style={[styles.metaText, styles.activeText]}>Đang cộng tác</Text>
+                            </View>
+                        ) : null}
                     </View>
                 </View>
-            </TouchableOpacity>
-        );
-    };
+            </View>
+        </TouchableOpacity>
+    );
 
     return (
-        <MobileLayout 
-            title="Thị trường Cộng tác viên" 
-            backButton={() => navigation.goBack()}
-        >
+        <MobileLayout title="Thị trường cộng tác viên" backButton={() => navigation.goBack()}>
             <View style={styles.container}>
                 <View style={styles.headerArea}>
-                    <Text style={styles.headerTitle}>Tìm Người Quản Lý Gian Hàng</Text>
+                    <Text style={styles.headerTitle}>Tìm người quản lý gian hàng</Text>
                     <Text style={styles.headerDesc}>
-                        Thuê Cộng tác viên từ xa để giúp bạn đăng tin, chăm sóc khách hàng và phát triển gian hàng trên GreenMarket.
+                        Thuê cộng tác viên từ xa để hỗ trợ đăng tin, chăm sóc khách hàng và phát triển gian hàng trên
+                        GreenMarket.
                     </Text>
                 </View>
 
@@ -119,15 +113,13 @@ const CollaboratorPublicListScreen = () => {
                         keyExtractor={(item) => item.userId.toString()}
                         renderItem={renderItem}
                         contentContainerStyle={styles.listContainer}
-                        refreshControl={
-                            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-                        }
+                        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
                         onEndReached={handleLoadMore}
                         onEndReachedThreshold={0.5}
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <Search size={40} color="#94A3B8" />
-                                <Text style={styles.emptyText}>Chưa có Cộng tác viên nào công khai hồ sơ.</Text>
+                                <Text style={styles.emptyText}>Chưa có cộng tác viên nào công khai hồ sơ.</Text>
                             </View>
                         }
                     />
@@ -181,7 +173,6 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     avatarContainer: {
-        position: 'relative',
         marginRight: 16,
     },
     avatar: {
@@ -189,16 +180,6 @@ const styles = StyleSheet.create({
         height: 60,
         borderRadius: 30,
         backgroundColor: '#E2E8F0',
-    },
-    statusDot: {
-        position: 'absolute',
-        bottom: 2,
-        right: 2,
-        width: 14,
-        height: 14,
-        borderRadius: 7,
-        borderWidth: 2,
-        borderColor: 'white',
     },
     info: {
         flex: 1,
@@ -215,6 +196,11 @@ const styles = StyleSheet.create({
         color: '#475569',
         marginBottom: 8,
         lineHeight: 18,
+    },
+    bioPlaceholder: {
+        fontSize: 13,
+        color: '#94A3B8',
+        marginBottom: 8,
     },
     metaRow: {
         flexDirection: 'row',
@@ -237,6 +223,9 @@ const styles = StyleSheet.create({
         color: '#64748B',
         marginLeft: 4,
         fontWeight: '500',
+    },
+    activeText: {
+        color: '#16A34A',
     },
     loadingText: {
         textAlign: 'center',

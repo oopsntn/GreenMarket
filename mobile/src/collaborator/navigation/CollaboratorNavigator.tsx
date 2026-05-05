@@ -18,11 +18,11 @@ import MyPostLayout from '../../components/post/screen/MyPostLayout';
 import PublicShopDetailScreen from '../../components/shop/screen/PublicShopDetailScreen';
 import PostDetailScreen from '../../components/post/screen/PostDetailScreen';
 import NotificationsScreen from '../../components/notification/screen/NotificationsScreen';
-import UserSettingsScreen from '../../components/settings/screen/UserSettingsScreen';
 import ProfileScreen from '../../components/profile/screen/ProfileScreen';
 import ManagementCenterScreen from '../../components/post/screen/ManagementCenterScreen';
 import UserSupportRequestScreen from '../../components/settings/screen/UserSupportRequestScreen';
 import QrLoginScannerScreen from '../../components/settings/screen/QrLoginScannerScreen';
+import CollaboratorSettingsScreen from '../screens/CollaboratorSettingsScreen';
 
 type CollaboratorTabParamList = {
   Dashboard: undefined;
@@ -114,7 +114,7 @@ const CollaboratorTabs = () => {
       />
       <Tab.Screen
         name="SettingsTab"
-        component={UserSettingsScreen}
+        component={CollaboratorSettingsScreen}
         options={{ tabBarLabel: 'Cài đặt' }}
       />
     </Tab.Navigator>

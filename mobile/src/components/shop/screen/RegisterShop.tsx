@@ -175,35 +175,35 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
     const validateForm = () => {
         if (!formData.shopName.trim()) {
-            CustomAlert('Lỗi', 'Vui lòng nhập tên cửa hàng')
+            CustomAlert('Xin thông báo', 'Vui lòng nhập tên cửa hàng')
             return false
         }
         if (formData.shopName.trim().length < 3) {
-            CustomAlert('Lỗi', 'Tên cửa hàng phải có ít nhất 3 ký tự')
+            CustomAlert('Xin thông báo', 'Tên cửa hàng phải có ít nhất 3 ký tự')
             return false
         }
         if (!localLogoUri) {
-            CustomAlert('Lỗi', 'Vui lòng tải lên ảnh đại diện cho cửa hàng')
+            CustomAlert('Xin thông báo', 'Vui lòng tải lên ảnh đại diện cho cửa hàng')
             return false
         }
         if (localGalleryUris.length < 3) {
-            CustomAlert('Lỗi', 'Vui lòng tải lên ít nhất 3 ảnh mô tả cửa hàng')
+            CustomAlert('Xin thông báo', 'Vui lòng tải lên ít nhất 3 ảnh mô tả cửa hàng')
             return false
         }
         if (!formData.shopDescription.trim()) {
-            CustomAlert('Lỗi', 'Vui lòng nhập mô tả cho cửa hàng')
+            CustomAlert('Xin thông báo', 'Vui lòng nhập mô tả cho cửa hàng')
             return false
         }
         if (formData.shopDescription.trim().length < 10) {
-            CustomAlert('Lỗi', 'Mô tả cửa hàng quá ngắn (cần ít nhất 10 ký tự)')
+            CustomAlert('Xin thông báo', 'Mô tả cửa hàng quá ngắn (cần ít nhất 10 ký tự)')
             return false
         }
         if (!formData.shopLocation.trim() || formData.shopLocation.trim() === 'Vị trí đã chọn') {
-            CustomAlert('Lỗi', 'Vui lòng xác định địa chỉ cửa hàng hợp lệ')
+            CustomAlert('Xin thông báo', 'Vui lòng xác định địa chỉ cửa hàng hợp lệ')
             return false
         }
         if (!formData.shopLat || !formData.shopLng) {
-            CustomAlert('Lỗi', 'Vui lòng chọn tọa độ cửa hàng trên bản đồ')
+            CustomAlert('Xin thông báo', 'Vui lòng chọn tọa độ cửa hàng trên bản đồ')
             return false
         }
         return true
@@ -252,7 +252,16 @@ const RegisterShopScreen = ({ navigation }: any) => {
                 const code = getParam(url, 'code') || getParam(url, 'vnp_ResponseCode') || undefined;
                 const txnRef = getParam(url, 'txnRef') || getParam(url, 'vnp_TxnRef') || undefined;
 
-                navigation.navigate('PaymentResult', { status, code, txnRef });
+                (async () => {
+                    if (status === 'success' || code === '00') {
+                        await refreshShop();
+                    }
+
+                    navigation.navigate('PaymentResult', { status, code, txnRef, type: 'shop' });
+                })().catch((error) => {
+                    console.error('[Payment] Failed to refresh shop after return:', error);
+                    navigation.navigate('PaymentResult', { status, code, txnRef, type: 'shop' });
+                });
             }
         });
 
@@ -602,7 +611,7 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         fullWidth
                         style={styles.submitBtn}
                     >
-                        {uploading ? 'Đang tải ảnh...' : loading ? 'Đang đăng ký...' : 'Đăng ký cửa hàng'}
+                        {uploading ? 'Đang tải ảnh...' : loading ? 'Đang đăng ký...' : 'Đăng ký cửa hàng với phí 250.000 đồng'}
                     </Button>
                 </View>
             </ScrollView>
