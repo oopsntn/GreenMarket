@@ -12,6 +12,7 @@ import {
   EyeOff,
   ExternalLink,
   Flag,
+  Image as ImageIcon,
   MessageSquare,
   ShieldAlert,
   ThumbsDown,
@@ -23,6 +24,7 @@ import ReasonModal from '../components/ReasonModal';
 import managerService, { ReportModerationData } from '../services/ManagerService';
 import CustomAlert from '../../utils/AlertHelper';
 import ManagerHeader from '../components/ManagerHeader';
+import { MediaGallery } from '../../components/post/components/MediaGallery';
 
 const statusLabelMap: Record<string, string> = {
   pending: 'Chờ xử lý',
@@ -170,6 +172,13 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
   }
 
   if (!report) return null;
+
+  const reporterLabel =
+    (typeof report.reporterDisplayName === 'string' && report.reporterDisplayName.trim()) ||
+    (report.reporterId ? `Nguoi dung #${report.reporterId}` : 'Nguoi bao cao khong xac dinh');
+  const evidenceMedia = (report.evidenceUrls || [])
+    .filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+    .map((url) => ({ type: 'image', url }));
 
   return (
     <View style={styles.container}>

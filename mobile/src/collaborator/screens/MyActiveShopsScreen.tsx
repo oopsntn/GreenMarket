@@ -54,7 +54,11 @@ const MyActiveShopsScreen = () => {
     };
 
     const goCreatePost = (shop: CollaboratorActiveShop) => {
-        navigation.navigate('CreateDelegatedPost', { shopId: shop.shopId, shopName: shop.shopName });
+        navigation.navigate('CreateDelegatedPost', { 
+            shopId: shop.shopId, 
+            shopName: shop.shopName,
+            shopLocation: shop.shopLocation
+        });
     };
 
     const renderItem = ({ item }: { item: CollaboratorActiveShop }) => (

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react-native';
 import { CollaboratorService, JobDetail } from '../services/collaboratorService';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const JobDetailScreen = () => {
@@ -32,6 +33,7 @@ const JobDetailScreen = () => {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<JobDetail | null>(null);
     const [processing, setProcessing] = useState(false);
+    const { user } = useAuth();
 
     const fetchDetail = async () => {
         try {
@@ -50,6 +52,23 @@ const JobDetailScreen = () => {
     }, [jobId]);
 
     const handleDecision = async (decision: 'accept' | 'decline') => {
+        if (decision === 'accept') {
+            const hasProfile = user?.userDisplayName && user?.userMobile && user?.userLocation;
+            if (!hasProfile) {
+                Alert.alert(
+                    'Cập nhật hồ sơ',
+                    'Bạn cần cập nhật đầy đủ thông tin cá nhân (Tên, Số điện thoại, Địa chỉ) trước khi có thể nhận việc.',
+                    [
+                        { text: 'Hủy', style: 'cancel' },
+                        {
+                            text: 'Cập nhật ngay',
+                            onPress: () => navigation.navigate('Profile')
+                        }
+                    ]
+                );
+                return;
+            }
+        }
         if (decision === 'decline') {
             // In a real app, you might show a reason modal
             Alert.alert(

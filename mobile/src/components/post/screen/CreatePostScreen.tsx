@@ -30,11 +30,17 @@ const CreatePostLayout = () => {
     const route = useRoute<any>()
     const delegatedShopId = route.params?.shopId ? Number(route.params.shopId) : undefined
     const delegatedShopName = route.params?.shopName ? String(route.params.shopName) : undefined
+    const delegatedShopLocation = route.params?.shopLocation ? String(route.params.shopLocation) : undefined
     const isDelegated = !!delegatedShopId
 
-    const { state, actions } = useCreatePost({ shopId: delegatedShopId, shopName: delegatedShopName })
     const { shop } = useAuth()
     const isShop = !!shop && shop.shopStatus === 'active'
+
+    const { state, actions } = useCreatePost({ 
+        shopId: delegatedShopId, 
+        shopName: delegatedShopName,
+        shopLocation: delegatedShopLocation || shop?.shopLocation
+    })
 
     if (state.submitted) {
         return (
@@ -56,6 +62,13 @@ const CreatePostLayout = () => {
                         style={styles.successButton}
                     >
                         Tạo tin khác
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })}
+                        style={styles.successButton}
+                    >
+                        Về trang chủ
                     </Button>
                 </View>
             </MobileLayout>
@@ -204,40 +217,6 @@ const CreatePostLayout = () => {
                         onChangeText={(txt) => actions.setFormData({ ...state.formData, postLocation: txt })}
                         icon={<MapPin size={16} color="#10b981" />}
                         placeholder="Ví dụ: Cầu Giấy, Hà Nội"
-                    />
-                )}
-                {isShop && shop?.shopPhone ? (
-                    <View style={styles.locationBlock}>
-                        <Input
-                            testID="create-post-contact-phone-input"
-                            label="Số điện thoại liên hệ"
-                            type="phone-pad"
-                            value={state.formData.postContactPhone}
-                            onChangeText={(txt) => actions.setFormData({ ...state.formData, postContactPhone: txt })}
-                            icon={<Phone size={16} color="#10b981" />}
-                            placeholder="Để trống nếu dùng số mặc định"
-                        />
-                        <TouchableOpacity
-                            style={styles.useShopLocationBtn}
-                            onPress={() =>
-                                actions.setFormData({
-                                    ...state.formData,
-                                    postContactPhone: shop.shopPhone || '',
-                                })
-                            }
-                        >
-                            <Text style={styles.useShopLocationText}>Dùng số cửa hàng</Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <Input
-                        testID="create-post-contact-phone-input"
-                        label="Số điện thoại liên hệ"
-                        type="phone-pad"
-                        value={state.formData.postContactPhone}
-                        onChangeText={(txt) => actions.setFormData({ ...state.formData, postContactPhone: txt })}
-                        icon={<Phone size={16} color="#10b981" />}
-                        placeholder="Để trống nếu dùng số mặc định"
                     />
                 )}
 

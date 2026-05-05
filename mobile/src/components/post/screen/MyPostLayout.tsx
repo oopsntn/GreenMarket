@@ -20,7 +20,6 @@ const MyPostLayout = () => {
 
     const [editData, setEditData] = useState({
         title: '',
-        price: '',
         categoryId: 0,
         content: '',
         location: '',
@@ -43,7 +42,6 @@ const MyPostLayout = () => {
     const openEdit = (post: any) => {
         setEditData({
             title: post.postTitle,
-            price: String(post.postPrice),
             categoryId: post.categoryId,
             content: post.postContent || '',
             location: post.postLocation || '',

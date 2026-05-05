@@ -30,7 +30,6 @@ const RegisterShopScreen = ({ navigation }: any) => {
     const [localGalleryUris, setLocalGalleryUris] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
-    const [submitted, setSubmitted] = useState(false)
 
     const hasExistingShop = useMemo(
         () => !!shop?.shopId && shop.shopStatus === 'active',
@@ -223,6 +222,10 @@ const RegisterShopScreen = ({ navigation }: any) => {
         }
     }
 
+    const handleGoHome = () => {
+        navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] })
+    }
+
     const openPaymentBrowser = async () => {
         const paymentRes = await paymentService.createShopPaymentIntent()
         console.log('[Payment] createShopPaymentIntent response:', paymentRes)
@@ -257,16 +260,9 @@ const RegisterShopScreen = ({ navigation }: any) => {
 
         subscription.remove();
         if (!navigatedRef.current) {
-            // Fallback: refresh shop và báo user kiểm tra
+            // Browser đóng mà không có deep-link → chuyển đến màn hình chờ
             await refreshShop();
-            CustomAlert(
-                'Kiểm tra kết quả',
-                'Nếu bạn đã hoàn tất thanh toán, vui lòng nhấn "Tải lại" để cập nhật trạng thái cửa hàng.',
-                [
-                    { text: 'Tải lại', onPress: () => refreshShop() },
-                    { text: 'Đóng', style: 'cancel' },
-                ]
-            );
+            navigation.navigate('PaymentPending', { type: 'shop' });
         }
     }
 
@@ -378,29 +374,6 @@ const RegisterShopScreen = ({ navigation }: any) => {
         }
     }
 
-    if (submitted) {
-        return (
-            <View style={styles.successContainer}>
-                <View style={styles.successCard}>
-                    <View style={styles.iconCircle}>
-                        <CheckCircle color="#10b981" size={40} />
-                    </View>
-                    <Text style={styles.successTitle}>Đăng ký thành công!</Text>
-                    <Text style={styles.successDesc}>
-                        Hồ sơ cửa hàng đang được xét duyệt. Chúng tôi sẽ thông báo cho bạn sớm nhất có thể.
-                    </Text>
-                    <Button
-                        fullWidth
-                        icon={<ArrowRight size={18} color="#fff" />}
-                        onPress={() => navigation.navigate('MyShop')}
-                        style={styles.primaryAction}
-                    >
-                        Xem cửa hàng của tôi
-                    </Button>
-                </View>
-            </View>
-        )
-    }
 
     if (isPendingShop) {
         return (
@@ -436,6 +409,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
                         >
                             Đã thanh toán? Tải lại ngay
                         </Button>
+                        <Button
+                            fullWidth
+                            variant="outline"
+                            onPress={handleGoHome}
+                            style={[styles.secondaryAction, { marginTop: 8 }]}
+                        >
+                            Về trang chủ
+                        </Button>
                     </View>
                 </View>
             </MobileLayout>
@@ -465,6 +446,14 @@ const RegisterShopScreen = ({ navigation }: any) => {
                             textStyle={{ color: '#10b981' }}
                         >
                             Sửa thông tin
+                        </Button>
+                        <Button
+                            fullWidth
+                            variant="outline"
+                            onPress={handleGoHome}
+                            style={[styles.secondaryAction, { marginTop: 8 }]}
+                        >
+                            Về trang chủ
                         </Button>
                     </View>
                 </View>

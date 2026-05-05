@@ -26,6 +26,7 @@ import SavedPostsScreen from '../components/post/screen/SavedPostsScreen';
 import PromotePostScreen from '../components/payment/screen/PromotePostScreen';
 import PersonalDashboardScreen from '../components/payment/screen/PersonalDashboardScreen';
 import PaymentResultScreen from '../components/payment/screen/PaymentResultScreen';
+import PaymentPendingScreen from '../components/payment/screen/PaymentPendingScreen';
 import CreateReportScreen from '../components/report/screen/CreateReportService';
 import ShopDashboardScreen from '@/components/shop/screen/ShopDashboardScreen';
 import PackagesScreen from '@/components/shop/screen/PackagesScreen';
@@ -33,6 +34,7 @@ import ShopCollaboratorsScreen from '@/components/shop/screen/ShopCollaboratorsS
 import CollaboratorPublicListScreen from '@/components/shop/screen/CollaboratorPublicListScreen';
 import PublicCollaboratorDetailScreen from '@/components/shop/screen/PublicCollaboratorDetailScreen';
 import PendingOwnerPostsScreen from '@/components/shop/screen/PendingOwnerPostsScreen';
+import PreviewCollaboratorPostScreen from '@/components/shop/screen/PreviewCollaboratorPostScreen';
 import HostNewsDetailScreen from '@/host/screens/HostNewsDetailScreen';
 import NotificationsScreen from '@/components/notification/screen/NotificationsScreen';
 import HostNavigator from '@/host/navigation/HostNavigator';
@@ -178,7 +180,9 @@ const UserNavigator = () => {
       <RootStack.Screen name="CollaboratorPublicList" component={CollaboratorPublicListScreen} />
       <RootStack.Screen name="PublicCollaboratorDetail" component={PublicCollaboratorDetailScreen} />
       <RootStack.Screen name="PendingOwnerPosts" component={PendingOwnerPostsScreen} />
+      <RootStack.Screen name="PreviewCollaboratorPost" component={PreviewCollaboratorPostScreen} />
       <RootStack.Screen name="PaymentResult" component={PaymentResultScreen} />
+      <RootStack.Screen name="PaymentPending" component={PaymentPendingScreen} />
     </RootStack.Navigator>
   );
 };

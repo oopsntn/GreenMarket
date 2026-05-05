@@ -85,7 +85,6 @@ const useMyPost = () => {
 
     const handleUpdate = async (postId: number, data: {
         postTitle: string;
-        postPrice: string;
         categoryId: number;
         postContent: string;
         postLocation: string;
@@ -101,11 +100,6 @@ const useMyPost = () => {
             return
         }
 
-        if (!data.postPrice.trim() || Number.isNaN(Number(data.postPrice)) || Number(data.postPrice) < 0) {
-            CustomAlert('Giá không hợp lệ', 'Giá phải là một số lớn hơn hoặc bằng 0.')
-            return
-        }
-
         // Constraints mentioned in plan
         if (data.postContent.length > 2000) {
             CustomAlert('Thông tin quá dài', 'Phần mô tả không được vượt quá 2000 ký tự.')
@@ -116,8 +110,8 @@ const useMyPost = () => {
             setSaving(true)
             const updatedPost = await postService.updatePost(postId, {
                 postTitle: data.postTitle.trim(),
-                postPrice: Number(data.postPrice.trim()),
                 categoryId: data.categoryId,
+                postContent: data.postContent.trim() || undefined,
                 postLocation: data.postLocation.trim() || undefined,
                 postContactPhone: data.postContactPhone.replace(/\s+/g, '') || undefined,
             })

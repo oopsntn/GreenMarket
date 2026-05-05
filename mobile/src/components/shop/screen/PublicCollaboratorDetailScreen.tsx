@@ -224,16 +224,16 @@ const PublicCollaboratorDetailScreen = () => {
                     </Text>
                 </View>
 
-                {profile.availabilityNote ? (
+                {/* {profile.availabilityNote ? (
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Ghi chú từ cộng tác viên</Text>
                         <View style={styles.noteBox}>
                             <Text style={styles.noteText}>{profile.availabilityNote}</Text>
                         </View>
                     </View>
-                ) : null}
+                ) : null} */}
 
-                <View style={styles.section}>
+                {/* <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Portfolio</Text>
                     {Array.isArray(profile.portfolioPhotos) && profile.portfolioPhotos.length > 0 ? (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.portfolioScroll}>
@@ -256,7 +256,7 @@ const PublicCollaboratorDetailScreen = () => {
                     <Text style={styles.noteText}>
                         Mobile hiện hiển thị đúng dữ liệu mà backend public collaborator API trả về: bio, availability, portfolio ảnh, tổng shop hợp tác, tổng nội dung đã làm và contact khi quan hệ đã active.
                     </Text>
-                </View>
+                </View> */}
 
                 <View style={{ height: 40 }} />
             </ScrollView>

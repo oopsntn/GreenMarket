@@ -6,7 +6,6 @@ import Button from '../../Reused/Button/Button';
 
 interface EditData {
     title: string;
-    price: string;
     categoryId: number;
     content: string;
     location: string;
@@ -66,14 +65,6 @@ const EditPostModal = ({
                         </View>
 
                         <Input
-                            label="Giá bán (VND)"
-                            type="numeric"
-                            value={editData.price}
-                            onChangeText={(t) => setEditData({ ...editData, price: t })}
-                            placeholder="0"
-                        />
-
-                        <Input
                             label="Địa chỉ"
                             value={editData.location}
                             onChangeText={(t) => setEditData({ ...editData, location: t })}
@@ -116,7 +107,6 @@ const EditPostModal = ({
                             disabled={saving}
                             onPress={() => onSave(editingPost.postId, {
                                 postTitle: editData.title,
-                                postPrice: editData.price,
                                 categoryId: editData.categoryId,
                                 postContent: editData.content,
                                 postLocation: editData.location,

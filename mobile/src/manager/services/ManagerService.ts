@@ -55,6 +55,7 @@ export interface ReportModerationData {
     reportUpdatedAt?: string | null;
     adminNote?: string | null;
     severity?: ModerationPriority;
+    evidenceUrls?: string[];
 }
 
 export interface ManagerHistoryEntry {
@@ -139,6 +140,33 @@ const parseSubtitleValue = (subtitle: string | null | undefined, prefix: string)
     return subtitle;
 };
 
+const normalizeStringArray = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+        return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+    }
+
+    if (typeof value === 'string') {
+        const trimmedValue = value.trim();
+        if (!trimmedValue) return [];
+
+        try {
+            const parsedValue = JSON.parse(trimmedValue);
+            if (Array.isArray(parsedValue)) {
+                return parsedValue.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+            }
+        } catch {
+            // Ignore invalid JSON and fall back to a simple delimiter parse.
+        }
+
+        return trimmedValue
+            .split('|')
+            .map((item) => item.trim())
+            .filter(Boolean);
+    }
+
+    return [];
+};
+
 const normalizePost = (item: ModerationQueueRow): PostModerationData => ({
     queueId: item.queueId,
     postId: item.targetId,
@@ -166,7 +194,7 @@ const normalizeShop = (item: ModerationQueueRow): ShopModerationData => ({
 const normalizeReport = (report: any): ReportModerationData => ({
     reportId: report.reportId,
     reporterId: report.reporterId ?? null,
-    reporterDisplayName: report.reporterName ?? null,
+    reporterDisplayName: report.reporterDisplayName ?? report.reporterName ?? null,
     postId: report.postId ?? null,
     reportShopId: report.reportShopId ?? null,
     postTitle: report.postTitle ?? null,
@@ -179,6 +207,7 @@ const normalizeReport = (report: any): ReportModerationData => ({
     reportUpdatedAt: report.reportUpdatedAt ?? null,
     adminNote: report.adminNote ?? null,
     severity: report.severity ?? 'medium',
+    evidenceUrls: normalizeStringArray(report.evidenceUrls ?? report.ticketMetaData?.evidenceUrls),
 });
 
 const fetchAllQueueItems = async (type: QueueType) => {

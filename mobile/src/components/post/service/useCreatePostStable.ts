@@ -24,7 +24,6 @@ interface CreatePostFormData {
     categoryId: string
     postTitle: string
     postLocation: string
-    postContactPhone: string
     attributes: Record<number, string>
 }
 
@@ -32,7 +31,6 @@ const initialFormData: CreatePostFormData = {
     categoryId: '',
     postTitle: '',
     postLocation: '',
-    postContactPhone: '',
     attributes: {},
 }
 
@@ -44,7 +42,7 @@ export interface PostingPolicy {
     postCreationFee: number
 }
 
-const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) => {
+const useCreatePostStable = (options?: { shopId?: number; shopName?: string; shopLocation?: string }) => {
     const [categories, setCategories] = useState<Category[]>([])
     const [attributes, setAttributes] = useState<CategoryAttribute[]>([])
     const [policy, setPolicy] = useState<PostingPolicy | null>(null)
@@ -54,7 +52,10 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
     const [submitting, setSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
     const [media, setMedia] = useState<SelectedMedia[]>([])
-    const [formData, setFormData] = useState<CreatePostFormData>(initialFormData)
+    const [formData, setFormData] = useState<CreatePostFormData>(() => ({
+        ...initialFormData,
+        postLocation: options?.shopLocation || '',
+    }))
 
     useEffect(() => {
         fetchInitialData()
@@ -159,13 +160,6 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
             return false
         }
 
-        if (formData.postContactPhone) {
-            const cleanPhone = formData.postContactPhone.trim()
-            if (cleanPhone.length < 9 || cleanPhone.length > 20 || !/^\+?[0-9\s-]+$/.test(cleanPhone)) {
-                CustomAlert('Giá trị không hợp lệ', 'Vui lòng nhập số điện thoại hợp lệ (ít nhất 9 số).')
-                return false
-            }
-        }
 
         const imageCount = media.filter((m) => m.type === 'image').length
         if (imageCount === 0) {
@@ -228,7 +222,6 @@ const useCreatePostStable = (options?: { shopId?: number; shopName?: string }) =
                 categoryId: Number(formData.categoryId),
                 postTitle: formData.postTitle.trim(),
                 postLocation: formData.postLocation.trim() || undefined,
-                postContactPhone: formData.postContactPhone.replace(/\s+/g, '').trim() || undefined,
                 ...(options?.shopId ? { shopId: Number(options.shopId) } : {}),
                 images,
                 // videos được gửi để backend xử lý trong tương lai (hiện backend bỏ qua)

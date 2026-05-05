@@ -44,6 +44,7 @@ export interface PendingOwnerPost {
     postSlug: string | null;
     postStatus: string;
     postCreatedAt: string;
+    postRejectedReason?: string | null;
     authorName: string | null;
     authorMobile: string;
 }

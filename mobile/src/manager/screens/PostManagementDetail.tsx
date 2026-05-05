@@ -7,11 +7,29 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { AlertCircle, Calendar, Check, Clock3, EyeOff, User, X } from 'lucide-react-native';
+import { AlertCircle, Calendar, Check, Clock3, EyeOff, User, X, Store, Phone, MapPin, Maximize2 } from 'lucide-react-native';
 import ReasonModal from '../components/ReasonModal';
 import managerService, { PostModerationData } from '../services/ManagerService';
+import { postService } from '../../components/post/service/postService';
+import { MediaGallery } from '../../components/post/components/MediaGallery';
+import { resolveImageUrl } from '../../utils/resolveImageUrl';
 import CustomAlert from '../../utils/AlertHelper';
 import ManagerHeader from '../components/ManagerHeader';
+
+const normalizeMediaUrl = (raw: unknown): string => {
+  if (!raw) return '';
+  if (typeof raw === 'string') return resolveImageUrl(raw);
+  if (typeof raw === 'object') {
+    const record = raw as Record<string, unknown>;
+    const url =
+      (typeof record.imageUrl === 'string' && record.imageUrl) ||
+      (typeof record.videoUrl === 'string' && record.videoUrl) ||
+      (typeof record.url === 'string' && record.url) ||
+      '';
+    return resolveImageUrl(url);
+  }
+  return resolveImageUrl(String(raw));
+};
 
 const statusLabelMap: Record<string, string> = {
   pending: 'Chờ duyệt',
@@ -30,6 +48,7 @@ const priorityMap: Record<string, string> = {
 const PostManagementDetail = ({ route, navigation }: any) => {
   const { postId } = route.params;
   const [post, setPost] = useState<PostModerationData | null>(null);
+  const [fullPost, setFullPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [modalType, setModalType] = useState<'reject' | 'hide' | null>(null);
 
@@ -42,6 +61,13 @@ const PostManagementDetail = ({ route, navigation }: any) => {
       setLoading(true);
       const data = await managerService.getPostById(postId);
       setPost(data);
+
+      try {
+        const fullData = await postService.getPostDetail(postId);
+        setFullPost(fullData);
+      } catch (err) {
+        console.error("Could not fetch full post detail", err);
+      }
     } catch (error) {
       console.error(error);
       CustomAlert('Lỗi', 'Không thể tải chi tiết bài đăng.');
@@ -111,6 +137,66 @@ const PostManagementDetail = ({ route, navigation }: any) => {
           <Text style={styles.subtitle}>{post.summary || 'Không có mô tả bổ sung.'}</Text>
         </View>
 
+        {fullPost && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Nội dung bài đăng</Text>
+
+            <View style={{ marginBottom: 16, marginHorizontal: -20 }}>
+              <MediaGallery media={[
+                ...(fullPost?.images || []).map((i: any) => ({ type: 'image', url: normalizeMediaUrl(i) })),
+                ...(fullPost?.videos || []).map((v: any) => ({ type: 'video', url: normalizeMediaUrl(v) })),
+              ]} />
+            </View>
+
+            {fullPost?.attributes && fullPost.attributes.length > 0 && (
+              <View style={styles.infoCard}>
+                <View style={[styles.infoRow, { marginBottom: 4 }]}>
+                  <Maximize2 size={18} color="#64748B" />
+                  <Text style={[styles.infoLabel, { fontSize: 14, fontWeight: 'bold', color: '#1E293B', marginBottom: 0 }]}>Thông số kỹ thuật</Text>
+                </View>
+                <View style={styles.attrGrid}>
+                  {fullPost.attributes.map((attr: any, index: number) => (
+                    <View key={index} style={styles.attrItem}>
+                      <Text style={styles.attrLabel}>{attr.name}</Text>
+                      <Text style={styles.attrValue}>{attr.value}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View style={[styles.infoCard, { marginTop: 12 }]}>
+              <View style={styles.infoRow}>
+                <Store size={18} color="#64748B" />
+                <View>
+                  <Text style={styles.infoLabel}>Cửa hàng / Người bán</Text>
+                  <Text style={styles.infoValue}>{fullPost?.shop?.shopName || fullPost?.postContactName || 'Chưa cập nhật'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <Phone size={18} color="#64748B" />
+                <View>
+                  <Text style={styles.infoLabel}>Số điện thoại</Text>
+                  <Text style={styles.infoValue}>{fullPost?.shop?.shopPhone || fullPost?.postContactPhone || 'Chưa cập nhật'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <MapPin size={18} color="#64748B" />
+                <View>
+                  <Text style={styles.infoLabel}>Vị trí</Text>
+                  <Text style={styles.infoValue}>{fullPost?.shop?.shopLocation || fullPost?.postLocation || 'Chưa cập nhật'}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ngữ cảnh kiểm duyệt</Text>
           <View style={styles.infoCard}>
@@ -148,12 +234,6 @@ const PostManagementDetail = ({ route, navigation }: any) => {
           </View>
         </View>
 
-        <View style={styles.warningBox}>
-          <AlertCircle size={20} color="#94A3B8" />
-          <Text style={styles.warningText}>
-            Màn này hiện chỉ hiển thị dữ liệu moderation queue. Nếu cần xử lý mạnh hơn, quản lý có thể ẩn hoặc từ chối bài đăng tại đây.
-          </Text>
-        </View>
       </ScrollView>
 
       <View style={styles.moderationBar}>
@@ -164,12 +244,12 @@ const PostManagementDetail = ({ route, navigation }: any) => {
 
         <TouchableOpacity style={[styles.modButton, styles.rejectBtn]} onPress={() => setModalType('reject')}>
           <X size={22} color="#F59E0B" />
-          <Text style={[styles.modText, { color: '#F59E0B' }]}>Từ chối</Text>
+          <Text style={[styles.modText, { color: '#F59E0B' }]}>Gỡ bài đăng</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.modButton, styles.approveBtn]} onPress={handleApprove}>
           <Check size={22} color="white" />
-          <Text style={[styles.modText, { color: 'white' }]}>Duyệt</Text>
+          <Text style={[styles.modText, { color: 'white' }]}>Giữ bài</Text>
         </TouchableOpacity>
       </View>
 
@@ -223,6 +303,20 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 12, color: '#94A3B8', marginBottom: 2 },
   infoValue: { fontSize: 15, color: '#1E293B', fontWeight: '500' },
   divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 14 },
+  attrGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 8,
+  },
+  attrItem: {
+    width: '47%',
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 8,
+  },
+  attrLabel: { fontSize: 11, color: '#64748B', marginBottom: 2 },
+  attrValue: { fontSize: 13, color: '#1E293B', fontWeight: '600' },
   warningBox: {
     flexDirection: 'row',
     gap: 12,

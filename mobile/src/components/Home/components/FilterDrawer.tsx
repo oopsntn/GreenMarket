@@ -35,10 +35,6 @@ interface FilterDrawerProps {
   categories: any[];
   selectedCategoryId: string;
   onSelectCategory: (id: string) => void;
-  minPrice: string;
-  onMinPriceChange: (value: string) => void;
-  maxPrice: string;
-  onMaxPriceChange: (value: string) => void;
   location: string;
   onLocationChange: (value: string) => void;
   onApply: () => void;
@@ -51,10 +47,6 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({
   categories,
   selectedCategoryId,
   onSelectCategory,
-  minPrice,
-  onMinPriceChange,
-  maxPrice,
-  onMaxPriceChange,
   location,
   onLocationChange,
   onApply,
@@ -145,26 +137,6 @@ const FilterDrawer: React.FC<FilterDrawerProps> = ({
                 ))}
               </View>
 
-              {/* Price Filter */}
-              <View style={styles.filterSection}>
-                <Text style={styles.sectionTitle}>Khoảng giá (VND)</Text>
-                <TextInput
-                  style={styles.priceInput}
-                  placeholder="Giá thấp nhất"
-                  value={minPrice}
-                  onChangeText={onMinPriceChange}
-                  keyboardType="number-pad"
-                  placeholderTextColor="#999"
-                />
-                <TextInput
-                  style={[styles.priceInput, { marginTop: 10 }]}
-                  placeholder="Giá cao nhất"
-                  value={maxPrice}
-                  onChangeText={onMaxPriceChange}
-                  keyboardType="number-pad"
-                  placeholderTextColor="#999"
-                />
-              </View>
 
               {/* Location Filter */}
               <View style={styles.filterSection}>
@@ -312,17 +284,6 @@ const styles = StyleSheet.create({
   },
   categoryButtonTextActive: {
     color: '#fff',
-  },
-  priceInput: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#111827',
-    backgroundColor: '#f9fafb',
   },
   locationList: {
     maxHeight: 150,
