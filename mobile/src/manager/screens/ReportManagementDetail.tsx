@@ -111,8 +111,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         await managerService.resolveReport(
           reportId,
           'resolved',
-          `Bài đăng đã được ${
-            postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối'
+          `Bài đăng đã được ${postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối'
           } bởi quản lý`,
           note,
         );
@@ -258,7 +257,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
             <View style={styles.emptyEvidenceBox}>
               <ImageIcon size={20} color="#94A3B8" />
               <Text style={styles.emptyEvidenceText}>
-                Báo cáo này chưa có ảnh chứng cứ hoặc API chưa trả về `evidenceUrls`.
+                Báo cáo này chưa có ảnh chứng cứ.
               </Text>
             </View>
           )}
