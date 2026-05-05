@@ -26,6 +26,7 @@ type ConfirmState = {
 };
 
 const PAGE_SIZE = 5;
+const MAX_INTEGER_FIELD = 2_147_483_647;
 
 const statusFilterOptions: Array<PromotionPackageStatus | "All"> = [
   "All",
@@ -738,6 +739,7 @@ function PromotionPackagesPage() {
               name="durationDays"
               type="number"
               min={1}
+              max={MAX_INTEGER_FIELD}
               value={formData.durationDays}
               onChange={handleFormChange}
               disabled={isSubmitting}
@@ -752,6 +754,8 @@ function PromotionPackagesPage() {
               value={formData.price}
               onChange={handleFormChange}
               disabled={isSubmitting}
+              inputMode="numeric"
+              autoComplete="off"
               placeholder="Nhập giá bán"
             />
           </label>
@@ -773,6 +777,7 @@ function PromotionPackagesPage() {
               name="displayQuota"
               type="number"
               min={1}
+              max={MAX_INTEGER_FIELD}
               value={formData.displayQuota}
               onChange={handleFormChange}
               disabled={isSubmitting}

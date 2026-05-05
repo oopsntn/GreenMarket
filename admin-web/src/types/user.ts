@@ -42,6 +42,8 @@ export type User = {
   businessRoleId: number | null;
   businessRoleCode: string | null;
   businessRoleTitle: string | null;
+  ownedShopId: number | null;
+  ownedShopStatus: string | null;
 };
 
 export type ApiUserResponse = {
@@ -64,6 +66,8 @@ export type ApiUserResponse = {
   businessRoleAudienceGroup: string | null;
   businessRoleAccessScope: string | null;
   businessRoleStatus: string | null;
+  ownedShopId?: number | null;
+  ownedShopStatus?: string | null;
   roleHistory?: Array<{
     id: number;
     previousRole: string | null;

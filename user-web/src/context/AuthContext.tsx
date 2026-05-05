@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getMyShop } from '../services/api';
+import { getMyShop, getProfile } from '../services/api';
 
 interface User {
   id: number;
@@ -10,6 +10,8 @@ interface User {
   userLocation?: string | null;
   userBio?: string | null;
   businessRoleCode?: string | null;
+  userRegisteredAt?: string | null;
+  userLastLoginAt?: string | null;
 }
 
 interface Shop {
@@ -45,6 +47,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   refreshShop: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,6 +70,8 @@ const normalizeUser = (rawUser: any): User | null => {
     userLocation: rawUser.userLocation ?? null,
     userBio: rawUser.userBio ?? null,
     businessRoleCode: rawUser.businessRoleCode ?? null,
+    userRegisteredAt: rawUser.userRegisteredAt ?? null,
+    userLastLoginAt: rawUser.userLastLoginAt ?? null,
   };
 };
 
@@ -85,24 +90,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      const parsedUser = normalizeUser(JSON.parse(storedUser));
-      if (parsedUser) {
-        setToken(storedToken);
-        setUser(parsedUser);
-        localStorage.setItem('user', JSON.stringify(parsedUser));
-        // Fetch shop in background
-        fetchShop();
-      } else {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+  const refreshUser = async () => {
+    try {
+      const res = await getProfile();
+      const normalizedUser = normalizeUser(res.data);
+      if (!normalizedUser) {
+        return;
       }
+
+      setUser(normalizedUser);
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+    } catch {
+      // Keep the last known session data if profile sync fails temporarily.
     }
-    setLoading(false);
+  };
+
+  useEffect(() => {
+    const bootstrapAuth = async () => {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+
+      if (storedToken && storedUser) {
+        const parsedUser = normalizeUser(JSON.parse(storedUser));
+        if (parsedUser) {
+          setToken(storedToken);
+          setUser(parsedUser);
+          localStorage.setItem('user', JSON.stringify(parsedUser));
+          await Promise.all([refreshUser(), fetchShop()]);
+        } else {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      }
+
+      setLoading(false);
+    };
+
+    void bootstrapAuth();
   }, []);
 
   const login = (newToken: string, newUser: User) => {
@@ -113,8 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(normalizedUser);
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(normalizedUser));
-    // Fetch shop after login
-    fetchShop();
+    void refreshUser();
+    void fetchShop();
   };
 
   const logout = () => {
@@ -148,7 +172,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateUser,
       isAuthenticated: !!token, 
       loading,
-      refreshShop
+      refreshShop,
+      refreshUser
     }}>
       {children}
     </AuthContext.Provider>

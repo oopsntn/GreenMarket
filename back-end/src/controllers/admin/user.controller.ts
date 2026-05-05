@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { asc, desc, eq } from "drizzle-orm";
 import { db } from "../../config/db";
-import { users, businessRoles, eventLogs } from "../../models/schema/index";
+import { users, businessRoles, eventLogs, shops } from "../../models/schema/index";
 import { parseId } from "../../utils/parseId";
 import { AuthRequest } from "../../dtos/auth";
+import { toAdminBangkokIsoString } from "../../utils/adminDateTime";
 
 const getPerformedBy = (req: AuthRequest) =>
   req.user?.email || req.user?.mobile || "Quản trị viên hệ thống";
@@ -30,20 +31,18 @@ const buildUserBaseQuery = () =>
       businessRoleAudienceGroup: businessRoles.businessRoleAudienceGroup,
       businessRoleAccessScope: businessRoles.businessRoleAccessScope,
       businessRoleStatus: businessRoles.businessRoleStatus,
+      ownedShopId: shops.shopId,
+      ownedShopStatus: shops.shopStatus,
     })
     .from(users)
     .leftJoin(
       businessRoles,
       eq(users.userBusinessRoleId, businessRoles.businessRoleId),
-    );
+    )
+    .leftJoin(shops, eq(users.userId, shops.shopId));
 
 const formatDateTime = (value: Date | string | null | undefined) => {
-  if (!value) return "";
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "";
-
-  return parsed.toISOString();
+  return toAdminBangkokIsoString(value);
 };
 
 const buildUserDetailPayload = async (userId: number) => {
@@ -169,7 +168,7 @@ export const updateUserStatus = async (
     const [updatedUser] = await db
       .update(users)
       .set({
-        userStatus: status,
+        userStatus: normalizedStatus,
         userUpdatedAt: new Date(),
       })
       .where(eq(users.userId, idNumber))
@@ -247,6 +246,7 @@ export const assignUserBusinessRole = async (
       const [role] = await db
         .select({
           businessRoleId: businessRoles.businessRoleId,
+          businessRoleCode: businessRoles.businessRoleCode,
           businessRoleStatus: businessRoles.businessRoleStatus,
           businessRoleTitle: businessRoles.businessRoleTitle,
         })
@@ -264,6 +264,25 @@ export const assignUserBusinessRole = async (
           error: "Chỉ có thể gán vai trò nghiệp vụ đang hoạt động.",
         });
         return;
+      }
+
+      if (role.businessRoleCode?.toUpperCase() === "USER") {
+        const [ownedShop] = await db
+          .select({ shopId: shops.shopId })
+          .from(shops)
+          .where(eq(shops.shopId, userId))
+          .limit(1);
+
+        if (
+          existingUser.businessRoleCode?.toUpperCase() === "HOST" ||
+          ownedShop
+        ) {
+          res.status(400).json({
+            error:
+              "Tài khoản đang là chủ vườn hoặc đang sở hữu cửa hàng nên không thể gán về vai trò Người dùng.",
+          });
+          return;
+        }
       }
 
       nextRoleTitle = role.businessRoleTitle;

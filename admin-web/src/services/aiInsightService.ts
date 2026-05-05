@@ -9,10 +9,19 @@ import type {
   AIInsightTone,
   AITrendScoreRow,
 } from "../types/aiInsight";
+import { formatAdminDateTime } from "../utils/adminDateTime";
 
 const AI_INSIGHTS_API_PATH = "/api/admin/ai-insights";
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const TIMESTAMP_WITH_TIME_ZONE_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})$/;
 
 const TEXT_REPLACEMENTS: Array<[string, string]> = [
+  ["System Setup", "Thiết lập hệ thống"],
+  ["Hệ Thống Admin", "Hệ thống Admin"],
+  ["Gemini gemini-2.5-flash", "Mô hình Gemini 2.5 Flash"],
+  ["Gemini gemini-2.0-flash", "Mô hình Gemini 2.0 Flash"],
+  ["GreenMarket Fallback fallback-local-v1", "Bộ phân tích dự phòng GreenMarket"],
   ["System Administrator", "Quản trị viên hệ thống"],
   ["Home Top", "Vị trí 1 trang chủ"],
   ["Category Top", "Vị trí 2 trang chủ"],
@@ -172,6 +181,41 @@ const getToneDetailLead = (tone: AIInsightSettings["recommendationTone"]) => {
   return "Định hướng giọng điệu: cân bằng giữa tăng trưởng và ổn định vận hành.";
 };
 
+const formatLocalDateTime = (value: Date) => {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  const hours = String(value.getHours()).padStart(2, "0");
+  const minutes = String(value.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+};
+
+const resolveDisplayDateTime = (
+  value: string | null | undefined,
+  isoValue?: string,
+) => {
+  const normalizedIso = isoValue?.trim() || "";
+  if (normalizedIso) {
+    return formatAdminDateTime(normalizedIso) || value?.trim() || "Chưa có dữ liệu";
+  }
+
+  const normalizedValue = value?.trim() || "";
+  if (!normalizedValue) {
+    return "Chưa có dữ liệu";
+  }
+
+  if (DATE_ONLY_PATTERN.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  if (TIMESTAMP_WITH_TIME_ZONE_PATTERN.test(normalizedValue)) {
+    return formatAdminDateTime(normalizedValue) || normalizedValue;
+  }
+
+  return normalizedValue;
+};
+
 const applyToneToHistoryItem = (
   item: AIInsightHistoryItem,
   tone: AIInsightSettings["recommendationTone"],
@@ -215,6 +259,7 @@ const normalizeHistoryItem = (item: AIInsightHistoryItem): AIInsightHistoryItem 
   ),
   detail: translateText(item.detail || item.summary),
   generatedBy: translateText(item.generatedBy),
+  generatedAt: resolveDisplayDateTime(item.generatedAt, item.generatedAtIso),
 });
 
 const normalizeTrendRow = (item: AITrendScoreRow): AITrendScoreRow => ({
@@ -223,6 +268,7 @@ const normalizeTrendRow = (item: AITrendScoreRow): AITrendScoreRow => ({
   scoreNote: translateText(item.scoreNote),
   momentumNote: translateText(item.momentumNote),
   recommendation: translateText(item.recommendation),
+  updatedAt: resolveDisplayDateTime(item.updatedAt, item.updatedAtIso),
 });
 
 const normalizeOverview = (overview: AIInsightOverview): AIInsightOverview => ({
@@ -388,7 +434,7 @@ const buildLocalGeneratedInsight = async (
       summary,
       detail,
       generatedBy: "Bộ phân tích nội bộ",
-      generatedAt: new Date().toISOString().slice(0, 16).replace("T", " "),
+      generatedAt: formatLocalDateTime(new Date()),
       status: settings.reviewMode === "Required" ? "Needs Review" : "Generated",
     }),
     settings.recommendationTone,

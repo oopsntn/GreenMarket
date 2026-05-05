@@ -6,7 +6,8 @@ export type AccountPackageTrackingCode =
 export type AccountPackageTrackingStatus =
   | "permanent"
   | "active"
-  | "expiring_soon";
+  | "expiring_soon"
+  | "inactive";
 
 export type AccountPackageTrackingSummary = {
   totalTracked: number;

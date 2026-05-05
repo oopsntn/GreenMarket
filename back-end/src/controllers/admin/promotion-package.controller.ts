@@ -36,9 +36,11 @@ type PackageWithCurrentPrice = {
     promotionPackagePriceEffectiveFrom: Date | null;
 };
 
+const MAX_INTEGER_FIELD = 2_147_483_647;
+
 const parsePositiveInteger = (value: unknown): number | null => {
     const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > MAX_INTEGER_FIELD) {
         return null;
     }
 
@@ -47,7 +49,7 @@ const parsePositiveInteger = (value: unknown): number | null => {
 
 const parseNonNegativeInteger = (value: unknown, fallback: number): number => {
     const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 0) {
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > MAX_INTEGER_FIELD) {
         return fallback;
     }
 
@@ -83,7 +85,7 @@ const parseBooleanFlag = (value: unknown): boolean | null => {
 
 const parsePrice = (value: unknown): string | null => {
     const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > MAX_INTEGER_FIELD) {
         return null;
     }
 
@@ -375,7 +377,7 @@ export const createPromotionPackage = async (
 
         if (!slotId || !normalizedTitle || !durationDays || !parsedPrice) {
             res.status(400).json({
-                error: "Vui lòng nhập đầy đủ vị trí hiển thị, tên gói, thời lượng và giá bán.",
+                error: "Vui lòng nhập đầy đủ vị trí hiển thị, tên gói, thời lượng và giá bán hợp lệ.",
             });
             return;
         }
@@ -393,7 +395,7 @@ export const createPromotionPackage = async (
         );
         if (displayQuota < 1) {
             res.status(400).json({
-                error: "Quota hiển thị phải lớn hơn hoặc bằng 1.",
+                error: "Quota hiển thị phải lớn hơn hoặc bằng 1 và không vượt quá 2.147.483.647.",
             });
             return;
         }
@@ -516,7 +518,9 @@ export const updatePromotionPackage = async (
             : undefined;
 
         if (hasPriceInput && !parsedPrice) {
-            res.status(400).json({ error: "Giá bán phải lớn hơn 0." });
+            res.status(400).json({
+                error: "Giá bán phải lớn hơn 0 và không vượt quá 2.147.483.647 VND.",
+            });
             return;
         }
 
@@ -591,7 +595,9 @@ export const updatePromotionPackage = async (
                 body.promotionPackageDurationDays,
             );
             if (!parsedDuration) {
-                res.status(400).json({ error: "Thời lượng phải lớn hơn 0." });
+                res.status(400).json({
+                    error: "Thời lượng phải lớn hơn 0 và không vượt quá 2.147.483.647 ngày.",
+                });
                 return;
             }
             updatePayload.promotionPackageDurationDays = parsedDuration;
@@ -610,7 +616,7 @@ export const updatePromotionPackage = async (
             );
             if (parsedDisplayQuota < 1) {
                 res.status(400).json({
-                    error: "Quota hiển thị phải lớn hơn hoặc bằng 1.",
+                    error: "Quota hiển thị phải lớn hơn hoặc bằng 1 và không vượt quá 2.147.483.647.",
                 });
                 return;
             }

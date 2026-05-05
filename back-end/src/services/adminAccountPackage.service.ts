@@ -60,6 +60,7 @@ const PERSONAL_SETTING_KEY = "personal_monthly_price";
 const OWNER_POLICY_KEY = "owner_posting_policy";
 const PERSONAL_POLICY_KEY = "personal_posting_policy";
 const SHOP_VIP_POLICY_KEY = "shop_vip_policy";
+const MAX_INTEGER_FIELD = 2_147_483_647;
 
 const DEFAULT_OWNER_FEATURES = [
   "Đăng bài ngay, không qua chờ duyệt",
@@ -84,7 +85,7 @@ const DEFAULT_VIP_FEATURES = [
 
 const parsePositiveNumber = (value: unknown): number | null => {
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > MAX_INTEGER_FIELD) {
     return null;
   }
 
@@ -93,7 +94,7 @@ const parsePositiveNumber = (value: unknown): number | null => {
 
 const parsePositiveInteger = (value: unknown): number | null => {
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > MAX_INTEGER_FIELD) {
     return null;
   }
 
@@ -500,14 +501,17 @@ export const adminAccountPackageService = {
 
     const parsedPrice = parsePositiveNumber(params.price);
     if (!parsedPrice) {
-      throw new AdminAccountPackageError(400, "Giá gói phải lớn hơn 0.");
+      throw new AdminAccountPackageError(
+        400,
+        "Giá gói phải lớn hơn 0 và không vượt quá 2.147.483.647 VND.",
+      );
     }
 
     const parsedMaxSales = parsePositiveInteger(params.maxSales);
     if (!parsedMaxSales) {
       throw new AdminAccountPackageError(
         400,
-        "Số lượt bán tối đa phải lớn hơn 0.",
+        "Số lượt bán tối đa phải lớn hơn 0 và không vượt quá 2.147.483.647.",
       );
     }
 
@@ -638,7 +642,7 @@ export const adminAccountPackageService = {
     ) {
       throw new AdminAccountPackageError(
         400,
-        "Thời hạn VIP phải lớn hơn 0 ngày.",
+        "Thời hạn VIP phải lớn hơn 0 ngày và không vượt quá 2.147.483.647 ngày.",
       );
     }
 

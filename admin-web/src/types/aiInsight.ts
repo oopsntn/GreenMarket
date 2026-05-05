@@ -40,6 +40,7 @@ export type AITrendScoreRow = {
   momentumNote: string;
   recommendation: string;
   updatedAt: string;
+  updatedAtIso?: string;
 };
 
 export type AIInsightHistoryItem = {
@@ -50,6 +51,7 @@ export type AIInsightHistoryItem = {
   detail: string;
   generatedBy: string;
   generatedAt: string;
+  generatedAtIso?: string;
   status: AIInsightHistoryStatus;
 };
 

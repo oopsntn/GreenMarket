@@ -16,6 +16,7 @@ import "./AccountPackagesPage.css";
 type PackageGroupFilter = "All" | "Tài khoản" | "Nhà vườn VIP";
 
 const PAGE_SIZE = 5;
+const MAX_INTEGER_FIELD = 2_147_483_647;
 
 function AccountPackagesPage() {
   const [packages, setPackages] = useState<AccountPackage[]>([]);
@@ -480,6 +481,8 @@ function AccountPackagesPage() {
                 value={formData.price}
                 onChange={handleFormChange}
                 disabled={isSubmitting}
+                inputMode="numeric"
+                autoComplete="off"
                 placeholder="Nhập giá mới"
               />
               <small>Không làm thay đổi mức giá của các giao dịch đã phát sinh trước đó.</small>
@@ -497,6 +500,7 @@ function AccountPackagesPage() {
                 name="maxSales"
                 type="number"
                 min={1}
+                max={MAX_INTEGER_FIELD}
                 value={formData.maxSales}
                 onChange={handleFormChange}
                 disabled={isSubmitting}
@@ -511,6 +515,7 @@ function AccountPackagesPage() {
                   name="durationDays"
                   type="number"
                   min={1}
+                  max={MAX_INTEGER_FIELD}
                   value={formData.durationDays}
                   onChange={handleFormChange}
                   disabled={isSubmitting}

@@ -6,7 +6,8 @@ export type BoostedPostStatus =
   | "Paused"
   | "Completed"
   | "Expired"
-  | "Closed";
+  | "Closed"
+  | "Inactive";
 
 export type BoostedPostDeliveryHealth = "Healthy" | "Watch" | "At Risk";
 
