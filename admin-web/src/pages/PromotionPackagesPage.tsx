@@ -284,11 +284,7 @@ function PromotionPackagesPage() {
 
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        name === "durationDays" ||
-        name === "displayQuota"
-          ? Number(value)
-          : value,
+      [name]: name === "durationDays" ? Number(value) : value,
     }));
 
     if (formError) {
@@ -508,7 +504,7 @@ function PromotionPackagesPage() {
 
       <SectionCard
         title="Danh sách gói quảng bá"
-        description="Theo dõi giá bán, quota hiển thị, số bài tối đa và vị trí trang chủ của từng gói đẩy bài."
+        description="Theo dõi giá bán, số bài tối đa và vị trí trang chủ của từng gói đẩy bài."
       >
         {isLoading ? (
           <EmptyState
@@ -542,7 +538,6 @@ function PromotionPackagesPage() {
                     <th>Thời lượng</th>
                     <th>Giá bán</th>
                     <th>Số bài tối đa</th>
-                    <th>Quota</th>
                     <th>Trạng thái</th>
                     <th>Thao tác</th>
                   </tr>
@@ -557,7 +552,6 @@ function PromotionPackagesPage() {
                       <td>{item.durationDays} ngày</td>
                       <td>{item.price}</td>
                       <td>{item.maxPosts}</td>
-                      <td>{item.displayQuota.toLocaleString("vi-VN")}</td>
                       <td>
                         <StatusBadge
                           label={statusLabelMap[item.status]}
@@ -664,12 +658,6 @@ function PromotionPackagesPage() {
               <strong>{selectedPackage.maxPosts}</strong>
             </div>
             <div>
-              <span>Quota hiển thị</span>
-              <strong>
-                {selectedPackage.displayQuota.toLocaleString("vi-VN")}
-              </strong>
-            </div>
-            <div>
               <span>Trạng thái</span>
               <strong>{statusLabelMap[selectedPackage.status]}</strong>
             </div>
@@ -768,19 +756,6 @@ function PromotionPackagesPage() {
               min={1}
               value={formData.maxPosts}
               disabled
-            />
-          </label>
-
-          <label>
-            <span>Quota hiển thị</span>
-            <input
-              name="displayQuota"
-              type="number"
-              min={1}
-              max={MAX_INTEGER_FIELD}
-              value={formData.displayQuota}
-              onChange={handleFormChange}
-              disabled={isSubmitting}
             />
           </label>
 

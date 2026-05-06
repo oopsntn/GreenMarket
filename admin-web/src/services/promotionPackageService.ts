@@ -276,11 +276,6 @@ export const promotionPackageService = {
       packages.length === 0
         ? 0
         : Math.max(...packages.map((item) => parseCurrencyValue(item.price) ?? 0));
-    const totalQuota = packages.reduce(
-      (sum, item) => sum + item.displayQuota,
-      0,
-    );
-
     return [
       {
         title: "Tổng gói quảng bá",
@@ -301,11 +296,6 @@ export const promotionPackageService = {
         title: "Giá cao nhất",
         value: formatCurrencyLabel(highestPrice),
         subtitle: "Mức giá cao nhất trong các gói hiện có",
-      },
-      {
-        title: "Tổng quota",
-        value: totalQuota.toLocaleString("vi-VN"),
-        subtitle: "Tổng lượt hiển thị của các gói đã cấu hình",
       },
     ];
   },

@@ -78,7 +78,6 @@ export const boostedPostService = {
       (item) => item.reviewStatus !== "Approved",
     ).length;
     const atRiskCount = countByDeliveryHealth(posts, "At Risk");
-    const deliveredQuota = posts.reduce((sum, item) => sum + item.usedQuota, 0);
     const averageCtr = getAverageCtr(posts);
 
     return [
@@ -103,9 +102,9 @@ export const boostedPostService = {
         subtitle: "Lượt quảng bá có tiến độ hiển thị thấp hơn mức an toàn",
       },
       {
-        title: "CTR TB / Quota đã dùng",
-        value: `${averageCtr} / ${deliveredQuota.toLocaleString("en-US")}`,
-        subtitle: "Ảnh chụp nhanh hiệu quả quảng bá hiện tại",
+        title: "CTR trung bình",
+        value: averageCtr,
+        subtitle: "Ảnh chụp nhanh hiệu quả tỷ lệ nhấp hiện tại",
       },
     ];
   },
