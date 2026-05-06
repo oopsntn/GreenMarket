@@ -236,18 +236,18 @@ const PostManagementDetail = ({ route, navigation }: any) => {
 
       <View style={styles.moderationBar}>
         <TouchableOpacity style={[styles.modButton, styles.hideBtn]} onPress={() => setModalType('hide')}>
-          <EyeOff size={22} color="#EF4444" />
-          <Text style={[styles.modText, { color: '#EF4444' }]}>Ẩn bài</Text>
+          <EyeOff size={22} color="#F59E0B" />
+          <Text style={[styles.modText, { color: '#F59E0B' }]}>Ẩn bài</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.modButton, styles.rejectBtn]} onPress={() => setModalType('reject')}>
+        {/* <TouchableOpacity style={[styles.modButton, styles.rejectBtn]} onPress={() => setModalType('reject')}>
           <X size={22} color="#F59E0B" />
           <Text style={[styles.modText, { color: '#F59E0B' }]}>Gỡ bài đăng</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <TouchableOpacity style={[styles.modButton, styles.approveBtn]} onPress={handleApprove}>
           <Check size={22} color="white" />
-          <Text style={[styles.modText, { color: 'white' }]}>Giữ bài</Text>
+          <Text style={[styles.modText, { color: 'white' }]}>Duyệt bài</Text>
         </TouchableOpacity>
       </View>
 

@@ -13,7 +13,7 @@ import {
   getOwnerDashboard,
   type PromotionPackageItem,
 } from '../services/api';
-import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User, RotateCcw, Eye, EyeOff } from 'lucide-react';
+import { Store, Plus, PackageOpen, Clock, CheckCircle2, XCircle, MapPin, ChevronRight, Edit, Trash2, Zap, Loader2, ShieldCheck, User, RotateCcw, Eye, EyeOff, Image as ImageIcon, X, UploadCloud } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { resolveImageUrl } from '../utils/resolveImageUrl';
 
@@ -70,6 +70,8 @@ const MyPosts: React.FC = () => {
   const [boostPackages, setBoostPackages] = useState<PromotionPackageItem[]>([]);
   const [boostLoading, setBoostLoading] = useState(false);
   const [boostBuyingId, setBoostBuyingId] = useState<number | null>(null);
+  const [editPreviews, setEditPreviews] = useState<{ url: string, type: 'image' | 'video', file?: File, isExisting?: boolean, rawUrl?: string }[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const refreshPosts = useCallback(async () => {
     if (!user?.id) return;
@@ -198,6 +200,28 @@ const MyPosts: React.FC = () => {
     }));
   };
 
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const selectedFiles = Array.from(e.target.files);
+
+    const newPreviews = selectedFiles.map(file => ({
+      url: URL.createObjectURL(file),
+      type: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
+      file,
+      isExisting: false
+    }));
+
+    setEditPreviews(prev => [...prev, ...newPreviews]);
+  };
+
+  const removeEditPreview = (index: number) => {
+    const item = editPreviews[index];
+    if (!item.isExisting && item.url) {
+      URL.revokeObjectURL(item.url);
+    }
+    setEditPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const getSellerAvatar = (post: any) => {
     if (post?.postShopId) {
       return resolveImageUrl(
@@ -243,6 +267,16 @@ const MyPosts: React.FC = () => {
     setEditLocation(post.postLocation || "");
     setEditContactPhone(post.postContactPhone || "");
     setEditAttributes(getPrefilledAttributes(post));
+
+    // Preload images
+    const initialPreviews = (post.images || []).map((img: any) => ({
+      url: resolveImageUrl(img.imageUrl),
+      type: 'image' as const,
+      isExisting: true,
+      rawUrl: img.imageUrl
+    }));
+    setEditPreviews(initialPreviews);
+
     await loadCategoryAttributes(post.categoryId ? String(post.categoryId) : "");
   };
 
@@ -251,6 +285,30 @@ const MyPosts: React.FC = () => {
     if (!editingPost || !user?.id) return;
 
     try {
+      setIsUploadingImages(true);
+
+      // 1. Handle image uploads for new files
+      const newFiles = editPreviews.filter(p => !p.isExisting && p.file).map(p => p.file as File);
+      let newUploadedUrls: string[] = [];
+      if (newFiles.length > 0) {
+        const uploadRes = await uploadMedia(newFiles);
+        newUploadedUrls = uploadRes.data.urls;
+      }
+
+      // 2. Combine with existing images
+      const finalImageUrls = editPreviews.map(p => {
+        if (p.isExisting) return p.rawUrl;
+        // Match new files to their uploaded URLs by order
+        const newFileIndex = editPreviews.filter(item => !item.isExisting).indexOf(p);
+        return newUploadedUrls[newFileIndex];
+      }).filter(Boolean) as string[];
+
+      if (finalImageUrls.length === 0) {
+        alert("Vui lòng giữ lại hoặc chọn ít nhất 1 ảnh về sản phẩm!");
+        setIsUploadingImages(false);
+        return;
+      }
+
       const formattedAttributes = Object.entries(editAttributes)
         .filter(([, value]) => String(value).trim() !== "")
         .map(([attributeId, value]) => ({
@@ -263,6 +321,7 @@ const MyPosts: React.FC = () => {
         postTitle: editTitle,
         postLocation: editLocation,
         postContactPhone: editContactPhone,
+        images: finalImageUrls,
         attributes: formattedAttributes,
       });
       const autoApprove = Boolean(updateRes?.data?.postingPolicy?.autoApprove);
@@ -285,6 +344,12 @@ const MyPosts: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to update post', error);
       alert(error?.response?.data?.error || 'Có lỗi xảy ra khi cập nhật bài đăng.');
+    } finally {
+      setIsUploadingImages(false);
+      // Clean up object URLs for new previews
+      editPreviews.forEach(p => {
+        if (!p.isExisting && p.url) URL.revokeObjectURL(p.url);
+      });
     }
   };
 
@@ -664,13 +729,15 @@ const MyPosts: React.FC = () => {
                         {post.postPublished ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                       </button>
                     )}
-                    <button
-                      title="Xem chi tiết"
-                      onClick={() => navigate(`/posts/detail/${post.postSlug}`)}
-                      className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-blue-600 transition-all hover:scale-105 active:scale-95"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
+                    {post.postStatus === 'approved' && (
+                      <button
+                        title="Xem chi tiết"
+                        onClick={() => navigate(`/posts/detail/${post.postSlug}`)}
+                        className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-blue-600 transition-all hover:scale-105 active:scale-95"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    )}
                     <button
                       title="Chỉnh sửa"
                       onClick={() => openEditModal(post)}
@@ -754,13 +821,15 @@ const MyPosts: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button
-                      title="Xem chi tiết"
-                      onClick={() => navigate(`/posts/detail/${post.postSlug}`)}
-                      className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-blue-600 transition-all hover:scale-105 active:scale-95"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
+                    {post.postStatus === 'approved' && (
+                      <button
+                        title="Xem chi tiết"
+                        onClick={() => navigate(`/posts/detail/${post.postSlug}`)}
+                        className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-slate-400 hover:text-white hover:bg-blue-600 transition-all hover:scale-105 active:scale-95"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    )}
                     <button
                       title="Khôi phục bài đăng"
                       onClick={() => handleRestore(post.postId)}
@@ -970,6 +1039,41 @@ const MyPosts: React.FC = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-slate-500 text-xs font-black uppercase tracking-wider mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" /> Hình ảnh sản phẩm ({editPreviews.length}/10)
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                  {editPreviews.map((preview, index) => (
+                    <div key={index} className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 group bg-slate-100">
+                      <img src={preview.url} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="preview" />
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => removeEditPreview(index)}
+                          className="p-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-all shadow-xl scale-75 group-hover:scale-100"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {!preview.isExisting && (
+                        <div className="absolute bottom-1 left-1 bg-emerald-500 text-white text-[8px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-tighter">Mới</div>
+                      )}
+                    </div>
+                  ))}
+                  {editPreviews.length < 10 && (
+                    <label className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 hover:border-emerald-500/30 transition-all text-slate-400 hover:text-emerald-600 group">
+                      <div className="w-10 h-10 bg-slate-50 rounded-full flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
+                        <UploadCloud className="w-6 h-6" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Thêm ảnh</span>
+                      <input type="file" multiple accept="image/*" className="hidden" onChange={handleEditFileSelect} />
+                    </label>
+                  )}
+                </div>
+                <p className="mt-3 text-[10px] text-slate-400 font-medium italic">* Kéo để sắp xếp thứ tự hoặc nhấn X để xóa ảnh.</p>
+              </div>
+
 
 
               {editCategoryAttributes.length > 0 && (
@@ -1019,9 +1123,16 @@ const MyPosts: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-xl shadow-emerald-200/50"
+                  disabled={isUploadingImages}
+                  className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-xl shadow-emerald-200/50 flex items-center justify-center gap-2 disabled:bg-slate-300 disabled:shadow-none"
                 >
-                  Lưu thay đổi
+                  {isUploadingImages ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" /> Đang lưu...
+                    </>
+                  ) : (
+                    "Lưu thay đổi"
+                  )}
                 </button>
               </div>
             </form>

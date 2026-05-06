@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, Image as ImageIcon, MapPin, Tag, CircleDollarSign, CheckCircle, ArrowRight, X, UploadCloud } from 'lucide-react';
+import { PlusCircle, Image as ImageIcon, MapPin, Tag, CircleDollarSign, CheckCircle, ArrowRight, X, UploadCloud, Clock } from 'lucide-react';
 import { getCategories, getCategoryAttributes, createPost, uploadMedia, getPublicSystemSettings } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -235,10 +235,16 @@ const CreatePost: React.FC = () => {
         return (
             <div className="min-h-[80vh] flex items-center justify-center px-4">
                 <div className="bg-white p-12 rounded-3xl text-center max-w-md border border-slate-200 shadow-2xl">
-                    <div className="bg-emerald-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-100">
-                        <CheckCircle className="w-10 h-10 text-emerald-600" />
+                    <div className={`${submissionMeta?.autoApprove ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'} w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border`}>
+                        {submissionMeta?.autoApprove ? (
+                            <CheckCircle className="w-10 h-10 text-emerald-600" />
+                        ) : (
+                            <Clock className="w-10 h-10 text-blue-600" />
+                        )}
                     </div>
-                    <h2 className="text-3xl font-bold mb-4 text-slate-900">Đăng tin thành công!</h2>
+                    <h2 className="text-3xl font-bold mb-4 text-slate-900">
+                        {submissionMeta?.autoApprove ? "Đăng tin thành công!" : "Đã gửi tin chờ duyệt"}
+                    </h2>
                     <p className="text-slate-500 mb-8 leading-relaxed">
                         {submissionMeta?.autoApprove
                             ? "Bài đăng của bạn đã hiển thị ngay trên sàn. Bạn có thể theo dõi hiệu quả tại mục Tin của tôi."
