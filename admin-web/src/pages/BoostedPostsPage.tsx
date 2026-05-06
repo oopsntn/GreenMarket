@@ -94,12 +94,6 @@ const formatCtr = (clicks: number, impressions: number) => {
   return `${((clicks / impressions) * 100).toFixed(2)}%`;
 };
 
-const formatQuotaUsage = (usedQuota: number, totalQuota: number) => {
-  return `${usedQuota.toLocaleString("en-US")} / ${totalQuota.toLocaleString(
-    "en-US",
-  )}`;
-};
-
 const getHealthVariant = (health: BoostedPostDeliveryHealth) => {
   if (health === "Healthy") return "active";
   if (health === "Watch") return "processing";
@@ -337,14 +331,14 @@ function BoostedPostsPage() {
     }? Việc phân phối sẽ dừng cho đến khi được mở lại.`,
     resume: `Bạn chắc chắn muốn tiếp tục ${
       confirmPost?.campaignCode ?? "bài này"
-    }? Bài sẽ chạy lại theo vị trí hiển thị và quota hiện tại.`,
+    }? Bài sẽ chạy lại theo vị trí hiển thị hiện tại.`,
   };
 
   return (
     <div className="boosted-posts-page">
       <PageHeader
         title="Theo dõi quảng bá"
-        description="Theo dõi mã quảng bá, trạng thái chạy, CTR và quota của từng lượt quảng bá. Việc đóng hẳn chỉ được xử lý ở luồng báo cáo."
+        description="Theo dõi mã quảng bá, trạng thái chạy và CTR của từng lượt quảng bá. Việc đóng hẳn chỉ được xử lý ở luồng báo cáo."
       />
 
       <div className="boosted-posts-summary-grid">
@@ -459,7 +453,7 @@ function BoostedPostsPage() {
 
       <SectionCard
         title="Danh sách quảng bá"
-        description="Theo dõi CTR, quota đã dùng và mức độ thu hút của từng lượt quảng bá."
+        description="Theo dõi CTR và mức độ thu hút của từng lượt quảng bá."
       >
         {isLoading ? (
           <EmptyState
@@ -489,7 +483,6 @@ function BoostedPostsPage() {
                     <th>Đánh giá</th>
                     <th>Duyệt</th>
                     <th>CTR</th>
-                    <th>Quota đã dùng</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -526,7 +519,6 @@ function BoostedPostsPage() {
                         />
                       </td>
                       <td>{formatCtr(item.clicks, item.impressions)}</td>
-                      <td>{formatQuotaUsage(item.usedQuota, item.totalQuota)}</td>
                       <td>
                         <div className="boosted-posts-actions">
                           <button
@@ -657,18 +649,6 @@ function BoostedPostsPage() {
                 <input
                   type="text"
                   value={`${selectedPost.startDate} đến ${selectedPost.endDate}`}
-                  disabled
-                />
-              </div>
-
-              <div className="boosted-posts-modal__field">
-                <label>Quota đã dùng</label>
-                <input
-                  type="text"
-                  value={formatQuotaUsage(
-                    selectedPost.usedQuota,
-                    selectedPost.totalQuota,
-                  )}
                   disabled
                 />
               </div>
