@@ -472,6 +472,7 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
             postTitle,
             postLocation,
             postContactPhone,
+            images,
             attributes: updatedAttributes
         } = req.body;
 
@@ -578,6 +579,28 @@ export const updatePost = async (req: AuthRequest, res: Response): Promise<void>
 
             if (attrRecords.length > 0) {
                 await db.insert(postAttributeValues).values(attrRecords);
+            }
+        }
+
+        if (Array.isArray(images)) {
+            await db.delete(mediaAssets).where(
+                and(
+                    eq(mediaAssets.targetType, "post"),
+                    eq(mediaAssets.targetId, postId),
+                    eq(mediaAssets.mediaType, "image")
+                )
+            );
+
+            if (images.length > 0) {
+                await db.insert(mediaAssets).values(
+                    images.map((url: string, index: number) => ({
+                        targetType: "post",
+                        targetId: postId,
+                        mediaType: "image",
+                        url: url,
+                        sortOrder: index,
+                    }))
+                );
             }
         }
 

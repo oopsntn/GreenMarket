@@ -62,7 +62,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
       setReport(data);
     } catch (error) {
       console.error(error);
-      CustomAlert('Lỗi', 'Không thể tải chi tiết báo cáo.');
+      CustomAlert('Thông báo', 'Không thể tải chi tiết báo cáo.');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -76,7 +76,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
 
   const handleModeratePost = (action: 'approved' | 'rejected' | 'hidden') => {
     if (!report?.postId) {
-      CustomAlert('Lỗi', 'Báo cáo này không liên kết với bài đăng nào.');
+      CustomAlert('Thông báo', 'Báo cáo này không liên kết với bài đăng nào.');
       return;
     }
 
@@ -111,8 +111,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         await managerService.resolveReport(
           reportId,
           'resolved',
-          `Bài đăng đã được ${
-            postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối'
+          `Bài đăng đã được ${postAction === 'approved' ? 'duyệt' : postAction === 'hidden' ? 'ẩn' : 'từ chối'
           } bởi quản lý`,
           note,
         );
@@ -167,7 +166,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
         );
       }
     } catch (error) {
-      CustomAlert('Lỗi', 'Không thể xử lý báo cáo này.');
+      CustomAlert('Thông báo', 'Không thể xử lý báo cáo này.');
     } finally {
       setProcessingPost(false);
       setPostAction(null);
@@ -258,7 +257,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
             <View style={styles.emptyEvidenceBox}>
               <ImageIcon size={20} color="#94A3B8" />
               <Text style={styles.emptyEvidenceText}>
-                Báo cáo này chưa có ảnh chứng cứ hoặc API chưa trả về `evidenceUrls`.
+                Báo cáo này chưa có ảnh chứng cứ.
               </Text>
             </View>
           )}
@@ -285,14 +284,14 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
       <View style={styles.bottomActions}>
         {report.postId ? (
           <>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={[styles.btn, styles.rejectPostBtn]}
               disabled={processingPost}
               onPress={() => handleModeratePost('rejected')}
             >
               <ThumbsDown size={16} color="#EF4444" />
               <Text style={[styles.btnText, { color: '#EF4444', fontSize: 11 }]}>Từ chối</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TouchableOpacity
               style={[styles.btn, styles.hidePostBtn]}
@@ -309,7 +308,7 @@ const ReportManagementDetail = ({ route, navigation }: any) => {
               onPress={() => handleModeratePost('approved')}
             >
               <ThumbsUp size={16} color="white" />
-              <Text style={[styles.btnText, styles.approveBtnText, { fontSize: 11 }]}>Duyệt bài</Text>
+              <Text style={[styles.btnText, styles.approveBtnText, { fontSize: 11 }]}>Duyệt báo cáo</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.btn, styles.dismissBtn]} onPress={() => handleAction('dismissed')}>
